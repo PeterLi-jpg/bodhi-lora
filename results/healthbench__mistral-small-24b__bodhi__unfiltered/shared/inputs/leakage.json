@@ -1,0 +1,34 @@
+{
+  "n_trained_prompts": 3321,
+  "n_eval_pool": 1000,
+  "n_probe_pool": 679,
+  "n_held_out": 1679,
+  "id_leak": 0,
+  "id_leak_first": [],
+  "text_duplicates": 0,
+  "text_duplicates_first": [],
+  "eval_ids": {
+    "42": {
+      "n": 200,
+      "outside_population": 0
+    },
+    "7": {
+      "n": 200,
+      "outside_population": 0
+    },
+    "13": {
+      "n": 200,
+      "outside_population": 0
+    },
+    "99": {
+      "n": 200,
+      "outside_population": 0
+    },
+    "101": {
+      "n": 200,
+      "outside_population": 0
+    }
+  },
+  "passed": true,
+  "problems": []
+}

@@ -1,0 +1,25 @@
+# Twenty-four questions written for the smoke test, in the rubric JSONL format. No run
+# that reports a number uses it.
+id: tiny-rubric
+title: Tiny rubric benchmark for the smoke cell
+loader: rubric_jsonl
+source:
+  kind: local
+  files:
+    rows:
+      path: tests/fixtures/pipeline/tiny_rubric.jsonl
+      sha256: 4731f168c984a2f1573326725a538c42b1187985f7b9af2654946b4087c08276
+license: MIT (this repository)
+audience: patient
+task: open_ended
+rubric: native
+splits:
+  # Every row is in the pool; the first 6 are the eval pool, the rest the train pool.
+  default: {method: holdout, pool: {select: all}, holdout: {select: head, size: 6}}
+labels:
+  needs-info:
+    description: rows tagged as lacking context (odd rows of the fixture)
+    source: the fixture
+    timing: pre_specified
+    positive_tags: ["physician_agreed_category:not-enough-context"]
+    negative_tags: ["physician_agreed_category:enough-context"]

@@ -1,0 +1,102 @@
+{
+  "cell": "healthbench__mistral-small-24b__bodhi",
+  "completions": {
+    "base": 200,
+    "base+bodhi": 200,
+    "base+clarify": 200,
+    "base+mediq-abstain": 200,
+    "base+red-flags-first": 200,
+    "base+verbalized-confidence": 200,
+    "lora": 200,
+    "lora+bodhi": 200,
+    "lora+red-flags-first": 200
+  },
+  "grade": {
+    "counts": {
+      "base": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "base+bodhi": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "base+clarify": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "base+mediq-abstain": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "base+red-flags-first": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "base+verbalized-confidence": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "lora": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "lora+bodhi": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "lora+red-flags-first": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      }
+    },
+    "file": "results/healthbench__mistral-small-24b__bodhi/seed_7/grade/epistemic__llama-3.1-8b.json",
+    "present": true
+  },
+  "n_examples": {
+    "base": 200,
+    "base+bodhi": 200,
+    "base+clarify": 200,
+    "base+mediq-abstain": 200,
+    "base+red-flags-first": 200,
+    "base+verbalized-confidence": 200,
+    "lora": 200,
+    "lora+bodhi": 200,
+    "lora+red-flags-first": 200
+  },
+  "score_metric": {
+    "base": "normalized_score",
+    "base+bodhi": "normalized_score",
+    "base+clarify": "normalized_score",
+    "base+mediq-abstain": "normalized_score",
+    "base+red-flags-first": "normalized_score",
+    "base+verbalized-confidence": "normalized_score",
+    "lora": "normalized_score",
+    "lora+bodhi": "normalized_score",
+    "lora+red-flags-first": "normalized_score"
+  },
+  "seed": 7,
+  "sources": {
+    "results/healthbench__mistral-small-24b__bodhi/seed_7/eval/base+bodhi.json": "db1ece74b334f61337c961e6b4c39819954c316efd29cda3e8ca251390b4de40",
+    "results/healthbench__mistral-small-24b__bodhi/seed_7/eval/base+clarify.json": "3e768988d23af96d6e53d026914becd2f6bff2693b315201a29fbf5ec995c640",
+    "results/healthbench__mistral-small-24b__bodhi/seed_7/eval/base+mediq-abstain.json": "7bd932f15eff45d0a9d6e8653202e07441de314bcb31f10f59829aab05de4aaa",
+    "results/healthbench__mistral-small-24b__bodhi/seed_7/eval/base+red-flags-first.json": "6ce82c6790c124d57d258e1bc46cb4764db885fa78c9cb93b5690f9507ec2e61",
+    "results/healthbench__mistral-small-24b__bodhi/seed_7/eval/base+verbalized-confidence.json": "edc142845e92db03a0f0b38147703b544428cab067dd1cdec9e026bb0b8f4110",
+    "results/healthbench__mistral-small-24b__bodhi/seed_7/eval/base.json": "23ca5937a85912f5faa9e6b51ede9c40f42775dfb21f15a3b06c078e0eaf9b28",
+    "results/healthbench__mistral-small-24b__bodhi/seed_7/eval/lora+bodhi.json": "6501b32e28b10bbbb781a0c51a14e6ee391d077a8e4291760fcab3bd167fdc3d",
+    "results/healthbench__mistral-small-24b__bodhi/seed_7/eval/lora+red-flags-first.json": "8bc7b61c4d5ec85fe5bf4d6f44036d0001114874d2e16f6dd43d64e66567f67c",
+    "results/healthbench__mistral-small-24b__bodhi/seed_7/eval/lora.json": "9c871651cb1405db9205b424324069cbc5a3c3b31e95af5f7a9c23eb7946d285",
+    "results/healthbench__mistral-small-24b__bodhi/seed_7/grade/epistemic__llama-3.1-8b.json": "6e5b1c8e93200e9294bdac501a7489e10c17f6b1716f92dbc91a2f92be3705db",
+    "results/healthbench__mistral-small-24b__bodhi/seed_7/grade/judge__medgemma-27b-text.json": "542615057f7821364164c911783be6d4c9135b28e125ee2dabc6c134c7e5323e"
+  },
+  "tokenizer": "mistralai/Mistral-Small-24B-Instruct-2501@9527884be6e5616bdd54de542f9ae13384489724"
+}

@@ -1,0 +1,84 @@
+{
+  "cell": "healthbench__medgemma-27b-text__bodhi__cap4096",
+  "completions": {
+    "base": 200,
+    "base+clarify": 200,
+    "base+mediq-abstain": 200,
+    "base+verbalized-confidence": 200,
+    "lora": 200,
+    "lora+bodhi": 200,
+    "lora+red-flags-first": 200
+  },
+  "grade": {
+    "counts": {
+      "base": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "base+clarify": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "base+mediq-abstain": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "base+verbalized-confidence": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "lora": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "lora+bodhi": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "lora+red-flags-first": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      }
+    },
+    "file": "results/healthbench__medgemma-27b-text__bodhi__cap4096/seed_101/grade/epistemic__llama-3.1-8b.json",
+    "present": true
+  },
+  "n_examples": {
+    "base": 200,
+    "base+clarify": 200,
+    "base+mediq-abstain": 200,
+    "base+verbalized-confidence": 200,
+    "lora": 200,
+    "lora+bodhi": 200,
+    "lora+red-flags-first": 200
+  },
+  "score_metric": {
+    "base": "normalized_score",
+    "base+clarify": "normalized_score",
+    "base+mediq-abstain": "normalized_score",
+    "base+verbalized-confidence": "normalized_score",
+    "lora": "normalized_score",
+    "lora+bodhi": "normalized_score",
+    "lora+red-flags-first": "normalized_score"
+  },
+  "seed": 101,
+  "sources": {
+    "results/healthbench__medgemma-27b-text__bodhi__cap4096/seed_101/eval/base+clarify.json": "5b11c872222835d8df7f9beddfe368dc9f1174214e70b0d0fe3e6c2393a081d7",
+    "results/healthbench__medgemma-27b-text__bodhi__cap4096/seed_101/eval/base+mediq-abstain.json": "aebfcf655c0c5d1b9b44d894c5413fcb6187b054189c6d9511fb1ad3d777e80a",
+    "results/healthbench__medgemma-27b-text__bodhi__cap4096/seed_101/eval/base+verbalized-confidence.json": "a1e94f711375b9e2c4552a153d6d6bd92519a8f43e38d84d6905414732c8279d",
+    "results/healthbench__medgemma-27b-text__bodhi__cap4096/seed_101/eval/base.json": "7b620c23e656847bd4b00e527ecc47f44b90f1c1a8466d4c94e5cf893b25ed0b",
+    "results/healthbench__medgemma-27b-text__bodhi__cap4096/seed_101/eval/lora+bodhi.json": "09c87ca3172e81f5f377e14a9896991efe42240ac752fca92db1afb548a26c87",
+    "results/healthbench__medgemma-27b-text__bodhi__cap4096/seed_101/eval/lora+red-flags-first.json": "829fe6a03ff0973ff3887ce732a5d83deea655bb79b47843e0a93b6e7ff50a92",
+    "results/healthbench__medgemma-27b-text__bodhi__cap4096/seed_101/eval/lora.json": "f083075127665ed6f3e2a0b5f48c950bd51724f86b73c9ea1aa009912f7ada8c",
+    "results/healthbench__medgemma-27b-text__bodhi__cap4096/seed_101/grade/epistemic__llama-3.1-8b.json": "a0ac168d9322bca56e5c6553acf0d797d434fb4bfe75bc45b4e726590adf1f6b",
+    "results/healthbench__medgemma-27b-text__bodhi__cap4096/seed_101/grade/judge__phi-4.json": "2d8e7d2db025ba0412abc2e788797ddc452d03ae3631fb2fd2eafff07c13b158"
+  },
+  "tokenizer": "tokenizer.json of google/medgemma-27b-text-it at 5b667cf2ddcf064085bc90952edb35a0edbfb79c is not in the local Hugging Face cache (fetch it with: huggingface-cli download google/medgemma-27b-text-it tokenizer.json --revision 5b667cf2ddcf064085bc90952edb35a0edbfb79c)"
+}

@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: ['*']
+
+# Cancel older runs on the same ref when new commits arrive.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          # check_doc_paths.py verifies <commit>:<path> references in history notes.
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      # The package with its train and dev extras (pyproject.toml), so the tests that
+      # import torch, transformers, peft, trl and bodhi-llm run instead of skipping. The
+      # gpu extra (autoawq, bitsandbytes) is CUDA only and stays out.
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e '.[train,dev]'
+
+      - name: Compile Python sources
+        run: python -m compileall -q bodhi_lora scripts
+
+      # Doc paths, the secrets scan, and the registry: every record in configs/ loads and
+      # passes the family rule (Makefile target check).
+      - name: Check repo hygiene and the registry
+        run: make check
+
+      # A clean checkout must rebuild every committed paper number (audit REPRO-6).
+      # HealthBench is the one input not in git; fetch downloads it from OpenAI's public
+      # bucket and checks it against the sha256 pins of its record, as setup.sh does.
+      - name: Rebuild the paper numbers from the checkout
+        run: |
+          python -m bodhi_lora fetch healthbench
+          make numbers
+          git diff --exit-code paper/generated
+          python scripts/check_paper_macros.py
+
+      # Every figure the paper includes, from the tracked results and the HealthBench file
+      # fetched above. Without tectonic, Figure 1 keeps its tracked pipeline.pdf.
+      - name: Rebuild the paper figures
+        run: make figures
+
+      - name: Run tests
+        run: python -m pytest

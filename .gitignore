@@ -1,0 +1,100 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+
+# The data root: benchmark files that python -m bodhi_lora fetch downloads or builds,
+# one folder per benchmark.
+data/raw/*
+!data/raw/.gitkeep
+
+# Model weights and optimizer state never go in git.
+checkpoints/
+*.bin
+*.safetensors
+optimizer*.pt
+
+# results/: one folder per cell (docs/ARCHITECTURE.md section 6). The rule depends on the
+# kind of file and is the same for every cell (open decision O2: the proposed default,
+# applied on 2026-10-11 and waiting for the first author's yes).
+# Tracked: manifests, cell records, id lists, scores, response tables, adapter configs,
+# trainer states, the probe and bench summaries, analysis and validation files. Ignored:
+# traces and the other JSONL (the probe's per-item text among them, open decision O8),
+# adapter weights and checkpoint state, raw eval and grade JSON, logs.
+results/**/*.jsonl
+results/**/logs/
+results/**/eval/*.json
+results/**/grade/*.json
+!results/**/manifest.json
+!results/**/*.manifest.json
+results/**/train/**
+!results/**/train/**/
+!results/**/train/**/adapter_config.json
+!results/**/train/**/trainer_state.json
+!results/**/train/**/manifest.json
+# A training run set aside under another name (R7 seed 42's batch-8 run, DECISIONS.md D31)
+# keeps the same files as train/.
+results/**/train.*/**
+!results/**/train.*/**/
+!results/**/train.*/**/adapter_config.json
+!results/**/train.*/**/trainer_state.json
+!results/**/train.*/**/manifest.json
+# The answer key unblinds the physician grading sheets, so it stays outside the repo
+# (docs/KNOWN_ISSUES.md). make_irr_excel.py writes it next to the sheets.
+results/**/validation/answer_key.xlsx
+
+paper/build/
+paper/figures/*.pdf
+# Figure 1 is hand-drawn TikZ; its PDF is tracked so the paper builds without a
+# second LaTeX run, and make figures rebuilds it byte for byte.
+!paper/figures/pipeline.pdf
+paper/figures/*.png
+paper/*.aux
+paper/*.bbl
+paper/*.blg
+paper/*.fdb_latexmk
+paper/*.fls
+paper/*.log
+paper/*.out
+paper/*.pdf
+paper/*.synctex.gz
+paper/missfont.log
+
+logs/
+wandb/
+*.log
+
+.env
+.env.local
+.venv/
+.venv-*/
+env/
+.DS_Store
+.vscode/
+.idea/
+
+temporal/
+
+data/grading/
+REBUTTAL_NOTES.md
+# Word exports of reviewer replies. The markdown in rebuttal/responses/ is the source.
+*.docx
+
+# --- submission build artifacts (regenerable, never commit) ---
+*.zip
+*.tar.gz
+paper/arxiv/
+paper/arxiv_upload/
+paper/neurips_submission/
+paper/preprint/
+
+# --- kept out while the paper is under double-blind review ---
+# (these carry real names; re-enable after acceptance)
+IRR-clinicians/
+paper/AUTHORS.md
+CONTRIBUTORS.md
+
+# --- scratch output and local notes ---
+outputs/

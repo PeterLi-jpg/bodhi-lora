@@ -1,0 +1,13 @@
+# Clinical Llama-3 base of two 2026-07 cells. It shares the evaluator's family (D6).
+id: med42-8b
+hf_id: m42-health/Llama3-Med42-8B
+revision: ceab7e7ee4b9dbde7ba82867f34274db51487d83
+last_modified: "2024-08-20"
+family: llama3
+domain: clinical
+params_b: 8
+chat_template:
+  # The tokenizer pads with its EOS (<|eot_id|>, id 128009). <|reserved_special_token_2|>
+  # (id 128004) is the reserved token that Llama 3.1 later named <|finetune_right_pad_id|>.
+  pad_token: "<|reserved_special_token_2|>"
+license: llama3

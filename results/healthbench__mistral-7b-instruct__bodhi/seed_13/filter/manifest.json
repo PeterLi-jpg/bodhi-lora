@@ -1,0 +1,107 @@
+{
+  "schema": 3,
+  "stage": "filter",
+  "cell": "healthbench__mistral-7b-instruct__bodhi",
+  "seed": 13,
+  "created_utc": "2026-11-01T18:54:43.639507+00:00",
+  "git": {
+    "sha": "<commit>",
+    "dirty": false,
+    "diff_sha256": null,
+    "n_untracked": 5
+  },
+  "packages": {
+    "python": "3.12.3",
+    "torch": "2.7.0",
+    "transformers": "4.57.6",
+    "vllm": "0.9.2",
+    "peft": "0.19.1",
+    "trl": "0.11.4",
+    "accelerate": "1.13.0",
+    "bitsandbytes": "0.47.0",
+    "datasets": "3.6.0",
+    "bodhi-llm": "0.1.4",
+    "huggingface-hub": "0.36.2",
+    "numpy": "2.2.6"
+  },
+  "host_sha256": "e57f9913e18993f3b7eea3afa676d9d0ae3c5a04f647be54a2f28299b57e4149",
+  "hardware": {
+    "visible_devices": null,
+    "gpus": [
+      {
+        "index": "0",
+        "name": "NVIDIA H100 80GB HBM3",
+        "memory": "81559 MiB"
+      },
+      {
+        "index": "1",
+        "name": "NVIDIA H100 80GB HBM3",
+        "memory": "81559 MiB"
+      },
+      {
+        "index": "2",
+        "name": "NVIDIA H100 80GB HBM3",
+        "memory": "81559 MiB"
+      },
+      {
+        "index": "3",
+        "name": "NVIDIA H100 80GB HBM3",
+        "memory": "81559 MiB"
+      },
+      {
+        "index": "4",
+        "name": "NVIDIA H100 80GB HBM3",
+        "memory": "81559 MiB"
+      },
+      {
+        "index": "5",
+        "name": "NVIDIA H100 80GB HBM3",
+        "memory": "81559 MiB"
+      },
+      {
+        "index": "6",
+        "name": "NVIDIA H100 80GB HBM3",
+        "memory": "81559 MiB"
+      },
+      {
+        "index": "7",
+        "name": "NVIDIA H100 80GB HBM3",
+        "memory": "81559 MiB"
+      }
+    ]
+  },
+  "time": {
+    "started_utc": "2026-11-01T18:54:43.446083+00:00",
+    "finished_utc": "2026-11-01T18:54:43.779733+00:00",
+    "seconds": 0.334
+  },
+  "inputs": [
+    {
+      "path": "/data/PROJECTS/bodhi/runs-2026-11/results/healthbench__mistral-7b-instruct__bodhi/shared/filter/kept.jsonl",
+      "bytes": 22382487,
+      "sha256": "1b79ebbdab1ec405c98f67554ef3f2f9c45fe6000047b0cbe083c1b7cbda4231",
+      "n_lines": 1726
+    }
+  ],
+  "outputs": [
+    {
+      "path": "/data/PROJECTS/bodhi/runs-2026-11/results/healthbench__mistral-7b-instruct__bodhi/seed_13/filter/train.jsonl",
+      "bytes": 20144203,
+      "sha256": "2fb3a283ebb8184f60f685e82dc788d7fcb18701ed22f22a1d4dff46d4fb4f0c",
+      "n_lines": 1554
+    },
+    {
+      "path": "/data/PROJECTS/bodhi/runs-2026-11/results/healthbench__mistral-7b-instruct__bodhi/seed_13/filter/val.jsonl",
+      "bytes": 2238284,
+      "sha256": "80361f09b2fa185ced5bf2ccab26f8c314c92e455253f437e934692a8f0415df",
+      "n_lines": 172
+    }
+  ],
+  "counts": {
+    "n_kept": 1726,
+    "n_train": 1554,
+    "n_val": 172
+  },
+  "status": "complete",
+  "split_seed": 13
+}

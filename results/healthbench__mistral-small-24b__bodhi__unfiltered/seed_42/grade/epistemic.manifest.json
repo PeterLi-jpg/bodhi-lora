@@ -1,0 +1,103 @@
+{
+  "schema": 3,
+  "stage": "grade",
+  "cell": "healthbench__mistral-small-24b__bodhi__unfiltered",
+  "seed": 42,
+  "created_utc": "2026-11-02T01:02:25.930860+00:00",
+  "git": {
+    "sha": "<commit>",
+    "dirty": false,
+    "diff_sha256": null,
+    "n_untracked": 13
+  },
+  "packages": {
+    "python": "3.12.3",
+    "torch": "2.8.0",
+    "transformers": "4.56.2",
+    "vllm": "0.10.2",
+    "peft": null,
+    "trl": null,
+    "accelerate": null,
+    "bitsandbytes": "0.47.0",
+    "datasets": "5.0.0",
+    "bodhi-llm": "0.1.4",
+    "huggingface-hub": "0.36.2",
+    "numpy": "2.2.6"
+  },
+  "host_sha256": "e57f9913e18993f3b7eea3afa676d9d0ae3c5a04f647be54a2f28299b57e4149",
+  "hardware": {
+    "visible_devices": "5",
+    "gpus": [
+      {
+        "index": "5",
+        "name": "NVIDIA H100 80GB HBM3",
+        "memory": "81559 MiB"
+      }
+    ]
+  },
+  "time": {
+    "started_utc": "2026-11-02T01:00:53.067406+00:00",
+    "finished_utc": "2026-11-02T01:02:26.069262+00:00",
+    "seconds": 93.002
+  },
+  "models": {
+    "grader": {
+      "id": "llama-3.1-8b",
+      "repo_id": "meta-llama/Llama-3.1-8B-Instruct",
+      "family": "llama3",
+      "revision": "0e9e39f249a16976918f6564b8830bc894c89659",
+      "revision_source": "record",
+      "unpinned_reason": null
+    }
+  },
+  "engines": {
+    "grader": {
+      "model": "meta-llama/Llama-3.1-8B-Instruct",
+      "revision": "0e9e39f249a16976918f6564b8830bc894c89659",
+      "max_model_len": 8192,
+      "max_num_seqs": 32,
+      "tensor_parallel_size": 1,
+      "dtype": "bfloat16",
+      "quantization": null,
+      "enforce_eager": true,
+      "request_timeout_s": 900,
+      "lora_path": null,
+      "lora_modules": {},
+      "max_loras": null,
+      "max_lora_rank": null,
+      "env": {}
+    }
+  },
+  "inputs": [
+    {
+      "path": "/data/PROJECTS/bodhi/runs-2026-11/results/healthbench__mistral-small-24b__bodhi__unfiltered/seed_42/eval/base.json",
+      "bytes": 2232573,
+      "sha256": "d405f9b9f7f9bc4b1770f6de584c0fc96fc96908ae98fb0a66dddd303db2ecd6"
+    },
+    {
+      "path": "/data/PROJECTS/bodhi/runs-2026-11/results/healthbench__mistral-small-24b__bodhi__unfiltered/seed_42/eval/lora.json",
+      "bytes": 2352011,
+      "sha256": "c4ba67dc32e48b04d640aeae57696cc58dc0e5e998d092a8c2d63dfbb1c29b36"
+    }
+  ],
+  "outputs": [
+    {
+      "path": "/data/PROJECTS/bodhi/runs-2026-11/results/healthbench__mistral-small-24b__bodhi__unfiltered/seed_42/grade/epistemic__llama-3.1-8b.json",
+      "bytes": 1688315,
+      "sha256": "fe490d8af893968231b5f021bd23733e7bf9a15937475ea14e69f2d9a6953e39"
+    }
+  ],
+  "counts": {
+    "base": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    },
+    "lora": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    }
+  },
+  "status": "complete"
+}

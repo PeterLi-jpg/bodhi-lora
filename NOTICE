@@ -1,0 +1,11 @@
+BODHI-LoRA
+Copyright 2026 Anonymous Authors
+
+This repository reuses released research code, datasets and model checkpoints.
+docs/REUSE.md lists each one with its source and license. The main ones are the
+BODHI prompt wrapper (https://pypi.org/project/bodhi-llm/), the OpenAI
+HealthBench evaluation sets, and the base and grader model checkpoints. Each
+checkpoint keeps its own license; MedGemma uses the Health AI Developer
+Foundations terms. The submitted MedGemma-27B adapters were trained with
+Google's tunix and qwix. The added base models were trained with Hugging Face
+transformers, peft and trl.

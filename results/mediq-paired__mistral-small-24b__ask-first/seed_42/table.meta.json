@@ -1,0 +1,56 @@
+{
+  "cell": "mediq-paired__mistral-small-24b__ask-first",
+  "completions": {
+    "base": 400,
+    "base+ask-first": 400,
+    "lora": 400,
+    "lora+ask-first": 400
+  },
+  "grade": {
+    "counts": {
+      "base": {
+        "examples": 400,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "base+ask-first": {
+        "examples": 400,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "lora": {
+        "examples": 400,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "lora+ask-first": {
+        "examples": 400,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      }
+    },
+    "file": "results/mediq-paired__mistral-small-24b__ask-first/seed_42/grade/epistemic__llama-3.1-8b.json",
+    "present": true
+  },
+  "n_examples": {
+    "base": 400,
+    "base+ask-first": 400,
+    "lora": 400,
+    "lora+ask-first": 400
+  },
+  "score_metric": {
+    "base": "normalized_score",
+    "base+ask-first": "normalized_score",
+    "lora": "normalized_score",
+    "lora+ask-first": "normalized_score"
+  },
+  "seed": 42,
+  "sources": {
+    "results/mediq-paired__mistral-small-24b__ask-first/seed_42/eval/base+ask-first.json": "42653b0f49467933b82b8ec5207f28cda384a6bad4092630b4f5effb78be5ff5",
+    "results/mediq-paired__mistral-small-24b__ask-first/seed_42/eval/base.json": "277ff4014023e88916d4da2a57e68b88b21e46a5588e608ef1f17c368f31bf92",
+    "results/mediq-paired__mistral-small-24b__ask-first/seed_42/eval/lora+ask-first.json": "101bb95d2cfa3aff4cf09c16a818ed9a38c97d26863a92de83c53afe550c1db6",
+    "results/mediq-paired__mistral-small-24b__ask-first/seed_42/eval/lora.json": "1ab788e56758050222f79c430e5e85fba83249e370675633764f1f54bbba1ebf",
+    "results/mediq-paired__mistral-small-24b__ask-first/seed_42/grade/epistemic__llama-3.1-8b.json": "5b4c2085c891596b7e7b7e8f77802d2716659aa069d25aa2f4c78f5330df2638"
+  },
+  "tokenizer": "mistralai/Mistral-Small-24B-Instruct-2501@9527884be6e5616bdd54de542f9ae13384489724"
+}

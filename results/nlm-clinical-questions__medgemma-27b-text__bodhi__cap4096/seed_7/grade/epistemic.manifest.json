@@ -1,0 +1,103 @@
+{
+  "schema": 3,
+  "stage": "grade",
+  "cell": "nlm-clinical-questions__medgemma-27b-text__bodhi__cap4096",
+  "seed": 7,
+  "created_utc": "2026-10-27T12:24:28.757161+00:00",
+  "git": {
+    "sha": "<commit>",
+    "dirty": false,
+    "diff_sha256": null,
+    "n_untracked": 3
+  },
+  "packages": {
+    "python": "3.12.3",
+    "torch": "2.8.0",
+    "transformers": "4.56.2",
+    "vllm": "0.10.2",
+    "peft": null,
+    "trl": null,
+    "accelerate": null,
+    "bitsandbytes": "0.47.0",
+    "datasets": "5.0.0",
+    "bodhi-llm": "0.1.4",
+    "huggingface-hub": "0.36.2",
+    "numpy": "2.2.6"
+  },
+  "host_sha256": "e57f9913e18993f3b7eea3afa676d9d0ae3c5a04f647be54a2f28299b57e4149",
+  "hardware": {
+    "visible_devices": "1",
+    "gpus": [
+      {
+        "index": "1",
+        "name": "NVIDIA H100 80GB HBM3",
+        "memory": "81559 MiB"
+      }
+    ]
+  },
+  "time": {
+    "started_utc": "2026-10-27T12:22:41.227166+00:00",
+    "finished_utc": "2026-10-27T12:24:28.892985+00:00",
+    "seconds": 107.666
+  },
+  "models": {
+    "grader": {
+      "id": "llama-3.1-8b",
+      "repo_id": "meta-llama/Llama-3.1-8B-Instruct",
+      "family": "llama3",
+      "revision": "0e9e39f249a16976918f6564b8830bc894c89659",
+      "revision_source": "record",
+      "unpinned_reason": null
+    }
+  },
+  "engines": {
+    "grader": {
+      "model": "meta-llama/Llama-3.1-8B-Instruct",
+      "revision": "0e9e39f249a16976918f6564b8830bc894c89659",
+      "max_model_len": 8192,
+      "max_num_seqs": 32,
+      "tensor_parallel_size": 1,
+      "dtype": "bfloat16",
+      "quantization": null,
+      "enforce_eager": true,
+      "request_timeout_s": 3600,
+      "lora_path": null,
+      "lora_modules": {},
+      "max_loras": null,
+      "max_lora_rank": null,
+      "env": {}
+    }
+  },
+  "inputs": [
+    {
+      "path": "/data/PROJECTS/collaborator/bodhi-lora/results/nlm-clinical-questions__medgemma-27b-text__bodhi__cap4096/seed_7/eval/base.json",
+      "bytes": 1368272,
+      "sha256": "51b535b1ffd335ad21f7cd250e55a8d42b11543b9bf1a16051ec5df6d93da6a1"
+    },
+    {
+      "path": "/data/PROJECTS/collaborator/bodhi-lora/results/nlm-clinical-questions__medgemma-27b-text__bodhi__cap4096/seed_7/eval/lora.json",
+      "bytes": 1116318,
+      "sha256": "766b5ff47688cd821be8a137ede665f7249988cf2753dfaae033e563a74e7e46"
+    }
+  ],
+  "outputs": [
+    {
+      "path": "/data/PROJECTS/collaborator/bodhi-lora/results/nlm-clinical-questions__medgemma-27b-text__bodhi__cap4096/seed_7/grade/epistemic__llama-3.1-8b.json",
+      "bytes": 3254432,
+      "sha256": "4d68a01faf66601c6f4d647cad1d7f02706c005dccbdbf9170ac40d6a93e9e51"
+    }
+  ],
+  "counts": {
+    "base": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    },
+    "lora": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    }
+  },
+  "status": "complete"
+}

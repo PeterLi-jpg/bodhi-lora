@@ -1,0 +1,17 @@
+{
+  "n_trained_prompts": 2091,
+  "n_eval_prompts": 1464,
+  "id_leak": 0,
+  "id_leak_first": [],
+  "text_duplicates": 0,
+  "text_duplicates_first": [],
+  "ngram": 13,
+  "near_copy_share": 0.8,
+  "near_copies": 0,
+  "near_copies_first": [],
+  "max_share": 0.0,
+  "n_share_at_least_half": 0,
+  "n_too_short_for_ngrams": 0,
+  "passed": true,
+  "problems": []
+}

@@ -1,0 +1,13 @@
+# Random weights, two layers, about one million parameters. The smoke cell trains it on
+# the CPU so `make smoke` runs every stage without a GPU or a token.
+id: tiny-random-llama
+hf_id: hf-internal-testing/tiny-random-LlamaForCausalLM
+revision: 9fb191250dd56d0ba7ec9785a025ed29c03d5998
+# Random weights have no pretraining lineage, so the model shares no family with a grader.
+family: test
+domain: general
+params_b: 0.001
+dtype: float32
+chat_template:
+  response_template: "[/INST]"
+license: see upstream

@@ -1,0 +1,72 @@
+{
+  "schema": 3,
+  "stage": "filter",
+  "cell": "healthbench__medgemma-27b-text__bodhi",
+  "seed": 7,
+  "created_utc": "2026-10-20T22:12:11.208250+00:00",
+  "git": {
+    "sha": "<commit>",
+    "dirty": false,
+    "diff_sha256": null,
+    "n_untracked": 4
+  },
+  "packages": {
+    "python": "3.12.11",
+    "torch": "2.7.0",
+    "transformers": "4.57.6",
+    "vllm": "0.9.2",
+    "peft": "0.19.1",
+    "trl": "0.11.4",
+    "accelerate": "1.13.0",
+    "bitsandbytes": "0.47.0",
+    "datasets": "3.6.0",
+    "bodhi-llm": "0.1.4",
+    "huggingface-hub": "0.36.2",
+    "numpy": "2.2.6"
+  },
+  "host_sha256": "f901b2d54f777417d7649670880c9e0091a4ed3712c9d3219af5f63bf530c67c",
+  "hardware": {
+    "visible_devices": null,
+    "gpus": [
+      {
+        "index": "0",
+        "name": "NVIDIA A100-SXM4-80GB",
+        "memory": "81920 MiB"
+      }
+    ]
+  },
+  "time": {
+    "started_utc": "2026-10-20T22:12:09.969744+00:00",
+    "finished_utc": "2026-10-20T22:12:12.447181+00:00",
+    "seconds": 2.477
+  },
+  "inputs": [
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/shared/filter/kept.jsonl",
+      "bytes": 47084460,
+      "sha256": "d27babbd95fe06c6567859a2bf08751bfaeef08111de4676ea01171e1837e07f",
+      "n_lines": 2482
+    }
+  ],
+  "outputs": [
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_7/filter/train.jsonl",
+      "bytes": 42426944,
+      "sha256": "0652bad39420cc851bd198b5c6ba04e4eaff79fdfc8a5bcf062094c5cf4122af",
+      "n_lines": 2234
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_7/filter/val.jsonl",
+      "bytes": 4657516,
+      "sha256": "d67bb8556f04e3a6f944ec8ad3a2ffceaf642730beb1938d284d7e2e7fa7dafb",
+      "n_lines": 248
+    }
+  ],
+  "counts": {
+    "n_kept": 2482,
+    "n_train": 2234,
+    "n_val": 248
+  },
+  "status": "complete",
+  "split_seed": 7
+}

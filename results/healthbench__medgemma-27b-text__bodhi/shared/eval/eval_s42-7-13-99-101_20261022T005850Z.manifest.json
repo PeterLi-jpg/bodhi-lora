@@ -1,0 +1,578 @@
+{
+  "schema": 3,
+  "stage": "eval",
+  "cell": "healthbench__medgemma-27b-text__bodhi",
+  "seed": null,
+  "created_utc": "2026-10-22T22:34:41.372079+00:00",
+  "git": {
+    "sha": "<commit>",
+    "dirty": false,
+    "diff_sha256": null,
+    "n_untracked": 5
+  },
+  "packages": {
+    "python": "3.12.11",
+    "torch": "2.8.0",
+    "transformers": "4.56.2",
+    "vllm": "0.10.2",
+    "peft": null,
+    "trl": null,
+    "accelerate": null,
+    "bitsandbytes": "0.47.0",
+    "datasets": "5.0.0",
+    "bodhi-llm": "0.1.4",
+    "huggingface-hub": "0.36.2",
+    "numpy": "2.2.6"
+  },
+  "host_sha256": "1a0f66b435cfd84be5750769e2c6587c5bc24b35009b7cfdd98508726f6ce272",
+  "hardware": {
+    "visible_devices": "0",
+    "gpus": [
+      {
+        "index": "0",
+        "name": "NVIDIA A100-SXM4-80GB",
+        "memory": "81920 MiB"
+      }
+    ]
+  },
+  "time": {
+    "started_utc": "2026-10-22T00:58:50.831754+00:00",
+    "finished_utc": "2026-10-22T22:34:42.448430+00:00",
+    "seconds": 77751.617
+  },
+  "config": {
+    "seeds": [
+      42,
+      7,
+      13,
+      99,
+      101
+    ],
+    "eval": {
+      "conditions": [
+        "base",
+        "base+bodhi",
+        "lora",
+        "lora+bodhi",
+        "base+clarify",
+        "base+verbalized-confidence",
+        "base+mediq-abstain",
+        "base+red-flags-first",
+        "lora+red-flags-first"
+      ],
+      "ids": {
+        "policy": "per_seed_draw",
+        "n": 200,
+        "unit": "row",
+        "only": [],
+        "file": null
+      },
+      "base_precision": "train",
+      "base_precision_reason": null,
+      "max_new_tokens": 1024,
+      "max_new_tokens_per_pass": 2048,
+      "serving": {
+        "max_model_len": 8192,
+        "max_num_seqs": 32,
+        "concurrency": 32,
+        "request_timeout_s": 900,
+        "drain_s": 0.0,
+        "enforce_eager": null
+      },
+      "shared_server": true
+    }
+  },
+  "config_sha256": "fd7574a1ccd54b9871a097737352855335522b82ab3fd96f48b43b54b03496f1",
+  "models": {
+    "policy": {
+      "id": "medgemma-27b-text",
+      "repo_id": "google/medgemma-27b-text-it",
+      "family": "gemma",
+      "revision": "5b667cf2ddcf064085bc90952edb35a0edbfb79c",
+      "revision_source": "record",
+      "unpinned_reason": null
+    },
+    "grader": {
+      "id": "llama-3.1-8b",
+      "repo_id": "meta-llama/Llama-3.1-8B-Instruct",
+      "family": "llama3",
+      "revision": "0e9e39f249a16976918f6564b8830bc894c89659",
+      "revision_source": "record",
+      "unpinned_reason": null
+    }
+  },
+  "engines": {
+    "policy": {
+      "model": "google/medgemma-27b-text-it",
+      "revision": "5b667cf2ddcf064085bc90952edb35a0edbfb79c",
+      "max_model_len": 8192,
+      "max_num_seqs": 32,
+      "tensor_parallel_size": 1,
+      "dtype": "bfloat16",
+      "quantization": "bitsandbytes",
+      "enforce_eager": true,
+      "request_timeout_s": 900,
+      "lora_path": null,
+      "lora_modules": {
+        "adapter-s42": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_42/train",
+        "adapter-s7": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_7/train",
+        "adapter-s13": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_13/train",
+        "adapter-s99": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_99/train",
+        "adapter-s101": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_101/train"
+      },
+      "max_loras": 5,
+      "max_lora_rank": 16,
+      "env": {}
+    },
+    "grader": {
+      "model": "meta-llama/Llama-3.1-8B-Instruct",
+      "revision": "0e9e39f249a16976918f6564b8830bc894c89659",
+      "max_model_len": 8192,
+      "max_num_seqs": 32,
+      "tensor_parallel_size": 1,
+      "dtype": "bfloat16",
+      "quantization": null,
+      "enforce_eager": true,
+      "request_timeout_s": 900,
+      "lora_path": null,
+      "lora_modules": {},
+      "max_loras": null,
+      "max_lora_rank": null,
+      "env": {}
+    }
+  },
+  "outputs": [
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_42/eval/base.json",
+      "bytes": 2742580,
+      "sha256": "f8a5fe978a98a69461eab75bbbb73f7e627198edaf111bbb838efa6ce1aab616"
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_42/eval/base+bodhi.json",
+      "bytes": 3023467,
+      "sha256": "eb49600173ee46f71611ce3c7da834a1ea001560af9d0e88e060d5e470ac5ede"
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_42/eval/lora.json",
+      "bytes": 2575674,
+      "sha256": "63d29f4e9631eff4417ee3324fed6cdb2c933ead3fa516fd94cc4e7b08f4542e"
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_42/eval/lora+bodhi.json",
+      "bytes": 3036025,
+      "sha256": "88c31dcbdbf42ec8e20b5088f58435328f0a1c234db4a046845286cecd501a2a"
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_42/eval/base+clarify.json",
+      "bytes": 2373422,
+      "sha256": "3532ebb011871b8d71e68d299cbaeab4c6b706518ad1aaff92d9a50b6317f4f7"
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_42/eval/base+verbalized-confidence.json",
+      "bytes": 2676386,
+      "sha256": "34386bcec7f72f541854b564a7f2b6b793f11d573722750dd6887a14dfdc543f"
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_42/eval/base+mediq-abstain.json",
+      "bytes": 1960704,
+      "sha256": "ab80d7302334864b975339ad1ed2c64c6d3875cade98fa6d60ae5ec864a8cb2e"
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_42/eval/base+red-flags-first.json",
+      "bytes": 3021145,
+      "sha256": "5a6e69e9624632771f34de43098fb228cb49d84bc4c196d8168e0cf928f2f678"
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_42/eval/lora+red-flags-first.json",
+      "bytes": 3042521,
+      "sha256": "23dd84d65672f4025a2d03cdf7e27f8a6e2d412e13da281e6c5359b92da67594"
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_7/eval/base.json",
+      "bytes": 2626866,
+      "sha256": "eff52d5ad4fcf3748b00315864e15154727c4c635f5438dee3bb8f83f61e3762"
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_7/eval/base+bodhi.json",
+      "bytes": 2872390,
+      "sha256": "2d9c5f95a2b5d3623ec8742c75e387227e5e9b51d78853fcf2fa024050675fa4"
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_7/eval/lora.json",
+      "bytes": 2435064,
+      "sha256": "1b68201d623180e89015918c580bb7967777c9bbdfe282a066a1f3311310ffaf"
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_7/eval/lora+bodhi.json",
+      "bytes": 2796478,
+      "sha256": "cbc48c16fe1ac69c5ad3e3c103c364567bfe1c335cedaf21a8ad9cabdddfa9e3"
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_7/eval/base+clarify.json",
+      "bytes": 2302602,
+      "sha256": "65bb45bfb6994ff9a54ff50f6cd61ff27fd2cb09f3702af221233869c6aef935"
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_7/eval/base+verbalized-confidence.json",
+      "bytes": 2567897,
+      "sha256": "bc09ee2e52c8cd395e4b5fe7414adb9ef38c88980f6bc818dbd6afd07847a458"
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_7/eval/base+mediq-abstain.json",
+      "bytes": 1847146,
+      "sha256": "0622ad501dd5f0ff2704fd272060a778ea1cfcf28197dbd7800ac1fb3daae4db"
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_7/eval/base+red-flags-first.json",
+      "bytes": 2809846,
+      "sha256": "1af34b3bfa7cf025ba0c3cb653e5f6847ec16b4d2dfc3b4e16dd9277cd662db6"
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_7/eval/lora+red-flags-first.json",
+      "bytes": 2847759,
+      "sha256": "2869e9ea1055a62577c28dabef30204e21c762941bd3c94e6af35061b2b7ef9c"
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_13/eval/base.json",
+      "bytes": 2748886,
+      "sha256": "576e519434f9cfc2389ed41c9e1c7c3454ec214fa54f886d9cbed52078873bd2"
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_13/eval/base+bodhi.json",
+      "bytes": 3118658,
+      "sha256": "8e2223b5e3063aee7094ce94d567d8edade309a953ffb72c24717697fa5af537"
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_13/eval/lora.json",
+      "bytes": 2557898,
+      "sha256": "cf3d01f45a19e6e6f6fca613af873e65bf7b63b4596e08332b22cc4bbfeb8a09"
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_13/eval/lora+bodhi.json",
+      "bytes": 3081045,
+      "sha256": "408c23af870a390fbb5ed8be615a86d4afc9e5be5132782b3d60e0663205ae90"
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_13/eval/base+clarify.json",
+      "bytes": 2352588,
+      "sha256": "bb1005f3f2190fc2206f21dea06115c519ed2401f0f66e50617e4cf73e57fac2"
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_13/eval/base+verbalized-confidence.json",
+      "bytes": 2601189,
+      "sha256": "f07d3410b23e0df18614590f935391de304500c539209e0174e1d222be3dfad9"
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_13/eval/base+mediq-abstain.json",
+      "bytes": 1963412,
+      "sha256": "a1fb823a4ebb14106468e3b596361695755292706fbe427694fc2af6983973eb"
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_13/eval/base+red-flags-first.json",
+      "bytes": 3033053,
+      "sha256": "88a1900aa80cad449db688580163a7ba8f7edd42724b3308903b491ee2a02570"
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_13/eval/lora+red-flags-first.json",
+      "bytes": 3135868,
+      "sha256": "66f19502ca0bf58430fbb47b73faf2e5df467690a151dd6e24688440619a7483"
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_99/eval/base.json",
+      "bytes": 2751410,
+      "sha256": "0fbb333748685eda78513cee80db7828bafd61a411a80ba567962c5928eb2fd2"
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_99/eval/base+bodhi.json",
+      "bytes": 3037480,
+      "sha256": "c1775856cb15cc4a80b8cd032a9463df7da4c807334c9ecf4dcefd3610222591"
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_99/eval/lora.json",
+      "bytes": 2582384,
+      "sha256": "c44922238d7bea0ec5a0c41c760065ee9ed00d9be7c400ec5816810c7b4fde85"
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_99/eval/lora+bodhi.json",
+      "bytes": 2981496,
+      "sha256": "c2430ac6c86f43f1d8dc23714f77e0ad9a12dd62eb2e6828bce04364f828dd8f"
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_99/eval/base+clarify.json",
+      "bytes": 2414736,
+      "sha256": "e7083da9afa8f757f6aff80b7cf1710e1e7c5c0e7592ae25c6510680befb0498"
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_99/eval/base+verbalized-confidence.json",
+      "bytes": 2727464,
+      "sha256": "35349c672c975d6d9589803832d7912ac4c3fc31789be9c409fca53efba7db4a"
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_99/eval/base+mediq-abstain.json",
+      "bytes": 2047138,
+      "sha256": "d814c39069b7e01fa7d61819c15c1810ecfbbc731de9d1df6af51f28bea092d5"
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_99/eval/base+red-flags-first.json",
+      "bytes": 3006030,
+      "sha256": "fc641a37ec78895f68169dbf6748224caed8ef0ad4810c522bea873ec4e9fd0a"
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_99/eval/lora+red-flags-first.json",
+      "bytes": 3064565,
+      "sha256": "977471c4b769e63d7692f27b1bd9612ec650b46126cf42c593bd1c1370ddb6db"
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_101/eval/base.json",
+      "bytes": 2778599,
+      "sha256": "9ef584a35e012a05af9b9ffd89d500bbf42c4bbb48cf2d7c6e16969230789f99"
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_101/eval/base+bodhi.json",
+      "bytes": 3121802,
+      "sha256": "7abdf2193245cbed3b2a31c3e013660b39f050be67171e2ec82e80995ec31f5f"
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_101/eval/lora.json",
+      "bytes": 2693219,
+      "sha256": "772b7dfb29b2c2ee6b5f3256962492b2f3761ff150c3dbc6e4643024e87c3213"
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_101/eval/lora+bodhi.json",
+      "bytes": 3127116,
+      "sha256": "cf1c5dfd645d2b0ba18409028a56d7b2413eb53d96453bfa2f06f082dc04c763"
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_101/eval/base+clarify.json",
+      "bytes": 2450167,
+      "sha256": "9d55cc7fb7dd4b37bebf21a2d73e639060669d44e1e6d16896187034be0d03f4"
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_101/eval/base+verbalized-confidence.json",
+      "bytes": 2762988,
+      "sha256": "05c6fd9a7a6ddb96211e3b7d1fdbd9cb8aaa0c276a9e9044b6e84cf9b5aed8e1"
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_101/eval/base+mediq-abstain.json",
+      "bytes": 2085172,
+      "sha256": "8ddc6fac343515c7345498e689a20eda1cec48383cb30006ddd97c04f0fc31ab"
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_101/eval/base+red-flags-first.json",
+      "bytes": 3219492,
+      "sha256": "23c645b602309670b2008db9753ba856b3db167941679d873fca3e7f729e0477"
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_101/eval/lora+red-flags-first.json",
+      "bytes": 3208268,
+      "sha256": "da169160f9e5a343802103aa15986d430f4d4a2d58c8df49457ed7dfaaf2a609"
+    }
+  ],
+  "counts": {
+    "n_examples": 9000,
+    "n_generated": 9000,
+    "n_graded": 9000,
+    "calls": 14000,
+    "completion_tokens_total": 10481897,
+    "n_files": 45,
+    "n_conditions_run": 45,
+    "n_incomplete": 0
+  },
+  "status": "complete",
+  "shared_server": {
+    "run_manifest": "results/healthbench__medgemma-27b-text__bodhi/shared/eval/eval_s42-7-13-99-101_20261022T005850Z.manifest.json",
+    "seeds": [
+      42,
+      7,
+      13,
+      99,
+      101
+    ],
+    "conditions_run": [
+      [
+        42,
+        "base"
+      ],
+      [
+        42,
+        "base+bodhi"
+      ],
+      [
+        42,
+        "lora"
+      ],
+      [
+        42,
+        "lora+bodhi"
+      ],
+      [
+        42,
+        "base+clarify"
+      ],
+      [
+        42,
+        "base+verbalized-confidence"
+      ],
+      [
+        42,
+        "base+mediq-abstain"
+      ],
+      [
+        42,
+        "base+red-flags-first"
+      ],
+      [
+        42,
+        "lora+red-flags-first"
+      ],
+      [
+        7,
+        "base"
+      ],
+      [
+        7,
+        "base+bodhi"
+      ],
+      [
+        7,
+        "lora"
+      ],
+      [
+        7,
+        "lora+bodhi"
+      ],
+      [
+        7,
+        "base+clarify"
+      ],
+      [
+        7,
+        "base+verbalized-confidence"
+      ],
+      [
+        7,
+        "base+mediq-abstain"
+      ],
+      [
+        7,
+        "base+red-flags-first"
+      ],
+      [
+        7,
+        "lora+red-flags-first"
+      ],
+      [
+        13,
+        "base"
+      ],
+      [
+        13,
+        "base+bodhi"
+      ],
+      [
+        13,
+        "lora"
+      ],
+      [
+        13,
+        "lora+bodhi"
+      ],
+      [
+        13,
+        "base+clarify"
+      ],
+      [
+        13,
+        "base+verbalized-confidence"
+      ],
+      [
+        13,
+        "base+mediq-abstain"
+      ],
+      [
+        13,
+        "base+red-flags-first"
+      ],
+      [
+        13,
+        "lora+red-flags-first"
+      ],
+      [
+        99,
+        "base"
+      ],
+      [
+        99,
+        "base+bodhi"
+      ],
+      [
+        99,
+        "lora"
+      ],
+      [
+        99,
+        "lora+bodhi"
+      ],
+      [
+        99,
+        "base+clarify"
+      ],
+      [
+        99,
+        "base+verbalized-confidence"
+      ],
+      [
+        99,
+        "base+mediq-abstain"
+      ],
+      [
+        99,
+        "base+red-flags-first"
+      ],
+      [
+        99,
+        "lora+red-flags-first"
+      ],
+      [
+        101,
+        "base"
+      ],
+      [
+        101,
+        "base+bodhi"
+      ],
+      [
+        101,
+        "lora"
+      ],
+      [
+        101,
+        "lora+bodhi"
+      ],
+      [
+        101,
+        "base+clarify"
+      ],
+      [
+        101,
+        "base+verbalized-confidence"
+      ],
+      [
+        101,
+        "base+mediq-abstain"
+      ],
+      [
+        101,
+        "base+red-flags-first"
+      ],
+      [
+        101,
+        "lora+red-flags-first"
+      ]
+    ],
+    "client_threads": 32,
+    "replies_kept_from_an_earlier_run": 0
+  },
+  "incomplete": [],
+  "base_evaluated_once": []
+}

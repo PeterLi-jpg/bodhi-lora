@@ -1,0 +1,38 @@
+{
+  "cell": "healthbench__medgemma-27b-text__bodhi__labelled-cap4096",
+  "completions": {
+    "base": 775,
+    "lora": 775
+  },
+  "grade": {
+    "counts": {
+      "base": {
+        "examples": 775,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "lora": {
+        "examples": 775,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      }
+    },
+    "file": "results/healthbench__medgemma-27b-text__bodhi__labelled-cap4096/seed_101/grade/epistemic__llama-3.1-8b.json",
+    "present": true
+  },
+  "n_examples": {
+    "base": 775,
+    "lora": 775
+  },
+  "score_metric": {
+    "base": "normalized_score",
+    "lora": "normalized_score"
+  },
+  "seed": 101,
+  "sources": {
+    "results/healthbench__medgemma-27b-text__bodhi__labelled-cap4096/seed_101/eval/base.json": "210710bb2787ac5eacd54a6af7166e71e3c40af7a7e438aca4545d8813466360",
+    "results/healthbench__medgemma-27b-text__bodhi__labelled-cap4096/seed_101/eval/lora.json": "487702096d6df14bdda5da9fba1045f3043ac2e1a55e8f8ce0458523dbd9478b",
+    "results/healthbench__medgemma-27b-text__bodhi__labelled-cap4096/seed_101/grade/epistemic__llama-3.1-8b.json": "b439dda9a1e1586737872d460f20fa121985319e6419b77615f983ea18a79559"
+  },
+  "tokenizer": "tokenizer.json of google/medgemma-27b-text-it at 5b667cf2ddcf064085bc90952edb35a0edbfb79c is not in the local Hugging Face cache (fetch it with: huggingface-cli download google/medgemma-27b-text-it tokenizer.json --revision 5b667cf2ddcf064085bc90952edb35a0edbfb79c)"
+}

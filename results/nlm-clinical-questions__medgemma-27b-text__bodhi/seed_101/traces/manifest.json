@@ -1,0 +1,42 @@
+{
+  "schema": 3,
+  "stage": "traces",
+  "cell": "nlm-clinical-questions__medgemma-27b-text__bodhi",
+  "seed": 101,
+  "created_utc": "2026-10-25T17:27:40.086618+00:00",
+  "git": {
+    "sha": "<commit>",
+    "dirty": false,
+    "diff_sha256": null,
+    "n_untracked": 8
+  },
+  "packages": {
+    "python": "3.12.11",
+    "torch": "2.8.0",
+    "transformers": "4.56.2",
+    "vllm": "0.10.2",
+    "peft": null,
+    "trl": null,
+    "accelerate": null,
+    "bitsandbytes": "0.47.0",
+    "datasets": "5.0.0",
+    "bodhi-llm": "0.1.4",
+    "huggingface-hub": "0.36.2",
+    "numpy": "2.2.6"
+  },
+  "host_sha256": "a41e382dd7e7da8a30032455e2b2800ce219276b6e8c443c0ba4a63a243baed7",
+  "hardware": {
+    "visible_devices": null,
+    "gpus": [
+      {
+        "index": "0",
+        "name": "NVIDIA A100-SXM4-80GB",
+        "memory": "81920 MiB"
+      }
+    ]
+  },
+  "status": "complete",
+  "points_to": "results/healthbench__medgemma-27b-text__bodhi/seed_101/traces/manifest.json",
+  "points_to_sha256": "5ac3ff4057aa80346ebc92fb95cbd808ed69e61e78c481fff62ecc0b0ca167d0",
+  "note": "adapters of healthbench__medgemma-27b-text__bodhi"
+}

@@ -1,0 +1,121 @@
+"""Write small tracked copies of the scores in two large ignored files.
+
+Two files that git ignores because of their size hold scores the paper reports
+(<M> is the submitted cell, <pilot> the 2026-04 pilot, both under results/):
+
+  <M>/seed_7/filter/train.jsonl      (49 MB: the seed-7 training traces)
+  <pilot>/seed_42/eval/<cond>.json   (8 MB: the seed-42 run graded by Qwen2.5-14B)
+
+This script copies their scores, with the prompt ids, into
+<M>/seed_7/filter/filter_scores.json and <pilot>/analysis/qwen_grader_scores.json,
+which are tracked. The analysis reads the filter scores for the tau table (make
+analyze), so a clean checkout rebuilds every number. The pilot's scores reach the paper
+through its tracked response table now; the copy stays as the record of the scores the
+pilot stored. The output keeps the source row order, so float sums match a run on the
+source files bit for bit.
+
+The derived files hold no response text. Each records the sha256 of its source, so a
+reader with the source file can rerun this script and diff the output. The tracked
+copies name their sources by the paths the files had when they were exported, before
+the results root (results/PROVENANCE.md); a new export names the paths it read.
+
+Usage:
+    python3 scripts/export_derived_inputs.py [--filter-train PATH] [--qwen-grader-dir DIR]
+"""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import re
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+
+from bodhi_lora.registry import condition_from_legacy  # noqa: E402
+
+MAIN_CELL = ROOT / "results" / "healthbench__medgemma-27b-text__bodhi__2026-05"
+PILOT = ROOT / "results" / "healthbench__medgemma-27b-text__bodhi__2026-04"
+FILTER_SCORES = MAIN_CELL / "seed_7" / "filter" / "filter_scores.json"
+QWEN_SCORES = PILOT / "analysis" / "qwen_grader_scores.json"
+# The side run graded these three conditions only.
+QWEN_CONDITIONS = ("base_no_wrapper", "base_bodhi", "lora_no_wrapper")
+
+
+def _sha256(path: Path) -> str:
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _rel(path: Path) -> str:
+    try:
+        return str(path.resolve().relative_to(ROOT.resolve()))
+    except ValueError:
+        return str(path)
+
+
+def _write(path: Path, obj: dict) -> None:
+    # indent=1 puts every number on its own line; fold each [prompt_id, value] pair
+    # back onto one line so the file stays short and diffs read row by row.
+    text = re.sub(r"\[\n\s+(\"[^\"]*\"),\n\s+([^\n]+)\n\s+\]", r"[\1, \2]", json.dumps(obj, indent=1))
+    if json.loads(text) != obj:
+        raise SystemExit(f"export_derived_inputs: folding changed the content of {path.name}")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text + "\n")
+    print(f"wrote {_rel(path)}")
+
+
+def export_filter_scores(src: Path) -> dict:
+    rows = []
+    with open(src) as f:
+        for line in f:
+            if line.strip():
+                r = json.loads(line)
+                rows.append([r["prompt_id"], r["grade"]["normalized_score"]])
+    return {
+        "what": "Qwen2.5-14B filter score of each trace in the seed-7 training split",
+        "source": _rel(src),
+        "source_sha256": _sha256(src),
+        "columns": ["prompt_id", "normalized_score"],
+        "rows": rows,
+    }
+
+
+def export_qwen_scores(qdir: Path) -> dict:
+    conditions, sources, graders = {}, {}, set()
+    for cfg in QWEN_CONDITIONS:
+        p = qdir / f"{condition_from_legacy(cfg)}.json"
+        with open(p) as f:
+            q = json.load(f)
+        graders.add(q.get("run_metadata", {}).get("grader_model"))
+        conditions[cfg] = [[r["prompt_id"], r["score"]] for r in q["results"]]
+        sources[cfg] = {"source": _rel(p), "source_sha256": _sha256(p)}
+    if len(graders) != 1:
+        raise SystemExit(f"export_derived_inputs: grader differs across conditions: {graders}")
+    return {
+        "what": "seed-42 side run: aggregate HealthBench score per response, graded by Qwen2.5-14B",
+        "grader_model": graders.pop(),
+        "columns": ["prompt_id", "score"],
+        "sources": sources,
+        "conditions": conditions,
+    }
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    ap.add_argument("--filter-train", type=Path, default=MAIN_CELL / "seed_7" / "filter" / "train.jsonl")
+    ap.add_argument("--qwen-grader-dir", type=Path, default=PILOT / "seed_42" / "eval")
+    ap.add_argument("--filter-out", type=Path, default=FILTER_SCORES)
+    ap.add_argument("--qwen-out", type=Path, default=QWEN_SCORES)
+    a = ap.parse_args()
+    _write(a.filter_out, export_filter_scores(a.filter_train))
+    _write(a.qwen_out, export_qwen_scores(a.qwen_grader_dir))
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,39 @@
+# Inference env (.venv-infer): vLLM serving for the probe, traces, filter, eval,
+# grade and bench stages (bodhi_lora/pipeline/). It is separate from the training
+# env of pyproject.toml because vLLM 0.10.2 pins torch 2.8.0, and training pins torch
+# 2.7.0 and transformers 4.57.6. The runner starts the stages with python.infer of
+# configs/project.yaml (default .venv-infer/bin/python).
+#
+# The pins are the env that ran the 2026-07 cells and the 2026-10 runs on the GPU host:
+#   - its .venv-infer had every package installed by 2026-07-23 21:44 UTC, and the first
+#     2026-07 output is from 22:38 that day;
+#   - the 2026-07 launcher ran every vLLM stage with it
+#     (<commit>:rebuttal/launch/run_cell.sh:22);
+#   - all 144 eval files of the 2026-07 cells record transformers 4.56.2, which only
+#     this env has (the training env has 4.57.6);
+#   - the 2026-10 stage manifests record vllm 0.10.2, torch 2.8.0, transformers 4.56.2.
+# The one change since 2026-07 is bitsandbytes, added on 2026-10-11 for the 4-bit base of
+# the 2026-10 QLoRA cells (the 2026-07 cells served their base in bf16).
+# requirements-infer.lock.txt is the env's full pip freeze; setup.sh installs this file
+# with the lock as constraints, so a new env gets the same version of every package.
+#
+# The submitted cell (2026-05) ran on Modal with vllm>=0.6.5,<0.10 (legacy/README.md).
+vllm==0.10.2
+# vllm 0.10.2 requires torch==2.8.0 and transformers>=4.55.2 (its PyPI metadata).
+torch==2.8.0
+transformers==4.56.2
+bodhi-llm[all]==0.1.4
+# bitsandbytes serves a 4-bit base (eval.base_precision: train on a QLoRA cell). vLLM's
+# bitsandbytes loader asks for >=0.46.1.
+bitsandbytes==0.47.0; sys_platform == "linux"
+# No stage reads it (python -m bodhi_lora fetch builds the rows in the training env); the
+# env that ran has 5.0.0.
+datasets>=2.18.0,<6.0.0
+huggingface-hub
+numpy>=1.24,<3.0
+pyyaml>=6.0,<7.0
+# The registry schema (bodhi_lora/registry/schema.py). vLLM 0.10.2 needs pydantic>=2.11.7.
+pydantic>=2.11.7,<3
+tqdm>=4.65
+# The probe stage computes its Fisher test with scipy (bodhi_lora/pipeline/probe.py).
+scipy>=1.11,<2.0

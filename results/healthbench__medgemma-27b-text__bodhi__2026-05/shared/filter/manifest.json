@@ -1,0 +1,17 @@
+{
+  "schema": 2,
+  "stage": "filter",
+  "cell": "healthbench__medgemma-27b-text__bodhi__2026-05",
+  "seed": null,
+  "status": "not_kept",
+  "recorded": {
+    "tau": 0.4,
+    "raw": 4000,
+    "kept": 3129
+  },
+  "source": "paper/submitted/neurips2026/main.tex:117",
+  "note": "the filter log of this cell is not in the repo (PROV-11); the submitted paper states that 3,129 of 4,000 traces passed tau = 0.4 (seed 42). The filter grades greedily, so every seed keeps the same traces. scripts/paper_stats.py held these two counts as constants until 2026-10-10.",
+  "written_by": {
+    "by_hand": "2026-10-10, from the source above"
+  }
+}

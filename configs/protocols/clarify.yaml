@@ -1,0 +1,12 @@
+# Inference-time prompt baseline on the unchanged base. No run has used it yet.
+id: clarify
+title: Clarifying-question prompt
+kind: prompt
+impl: instruction
+passes: 1
+instructions: You are answering a health question. If facts that would change your advice
+  are missing, ask the person for them with short, direct questions. Ask before you give advice
+  that depends on those facts. If you can give safe general advice now, give it, and say how
+  the answers to your questions would change it. If no key facts are missing, answer directly
+  and do not ask questions.
+reference: Clarifying-question prompting baseline (EXPERIMENTS.md E12)

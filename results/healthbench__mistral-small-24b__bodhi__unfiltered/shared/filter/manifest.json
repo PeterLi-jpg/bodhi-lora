@@ -1,0 +1,157 @@
+{
+  "schema": 3,
+  "stage": "filter",
+  "cell": "healthbench__mistral-small-24b__bodhi__unfiltered",
+  "seed": null,
+  "created_utc": "2026-11-01T17:25:21.907607+00:00",
+  "git": {
+    "sha": "<commit>",
+    "dirty": false,
+    "diff_sha256": null,
+    "n_untracked": 4
+  },
+  "packages": {
+    "python": "3.12.3",
+    "torch": "2.8.0",
+    "transformers": "4.56.2",
+    "vllm": "0.10.2",
+    "peft": null,
+    "trl": null,
+    "accelerate": null,
+    "bitsandbytes": "0.47.0",
+    "datasets": "5.0.0",
+    "bodhi-llm": "0.1.4",
+    "huggingface-hub": "0.36.2",
+    "numpy": "2.2.6"
+  },
+  "host_sha256": "e57f9913e18993f3b7eea3afa676d9d0ae3c5a04f647be54a2f28299b57e4149",
+  "hardware": {
+    "visible_devices": "5",
+    "gpus": [
+      {
+        "index": "5",
+        "name": "NVIDIA H100 80GB HBM3",
+        "memory": "81559 MiB"
+      }
+    ]
+  },
+  "time": {
+    "started_utc": "2026-11-01T17:25:20.920646+00:00",
+    "finished_utc": "2026-11-01T17:25:22.588320+00:00",
+    "seconds": 1.668
+  },
+  "config": {
+    "filter": {
+      "tau": {
+        "rule": "none",
+        "value": null,
+        "percentile": null,
+        "min_kept_share": null,
+        "seed": 0
+      },
+      "val_ratio": 0.1,
+      "split_policy": "per_seed",
+      "split_seed": null,
+      "serving": {
+        "max_model_len": 8192,
+        "max_num_seqs": 64,
+        "concurrency": 16,
+        "request_timeout_s": 180,
+        "drain_s": 0.0,
+        "enforce_eager": null
+      }
+    }
+  },
+  "config_sha256": "257de89b2fd534c005ba6057b68b822eaa63c777dbe9a0c0f41fb0aae9631d37",
+  "models": {
+    "grader": {
+      "id": "qwen2.5-14b",
+      "repo_id": "Qwen/Qwen2.5-14B-Instruct",
+      "family": "qwen2",
+      "revision": "cf98f3b3bbb457ad9e2bb7baf9a0125b6b88caa8",
+      "revision_source": "record",
+      "unpinned_reason": null
+    }
+  },
+  "engines": {
+    "grader": {
+      "model": "Qwen/Qwen2.5-14B-Instruct",
+      "revision": "cf98f3b3bbb457ad9e2bb7baf9a0125b6b88caa8",
+      "max_model_len": 8192,
+      "max_num_seqs": 64,
+      "tensor_parallel_size": 1,
+      "dtype": "bfloat16",
+      "quantization": null,
+      "enforce_eager": true,
+      "request_timeout_s": 180,
+      "lora_path": null,
+      "lora_modules": {},
+      "max_loras": null,
+      "max_lora_rank": null,
+      "env": {}
+    }
+  },
+  "inputs": [
+    {
+      "path": "/data/PROJECTS/bodhi/runs-2026-11/results/healthbench__mistral-small-24b__bodhi/shared/traces/traces.jsonl",
+      "bytes": 19679264,
+      "sha256": "e25c8b55372672e93b069433daa7e3a05945c3aacdb7e89a4e465e3fe69c2675",
+      "n_lines": 3321
+    },
+    {
+      "path": "/data/PROJECTS/bodhi/runs-2026-11/results/healthbench__mistral-small-24b__bodhi/shared/filter/graded.jsonl",
+      "bytes": 48694166,
+      "sha256": "1edee993df2b8b7af70d661392e868fb98b164003769b5aefe640f96951fcea2",
+      "n_lines": 3321
+    }
+  ],
+  "outputs": [
+    {
+      "path": "/data/PROJECTS/bodhi/runs-2026-11/results/healthbench__mistral-small-24b__bodhi__unfiltered/shared/filter/graded.jsonl",
+      "bytes": 48880142,
+      "sha256": "602a8631addfb9e3933bd5b587b7393f0668a73a25a3560f1fcad50acdf0e918",
+      "n_lines": 3321
+    },
+    {
+      "path": "/data/PROJECTS/bodhi/runs-2026-11/results/healthbench__mistral-small-24b__bodhi__unfiltered/shared/filter/scores.json",
+      "bytes": 199308,
+      "sha256": "640285b7af4d4d265ce2ca457c720866e1dac45cc7992dd7ca3966dd6fe1b58c"
+    },
+    {
+      "path": "/data/PROJECTS/bodhi/runs-2026-11/results/healthbench__mistral-small-24b__bodhi__unfiltered/shared/filter/kept.jsonl",
+      "bytes": 48880142,
+      "sha256": "602a8631addfb9e3933bd5b587b7393f0668a73a25a3560f1fcad50acdf0e918",
+      "n_lines": 3321
+    }
+  ],
+  "counts": {
+    "n_traces": 3321,
+    "n_in_train_pool": 3321,
+    "n_outside_train_pool": 0,
+    "n_graded": 3321,
+    "n_failed_grading": 0,
+    "n_too_long": 0,
+    "n_kept": 3321,
+    "kept_of_graded": 1.0,
+    "grader_parse_failures_total": 2,
+    "grader_rubric_items_total": 38607,
+    "n_grades_reused": 3321
+  },
+  "status": "complete",
+  "tau": {
+    "rule": "none",
+    "value": null,
+    "percentile": null,
+    "min_kept_share": null,
+    "score_field": "overall_score",
+    "tau": null,
+    "score_summary": {
+      "min": 0.0,
+      "median": 0.4520547945205479,
+      "mean": 0.46492359622305834,
+      "max": 1.0
+    }
+  },
+  "grades_from": "healthbench__mistral-small-24b__bodhi",
+  "too_long_ids": []
+}

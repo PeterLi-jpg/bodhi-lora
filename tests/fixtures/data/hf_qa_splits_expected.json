@@ -1,0 +1,414 @@
+{
+ "source": [
+  {
+   "input": "patient question 0",
+   "output": "doctor reply 0"
+  },
+  {
+   "input": "patient question 1",
+   "output": "doctor reply 1"
+  },
+  {
+   "input": "patient question 2",
+   "output": "doctor reply 2"
+  },
+  {
+   "input": "patient question 3",
+   "output": "doctor reply 3"
+  },
+  {
+   "input": "patient question 4",
+   "output": "doctor reply 4"
+  },
+  {
+   "input": "",
+   "output": "no question"
+  },
+  {
+   "input": "patient question 5",
+   "output": "doctor reply 5"
+  },
+  {
+   "input": "patient question 6",
+   "output": "doctor reply 6"
+  },
+  {
+   "input": "patient question 7",
+   "output": "doctor reply 7"
+  },
+  {
+   "input": "patient question 3",
+   "output": "dup"
+  },
+  {
+   "input": "patient question 8",
+   "output": "doctor reply 8"
+  },
+  {
+   "input": "patient question 9",
+   "output": "doctor reply 9"
+  },
+  {
+   "input": "patient question 10",
+   "output": "doctor reply 10"
+  },
+  {
+   "input": "patient question 11",
+   "output": "doctor reply 11"
+  },
+  {
+   "input": "patient question 12",
+   "output": "doctor reply 12"
+  },
+  {
+   "input": "patient question 13",
+   "output": "doctor reply 13"
+  },
+  {
+   "input": "patient question 14",
+   "output": "doctor reply 14"
+  },
+  {
+   "input": "patient question 15",
+   "output": "doctor reply 15"
+  },
+  {
+   "input": "patient question 16",
+   "output": "doctor reply 16"
+  },
+  {
+   "input": "patient question 17",
+   "output": "doctor reply 17"
+  },
+  {
+   "input": "patient question 18",
+   "output": "doctor reply 18"
+  },
+  {
+   "input": "patient question 19",
+   "output": "doctor reply 19"
+  },
+  {
+   "input": "patient question 20",
+   "output": "doctor reply 20"
+  },
+  {
+   "input": "patient question 21",
+   "output": "doctor reply 21"
+  },
+  {
+   "input": "patient question 22",
+   "output": "doctor reply 22"
+  },
+  {
+   "input": "patient question 23",
+   "output": "doctor reply 23"
+  },
+  {
+   "input": "patient question 24",
+   "output": "doctor reply 24"
+  },
+  {
+   "input": "patient question 25",
+   "output": "doctor reply 25"
+  },
+  {
+   "input": "patient question 26",
+   "output": "doctor reply 26"
+  },
+  {
+   "input": "patient question 27",
+   "output": "doctor reply 27"
+  },
+  {
+   "input": "patient question 28",
+   "output": "doctor reply 28"
+  },
+  {
+   "input": "patient question 29",
+   "output": "doctor reply 29"
+  },
+  {
+   "input": "patient question 30",
+   "output": "doctor reply 30"
+  },
+  {
+   "input": "patient question 31",
+   "output": "doctor reply 31"
+  },
+  {
+   "input": "patient question 32",
+   "output": "doctor reply 32"
+  },
+  {
+   "input": "patient question 33",
+   "output": "doctor reply 33"
+  },
+  {
+   "input": "patient question 34",
+   "output": "doctor reply 34"
+  },
+  {
+   "input": "patient question 35",
+   "output": "doctor reply 35"
+  },
+  {
+   "input": "patient question 36",
+   "output": "doctor reply 36"
+  },
+  {
+   "input": "patient question 37",
+   "output": "doctor reply 37"
+  },
+  {
+   "input": "patient question 38",
+   "output": "doctor reply 38"
+  },
+  {
+   "input": "patient question 39",
+   "output": "doctor reply 39"
+  },
+  {
+   "input": "patient question 40",
+   "output": "doctor reply 40"
+  },
+  {
+   "input": "patient question 41",
+   "output": "doctor reply 41"
+  },
+  {
+   "input": "patient question 42",
+   "output": "doctor reply 42"
+  },
+  {
+   "input": "patient question 43",
+   "output": "doctor reply 43"
+  },
+  {
+   "input": "patient question 44",
+   "output": "doctor reply 44"
+  },
+  {
+   "input": "patient question 45",
+   "output": "doctor reply 45"
+  },
+  {
+   "input": "patient question 46",
+   "output": "doctor reply 46"
+  },
+  {
+   "input": "patient question 47",
+   "output": "doctor reply 47"
+  },
+  {
+   "input": "patient question 48",
+   "output": "doctor reply 48"
+  },
+  {
+   "input": "patient question 49",
+   "output": "doctor reply 49"
+  },
+  {
+   "input": "patient question 50",
+   "output": "doctor reply 50"
+  },
+  {
+   "input": "patient question 51",
+   "output": "doctor reply 51"
+  },
+  {
+   "input": "patient question 52",
+   "output": "doctor reply 52"
+  },
+  {
+   "input": "patient question 53",
+   "output": "doctor reply 53"
+  },
+  {
+   "input": "patient question 54",
+   "output": "doctor reply 54"
+  },
+  {
+   "input": "patient question 55",
+   "output": "doctor reply 55"
+  },
+  {
+   "input": "patient question 56",
+   "output": "doctor reply 56"
+  },
+  {
+   "input": "patient question 57",
+   "output": "doctor reply 57"
+  },
+  {
+   "input": "patient question 58",
+   "output": "doctor reply 58"
+  },
+  {
+   "input": "patient question 59",
+   "output": "doctor reply 59"
+  }
+ ],
+ "head": {
+  "pool": {
+   "select": "head",
+   "size": 30,
+   "seed": 0
+  },
+  "holdout": {
+   "select": "head",
+   "size": 8,
+   "seed": 0
+  },
+  "pool_ids": [
+   "chatdoctor-c2eb87ab5f60",
+   "chatdoctor-ca7968928f25",
+   "chatdoctor-e2dad635c17a",
+   "chatdoctor-a59b1ff4f7d1",
+   "chatdoctor-132ea40ecf20",
+   "chatdoctor-d40ca3d87b61",
+   "chatdoctor-5ea0df1d3796",
+   "chatdoctor-1b70eb9d153c",
+   "chatdoctor-01c5b590aba0",
+   "chatdoctor-f8477694e677",
+   "chatdoctor-d22706a00808",
+   "chatdoctor-a62d893557cc",
+   "chatdoctor-3bc20f6a4ed9",
+   "chatdoctor-84e5e62b85ed",
+   "chatdoctor-a435c972e131",
+   "chatdoctor-5992ef773178",
+   "chatdoctor-af0d17030bd8",
+   "chatdoctor-93ed16c4f578",
+   "chatdoctor-b7179fc475bb",
+   "chatdoctor-48bf1bea0e42",
+   "chatdoctor-60c8d03c27f5",
+   "chatdoctor-b4d26e1b9564",
+   "chatdoctor-f3c378d7ad04",
+   "chatdoctor-7339c1f7b888",
+   "chatdoctor-1316c8f4cb42",
+   "chatdoctor-2fe1bd391622",
+   "chatdoctor-cde251205205",
+   "chatdoctor-bcdeb98d20ab",
+   "chatdoctor-e13ae2abf5b5",
+   "chatdoctor-632f0aad24f4"
+  ],
+  "holdout_ids": [
+   "chatdoctor-c2eb87ab5f60",
+   "chatdoctor-ca7968928f25",
+   "chatdoctor-e2dad635c17a",
+   "chatdoctor-a59b1ff4f7d1",
+   "chatdoctor-132ea40ecf20",
+   "chatdoctor-d40ca3d87b61",
+   "chatdoctor-5ea0df1d3796",
+   "chatdoctor-1b70eb9d153c"
+  ]
+ },
+ "seeded": {
+  "pool": {
+   "select": "seeded",
+   "size": 30,
+   "seed": 0
+  },
+  "holdout": {
+   "select": "seeded",
+   "size": 8,
+   "seed": 0
+  },
+  "pool_ids": [
+   "chatdoctor-01c5b590aba0",
+   "chatdoctor-06d988c3cd49",
+   "chatdoctor-132ea40ecf20",
+   "chatdoctor-1668650d04a8",
+   "chatdoctor-1a83ddcc7c4c",
+   "chatdoctor-2a9abaabacea",
+   "chatdoctor-406a93083869",
+   "chatdoctor-48bf1bea0e42",
+   "chatdoctor-5992ef773178",
+   "chatdoctor-5ea0df1d3796",
+   "chatdoctor-632f0aad24f4",
+   "chatdoctor-6c40bfd7d8e8",
+   "chatdoctor-7f7477354cb1",
+   "chatdoctor-84e5e62b85ed",
+   "chatdoctor-89bbb0b2e20d",
+   "chatdoctor-9e931268e048",
+   "chatdoctor-a435c972e131",
+   "chatdoctor-a59b1ff4f7d1",
+   "chatdoctor-a729e4372dcb",
+   "chatdoctor-b3706bac2cfe",
+   "chatdoctor-b7179fc475bb",
+   "chatdoctor-bcdeb98d20ab",
+   "chatdoctor-c2eb87ab5f60",
+   "chatdoctor-d22706a00808",
+   "chatdoctor-d3de7979b1d5",
+   "chatdoctor-dae471f8260f",
+   "chatdoctor-e13ae2abf5b5",
+   "chatdoctor-e1721622f394",
+   "chatdoctor-edc046650d79",
+   "chatdoctor-f3c378d7ad04"
+  ],
+  "holdout_ids": [
+   "chatdoctor-06d988c3cd49",
+   "chatdoctor-5992ef773178",
+   "chatdoctor-7f7477354cb1",
+   "chatdoctor-84e5e62b85ed",
+   "chatdoctor-9e931268e048",
+   "chatdoctor-a435c972e131",
+   "chatdoctor-d3de7979b1d5",
+   "chatdoctor-e1721622f394"
+  ]
+ },
+ "seeded_s1": {
+  "pool": {
+   "select": "seeded",
+   "size": 30,
+   "seed": 1
+  },
+  "holdout": {
+   "select": "seeded",
+   "size": 8,
+   "seed": 3
+  },
+  "pool_ids": [
+   "chatdoctor-0061cac217b5",
+   "chatdoctor-015428863a34",
+   "chatdoctor-06d988c3cd49",
+   "chatdoctor-132ea40ecf20",
+   "chatdoctor-16536688b7f9",
+   "chatdoctor-1668650d04a8",
+   "chatdoctor-2a9abaabacea",
+   "chatdoctor-2fe1bd391622",
+   "chatdoctor-406a93083869",
+   "chatdoctor-48bf1bea0e42",
+   "chatdoctor-60c8d03c27f5",
+   "chatdoctor-7f7477354cb1",
+   "chatdoctor-93ed16c4f578",
+   "chatdoctor-9afea7097142",
+   "chatdoctor-9e931268e048",
+   "chatdoctor-a435c972e131",
+   "chatdoctor-a59b1ff4f7d1",
+   "chatdoctor-b049afefc689",
+   "chatdoctor-b4d26e1b9564",
+   "chatdoctor-b7179fc475bb",
+   "chatdoctor-bce3a77e8406",
+   "chatdoctor-bf395168846a",
+   "chatdoctor-c871956bd414",
+   "chatdoctor-cc186bdabce6",
+   "chatdoctor-d22706a00808",
+   "chatdoctor-d3de7979b1d5",
+   "chatdoctor-dab052de297d",
+   "chatdoctor-e1721622f394",
+   "chatdoctor-e2dad635c17a",
+   "chatdoctor-edc046650d79"
+  ],
+  "holdout_ids": [
+   "chatdoctor-16536688b7f9",
+   "chatdoctor-2fe1bd391622",
+   "chatdoctor-7f7477354cb1",
+   "chatdoctor-a435c972e131",
+   "chatdoctor-b049afefc689",
+   "chatdoctor-b4d26e1b9564",
+   "chatdoctor-b7179fc475bb",
+   "chatdoctor-bce3a77e8406"
+  ]
+ }
+}

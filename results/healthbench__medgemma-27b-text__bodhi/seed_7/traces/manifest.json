@@ -1,0 +1,42 @@
+{
+  "schema": 3,
+  "stage": "traces",
+  "cell": "healthbench__medgemma-27b-text__bodhi",
+  "seed": 7,
+  "created_utc": "2026-10-25T17:23:57.076132+00:00",
+  "git": {
+    "sha": "<commit>",
+    "dirty": false,
+    "diff_sha256": null,
+    "n_untracked": 8
+  },
+  "packages": {
+    "python": "3.12.11",
+    "torch": "2.8.0",
+    "transformers": "4.56.2",
+    "vllm": "0.10.2",
+    "peft": null,
+    "trl": null,
+    "accelerate": null,
+    "bitsandbytes": "0.47.0",
+    "datasets": "5.0.0",
+    "bodhi-llm": "0.1.4",
+    "huggingface-hub": "0.36.2",
+    "numpy": "2.2.6"
+  },
+  "host_sha256": "1a0f66b435cfd84be5750769e2c6587c5bc24b35009b7cfdd98508726f6ce272",
+  "hardware": {
+    "visible_devices": null,
+    "gpus": [
+      {
+        "index": "0",
+        "name": "NVIDIA A100-SXM4-80GB",
+        "memory": "81920 MiB"
+      }
+    ]
+  },
+  "status": "complete",
+  "points_to": "results/healthbench__medgemma-27b-text__bodhi/shared/traces/manifest.json",
+  "points_to_sha256": "3a418cd7694d3ec6747cad533fdfaecd38478976dfbf74336bc5a23c87b977d5",
+  "note": ""
+}

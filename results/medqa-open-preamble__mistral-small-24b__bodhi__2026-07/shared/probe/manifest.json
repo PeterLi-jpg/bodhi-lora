@@ -1,0 +1,110 @@
+{
+  "schema": 3,
+  "stage": "probe",
+  "cell": "medqa-open-preamble__mistral-small-24b__bodhi__2026-07",
+  "seed": null,
+  "created_utc": "2026-11-02T00:11:23.326034+00:00",
+  "git": {
+    "sha": "<commit>",
+    "dirty": false,
+    "diff_sha256": null,
+    "n_untracked": 10
+  },
+  "packages": {
+    "python": "3.12.3",
+    "torch": "2.8.0",
+    "transformers": "4.56.2",
+    "vllm": "0.10.2",
+    "peft": null,
+    "trl": null,
+    "accelerate": null,
+    "bitsandbytes": "0.47.0",
+    "datasets": "5.0.0",
+    "bodhi-llm": "0.1.4",
+    "huggingface-hub": "0.36.2",
+    "numpy": "2.2.6"
+  },
+  "host_sha256": "e57f9913e18993f3b7eea3afa676d9d0ae3c5a04f647be54a2f28299b57e4149",
+  "hardware": {
+    "visible_devices": "6",
+    "gpus": [
+      {
+        "index": "6",
+        "name": "NVIDIA H100 80GB HBM3",
+        "memory": "81559 MiB"
+      }
+    ]
+  },
+  "time": {
+    "started_utc": "2026-11-02T00:10:29.060547+00:00",
+    "finished_utc": "2026-11-02T00:11:23.468611+00:00",
+    "seconds": 54.408
+  },
+  "config": {
+    "probe": {
+      "control": "healthbench",
+      "n_prompts": 100,
+      "prefix_tokens": 15,
+      "continuation_tokens": 25,
+      "seed": 0,
+      "serving": {
+        "max_model_len": 8192,
+        "max_num_seqs": 64,
+        "concurrency": 32,
+        "request_timeout_s": 180,
+        "drain_s": 0.0,
+        "enforce_eager": null
+      }
+    },
+    "control": "healthbench"
+  },
+  "config_sha256": "e28eced2c33cac319a953967fe68bc1b45d2eff2c36aa9fd02a630ee40c8b07c",
+  "models": {
+    "base": {
+      "id": "mistral-small-24b",
+      "repo_id": "mistralai/Mistral-Small-24B-Instruct-2501",
+      "family": "mistral",
+      "revision": "9527884be6e5616bdd54de542f9ae13384489724",
+      "revision_source": "record",
+      "unpinned_reason": null
+    }
+  },
+  "engines": {
+    "base": {
+      "model": "mistralai/Mistral-Small-24B-Instruct-2501",
+      "revision": "9527884be6e5616bdd54de542f9ae13384489724",
+      "max_model_len": 8192,
+      "max_num_seqs": 64,
+      "tensor_parallel_size": 1,
+      "dtype": "bfloat16",
+      "quantization": null,
+      "enforce_eager": false,
+      "request_timeout_s": 180,
+      "lora_path": null,
+      "lora_modules": {},
+      "max_loras": null,
+      "max_lora_rank": null,
+      "env": {}
+    }
+  },
+  "outputs": [
+    {
+      "path": "/data/PROJECTS/bodhi/runs-2026-11/results/medqa-open-preamble__mistral-small-24b__bodhi__2026-07/shared/probe/probe.json",
+      "bytes": 1279,
+      "sha256": "90f4adda4ef2530414e525c65394c378e9172adafecab9684f9a1a445cd1c0bd"
+    },
+    {
+      "path": "/data/PROJECTS/bodhi/runs-2026-11/results/medqa-open-preamble__mistral-small-24b__bodhi__2026-07/shared/probe/samples.jsonl",
+      "bytes": 99619,
+      "sha256": "adb319c1e054a2e0c96959cd4cd99bd77cf1f2dd72028f0bc94fa62a1abd8fce",
+      "n_lines": 200
+    }
+  ],
+  "counts": {
+    "benchmark_hits": 0,
+    "control_hits": 0,
+    "n_per_set": 100,
+    "fisher_p_value": 1.0
+  },
+  "status": "complete"
+}

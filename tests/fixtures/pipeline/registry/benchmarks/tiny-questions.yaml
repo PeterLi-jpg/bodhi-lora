@@ -1,0 +1,26 @@
+# Eight records in the format of the NLM Clinical Questions Collection files (one XML
+# document per record, one after another), written for the tests; the twin of
+# configs/benchmarks/nlm-clinical-questions.yaml.
+id: tiny-questions
+title: Tiny clinician-question benchmark for the tests
+loader: xml_records
+source:
+  kind: local
+  files:
+    all:
+      path: tests/fixtures/pipeline/tiny_clinical_questions.xml
+      sha256: 25c76807798d297caaa75c791b2d86f4975fdffa790d91937b0e9395670f079a
+license: MIT (this repository)
+audience: clinician
+task: open_ended
+rubric: none
+fields:
+  question: [original_question]
+loader_params:
+  record_tag: clinical_question
+  id_path: id_info/nlm_id
+  tag_paths: {asker: asker_info/occupation, year: year_asked}
+prompt_template: "You are advising a clinician colleague. Answer the following clinical question.\n\n{question}"
+tags: ["theme:tiny-questions"]
+splits:
+  default: {method: holdout, pool: {select: all}, holdout: {select: all}}

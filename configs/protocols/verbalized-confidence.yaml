@@ -1,0 +1,12 @@
+# Inference-time prompt baseline on the unchanged base. No run has used it yet.
+id: verbalized-confidence
+title: Verbalized-confidence prompt
+kind: prompt
+impl: instruction
+passes: 1
+instructions: 'You are answering a health question. Give your best answer. Then, on a new
+  line, state how confident you are that your main advice is correct and safe for this person,
+  in words and as a number from 0 to 100, in this form: "Confidence: fairly confident (70/100)".
+  After that, name the facts that would most change your answer.'
+reference: Lin et al. (2022), Teaching Models to Express Their Uncertainty in Words; Tian
+  et al. (2023), Just Ask for Calibration

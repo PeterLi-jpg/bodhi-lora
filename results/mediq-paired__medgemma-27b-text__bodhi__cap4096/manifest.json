@@ -1,0 +1,206 @@
+{
+  "schema": 3,
+  "stage": "cell",
+  "cell": "mediq-paired__medgemma-27b-text__bodhi__cap4096",
+  "seed": null,
+  "created_utc": "2026-10-27T15:26:23.715626+00:00",
+  "git": {
+    "sha": "<commit>",
+    "dirty": false,
+    "diff_sha256": null,
+    "n_untracked": 11
+  },
+  "packages": {
+    "infer": {
+      "python": "3.12.11",
+      "torch": "2.8.0",
+      "transformers": "4.56.2",
+      "vllm": "0.10.2",
+      "peft": null,
+      "trl": null,
+      "accelerate": null,
+      "bitsandbytes": "0.47.0",
+      "datasets": "5.0.0",
+      "bodhi-llm": "0.1.4",
+      "huggingface-hub": "0.36.2",
+      "numpy": "2.2.6"
+    },
+    "train": {
+      "python": "3.12.11",
+      "torch": "2.7.0",
+      "transformers": "4.57.6",
+      "vllm": "0.9.2",
+      "peft": "0.19.1",
+      "trl": "0.11.4",
+      "accelerate": "1.13.0",
+      "bitsandbytes": "0.47.0",
+      "datasets": "3.6.0",
+      "bodhi-llm": "0.1.4",
+      "huggingface-hub": "0.36.2",
+      "numpy": "2.2.6"
+    }
+  },
+  "host_sha256": "93fceb72101974171ddc3baeeabb83b7944d48080e69e047a4baec788bac9695",
+  "hardware": {
+    "visible_devices": null,
+    "gpus": [
+      {
+        "index": "0",
+        "name": "NVIDIA A100-SXM4-80GB",
+        "memory": "81920 MiB"
+      }
+    ]
+  },
+  "time": {
+    "started_utc": "2026-10-27T15:26:14.376699+00:00",
+    "finished_utc": "2026-10-27T15:26:23.980544+00:00",
+    "seconds": 9.604
+  },
+  "config": {
+    "id": "mediq-paired__medgemma-27b-text__bodhi__cap4096",
+    "benchmark": "mediq-paired",
+    "split": "default",
+    "model": "medgemma-27b-text",
+    "protocol": "bodhi",
+    "seeds": [
+      42,
+      7,
+      13,
+      99,
+      101
+    ],
+    "adapters_from": "healthbench__medgemma-27b-text__bodhi",
+    "traces_from": null,
+    "grading": {
+      "filter": "qwen2.5-14b",
+      "evaluator": "llama-3.1-8b",
+      "judges": [],
+      "same_family_waiver": null,
+      "judge_serving": null
+    },
+    "traces": null,
+    "filter": null,
+    "train": null,
+    "eval": {
+      "conditions": [
+        "base",
+        "lora"
+      ],
+      "ids": {
+        "policy": "per_seed_draw",
+        "n": 200,
+        "unit": "pair",
+        "only": [],
+        "file": null
+      },
+      "base_precision": "train",
+      "base_precision_reason": null,
+      "max_new_tokens": 4096,
+      "max_new_tokens_per_pass": 2048,
+      "serving": {
+        "max_model_len": 8192,
+        "max_num_seqs": 32,
+        "concurrency": 32,
+        "request_timeout_s": 3600,
+        "drain_s": 0.0,
+        "enforce_eager": null
+      },
+      "shared_server": true
+    },
+    "probe": null,
+    "bench": null,
+    "report": {
+      "label": "MediQ paired probe, MedGemma-27B, 4,096-token cap",
+      "token": "MediqMedGemmaCap",
+      "status": "planned",
+      "set_aside": null,
+      "notes": "",
+      "contrasts": []
+    }
+  },
+  "config_sha256": "78824b09baea7f0ef67a420c29d9168c27e8bcd86f2b15b1dcbfb82593adde47",
+  "models": {
+    "base": {
+      "id": "medgemma-27b-text",
+      "repo_id": "google/medgemma-27b-text-it",
+      "family": "gemma",
+      "revision": "5b667cf2ddcf064085bc90952edb35a0edbfb79c",
+      "revision_source": "record",
+      "unpinned_reason": null
+    },
+    "teacher": {
+      "id": "medgemma-27b-text",
+      "repo_id": "google/medgemma-27b-text-it",
+      "family": "gemma",
+      "revision": "5b667cf2ddcf064085bc90952edb35a0edbfb79c",
+      "revision_source": "record",
+      "unpinned_reason": null
+    },
+    "filter": {
+      "id": "qwen2.5-14b",
+      "repo_id": "Qwen/Qwen2.5-14B-Instruct",
+      "family": "qwen2",
+      "revision": "cf98f3b3bbb457ad9e2bb7baf9a0125b6b88caa8",
+      "revision_source": "record",
+      "unpinned_reason": null
+    },
+    "evaluator": {
+      "id": "llama-3.1-8b",
+      "repo_id": "meta-llama/Llama-3.1-8B-Instruct",
+      "family": "llama3",
+      "revision": "0e9e39f249a16976918f6564b8830bc894c89659",
+      "revision_source": "record",
+      "unpinned_reason": null
+    }
+  },
+  "status": "finished",
+  "mode": "gpu",
+  "seeds_run": [
+    42,
+    7,
+    13,
+    99,
+    101
+  ],
+  "stages_run": [
+    "probe",
+    "traces",
+    "filter",
+    "train",
+    "eval",
+    "grade",
+    "bench"
+  ],
+  "judges_run": [],
+  "family": {
+    "problems": [],
+    "waiver": null
+  },
+  "stage_manifests": {
+    "seed_42/traces": "ab8fbbcfa75f8551bab5a593f8e0b5e1ff4062be05e3fcb8b8f1457acd6b949b",
+    "seed_42/filter": "5ccf2e1b400919df459c8d5dd9845a54c4456d52bafbc587840bf0629f5a40b3",
+    "seed_42/train": "bc7243e76dc92d6329cb833a653c66eadc744eea66d8bd020e0542f13b4986dc",
+    "seed_42/eval": "b30c484a7bc83bc558d8ca3bc2eb678c9c4283f782697f6ddb84f7de8d07dfc5",
+    "seed_42/grade": "d838ab5ee748ad34f00b725397ca2e174984ad9b94c89b60b76148758ca30d63",
+    "seed_7/traces": "25638ebb98e9ccce8dc6e060d86c09438eb77092adef7cb1fc93e063db34a678",
+    "seed_7/filter": "26ddaf397ca8680fe6c0aa679681ebe1659c76cdebd58d3ffabb8a6e7bcf1cb5",
+    "seed_7/train": "e596d446186084841c24437ccb884f21aa620e4d5b39c311462b08b98dd0c982",
+    "seed_7/eval": "1b2343c39d1a62db3154f1198533dc152c295d7e7eed57d4aba1b7eb7a653c54",
+    "seed_7/grade": "25cf9343332fc14d7e7ec8561ee5023097b5db5cefe023ab75a09447981c3aa7",
+    "seed_13/traces": "bc4cb9fe2a3f77b81232c3447f084deb6f8183167d36bca64de4a52339ca275d",
+    "seed_13/filter": "034aea233e8afb56d095d5b8a9761c3f029b7cc5503fca499c3e4ca49e83e268",
+    "seed_13/train": "8ec96eb66a92e520dcba8bc0976a9bb2beac1d2e8e3ed8b6be823daedd820a49",
+    "seed_13/eval": "19f3c2c59d13ad0ac4bdd576a7c37a0a419bca838cba72dd853e598fd8d9c54e",
+    "seed_13/grade": "e74926fd7351c615f9493a8e5a314e4cc548243ecd298bfd13fcfcf7314ce867",
+    "seed_99/traces": "077fc022c03e5a18f6206d789e88ed8b28294fcc071dd49be10a75d0250a1c29",
+    "seed_99/filter": "7c5133f26e02c1de49a586497b5d825c1e86b0f400f7815acd163b46bf417983",
+    "seed_99/train": "580c47bdfd1f6324ce488a80bd709201ebbc821dc26965e93c2d780717d7d1af",
+    "seed_99/eval": "3f0a7eee3f8fee38794f0fd2ad209ab5d47395566dc050fa9f04b35243ceb970",
+    "seed_99/grade": "1b12263aad8051ef1052f4eb3d81afea73665ea2b1ccf773626cd8b55dc72c93",
+    "seed_101/traces": "096ed753b9e6f36e8ea08981f9995b36f1b3db9cb2a5696a01f0e2773a809d64",
+    "seed_101/filter": "f8df7bdf9bef188e62bd959ca78264839123acc58bf6d4270b7911be61d35b0b",
+    "seed_101/train": "0315861d09a54d7811421835129c8ac0022d1e91592719cd13a51f95a4cb1e8e",
+    "seed_101/eval": "59ff65c204e58fb9419c3956702627fbb1550078bc49c4e293138c338e7f6319",
+    "seed_101/grade": "0f0451427527ee2a8483c0f8f292f3db1e7d7cfa872aafae3948ab031ba3d057"
+  }
+}

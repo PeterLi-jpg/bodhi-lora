@@ -1,0 +1,153 @@
+{
+  "schema": 3,
+  "stage": "grade",
+  "cell": "nlm-clinical-questions__medgemma-27b-text__bodhi",
+  "seed": 42,
+  "created_utc": "2026-10-24T14:19:50.572970+00:00",
+  "git": {
+    "sha": "<commit>",
+    "dirty": false,
+    "diff_sha256": null,
+    "n_untracked": 7
+  },
+  "packages": {
+    "python": "3.12.11",
+    "torch": "2.8.0",
+    "transformers": "4.56.2",
+    "vllm": "0.10.2",
+    "peft": null,
+    "trl": null,
+    "accelerate": null,
+    "bitsandbytes": "0.47.0",
+    "datasets": "5.0.0",
+    "bodhi-llm": "0.1.4",
+    "huggingface-hub": "0.36.2",
+    "numpy": "2.2.6"
+  },
+  "host_sha256": "a41e382dd7e7da8a30032455e2b2800ce219276b6e8c443c0ba4a63a243baed7",
+  "hardware": {
+    "visible_devices": "0",
+    "gpus": [
+      {
+        "index": "0",
+        "name": "NVIDIA A100-SXM4-80GB",
+        "memory": "81920 MiB"
+      }
+    ]
+  },
+  "time": {
+    "started_utc": "2026-10-24T14:11:13.337951+00:00",
+    "finished_utc": "2026-10-24T14:19:51.562524+00:00",
+    "seconds": 518.225
+  },
+  "models": {
+    "grader": {
+      "id": "llama-3.1-8b",
+      "repo_id": "meta-llama/Llama-3.1-8B-Instruct",
+      "family": "llama3",
+      "revision": "0e9e39f249a16976918f6564b8830bc894c89659",
+      "revision_source": "record",
+      "unpinned_reason": null
+    }
+  },
+  "engines": {
+    "grader": {
+      "model": "meta-llama/Llama-3.1-8B-Instruct",
+      "revision": "0e9e39f249a16976918f6564b8830bc894c89659",
+      "max_model_len": 8192,
+      "max_num_seqs": 32,
+      "tensor_parallel_size": 1,
+      "dtype": "bfloat16",
+      "quantization": null,
+      "enforce_eager": true,
+      "request_timeout_s": 900,
+      "lora_path": null,
+      "lora_modules": {},
+      "max_loras": null,
+      "max_lora_rank": null,
+      "env": {}
+    }
+  },
+  "inputs": [
+    {
+      "path": "/data/bodhi/results/nlm-clinical-questions__medgemma-27b-text__bodhi/seed_42/eval/base.json",
+      "bytes": 992785,
+      "sha256": "5b1ca80fed1d586d7b6178437265782a0d66cf1c26ff051ce9bf309e8abef6cf"
+    },
+    {
+      "path": "/data/bodhi/results/nlm-clinical-questions__medgemma-27b-text__bodhi/seed_42/eval/base+bodhi.json",
+      "bytes": 1166777,
+      "sha256": "b842e417e69d01d7e5d3a8577a983904f3ac5560443ca38c68ed0936c2f75ef7"
+    },
+    {
+      "path": "/data/bodhi/results/nlm-clinical-questions__medgemma-27b-text__bodhi/seed_42/eval/lora.json",
+      "bytes": 976323,
+      "sha256": "c2211d4268fb605907053c165d1f43c376c560d8274b597a4a62819ecf784871"
+    },
+    {
+      "path": "/data/bodhi/results/nlm-clinical-questions__medgemma-27b-text__bodhi/seed_42/eval/lora+bodhi.json",
+      "bytes": 1423997,
+      "sha256": "0cce00b9a440eb399d697a1ea7703f57ac1b6be19d849df26f963aad13efc17d"
+    },
+    {
+      "path": "/data/bodhi/results/nlm-clinical-questions__medgemma-27b-text__bodhi/seed_42/eval/base+clarify.json",
+      "bytes": 635991,
+      "sha256": "31303457e110fd9fbf730d8812a62b2981bc5a9279f11e63f3bf0a6be3d7172d"
+    },
+    {
+      "path": "/data/bodhi/results/nlm-clinical-questions__medgemma-27b-text__bodhi/seed_42/eval/base+verbalized-confidence.json",
+      "bytes": 845066,
+      "sha256": "ce25faff0244455bb9f0a242a3984aefbda6ca588992aef0d1515ab57e3a6e9e"
+    },
+    {
+      "path": "/data/bodhi/results/nlm-clinical-questions__medgemma-27b-text__bodhi/seed_42/eval/base+mediq-abstain.json",
+      "bytes": 369053,
+      "sha256": "117dcf425d8ed88a430f2ecf23d25be6e57bfd7bac3d25127140ba66f28392f2"
+    }
+  ],
+  "outputs": [
+    {
+      "path": "/data/bodhi/results/nlm-clinical-questions__medgemma-27b-text__bodhi/seed_42/grade/epistemic__llama-3.1-8b.json",
+      "bytes": 8762004,
+      "sha256": "6c21bb42e5757df1e4780da0994c20efee1072bf309c082db036bf1765e07848"
+    }
+  ],
+  "counts": {
+    "base": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    },
+    "base+bodhi": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    },
+    "lora": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    },
+    "lora+bodhi": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    },
+    "base+clarify": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    },
+    "base+verbalized-confidence": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    },
+    "base+mediq-abstain": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    }
+  },
+  "status": "complete"
+}

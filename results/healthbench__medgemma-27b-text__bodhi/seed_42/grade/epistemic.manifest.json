@@ -1,0 +1,173 @@
+{
+  "schema": 3,
+  "stage": "grade",
+  "cell": "healthbench__medgemma-27b-text__bodhi",
+  "seed": 42,
+  "created_utc": "2026-10-25T04:32:44.282234+00:00",
+  "git": {
+    "sha": "<commit>",
+    "dirty": false,
+    "diff_sha256": null,
+    "n_untracked": 8
+  },
+  "packages": {
+    "python": "3.12.11",
+    "torch": "2.8.0",
+    "transformers": "4.56.2",
+    "vllm": "0.10.2",
+    "peft": null,
+    "trl": null,
+    "accelerate": null,
+    "bitsandbytes": "0.47.0",
+    "datasets": "5.0.0",
+    "bodhi-llm": "0.1.4",
+    "huggingface-hub": "0.36.2",
+    "numpy": "2.2.6"
+  },
+  "host_sha256": "1a0f66b435cfd84be5750769e2c6587c5bc24b35009b7cfdd98508726f6ce272",
+  "hardware": {
+    "visible_devices": "0",
+    "gpus": [
+      {
+        "index": "0",
+        "name": "NVIDIA A100-SXM4-80GB",
+        "memory": "81920 MiB"
+      }
+    ]
+  },
+  "time": {
+    "started_utc": "2026-10-25T04:19:24.515605+00:00",
+    "finished_utc": "2026-10-25T04:32:45.390178+00:00",
+    "seconds": 800.875
+  },
+  "models": {
+    "grader": {
+      "id": "llama-3.1-8b",
+      "repo_id": "meta-llama/Llama-3.1-8B-Instruct",
+      "family": "llama3",
+      "revision": "0e9e39f249a16976918f6564b8830bc894c89659",
+      "revision_source": "record",
+      "unpinned_reason": null
+    }
+  },
+  "engines": {
+    "grader": {
+      "model": "meta-llama/Llama-3.1-8B-Instruct",
+      "revision": "0e9e39f249a16976918f6564b8830bc894c89659",
+      "max_model_len": 8192,
+      "max_num_seqs": 32,
+      "tensor_parallel_size": 1,
+      "dtype": "bfloat16",
+      "quantization": null,
+      "enforce_eager": true,
+      "request_timeout_s": 900,
+      "lora_path": null,
+      "lora_modules": {},
+      "max_loras": null,
+      "max_lora_rank": null,
+      "env": {}
+    }
+  },
+  "inputs": [
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_42/eval/base.json",
+      "bytes": 2742580,
+      "sha256": "f8a5fe978a98a69461eab75bbbb73f7e627198edaf111bbb838efa6ce1aab616"
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_42/eval/base+bodhi.json",
+      "bytes": 3023467,
+      "sha256": "eb49600173ee46f71611ce3c7da834a1ea001560af9d0e88e060d5e470ac5ede"
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_42/eval/lora.json",
+      "bytes": 2575674,
+      "sha256": "63d29f4e9631eff4417ee3324fed6cdb2c933ead3fa516fd94cc4e7b08f4542e"
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_42/eval/lora+bodhi.json",
+      "bytes": 3036025,
+      "sha256": "88c31dcbdbf42ec8e20b5088f58435328f0a1c234db4a046845286cecd501a2a"
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_42/eval/base+clarify.json",
+      "bytes": 2373422,
+      "sha256": "3532ebb011871b8d71e68d299cbaeab4c6b706518ad1aaff92d9a50b6317f4f7"
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_42/eval/base+verbalized-confidence.json",
+      "bytes": 2676386,
+      "sha256": "34386bcec7f72f541854b564a7f2b6b793f11d573722750dd6887a14dfdc543f"
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_42/eval/base+mediq-abstain.json",
+      "bytes": 1960704,
+      "sha256": "ab80d7302334864b975339ad1ed2c64c6d3875cade98fa6d60ae5ec864a8cb2e"
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_42/eval/base+red-flags-first.json",
+      "bytes": 3021145,
+      "sha256": "5a6e69e9624632771f34de43098fb228cb49d84bc4c196d8168e0cf928f2f678"
+    },
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_42/eval/lora+red-flags-first.json",
+      "bytes": 3042521,
+      "sha256": "23dd84d65672f4025a2d03cdf7e27f8a6e2d412e13da281e6c5359b92da67594"
+    }
+  ],
+  "outputs": [
+    {
+      "path": "/data/bodhi/results/healthbench__medgemma-27b-text__bodhi/seed_42/grade/epistemic__llama-3.1-8b.json",
+      "bytes": 10756468,
+      "sha256": "363cc6cdfef7ca24c2092777b22c2a33d98a307b9c99363c80d5e58572139d59"
+    }
+  ],
+  "counts": {
+    "base": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    },
+    "base+bodhi": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    },
+    "lora": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    },
+    "lora+bodhi": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    },
+    "base+clarify": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    },
+    "base+verbalized-confidence": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    },
+    "base+mediq-abstain": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    },
+    "base+red-flags-first": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    },
+    "lora+red-flags-first": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    }
+  },
+  "status": "complete"
+}

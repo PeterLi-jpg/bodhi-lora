@@ -1,0 +1,83 @@
+{
+  "schema": 3,
+  "stage": "eval",
+  "cell": "healthbench__medgemma-27b-text__bodhi__cap4096",
+  "seed": 13,
+  "created_utc": "2026-10-26T22:38:07.335275+00:00",
+  "git": {
+    "sha": "<commit>",
+    "dirty": false,
+    "diff_sha256": null,
+    "n_untracked": 2
+  },
+  "packages": {
+    "python": "3.12.3",
+    "torch": "2.8.0",
+    "transformers": "4.56.2",
+    "vllm": "0.10.2",
+    "peft": null,
+    "trl": null,
+    "accelerate": null,
+    "bitsandbytes": "0.47.0",
+    "datasets": "5.0.0",
+    "bodhi-llm": "0.1.4",
+    "huggingface-hub": "0.36.2",
+    "numpy": "2.2.6"
+  },
+  "host_sha256": "e57f9913e18993f3b7eea3afa676d9d0ae3c5a04f647be54a2f28299b57e4149",
+  "hardware": {
+    "visible_devices": null,
+    "gpus": [
+      {
+        "index": "0",
+        "name": "NVIDIA H100 80GB HBM3",
+        "memory": "81559 MiB"
+      },
+      {
+        "index": "1",
+        "name": "NVIDIA H100 80GB HBM3",
+        "memory": "81559 MiB"
+      },
+      {
+        "index": "2",
+        "name": "NVIDIA H100 80GB HBM3",
+        "memory": "81559 MiB"
+      },
+      {
+        "index": "3",
+        "name": "NVIDIA H100 80GB HBM3",
+        "memory": "81559 MiB"
+      },
+      {
+        "index": "4",
+        "name": "NVIDIA H100 80GB HBM3",
+        "memory": "81559 MiB"
+      },
+      {
+        "index": "5",
+        "name": "NVIDIA H100 80GB HBM3",
+        "memory": "81559 MiB"
+      },
+      {
+        "index": "6",
+        "name": "NVIDIA H100 80GB HBM3",
+        "memory": "81559 MiB"
+      },
+      {
+        "index": "7",
+        "name": "NVIDIA H100 80GB HBM3",
+        "memory": "81559 MiB"
+      }
+    ]
+  },
+  "status": "complete",
+  "parts": {
+    "base+clarify.manifest.json": "37d855f64c4328a082a02bdc517b5cac5f2146c4b67d0c6c0feb816f38659151",
+    "base+mediq-abstain.manifest.json": "b323458cbc629e64463fbb4defb6255fa415b44515e8f8b44841e6eb5755dcfb",
+    "base+verbalized-confidence.manifest.json": "df2985450dc688adeb9e1f067478fdc0d789b4215196223fbfdca3aa5495b451",
+    "base.manifest.json": "c291cd905b4eb876284cb9c5f66e150629660a11d6e5ffc08ffea19c56bc8ee4",
+    "lora+bodhi.manifest.json": "ee5a1aa71938cac3ea12dc13eb44b020b476cc352a7f936516a90818e2ed6ac7",
+    "lora+red-flags-first.manifest.json": "e2818dbd5d4830b6911a03238cbcbd0280b0f589fe2d6be2a5ef10c30dd79332",
+    "lora.manifest.json": "1b695573db2f31bf24073d30ec29177a3a80ddbad2b1486c369c5127722da3dd"
+  }
+}

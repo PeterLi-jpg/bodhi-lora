@@ -1,0 +1,47 @@
+{
+  "cell": "healthbench__medgemma-27b-text__bodhi__ctx4096",
+  "completions": {
+    "lora": 200,
+    "lora+bodhi": 194,
+    "lora+red-flags-first": 194
+  },
+  "grade": {
+    "counts": {
+      "lora": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "lora+bodhi": {
+        "examples": 193,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "lora+red-flags-first": {
+        "examples": 193,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      }
+    },
+    "file": "results/healthbench__medgemma-27b-text__bodhi__ctx4096/seed_101/grade/epistemic__llama-3.1-8b.json",
+    "present": true
+  },
+  "n_examples": {
+    "lora": 200,
+    "lora+bodhi": 200,
+    "lora+red-flags-first": 200
+  },
+  "score_metric": {
+    "lora": "normalized_score",
+    "lora+bodhi": "normalized_score",
+    "lora+red-flags-first": "normalized_score"
+  },
+  "seed": 101,
+  "sources": {
+    "results/healthbench__medgemma-27b-text__bodhi__ctx4096/seed_101/eval/lora+bodhi.json": "00fd45622ef07f470439cf1c304e78d8261b8d9aa20766fe849022b3f4afaaa1",
+    "results/healthbench__medgemma-27b-text__bodhi__ctx4096/seed_101/eval/lora+red-flags-first.json": "6e29a0b62cfc2191bbd10307672cefa474be65cb9bfca8ccecb8925ef3509167",
+    "results/healthbench__medgemma-27b-text__bodhi__ctx4096/seed_101/eval/lora.json": "1f693c4e41a9fdb7900f679280951b1ac6f9792d6972b411dab1f81de3566175",
+    "results/healthbench__medgemma-27b-text__bodhi__ctx4096/seed_101/grade/epistemic__llama-3.1-8b.json": "db2a1618976c3e8a4e1c1a67757bd309d2d8b4fabc14dc592c4e7a70b97e4d85"
+  },
+  "tokenizer": "tokenizer.json of google/medgemma-27b-text-it at 5b667cf2ddcf064085bc90952edb35a0edbfb79c is not in the local Hugging Face cache (fetch it with: huggingface-cli download google/medgemma-27b-text-it tokenizer.json --revision 5b667cf2ddcf064085bc90952edb35a0edbfb79c)"
+}

@@ -1,0 +1,58 @@
+{
+  "cell": "healthbench__med42-8b__bodhi__2026-07",
+  "completions": {
+    "base": 200,
+    "base+bodhi": 200,
+    "lora": 200,
+    "lora+bodhi": 200
+  },
+  "grade": {
+    "counts": {
+      "base": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "base+bodhi": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "lora": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "lora+bodhi": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      }
+    },
+    "file": "results/healthbench__med42-8b__bodhi__2026-07/seed_42/grade/epistemic__llama-3.1-8b-nous.json",
+    "present": true
+  },
+  "n_examples": {
+    "base": 200,
+    "base+bodhi": 200,
+    "lora": 200,
+    "lora+bodhi": 200
+  },
+  "score_metric": {
+    "base": "normalized_score",
+    "base+bodhi": "normalized_score",
+    "lora": "normalized_score",
+    "lora+bodhi": "normalized_score"
+  },
+  "seed": 42,
+  "sources": {
+    "results/healthbench__med42-8b__bodhi__2026-07/seed_42/eval/base+bodhi.json": "b5a9ca0b777f957528e9857f6b4288c8dde6cf68c8b886beef8fbf160369ba58",
+    "results/healthbench__med42-8b__bodhi__2026-07/seed_42/eval/base.json": "fb1cd5aabf7dec9f338ab638991a6098145ab44d4b2f0fc3ba1448adc1fe9a4b",
+    "results/healthbench__med42-8b__bodhi__2026-07/seed_42/eval/lora+bodhi.json": "25b9efb113d3b88ba3e536c1c602e3e4bacfb256d19149928b1bbdfd46f456b2",
+    "results/healthbench__med42-8b__bodhi__2026-07/seed_42/eval/lora.json": "60a04359965579b06c77828b209f733e57580ae837c407a778b34be9bc20ad97",
+    "results/healthbench__med42-8b__bodhi__2026-07/seed_42/grade/epistemic__llama-3.1-8b-nous.json": "d17b4c274d6a511f5f9732bc7187277691ae74131d6b492d0730777ccfd654b3",
+    "results/healthbench__med42-8b__bodhi__2026-07/seed_42/grade/judge__gemma-2-27b.json": "87b16c7311e1803bbea31dcac6c8e48b6ca8fd907a2caa1d2aa1b5879546a935",
+    "results/healthbench__med42-8b__bodhi__2026-07/seed_42/grade/judge__medgemma-27b-text.json": "80ed3ca7f67fa129b478c0b1b9adbc9735910a062e74c5454aba4ee9f14a2719"
+  },
+  "tokenizer": "tokenizer.json of m42-health/Llama3-Med42-8B at ceab7e7ee4b9dbde7ba82867f34274db51487d83 is not in the local Hugging Face cache (fetch it with: huggingface-cli download m42-health/Llama3-Med42-8B tokenizer.json --revision ceab7e7ee4b9dbde7ba82867f34274db51487d83)"
+}

@@ -1,0 +1,147 @@
+{
+ "chatdoctor": [
+  {
+   "input": "  I have had a cough for 3 days.  ",
+   "output": "Rest and fluids.\nSee a doctor if it lasts."
+  },
+  {
+   "input": "",
+   "output": "no question"
+  },
+  {
+   "Patient": "My knee hurts after running.",
+   "Doctor": "Line one of a long answer.\nLine two. word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word "
+  },
+  {
+   "input": "  I have had a cough for 3 days.  ",
+   "output": "duplicate question"
+  },
+  {
+   "input": "Is a fever of 38 C dangerous?",
+   "output": ""
+  },
+  {
+   "question": "Can I take two painkillers together?",
+   "answer": "Ask a pharmacist."
+  },
+  {
+   "input": "I feel tired all the time.",
+   "output": "Check thyroid and iron.",
+   "instruction": "x"
+  }
+ ],
+ "medquad": [
+  {
+   "question": "What is glaucoma? ",
+   "answer": "Glaucoma is a group of eye diseases.\nIt damages the optic nerve."
+  },
+  {
+   "Question": "What causes gout?",
+   "Answer": "Line one of a long answer.\nLine two. word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word "
+  },
+  {
+   "question": "What are the symptoms of flu?",
+   "answer": null
+  },
+  {
+   "question": "What is glaucoma? ",
+   "answer": "duplicate"
+  },
+  {
+   "query": "How is asthma treated?",
+   "long_answer": "Inhalers."
+  }
+ ],
+ "medqa": [
+  {
+   "question": "A 45-year-old man has chest pain. What is the next step? ",
+   "answer": "ECG",
+   "options": {
+    "A": "ECG",
+    "B": "MRI"
+   }
+  },
+  {
+   "question": "A child has a rash. Diagnosis?",
+   "answer": "B",
+   "options": {
+    "A": "Measles",
+    "B": "Chickenpox"
+   }
+  },
+  {
+   "sent1": "A woman has fatigue.",
+   "answer_idx": "C",
+   "choices": {
+    "C": "Anemia"
+   }
+  },
+  {
+   "question": "No answer here.",
+   "answer": ""
+  },
+  {
+   "question": "A 45-year-old man has chest pain. What is the next step? ",
+   "answer": "dup"
+  },
+  {
+   "question": "Long reference?",
+   "answer": "x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x "
+  }
+ ],
+ "medicationqa": [
+  {
+   "Question": "how much ibuprofen can i take",
+   "Answer": "Up to 1200 mg a day\nwithout advice."
+  },
+  {
+   "question": "is it ok to drink on antibiotics",
+   "answer": "Line one of a long answer.\nLine two. word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word "
+  },
+  {
+   "Question": "",
+   "Answer": "empty"
+  }
+ ],
+ "medmcqa": [
+  {
+   "question": "Drug of choice for X?",
+   "opa": "A1",
+   "opb": "B1",
+   "opc": "C1",
+   "opd": "D1",
+   "cop": 2
+  },
+  {
+   "question": "Bad index",
+   "opa": "A",
+   "opb": "B",
+   "opc": "C",
+   "opd": "D",
+   "cop": 7
+  },
+  {
+   "question": "No options",
+   "opa": "",
+   "opb": "",
+   "opc": "",
+   "opd": "",
+   "cop": 0
+  },
+  {
+   "question": "String index",
+   "opa": "first",
+   "opb": "second",
+   "opc": "",
+   "opd": "",
+   "cop": "1"
+  },
+  {
+   "question": "Missing cop",
+   "opa": "a",
+   "opb": "b",
+   "opc": "c",
+   "opd": "d"
+  }
+ ]
+}

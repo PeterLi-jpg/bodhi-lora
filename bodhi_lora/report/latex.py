@@ -1,0 +1,145 @@
+"""LaTeX text for the report: number formats, macro tokens and booktabs tables.
+
+The formats are the ones the paper's numbers had since the submission: fixed decimals in
+\\ensuremath, "-0.0" printed as "0.0" for a point value, an interval end that rounds to
+zero printed with the extra decimals that show its sign, p-values to two significant digits and in
+scientific form below 0.001.
+"""
+from __future__ import annotations
+
+import math
+import re
+
+DIGITS = {"0": "Zero", "1": "One", "2": "Two", "3": "Three", "4": "Four", "5": "Five", "6": "Six",
+          "7": "Seven", "8": "Eight", "9": "Nine"}
+MISSING = "--"
+
+
+def finite(x) -> bool:
+    return isinstance(x, (int, float)) and not isinstance(x, bool) and math.isfinite(x)
+
+
+def fmt(x, dp: int, sign: bool = False) -> str:
+    if not finite(x):
+        return MISSING
+    s = f"{x:+.{dp}f}" if sign else f"{x:.{dp}f}"
+    if float(s) == 0:
+        s = f"{0:.{dp}f}"
+    return "\\ensuremath{" + s + "}"
+
+
+def fmt_int(n) -> str:
+    return f"{int(n):,}".replace(",", "{,}")
+
+
+def fmt_p(p) -> str:
+    if not finite(p):
+        return MISSING
+    if p < 0.001:
+        mant, exp = f"{p:.1e}".split("e")
+        return f"\\ensuremath{{{mant}\\times10^{{{int(exp)}}}}}"
+    return "\\ensuremath{" + f"{p:.2g}" + "}"
+
+
+def _endpoint(v: float, dp: int, sign: bool) -> str:
+    """One end of an interval. An end that is not zero but rounds to zero would print
+    as "-0.000" or "+0.000" and hide which side of zero it lies on, which is the point
+    of the interval, so it gets up to three more decimals until a nonzero digit shows."""
+    for extra in range(4):
+        s = f"{v:+.{dp + extra}f}" if sign else f"{v:.{dp + extra}f}"
+        if float(s) != 0 or v == 0:
+            return s
+    return s
+
+
+def fmt_ci(ci, dp: int, sign: bool = True) -> str:
+    if not ci or not (finite(ci[0]) and finite(ci[1])):
+        return MISSING
+    a = _endpoint(ci[0], dp, sign)
+    b = _endpoint(ci[1], dp, sign)
+    return "\\ensuremath{[" + a + ",\\," + b + "]}"
+
+
+def fmt_pm(x, ci, dp: int, sign: bool = True) -> str:
+    """x plus or minus the half width of a symmetric interval (a t interval)."""
+    if not finite(x):
+        return MISSING
+    s = f"{x:+.{dp}f}" if sign else f"{x:.{dp}f}"
+    if float(s) == 0:
+        s = f"{0:.{dp}f}"
+    if ci and finite(ci[0]) and finite(ci[1]):
+        s += f"\\pm{(ci[1] - ci[0]) / 2:.{dp}f}"
+    return "\\ensuremath{" + s + "}"
+
+
+def fmt_range(x, ci, dp: int, sign: bool = True, stack: bool = False) -> str:
+    """x followed by both ends of its interval, for an interval that need not be
+    symmetric (a percentile bootstrap). With stack, the interval goes on a second line
+    under x, which keeps a table column narrow."""
+    if not finite(x):
+        return MISSING
+    value = fmt(x, dp, sign)
+    if not (ci and finite(ci[0]) and finite(ci[1])):
+        return value
+    interval = fmt_ci(ci, dp, sign)
+    if stack:
+        return "\\shortstack[r]{" + value + "\\\\" + interval + "}"
+    return value.removesuffix("}") + "\\;" + interval.removeprefix("\\ensuremath{")
+
+
+def token(name: str) -> str:
+    """An id as letters for a macro name: 'needs-info-theme' -> 'NeedsInfoTheme',
+    'pass1-headers' -> 'PassOneHeaders'."""
+    out = []
+    for part in re.split(r"[^A-Za-z0-9]+", name):
+        if part:
+            part = "".join(DIGITS.get(ch, ch) for ch in part)
+            out.append(part[0].upper() + part[1:])
+    return "".join(out)
+
+
+def escape(text: str) -> str:
+    """Plain text (ids, notes) for a table cell."""
+    return re.sub(r"([_%&#$])", r"\\\1", text)
+
+
+_MULTICOLUMN = re.compile(r"^(?:\\cmidrule\S*\s*)*\\multicolumn\{(\d+)\}")
+
+
+def columns_of(colspec: str) -> int:
+    """How many columns a colspec such as "lrrr" or "l@{}p{3cm}c" declares."""
+    spec = re.sub(r"@\{[^}]*\}|!\{[^}]*\}|\|", "", colspec)
+    spec = re.sub(r"[pmb]\{[^}]*\}", "x", spec)
+    return sum(ch in "lcrxS" for ch in spec)
+
+
+def row_width(row: list[str]) -> int:
+    """How many columns one row fills: one per cell, or n for a \\multicolumn{n}."""
+    width = 0
+    for text in row:
+        m = _MULTICOLUMN.match(text.strip())
+        width += int(m.group(1)) if m else 1
+    return width
+
+
+def tabular(colspec: str, header_rows: list[list[str]], blocks: list[list[list[str]]], source: str) -> str:
+    """A booktabs tabular; blocks are row groups separated by \\midrule.
+
+    Every row must fill exactly the columns of colspec. A row with more cells breaks the
+    LaTeX build ("Extra alignment tab"), and one with fewer shifts its numbers under the
+    wrong header, so either is an error here, where the report is made."""
+    ncols = columns_of(colspec)
+    for row in [*header_rows, *(r for b in blocks for r in b)]:
+        if row_width(row) != ncols:
+            raise ValueError(f"table from {source}: a row fills {row_width(row)} columns, but the colspec "
+                             f"{colspec!r} has {ncols}: {row[:3]}")
+    lines = [f"% Generated by bodhi_lora.report from {source}. Do not edit by hand; run `make numbers`.",
+             f"\\begin{{tabular}}{{{colspec}}}", "\\toprule"]
+    lines += [" & ".join(r) + " \\\\" for r in header_rows]
+    lines.append("\\midrule")
+    for i, block in enumerate(blocks):
+        if i:
+            lines.append("\\midrule")
+        lines += [" & ".join(r) + " \\\\" for r in block]
+    lines += ["\\bottomrule", "\\end{tabular}"]
+    return "\n".join(lines) + "\n"
