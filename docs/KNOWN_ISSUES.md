@@ -246,19 +246,17 @@ D-numbers refer to [DECISIONS.md](DECISIONS.md). Issue numbers such as #5 are Gi
   go-ahead on each (BLOCKED.md item 4.3). The recipe now rewrites the commit ids that
   tracked files cite before the push (`scripts/maintenance/purge_history.md`, step 7b), so
   `make check` and the pre-commit hook still pass afterwards. The current tree is clean.
-- **Temp branches may remain on the remote (HYG-15, HYG-11).** The first author deleted
-  the remote scratch branches on 2026-10-11 (HYG-12). Whether the
-  temp branches and the branches merged into the mainline went too is not confirmed from
-  this checkout. One of them, `results-temp`, holds the adapter of the 2026-04 MedGemma
-  pilot (seed 42, 838 traces), not a submitted adapter; its weights match the local copy
-  in the pilot cell's train folder. `scripts/maintenance/prune_branches.sh` lists them;
-  `--apply` deletes them after the first author's yes (D16, BLOCKED.md item 4).
 - **`make smoke` stops after the smoke record changes.** The runner freezes a cell's
   record at its first run, in the scratch root too, so a changed smoke record fails
   against the old `outputs/smoke/` folder. Move that folder away and run again.
 
 ## Fixed
 
+- **Old branches on the remote (HYG-15, HYG-11, D34).** On 2026-11-03 the 103 branches of
+  April to July were deleted. The remote holds `main`, the resubmission branch, `review`
+  (the anonymous copy) and `results-scaffold`, which keeps <commit>. The branch
+  `results-temp` went too; its adapter, from the 2026-04 MedGemma pilot (seed 42, 838
+  traces), not a submitted adapter, has the same bytes in the pilot cell's train folder.
 - **The repository name (D15).** The repository is now `bodhi-lora`; it was
   `bodhi-lora`, which misspelled the name. GitHub redirects the old URL. The tracked docs
   and `pyproject.toml` use the new name (2026-11-01); `legacy/` keeps the old one, as it

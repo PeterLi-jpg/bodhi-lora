@@ -1022,8 +1022,8 @@ Table~\ref{tab:hparams-cells} gives the configuration of the added cells.
 %   base model      main:configs/lora_medgemma27b_tunix.yaml:19
 %   r, alpha        main:configs/lora_medgemma27b_tunix.yaml:37-38; PEFT export
 %                   main:tpu/launch_5seeds_tunix.sh:540 (--r 8 --alpha 16 --dropout 0.0).
-%                   The only MedGemma adapter in git, <commit>:checkpoints/seed_42/best/
-%                   adapter_config.json:19,29, also has r=8, alpha=16, but it comes from an
+%                   The only MedGemma adapter in git (<commit>), now
+%                   results/healthbench__medgemma-27b-text__bodhi__2026-04/seed_42/train/adapter_config.json:19,29, also has r=8, alpha=16, but it comes from an
 %                   early HF-path run (q_proj/v_proj, 5 epochs on 838 traces), not from
 %                   the evaluated adapters.
 %   dropout         main:configs/lora_medgemma27b_tunix.yaml:39, applied by qwix.LoraRule
