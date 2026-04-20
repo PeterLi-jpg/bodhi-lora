@@ -26,6 +26,9 @@ if [ -z "${HF_TOKEN:-}" ]; then
 fi
 export HF_TOKEN
 export WANDB_MODE=offline
+RUN_DIR="${1:-${RUN_DIR:-results/manual_run}}"
+
+mkdir -p "$RUN_DIR"
 
 echo "$(date) | starting lora training on $(hostname)"
 nvidia-smi --list-gpus
@@ -33,7 +36,9 @@ nvidia-smi --list-gpus
 # Fail fast on missing deps / gated-access / no-GPU before loading MedGemma-27B.
 python scripts/preflight.py
 
-python scripts/train_lora.py --config configs/lora_medgemma27b.yaml
+python scripts/train_lora.py \
+    --config configs/lora_medgemma27b.yaml \
+    --output-dir "$RUN_DIR/checkpoints"
 
 echo "$(date) | done"
 nvidia-smi --query-gpu=index,memory.used,memory.total --format=csv

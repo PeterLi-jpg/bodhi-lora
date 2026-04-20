@@ -25,6 +25,9 @@ if [ -z "${HF_TOKEN:-}" ]; then
     exit 1
 fi
 export HF_TOKEN
+RUN_DIR="${1:-${RUN_DIR:-results/manual_run}}"
+
+mkdir -p "$RUN_DIR/eval" "$RUN_DIR/figures"
 
 echo "$(date) | starting eval on $(hostname)"
 nvidia-smi --list-gpus
@@ -36,32 +39,32 @@ python scripts/download_data.py
 
 MODEL="google/medgemma-27b-text-it"
 IDS="data/raw/hard_200_sample_ids.json"
-LORA="checkpoints/best"
+LORA="$RUN_DIR/checkpoints/best"
 
 echo "--- base, no wrapper ---"
-python scripts/eval_healthbench.py --model "$MODEL" --sample-ids "$IDS" --output eval/base_no_wrapper.json
+python scripts/eval_healthbench.py --model "$MODEL" --sample-ids "$IDS" --output "$RUN_DIR/eval/base_no_wrapper.json"
 
 echo "--- base + bodhi ---"
-python scripts/eval_healthbench.py --model "$MODEL" --use-bodhi --sample-ids "$IDS" --output eval/base_bodhi.json
+python scripts/eval_healthbench.py --model "$MODEL" --use-bodhi --sample-ids "$IDS" --output "$RUN_DIR/eval/base_bodhi.json"
 
 echo "--- lora, no wrapper ---"
-python scripts/eval_healthbench.py --model "$MODEL" --lora-path "$LORA" --sample-ids "$IDS" --output eval/lora_no_wrapper.json
+python scripts/eval_healthbench.py --model "$MODEL" --lora-path "$LORA" --sample-ids "$IDS" --output "$RUN_DIR/eval/lora_no_wrapper.json"
 
 echo "--- lora + bodhi ---"
-python scripts/eval_healthbench.py --model "$MODEL" --lora-path "$LORA" --use-bodhi --sample-ids "$IDS" --output eval/lora_bodhi.json
+python scripts/eval_healthbench.py --model "$MODEL" --lora-path "$LORA" --use-bodhi --sample-ids "$IDS" --output "$RUN_DIR/eval/lora_bodhi.json"
 
 echo "--- U-shape stratified analysis ---"
 python scripts/eval_ushape.py \
-    --eval-jsons eval/base_no_wrapper.json eval/base_bodhi.json eval/lora_no_wrapper.json eval/lora_bodhi.json \
+    --eval-jsons "$RUN_DIR/eval/base_no_wrapper.json" "$RUN_DIR/eval/base_bodhi.json" "$RUN_DIR/eval/lora_no_wrapper.json" "$RUN_DIR/eval/lora_bodhi.json" \
     --healthbench data/raw/healthbench_hard.jsonl data/raw/healthbench.jsonl \
-    --output eval/ushape.json
+    --output "$RUN_DIR/eval/ushape.json"
 
 echo "--- plot U-shape figures ---"
 python scripts/plot_ushape.py \
-    --input eval/ushape.json \
-    --eval-jsons eval/base_no_wrapper.json eval/base_bodhi.json eval/lora_no_wrapper.json eval/lora_bodhi.json \
+    --input "$RUN_DIR/eval/ushape.json" \
+    --eval-jsons "$RUN_DIR/eval/base_no_wrapper.json" "$RUN_DIR/eval/base_bodhi.json" "$RUN_DIR/eval/lora_no_wrapper.json" "$RUN_DIR/eval/lora_bodhi.json" \
     --healthbench data/raw/healthbench_hard.jsonl data/raw/healthbench.jsonl \
     --n-bins 10 \
-    --out-dir eval/figures
+    --out-dir "$RUN_DIR/figures"
 
 echo "$(date) | done"

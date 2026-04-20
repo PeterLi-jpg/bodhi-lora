@@ -12,6 +12,7 @@ eval/smoke/
 checkpoints/
 *.bin
 *.safetensors
+results/
 
 logs/
 wandb/
