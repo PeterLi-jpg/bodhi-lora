@@ -1,9 +1,12 @@
 """Evaluate model on HealthBench Hard (base vs lora, with/without BOHDI wrapper)."""
 
 import argparse
+from datetime import datetime, timezone
+from importlib import metadata
 import json
 import math
 import random
+import subprocess
 import urllib.request
 import sys
 from pathlib import Path
@@ -148,6 +151,44 @@ def compute_ece(results, n_bins=10):
     return float(ece)
 
 
+def _safe_package_version(name):
+    try:
+        return metadata.version(name)
+    except metadata.PackageNotFoundError:
+        return None
+
+
+def _safe_git_sha():
+    try:
+        return subprocess.check_output(
+            ["git", "rev-parse", "HEAD"],
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+    except Exception:
+        return None
+
+
+def collect_run_metadata(seed, grader_model):
+    gpu_names = []
+    if torch.cuda.is_available():
+        for idx in range(torch.cuda.device_count()):
+            gpu_names.append(torch.cuda.get_device_properties(idx).name)
+
+    return {
+        "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+        "git_sha": _safe_git_sha(),
+        "seed": seed,
+        "grader_model": grader_model,
+        "bodhi_version": _safe_package_version("bodhi-llm"),
+        "transformers_version": _safe_package_version("transformers"),
+        "peft_version": _safe_package_version("peft"),
+        "torch_version": torch.__version__,
+        "n_gpus": len(gpu_names),
+        "gpu_names": gpu_names,
+    }
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", default="google/medgemma-27b-text-it")
@@ -204,6 +245,7 @@ def main():
         "config": tag, "model": args.model,
         "lora_path": args.lora_path, "use_bodhi": args.use_bodhi,
         "n_examples": len(examples),
+        "run_metadata": collect_run_metadata(args.seed, args.grader_model),
         "mean": float(np.mean(scores)) if scores else None,
         "std": float(np.std(scores)) if scores else None,
         "median": float(np.median(scores)) if scores else None,
