@@ -17,6 +17,7 @@ Anything unset keeps pre-existing behavior so current configs still work.
 import argparse
 import json
 import random
+from pathlib import Path
 
 import numpy as np
 import torch
@@ -286,9 +287,11 @@ def main():
     )
 
     trainer.train()
+    trainer.save_state()
     best_path = f"{args.output_dir.rstrip('/')}/best"
     trainer.save_model(best_path)
     _tokenizer.save_pretrained(best_path)
+    trainer.state.save_to_json(str(Path(best_path) / "trainer_state.json"))
     print(f"saved to {best_path}")
 
 
