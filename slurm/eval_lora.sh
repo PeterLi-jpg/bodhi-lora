@@ -68,4 +68,13 @@ python scripts/plot_ushape.py \
     --n-bins 10 \
     --out-dir "$RUN_DIR/figures"
 
+echo "--- plot training loss (if trainer_state.json exists) ---"
+if [ -f "$LORA/trainer_state.json" ]; then
+    python scripts/plot_training.py \
+        --trainer-state "$LORA/trainer_state.json" \
+        --output "$RUN_DIR/figures/training_loss.png"
+else
+    echo "trainer_state.json not found at $LORA — skipping training loss plot"
+fi
+
 echo "$(date) | done"

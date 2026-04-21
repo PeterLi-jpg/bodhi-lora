@@ -3,22 +3,28 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+.pytest_cache/
 
 data/raw/*.jsonl
 data/sft/*.jsonl
 data/sft/smoke/
+data/sft/figures/
 eval/smoke/
+eval/*.json
+eval/figures/
 
 checkpoints/
 *.bin
 *.safetensors
 results/
+paper/figures/*.pdf
 
 logs/
 wandb/
 *.log
 
 .env
+.env.local
 .venv/
 env/
 .DS_Store
