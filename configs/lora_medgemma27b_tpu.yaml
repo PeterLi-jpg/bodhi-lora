@@ -1,0 +1,43 @@
+seed: 42
+
+model:
+  name: google/medgemma-27b-text-it
+  torch_dtype: bfloat16
+  # bitsandbytes (4bit/8bit QLoRA) is CUDA-only and doesn't run on TPU.
+  # With v6e-64 (64 chips, ~2TB total HBM) there's no memory pressure anyway.
+  quantization: null
+
+lora:
+  r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  target_modules:
+    - q_proj
+    - k_proj
+    - v_proj
+    - o_proj
+    - gate_proj
+    - up_proj
+    - down_proj
+  task_type: CAUSAL_LM
+  variant: standard
+
+training:
+  num_epochs: 3
+  # v6e: 64 chips — we can use a larger per-device batch because we have plenty
+  # of HBM (each chip ~32GB, model weights ~54GB total across all chips).
+  per_device_train_batch_size: 4
+  gradient_accumulation_steps: 4   # effective batch = 4 * 64 * 4 = 1024
+  learning_rate: 1.0e-4
+  warmup_ratio: 0.05
+  lr_scheduler_type: cosine
+  max_seq_length: 4096
+  logging_steps: 10
+  save_strategy: epoch
+  eval_strategy: epoch
+  bf16: true
+
+data:
+  train_file: data/sft/train.jsonl
+  val_file: data/sft/val.jsonl
+  eval_sample_ids: data/raw/hard_200_sample_ids.json

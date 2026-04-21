@@ -27,6 +27,15 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, set_seed
 from trl import SFTTrainer, SFTConfig, DataCollatorForCompletionOnlyLM
 from peft import LoraConfig
 
+# Detect whether we're running under PyTorch/XLA (Google Cloud TPU).
+# When True:  device_map="auto" must NOT be used — accelerate owns placement.
+# When False: device_map="auto" is used as before (multi-GPU or single GPU).
+try:
+    import torch_xla  # noqa: F401
+    _ON_TPU = True
+except ImportError:
+    _ON_TPU = False
+
 DTYPE_MAP = {"bfloat16": torch.bfloat16, "float16": torch.float16, "float32": torch.float32}
 
 # Known LoRA variants we support via PEFT's LoraConfig flags.
@@ -169,6 +178,13 @@ def main():
     # "4bit" / "8bit". The 4bit path matches the original QLoRA paper: NF4
     # weights with bf16 compute dtype, double-quantized.
     quant = model_cfg.get("quantization")
+    # bitsandbytes is CUDA-only; it will hard-fail on TPU at import time.
+    if quant in ("4bit", "8bit") and _ON_TPU:
+        raise ValueError(
+            f"model.quantization={quant!r} uses bitsandbytes which is CUDA-only "
+            "and cannot run on TPU. Set model.quantization: null in your config "
+            "(not needed on TPU — you have plenty of HBM)."
+        )
     quant_config = None
     if quant in ("4bit", "8bit"):
         # Import lazily so CPU-only / Mac dev boxes without bitsandbytes still
@@ -192,10 +208,13 @@ def main():
     else:
         print(f"Loading {model_cfg['name']} ({dtype})...")
 
+    # On TPU, accelerate (via torch_xla) manages device placement across chips.
+    # device_map="auto" would try to use CUDA device IDs and fail; pass None
+    # instead and let accelerate distribute the model automatically.
     model = AutoModelForCausalLM.from_pretrained(
         model_cfg["name"],
         torch_dtype=dtype,
-        device_map="auto",
+        device_map=None if _ON_TPU else "auto",
         quantization_config=quant_config,
     )
 
