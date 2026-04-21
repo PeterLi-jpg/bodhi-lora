@@ -17,7 +17,9 @@ set -euo pipefail
 PROJECT="tokyo-micron-494016-s9"
 TPU_NAME="bohdi-lora-v4"
 TPU_TYPE="v4-32"
-TPU_RUNTIME="tpu-vm-pt-2.4"   # PyTorch 2.4 + torch_xla, stable for v4
+# tpu-vm-base is plain Ubuntu. setup_tpu.sh installs torch + torch_xla 2.5
+# from Google's TPU wheel server. tpu-vm-pt-* images only go up to 2.0.
+TPU_RUNTIME="tpu-vm-base"
 ZONE="us-central2-b"
 
 gcloud compute tpus tpu-vm create "$TPU_NAME" \
@@ -46,9 +48,18 @@ cd ~/bohdi-lora
 bash tpu/setup_tpu.sh
 
 mkdir -p data/sft eval checkpoints logs
+
+if [ -n "${GCS_DATA_PATH:-}" ]; then
+    echo "=== Downloading training data from ${GCS_DATA_PATH} ==="
+    gsutil -m cp "${GCS_DATA_PATH}/train.jsonl" data/sft/train.jsonl
+    gsutil -m cp "${GCS_DATA_PATH}/val.jsonl"   data/sft/val.jsonl
+    echo "Data downloaded: $(wc -l < data/sft/train.jsonl) train, $(wc -l < data/sft/val.jsonl) val examples"
+else
+    echo "WARNING: GCS_DATA_PATH not set — data/sft/train.jsonl and val.jsonl must already be on this VM."
+fi
+
 export HF_TOKEN="${HF_TOKEN}"
 
-# v4-32 uses 32 cores; batch size is smaller (less HBM per chip than v6e)
 accelerate launch \
     --config_file tpu/accelerate_config_v4_32.yaml \
     scripts/train_lora.py \

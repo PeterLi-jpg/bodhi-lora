@@ -1,20 +1,35 @@
 #!/bin/bash
-# setup_tpu.sh — install Python deps on a Cloud TPU VM.
+# setup_tpu.sh — install Python deps on a Cloud TPU VM (tpu-vm-base image).
 #
-# TPU VMs come with torch + torch_xla pre-installed and tightly coupled to the
-# TPU runtime. We install everything else from requirements.txt but skip
-# torch itself (re-installing would break the xla linkage) and skip the
-# CUDA-only packages (bitsandbytes, autoawq) that don't exist on TPU.
+# We use the tpu-vm-base image (plain Ubuntu) and install torch + torch_xla
+# from Google's TPU wheel server. This gives us a current torch version (2.5)
+# that satisfies requirements.txt and is built against the TPU runtime.
 #
-# Usage: run once after SSH-ing into the TPU VM, before launching training.
+# We skip the CUDA-only packages (bitsandbytes, autoawq) — they don't exist
+# on TPU and aren't needed (no memory pressure with 1TB+ HBM).
+#
+# Usage: called automatically by launch_v6e.sh / launch_v4_ondemand.sh
 
 set -euo pipefail
 
-echo "=== Python / torch_xla version ==="
+TORCH_VERSION="2.5.0"
+TORCH_XLA_VERSION="2.5.0"
+TPU_WHEEL_URL="https://storage.googleapis.com/libtpu-releases/index.html"
+
+echo "=== Installing torch ${TORCH_VERSION} + torch_xla ${TORCH_XLA_VERSION} from TPU wheel server ==="
+pip install --quiet \
+    "torch==${TORCH_VERSION}" \
+    "torch_xla[tpu]==${TORCH_XLA_VERSION}" \
+    -f "${TPU_WHEEL_URL}"
+
+echo "=== Verifying torch_xla import ==="
 python3 -c "import torch; import torch_xla; print('torch:', torch.__version__, '| xla:', torch_xla.__version__)"
 
-echo "=== Installing deps (skipping torch / CUDA-only packages) ==="
+echo "=== Installing remaining deps ==="
+# Pin torch here too so pip does not silently downgrade it when resolving
+# transitive requirements from transformers / trl / peft.
 pip install --quiet \
+    "torch==${TORCH_VERSION}" \
     "bodhi-llm[all]==0.1.4" \
     "transformers>=4.50.0,<5.0.0" \
     "timm>=1.0.0,<2.0.0" \
@@ -28,9 +43,18 @@ pip install --quiet \
     "numpy>=1.24,<3.0" \
     "pandas>=2.0,<3.0" \
     "tqdm>=4.65" \
-    "matplotlib>=3.7,<4.0"
+    "matplotlib>=3.7,<4.0" \
+    -f "${TPU_WHEEL_URL}"
 
-echo "=== Verifying peft + trl import ==="
-python3 -c "from peft import LoraConfig; from trl import SFTTrainer; print('peft + trl OK')"
+echo "=== Final version check ==="
+python3 -c "
+import torch, torch_xla, peft, trl, transformers, accelerate
+print('torch:', torch.__version__)
+print('torch_xla:', torch_xla.__version__)
+print('transformers:', transformers.__version__)
+print('peft:', peft.__version__)
+print('trl:', trl.__version__)
+print('accelerate:', accelerate.__version__)
+"
 
 echo "=== setup_tpu.sh done ==="

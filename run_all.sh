@@ -9,6 +9,7 @@ mkdir -p logs
 RUN_DATE="${RUN_DATE:-$(date +%F)}"
 CONFIG_TAG="${CONFIG_TAG:-$(basename "${CONFIG_PATH:-configs/lora_medgemma27b.yaml}" .yaml)}"
 SEED="${SEED:-42}"
+export SEED  # export so slurm child jobs inherit the value (not just the RUN_TAG suffix)
 RUN_TAG="${RUN_TAG:-${CONFIG_TAG}_seed${SEED}}"
 RUN_DIR="${RUN_DIR:-results/${RUN_DATE}_${RUN_TAG}}"
 
