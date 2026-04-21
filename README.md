@@ -23,7 +23,7 @@ HealthBench Hard (1000 examples) + HealthBench Full (5000 examples) combined = 5
 3. `bash smoke.sh` — end-to-end test with `gemma-3n-E4B-it` (<10 min, catches bugs)
 4. `bash run_all.sh` — full pipeline on slurm
 
-See [CONTRIBUTIONS.md](CONTRIBUTIONS.md) for setup (Mac/Linux/Windows), full pipeline instructions, expected outputs, and how to contribute. [KNOWN_ISSUES.md](KNOWN_ISSUES.md) tracks open methodological concerns that need discussion before the paper eval is final.
+See [contributions/reproducibility.md](contributions/reproducibility.md) for step-by-step pipeline instructions, expected outputs, and troubleshooting. See [contributions/contributing.md](contributions/contributing.md) for environment setup and PR process. [KNOWN_ISSUES.md](KNOWN_ISSUES.md) tracks open methodological concerns.
 
 ## Hygiene
 
@@ -89,10 +89,10 @@ bohdi-lora/
 ├── eval/             # Evaluation outputs
 ├── scripts/          # Generation, filtering, training, and eval scripts
 ├── slurm/            # SBATCH job scripts
+├── contributions/    # Reproducibility guide and contribution docs
 ├── tests/            # Pytest test suite (no GPU required)
 ├── smoke.sh          # End-to-end smoke test (<10 min)
 ├── run_all.sh        # Full pipeline dependency chain (slurm)
-├── CONTRIBUTIONS.md  # Setup, reproducibility, and contribution guide
 ├── KNOWN_ISSUES.md
 └── requirements.txt
 ```
