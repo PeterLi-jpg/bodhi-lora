@@ -64,7 +64,7 @@ TRC_SLOTS=(
 )
 
 # Try each slot in one pass, then sleep and retry the whole list.
-# 200 rounds * 5 min = ~16 hours of overnight retrying
+# 200 rounds * 5 min = ~16 hours of overnight retrying. Override: MAX_ROUNDS=10 bash tpu/launch_multiseed.sh
 MAX_ROUNDS="${MAX_ROUNDS:-200}"
 RETRY_DELAY="${RETRY_DELAY:-300}"
 
