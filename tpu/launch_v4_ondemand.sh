@@ -12,7 +12,14 @@
 
 set -euo pipefail
 
-: "${HF_TOKEN:?HF_TOKEN must be set}"
+# Load HF_TOKEN from .env in repo root if not already set in environment
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ENV_FILE="${SCRIPT_DIR}/../.env"
+if [ -z "${HF_TOKEN:-}" ] && [ -f "$ENV_FILE" ]; then
+    # shellcheck source=/dev/null
+    source "$ENV_FILE"
+fi
+: "${HF_TOKEN:?HF_TOKEN not set — add HF_TOKEN=hf_... to .env or export it}"
 
 PROJECT="tokyo-micron-494016-s9"
 TPU_NAME="bohdi-lora-v4"
