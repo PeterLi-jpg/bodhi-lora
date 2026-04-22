@@ -213,7 +213,7 @@ def main():
     parser.add_argument("--lora-path", default=None)
     parser.add_argument("--use-bodhi", action="store_true")
     parser.add_argument("--sample-ids", required=True)
-    parser.add_argument("--grader-model", default="Qwen/Qwen2.5-14B-Instruct-AWQ")
+    parser.add_argument("--grader-model", default="Qwen/Qwen2.5-14B-Instruct")
     parser.add_argument("--output", required=True)
     parser.add_argument("--max-examples", type=int, default=None)
     parser.add_argument("--seed", type=int, default=42)

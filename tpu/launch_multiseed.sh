@@ -167,6 +167,12 @@ if [ -f \"\$LORA/trainer_state.json\" ]; then
     python scripts/plot_training.py --trainer-state \"\$LORA/trainer_state.json\" --output \"\$FIG_DIR/training_loss.png\"
 fi
 
+echo '-- rubric diff (base_no_wrapper → lora_bodhi) --'
+python scripts/rubric_diff.py \
+    \"\$EVAL_DIR/base_no_wrapper.json\" \
+    \"\$EVAL_DIR/lora_bodhi.json\" \
+    --output \"\$EVAL_DIR/rubric_diff.json\"
+
 echo 'Eval done for seed ${SEED}.'
 "
 
@@ -183,6 +189,31 @@ echo 'Eval done for seed ${SEED}.'
     echo "Seed $SEED complete — results in ./results/seed_${SEED}/"
 done
 
+# ── Aggregate across all seeds ────────────────────────────────────────────────
+echo ""
+echo "=== Aggregate: multi-seed summary ==="
+SEED_DIRS_ARG=""
+for SEED in $SEEDS; do
+    SEED_DIRS_ARG="$SEED_DIRS_ARG eval/seed_${SEED}"
+done
+
+gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
+    --zone="$ZONE" --project="$PROJECT" \
+    --command="
+set -euo pipefail
+cd ~/bohdi-lora
+python scripts/aggregate_seeds.py \
+    --seed-dirs $SEED_DIRS_ARG \
+    --healthbench data/raw/healthbench_hard.jsonl data/raw/healthbench.jsonl \
+    --output eval/multi_seed_summary.json
+echo 'Aggregate done.'
+"
+
+mkdir -p ./results
+gcloud compute tpus tpu-vm scp --zone="$ZONE" --project="$PROJECT" \
+    "${TPU_NAME}:~/bohdi-lora/eval/multi_seed_summary.json" "./results/"
+
 echo ""
 echo "All seeds done: $SEEDS"
 echo "Results in ./results/"
+echo "Multi-seed summary: ./results/multi_seed_summary.json"

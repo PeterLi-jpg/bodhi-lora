@@ -59,7 +59,16 @@ python scripts/filter_traces.py \
     --val-ratio 0.34
 
 echo "--- 4a/4: train 1 epoch on the smoke set ---"
-python scripts/train_lora.py --config configs/lora_gemma_smoke.yaml
+# On TPU, train_lora.py must run under accelerate launch (XLA needs the
+# launcher to set up the distributed context). On GPU/CPU, plain python works.
+if python -c "import torch_xla" 2>/dev/null; then
+    echo "  TPU detected — using accelerate launch (v4-32 config)"
+    accelerate launch \
+        --config_file tpu/accelerate_config_v4_32.yaml \
+        scripts/train_lora.py --config configs/lora_gemma_smoke.yaml
+else
+    python scripts/train_lora.py --config configs/lora_gemma_smoke.yaml
+fi
 
 echo "--- 4b/4: eval on $N_EXAMPLES examples ---"
 python scripts/eval_healthbench.py \
