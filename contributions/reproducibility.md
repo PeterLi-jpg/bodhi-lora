@@ -5,8 +5,20 @@ Step-by-step instructions to reproduce every experiment in this repo. If a comma
 ## 1. Prerequisites
 
 ### Hardware
-- **Smoke test**: 1 GPU with >=16 GB VRAM (or CPU, slow)
-- **Full run**: 1 GPU with >=80 GB VRAM for MedGemma-27B (H100 or A100-80G). Multi-GPU not required; single-device with `device_map="auto"`.
+
+Two fully-supported paths — pick one:
+
+**TPU (recommended if you have TRC access)**
+- Smoke test: any machine with gcloud installed and HF_TOKEN set
+- Full run: Cloud TPU v4-32, v6e-64, or v5litepod-64 via TRC grant
+- No VRAM constraints — full bfloat16, no quantization needed
+- See section 4a (TPU) for setup
+
+**GPU**
+- Smoke test: 1 GPU with ≥16 GB VRAM (or CPU, slow)
+- Full run (full-precision LoRA): ≥80 GB VRAM — H100 or A100-80G, or 2× A100-40G
+- Full run (QLoRA): ≥18 GB VRAM — single A100-40G or RTX 4090
+- See section 4b (GPU) for setup
 
 ### Software
 - Python 3.10 or 3.11 (tested on 3.11; 3.12 works but CUDA wheel coverage lags)
@@ -14,15 +26,17 @@ Step-by-step instructions to reproduce every experiment in this repo. If a comma
 - Linux for the full run (slurm + autoawq). macOS is fine for smoke/dev (autoawq is skipped via platform marker).
 
 ### Hugging Face access
-All three models are gated. Accept the terms on each page while logged into HF, then set `HF_TOKEN`:
+Accept the terms on each model page while logged into HF, then set `HF_TOKEN`:
 
 | Model | Used for | URL |
 |---|---|---|
 | `google/medgemma-27b-text-it` | base model (paper target) | https://huggingface.co/google/medgemma-27b-text-it |
-| `google/gemma-3n-E4B-it` | smoke / local iteration (Felipe: "4B has good reasoning") | https://huggingface.co/google/gemma-3n-E4B-it |
-| `google/gemma-3n-E2B-it` | fallback if E4B OOMs on your box | https://huggingface.co/google/gemma-3n-E2B-it |
-| `Qwen/Qwen2.5-14B-Instruct-AWQ` | grader (full) | https://huggingface.co/Qwen/Qwen2.5-14B-Instruct-AWQ |
+| `google/gemma-3n-E4B-it` | smoke / local iteration | https://huggingface.co/google/gemma-3n-E4B-it |
+| `google/gemma-3n-E2B-it` | fallback if E4B OOMs | https://huggingface.co/google/gemma-3n-E2B-it |
+| `Qwen/Qwen2.5-14B-Instruct` | grader — full pipeline (GPU + TPU) | https://huggingface.co/Qwen/Qwen2.5-14B-Instruct |
 | `Qwen/Qwen2.5-0.5B-Instruct` | grader (smoke) | ungated |
+
+Note: the grader is `Qwen2.5-14B-Instruct` (bfloat16, not AWQ) so it runs on both GPU and TPU. AWQ requires CUDA and cannot run on TPU.
 
 ```bash
 export HF_TOKEN=hf_...
@@ -42,6 +56,71 @@ bash setup.sh
 3. Downloads HealthBench Hard + Full + Consensus into `data/raw/`
 
 If `pip install` fails on `autoawq`, you are on macOS — that is expected and handled by a platform marker.
+
+## 4a. Full pipeline — TPU (Google TRC)
+
+Requires a [TRC grant](https://sites.research.google/trc/about/) with Cloud TPU quota. The script handles VM creation, dependency setup, all 5 pipeline stages, and VM deletion automatically.
+
+```bash
+# store your HF token in .env (gitignored)
+echo "HF_TOKEN=hf_..." > .env
+
+# launch — tries all TRC zones until capacity is available
+bash tpu/launch_multiseed.sh
+```
+
+The script tries TRC-granted zones in this order, retrying every 3 minutes:
+
+| Priority | TPU | Chips | Zone |
+|---|---|---|---|
+| 1 | v4-32 on-demand | 32 | us-central2-b |
+| 2 | v4-32 spot | 32 | us-central2-b |
+| 3 | v6e-64 spot | 64 | europe-west4-a |
+| 4 | v6e-64 spot | 64 | us-east1-d |
+| 5 | v5litepod-64 spot | 64 | us-central1-a |
+| 6 | v5litepod-64 spot | 64 | europe-west4-b |
+
+**Expected time once VM is acquired:** ~6-7 hours total (generation dominates at ~2-3 hours).
+
+**Outputs** land in `./results/` locally:
+```
+results/
+  seed_42/{checkpoints/, eval/, figures/}
+  seed_123/{checkpoints/, eval/, figures/}
+  seed_456/{checkpoints/, eval/, figures/}
+  multi_seed_summary.json
+```
+
+**Optional overrides:**
+```bash
+SEEDS="42 123" bash tpu/launch_multiseed.sh          # fewer seeds
+MAX_EXAMPLES=100 bash tpu/launch_multiseed.sh        # quick test
+LORA_VARIANT=dora bash tpu/launch_multiseed.sh       # DoRA variant
+LORA_VARIANT=rslora LORA_R=32 bash tpu/launch_multiseed.sh
+```
+
+Note: `QUANT=4bit` will error on TPU (bitsandbytes is CUDA-only). Use the default full-precision bfloat16 on TPU.
+
+## 4b. Full pipeline — GPU
+
+On any Linux machine with CUDA GPUs:
+
+```bash
+# store HF token
+export HF_TOKEN=hf_...
+
+# auto-detects GPU count, picks 1-GPU or multi-GPU accelerate config
+bash gpu/launch_multiseed.sh
+```
+
+Stages 1 and 2 (generate + filter) are skipped if their output files already exist, so interrupted runs resume from the right stage.
+
+**Optional overrides:**
+```bash
+QUANT=4bit bash gpu/launch_multiseed.sh              # QLoRA (saves VRAM)
+LORA_VARIANT=dora bash gpu/launch_multiseed.sh       # DoRA
+CONFIG=configs/lora_medgemma27b_qlora.yaml bash gpu/launch_multiseed.sh
+```
 
 ## 3a. Smoke test on GCP (recommended — ~20 min, ~$0.25)
 
@@ -105,7 +184,7 @@ Expected outputs:
 
 If any stage errors, fix it before moving to the full pipeline. Do not submit slurm jobs with a broken smoke test.
 
-## 4. Full pipeline (cluster)
+## 4c. Full pipeline — Slurm cluster
 
 On a slurm cluster, from the repo root:
 
@@ -316,6 +395,10 @@ If you need bit-exact reproducibility, lock: GPU model, CUDA version, PyTorch ve
 | Slurm job runs in wrong dir | `SLURM_SUBMIT_DIR` not set (manual `sbatch` from unusual location) | Set `export BOHDI_DIR=/path/to/bohdi-lora` before `run_all.sh` |
 | `autoawq` install fails on Mac | Expected — no CUDA wheel | Platform marker skips it; smoke test uses ungated Qwen 0.5B grader |
 | `ModuleNotFoundError: liger_kernel` on import trl | Optional TRL dep | `pip install liger-kernel` (Linux/CUDA only) |
+| `model.quantization=4bit` error on TPU | bitsandbytes is CUDA-only | Remove `QUANT=4bit`; use full bfloat16 on TPU (plenty of HBM) |
+| `There is no more capacity` on TPU create | Zone temporarily full | Script retries all TRC zones automatically; try again later or wait |
+| `IN_USE_ADDRESSES limit` on v6e | Transient Google error | Script skips to next zone; resolves on its own |
+| `device_map="auto"` error on TPU | XLA doesn't support CUDA device mapping | Should not happen with current scripts; file an issue if it does |
 
 ## 8. Minimal environment freeze
 

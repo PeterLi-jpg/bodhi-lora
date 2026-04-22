@@ -18,28 +18,49 @@ HealthBench Hard (1000 examples) + HealthBench Full (5000 examples) combined = 5
 
 ## Quickstart
 
-1. `bash setup.sh` — one-time install and data download
-2. `export HF_TOKEN=hf_...` — gated model access
-3. `bash smoke.sh` — end-to-end test with `gemma-3n-E4B-it` (<10 min, catches bugs)
-4. `bash run_all.sh` — full pipeline on slurm
+```bash
+git clone https://github.com/PeterLi-jpg/bohdi-lora.git
+cd bohdi-lora
+bash setup.sh
+export HF_TOKEN=hf_...        # gated model access (see reproducibility.md)
+bash smoke.sh                  # end-to-end test, <10 min, catches bugs early
+```
 
-See [contributions/reproducibility.md](contributions/reproducibility.md) for step-by-step pipeline instructions, expected outputs, and troubleshooting. See [contributions/contributing.md](contributions/contributing.md) for environment setup and PR process. [KNOWN_ISSUES.md](KNOWN_ISSUES.md) tracks open methodological concerns.
+Then run the full pipeline on your hardware:
 
-## Hygiene
+```bash
+# TPU (Google TRC / Cloud TPU) — recommended, no cost under TRC grant
+echo "HF_TOKEN=hf_..." > .env
+bash tpu/launch_multiseed.sh
 
-Run `bash scripts/check_no_secrets.sh` before opening a PR if you touched config or environment files. Generated outputs under `logs/`, `checkpoints/`, `eval/`, `data/sft/`, and `results/` are intentionally gitignored.
+# GPU (any Linux machine with CUDA GPUs)
+bash gpu/launch_multiseed.sh
+
+# Slurm cluster
+bash run_all.sh
+```
+
+See [contributions/reproducibility.md](contributions/reproducibility.md) for full instructions, hardware requirements, expected outputs, and troubleshooting.
 
 ## Pipeline
 
-```bash
-# first-time setup (creates dirs, installs deps, downloads data)
-bash setup.sh
+The full pipeline runs 5 stages automatically via the launch scripts:
 
+| Stage | Script | What it does |
+|---|---|---|
+| 1 | `generate_traces.py` | MedGemma-27B + BOHDI wrapper over 4800 prompts |
+| 2 | `filter_traces.py` | Grade with Qwen2.5-14B, keep score ≥ 0.4 |
+| 3 | `train_lora.py` | LoRA SFT, one run per seed |
+| 4 | `eval_healthbench.py` | 4 configs × 200 holdout prompts per seed |
+| 5 | `aggregate_seeds.py` | Cross-seed means, stds, 95% CIs |
+
+To run individual stages manually:
+
+```bash
 # 1. Generate BOHDI traces
 python scripts/generate_traces.py \
     --model google/medgemma-27b-text-it \
     --datasets healthbench_hard healthbench \
-    --exclude-ids data/raw/hard_200_sample_ids.json \
     --output data/sft/raw_traces.jsonl --use-bodhi
 
 # 2. Grade and filter traces
@@ -49,7 +70,9 @@ python scripts/filter_traces.py \
     --output-dir data/sft/
 
 # 3. Train LoRA
-python scripts/train_lora.py --config configs/lora_medgemma27b.yaml
+accelerate launch --config_file tpu/accelerate_config_v4_32.yaml \
+    scripts/train_lora.py --config configs/lora_medgemma27b_tpu.yaml  # TPU
+python scripts/train_lora.py --config configs/lora_medgemma27b.yaml   # GPU
 
 # 4. Evaluate
 python scripts/eval_healthbench.py \
@@ -59,13 +82,56 @@ python scripts/eval_healthbench.py \
     --output eval/lora_no_wrapper.json
 ```
 
-Slurm scripts for cluster execution are in `slurm/`. Update the `cd` path and submit with `sbatch`.
+## Hardware Paths
+
+Two fully-supported execution paths — same pipeline, different hardware:
+
+### TPU (Google Cloud TRC)
+
+Runs on Google Cloud TPU VMs via `tpu/launch_multiseed.sh`. Requires a [TRC grant](https://sites.research.google/trc/about/). Supported quota types and zones:
+
+| TPU | Chips | Zone | Notes |
+|---|---|---|---|
+| v4-32 | 32 | us-central2-b | on-demand + spot |
+| v6e-64 | 64 | us-east1-d, europe-west4-a | spot |
+| v5litepod-64 | 64 | us-central1-a, europe-west4-b | spot |
+
+The launch script tries all zones automatically and retries until capacity is available. No quantization needed on TPU — full bfloat16 fits comfortably across the chips.
+
+```bash
+echo "HF_TOKEN=hf_..." > .env
+bash tpu/launch_multiseed.sh
+
+# Optional overrides:
+SEEDS="42 123" bash tpu/launch_multiseed.sh
+MAX_EXAMPLES=100 bash tpu/launch_multiseed.sh   # quick test
+LORA_VARIANT=dora bash tpu/launch_multiseed.sh
+LORA_R=32 bash tpu/launch_multiseed.sh
+```
+
+### GPU (Cloud or local)
+
+Runs locally on any Linux machine with CUDA GPUs via `gpu/launch_multiseed.sh`. Detects GPU count automatically and picks the right accelerate config.
+
+| Config | VRAM needed | When to use |
+|---|---|---|
+| `lora_medgemma27b.yaml` | ~60-80 GB | 2× A100-40G or 1× A100-80G / H100 |
+| `lora_medgemma27b_qlora.yaml` | ~18-22 GB | Single A100-40G or RTX 4090 |
+
+```bash
+bash gpu/launch_multiseed.sh
+
+# Optional overrides:
+QUANT=4bit bash gpu/launch_multiseed.sh          # QLoRA
+LORA_VARIANT=dora bash gpu/launch_multiseed.sh   # DoRA (full-precision only)
+LORA_VARIANT=rslora LORA_R=32 bash gpu/launch_multiseed.sh
+```
 
 ## Evaluation
 
-Four configurations are compared on the 200-sample HealthBench Hard holdout. Brier score and ECE (expected calibration error) measure how well the model's confidence tracks actual correctness — lower is better for both.
+Four configurations are compared on the 200-sample HealthBench Hard holdout:
 
-| Configuration | HB-Hard Score | Brier | ECE |
+| Configuration | HB-Hard Score | Brier* | ECE* |
 |---|---|---|---|
 | Base model | | | |
 | Base + BOHDI wrapper | | | |
@@ -74,28 +140,45 @@ Four configurations are compared on the 200-sample HealthBench Hard holdout. Bri
 
 The key result is row 3: does the fine-tuned model exhibit epistemic humility without the prompt wrapper?
 
+*Brier and ECE here measure grader-internal consistency, not model calibration. See [KNOWN_ISSUES.md](KNOWN_ISSUES.md) #1.
+
 ### U-shape stratified analysis
 
-Per-tier failure rates stratified by rubric complexity (easy/medium/hard) and by theme (`emergency_referrals`, `hedging`, `context_seeking`, ...). Inspired by the Nature Medicine 2026 triage paper ([s41591-026-04297-7](https://www.nature.com/articles/s41591-026-04297-7)) which showed LLM failures concentrate at clinical extremes. The BOHDI hypothesis is that LoRA flattens this U by lifting the tails. Produced post-hoc by `scripts/eval_ushape.py`; output at `eval/ushape.json`.
+Per-tier failure rates stratified by rubric complexity (easy/medium/hard) and by theme (`emergency_referrals`, `hedging`, `context_seeking`, ...). Inspired by the Nature Medicine 2026 triage paper ([s41591-026-04297-7](https://www.nature.com/articles/s41591-026-04297-7)) which showed LLM failures concentrate at clinical extremes. The BOHDI hypothesis is that LoRA flattens this U by lifting the tails.
 
 ## Repository Structure
 
 ```
 bohdi-lora/
-├── configs/          # Training hyperparameters (full + smoke)
+├── configs/               # Training hyperparameters
+│   ├── lora_medgemma27b_tpu.yaml    # TPU (bfloat16, no quantization)
+│   ├── lora_medgemma27b.yaml        # GPU full-precision
+│   ├── lora_medgemma27b_qlora.yaml  # GPU QLoRA (4-bit)
+│   └── lora_gemma_smoke.yaml        # Smoke test only
+├── tpu/                   # TPU launch scripts and accelerate configs
+│   ├── launch_multiseed.sh          # Full pipeline on Cloud TPU
+│   ├── setup_tpu.sh                 # TPU dependency installer
+│   └── accelerate_config_*.yaml     # v4-32, v5e-64, v6e-64
+├── gpu/                   # GPU launch scripts and accelerate configs
+│   ├── launch_multiseed.sh          # Full pipeline on GPU
+│   └── accelerate_config_*.yaml     # 1-GPU and multi-GPU DDP
+├── scripts/               # Generation, filtering, training, eval, analysis
+├── slurm/                 # SBATCH job scripts (cluster alternative)
+├── contributions/         # Reproducibility guide and contribution docs
 ├── data/
-│   ├── raw/          # HealthBench eval IDs
-│   └── sft/          # Generated and filtered training data
-├── eval/             # Evaluation outputs
-├── scripts/          # Generation, filtering, training, and eval scripts
-├── slurm/            # SBATCH job scripts
-├── contributions/    # Reproducibility guide and contribution docs
-├── tests/            # Pytest test suite (no GPU required)
-├── smoke.sh          # End-to-end smoke test (<10 min)
-├── run_all.sh        # Full pipeline dependency chain (slurm)
+│   ├── raw/               # HealthBench eval IDs
+│   └── sft/               # Generated and filtered training data
+├── eval/                  # Evaluation outputs
+├── tests/                 # Pytest test suite (no GPU required)
+├── smoke.sh               # End-to-end smoke test (<10 min)
+├── run_all.sh             # Full pipeline dependency chain (slurm)
 ├── KNOWN_ISSUES.md
 └── requirements.txt
 ```
+
+## Hygiene
+
+Run `bash scripts/check_no_secrets.sh` before opening a PR if you touched config or environment files. Generated outputs under `logs/`, `checkpoints/`, `eval/`, `data/sft/`, and `results/` are intentionally gitignored.
 
 ## References
 
