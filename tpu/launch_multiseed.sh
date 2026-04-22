@@ -52,13 +52,29 @@ echo "Seeds to run: $SEEDS"
 echo "Estimated time: ~1.5 - 2 hours for 3 seeds"
 echo ""
 
-# Create the VM once
-echo "=== Creating TPU VM $TPU_NAME ($TPU_TYPE, on-demand) ==="
-gcloud compute tpus tpu-vm create "$TPU_NAME" \
-    --zone="$ZONE" \
-    --accelerator-type="$TPU_TYPE" \
-    --version="$TPU_RUNTIME" \
-    --project="$PROJECT"
+# Create the VM — retry until capacity is available (spot capacity fluctuates).
+# Only us-central2-b is in the TRC quota for v4-32; no other zone is tried.
+echo "=== Creating TPU VM $TPU_NAME ($TPU_TYPE) in $ZONE ==="
+MAX_ATTEMPTS=20
+RETRY_DELAY=180  # 3 minutes between attempts
+attempt=1
+while true; do
+    if gcloud compute tpus tpu-vm create "$TPU_NAME" \
+        --zone="$ZONE" \
+        --accelerator-type="$TPU_TYPE" \
+        --version="$TPU_RUNTIME" \
+        --project="$PROJECT" 2>&1; then
+        echo "VM created."
+        break
+    fi
+    if [ "$attempt" -ge "$MAX_ATTEMPTS" ]; then
+        echo "ERROR: could not get capacity in $ZONE after $MAX_ATTEMPTS attempts. Try again later."
+        exit 1
+    fi
+    echo "No capacity yet (attempt $attempt/$MAX_ATTEMPTS) — retrying in ${RETRY_DELAY}s..."
+    attempt=$((attempt + 1))
+    sleep "$RETRY_DELAY"
+done
 
 # On exit (normal, error, or Ctrl-C): rescue any unsaved checkpoints first,
 # then delete the VM. Completed seeds are already local; this catches
