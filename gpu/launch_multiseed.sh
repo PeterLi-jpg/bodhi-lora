@@ -39,6 +39,21 @@ RESULTS_DIR="${REPO_ROOT}/results"
 MODEL="google/medgemma-27b-text-it"
 SAMPLE_IDS="data/raw/hard_200_sample_ids.json"
 
+# Optional training-method overrides. Leave unset to use values from the YAML.
+#   QUANT=4bit bash gpu/launch_multiseed.sh         -> QLoRA (GPU only)
+#   LORA_VARIANT=dora bash gpu/launch_multiseed.sh  -> DoRA (full-precision only)
+#   LORA_VARIANT=rslora bash gpu/launch_multiseed.sh
+#   LORA_R=32 bash gpu/launch_multiseed.sh          -> higher rank
+QUANT="${QUANT:-}"
+LORA_VARIANT="${LORA_VARIANT:-}"
+LORA_R="${LORA_R:-}"
+
+# Build optional CLI flags for train_lora.py from env vars.
+TRAIN_EXTRA_FLAGS=""
+[ -n "$QUANT" ]         && TRAIN_EXTRA_FLAGS="$TRAIN_EXTRA_FLAGS --quantization $QUANT"
+[ -n "$LORA_VARIANT" ]  && TRAIN_EXTRA_FLAGS="$TRAIN_EXTRA_FLAGS --lora-variant $LORA_VARIANT"
+[ -n "$LORA_R" ]        && TRAIN_EXTRA_FLAGS="$TRAIN_EXTRA_FLAGS --lora-r $LORA_R"
+
 # Detect GPU count and pick the right accelerate config
 GPU_COUNT=$(python3 -c "import torch; print(torch.cuda.device_count())" 2>/dev/null || echo "0")
 
@@ -54,10 +69,13 @@ else
     echo "  (edit gpu/accelerate_config_multi.yaml if num_processes doesn't match)"
 fi
 
-echo "Model:   $MODEL"
-echo "Config:  $CONFIG"
-echo "Seeds:   $SEEDS"
-echo "Results: $RESULTS_DIR"
+echo "Model:        $MODEL"
+echo "Config:       $CONFIG"
+echo "Seeds:        $SEEDS"
+echo "Quantization: ${QUANT:-from yaml}"
+echo "LoRA variant: ${LORA_VARIANT:-from yaml}"
+echo "LoRA rank:    ${LORA_R:-from yaml}"
+echo "Results:      $RESULTS_DIR"
 echo ""
 
 cd "$REPO_ROOT"
@@ -114,12 +132,14 @@ for SEED in $SEEDS; do
     LORA="${CKPT_DIR}/best"
     mkdir -p "$CKPT_DIR" "$EVAL_DIR" "$FIG_DIR"
 
+    # shellcheck disable=SC2086  # TRAIN_EXTRA_FLAGS is intentionally word-split
     accelerate launch \
         --config_file "$ACCEL_CFG" \
         scripts/train_lora.py \
         --config "$CONFIG" \
         --seed "$SEED" \
-        --output-dir "$CKPT_DIR"
+        --output-dir "$CKPT_DIR" \
+        $TRAIN_EXTRA_FLAGS
 
     echo "Seed $SEED training done — checkpoints in $CKPT_DIR/"
 

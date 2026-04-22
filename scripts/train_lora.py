@@ -132,10 +132,32 @@ def main():
                         help="override data.train_file from the YAML config")
     parser.add_argument("--val-file", default=None,
                         help="override data.val_file from the YAML config")
+    parser.add_argument("--quantization", default=None,
+                        choices=["4bit", "8bit", "null"],
+                        help="override model.quantization from the YAML config. "
+                             "'null' means full-precision (same as leaving it unset). "
+                             "4bit = QLoRA (NF4 + bf16 compute, GPU only). "
+                             "8bit = bitsandbytes 8-bit (GPU only).")
+    parser.add_argument("--lora-variant", default=None,
+                        choices=list(LORA_VARIANTS),
+                        help="override lora.variant from the YAML config. "
+                             "standard = classic LoRA (default). "
+                             "dora = direction+magnitude decomposition (full-precision only). "
+                             "rslora = alpha/sqrt(r) scaling, better at higher ranks.")
+    parser.add_argument("--lora-r", type=int, default=None,
+                        help="override lora.r (rank) from the YAML config.")
     args = parser.parse_args()
 
     with open(args.config) as f:
         cfg = yaml.safe_load(f)
+
+    # CLI overrides take precedence over YAML values.
+    if args.quantization is not None:
+        cfg["model"]["quantization"] = None if args.quantization == "null" else args.quantization
+    if args.lora_variant is not None:
+        cfg["lora"]["variant"] = args.lora_variant
+    if args.lora_r is not None:
+        cfg["lora"]["r"] = args.lora_r
 
     model_cfg = cfg["model"]
     lora_cfg = cfg["lora"]

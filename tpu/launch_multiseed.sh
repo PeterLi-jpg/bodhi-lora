@@ -27,6 +27,21 @@ fi
 
 SEEDS="${SEEDS:-42 123 456}"
 GCS_DATA_PATH="${GCS_DATA_PATH:-}"
+
+# Optional training-method overrides (TPU: 4bit/8bit will error; only variant/rank).
+#   LORA_VARIANT=dora bash tpu/launch_multiseed.sh
+#   LORA_VARIANT=rslora bash tpu/launch_multiseed.sh
+#   LORA_R=32 bash tpu/launch_multiseed.sh
+QUANT="${QUANT:-}"
+LORA_VARIANT="${LORA_VARIANT:-}"
+LORA_R="${LORA_R:-}"
+
+# Build the extra-flags string to pass through to the remote SSH command.
+TRAIN_EXTRA_FLAGS=""
+[ -n "$QUANT" ]        && TRAIN_EXTRA_FLAGS="$TRAIN_EXTRA_FLAGS --quantization $QUANT"
+[ -n "$LORA_VARIANT" ] && TRAIN_EXTRA_FLAGS="$TRAIN_EXTRA_FLAGS --lora-variant $LORA_VARIANT"
+[ -n "$LORA_R" ]       && TRAIN_EXTRA_FLAGS="$TRAIN_EXTRA_FLAGS --lora-r $LORA_R"
+
 PROJECT="tokyo-micron-494016-s9"
 TPU_NAME="bohdi-lora-v4"
 TPU_TYPE="v4-32"
@@ -115,7 +130,8 @@ accelerate launch \
     scripts/train_lora.py \
     --config configs/lora_medgemma27b_tpu.yaml \
     --seed ${SEED} \
-    --output-dir checkpoints/seed_${SEED}
+    --output-dir checkpoints/seed_${SEED} \
+    ${TRAIN_EXTRA_FLAGS}
 
 echo 'Seed ${SEED} done.'
 "
