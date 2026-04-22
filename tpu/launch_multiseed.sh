@@ -64,8 +64,9 @@ TRC_SLOTS=(
 )
 
 # Try each slot in one pass, then sleep and retry the whole list.
-MAX_ROUNDS=10
-RETRY_DELAY=180
+# 200 rounds * 5 min = ~16 hours of overnight retrying
+MAX_ROUNDS="${MAX_ROUNDS:-200}"
+RETRY_DELAY="${RETRY_DELAY:-300}"
 
 echo "=== Acquiring TPU VM from TRC quota ==="
 ACCEL_CFG=""
@@ -85,7 +86,13 @@ for slot in "${TRC_SLOTS[@]}"; do
             STATE=$(gcloud compute tpus tpu-vm list --zone="$_ZONE" --project="$PROJECT" \
                 --format="value(state)" 2>/dev/null | head -1)
             echo "  state: $STATE"
+            # VM vanished (preempted or failed during CREATING) — fall through to fresh create
+            if [ -z "$STATE" ]; then
+                echo "VM $TPU_NAME disappeared from $_ZONE, will try a fresh create."
+                break
+            fi
         done
+        [ "$STATE" != "READY" ] && continue
         TPU_TYPE="$_TYPE"; ZONE="$_ZONE"; ACCEL_CFG="$_CFG"
         echo "Reusing existing VM: $_TYPE in $_ZONE"
         found=true
@@ -149,30 +156,46 @@ gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
     --zone="$ZONE" --project="$PROJECT" \
     --command="
 set -euo pipefail
-
-git clone https://github.com/PeterLi-jpg/bohdi-lora.git ~/bohdi-lora
+git clone https://github.com/PeterLi-jpg/bohdi-lora.git ~/bohdi-lora 2>/dev/null || (cd ~/bohdi-lora && git pull)
 cd ~/bohdi-lora
 bash tpu/setup_tpu.sh
 mkdir -p data/raw data/sft eval logs
-export HF_TOKEN='${HF_TOKEN}'
+"
 
-# ── Stage 1: generate traces ──────────────────────────────────────────────────
-echo '=== Stage 1: generate BOHDI traces (MedGemma-27B) ==='
+# ── Stage 1: generate traces (separate SSH so a failure here is identifiable
+#    and restartable without re-running setup) ─────────────────────────────────
+echo "=== Stage 1: generate BOHDI traces (MedGemma-27B) ==="
+gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
+    --zone="$ZONE" --project="$PROJECT" \
+    --command="
+set -euo pipefail
+cd ~/bohdi-lora
+export HF_TOKEN='${HF_TOKEN}'
+# --resume-from means a restart after preemption or SSH drop continues from
+# the last completed example rather than starting over.
 python scripts/generate_traces.py \
     --model google/medgemma-27b-text-it \
     --datasets healthbench_hard healthbench \
     --output data/sft/raw_traces.jsonl \
+    --resume-from data/sft/raw_traces.jsonl \
     --use-bodhi \
     --max-examples \${MAX_EXAMPLES:-4800}
+echo \"Generate done: \$(wc -l < data/sft/raw_traces.jsonl) traces\"
+"
 
-# ── Stage 2: grade + filter ───────────────────────────────────────────────────
-echo '=== Stage 2: grade and filter traces (Qwen2.5-14B) ==='
+# ── Stage 2: grade + filter (separate SSH — runs fresh Qwen2.5-14B grader) ───
+echo "=== Stage 2: grade and filter traces (Qwen2.5-14B) ==="
+gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
+    --zone="$ZONE" --project="$PROJECT" \
+    --command="
+set -euo pipefail
+cd ~/bohdi-lora
+export HF_TOKEN='${HF_TOKEN}'
 python scripts/filter_traces.py \
     --input data/sft/raw_traces.jsonl \
     --healthbench-data data/raw/healthbench_hard.jsonl data/raw/healthbench.jsonl \
     --output-dir data/sft \
     --min-score 0.4
-
 echo \"Training data ready: \$(wc -l < data/sft/train.jsonl) train, \$(wc -l < data/sft/val.jsonl) val\"
 "
 
