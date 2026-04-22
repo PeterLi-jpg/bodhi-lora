@@ -52,29 +52,53 @@ echo "Seeds to run: $SEEDS"
 echo "Estimated time: ~1.5 - 2 hours for 3 seeds"
 echo ""
 
-# Create the VM — retry until capacity is available (spot capacity fluctuates).
-# Only us-central2-b is in the TRC quota for v4-32; no other zone is tried.
-echo "=== Creating TPU VM $TPU_NAME ($TPU_TYPE) in $ZONE ==="
-MAX_ATTEMPTS=20
-RETRY_DELAY=180  # 3 minutes between attempts
-attempt=1
-while true; do
-    if gcloud compute tpus tpu-vm create "$TPU_NAME" \
-        --zone="$ZONE" \
-        --accelerator-type="$TPU_TYPE" \
-        --version="$TPU_RUNTIME" \
-        --project="$PROJECT" 2>&1; then
-        echo "VM created."
-        break
-    fi
-    if [ "$attempt" -ge "$MAX_ATTEMPTS" ]; then
-        echo "ERROR: could not get capacity in $ZONE after $MAX_ATTEMPTS attempts. Try again later."
-        exit 1
-    fi
-    echo "No capacity yet (attempt $attempt/$MAX_ATTEMPTS) — retrying in ${RETRY_DELAY}s..."
-    attempt=$((attempt + 1))
+# TRC-granted slots only — in preference order (on-demand first, then spot).
+# Format: "TPU_TYPE ZONE SPOT(yes/no) ACCEL_CONFIG"
+TRC_SLOTS=(
+    "v4-32  us-central2-b  no   tpu/accelerate_config_v4_32.yaml"
+    "v4-32  us-central2-b  yes  tpu/accelerate_config_v4_32.yaml"
+    "v6e-64 us-east1-d     yes  tpu/accelerate_config_v6e64.yaml"
+    "v6e-64 europe-west4-a yes  tpu/accelerate_config_v6e64.yaml"
+    "v5e-64 us-central1-a  yes  tpu/accelerate_config_v5e64.yaml"
+    "v5e-64 europe-west4-b yes  tpu/accelerate_config_v5e64.yaml"
+)
+
+# Try each slot in one pass, then sleep and retry the whole list.
+MAX_ROUNDS=10
+RETRY_DELAY=180
+
+echo "=== Acquiring TPU VM from TRC quota ==="
+ACCEL_CFG=""
+found=false
+for round in $(seq 1 $MAX_ROUNDS); do
+    for slot in "${TRC_SLOTS[@]}"; do
+        read -r _TYPE _ZONE _SPOT _CFG <<< "$slot"
+        SPOT_FLAG=""
+        [ "$_SPOT" = "yes" ] && SPOT_FLAG="--spot"
+        echo "  Trying $_TYPE in $_ZONE (spot=$_SPOT)..."
+        if gcloud compute tpus tpu-vm create "$TPU_NAME" \
+            --zone="$_ZONE" \
+            --accelerator-type="$_TYPE" \
+            --version="$TPU_RUNTIME" \
+            --project="$PROJECT" \
+            $SPOT_FLAG 2>&1; then
+            TPU_TYPE="$_TYPE"
+            ZONE="$_ZONE"
+            ACCEL_CFG="$_CFG"
+            echo "VM created: $_TYPE in $_ZONE (spot=$_SPOT)"
+            found=true
+            break
+        fi
+    done
+    $found && break
+    echo "No capacity found in any TRC zone (round $round/$MAX_ROUNDS) — waiting ${RETRY_DELAY}s..."
     sleep "$RETRY_DELAY"
 done
+
+if ! $found; then
+    echo "ERROR: could not get capacity in any TRC zone after $MAX_ROUNDS rounds."
+    exit 1
+fi
 
 # On exit (normal, error, or Ctrl-C): rescue any unsaved checkpoints first,
 # then delete the VM. Completed seeds are already local; this catches
@@ -142,7 +166,7 @@ mkdir -p checkpoints/seed_${SEED}
 export HF_TOKEN='${HF_TOKEN}'
 
 accelerate launch \
-    --config_file tpu/accelerate_config_v4_32.yaml \
+    --config_file "${ACCEL_CFG}" \
     scripts/train_lora.py \
     --config configs/lora_medgemma27b_tpu.yaml \
     --seed ${SEED} \
