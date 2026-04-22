@@ -15,6 +15,9 @@ TRL probes `formatting_func` on a single example first to decide whether it retu
 ### [#6, #7] Resume logic mixing settings — FIXED
 `generate_traces.py --resume-from` now validates that existing rows in the target file were produced with the same `--model` and `--use-bodhi` settings. Mismatch aborts with a clear error. Override with `--force-resume` only when intentionally mixing is desired.
 
+### [#23] Mid-epoch checkpoint resume — FIXED
+Training now checkpoints on aligned step intervals instead of epoch boundaries. The default config uses matching `save_strategy: steps` and `eval_strategy: steps` values so `load_best_model_at_end=True` remains valid, and `scripts/train_lora.py` auto-resumes from the latest `checkpoint-*` directory under `--output-dir` when one is present.
+
 ## Documented, deferred to discussion
 
 ### [#1] Brier / ECE do not measure model calibration — PARTIALLY ADDRESSED
