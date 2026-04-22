@@ -49,7 +49,7 @@ TPU_RUNTIME="tpu-vm-base"
 ZONE="us-central2-b"
 
 echo "Seeds to run: $SEEDS"
-echo "Estimated time: ~1.5 - 2 hours for 3 seeds"
+echo "TPU type will be shown once a slot is acquired"
 echo ""
 
 # TRC-granted slots only — in preference order (on-demand first, then spot).
@@ -75,7 +75,7 @@ for round in $(seq 1 $MAX_ROUNDS); do
         read -r _TYPE _ZONE _SPOT _CFG <<< "$slot"
         SPOT_FLAG=""
         [ "$_SPOT" = "yes" ] && SPOT_FLAG="--spot"
-        echo "  Trying $_TYPE in $_ZONE (spot=$_SPOT)..."
+        echo "  Trying $_TYPE ($(echo $_TYPE | grep -o '[0-9]*$') chips) in $_ZONE (spot=$_SPOT)..."
         if gcloud compute tpus tpu-vm create "$TPU_NAME" \
             --zone="$_ZONE" \
             --accelerator-type="$_TYPE" \
@@ -85,7 +85,7 @@ for round in $(seq 1 $MAX_ROUNDS); do
             TPU_TYPE="$_TYPE"
             ZONE="$_ZONE"
             ACCEL_CFG="$_CFG"
-            echo "VM created: $_TYPE in $_ZONE (spot=$_SPOT)"
+            echo "VM created: $_TYPE ($(echo $_TYPE | grep -o '[0-9]*$') chips) in $_ZONE (spot=$_SPOT)"
             found=true
             break
         fi
