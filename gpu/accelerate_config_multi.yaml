@@ -1,0 +1,8 @@
+# Multi-GPU DDP. Set num_processes to the number of GPUs on your machine
+# (e.g. 2 for 2xA100, 4 for 4xA100, 8 for 8xA100).
+compute_environment: LOCAL_MACHINE
+distributed_type: MULTI_GPU
+mixed_precision: bf16
+num_machines: 1
+num_processes: 4   # <-- change this to match your GPU count
+use_cpu: false

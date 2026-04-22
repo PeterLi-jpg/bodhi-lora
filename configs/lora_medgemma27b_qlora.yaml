@@ -1,0 +1,44 @@
+seed: 42
+
+# QLoRA config for single-GPU setups (A100-40GB, RTX 4090, etc.).
+# 4-bit NF4 quantization reduces VRAM from ~60 GB to ~18-22 GB.
+# Use configs/lora_medgemma27b.yaml instead if you have 2x A100-80GB or similar.
+
+model:
+  name: google/medgemma-27b-text-it
+  torch_dtype: bfloat16
+  quantization: 4bit   # NF4 weights, bf16 compute, double-quantized (QLoRA)
+
+lora:
+  r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  target_modules:
+    - q_proj
+    - k_proj
+    - v_proj
+    - o_proj
+    - gate_proj
+    - up_proj
+    - down_proj
+  task_type: CAUSAL_LM
+  # DoRA is incompatible with quantization — keep variant: standard here
+  variant: standard
+
+training:
+  num_epochs: 3
+  per_device_train_batch_size: 1   # smaller batch to fit in 40 GB VRAM
+  gradient_accumulation_steps: 16  # effective batch = 16 (same as full-precision 2*8)
+  learning_rate: 1.0e-4
+  warmup_ratio: 0.05
+  lr_scheduler_type: cosine
+  max_seq_length: 4096
+  logging_steps: 10
+  save_strategy: epoch
+  eval_strategy: epoch
+  bf16: true
+
+data:
+  train_file: data/sft/train.jsonl
+  val_file: data/sft/val.jsonl
+  eval_sample_ids: data/raw/hard_200_sample_ids.json
