@@ -120,16 +120,67 @@ accelerate launch \
 echo 'Seed ${SEED} done.'
 "
 
-    # Pull this seed's checkpoints back immediately
-    echo "Copying seed $SEED checkpoints..."
-    mkdir -p "./results/seed_${SEED}"
-    gcloud compute tpus tpu-vm scp \
-        --recurse \
+    # ── Stage 4: evaluate all 4 configurations ────────────────────────────────
+    echo "=== Stage 4: evaluation (4 configs) for seed $SEED ==="
+    gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
         --zone="$ZONE" --project="$PROJECT" \
-        "${TPU_NAME}:~/bohdi-lora/checkpoints/seed_${SEED}" \
-        "./results/seed_${SEED}/"
+        --command="
+set -euo pipefail
+cd ~/bohdi-lora
+export HF_TOKEN='${HF_TOKEN}'
 
-    echo "Seed $SEED complete — checkpoints in ./results/seed_${SEED}/"
+MODEL='google/medgemma-27b-text-it'
+IDS='data/raw/hard_200_sample_ids.json'
+LORA='checkpoints/seed_${SEED}/best'
+EVAL_DIR='eval/seed_${SEED}'
+FIG_DIR='figures/seed_${SEED}'
+mkdir -p \"\$EVAL_DIR\" \"\$FIG_DIR\"
+
+echo '-- base, no wrapper --'
+python scripts/eval_healthbench.py --model \"\$MODEL\" --sample-ids \"\$IDS\" --output \"\$EVAL_DIR/base_no_wrapper.json\"
+
+echo '-- base + BOHDI wrapper --'
+python scripts/eval_healthbench.py --model \"\$MODEL\" --use-bodhi --sample-ids \"\$IDS\" --output \"\$EVAL_DIR/base_bodhi.json\"
+
+echo '-- LoRA, no wrapper --'
+python scripts/eval_healthbench.py --model \"\$MODEL\" --lora-path \"\$LORA\" --sample-ids \"\$IDS\" --output \"\$EVAL_DIR/lora_no_wrapper.json\"
+
+echo '-- LoRA + BOHDI wrapper --'
+python scripts/eval_healthbench.py --model \"\$MODEL\" --lora-path \"\$LORA\" --use-bodhi --sample-ids \"\$IDS\" --output \"\$EVAL_DIR/lora_bodhi.json\"
+
+echo '-- U-shape analysis --'
+python scripts/eval_ushape.py \
+    --eval-jsons \"\$EVAL_DIR/base_no_wrapper.json\" \"\$EVAL_DIR/base_bodhi.json\" \
+                  \"\$EVAL_DIR/lora_no_wrapper.json\" \"\$EVAL_DIR/lora_bodhi.json\" \
+    --healthbench data/raw/healthbench_hard.jsonl data/raw/healthbench.jsonl \
+    --output \"\$EVAL_DIR/ushape.json\"
+
+echo '-- plots --'
+python scripts/plot_ushape.py \
+    --input \"\$EVAL_DIR/ushape.json\" \
+    --eval-jsons \"\$EVAL_DIR/base_no_wrapper.json\" \"\$EVAL_DIR/base_bodhi.json\" \
+                  \"\$EVAL_DIR/lora_no_wrapper.json\" \"\$EVAL_DIR/lora_bodhi.json\" \
+    --healthbench data/raw/healthbench_hard.jsonl data/raw/healthbench.jsonl \
+    --n-bins 10 --out-dir \"\$FIG_DIR\"
+
+if [ -f \"\$LORA/trainer_state.json\" ]; then
+    python scripts/plot_training.py --trainer-state \"\$LORA/trainer_state.json\" --output \"\$FIG_DIR/training_loss.png\"
+fi
+
+echo 'Eval done for seed ${SEED}.'
+"
+
+    # Pull checkpoints + eval results back
+    echo "Copying seed $SEED outputs..."
+    mkdir -p "./results/seed_${SEED}"
+    gcloud compute tpus tpu-vm scp --recurse --zone="$ZONE" --project="$PROJECT" \
+        "${TPU_NAME}:~/bohdi-lora/checkpoints/seed_${SEED}" "./results/seed_${SEED}/"
+    gcloud compute tpus tpu-vm scp --recurse --zone="$ZONE" --project="$PROJECT" \
+        "${TPU_NAME}:~/bohdi-lora/eval/seed_${SEED}"        "./results/seed_${SEED}/"
+    gcloud compute tpus tpu-vm scp --recurse --zone="$ZONE" --project="$PROJECT" \
+        "${TPU_NAME}:~/bohdi-lora/figures/seed_${SEED}"     "./results/seed_${SEED}/"
+
+    echo "Seed $SEED complete — results in ./results/seed_${SEED}/"
 done
 
 echo ""

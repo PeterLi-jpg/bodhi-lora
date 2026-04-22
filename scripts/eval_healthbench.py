@@ -21,6 +21,14 @@ from peft import PeftModel
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from scripts.filter_traces import GRADER_TEMPLATE, LocalGrader, parse_json_response, grade_trace
 
+# TPU detection — same pattern used across the pipeline.
+try:
+    import torch_xla.core.xla_model as _xm
+    _ON_TPU = True
+except ImportError:
+    _xm = None
+    _ON_TPU = False
+
 HEALTHBENCH_HARD_URL = "https://openaipublic.blob.core.windows.net/simple-evals/healthbench/hard_2025-05-08-21-00-10.jsonl"
 DATA_DIR = Path("data/raw")
 
@@ -54,24 +62,34 @@ def load_model(model_name, lora_path=None):
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
-    model = AutoModelForCausalLM.from_pretrained(
-        model_name, torch_dtype=torch.bfloat16, device_map="auto",
-    )
+    if _ON_TPU:
+        model = AutoModelForCausalLM.from_pretrained(
+            model_name, torch_dtype=torch.bfloat16
+        )
+        _device = _xm.xla_device()
+        model = model.to(_device)
+    else:
+        model = AutoModelForCausalLM.from_pretrained(
+            model_name, torch_dtype=torch.bfloat16, device_map="auto",
+        )
+        _device = next(model.parameters()).device
+
     if lora_path:
         print(f"Merging LoRA from {lora_path}")
         model = PeftModel.from_pretrained(model, lora_path)
         model = model.merge_and_unload()
+
     model.eval()
-    return model, tokenizer
+    return model, tokenizer, _device
 
 
-def make_bodhi_wrapper(model, tokenizer, max_new_tokens=1024):
+def make_bodhi_wrapper(model, tokenizer, device, max_new_tokens=1024):
     """Build a reusable BODHI wrapper around the given model."""
     from bodhi import BODHI, BODHIConfig
 
     def chat_fn(msgs):
         text = tokenizer.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True)
-        inputs = tokenizer(text, return_tensors="pt").to(model.device)
+        inputs = tokenizer(text, return_tensors="pt").to(device)
         with torch.no_grad():
             out = model.generate(**inputs, max_new_tokens=max_new_tokens, do_sample=False)
         return tokenizer.decode(out[0][inputs["input_ids"].shape[1]:], skip_special_tokens=True)
@@ -79,10 +97,10 @@ def make_bodhi_wrapper(model, tokenizer, max_new_tokens=1024):
     return BODHI(chat_function=chat_fn, config=BODHIConfig(domain="medical"))
 
 
-def gen_response(model, tokenizer, messages, use_bodhi, bodhi_wrapper=None, max_new_tokens=1024):
+def gen_response(model, tokenizer, device, messages, use_bodhi, bodhi_wrapper=None, max_new_tokens=1024):
     if not use_bodhi:
         text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-        inputs = tokenizer(text, return_tensors="pt").to(model.device)
+        inputs = tokenizer(text, return_tensors="pt").to(device)
         with torch.no_grad():
             out = model.generate(**inputs, max_new_tokens=max_new_tokens, do_sample=False)
         return tokenizer.decode(out[0][inputs["input_ids"].shape[1]:], skip_special_tokens=True)
@@ -212,10 +230,10 @@ def main():
     if args.max_examples:
         examples = examples[:args.max_examples]
 
-    model, tokenizer = load_model(args.model, args.lora_path)
+    model, tokenizer, device = load_model(args.model, args.lora_path)
     grader = LocalGrader(args.grader_model)
 
-    bodhi_wrapper = make_bodhi_wrapper(model, tokenizer) if args.use_bodhi else None
+    bodhi_wrapper = make_bodhi_wrapper(model, tokenizer, device) if args.use_bodhi else None
 
     tag = f"{'lora' if args.lora_path else 'base'}_{'bodhi' if args.use_bodhi else 'no_wrapper'}"
     print(f"\nEval: {tag}  ({len(examples)} examples)\n")
@@ -225,7 +243,7 @@ def main():
     total_parse_failures = 0
     total_rubric_items = 0
     for ex in tqdm(examples, desc=tag):
-        resp = gen_response(model, tokenizer, ex["prompt"], args.use_bodhi, bodhi_wrapper)
+        resp = gen_response(model, tokenizer, device, ex["prompt"], args.use_bodhi, bodhi_wrapper)
         grade = grade_trace(grader, ex["prompt"], resp, ex["rubrics"])
         all_results.append({
             "prompt_id": ex["prompt_id"], "response": resp,
