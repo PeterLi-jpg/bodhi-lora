@@ -1,15 +1,18 @@
 #!/bin/bash
-# launch_multiseed.sh — run multiple seeds sequentially on one on-demand v4-32 VM.
+# launch_multiseed.sh — run the full pipeline on one on-demand v4-32 VM.
+#
+# Runs all three stages on the same VM:
+#   Stage 1 — generate BOHDI traces (MedGemma-27B inference)
+#   Stage 2 — grade + filter traces (Qwen2.5-14B, non-AWQ, fits on one chip)
+#   Stage 3 — LoRA SFT across all 32 chips, one run per seed
 #
 # Quota: 32 on-demand Cloud TPU v4 chips in zone us-central2-b (never preempted).
-#
-# The VM stays alive for all seeds. The HF model download and XLA graph
-# compilation only happen once, so per-seed overhead after the first is small.
-# Estimated total time: ~1.5 - 2 hours for 3 seeds.
+# Estimated total time: ~3-5 hours (generation dominates).
 #
 # Usage:
-#   bash tpu/launch_multiseed.sh                   # default: seeds 42 123 456
-#   SEEDS="42 123" bash tpu/launch_multiseed.sh    # custom seeds
+#   bash tpu/launch_multiseed.sh                        # seeds 42 123 456
+#   SEEDS="42 123" bash tpu/launch_multiseed.sh         # custom seeds
+#   MAX_EXAMPLES=100 bash tpu/launch_multiseed.sh       # smaller run for testing
 #   (HF_TOKEN auto-loaded from .env)
 
 set -euo pipefail
@@ -62,7 +65,7 @@ trap '
 ' EXIT
 
 # ── One-time setup ────────────────────────────────────────────────────────────
-echo "=== One-time setup (deps + repo + data) ==="
+echo "=== One-time setup (deps + repo) ==="
 gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
     --zone="$ZONE" --project="$PROJECT" \
     --command="
@@ -71,35 +74,33 @@ set -euo pipefail
 git clone https://github.com/PeterLi-jpg/bohdi-lora.git ~/bohdi-lora
 cd ~/bohdi-lora
 bash tpu/setup_tpu.sh
-mkdir -p data/sft eval logs
+mkdir -p data/raw data/sft eval logs
+export HF_TOKEN='${HF_TOKEN}'
 
-if [ -n '${GCS_DATA_PATH}' ]; then
-    echo '=== Downloading training data ==='
-    gsutil -m cp '${GCS_DATA_PATH}/train.jsonl' data/sft/train.jsonl
-    gsutil -m cp '${GCS_DATA_PATH}/val.jsonl'   data/sft/val.jsonl
-    echo \"Data: \$(wc -l < data/sft/train.jsonl) train, \$(wc -l < data/sft/val.jsonl) val\"
-else
-    echo 'WARNING: GCS_DATA_PATH not set — data/sft/train.jsonl must already be on this VM'
-fi
+# ── Stage 1: generate traces ──────────────────────────────────────────────────
+echo '=== Stage 1: generate BOHDI traces (MedGemma-27B) ==='
+python scripts/generate_traces.py \
+    --model google/medgemma-27b-text-it \
+    --datasets healthbench_hard healthbench \
+    --output data/sft/raw_traces.jsonl \
+    --use-bodhi \
+    --max-examples \${MAX_EXAMPLES:-4800}
 
-# Pre-download the model so all seeds share the cache
-echo '=== Pre-downloading MedGemma-27B (runs once, ~20 min) ==='
-HF_TOKEN='${HF_TOKEN}' python3 -c \"
-from transformers import AutoTokenizer
-AutoTokenizer.from_pretrained('google/medgemma-27b-text-it', token='${HF_TOKEN}')
-from transformers import AutoModelForCausalLM
-import torch
-AutoModelForCausalLM.from_pretrained(
-    'google/medgemma-27b-text-it', token='${HF_TOKEN}',
-    torch_dtype=torch.bfloat16)
-print('Model cached.')
-\"
+# ── Stage 2: grade + filter ───────────────────────────────────────────────────
+echo '=== Stage 2: grade and filter traces (Qwen2.5-14B) ==='
+python scripts/filter_traces.py \
+    --input data/sft/raw_traces.jsonl \
+    --healthbench-data data/raw/healthbench_hard.jsonl data/raw/healthbench.jsonl \
+    --output-dir data/sft \
+    --min-score 0.4
+
+echo \"Training data ready: \$(wc -l < data/sft/train.jsonl) train, \$(wc -l < data/sft/val.jsonl) val\"
 "
 
 # ── Train each seed sequentially ──────────────────────────────────────────────
 for SEED in $SEEDS; do
     echo ""
-    echo "=== Training seed $SEED ==="
+    echo "=== Stage 3: training seed $SEED ==="
 
     gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
         --zone="$ZONE" --project="$PROJECT" \
@@ -107,7 +108,6 @@ for SEED in $SEEDS; do
 set -euo pipefail
 cd ~/bohdi-lora
 mkdir -p checkpoints/seed_${SEED}
-
 export HF_TOKEN='${HF_TOKEN}'
 
 accelerate launch \

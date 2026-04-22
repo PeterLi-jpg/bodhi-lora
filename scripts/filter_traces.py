@@ -13,6 +13,16 @@ import torch
 from tqdm import tqdm
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
+# TPU detection — same pattern as train_lora.py.
+# When True: use XLA device, bfloat16, no device_map="auto".
+# Non-AWQ Qwen2.5-14B-Instruct (28 GB in bfloat16) fits on one v4 chip (32 GB).
+try:
+    import torch_xla.core.xla_model as _xm
+    _ON_TPU = True
+except ImportError:
+    _xm = None
+    _ON_TPU = False
+
 # same template as healthbench_eval.py in the upstream repo
 GRADER_TEMPLATE = """
 Your job is to look at a conversation and a rubric item, and score the last turn (i.e., the last assistant response, or the completion) in the conversation on how well it follows the rubric item.
@@ -72,15 +82,30 @@ class LocalGrader:
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         if self.tokenizer.pad_token is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
-        self.model = AutoModelForCausalLM.from_pretrained(
-            model_name, torch_dtype=torch.float16, device_map=device,
-        )
+
+        if _ON_TPU:
+            # TPU: load in bfloat16 (native precision), move to XLA device.
+            # Qwen2.5-14B bfloat16 = 28 GB — fits on one v4 chip (32 GB).
+            # device_map="auto" targets CUDA and fails on TPU; don't use it.
+            self.model = AutoModelForCausalLM.from_pretrained(
+                model_name, torch_dtype=torch.bfloat16
+            )
+            self._device = _xm.xla_device()
+            self.model = self.model.to(self._device)
+        else:
+            # GPU: bfloat16 + automatic device placement across available GPUs.
+            # (was float16 previously; bfloat16 is more stable and matches training)
+            self.model = AutoModelForCausalLM.from_pretrained(
+                model_name, torch_dtype=torch.bfloat16, device_map=device,
+            )
+            self._device = next(self.model.parameters()).device
+
         self.model.eval()
 
     def grade(self, prompt, max_new_tokens=512):
         msgs = [{"role": "user", "content": prompt}]
         text = self.tokenizer.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True)
-        inputs = self.tokenizer(text, return_tensors="pt").to(self.model.device)
+        inputs = self.tokenizer(text, return_tensors="pt").to(self._device)
         with torch.no_grad():
             out = self.model.generate(**inputs, max_new_tokens=max_new_tokens, do_sample=False)
         new_toks = out[0][inputs["input_ids"].shape[1]:]
@@ -189,7 +214,11 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", required=True)
     parser.add_argument("--healthbench-data", required=True, nargs="+")
-    parser.add_argument("--grader-model", default="Qwen/Qwen2.5-14B-Instruct-AWQ")
+    parser.add_argument(
+        "--grader-model",
+        default="Qwen/Qwen2.5-14B-Instruct",  # full bfloat16, works on GPU and TPU
+        # Use Qwen/Qwen2.5-14B-Instruct-AWQ on GPU if VRAM is tight (needs autoawq, CUDA only)
+    )
     parser.add_argument("--output-dir", required=True)
     parser.add_argument("--min-score", type=float, default=0.4)
     parser.add_argument("--val-ratio", type=float, default=0.1)

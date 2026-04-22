@@ -11,6 +11,17 @@ import torch
 from tqdm import tqdm
 from transformers import AutoModelForCausalLM, AutoTokenizer, set_seed
 
+# TPU detection — same pattern as train_lora.py and filter_traces.py.
+# MedGemma-27B in bfloat16 = 54 GB. A single v4 chip has 32 GB, so the model
+# must be spread across 2+ chips. On TPU we load without device_map and let
+# the XLA runtime place layers; use device_map="auto" on GPU as before.
+try:
+    import torch_xla.core.xla_model as _xm
+    _ON_TPU = True
+except ImportError:
+    _xm = None
+    _ON_TPU = False
+
 DATA_DIR = Path("data/raw")
 
 DATASET_URLS = {
@@ -94,16 +105,29 @@ class LocalModel:
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         if self.tokenizer.pad_token is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
-        self.model = AutoModelForCausalLM.from_pretrained(
-            model_name, torch_dtype=torch.bfloat16, device_map=device,
-        )
+
+        if _ON_TPU:
+            # TPU: load without device_map (CUDA auto-placement doesn't apply).
+            # For models > 32 GB (e.g. MedGemma-27B), XLA spreads tensors
+            # across chips automatically via its memory management.
+            self.model = AutoModelForCausalLM.from_pretrained(
+                model_name, torch_dtype=torch.bfloat16
+            )
+            self._device = _xm.xla_device()
+            self.model = self.model.to(self._device)
+        else:
+            self.model = AutoModelForCausalLM.from_pretrained(
+                model_name, torch_dtype=torch.bfloat16, device_map=device,
+            )
+            self._device = next(self.model.parameters()).device
+
         self.model.eval()
 
     def generate(self, messages, max_new_tokens=1024):
         text = self.tokenizer.apply_chat_template(
             messages, tokenize=False, add_generation_prompt=True
         )
-        inputs = self.tokenizer(text, return_tensors="pt").to(self.model.device)
+        inputs = self.tokenizer(text, return_tensors="pt").to(self._device)
         with torch.no_grad():
             out = self.model.generate(**inputs, max_new_tokens=max_new_tokens, do_sample=False)
         return self.tokenizer.decode(out[0][inputs["input_ids"].shape[1]:], skip_special_tokens=True)
