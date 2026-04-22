@@ -42,11 +42,24 @@ gcloud compute tpus tpu-vm create "$TPU_NAME" \
     --version="$TPU_RUNTIME" \
     --project="$PROJECT"
 
-# Delete VM on exit regardless of success or failure
-trap 'echo "Deleting TPU VM..."; \
-      gcloud compute tpus tpu-vm delete "$TPU_NAME" \
-          --zone="$ZONE" --project="$PROJECT" --quiet 2>/dev/null; \
-      echo "VM deleted."' EXIT
+# On exit (normal, error, or Ctrl-C): rescue any unsaved checkpoints first,
+# then delete the VM. Completed seeds are already local; this catches
+# whatever is on the VM for any in-progress seed that was interrupted.
+trap '
+    echo ""
+    echo "=== Saving any remaining checkpoints before VM deletion ==="
+    mkdir -p "./results/_rescue"
+    gcloud compute tpus tpu-vm scp \
+        --recurse \
+        --zone="$ZONE" --project="$PROJECT" \
+        "${TPU_NAME}:~/bohdi-lora/checkpoints" "./results/_rescue/" 2>/dev/null \
+        && echo "Rescue copy done — check ./results/_rescue/" \
+        || echo "Rescue copy failed or nothing to copy."
+    echo "=== Deleting TPU VM ==="
+    gcloud compute tpus tpu-vm delete "$TPU_NAME" \
+        --zone="$ZONE" --project="$PROJECT" --quiet 2>/dev/null
+    echo "VM deleted."
+' EXIT
 
 # ── One-time setup ────────────────────────────────────────────────────────────
 echo "=== One-time setup (deps + repo + data) ==="

@@ -38,10 +38,19 @@ gcloud compute tpus tpu-vm create "$TPU_NAME" \
 
 echo "TPU VM $TPU_NAME created (on-demand, zone $ZONE)"
 
-trap 'echo "Cleaning up TPU VM..."; \
-      gcloud compute tpus tpu-vm delete "$TPU_NAME" \
-          --zone="$ZONE" --project="$PROJECT" --quiet 2>/dev/null; \
-      echo "VM deleted."' EXIT
+trap '
+    echo "=== Saving checkpoints before VM deletion ==="
+    mkdir -p "./checkpoints_tpu"
+    gcloud compute tpus tpu-vm scp \
+        --recurse --zone="$ZONE" --project="$PROJECT" \
+        "${TPU_NAME}:~/bohdi-lora/checkpoints" "./checkpoints_tpu/" 2>/dev/null \
+        && echo "Checkpoints saved to ./checkpoints_tpu/" \
+        || echo "Nothing to copy or copy failed."
+    echo "=== Deleting TPU VM ==="
+    gcloud compute tpus tpu-vm delete "$TPU_NAME" \
+        --zone="$ZONE" --project="$PROJECT" --quiet 2>/dev/null
+    echo "VM deleted."
+' EXIT
 
 gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
     --zone="$ZONE" \
