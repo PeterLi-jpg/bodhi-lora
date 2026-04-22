@@ -70,7 +70,31 @@ RETRY_DELAY=180
 echo "=== Acquiring TPU VM from TRC quota ==="
 ACCEL_CFG=""
 found=false
+
+# If a VM with this name already exists (e.g. from a previous interrupted run),
+# detect its zone/type and reuse it rather than failing with ALREADY_EXISTS.
+for slot in "${TRC_SLOTS[@]}"; do
+    read -r _TYPE _ZONE _SPOT _CFG <<< "$slot"
+    EXISTING=$(gcloud compute tpus tpu-vm list --zone="$_ZONE" --project="$PROJECT" \
+        --format="value(name,state)" 2>/dev/null | grep "^${TPU_NAME}\b" || true)
+    if [ -n "$EXISTING" ]; then
+        STATE=$(echo "$EXISTING" | awk '{print $2}')
+        echo "Found existing VM $TPU_NAME in $_ZONE (state=$STATE) — waiting for READY..."
+        while [ "$STATE" != "READY" ]; do
+            sleep 15
+            STATE=$(gcloud compute tpus tpu-vm list --zone="$_ZONE" --project="$PROJECT" \
+                --format="value(state)" 2>/dev/null | head -1)
+            echo "  state: $STATE"
+        done
+        TPU_TYPE="$_TYPE"; ZONE="$_ZONE"; ACCEL_CFG="$_CFG"
+        echo "Reusing existing VM: $_TYPE in $_ZONE"
+        found=true
+        break
+    fi
+done
+
 for round in $(seq 1 $MAX_ROUNDS); do
+    $found && break
     for slot in "${TRC_SLOTS[@]}"; do
         read -r _TYPE _ZONE _SPOT _CFG <<< "$slot"
         SPOT_FLAG=""
