@@ -59,8 +59,8 @@ TRC_SLOTS=(
     "v4-32  us-central2-b  yes  tpu/accelerate_config_v4_32.yaml"
     "v6e-64 us-east1-d     yes  tpu/accelerate_config_v6e64.yaml"
     "v6e-64 europe-west4-a yes  tpu/accelerate_config_v6e64.yaml"
-    "v5e-64 us-central1-a  yes  tpu/accelerate_config_v5e64.yaml"
-    "v5e-64 europe-west4-b yes  tpu/accelerate_config_v5e64.yaml"
+    "v5litepod-64 us-central1-a  yes  tpu/accelerate_config_v5e64.yaml"
+    "v5litepod-64 europe-west4-b yes  tpu/accelerate_config_v5e64.yaml"
 )
 
 # Try each slot in one pass, then sleep and retry the whole list.
