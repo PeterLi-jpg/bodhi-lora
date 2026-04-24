@@ -143,7 +143,10 @@ def make_bodhi_wrapper(model, tokenizer, device, max_new_tokens=1024):
         text = tokenizer.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True)
         inputs = tokenizer(text, return_tensors="pt").to(device)
         with torch.no_grad():
-            out = model.generate(**inputs, max_new_tokens=max_new_tokens, do_sample=False)
+            gen_kwargs = dict(max_new_tokens=max_new_tokens, do_sample=False)
+            if _ON_TPU:
+                gen_kwargs["cache_implementation"] = "static"
+            out = model.generate(**inputs, **gen_kwargs)
         return tokenizer.decode(out[0][inputs["input_ids"].shape[1]:], skip_special_tokens=True)
 
     return BODHI(chat_function=chat_fn, config=BODHIConfig(domain="medical"))
@@ -154,7 +157,10 @@ def gen_response(model, tokenizer, device, messages, use_bodhi, bodhi_wrapper=No
         text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         inputs = tokenizer(text, return_tensors="pt").to(device)
         with torch.no_grad():
-            out = model.generate(**inputs, max_new_tokens=max_new_tokens, do_sample=False)
+            gen_kwargs = dict(max_new_tokens=max_new_tokens, do_sample=False)
+            if _ON_TPU:
+                gen_kwargs["cache_implementation"] = "static"
+            out = model.generate(**inputs, **gen_kwargs)
         return tokenizer.decode(out[0][inputs["input_ids"].shape[1]:], skip_special_tokens=True)
 
     resp = bodhi_wrapper.complete(messages)

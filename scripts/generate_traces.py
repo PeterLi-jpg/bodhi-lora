@@ -189,7 +189,15 @@ class LocalModel:
         )
         inputs = self.tokenizer(text, return_tensors="pt").to(self._device)
         with torch.no_grad():
-            out = self.model.generate(**inputs, max_new_tokens=max_new_tokens, do_sample=False)
+            # cache_implementation="static" is required on XLA/TPU.
+            # The default HybridCache (Gemma3 sliding-window) grows dynamically
+            # and its slice indices overflow XLA's static-shape validation.
+            # StaticCache pre-allocates fixed tensors so no recompilation or
+            # index-out-of-range errors occur during greedy decoding.
+            gen_kwargs = dict(max_new_tokens=max_new_tokens, do_sample=False)
+            if _ON_TPU:
+                gen_kwargs["cache_implementation"] = "static"
+            out = self.model.generate(**inputs, **gen_kwargs)
         if _ON_TPU:
             _xm.mark_step()
         return self.tokenizer.decode(out[0][inputs["input_ids"].shape[1]:], skip_special_tokens=True)
