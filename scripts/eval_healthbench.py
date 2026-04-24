@@ -76,8 +76,16 @@ def load_model(model_name, lora_path=None):
 
         if _xs is not None:
             from torch_xla import runtime as _xr
-            _xr.use_spmd()
             import numpy as _np
+            # CRITICAL: load model on CPU BEFORE calling use_spmd().
+            # use_spmd() globally intercepts all set_data() calls; if it is
+            # active when from_pretrained() runs, every internal weight
+            # assignment raises "incompatible tensor type".  Safe order:
+            # 1) load to CPU  2) enable SPMD  3) move params to XLA.
+            model = AutoModelForCausalLM.from_pretrained(
+                model_name, torch_dtype=torch.bfloat16
+            )
+            _xr.use_spmd()
             # global_device_count() returns 1 in SPMD mode (1 virtual device).
             # addressable_device_count() returns the physical chip count (8 on v6e-8).
             _n_dev = getattr(_xr, 'addressable_device_count', _xr.global_device_count)()
@@ -89,9 +97,6 @@ def load_model(model_name, lora_path=None):
             _mesh = _xs.Mesh(_device_ids, (_n_dev,), ("tp",))
             _dev = _xm.xla_device()
             print(f"SPMD: sharding model across {_n_dev} chips")
-            model = AutoModelForCausalLM.from_pretrained(
-                model_name, torch_dtype=torch.bfloat16
-            )
             import torch.nn as _nn
             for _mod in model.modules():
                 for _pname, _p in list(_mod._parameters.items()):

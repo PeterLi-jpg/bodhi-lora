@@ -124,8 +124,16 @@ class LocalModel:
 
             if _xs is not None:
                 from torch_xla import runtime as _xr
-                _xr.use_spmd()
                 import numpy as _np
+                # CRITICAL: load model on CPU BEFORE calling use_spmd().
+                # use_spmd() globally intercepts all set_data() calls; if it is
+                # active when from_pretrained() runs, every internal weight
+                # assignment raises "incompatible tensor type".  Safe order:
+                # 1) load to CPU  2) enable SPMD  3) move params to XLA.
+                self.model = AutoModelForCausalLM.from_pretrained(
+                    model_name, torch_dtype=torch.bfloat16
+                )
+                _xr.use_spmd()
                 # global_device_count() returns 1 in SPMD mode (1 virtual device).
                 # addressable_device_count() returns the physical chip count (8 on v6e-8).
                 # mark_sharding() internally uses addressable_device_count, so the mesh
@@ -140,14 +148,9 @@ class LocalModel:
                 _mesh = _xs.Mesh(_device_ids, (_n_dev,), ("tp",))
                 _dev = _xm.xla_device()
                 print(f"SPMD: sharding model across {_n_dev} chips")
-                # Load on CPU first, then manually reassign parameters to XLA.
-                # model.to(xla_device) calls param.data = xla_tensor internally,
-                # which torch_xla SPMD blocks with "incompatible tensor type".
-                # Replacing module._parameters[name] with a new nn.Parameter
-                # constructed from the XLA data bypasses set_data entirely.
-                self.model = AutoModelForCausalLM.from_pretrained(
-                    model_name, torch_dtype=torch.bfloat16
-                )
+                # Replace module._parameters entries with new nn.Parameter objects
+                # wrapping XLA tensors.  Direct dict assignment avoids set_data()
+                # entirely (which SPMD blocks even for the post-use_spmd path).
                 import torch.nn as _nn
                 for _mod in self.model.modules():
                     for _pname, _p in list(_mod._parameters.items()):
