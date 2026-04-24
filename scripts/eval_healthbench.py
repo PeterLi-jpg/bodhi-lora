@@ -137,14 +137,13 @@ def load_model(model_name, lora_path=None):
     return model, tokenizer, _device
 
 
-def _tpu_pad_short_inputs(inputs, tokenizer, min_len=1024):
-    """Left-pad inputs shorter than min_len on CPU before moving to XLA.
+def _tpu_pad_short_inputs(inputs, tokenizer, min_len=4096):
+    """Pad inputs to a fixed length on CPU before moving to XLA.
 
-    HybridCache's SlidingWindowCache (sliding_window=1024) slices:
-        full_kv[:, :, -1023:, :]
-    XLA rejects this when the cache has fewer than 1024 entries (short prompts).
-    Padding on CPU avoids adding the concat to the XLA computation graph.
-    Long prompts are left unchanged.
+    XLA compiles a new graph for every distinct input shape; for a 27B SPMD
+    model each compile takes 20-30 min.  Padding everything to a single fixed
+    length (4096) means one prefill compile covers all HealthBench prompts.
+    4096 also satisfies the sliding-window minimum of 1024.
     """
     seq_len = inputs["input_ids"].shape[1]
     if seq_len >= min_len:
