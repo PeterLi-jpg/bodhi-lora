@@ -195,51 +195,33 @@ class LocalModel:
             messages, tokenize=False, add_generation_prompt=True
         )
         inputs = self.tokenizer(text, return_tensors="pt").to(self._device)
+        if _ON_TPU:
+            # Gemma3's HybridCache contains SlidingWindowCache sublayers that do:
+            #   full_kv[:, :, -sliding_window+1:, :]   (sliding_window=1024)
+            # XLA rejects this slice when the cache has fewer than 1024 entries,
+            # which happens when the prefill is short (< 1024 tokens).
+            # StaticCache avoids the sliding-window slice but triggers
+            # torch._inductor compilation workers that hang XLA indefinitely.
+            # Fix: keep HybridCache (default) and pad inputs to >= 1024 tokens
+            # so the prefill fills the cache past the sliding-window threshold.
+            _min_len = 1024
+            _seq_len = inputs["input_ids"].shape[1]
+            if _seq_len < _min_len:
+                _pad = _min_len - _seq_len
+                _pad_id = self.tokenizer.pad_token_id or 0
+                _pad_ids = inputs["input_ids"].new_full((1, _pad), _pad_id)
+                _pad_mask = inputs["attention_mask"].new_zeros((1, _pad))
+                # Prepend padding so the real tokens appear at the end (left-pad).
+                inputs["input_ids"] = torch.cat([_pad_ids, inputs["input_ids"]], dim=1)
+                inputs["attention_mask"] = torch.cat([_pad_mask, inputs["attention_mask"]], dim=1)
         with torch.no_grad():
             gen_kwargs = dict(max_new_tokens=max_new_tokens, do_sample=False)
-            if _ON_TPU:
-                # Gemma3 overrides _get_cache() to always build HybridCache,
-                # which contains SlidingWindowCache sublayers that do:
-                #   full_kv[:, :, -sliding_window+1:, :]
-                # XLA rejects this slice when the static tensor has fewer rows
-                # than sliding_window (true for short prompts early in gen).
-                # Passing past_key_values=StaticCache() to generate() does NOT
-                # help because generate() calls self._get_cache() internally
-                # and replaces whatever we pass.
-                # Fix: monkey-patch _get_cache on this model instance so the
-                # generate loop builds a StaticCache instead of HybridCache.
-                # StaticCache has no sliding-window slice, so XLA compiles
-                # once and reuses the same graph shape across all tokens.
-                import types
-                from transformers import StaticCache
-                _dev, _dtype = self._device, torch.bfloat16
-                def _static_get_cache(self_m, *args, **kw):
-                    # transformers calls _get_cache with varying signatures across
-                    # versions; accept anything and extract what StaticCache needs.
-                    batch_size    = args[0] if len(args) > 0 else kw.get('batch_size', 1)
-                    # CRITICAL: clamp max_cache_len to 4096.
-                    # MedGemma-27B has max_position_embeddings=131072. If generate()
-                    # passes that as max_cache_len, XLA compiles attention over 131K
-                    # static positions on a sharded 27B model — essentially infinite.
-                    # HealthBench prompts (~500 tok) + max_new_tokens=1024 = ~1524 max.
-                    # 4096 is safe headroom. Larger values cause multi-hour XLA hangs.
-                    raw_len       = args[1] if len(args) > 1 else kw.get('max_cache_len', 4096)
-                    max_cache_len = min(int(raw_len), 4096)
-                    _p = next(self_m.parameters())
-                    device = kw.get('device', _p.device)
-                    dtype  = kw.get('dtype',  _p.dtype)
-                    return StaticCache(
-                        config=self_m.config, max_batch_size=batch_size,
-                        max_cache_len=max_cache_len, device=device, dtype=dtype,
-                    )
-                self.model._get_cache = types.MethodType(_static_get_cache, self.model)
-                # Also set cache_implementation so generate() passes the right
-                # max_cache_len when it calls _get_cache.
-                gen_kwargs["cache_implementation"] = "static"
             out = self.model.generate(**inputs, **gen_kwargs)
         if _ON_TPU:
             _xm.mark_step()
-        return self.tokenizer.decode(out[0][inputs["input_ids"].shape[1]:], skip_special_tokens=True)
+        # Decode only the newly generated tokens (skip both padding and prompt).
+        prompt_len = inputs["input_ids"].shape[1]
+        return self.tokenizer.decode(out[0][prompt_len:], skip_special_tokens=True)
 
 
 def make_bodhi_wrapper(model):

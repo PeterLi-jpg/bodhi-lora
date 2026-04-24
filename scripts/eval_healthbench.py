@@ -141,54 +141,41 @@ def load_model(model_name, lora_path=None):
     return model, tokenizer, _device
 
 
-def _patch_model_static_cache(model):
-    """Monkey-patch model._get_cache so generate() uses StaticCache, not HybridCache.
+def _tpu_pad_inputs(inputs, tokenizer, min_len=1024):
+    """Left-pad inputs to min_len tokens so HybridCache's sliding-window slice works.
 
-    Gemma3 overrides _get_cache() to always build HybridCache, which has
-    SlidingWindowCache sublayers that do full_kv[:, :, -sliding_window+1:, :].
-    XLA rejects that slice when the static tensor has fewer rows than
-    sliding_window (which happens for every short prompt at the start of gen).
-    Passing past_key_values=StaticCache() to generate() doesn't help because
-    generate() calls self._get_cache() internally and replaces it.
-    Patching _get_cache on the instance fixes the root cause.
+    Gemma3's HybridCache has SlidingWindowCache sublayers that slice:
+        full_kv[:, :, -sliding_window+1:, :]   (sliding_window=1024)
+    XLA rejects this when the cache has fewer than 1024 entries (short prompts).
+    StaticCache avoids the slice but triggers torch._inductor workers that hang XLA.
+    Padding inputs to >= 1024 tokens fills the cache past the threshold instead.
     """
-    import types
-    from transformers import StaticCache
-
-    def _static_get_cache(self_m, *args, **kw):
-        # Accept any calling convention across transformers versions.
-        batch_size    = args[0] if len(args) > 0 else kw.get('batch_size', 1)
-        # Clamp to 4096: MedGemma-27B has max_position_embeddings=131072 and
-        # generate() may pass that as max_cache_len. XLA compiling attention
-        # over 131K static positions on a sharded 27B model hangs indefinitely.
-        raw_len       = args[1] if len(args) > 1 else kw.get('max_cache_len', 4096)
-        max_cache_len = min(int(raw_len), 4096)
-        _p = next(self_m.parameters())
-        device = kw.get('device', _p.device)
-        dtype  = kw.get('dtype',  _p.dtype)
-        return StaticCache(
-            config=self_m.config, max_batch_size=batch_size,
-            max_cache_len=max_cache_len, device=device, dtype=dtype,
-        )
-    model._get_cache = types.MethodType(_static_get_cache, model)
+    seq_len = inputs["input_ids"].shape[1]
+    if seq_len >= min_len:
+        return inputs
+    pad = min_len - seq_len
+    pad_id = tokenizer.pad_token_id or 0
+    pad_ids = inputs["input_ids"].new_full((1, pad), pad_id)
+    pad_mask = inputs["attention_mask"].new_zeros((1, pad))
+    return {
+        "input_ids": torch.cat([pad_ids, inputs["input_ids"]], dim=1),
+        "attention_mask": torch.cat([pad_mask, inputs["attention_mask"]], dim=1),
+    }
 
 
 def make_bodhi_wrapper(model, tokenizer, device, max_new_tokens=1024):
     """Build a reusable BODHI wrapper around the given model."""
     from bodhi import BODHI, BODHIConfig
 
-    if _ON_TPU:
-        _patch_model_static_cache(model)
-
     def chat_fn(msgs):
         text = tokenizer.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True)
         inputs = tokenizer(text, return_tensors="pt").to(device)
-        gen_kwargs = dict(max_new_tokens=max_new_tokens, do_sample=False)
         if _ON_TPU:
-            gen_kwargs["cache_implementation"] = "static"
+            inputs = _tpu_pad_inputs(inputs, tokenizer)
+        prompt_len = inputs["input_ids"].shape[1]
         with torch.no_grad():
-            out = model.generate(**inputs, **gen_kwargs)
-        return tokenizer.decode(out[0][inputs["input_ids"].shape[1]:], skip_special_tokens=True)
+            out = model.generate(**inputs, max_new_tokens=max_new_tokens, do_sample=False)
+        return tokenizer.decode(out[0][prompt_len:], skip_special_tokens=True)
 
     return BODHI(chat_function=chat_fn, config=BODHIConfig(domain="medical"))
 
@@ -197,13 +184,12 @@ def gen_response(model, tokenizer, device, messages, use_bodhi, bodhi_wrapper=No
     if not use_bodhi:
         text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         inputs = tokenizer(text, return_tensors="pt").to(device)
-        gen_kwargs = dict(max_new_tokens=max_new_tokens, do_sample=False)
         if _ON_TPU:
-            _patch_model_static_cache(model)
-            gen_kwargs["cache_implementation"] = "static"
+            inputs = _tpu_pad_inputs(inputs, tokenizer)
+        prompt_len = inputs["input_ids"].shape[1]
         with torch.no_grad():
-            out = model.generate(**inputs, **gen_kwargs)
-        return tokenizer.decode(out[0][inputs["input_ids"].shape[1]:], skip_special_tokens=True)
+            out = model.generate(**inputs, max_new_tokens=max_new_tokens, do_sample=False)
+        return tokenizer.decode(out[0][prompt_len:], skip_special_tokens=True)
 
     resp = bodhi_wrapper.complete(messages)
     return resp.content
