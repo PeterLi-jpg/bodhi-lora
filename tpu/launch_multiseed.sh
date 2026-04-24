@@ -187,45 +187,111 @@ if [ -f "./results/_rescue/raw_traces.jsonl" ]; then
 fi
 
 # Smoke test: 1 example before committing to the full run.
-# Catches generation bugs (wrong cache, broken BODHI wrapper, etc.) in ~2 min
-# instead of discovering them after 4800 failures.
+# XLA compilation on a fresh 27B SPMD model can pin all host CPUs for 20-30 min,
+# making sshd unresponsive and dropping a blocking SSH session.  We work around
+# this by launching the script with nohup in the background and polling from here.
 echo "--- smoke test (1 example) ---"
 gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
     --zone="$ZONE" --project="$PROJECT" \
     --command="
-set -euo pipefail
 export PATH=\"\$HOME/.local/bin:\$PATH\"
 cd ~/bohdi-lora
 export HF_TOKEN='${HF_TOKEN}'
-python scripts/generate_traces.py \
+rm -f /tmp/smoke_test.jsonl /tmp/smoke_test.log
+nohup python scripts/generate_traces.py \
     --model google/medgemma-27b-text-it \
     --datasets healthbench_hard \
     --output /tmp/smoke_test.jsonl \
     --use-bodhi \
-    --max-examples 1
-N=\$(wc -l < /tmp/smoke_test.jsonl)
-echo \"Smoke test: \${N}/1 trace written\"
-[ \"\$N\" -eq 1 ] || { echo 'SMOKE TEST FAILED — aborting before full run'; exit 1; }
+    --max-examples 1 \
+    > /tmp/smoke_test.log 2>&1 &
+echo \$! > /tmp/smoke_test.pid
+echo 'Smoke test running in background (PID '\$(cat /tmp/smoke_test.pid)')'
 "
 
+# Poll from bohdi-runner every 90 s (each poll is a short SSH that won't hang).
+# Allow up to 75 minutes for XLA compilation + generation.
+echo "Polling for smoke test result (up to 75 min)..."
+SMOKE_PASSED=false
+for i in $(seq 1 50); do
+    sleep 90
+    N=$(gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
+        --zone="$ZONE" --project="$PROJECT" \
+        --command="wc -l < /tmp/smoke_test.jsonl 2>/dev/null || echo 0" 2>/dev/null \
+        | grep -E '^[0-9]+$' | tail -1)
+    echo "  Poll $i/50 ($(( i * 90 / 60 )) min): ${N:-0}/1 traces written"
+    if [ "${N:-0}" -ge 1 ]; then
+        SMOKE_PASSED=true
+        break
+    fi
+    # If process exited without writing a trace, it failed
+    ALIVE=$(gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
+        --zone="$ZONE" --project="$PROJECT" \
+        --command="pgrep -f generate_traces.py > /dev/null 2>&1 && echo alive || echo dead" 2>/dev/null \
+        | grep -E '^(alive|dead)$' | tail -1)
+    if [ "$ALIVE" = "dead" ] && [ "${N:-0}" -lt 1 ]; then
+        echo "Smoke test process exited without writing a trace."
+        echo "=== smoke_test.log ==="
+        gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
+            --zone="$ZONE" --project="$PROJECT" \
+            --command="tail -30 /tmp/smoke_test.log" 2>/dev/null || true
+        echo "SMOKE TEST FAILED — aborting before full run"
+        exit 1
+    fi
+done
+if ! $SMOKE_PASSED; then
+    echo "Smoke test timed out after 75 min — aborting."
+    exit 1
+fi
+echo "Smoke test passed."
+
+# Stage 1 full run: also use nohup + polling so SSH drops during the 4-8 hour
+# generation don't kill the process.  Poll every 5 min; expect ~4800 traces.
 gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
     --zone="$ZONE" --project="$PROJECT" \
     --command="
-set -euo pipefail
 export PATH=\"\$HOME/.local/bin:\$PATH\"
 cd ~/bohdi-lora
 export HF_TOKEN='${HF_TOKEN}'
-# --resume-from means a restart after preemption or SSH drop continues from
-# the last completed example rather than starting over.
-python scripts/generate_traces.py \
+rm -f /tmp/gen_stage1.log
+nohup python scripts/generate_traces.py \
     --model google/medgemma-27b-text-it \
     --datasets healthbench_hard healthbench \
     --output data/sft/raw_traces.jsonl \
     --resume-from data/sft/raw_traces.jsonl \
     --use-bodhi \
-    --max-examples \${MAX_EXAMPLES:-4800}
-echo \"Generate done: \$(wc -l < data/sft/raw_traces.jsonl) traces\"
+    --max-examples \${MAX_EXAMPLES:-4800} \
+    > /tmp/gen_stage1.log 2>&1 &
+echo \$! > /tmp/gen_stage1.pid
+echo 'Stage 1 running in background (PID '\$(cat /tmp/gen_stage1.pid)')'
 "
+
+echo "Polling Stage 1 progress (target: ${MAX_EXAMPLES:-4800} traces)..."
+TARGET="${MAX_EXAMPLES:-4800}"
+for i in $(seq 1 576); do   # 576 × 5 min = 48 hours max
+    sleep 300
+    N=$(gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
+        --zone="$ZONE" --project="$PROJECT" \
+        --command="wc -l < ~/bohdi-lora/data/sft/raw_traces.jsonl 2>/dev/null || echo 0" 2>/dev/null \
+        | grep -E '^[0-9]+$' | tail -1)
+    echo "  Stage 1 poll $i: ${N:-0}/$TARGET traces"
+    if [ "${N:-0}" -ge "$TARGET" ]; then
+        echo "Stage 1 complete: $TARGET traces written."
+        break
+    fi
+    ALIVE=$(gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
+        --zone="$ZONE" --project="$PROJECT" \
+        --command="pgrep -f generate_traces.py > /dev/null 2>&1 && echo alive || echo dead" 2>/dev/null \
+        | grep -E '^(alive|dead)$' | tail -1)
+    if [ "$ALIVE" = "dead" ]; then
+        echo "Stage 1 process exited with ${N:-0}/$TARGET traces (preempted or done)."
+        break
+    fi
+done
+echo "Generate done: $(gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
+    --zone="$ZONE" --project="$PROJECT" \
+    --command="wc -l < ~/bohdi-lora/data/sft/raw_traces.jsonl 2>/dev/null || echo 0" 2>/dev/null \
+    | grep -E '^[0-9]+$' | tail -1) traces"
 
 # Save traces locally so they survive if the VM is preempted before training.
 echo "Saving raw_traces.jsonl to local results/..."
