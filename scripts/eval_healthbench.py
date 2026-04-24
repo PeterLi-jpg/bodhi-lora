@@ -78,8 +78,14 @@ def load_model(model_name, lora_path=None):
             from torch_xla import runtime as _xr
             _xr.use_spmd()
             import numpy as _np
-                _n_dev = _xr.global_device_count()
-                _device_ids = _np.arange(_n_dev)
+            # global_device_count() returns 1 in SPMD mode (1 virtual device).
+            # addressable_device_count() returns the physical chip count (8 on v6e-8).
+            _n_dev = getattr(_xr, 'addressable_device_count', _xr.global_device_count)()
+            if _n_dev < 2:
+                import os as _os
+                _vfio = [d for d in _os.listdir('/dev/vfio') if d.isdigit()] if _os.path.exists('/dev/vfio') else []
+                _n_dev = len(_vfio) or _n_dev
+            _device_ids = _np.arange(_n_dev)
             _mesh = _xs.Mesh(_device_ids, (_n_dev,), ("tp",))
             _dev = _xm.xla_device()
             print(f"SPMD: sharding model across {_n_dev} chips")

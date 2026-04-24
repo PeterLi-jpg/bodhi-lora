@@ -126,7 +126,16 @@ class LocalModel:
                 from torch_xla import runtime as _xr
                 _xr.use_spmd()
                 import numpy as _np
-                _n_dev = _xr.global_device_count()
+                # global_device_count() returns 1 in SPMD mode (1 virtual device).
+                # addressable_device_count() returns the physical chip count (8 on v6e-8).
+                # mark_sharding() internally uses addressable_device_count, so the mesh
+                # must match that number or we get "not mappable over N devices".
+                _n_dev = getattr(_xr, 'addressable_device_count', _xr.global_device_count)()
+                if _n_dev < 2:
+                    # Last resort: count VFIO groups = physical chips
+                    import os as _os
+                    _vfio = [d for d in _os.listdir('/dev/vfio') if d.isdigit()] if _os.path.exists('/dev/vfio') else []
+                    _n_dev = len(_vfio) or _n_dev
                 _device_ids = _np.arange(_n_dev)
                 _mesh = _xs.Mesh(_device_ids, (_n_dev,), ("tp",))
                 _dev = _xm.xla_device()
