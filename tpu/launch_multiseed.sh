@@ -186,6 +186,28 @@ if [ -f "./results/_rescue/raw_traces.jsonl" ]; then
         || echo "  Restore failed — starting from scratch"
 fi
 
+# Smoke test: 1 example before committing to the full run.
+# Catches generation bugs (wrong cache, broken BODHI wrapper, etc.) in ~2 min
+# instead of discovering them after 4800 failures.
+echo "--- smoke test (1 example) ---"
+gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
+    --zone="$ZONE" --project="$PROJECT" \
+    --command="
+set -euo pipefail
+export PATH=\"\$HOME/.local/bin:\$PATH\"
+cd ~/bohdi-lora
+export HF_TOKEN='${HF_TOKEN}'
+python scripts/generate_traces.py \
+    --model google/medgemma-27b-text-it \
+    --datasets healthbench_hard \
+    --output /tmp/smoke_test.jsonl \
+    --use-bodhi \
+    --max-examples 1
+N=\$(wc -l < /tmp/smoke_test.jsonl)
+echo \"Smoke test: \${N}/1 trace written\"
+[ \"\$N\" -eq 1 ] || { echo 'SMOKE TEST FAILED — aborting before full run'; exit 1; }
+"
+
 gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
     --zone="$ZONE" --project="$PROJECT" \
     --command="
