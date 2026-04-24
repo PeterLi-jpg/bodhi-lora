@@ -23,6 +23,35 @@ except ImportError:
     _xm = None
     _ON_TPU = False
 
+# Fix for transformers DynamicCache bug on XLA/TPU.
+#
+# In transformers 4.57+, DynamicLayer.lazy_initialization() creates
+# self.keys = torch.tensor([]) — a 1D tensor with shape (0,).  The first
+# real update() call then does torch.cat([shape_(0,), shape_(B,H,S,D)], dim=-2)
+# which fails with a dimension mismatch.  On XLA the error is deferred until
+# after graph compilation (~15 min), then raises for every example — all
+# traces fail silently and the run produces 0 output.
+#
+# Fix: replace lazy_initialization to create properly-shaped zero tensors
+# (shape [B, H, 0, D]) that torch.cat along dim=-2 can handle correctly.
+if _ON_TPU:
+    try:
+        from transformers.cache_utils import DynamicLayer
+
+        def _patched_lazy_init(self, key_states):
+            self.dtype = key_states.dtype
+            self.device = key_states.device
+            shape = list(key_states.shape)
+            shape[-2] = 0  # zero seq length, matching number of dims
+            self.keys = torch.zeros(shape, dtype=self.dtype, device=self.device)
+            self.values = torch.zeros(shape, dtype=self.dtype, device=self.device)
+            self.is_initialized = True
+
+        DynamicLayer.lazy_initialization = _patched_lazy_init
+        print("Applied DynamicLayer.lazy_initialization patch (XLA cache fix)")
+    except (ImportError, AttributeError):
+        pass  # transformers version without DynamicLayer — no patch needed
+
 DATA_DIR = Path("data/raw")
 
 DATASET_URLS = {

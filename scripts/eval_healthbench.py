@@ -31,6 +31,26 @@ except ImportError:
     _xm = None
     _ON_TPU = False
 
+# Fix for transformers DynamicCache bug on XLA/TPU — same patch as
+# generate_traces.py; see that file for the full explanation.
+if _ON_TPU:
+    try:
+        from transformers.cache_utils import DynamicLayer
+
+        def _patched_lazy_init(self, key_states):
+            self.dtype = key_states.dtype
+            self.device = key_states.device
+            shape = list(key_states.shape)
+            shape[-2] = 0
+            self.keys = torch.zeros(shape, dtype=self.dtype, device=self.device)
+            self.values = torch.zeros(shape, dtype=self.dtype, device=self.device)
+            self.is_initialized = True
+
+        DynamicLayer.lazy_initialization = _patched_lazy_init
+        print("Applied DynamicLayer.lazy_initialization patch (XLA cache fix)")
+    except (ImportError, AttributeError):
+        pass
+
 HEALTHBENCH_HARD_URL = "https://openaipublic.blob.core.windows.net/simple-evals/healthbench/hard_2025-05-08-21-00-10.jsonl"
 DATA_DIR = Path("data/raw")
 

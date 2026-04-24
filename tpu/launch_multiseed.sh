@@ -234,7 +234,19 @@ for i in $(seq 1 576); do   # 576 × 5 min = 48 hours max
         --command="pgrep -f generate_traces.py > /dev/null 2>&1 && echo alive || echo dead" 2>/dev/null \
         | grep -E '^(alive|dead)$' | tail -1)
     if [ "$ALIVE" = "dead" ]; then
-        echo "Stage 1 process exited with ${N:-0}/$TARGET traces (preempted or done)."
+        echo "Stage 1 process exited with ${N:-0}/$TARGET traces."
+        # If we got 0 traces, something crashed early — print the log so we
+        # can diagnose the error without SSH-ing in manually.
+        if [ "${N:-0}" -eq 0 ]; then
+            echo "--- last 40 lines of gen_stage1.log ---"
+            gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
+                --zone="$ZONE" --project="$PROJECT" \
+                --command="tail -40 /tmp/gen_stage1.log 2>/dev/null || echo '(log not found)'" \
+                2>/dev/null || true
+            echo "--- end log ---"
+            echo "ERROR: Stage 1 produced 0 traces — aborting pipeline."
+            exit 1
+        fi
         break
     fi
 done
