@@ -152,7 +152,11 @@ def _patch_model_static_cache(model):
     def _static_get_cache(self_m, *args, **kw):
         # Accept any calling convention across transformers versions.
         batch_size    = args[0] if len(args) > 0 else kw.get('batch_size', 1)
-        max_cache_len = args[1] if len(args) > 1 else kw.get('max_cache_len', 4096)
+        # Clamp to 4096: MedGemma-27B has max_position_embeddings=131072 and
+        # generate() may pass that as max_cache_len. XLA compiling attention
+        # over 131K static positions on a sharded 27B model hangs indefinitely.
+        raw_len       = args[1] if len(args) > 1 else kw.get('max_cache_len', 4096)
+        max_cache_len = min(int(raw_len), 4096)
         _p = next(self_m.parameters())
         device = kw.get('device', _p.device)
         dtype  = kw.get('dtype',  _p.dtype)

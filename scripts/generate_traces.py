@@ -210,7 +210,14 @@ class LocalModel:
                     # transformers calls _get_cache with varying signatures across
                     # versions; accept anything and extract what StaticCache needs.
                     batch_size    = args[0] if len(args) > 0 else kw.get('batch_size', 1)
-                    max_cache_len = args[1] if len(args) > 1 else kw.get('max_cache_len', 4096)
+                    # CRITICAL: clamp max_cache_len to 4096.
+                    # MedGemma-27B has max_position_embeddings=131072. If generate()
+                    # passes that as max_cache_len, XLA compiles attention over 131K
+                    # static positions on a sharded 27B model — essentially infinite.
+                    # HealthBench prompts (~500 tok) + max_new_tokens=1024 = ~1524 max.
+                    # 4096 is safe headroom. Larger values cause multi-hour XLA hangs.
+                    raw_len       = args[1] if len(args) > 1 else kw.get('max_cache_len', 4096)
+                    max_cache_len = min(int(raw_len), 4096)
                     _p = next(self_m.parameters())
                     device = kw.get('device', _p.device)
                     dtype  = kw.get('dtype',  _p.dtype)
