@@ -107,16 +107,27 @@ class LocalModel:
             self.tokenizer.pad_token = self.tokenizer.eos_token
 
         if _ON_TPU:
-            # Spread model across all available TPU chips.
-            # MedGemma-27B (54 GB bfloat16) exceeds one chip (32 GB),
-            # so we use device_map='balanced' with per-chip memory limits.
-            xla_devs = _xm.get_xla_supported_devices()
-            max_mem = {d: '28GiB' for d in xla_devs}
+            # SPMD: treat all chips as one logical device, shard weights
+            # across them so 54 GB model fits across 8 x 32 GB chips.
+            import torch_xla.experimental.xla_sharding as _xs
+            from torch_xla import runtime as _xr
+            _xr.use_spmd()
+            _n_dev = len(_xm.get_xla_supported_devices())
+            _mesh = _xs.Mesh(list(range(_n_dev)), (_n_dev,), ('tp',))
+            _dev = _xm.xla_device()
+            print(f'SPMD: sharding model across {_n_dev} chips')
+            # Load on CPU first — avoids single-chip HBM limit during load
             self.model = AutoModelForCausalLM.from_pretrained(
-                model_name, torch_dtype=torch.bfloat16,
-                device_map='balanced', max_memory=max_mem,
+                model_name, torch_dtype=torch.bfloat16
             )
-            self._device = xla_devs[0]
+            # Move each param to XLA one at a time, shard 2-D matrices
+            for _pname, _param in self.model.named_parameters():
+                _xla_p = _param.data.to(_dev)
+                if _xla_p.dim() == 2 and _xla_p.shape[0] > 1024:
+                    _xs.mark_sharding(_xla_p, _mesh, (0, None))
+                _param.data = _xla_p
+            _xm.mark_step()
+            self._device = _dev
         else:
             self.model = AutoModelForCausalLM.from_pretrained(
                 model_name, torch_dtype=torch.bfloat16, device_map=device,
