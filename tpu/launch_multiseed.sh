@@ -44,18 +44,20 @@ TRAIN_EXTRA_FLAGS=""
 
 PROJECT="tokyo-micron-494016-s9"
 TPU_NAME="bohdi-lora-v4"
-TPU_TYPE="v4-32"
-TPU_RUNTIME="tpu-vm-base"
-ZONE="us-central2-b"
+TPU_TYPE="v6e-8"
+TPU_RUNTIME="v2-alpha-tpuv6e"
+ZONE="us-east1-d"
 
 echo "Seeds to run: $SEEDS"
 echo "TPU type will be shown once a slot is acquired"
 echo ""
 
-# TRC-granted slots only — in preference order (on-demand first, then spot).
+# TRC-granted slots — v6e-8 spot in TRC regions only.
+# v6e-8 = 8 chips × 32 GB HBM = 256 GB; spot OK for TRC quota.
 # Format: "TPU_TYPE ZONE SPOT(yes/no) ACCEL_CONFIG"
 TRC_SLOTS=(
-    "v4-32 us-central2-b no tpu/accelerate_config_v4_32.yaml"
+    "v6e-8 us-east1-d     yes tpu/accelerate_config_v6e8.yaml"
+    "v6e-8 europe-west4-a yes tpu/accelerate_config_v6e8.yaml"
 )
 
 # Try each slot in one pass, then sleep and retry the whole list.
