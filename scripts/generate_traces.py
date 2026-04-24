@@ -7,12 +7,6 @@ import random
 import traceback
 from pathlib import Path
 
-# Disable torch.compile / Dynamo before importing torch.
-# transformers 4.50+ auto-calls torch.compile() when using static cache
-# (_valid_auto_compile_criteria). On TPU with XLA tensors, Dynamo/Inductor
-# tries to trace XLA ops and hangs indefinitely (observed: 18+ hours).
-os.environ["TORCHDYNAMO_DISABLE"] = "1"
-
 import numpy as np
 import torch
 from tqdm import tqdm
@@ -194,39 +188,31 @@ class LocalModel:
         text = self.tokenizer.apply_chat_template(
             messages, tokenize=False, add_generation_prompt=True
         )
-        # Tokenize on CPU first so we can pad before handing to XLA.
+        # Tokenize on CPU so we can pad short prompts before handing to XLA.
         inputs = self.tokenizer(text, return_tensors="pt")
         if _ON_TPU:
-            # XLA compiles a separate graph for each unique input shape.
-            # BODHI makes multiple generate() calls per example with varying
-            # prompt lengths, so without fixed shapes we'd compile a new 27B
-            # SPMD graph for every call — each taking many minutes.
-            # Fix: pad ALL inputs to a single fixed length on CPU so every call
-            # shares one compiled graph.  Also ensures HybridCache's
-            # SlidingWindowCache slice (full_kv[:,:,-1023:,:]) always has
-            # >= 1024 entries to work with.
-            _FIXED_LEN = 4096
+            # HybridCache's SlidingWindowCache (sliding_window=1024) does:
+            #   full_kv[:, :, -1023:, :]
+            # XLA rejects this slice when the cache has fewer than 1024 entries,
+            # which happens for prompts shorter than 1024 tokens.
+            # Fix: left-pad short prompts to 1024 on CPU before moving to XLA.
+            # Long prompts (>= 1024) are left unchanged — matching the code that
+            # generated 19 traces at 1.7 s/trace before the cache changes.
+            _min_len = 1024
             _seq_len = inputs["input_ids"].shape[1]
-            if _seq_len > _FIXED_LEN:
-                # Truncate from the LEFT (keep the most recent tokens).
-                inputs["input_ids"] = inputs["input_ids"][:, -_FIXED_LEN:]
-                inputs["attention_mask"] = inputs["attention_mask"][:, -_FIXED_LEN:]
-            elif _seq_len < _FIXED_LEN:
-                _pad = _FIXED_LEN - _seq_len
+            if _seq_len < _min_len:
+                _pad = _min_len - _seq_len
                 _pad_id = self.tokenizer.pad_token_id or 0
                 _pad_ids = torch.full((1, _pad), _pad_id, dtype=inputs["input_ids"].dtype)
                 _pad_mask = torch.zeros((1, _pad), dtype=inputs["attention_mask"].dtype)
-                # Left-pad so real tokens are at the end.
                 inputs["input_ids"] = torch.cat([_pad_ids, inputs["input_ids"]], dim=1)
                 inputs["attention_mask"] = torch.cat([_pad_mask, inputs["attention_mask"]], dim=1)
         prompt_len = inputs["input_ids"].shape[1]
         inputs = {k: v.to(self._device) for k, v in inputs.items()}
         with torch.no_grad():
-            gen_kwargs = dict(max_new_tokens=max_new_tokens, do_sample=False)
-            out = self.model.generate(**inputs, **gen_kwargs)
+            out = self.model.generate(**inputs, max_new_tokens=max_new_tokens, do_sample=False)
         if _ON_TPU:
             _xm.mark_step()
-        # Decode only the newly generated tokens (skip padding + prompt).
         return self.tokenizer.decode(out[0][prompt_len:], skip_special_tokens=True)
 
 

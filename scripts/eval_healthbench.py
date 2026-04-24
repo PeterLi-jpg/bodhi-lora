@@ -10,10 +10,6 @@ import random
 import subprocess
 import urllib.request
 
-# Disable torch.compile / Dynamo before importing torch.
-# transformers 4.50+ auto-calls torch.compile() when using static cache.
-# On TPU with XLA tensors, Dynamo/Inductor hangs indefinitely.
-os.environ["TORCHDYNAMO_DISABLE"] = "1"
 import sys
 from pathlib import Path
 
@@ -141,34 +137,26 @@ def load_model(model_name, lora_path=None):
     return model, tokenizer, _device
 
 
-def _tpu_fix_inputs(inputs, tokenizer, fixed_len=4096):
-    """Pad or truncate inputs to a fixed length on CPU before moving to XLA.
+def _tpu_pad_short_inputs(inputs, tokenizer, min_len=1024):
+    """Left-pad inputs shorter than min_len on CPU before moving to XLA.
 
-    XLA compiles a separate graph per unique input shape.  With BODHI making
-    multiple generate() calls per example with varying prompt lengths, without
-    fixed shapes we'd recompile a fresh 27B SPMD graph every call.  Padding
-    to a single fixed length on CPU means one compilation, cached forever.
-
-    Also ensures HybridCache's SlidingWindowCache slice (last 1023 of 4096)
-    always has enough entries regardless of natural prompt length.
+    HybridCache's SlidingWindowCache (sliding_window=1024) slices:
+        full_kv[:, :, -1023:, :]
+    XLA rejects this when the cache has fewer than 1024 entries (short prompts).
+    Padding on CPU avoids adding the concat to the XLA computation graph.
+    Long prompts are left unchanged.
     """
     seq_len = inputs["input_ids"].shape[1]
-    if seq_len > fixed_len:
-        # Truncate from the left — keep the most recent tokens.
-        return {
-            "input_ids": inputs["input_ids"][:, -fixed_len:],
-            "attention_mask": inputs["attention_mask"][:, -fixed_len:],
-        }
-    elif seq_len < fixed_len:
-        pad = fixed_len - seq_len
-        pad_id = tokenizer.pad_token_id or 0
-        pad_ids = torch.full((1, pad), pad_id, dtype=inputs["input_ids"].dtype)
-        pad_mask = torch.zeros((1, pad), dtype=inputs["attention_mask"].dtype)
-        return {
-            "input_ids": torch.cat([pad_ids, inputs["input_ids"]], dim=1),
-            "attention_mask": torch.cat([pad_mask, inputs["attention_mask"]], dim=1),
-        }
-    return inputs
+    if seq_len >= min_len:
+        return inputs
+    pad = min_len - seq_len
+    pad_id = tokenizer.pad_token_id or 0
+    pad_ids = torch.full((1, pad), pad_id, dtype=inputs["input_ids"].dtype)
+    pad_mask = torch.zeros((1, pad), dtype=inputs["attention_mask"].dtype)
+    return {
+        "input_ids": torch.cat([pad_ids, inputs["input_ids"]], dim=1),
+        "attention_mask": torch.cat([pad_mask, inputs["attention_mask"]], dim=1),
+    }
 
 
 def make_bodhi_wrapper(model, tokenizer, device, max_new_tokens=1024):
@@ -179,7 +167,7 @@ def make_bodhi_wrapper(model, tokenizer, device, max_new_tokens=1024):
         text = tokenizer.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True)
         inputs = tokenizer(text, return_tensors="pt")
         if _ON_TPU:
-            inputs = _tpu_fix_inputs(inputs, tokenizer)
+            inputs = _tpu_pad_short_inputs(inputs, tokenizer)
         prompt_len = inputs["input_ids"].shape[1]
         inputs = {k: v.to(device) for k, v in inputs.items()}
         with torch.no_grad():
@@ -194,7 +182,7 @@ def gen_response(model, tokenizer, device, messages, use_bodhi, bodhi_wrapper=No
         text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         inputs = tokenizer(text, return_tensors="pt")
         if _ON_TPU:
-            inputs = _tpu_fix_inputs(inputs, tokenizer)
+            inputs = _tpu_pad_short_inputs(inputs, tokenizer)
         prompt_len = inputs["input_ids"].shape[1]
         inputs = {k: v.to(device) for k, v in inputs.items()}
         with torch.no_grad():
