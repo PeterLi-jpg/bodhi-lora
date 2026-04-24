@@ -194,9 +194,9 @@ class LocalModel:
             # XLA compiles a new graph for every distinct input shape, and each
             # compile takes 20-30 min for a 27B SPMD model.  Pad ALL prompts to
             # one fixed length so the entire run shares a single prefill graph.
-            # 4096 covers all HealthBench prompts; the sliding-window minimum of
-            # 1024 is satisfied automatically since 4096 > 1024.
-            _fixed_len = 4096
+            # 2048 covers all HealthBench prompts (typically 500-1500 tokens) and
+            # compiles ~4x faster than 4096 (attention is O(n^2) in sequence len).
+            _fixed_len = 2048
             _seq_len = inputs["input_ids"].shape[1]
             if _seq_len < _fixed_len:
                 _pad = _fixed_len - _seq_len

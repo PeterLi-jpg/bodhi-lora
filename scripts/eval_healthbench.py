@@ -137,13 +137,14 @@ def load_model(model_name, lora_path=None):
     return model, tokenizer, _device
 
 
-def _tpu_pad_short_inputs(inputs, tokenizer, min_len=4096):
+def _tpu_pad_short_inputs(inputs, tokenizer, min_len=2048):
     """Pad inputs to a fixed length on CPU before moving to XLA.
 
     XLA compiles a new graph for every distinct input shape; for a 27B SPMD
     model each compile takes 20-30 min.  Padding everything to a single fixed
-    length (4096) means one prefill compile covers all HealthBench prompts.
-    4096 also satisfies the sliding-window minimum of 1024.
+    length (2048) means one prefill compile covers all HealthBench prompts.
+    2048 compiles ~4x faster than 4096 (attention is O(n^2) in sequence len)
+    and still satisfies the sliding-window minimum of 1024.
     """
     seq_len = inputs["input_ids"].shape[1]
     if seq_len >= min_len:
