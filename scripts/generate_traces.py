@@ -140,14 +140,18 @@ class LocalModel:
                 _mesh = _xs.Mesh(_device_ids, (_n_dev,), ("tp",))
                 _dev = _xm.xla_device()
                 print(f"SPMD: sharding model across {_n_dev} chips")
+                # Load on CPU first (saves peak XLA memory during weight init),
+                # then move the whole model to the SPMD virtual device in one shot.
+                # Only after the move do we annotate params for sharding — setting
+                # .data directly on a CPU param to an XLA tensor raises
+                # "incompatible tensor type".
                 self.model = AutoModelForCausalLM.from_pretrained(
                     model_name, torch_dtype=torch.bfloat16
                 )
+                self.model = self.model.to(_dev)
                 for _, _p in self.model.named_parameters():
-                    _xp = _p.data.to(_dev)
-                    if _xp.dim() == 2 and _xp.shape[0] > 1024:
-                        _xs.mark_sharding(_xp, _mesh, (0, None))
-                    _p.data = _xp
+                    if _p.dim() == 2 and _p.shape[0] > 1024:
+                        _xs.mark_sharding(_p, _mesh, (0, None))
                 _xm.mark_step()
                 self._device = _dev
             else:

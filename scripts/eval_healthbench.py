@@ -92,11 +92,10 @@ def load_model(model_name, lora_path=None):
             model = AutoModelForCausalLM.from_pretrained(
                 model_name, torch_dtype=torch.bfloat16
             )
+            model = model.to(_dev)
             for _, _p in model.named_parameters():
-                _xp = _p.data.to(_dev)
-                if _xp.dim() == 2 and _xp.shape[0] > 1024:
-                    _xs.mark_sharding(_xp, _mesh, (0, None))
-                _p.data = _xp
+                if _p.dim() == 2 and _p.shape[0] > 1024:
+                    _xs.mark_sharding(_p, _mesh, (0, None))
             _xm.mark_step()
             _device = _dev
         else:
