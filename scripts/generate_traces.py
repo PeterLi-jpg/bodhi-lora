@@ -107,27 +107,47 @@ class LocalModel:
             self.tokenizer.pad_token = self.tokenizer.eos_token
 
         if _ON_TPU:
-            # SPMD: treat all chips as one logical device, shard weights
-            # across them so 54 GB model fits across 8 x 32 GB chips.
-            import torch_xla.experimental.xla_sharding as _xs
-            from torch_xla import runtime as _xr
-            _xr.use_spmd()
-            _n_dev = len(_xm.get_xla_supported_devices())
-            _mesh = _xs.Mesh(list(range(_n_dev)), (_n_dev,), ('tp',))
-            _dev = _xm.xla_device()
-            print(f'SPMD: sharding model across {_n_dev} chips')
-            # Load on CPU first — avoids single-chip HBM limit during load
-            self.model = AutoModelForCausalLM.from_pretrained(
-                model_name, torch_dtype=torch.bfloat16
-            )
-            # Move each param to XLA one at a time, shard 2-D matrices
-            for _pname, _param in self.model.named_parameters():
-                _xla_p = _param.data.to(_dev)
-                if _xla_p.dim() == 2 and _xla_p.shape[0] > 1024:
-                    _xs.mark_sharding(_xla_p, _mesh, (0, None))
-                _param.data = _xla_p
-            _xm.mark_step()
-            self._device = _dev
+            # MedGemma-27B (54 GB bfloat16) exceeds one v6e chip (32 GB).
+            # Try SPMD sharding across all chips; fall back to host CPU if
+            # the installed torch_xla build doesn't include the sharding API.
+            _xs = None
+            for _spmd_mod in ("torch_xla.experimental.xla_sharding",
+                              "torch_xla.distributed.xla_sharding",
+                              "torch_xla.distributed.spmd"):
+                try:
+                    import importlib as _il
+                    _xs = _il.import_module(_spmd_mod)
+                    print(f"SPMD module found: {_spmd_mod}")
+                    break
+                except ModuleNotFoundError:
+                    continue
+
+            if _xs is not None:
+                from torch_xla import runtime as _xr
+                _xr.use_spmd()
+                _n_dev = len(_xm.get_xla_supported_devices())
+                _mesh = _xs.Mesh(list(range(_n_dev)), (_n_dev,), ("tp",))
+                _dev = _xm.xla_device()
+                print(f"SPMD: sharding model across {_n_dev} chips")
+                self.model = AutoModelForCausalLM.from_pretrained(
+                    model_name, torch_dtype=torch.bfloat16
+                )
+                for _, _p in self.model.named_parameters():
+                    _xp = _p.data.to(_dev)
+                    if _xp.dim() == 2 and _xp.shape[0] > 1024:
+                        _xs.mark_sharding(_xp, _mesh, (0, None))
+                    _p.data = _xp
+                _xm.mark_step()
+                self._device = _dev
+            else:
+                # CPU fallback -- v6e-8 VM has 384 GB RAM so 27B fits
+                import os
+                print("SPMD unavailable in this torch_xla build; using host CPU")
+                os.environ.setdefault("OMP_NUM_THREADS", str(os.cpu_count() or 8))
+                self.model = AutoModelForCausalLM.from_pretrained(
+                    model_name, torch_dtype=torch.bfloat16, device_map="cpu"
+                )
+                self._device = torch.device("cpu")
         else:
             self.model = AutoModelForCausalLM.from_pretrained(
                 model_name, torch_dtype=torch.bfloat16, device_map=device,
