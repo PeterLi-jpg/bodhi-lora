@@ -92,10 +92,19 @@ def load_model(model_name, lora_path=None):
             model = AutoModelForCausalLM.from_pretrained(
                 model_name, torch_dtype=torch.bfloat16
             )
-            model = model.to(_dev)
-            for _, _p in model.named_parameters():
-                if _p.dim() == 2 and _p.shape[0] > 1024:
-                    _xs.mark_sharding(_p, _mesh, (0, None))
+            import torch.nn as _nn
+            for _mod in model.modules():
+                for _pname, _p in list(_mod._parameters.items()):
+                    if _p is not None:
+                        _xp = _nn.Parameter(
+                            _p.data.to(_dev), requires_grad=_p.requires_grad
+                        )
+                        if _xp.dim() == 2 and _xp.shape[0] > 1024:
+                            _xs.mark_sharding(_xp, _mesh, (0, None))
+                        _mod._parameters[_pname] = _xp
+                for _bname, _b in list(_mod._buffers.items()):
+                    if _b is not None:
+                        _mod._buffers[_bname] = _b.to(_dev)
             _xm.mark_step()
             _device = _dev
         else:
