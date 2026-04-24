@@ -191,24 +191,31 @@ class LocalModel:
         with torch.no_grad():
             gen_kwargs = dict(max_new_tokens=max_new_tokens, do_sample=False)
             if _ON_TPU:
-                # Gemma3 uses HybridCache by default. Its SlidingWindowCache
-                # sublayers do `full_kv[:, :, -sliding_window+1:, :]` which
-                # XLA rejects when the current sequence is shorter than
-                # sliding_window (index out of static tensor bounds).
-                # Workaround: pre-create a StaticCache with a fixed large size
-                # and pass it as past_key_values, bypassing HybridCache
-                # entirely. StaticCache.update() has no sliding-window slice,
-                # so XLA compiles once and every trace reuses the same shapes.
-                # 4096 slots fits any HealthBench prompt (≤1k tok) + 1024 gen.
+                # Gemma3 overrides _get_cache() to always build HybridCache,
+                # which contains SlidingWindowCache sublayers that do:
+                #   full_kv[:, :, -sliding_window+1:, :]
+                # XLA rejects this slice when the static tensor has fewer rows
+                # than sliding_window (true for short prompts early in gen).
+                # Passing past_key_values=StaticCache() to generate() does NOT
+                # help because generate() calls self._get_cache() internally
+                # and replaces whatever we pass.
+                # Fix: monkey-patch _get_cache on this model instance so the
+                # generate loop builds a StaticCache instead of HybridCache.
+                # StaticCache has no sliding-window slice, so XLA compiles
+                # once and reuses the same graph shape across all tokens.
+                import types
                 from transformers import StaticCache
-                _cache = StaticCache(
-                    config=self.model.config,
-                    max_batch_size=1,
-                    max_cache_len=4096,
-                    device=self._device,
-                    dtype=torch.bfloat16,
-                )
-                gen_kwargs["past_key_values"] = _cache
+                _dev, _dtype = self._device, torch.bfloat16
+                def _static_get_cache(self_m, cache_impl, batch_size,
+                                      max_cache_len, device, dtype, **kw):
+                    return StaticCache(
+                        config=self_m.config, max_batch_size=batch_size,
+                        max_cache_len=max_cache_len, device=device, dtype=dtype,
+                    )
+                self.model._get_cache = types.MethodType(_static_get_cache, self.model)
+                # Also set cache_implementation so generate() passes the right
+                # max_cache_len when it calls _get_cache.
+                gen_kwargs["cache_implementation"] = "static"
             out = self.model.generate(**inputs, **gen_kwargs)
         if _ON_TPU:
             _xm.mark_step()
