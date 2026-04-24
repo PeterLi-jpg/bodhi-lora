@@ -206,8 +206,14 @@ class LocalModel:
                 import types
                 from transformers import StaticCache
                 _dev, _dtype = self._device, torch.bfloat16
-                def _static_get_cache(self_m, cache_impl, batch_size,
-                                      max_cache_len, device, dtype, **kw):
+                def _static_get_cache(self_m, *args, **kw):
+                    # transformers calls _get_cache with varying signatures across
+                    # versions; accept anything and extract what StaticCache needs.
+                    batch_size    = args[0] if len(args) > 0 else kw.get('batch_size', 1)
+                    max_cache_len = args[1] if len(args) > 1 else kw.get('max_cache_len', 4096)
+                    _p = next(self_m.parameters())
+                    device = kw.get('device', _p.device)
+                    dtype  = kw.get('dtype',  _p.dtype)
                     return StaticCache(
                         config=self_m.config, max_batch_size=batch_size,
                         max_cache_len=max_cache_len, device=device, dtype=dtype,
