@@ -145,7 +145,11 @@ def make_bodhi_wrapper(model, tokenizer, device, max_new_tokens=1024):
         with torch.no_grad():
             gen_kwargs = dict(max_new_tokens=max_new_tokens, do_sample=False)
             if _ON_TPU:
-                gen_kwargs["cache_implementation"] = "static"
+                from transformers import StaticCache
+                gen_kwargs["past_key_values"] = StaticCache(
+                    config=model.config, max_batch_size=1,
+                    max_cache_len=4096, device=device, dtype=torch.bfloat16,
+                )
             out = model.generate(**inputs, **gen_kwargs)
         return tokenizer.decode(out[0][inputs["input_ids"].shape[1]:], skip_special_tokens=True)
 
@@ -159,7 +163,11 @@ def gen_response(model, tokenizer, device, messages, use_bodhi, bodhi_wrapper=No
         with torch.no_grad():
             gen_kwargs = dict(max_new_tokens=max_new_tokens, do_sample=False)
             if _ON_TPU:
-                gen_kwargs["cache_implementation"] = "static"
+                from transformers import StaticCache
+                gen_kwargs["past_key_values"] = StaticCache(
+                    config=model.config, max_batch_size=1,
+                    max_cache_len=4096, device=device, dtype=torch.bfloat16,
+                )
             out = model.generate(**inputs, **gen_kwargs)
         return tokenizer.decode(out[0][inputs["input_ids"].shape[1]:], skip_special_tokens=True)
 

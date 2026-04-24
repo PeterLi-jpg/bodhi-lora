@@ -189,14 +189,26 @@ class LocalModel:
         )
         inputs = self.tokenizer(text, return_tensors="pt").to(self._device)
         with torch.no_grad():
-            # cache_implementation="static" is required on XLA/TPU.
-            # The default HybridCache (Gemma3 sliding-window) grows dynamically
-            # and its slice indices overflow XLA's static-shape validation.
-            # StaticCache pre-allocates fixed tensors so no recompilation or
-            # index-out-of-range errors occur during greedy decoding.
             gen_kwargs = dict(max_new_tokens=max_new_tokens, do_sample=False)
             if _ON_TPU:
-                gen_kwargs["cache_implementation"] = "static"
+                # Gemma3 uses HybridCache by default. Its SlidingWindowCache
+                # sublayers do `full_kv[:, :, -sliding_window+1:, :]` which
+                # XLA rejects when the current sequence is shorter than
+                # sliding_window (index out of static tensor bounds).
+                # Workaround: pre-create a StaticCache with a fixed large size
+                # and pass it as past_key_values, bypassing HybridCache
+                # entirely. StaticCache.update() has no sliding-window slice,
+                # so XLA compiles once and every trace reuses the same shapes.
+                # 4096 slots fits any HealthBench prompt (≤1k tok) + 1024 gen.
+                from transformers import StaticCache
+                _cache = StaticCache(
+                    config=self.model.config,
+                    max_batch_size=1,
+                    max_cache_len=4096,
+                    device=self._device,
+                    dtype=torch.bfloat16,
+                )
+                gen_kwargs["past_key_values"] = _cache
             out = self.model.generate(**inputs, **gen_kwargs)
         if _ON_TPU:
             _xm.mark_step()
