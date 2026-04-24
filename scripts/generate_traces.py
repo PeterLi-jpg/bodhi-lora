@@ -107,14 +107,16 @@ class LocalModel:
             self.tokenizer.pad_token = self.tokenizer.eos_token
 
         if _ON_TPU:
-            # TPU: load without device_map (CUDA auto-placement doesn't apply).
-            # For models > 32 GB (e.g. MedGemma-27B), XLA spreads tensors
-            # across chips automatically via its memory management.
+            # Spread model across all available TPU chips.
+            # MedGemma-27B (54 GB bfloat16) exceeds one chip (32 GB),
+            # so we use device_map='balanced' with per-chip memory limits.
+            xla_devs = _xm.get_xla_supported_devices()
+            max_mem = {d: '28GiB' for d in xla_devs}
             self.model = AutoModelForCausalLM.from_pretrained(
-                model_name, torch_dtype=torch.bfloat16
+                model_name, torch_dtype=torch.bfloat16,
+                device_map='balanced', max_memory=max_mem,
             )
-            self._device = _xm.xla_device()
-            self.model = self.model.to(self._device)
+            self._device = xla_devs[0]
         else:
             self.model = AutoModelForCausalLM.from_pretrained(
                 model_name, torch_dtype=torch.bfloat16, device_map=device,
@@ -130,6 +132,8 @@ class LocalModel:
         inputs = self.tokenizer(text, return_tensors="pt").to(self._device)
         with torch.no_grad():
             out = self.model.generate(**inputs, max_new_tokens=max_new_tokens, do_sample=False)
+        if _ON_TPU:
+            _xm.mark_step()
         return self.tokenizer.decode(out[0][inputs["input_ids"].shape[1]:], skip_special_tokens=True)
 
 

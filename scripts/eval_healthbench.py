@@ -63,11 +63,14 @@ def load_model(model_name, lora_path=None):
         tokenizer.pad_token = tokenizer.eos_token
 
     if _ON_TPU:
+        # Spread model across all available TPU chips.
+        xla_devs = _xm.get_xla_supported_devices()
+        max_mem = {d: '28GiB' for d in xla_devs}
         model = AutoModelForCausalLM.from_pretrained(
-            model_name, torch_dtype=torch.bfloat16
+            model_name, torch_dtype=torch.bfloat16,
+            device_map='balanced', max_memory=max_mem,
         )
-        _device = _xm.xla_device()
-        model = model.to(_device)
+        _device = xla_devs[0]
     else:
         model = AutoModelForCausalLM.from_pretrained(
             model_name, torch_dtype=torch.bfloat16, device_map="auto",
