@@ -133,14 +133,21 @@ fi
 # whatever is on the VM for any in-progress seed that was interrupted.
 trap '
     echo ""
-    echo "=== Saving any remaining checkpoints before VM deletion ==="
+    echo "=== Saving any remaining data before VM deletion ==="
     mkdir -p "./results/_rescue"
+    # Raw traces are expensive to regenerate (~4-8 hours); save them so
+    # the next run can resume via --resume-from rather than starting over.
+    gcloud compute tpus tpu-vm scp \
+        --zone="$ZONE" --project="$PROJECT" \
+        "${TPU_NAME}:~/bohdi-lora/data/sft/raw_traces.jsonl" "./results/_rescue/" 2>/dev/null \
+        && echo "Rescued raw_traces.jsonl" \
+        || echo "(no raw_traces.jsonl to rescue)"
     gcloud compute tpus tpu-vm scp \
         --recurse \
         --zone="$ZONE" --project="$PROJECT" \
         "${TPU_NAME}:~/bohdi-lora/checkpoints" "./results/_rescue/" 2>/dev/null \
-        && echo "Rescue copy done — check ./results/_rescue/" \
-        || echo "Rescue copy failed or nothing to copy."
+        && echo "Rescue checkpoints done" \
+        || echo "(no checkpoints to rescue)"
     echo "=== Deleting TPU VM ==="
     gcloud compute tpus tpu-vm delete "$TPU_NAME" \
         --zone="$ZONE" --project="$PROJECT" --quiet 2>/dev/null
@@ -166,6 +173,19 @@ mkdir -p data/raw data/sft eval logs
 # ── Stage 1: generate traces (separate SSH so a failure here is identifiable
 #    and restartable without re-running setup) ─────────────────────────────────
 echo "=== Stage 1: generate BOHDI traces (MedGemma-27B) ==="
+
+# If a previous VM was interrupted mid-generation, restore the partial file
+# so --resume-from can skip already-done examples.
+if [ -f "./results/_rescue/raw_traces.jsonl" ]; then
+    echo "Restoring partial traces from previous run..."
+    gcloud compute tpus tpu-vm scp \
+        --zone="$ZONE" --project="$PROJECT" \
+        "./results/_rescue/raw_traces.jsonl" \
+        "${TPU_NAME}:~/bohdi-lora/data/sft/raw_traces.jsonl" \
+        && echo "  Restored $(wc -l < ./results/_rescue/raw_traces.jsonl) traces" \
+        || echo "  Restore failed — starting from scratch"
+fi
+
 gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
     --zone="$ZONE" --project="$PROJECT" \
     --command="
@@ -184,6 +204,17 @@ python scripts/generate_traces.py \
     --max-examples \${MAX_EXAMPLES:-4800}
 echo \"Generate done: \$(wc -l < data/sft/raw_traces.jsonl) traces\"
 "
+
+# Save traces locally so they survive if the VM is preempted before training.
+echo "Saving raw_traces.jsonl to local results/..."
+mkdir -p "./results"
+gcloud compute tpus tpu-vm scp \
+    --zone="$ZONE" --project="$PROJECT" \
+    "${TPU_NAME}:~/bohdi-lora/data/sft/raw_traces.jsonl" "./results/" \
+    && echo "  Saved $(wc -l < ./results/raw_traces.jsonl) traces" \
+    || echo "  Save failed (continuing)"
+# Also update the rescue copy so the restore path is consistent.
+cp -f "./results/raw_traces.jsonl" "./results/_rescue/raw_traces.jsonl" 2>/dev/null || true
 
 # ── Stage 2: grade + filter (separate SSH — runs fresh Qwen2.5-14B grader) ───
 echo "=== Stage 2: grade and filter traces (Qwen2.5-14B) ==="
