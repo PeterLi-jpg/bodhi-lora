@@ -156,6 +156,10 @@ set -euo pipefail
 git clone https://github.com/PeterLi-jpg/bohdi-lora.git ~/bohdi-lora 2>/dev/null || (cd ~/bohdi-lora && git pull)
 cd ~/bohdi-lora
 bash tpu/setup_tpu.sh
+# Ensure jinja2 meets apply_chat_template requirement (>=3.1.0).
+# setup_tpu.sh pins it, but transitive deps can downgrade it; re-pin here.
+export PATH=\"\$HOME/.local/bin:\$PATH\"
+pip install -q \"jinja2>=3.1.0\"
 mkdir -p data/raw data/sft eval logs
 "
 
@@ -166,6 +170,7 @@ gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
     --zone="$ZONE" --project="$PROJECT" \
     --command="
 set -euo pipefail
+export PATH=\"\$HOME/.local/bin:\$PATH\"
 cd ~/bohdi-lora
 export HF_TOKEN='${HF_TOKEN}'
 # --resume-from means a restart after preemption or SSH drop continues from
@@ -186,6 +191,7 @@ gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
     --zone="$ZONE" --project="$PROJECT" \
     --command="
 set -euo pipefail
+export PATH=\"\$HOME/.local/bin:\$PATH\"
 cd ~/bohdi-lora
 export HF_TOKEN='${HF_TOKEN}'
 python scripts/filter_traces.py \
@@ -205,6 +211,7 @@ for SEED in $SEEDS; do
         --zone="$ZONE" --project="$PROJECT" \
         --command="
 set -euo pipefail
+export PATH=\"\$HOME/.local/bin:\$PATH\"
 cd ~/bohdi-lora
 mkdir -p checkpoints/seed_${SEED}
 export HF_TOKEN='${HF_TOKEN}'
@@ -226,6 +233,7 @@ echo 'Seed ${SEED} done.'
         --zone="$ZONE" --project="$PROJECT" \
         --command="
 set -euo pipefail
+export PATH=\"\$HOME/.local/bin:\$PATH\"
 cd ~/bohdi-lora
 export HF_TOKEN='${HF_TOKEN}'
 
@@ -301,6 +309,7 @@ gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
     --zone="$ZONE" --project="$PROJECT" \
     --command="
 set -euo pipefail
+export PATH=\"\$HOME/.local/bin:\$PATH\"
 cd ~/bohdi-lora
 python scripts/aggregate_seeds.py \
     --seed-dirs $SEED_DIRS_ARG \
