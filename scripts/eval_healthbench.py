@@ -77,8 +77,10 @@ def load_model(model_name, lora_path=None):
         if _xs is not None:
             from torch_xla import runtime as _xr
             _xr.use_spmd()
-            _n_dev = len(_xm.get_xla_supported_devices())
-            _mesh = _xs.Mesh(list(range(_n_dev)), (_n_dev,), ("tp",))
+            import numpy as _np
+                _n_dev = _xr.global_device_count()
+                _device_ids = _np.arange(_n_dev)
+            _mesh = _xs.Mesh(_device_ids, (_n_dev,), ("tp",))
             _dev = _xm.xla_device()
             print(f"SPMD: sharding model across {_n_dev} chips")
             model = AutoModelForCausalLM.from_pretrained(

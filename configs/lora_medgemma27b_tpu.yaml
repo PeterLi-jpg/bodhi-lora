@@ -4,7 +4,7 @@ model:
   name: google/medgemma-27b-text-it
   torch_dtype: bfloat16
   # bitsandbytes (4bit/8bit QLoRA) is CUDA-only and doesn't run on TPU.
-  # With v6e-64 (64 chips, ~2TB total HBM) there's no memory pressure anyway.
+  # v6e-8 = 256 GB total HBM — MedGemma-27B (54 GB bfloat16) fits with plenty of room.
   quantization: null
 
 lora:
@@ -25,8 +25,8 @@ lora:
 training:
   num_epochs: 3
   # per_device batch applies per chip. effective batch = per_device * num_chips * grad_accum.
-  # v4-32: 8 * 32 * 4 = 1024    v6e-64: 8 * 64 * 4 = 2048
-  # num_chips is set by the accelerate config (accelerate_config_v4_32.yaml or v6e64.yaml).
+  # v6e-8:  8 *  8 * 4 =  256    v4-32: 8 * 32 * 4 = 1024    v6e-64: 8 * 64 * 4 = 2048
+  # num_chips is set by the accelerate config (accelerate_config_v6e8.yaml, v4_32.yaml, etc).
   per_device_train_batch_size: 8
   gradient_accumulation_steps: 4
   learning_rate: 1.0e-4
