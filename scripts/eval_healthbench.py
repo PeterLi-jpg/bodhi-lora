@@ -5,9 +5,15 @@ from datetime import datetime, timezone
 from importlib import metadata
 import json
 import math
+import os
 import random
 import subprocess
 import urllib.request
+
+# Disable torch.compile / Dynamo before importing torch.
+# transformers 4.50+ auto-calls torch.compile() when using static cache.
+# On TPU with XLA tensors, Dynamo/Inductor hangs indefinitely.
+os.environ["TORCHDYNAMO_DISABLE"] = "1"
 import sys
 from pathlib import Path
 

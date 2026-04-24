@@ -2,9 +2,16 @@
 
 import argparse
 import json
+import os
 import random
 import traceback
 from pathlib import Path
+
+# Disable torch.compile / Dynamo before importing torch.
+# transformers 4.50+ auto-calls torch.compile() when using static cache
+# (_valid_auto_compile_criteria). On TPU with XLA tensors, Dynamo/Inductor
+# tries to trace XLA ops and hangs indefinitely (observed: 18+ hours).
+os.environ["TORCHDYNAMO_DISABLE"] = "1"
 
 import numpy as np
 import torch
