@@ -186,73 +186,23 @@ if [ -f "./results/_rescue/raw_traces.jsonl" ]; then
         || echo "  Restore failed — starting from scratch"
 fi
 
-# Smoke test: 1 example before committing to the full run.
-# XLA compilation on a fresh 27B SPMD model can pin all host CPUs for 20-30 min,
-# making sshd unresponsive and dropping a blocking SSH session.  We work around
-# this by launching the script with nohup in the background and polling from here.
-echo "--- smoke test (1 example) ---"
-gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
-    --zone="$ZONE" --project="$PROJECT" \
-    --command="
-export PATH=\"\$HOME/.local/bin:\$PATH\"
-cd ~/bohdi-lora
-export HF_TOKEN='${HF_TOKEN}'
-rm -f /tmp/smoke_test.jsonl /tmp/smoke_test.log
-nohup python scripts/generate_traces.py \
-    --model google/medgemma-27b-text-it \
-    --datasets healthbench_hard \
-    --output /tmp/smoke_test.jsonl \
-    --use-bodhi \
-    --max-examples 1 \
-    > /tmp/smoke_test.log 2>&1 &
-echo \$! > /tmp/smoke_test.pid
-echo 'Smoke test running in background (PID '\$(cat /tmp/smoke_test.pid)')'
-"
-
-# Poll from bohdi-runner every 90 s (each poll is a short SSH that won't hang).
-# Allow up to 75 minutes for XLA compilation + generation.
-echo "Polling for smoke test result (up to 75 min)..."
-SMOKE_PASSED=false
-for i in $(seq 1 50); do
-    sleep 90
-    N=$(gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
-        --zone="$ZONE" --project="$PROJECT" \
-        --command="wc -l < /tmp/smoke_test.jsonl 2>/dev/null || echo 0" 2>/dev/null \
-        | grep -E '^[0-9]+$' | tail -1)
-    echo "  Poll $i/50 ($(( i * 90 / 60 )) min): ${N:-0}/1 traces written"
-    if [ "${N:-0}" -ge 1 ]; then
-        SMOKE_PASSED=true
-        break
-    fi
-    # If process exited without writing a trace, it failed
-    ALIVE=$(gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
-        --zone="$ZONE" --project="$PROJECT" \
-        --command="pgrep -f generate_traces.py > /dev/null 2>&1 && echo alive || echo dead" 2>/dev/null \
-        | grep -E '^(alive|dead)$' | tail -1)
-    if [ "$ALIVE" = "dead" ] && [ "${N:-0}" -lt 1 ]; then
-        echo "Smoke test process exited without writing a trace."
-        echo "=== smoke_test.log ==="
-        gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
-            --zone="$ZONE" --project="$PROJECT" \
-            --command="tail -30 /tmp/smoke_test.log" 2>/dev/null || true
-        echo "SMOKE TEST FAILED — aborting before full run"
-        exit 1
-    fi
-done
-if ! $SMOKE_PASSED; then
-    echo "Smoke test timed out after 75 min — aborting."
-    exit 1
-fi
-echo "Smoke test passed."
-
-# Stage 1 full run: also use nohup + polling so SSH drops during the 4-8 hour
+# Stage 1 full run: nohup + polling so SSH drops during the 4-8 hour
 # generation don't kill the process.  Poll every 5 min; expect ~4800 traces.
+#
+# Root cause of previous "hang at 0/1": XLA compiles the 27B SPMD graph on the
+# first forward pass, pinning all host CPUs for 20-40 min and dropping SSH.
+# The process was never dead — it just looked that way from a blocking SSH.
+# Fix: (a) nohup so the process survives SSH drops, (b) XLA persistent cache
+# so compiled graphs are saved to disk and reused for same-shape inputs within
+# the run (avoids recompiling the decode graph on every new prompt shape).
 gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
     --zone="$ZONE" --project="$PROJECT" \
     --command="
 export PATH=\"\$HOME/.local/bin:\$PATH\"
 cd ~/bohdi-lora
 export HF_TOKEN='${HF_TOKEN}'
+mkdir -p /tmp/xla_cache
+export XLA_FLAGS=\"\${XLA_FLAGS:+\${XLA_FLAGS} }--xla_persistent_cache_dir=/tmp/xla_cache\"
 rm -f /tmp/gen_stage1.log
 nohup python scripts/generate_traces.py \
     --model google/medgemma-27b-text-it \
