@@ -105,14 +105,76 @@ class LocalGrader:
             self.tokenizer.pad_token = self.tokenizer.eos_token
 
         if _ON_TPU:
-            # TPU: load in bfloat16 (native precision), move to XLA device.
-            # Qwen2.5-14B bfloat16 = 28 GB — fits on one v4 chip (32 GB).
-            # device_map="auto" targets CUDA and fails on TPU; don't use it.
+            # Qwen2.5-14B bfloat16 = 28 GB.  A single v6e chip is 32 GB — that
+            # leaves only ~4 GB for KV cache + activations, which is too tight
+            # under StaticCache (max_new_tokens=512 + prompt 4096 = ~2.5 GB KV
+            # cache alone for a 14B model).  SPMD-shard across all 8 chips so
+            # each holds 1/8 of the weights (~3.5 GB) and we get plenty of
+            # headroom.  Same pattern as scripts/generate_traces.py.
+            #
+            # Activate SPMD before any XLA tensor is created.  filter_traces.py
+            # is the only thing running in this process, so doing it inside
+            # __init__ is fine (no other module has touched XLA yet).
+            try:
+                from torch_xla import runtime as _xr
+                _xr.use_spmd()
+                _spmd_active = True
+            except (ImportError, AttributeError):
+                _spmd_active = False
+
+            # Load on CPU first (use_spmd intercepts set_data; from_pretrained
+            # would fail if SPMD were active during weight assignment).
             self.model = AutoModelForCausalLM.from_pretrained(
                 model_name, torch_dtype=torch.bfloat16
             )
+
+            _xs = None
+            if _spmd_active:
+                for _spmd_mod in ("torch_xla.distributed.spmd",
+                                  "torch_xla.experimental.xla_sharding",
+                                  "torch_xla.distributed.xla_sharding"):
+                    try:
+                        import importlib as _il
+                        _xs = _il.import_module(_spmd_mod)
+                        break
+                    except ModuleNotFoundError:
+                        continue
+
             self._device = _xm.xla_device()
-            self.model = self.model.to(self._device)
+            if _xs is not None:
+                from torch_xla import runtime as _xr
+                import numpy as _np
+                import torch.nn as _nn
+                _n_dev = getattr(_xr, "addressable_device_count",
+                                 _xr.global_device_count)()
+                if _n_dev < 2:
+                    import os as _os
+                    _vfio = ([d for d in _os.listdir("/dev/vfio") if d.isdigit()]
+                             if _os.path.exists("/dev/vfio") else [])
+                    _n_dev = len(_vfio) or _n_dev
+                _device_ids = _np.arange(_n_dev)
+                _mesh = _xs.Mesh(_device_ids, (_n_dev,), ("tp",))
+                print(f"SPMD: sharding grader across {_n_dev} chips")
+                for _mod in self.model.modules():
+                    for _pname, _p in list(_mod._parameters.items()):
+                        if _p is not None:
+                            _xp = _nn.Parameter(
+                                _p.data.to(self._device),
+                                requires_grad=_p.requires_grad,
+                            )
+                            if _xp.dim() == 2 and _xp.shape[0] > 1024:
+                                _xs.mark_sharding(_xp, _mesh, (0, None))
+                            _mod._parameters[_pname] = _xp
+                    for _bname, _b in list(_mod._buffers.items()):
+                        if _b is not None:
+                            _mod._buffers[_bname] = _b.to(self._device)
+                _xm.mark_step()
+            else:
+                # Fallback: single chip placement.  May OOM under load — log
+                # rather than die mysteriously later.
+                print("WARNING: SPMD unavailable; placing 14B grader on a "
+                      "single chip — may OOM during decode.")
+                self.model = self.model.to(self._device)
         else:
             # GPU: bfloat16 + automatic device placement across available GPUs.
             # (was float16 previously; bfloat16 is more stable and matches training)

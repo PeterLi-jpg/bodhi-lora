@@ -135,6 +135,12 @@ class LocalModel:
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         if self.tokenizer.pad_token is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
+        # Gemma chat template emits {{ bos_token }} itself AND the tokenizer
+        # has add_bos_token=True — so default tokenize() of a chat-templated
+        # string produces "<bos><bos>...".  Suppress the auto-prepend; the
+        # template handles BOS.
+        if getattr(self.tokenizer, "add_bos_token", False):
+            self.tokenizer.add_bos_token = False
 
         if _ON_TPU:
             # MedGemma-27B (54 GB bfloat16) exceeds one v6e chip (32 GB).

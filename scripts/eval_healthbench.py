@@ -83,6 +83,11 @@ def load_model(model_name, lora_path=None):
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
+    # Gemma chat template emits {{ bos_token }} itself; default tokenize()
+    # would prepend another <bos> on top, producing "<bos><bos>...".  Skip
+    # auto-BOS; the template provides it.
+    if getattr(tokenizer, "add_bos_token", False):
+        tokenizer.add_bos_token = False
 
     if _ON_TPU:
         _xs = None
@@ -149,9 +154,35 @@ def load_model(model_name, lora_path=None):
         _device = next(model.parameters()).device
 
     if lora_path:
-        print(f"Merging LoRA from {lora_path}")
+        print(f"Loading LoRA adapter from {lora_path}")
+        # NOTE on TPU: do NOT call merge_and_unload().  merge_and_unload
+        # replaces LoRA-wrapped Linears with plain Linears holding merged
+        # weights (base + scale * B @ A) — which destroys the SPMD sharding
+        # annotations on the base weights and gives every chip a full 54 GB
+        # replica → OOM.  The PEFT-wrapped model produces the same outputs as
+        # a merged model anyway (just one extra small matmul per linear).
+        #
+        # Also: PEFT constructs the new lora_A / lora_B Linear modules with
+        # default device = CPU, then loads the adapter weights into them.
+        # Forward would then mix CPU adapter with XLA base → device error.
+        # Move the adapter params onto the XLA device explicitly after load.
         model = PeftModel.from_pretrained(model, lora_path)
-        model = model.merge_and_unload()
+        if _ON_TPU and _device is not None:
+            import torch.nn as _nn
+            for _name, _p in list(model.named_parameters()):
+                # Adapter param names contain 'lora_' (lora_A.default.weight,
+                # lora_B.default.weight, lora_embedding_*, etc.).
+                if "lora_" in _name and _p is not None and _p.device != _device:
+                    # Replace the parameter on its parent module so the new
+                    # XLA tensor is what forward() sees.
+                    _parent_path, _, _attr = _name.rpartition(".")
+                    _parent = model.get_submodule(_parent_path)
+                    _xp = _nn.Parameter(_p.data.to(_device),
+                                        requires_grad=_p.requires_grad)
+                    setattr(_parent, _attr, _xp)
+            _xm.mark_step()
+        # Don't merge — we keep the PEFT wrapper so the SPMD-sharded base
+        # weights stay sharded.
 
     model.eval()
     return model, tokenizer, _device

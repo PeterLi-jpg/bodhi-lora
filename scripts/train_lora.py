@@ -207,6 +207,13 @@ def main():
     # SFTTrainer warns about this. Set it explicitly so we don't depend on the
     # tokenizer's upstream default (which flips between model families).
     _tokenizer.padding_side = "right"
+    # Gemma-family footgun: the chat template emits {{ bos_token }} at its
+    # start AND tokenizer_config has add_bos_token=True.  When SFTTrainer
+    # tokenizes the rendered chat template, the tokenizer would prepend a
+    # SECOND <bos>, giving every example "<bos><bos>...".  The model never
+    # saw that distribution during pretraining → measurably worse training.
+    # The chat template already handles BOS, so disable auto-prepend here.
+    _tokenizer.add_bos_token = False
 
     # HF's get_constant_schedule ignores warmup_ratio silently — warmup only
     # takes effect on scheduler types that support it (constant_with_warmup,

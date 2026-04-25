@@ -396,10 +396,22 @@ run_long_remote \
     "filter_traces.py" \
     "python scripts/filter_traces.py --input data/sft/raw_traces.jsonl --healthbench-data data/raw/healthbench_hard.jsonl data/raw/healthbench.jsonl --output-dir data/sft --min-score 0.4 && touch /tmp/stage2_done" \
     "/tmp/stage2_done"
-echo "Training data ready: $(gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
+_TRAIN_LINES=$(gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
     --zone="$ZONE" --project="$PROJECT" \
     --command="wc -l < ~/bohdi-lora/data/sft/train.jsonl 2>/dev/null || echo 0" 2>/dev/null \
-    | grep -E '^[0-9]+$' | tail -1) train"
+    | grep -E '^[0-9]+$' | tail -1)
+echo "Training data ready: ${_TRAIN_LINES:-0} train"
+# Stage 3 needs at least a handful of training examples — and load_best_model
+# requires a non-empty eval set.  10 is a defensible floor; below that the
+# whole experiment is meaningless and we'd just waste another v6e-8-hour OOMing
+# or NaN-ing.  Surface the failure HERE rather than from a confusing stack
+# trace inside SFTTrainer or DataCollatorForCompletionOnlyLM.
+if [ "${_TRAIN_LINES:-0}" -lt 10 ]; then
+    echo "ERROR: Stage 2 produced only ${_TRAIN_LINES:-0} training examples (< 10 floor)."
+    echo "Likely causes: grader threshold too high, grader produced 0% positive scores,"
+    echo "or grader silently failed.  Inspect /tmp/stage2_grade.log on the VM."
+    exit 1
+fi
 
 # ── Train each seed sequentially ──────────────────────────────────────────────
 for SEED in $SEEDS; do
