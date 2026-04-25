@@ -417,13 +417,20 @@ fi
 for SEED in $SEEDS; do
     echo ""
     echo "=== Stage 3: training seed $SEED ==="
-    # Sentinel: <output-dir>/best/adapter_model.safetensors is the final artifact
-    # written by trainer.save_model() at the end of training.  pgrep matches the
-    # accelerate launcher (which forks per-process workers).
+    # NOTE: do NOT use 'accelerate launch'.  accelerate's tpu_launcher
+    # ALWAYS calls xmp.spawn() with no nprocs arg, which forks
+    # addressable_device_count() processes (= 8 on v6e-8).  Each forked
+    # process loads a full 54 GB MedGemma-27B copy on its chip → 8x OOM.
+    # That is incompatible with our single-process SPMD design (where ONE
+    # python process drives all 8 chips and we shard the model with
+    # mark_sharding).  Run the script directly with PJRT_DEVICE=TPU so
+    # HF Trainer's native XLA path picks up SPMD without xmp.spawn.
+    # Sentinel: <output-dir>/best/adapter_model.safetensors is the final
+    # artifact written by trainer.save_model() at the end of training.
     run_long_remote \
         "stage3_train_seed${SEED}" \
         "train_lora.py" \
-        "mkdir -p checkpoints/seed_${SEED} && accelerate launch --config_file ${ACCEL_CFG} scripts/train_lora.py --config configs/lora_medgemma27b_tpu.yaml --seed ${SEED} --output-dir checkpoints/seed_${SEED} ${TRAIN_EXTRA_FLAGS}" \
+        "mkdir -p checkpoints/seed_${SEED} && PJRT_DEVICE=TPU python scripts/train_lora.py --config configs/lora_medgemma27b_tpu.yaml --seed ${SEED} --output-dir checkpoints/seed_${SEED} ${TRAIN_EXTRA_FLAGS}" \
         "checkpoints/seed_${SEED}/best/adapter_model.safetensors"
 
     # ── Stage 4: evaluate all 4 configurations ────────────────────────────────

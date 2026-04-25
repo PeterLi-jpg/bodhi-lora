@@ -112,21 +112,26 @@ class LocalGrader:
             # each holds 1/8 of the weights (~3.5 GB) and we get plenty of
             # headroom.  Same pattern as scripts/generate_traces.py.
             #
-            # Activate SPMD before any XLA tensor is created.  filter_traces.py
-            # is the only thing running in this process, so doing it inside
-            # __init__ is fine (no other module has touched XLA yet).
+            # CORRECT ORDER (the inverse breaks from_pretrained):
+            #   1) from_pretrained on CPU
+            #   2) xr.use_spmd()
+            #   3) move params to XLA + mark_sharding
+            # use_spmd() globally intercepts set_data() — calling it before
+            # from_pretrained makes every internal weight assignment raise
+            # "incompatible tensor type".
+
+            # Step 1: load on CPU.
+            self.model = AutoModelForCausalLM.from_pretrained(
+                model_name, torch_dtype=torch.bfloat16
+            )
+
+            # Step 2: try to enable SPMD now that the model is loaded.
             try:
                 from torch_xla import runtime as _xr
                 _xr.use_spmd()
                 _spmd_active = True
             except (ImportError, AttributeError):
                 _spmd_active = False
-
-            # Load on CPU first (use_spmd intercepts set_data; from_pretrained
-            # would fail if SPMD were active during weight assignment).
-            self.model = AutoModelForCausalLM.from_pretrained(
-                model_name, torch_dtype=torch.bfloat16
-            )
 
             _xs = None
             if _spmd_active:

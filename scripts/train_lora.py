@@ -50,18 +50,15 @@ except ImportError:
 # (same pattern Stage 1 uses in scripts/generate_traces.py).  This matches our
 # accelerate config tpu/accelerate_config_v6e8.yaml which sets num_processes: 1.
 #
-# Activate SPMD as early as possible — before any XLA tensor is created, before
-# AutoModelForCausalLM.from_pretrained, otherwise use_spmd() refuses to engage.
-if _ON_TPU:
-    try:
-        from torch_xla import runtime as _xr
-        _xr.use_spmd()
-        print("SPMD enabled for training")
-    except (ImportError, AttributeError) as _e:
-        # Older torch_xla without SPMD — training will fall back to replicated
-        # placement, which OOMs for 27B on 32 GB chips.  Surface the issue
-        # rather than die mysteriously at model.to(device).
-        print(f"WARNING: torch_xla SPMD not available ({_e!r}); 27B training will OOM")
+# IMPORTANT — DO NOT call xr.use_spmd() at module level.  use_spmd() globally
+# intercepts every set_data() call; if it is active when from_pretrained()
+# runs, every internal weight assignment raises "incompatible tensor type"
+# (this is documented in scripts/generate_traces.py / eval_healthbench.py).
+# The correct order is:
+#   1) from_pretrained on CPU
+#   2) xr.use_spmd()
+#   3) move params to XLA + mark_sharding
+# All of which now happen inside main() in that order.
 
 DTYPE_MAP = {"bfloat16": torch.bfloat16, "float16": torch.float16, "float32": torch.float32}
 
@@ -304,6 +301,11 @@ def main():
         if _xs is not None:
             from torch_xla import runtime as _xr
             import torch.nn as _nn
+            # NOW that from_pretrained is done (model is on CPU), it's safe to
+            # enable SPMD.  Doing this earlier breaks from_pretrained because
+            # use_spmd() globally intercepts set_data() and the loader does
+            # many such assignments while building the model.
+            _xr.use_spmd()
             # On v6e-8: addressable_device_count() == 8 (physical chips).
             # global_device_count() returns 1 in SPMD mode (single virtual dev).
             _n_dev = getattr(_xr, "addressable_device_count",
@@ -377,6 +379,16 @@ def main():
     if _ON_TPU:
         model = get_peft_model(model, lora_config)
         model.print_trainable_parameters()
+        # Tell HF Trainer "model placement is already handled" so it does NOT
+        # call model.to(args.device) at __init__ time (transformers 4.57
+        # trainer.py L612).  Under active SPMD, .to() invokes set_data() on
+        # every parameter — that's intercepted and may raise "incompatible
+        # tensor type" because the params are already sharded XLA tensors.
+        # Setting is_parallelizable + model_parallel makes Trainer's
+        # `is_model_parallel` property True, which flips
+        # `place_model_on_device` off (see trainer.py L587-594).
+        model.is_parallelizable = True
+        model.model_parallel = True
         # peft_config is now baked into the model — don't pass it to SFTTrainer
         # again (would no-op but also clutter the config snapshot).
         _peft_for_trainer = None
@@ -406,6 +418,14 @@ def main():
     # derive bf16 from torch_dtype so the two flags can't diverge
     use_bf16 = train_cfg.get("bf16", dtype == torch.bfloat16)
 
+    # On TPU, load_best_model_at_end=True is risky: the PEFT adapter reload
+    # at end-of-training calls model.load_state_dict() which under active SPMD
+    # invokes set_data on every adapter param.  Even though adapters are
+    # unsharded, the interception path is fragile.  If it fails, we lose the
+    # entire multi-hour training run because the failure happens AFTER the
+    # last save, inside trainer.train().  Use the LAST checkpoint instead —
+    # with cosine LR + 3 epochs the last is typically best anyway.
+    _load_best = not _ON_TPU
     training_args = SFTConfig(
         output_dir=args.output_dir,
         num_train_epochs=train_cfg["num_epochs"],
@@ -421,8 +441,10 @@ def main():
         seed=seed,
         data_seed=seed,
         report_to="none",
-        load_best_model_at_end=True,
-        metric_for_best_model="eval_loss",
+        load_best_model_at_end=_load_best,
+        # metric_for_best_model is only consulted when load_best_model_at_end
+        # is True, so leave it set for the GPU path.
+        metric_for_best_model="eval_loss" if _load_best else None,
         save_total_limit=3,
         gradient_checkpointing=True,
         max_seq_length=train_cfg.get("max_seq_length", 4096),
