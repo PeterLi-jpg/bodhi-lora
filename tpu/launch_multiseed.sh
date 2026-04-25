@@ -45,6 +45,13 @@ _EVAL_MAX_FLAG=""
 MODEL_NAME="${MODEL_NAME:-google/medgemma-27b-text-it}"
 TRAIN_CONFIG="${TRAIN_CONFIG:-configs/lora_medgemma27b_tpu.yaml}"
 
+# Stage 2 grader threshold and training floor.
+# Lower both for smoke runs where the model is small/general (gemma-3-4b-it):
+#   MIN_SCORE=0.0 TRAIN_FLOOR=1 bash tpu/launch_multiseed.sh
+# Production default: 0.4 / 10.
+MIN_SCORE="${MIN_SCORE:-0.4}"
+TRAIN_FLOOR="${TRAIN_FLOOR:-10}"
+
 # Optional training-method overrides (TPU: 4bit/8bit will error; only variant/rank).
 #   LORA_VARIANT=dora bash tpu/launch_multiseed.sh
 #   LORA_VARIANT=rslora bash tpu/launch_multiseed.sh
@@ -426,7 +433,7 @@ cp -f "./results/raw_traces.jsonl" "./results/_rescue/raw_traces.jsonl" 2>/dev/n
 run_long_remote \
     "stage2_grade" \
     "filter_traces.py" \
-    "python scripts/filter_traces.py --input data/sft/raw_traces.jsonl --healthbench-data data/raw/healthbench_hard.jsonl data/raw/healthbench.jsonl --output-dir data/sft --min-score 0.4 && touch /tmp/stage2_done" \
+    "python scripts/filter_traces.py --input data/sft/raw_traces.jsonl --healthbench-data data/raw/healthbench_hard.jsonl data/raw/healthbench.jsonl --output-dir data/sft --min-score ${MIN_SCORE} && touch /tmp/stage2_done" \
     "/tmp/stage2_done"
 _TRAIN_LINES=$(gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
     --zone="$ZONE" --project="$PROJECT" \
@@ -438,10 +445,11 @@ echo "Training data ready: ${_TRAIN_LINES:-0} train"
 # whole experiment is meaningless and we'd just waste another v6e-8-hour OOMing
 # or NaN-ing.  Surface the failure HERE rather than from a confusing stack
 # trace inside SFTTrainer or DataCollatorForCompletionOnlyLM.
-if [ "${_TRAIN_LINES:-0}" -lt 10 ]; then
-    echo "ERROR: Stage 2 produced only ${_TRAIN_LINES:-0} training examples (< 10 floor)."
+if [ "${_TRAIN_LINES:-0}" -lt "${TRAIN_FLOOR}" ]; then
+    echo "ERROR: Stage 2 produced only ${_TRAIN_LINES:-0} training examples (< ${TRAIN_FLOOR} floor)."
     echo "Likely causes: grader threshold too high, grader produced 0% positive scores,"
     echo "or grader silently failed.  Inspect /tmp/stage2_grade.log on the VM."
+    echo "For smoke runs with a small model, pass MIN_SCORE=0.0 TRAIN_FLOOR=1."
     exit 1
 fi
 
