@@ -23,6 +23,27 @@ except ImportError:
     _xm = None
     _ON_TPU = False
 
+# Same DynamicCache shape fix applied in generate_traces.py / eval_healthbench.py.
+# Without this, every grader.grade() call silently fails on XLA after a 15-min
+# compile, and Stage 2 produces 0 graded traces.
+if _ON_TPU:
+    try:
+        from transformers.cache_utils import DynamicLayer
+
+        def _patched_lazy_init(self, key_states):
+            self.dtype = key_states.dtype
+            self.device = key_states.device
+            shape = list(key_states.shape)
+            shape[-2] = 0
+            self.keys = torch.zeros(shape, dtype=self.dtype, device=self.device)
+            self.values = torch.zeros(shape, dtype=self.dtype, device=self.device)
+            self.is_initialized = True
+
+        DynamicLayer.lazy_initialization = _patched_lazy_init
+        print("Applied DynamicLayer.lazy_initialization patch (XLA cache fix)")
+    except (ImportError, AttributeError):
+        pass
+
 # same template as healthbench_eval.py in the upstream repo
 GRADER_TEMPLATE = """
 Your job is to look at a conversation and a rubric item, and score the last turn (i.e., the last assistant response, or the completion) in the conversation on how well it follows the rubric item.
@@ -105,10 +126,34 @@ class LocalGrader:
     def grade(self, prompt, max_new_tokens=512):
         msgs = [{"role": "user", "content": prompt}]
         text = self.tokenizer.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True)
-        inputs = self.tokenizer(text, return_tensors="pt").to(self._device)
+        inputs = self.tokenizer(text, return_tensors="pt")
+        if _ON_TPU:
+            # XLA compiles a new graph for every distinct input shape; pad every
+            # grader prompt to a single fixed length (4096 — graders see long
+            # rubric+conversation prompts) so prefill compiles ONCE.  Inputs
+            # longer than the cap are passed through and may trigger one extra
+            # compile, but that's bounded.
+            _fixed_len = 4096
+            _seq_len = inputs["input_ids"].shape[1]
+            if _seq_len < _fixed_len:
+                _pad = _fixed_len - _seq_len
+                _pad_id = self.tokenizer.pad_token_id or 0
+                _pad_ids = torch.full((1, _pad), _pad_id, dtype=inputs["input_ids"].dtype)
+                _pad_mask = torch.zeros((1, _pad), dtype=inputs["attention_mask"].dtype)
+                inputs["input_ids"] = torch.cat([_pad_ids, inputs["input_ids"]], dim=1)
+                inputs["attention_mask"] = torch.cat([_pad_mask, inputs["attention_mask"]], dim=1)
+        prompt_len = inputs["input_ids"].shape[1]
+        inputs = {k: v.to(self._device) for k, v in inputs.items()}
         with torch.no_grad():
-            out = self.model.generate(**inputs, max_new_tokens=max_new_tokens, do_sample=False)
-        new_toks = out[0][inputs["input_ids"].shape[1]:]
+            # StaticCache: pre-allocate KV cache to max_new_tokens so the decode
+            # graph is one compile instead of N compiles (one per token).
+            _gen_kwargs = dict(max_new_tokens=max_new_tokens, do_sample=False)
+            if _ON_TPU:
+                _gen_kwargs["cache_implementation"] = "static"
+            out = self.model.generate(**inputs, **_gen_kwargs)
+        if _ON_TPU:
+            _xm.mark_step()
+        new_toks = out[0][prompt_len:]
         return self.tokenizer.decode(new_toks, skip_special_tokens=True)
 
 

@@ -131,6 +131,100 @@ if ! $found; then
     exit 1
 fi
 
+# Generic remote long-task runner — same nohup-launch + poll-from-launcher
+# pattern that Stage 1 uses, but reusable for Stages 2/3/4.  Without this,
+# every long stage hits the same SSH-teardown failure mode: the TPU host CPUs
+# are pinned during XLA compile (10-40 min for a 27B SPMD model), the SSH
+# connection drops with exit 255, and `set -e` aborts the launcher mid-stage.
+#
+# Args:
+#   $1 — stage name (used in log filenames and progress messages)
+#   $2 — pgrep pattern that matches the remote process (alive check)
+#   $3 — remote shell command that completes the work and writes output.
+#        Must produce a file at $4 on success.  Will be run via `nohup ... &`.
+#   $4 — remote sentinel path (file/dir) that exists when the task is done.
+#        Polling keeps going until this exists OR the process exits.
+#   $5 — optional max poll iterations (default 576 = 48h at 5-min intervals).
+#
+# On done: returns 0.  On 6 consecutive SSH timeouts or a remote crash with
+# missing sentinel: prints the tail of the remote log and returns 1.
+run_long_remote() {
+    local _name="$1" _pgrep_pat="$2" _remote_cmd="$3" _sentinel="$4"
+    local _max_iters="${5:-576}"
+    local _log="/tmp/${_name}.log" _pid_file="/tmp/${_name}.pid"
+
+    echo "=== ${_name}: launching on TPU ==="
+    gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
+        --zone="$ZONE" --project="$PROJECT" \
+        --command="
+export PATH=\"\$HOME/.local/bin:\$PATH\"
+cd ~/bohdi-lora
+export HF_TOKEN='${HF_TOKEN}'
+rm -f ${_log}
+nohup bash -c '${_remote_cmd}' > ${_log} 2>&1 &
+echo \$! > ${_pid_file}
+echo '${_name} running in background (PID '\$(cat ${_pid_file})')'
+" || true  # SSH teardown often returns 255 right after launch (CPUs pinned).
+
+    echo "Polling ${_name}..."
+    local _ssh_misses=0
+    for i in $(seq 1 "$_max_iters"); do
+        sleep 300
+        local _done _alive
+        _done=$(gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
+            --zone="$ZONE" --project="$PROJECT" \
+            --command="[ -e ${_sentinel} ] && echo done || echo pending" 2>/dev/null \
+            | grep -E '^(done|pending)$' | tail -1)
+        if [ "$_done" = "done" ]; then
+            echo "${_name}: complete (sentinel ${_sentinel} present)."
+            return 0
+        fi
+        _alive=$(gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
+            --zone="$ZONE" --project="$PROJECT" \
+            --command="pgrep -f '${_pgrep_pat}' > /dev/null 2>&1 && echo alive || echo dead" 2>/dev/null \
+            | grep -E '^(alive|dead)$' | tail -1)
+        if [ -z "$_alive" ] && [ -z "$_done" ]; then
+            _ssh_misses=$(( _ssh_misses + 1 ))
+            echo "  ${_name} poll $i: SSH timeout (miss $_ssh_misses/6)"
+            if [ "$_ssh_misses" -ge 6 ]; then
+                echo "ERROR: ${_name}: 6 consecutive SSH timeouts."
+                echo "--- last 40 lines of ${_log} ---"
+                gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
+                    --zone="$ZONE" --project="$PROJECT" \
+                    --command="tail -40 ${_log} 2>/dev/null || echo '(log not found)'" \
+                    2>/dev/null || true
+                echo "--- end log ---"
+                return 1
+            fi
+            continue
+        fi
+        _ssh_misses=0
+        echo "  ${_name} poll $i: ${_alive:-unknown}"
+        if [ "$_alive" = "dead" ]; then
+            # Process exited — recheck sentinel one more time before declaring failure
+            # (race: process finished between our two SSH calls).
+            _done=$(gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
+                --zone="$ZONE" --project="$PROJECT" \
+                --command="[ -e ${_sentinel} ] && echo done || echo pending" 2>/dev/null \
+                | grep -E '^(done|pending)$' | tail -1)
+            if [ "$_done" = "done" ]; then
+                echo "${_name}: complete (sentinel found after process exit)."
+                return 0
+            fi
+            echo "ERROR: ${_name} exited but sentinel ${_sentinel} is missing."
+            echo "--- last 40 lines of ${_log} ---"
+            gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
+                --zone="$ZONE" --project="$PROJECT" \
+                --command="tail -40 ${_log} 2>/dev/null || echo '(log not found)'" \
+                2>/dev/null || true
+            echo "--- end log ---"
+            return 1
+        fi
+    done
+    echo "ERROR: ${_name}: exceeded max poll iterations."
+    return 1
+}
+
 # On exit (normal, error, or Ctrl-C): rescue any unsaved checkpoints first,
 # then delete the VM. Completed seeds are already local; this catches
 # whatever is on the VM for any in-progress seed that was interrupted.
@@ -292,104 +386,61 @@ gcloud compute tpus tpu-vm scp \
 # Also update the rescue copy so the restore path is consistent.
 cp -f "./results/raw_traces.jsonl" "./results/_rescue/raw_traces.jsonl" 2>/dev/null || true
 
-# ── Stage 2: grade + filter (separate SSH — runs fresh Qwen2.5-14B grader) ───
-echo "=== Stage 2: grade and filter traces (Qwen2.5-14B) ==="
-gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
+# ── Stage 2: grade + filter (Qwen2.5-14B grader, long-running on TPU) ────────
+# Stage 2 runs a 14B grader over thousands of (trace, rubric_item) pairs.
+# Each grade is a generate() call — same XLA compile / SSH-teardown failure
+# mode as Stage 1 if we run it in a foreground SSH.  Use the nohup-polling
+# helper instead.  Sentinel: data/sft/train.jsonl is written at the very end.
+run_long_remote \
+    "stage2_grade" \
+    "filter_traces.py" \
+    "python scripts/filter_traces.py --input data/sft/raw_traces.jsonl --healthbench-data data/raw/healthbench_hard.jsonl data/raw/healthbench.jsonl --output-dir data/sft --min-score 0.4 && touch /tmp/stage2_done" \
+    "/tmp/stage2_done"
+echo "Training data ready: $(gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
     --zone="$ZONE" --project="$PROJECT" \
-    --command="
-set -euo pipefail
-export PATH=\"\$HOME/.local/bin:\$PATH\"
-cd ~/bohdi-lora
-export HF_TOKEN='${HF_TOKEN}'
-python scripts/filter_traces.py \
-    --input data/sft/raw_traces.jsonl \
-    --healthbench-data data/raw/healthbench_hard.jsonl data/raw/healthbench.jsonl \
-    --output-dir data/sft \
-    --min-score 0.4
-echo \"Training data ready: \$(wc -l < data/sft/train.jsonl) train, \$(wc -l < data/sft/val.jsonl) val\"
-"
+    --command="wc -l < ~/bohdi-lora/data/sft/train.jsonl 2>/dev/null || echo 0" 2>/dev/null \
+    | grep -E '^[0-9]+$' | tail -1) train"
 
 # ── Train each seed sequentially ──────────────────────────────────────────────
 for SEED in $SEEDS; do
     echo ""
     echo "=== Stage 3: training seed $SEED ==="
-
-    gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
-        --zone="$ZONE" --project="$PROJECT" \
-        --command="
-set -euo pipefail
-export PATH=\"\$HOME/.local/bin:\$PATH\"
-cd ~/bohdi-lora
-mkdir -p checkpoints/seed_${SEED}
-export HF_TOKEN='${HF_TOKEN}'
-
-accelerate launch \
-    --config_file "${ACCEL_CFG}" \
-    scripts/train_lora.py \
-    --config configs/lora_medgemma27b_tpu.yaml \
-    --seed ${SEED} \
-    --output-dir checkpoints/seed_${SEED} \
-    ${TRAIN_EXTRA_FLAGS}
-
-echo 'Seed ${SEED} done.'
-"
+    # Sentinel: <output-dir>/best/adapter_model.safetensors is the final artifact
+    # written by trainer.save_model() at the end of training.  pgrep matches the
+    # accelerate launcher (which forks per-process workers).
+    run_long_remote \
+        "stage3_train_seed${SEED}" \
+        "train_lora.py" \
+        "mkdir -p checkpoints/seed_${SEED} && accelerate launch --config_file ${ACCEL_CFG} scripts/train_lora.py --config configs/lora_medgemma27b_tpu.yaml --seed ${SEED} --output-dir checkpoints/seed_${SEED} ${TRAIN_EXTRA_FLAGS}" \
+        "checkpoints/seed_${SEED}/best/adapter_model.safetensors"
 
     # ── Stage 4: evaluate all 4 configurations ────────────────────────────────
-    echo "=== Stage 4: evaluation (4 configs) for seed $SEED ==="
-    gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
-        --zone="$ZONE" --project="$PROJECT" \
-        --command="
-set -euo pipefail
-export PATH=\"\$HOME/.local/bin:\$PATH\"
-cd ~/bohdi-lora
-export HF_TOKEN='${HF_TOKEN}'
+    # Same long-running pattern as the other stages.  Sentinel: rubric_diff.json
+    # is the very last artifact produced; if it exists, the whole eval finished.
+    # NOTE: the heredoc-style remote command is condensed onto one big line because
+    # run_long_remote wraps it in `bash -c '<cmd>'` — embedded newlines in a
+    # single-quoted bash -c break the parser.
+    EVAL_DIR="eval/seed_${SEED}"
+    FIG_DIR="figures/seed_${SEED}"
+    LORA="checkpoints/seed_${SEED}/best"
+    MODEL="google/medgemma-27b-text-it"
+    IDS="data/raw/hard_200_sample_ids.json"
+    HB="data/raw/healthbench_hard.jsonl data/raw/healthbench.jsonl"
+    EVAL_CMD="set -e; mkdir -p ${EVAL_DIR} ${FIG_DIR}"
+    EVAL_CMD="${EVAL_CMD} && python scripts/eval_healthbench.py --model ${MODEL} --sample-ids ${IDS} --output ${EVAL_DIR}/base_no_wrapper.json"
+    EVAL_CMD="${EVAL_CMD} && python scripts/eval_healthbench.py --model ${MODEL} --use-bodhi --sample-ids ${IDS} --output ${EVAL_DIR}/base_bodhi.json"
+    EVAL_CMD="${EVAL_CMD} && python scripts/eval_healthbench.py --model ${MODEL} --lora-path ${LORA} --sample-ids ${IDS} --output ${EVAL_DIR}/lora_no_wrapper.json"
+    EVAL_CMD="${EVAL_CMD} && python scripts/eval_healthbench.py --model ${MODEL} --lora-path ${LORA} --use-bodhi --sample-ids ${IDS} --output ${EVAL_DIR}/lora_bodhi.json"
+    EVAL_CMD="${EVAL_CMD} && python scripts/eval_ushape.py --eval-jsons ${EVAL_DIR}/base_no_wrapper.json ${EVAL_DIR}/base_bodhi.json ${EVAL_DIR}/lora_no_wrapper.json ${EVAL_DIR}/lora_bodhi.json --healthbench ${HB} --output ${EVAL_DIR}/ushape.json"
+    EVAL_CMD="${EVAL_CMD} && python scripts/plot_ushape.py --input ${EVAL_DIR}/ushape.json --eval-jsons ${EVAL_DIR}/base_no_wrapper.json ${EVAL_DIR}/base_bodhi.json ${EVAL_DIR}/lora_no_wrapper.json ${EVAL_DIR}/lora_bodhi.json --healthbench ${HB} --n-bins 10 --out-dir ${FIG_DIR}"
+    EVAL_CMD="${EVAL_CMD} && (if [ -f ${LORA}/trainer_state.json ]; then python scripts/plot_training.py --trainer-state ${LORA}/trainer_state.json --output ${FIG_DIR}/training_loss.png; fi)"
+    EVAL_CMD="${EVAL_CMD} && python scripts/rubric_diff.py ${EVAL_DIR}/base_no_wrapper.json ${EVAL_DIR}/lora_bodhi.json --output ${EVAL_DIR}/rubric_diff.json"
 
-MODEL='google/medgemma-27b-text-it'
-IDS='data/raw/hard_200_sample_ids.json'
-LORA='checkpoints/seed_${SEED}/best'
-EVAL_DIR='eval/seed_${SEED}'
-FIG_DIR='figures/seed_${SEED}'
-mkdir -p \"\$EVAL_DIR\" \"\$FIG_DIR\"
-
-echo '-- base, no wrapper --'
-python scripts/eval_healthbench.py --model \"\$MODEL\" --sample-ids \"\$IDS\" --output \"\$EVAL_DIR/base_no_wrapper.json\"
-
-echo '-- base + BOHDI wrapper --'
-python scripts/eval_healthbench.py --model \"\$MODEL\" --use-bodhi --sample-ids \"\$IDS\" --output \"\$EVAL_DIR/base_bodhi.json\"
-
-echo '-- LoRA, no wrapper --'
-python scripts/eval_healthbench.py --model \"\$MODEL\" --lora-path \"\$LORA\" --sample-ids \"\$IDS\" --output \"\$EVAL_DIR/lora_no_wrapper.json\"
-
-echo '-- LoRA + BOHDI wrapper --'
-python scripts/eval_healthbench.py --model \"\$MODEL\" --lora-path \"\$LORA\" --use-bodhi --sample-ids \"\$IDS\" --output \"\$EVAL_DIR/lora_bodhi.json\"
-
-echo '-- U-shape analysis --'
-python scripts/eval_ushape.py \
-    --eval-jsons \"\$EVAL_DIR/base_no_wrapper.json\" \"\$EVAL_DIR/base_bodhi.json\" \
-                  \"\$EVAL_DIR/lora_no_wrapper.json\" \"\$EVAL_DIR/lora_bodhi.json\" \
-    --healthbench data/raw/healthbench_hard.jsonl data/raw/healthbench.jsonl \
-    --output \"\$EVAL_DIR/ushape.json\"
-
-echo '-- plots --'
-python scripts/plot_ushape.py \
-    --input \"\$EVAL_DIR/ushape.json\" \
-    --eval-jsons \"\$EVAL_DIR/base_no_wrapper.json\" \"\$EVAL_DIR/base_bodhi.json\" \
-                  \"\$EVAL_DIR/lora_no_wrapper.json\" \"\$EVAL_DIR/lora_bodhi.json\" \
-    --healthbench data/raw/healthbench_hard.jsonl data/raw/healthbench.jsonl \
-    --n-bins 10 --out-dir \"\$FIG_DIR\"
-
-if [ -f \"\$LORA/trainer_state.json\" ]; then
-    python scripts/plot_training.py --trainer-state \"\$LORA/trainer_state.json\" --output \"\$FIG_DIR/training_loss.png\"
-fi
-
-echo '-- rubric diff (base_no_wrapper → lora_bodhi) --'
-python scripts/rubric_diff.py \
-    \"\$EVAL_DIR/base_no_wrapper.json\" \
-    \"\$EVAL_DIR/lora_bodhi.json\" \
-    --output \"\$EVAL_DIR/rubric_diff.json\"
-
-echo 'Eval done for seed ${SEED}.'
-"
+    run_long_remote \
+        "stage4_eval_seed${SEED}" \
+        "eval_healthbench.py|eval_ushape.py|plot_ushape.py|rubric_diff.py|plot_training.py" \
+        "${EVAL_CMD}" \
+        "${EVAL_DIR}/rubric_diff.json"
 
     # Pull checkpoints + eval results back
     echo "Copying seed $SEED outputs..."
