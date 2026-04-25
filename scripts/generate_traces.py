@@ -10,65 +10,9 @@ from pathlib import Path
 import numpy as np
 import torch
 from tqdm import tqdm
-from transformers import AutoModelForCausalLM, AutoTokenizer, set_seed
+from transformers import set_seed
 
-# TPU detection — same pattern as train_lora.py and filter_traces.py.
-# MedGemma-27B in bfloat16 = 54 GB. A single v4 chip has 32 GB, so the model
-# must be spread across 2+ chips. On TPU we load without device_map and let
-# the XLA runtime place layers; use device_map="auto" on GPU as before.
-try:
-    import torch_xla.core.xla_model as _xm
-    _ON_TPU = True
-except ImportError:
-    _xm = None
-    _ON_TPU = False
-
-# XLA persistent compile cache — first run on a fresh VM still pays the
-# 30-60 min compile once per stage, but every subsequent invocation on the
-# SAME VM (e.g. resume after preemption, retry after a crash, or running
-# Stage 4 against the same 27B graph that Stage 1 compiled) loads the
-# compiled program directly and skips compile.  Cache lives on the boot
-# disk, survives reboots, dies with the VM.
-if _ON_TPU:
-    try:
-        import os as _os
-        _xla_cache = _os.path.expanduser("~/.xla_cache")
-        _os.makedirs(_xla_cache, exist_ok=True)
-        from torch_xla import runtime as _xr_cache
-        if hasattr(_xr_cache, "initialize_cache"):
-            _xr_cache.initialize_cache(_xla_cache, readonly=False)
-            print(f"XLA persistent compile cache: {_xla_cache}")
-    except Exception as _e:
-        print(f"XLA persistent cache unavailable ({_e!r}); compiles will not be saved.")
-
-# Fix for transformers DynamicCache bug on XLA/TPU.
-#
-# In transformers 4.57+, DynamicLayer.lazy_initialization() creates
-# self.keys = torch.tensor([]) — a 1D tensor with shape (0,).  The first
-# real update() call then does torch.cat([shape_(0,), shape_(B,H,S,D)], dim=-2)
-# which fails with a dimension mismatch.  On XLA the error is deferred until
-# after graph compilation (~15 min), then raises for every example — all
-# traces fail silently and the run produces 0 output.
-#
-# Fix: replace lazy_initialization to create properly-shaped zero tensors
-# (shape [B, H, 0, D]) that torch.cat along dim=-2 can handle correctly.
-if _ON_TPU:
-    try:
-        from transformers.cache_utils import DynamicLayer
-
-        def _patched_lazy_init(self, key_states):
-            self.dtype = key_states.dtype
-            self.device = key_states.device
-            shape = list(key_states.shape)
-            shape[-2] = 0  # zero seq length, matching number of dims
-            self.keys = torch.zeros(shape, dtype=self.dtype, device=self.device)
-            self.values = torch.zeros(shape, dtype=self.dtype, device=self.device)
-            self.is_initialized = True
-
-        DynamicLayer.lazy_initialization = _patched_lazy_init
-        print("Applied DynamicLayer.lazy_initialization patch (XLA cache fix)")
-    except (ImportError, AttributeError):
-        pass  # transformers version without DynamicLayer — no patch needed
+from scripts._vllm_engine import VLLMEngine
 
 DATA_DIR = Path("data/raw")
 
@@ -147,154 +91,14 @@ def load_exclude_ids(paths):
     return ids
 
 
-class LocalModel:
-    def __init__(self, model_name, device="auto"):
-        print(f"Loading {model_name}...")
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-        if self.tokenizer.pad_token is None:
-            self.tokenizer.pad_token = self.tokenizer.eos_token
-        # Gemma chat template emits {{ bos_token }} itself AND the tokenizer
-        # has add_bos_token=True — so default tokenize() of a chat-templated
-        # string produces "<bos><bos>...".  Suppress the auto-prepend; the
-        # template handles BOS.
-        if getattr(self.tokenizer, "add_bos_token", False):
-            self.tokenizer.add_bos_token = False
-
-        if _ON_TPU:
-            # MedGemma-27B (54 GB bfloat16) exceeds one v6e chip (32 GB).
-            # Try SPMD sharding across all chips; fall back to host CPU if
-            # the installed torch_xla build doesn't include the sharding API.
-            _xs = None
-            for _spmd_mod in ("torch_xla.experimental.xla_sharding",
-                              "torch_xla.distributed.xla_sharding",
-                              "torch_xla.distributed.spmd"):
-                try:
-                    import importlib as _il
-                    _xs = _il.import_module(_spmd_mod)
-                    print(f"SPMD module found: {_spmd_mod}")
-                    break
-                except ModuleNotFoundError:
-                    continue
-
-            if _xs is not None:
-                from torch_xla import runtime as _xr
-                import numpy as _np
-                # CRITICAL: load model on CPU BEFORE calling use_spmd().
-                # use_spmd() globally intercepts all set_data() calls; if it is
-                # active when from_pretrained() runs, every internal weight
-                # assignment raises "incompatible tensor type".  Safe order:
-                # 1) load to CPU  2) enable SPMD  3) move params to XLA.
-                self.model = AutoModelForCausalLM.from_pretrained(
-                    model_name, torch_dtype=torch.bfloat16
-                )
-                _xr.use_spmd()
-                # global_device_count() returns 1 in SPMD mode (1 virtual device).
-                # addressable_device_count() returns the physical chip count (8 on v6e-8).
-                # mark_sharding() internally uses addressable_device_count, so the mesh
-                # must match that number or we get "not mappable over N devices".
-                _n_dev = getattr(_xr, 'addressable_device_count', _xr.global_device_count)()
-                if _n_dev < 2:
-                    # Last resort: count VFIO groups = physical chips
-                    import os as _os
-                    _vfio = [d for d in _os.listdir('/dev/vfio') if d.isdigit()] if _os.path.exists('/dev/vfio') else []
-                    _n_dev = len(_vfio) or _n_dev
-                _device_ids = _np.arange(_n_dev)
-                _mesh = _xs.Mesh(_device_ids, (_n_dev,), ("tp",))
-                _dev = _xm.xla_device()
-                print(f"SPMD: sharding model across {_n_dev} chips")
-                # Replace module._parameters entries with new nn.Parameter objects
-                # wrapping XLA tensors.  Direct dict assignment avoids set_data()
-                # entirely (which SPMD blocks even for the post-use_spmd path).
-                import torch.nn as _nn
-                for _mod in self.model.modules():
-                    for _pname, _p in list(_mod._parameters.items()):
-                        if _p is not None:
-                            _xp = _nn.Parameter(
-                                _p.data.to(_dev), requires_grad=_p.requires_grad
-                            )
-                            if _xp.dim() == 2 and _xp.shape[0] > 1024:
-                                _xs.mark_sharding(_xp, _mesh, (0, None))
-                            _mod._parameters[_pname] = _xp
-                    for _bname, _b in list(_mod._buffers.items()):
-                        if _b is not None:
-                            _mod._buffers[_bname] = _b.to(_dev)
-                _xm.mark_step()
-                self._device = _dev
-            else:
-                # CPU fallback -- v6e-8 VM has 384 GB RAM so 27B fits
-                import os
-                print("SPMD unavailable in this torch_xla build; using host CPU")
-                os.environ.setdefault("OMP_NUM_THREADS", str(os.cpu_count() or 8))
-                self.model = AutoModelForCausalLM.from_pretrained(
-                    model_name, torch_dtype=torch.bfloat16, device_map="cpu"
-                )
-                self._device = torch.device("cpu")
-        else:
-            self.model = AutoModelForCausalLM.from_pretrained(
-                model_name, torch_dtype=torch.bfloat16, device_map=device,
-            )
-            self._device = next(self.model.parameters()).device
-
-        self.model.eval()
-
-    def generate(self, messages, max_new_tokens=1024):
-        text = self.tokenizer.apply_chat_template(
-            messages, tokenize=False, add_generation_prompt=True
-        )
-        # Tokenize on CPU so we can pad short prompts before handing to XLA.
-        inputs = self.tokenizer(text, return_tensors="pt")
-        if _ON_TPU:
-            # XLA compiles a new graph for every distinct input shape, and each
-            # compile takes 20-30 min for a 27B SPMD model.  Pad ALL prompts to
-            # one fixed length so the entire run shares a single prefill graph.
-            #
-            # Why 4096 (not 2048): the BOHDI two-pass response-prompt is
-            # template (~500) + original case (up to 1500) + Pass 1 analysis
-            # (up to 1024 generated tokens) ≈ up to 3000 tokens.  At 2048 even
-            # a 5% overflow rate over 800 traces means ~40 fresh compiles ×
-            # ~30 min = 20 hours of wasted compile.  4096 has comfortable
-            # margin and pays it back in one ~2x slower forward.
-            _fixed_len = 4096
-            _seq_len = inputs["input_ids"].shape[1]
-            if _seq_len < _fixed_len:
-                _pad = _fixed_len - _seq_len
-                _pad_id = self.tokenizer.pad_token_id or 0
-                _pad_ids = torch.full((1, _pad), _pad_id, dtype=inputs["input_ids"].dtype)
-                _pad_mask = torch.zeros((1, _pad), dtype=inputs["attention_mask"].dtype)
-                inputs["input_ids"] = torch.cat([_pad_ids, inputs["input_ids"]], dim=1)
-                inputs["attention_mask"] = torch.cat([_pad_mask, inputs["attention_mask"]], dim=1)
-            elif _seq_len > _fixed_len:
-                # Surface this rather than silently triggering a fresh compile.
-                # If it ever fires, bump _fixed_len.
-                print(f"WARN: input ({_seq_len} tok) exceeds fixed pad ({_fixed_len}); "
-                      f"this triggers a fresh XLA compile (~30 min).")
-        prompt_len = inputs["input_ids"].shape[1]
-        inputs = {k: v.to(self._device) for k, v in inputs.items()}
-        with torch.no_grad():
-            # On XLA/TPU, DynamicCache grows the KV-cache by one token per
-            # decode step: shape goes [B,H,0,D] → [B,H,1,D] → … → [B,H,N,D].
-            # XLA compiles a separate graph for every distinct tensor shape, so
-            # N decode steps = N compilations (each 10-30 min for 27B SPMD).
-            # StaticCache pre-allocates to max_new_tokens — fixed shape, one
-            # compile for the entire decode loop.
-            _cache_impl = "static" if _ON_TPU else None
-            _gen_kwargs = dict(max_new_tokens=max_new_tokens, do_sample=False)
-            if _cache_impl:
-                _gen_kwargs["cache_implementation"] = _cache_impl
-            out = self.model.generate(**inputs, **_gen_kwargs)
-        if _ON_TPU:
-            _xm.mark_step()
-        return self.tokenizer.decode(out[0][prompt_len:], skip_special_tokens=True)
-
-
-def make_bodhi_wrapper(model):
+def make_bodhi_wrapper(engine):
     """Set up BODHI wrapper once, reuse across examples."""
     from bodhi import BODHI, BODHIConfig
-    chat_fn = lambda msgs: model.generate(msgs)
+    chat_fn = lambda msgs: engine.chat(msgs)
     return BODHI(chat_function=chat_fn, config=BODHIConfig(domain="medical"))
 
 
-def generate_response(model, messages, use_bodhi, bodhi_wrapper=None):
+def generate_response(engine, messages, use_bodhi, bodhi_wrapper=None):
     """Return {content, analysis, metadata}. analysis/metadata are None for
     non-BODHI runs so callers get a stable schema.
 
@@ -303,7 +107,7 @@ def generate_response(model, messages, use_bodhi, bodhi_wrapper=None):
     the humility wrapper went wrong on specific examples.
     """
     if not use_bodhi:
-        return {"content": model.generate(messages), "analysis": None, "metadata": None}
+        return {"content": engine.chat(messages), "analysis": None, "metadata": None}
     resp = bodhi_wrapper.complete(messages)
     return {
         "content": resp.content,
@@ -394,39 +198,38 @@ def main():
               f"(prev model={prev_models or '?'} bodhi={prev_bodhi or '?'})")
 
     print(f"\nGenerating {len(examples)} traces, bodhi={args.use_bodhi}\n")
-    model = LocalModel(args.model)
-
-    bodhi_wrapper = make_bodhi_wrapper(model) if args.use_bodhi else None
 
     out_path = Path(args.output)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     mode = "a" if done_ids else "w"
     ok, fail = 0, 0
 
-    with open(out_path, mode) as f:
-        for ex in tqdm(examples):
-            try:
-                out = generate_response(model, ex["prompt"], args.use_bodhi, bodhi_wrapper)
-                trace = {
-                    "prompt_id": ex["prompt_id"],
-                    "messages": ex["prompt"],
-                    "response": out["content"],
-                    "bodhi_analysis": out["analysis"],
-                    "bodhi_metadata": out["metadata"],
-                    "tags": ex.get("example_tags", []),
-                    "source_dataset": ex.get("_source", "unknown"),
-                    "model": args.model,
-                    "bodhi": args.use_bodhi,
-                }
-                f.write(json.dumps(trace) + "\n")
-                f.flush()
-                ok += 1
-            except Exception as e:
-                # Full traceback helps distinguish OOM from tokenizer/BODHI bugs
-                # when a 48h run has a few failures we want to diagnose later.
-                traceback.print_exc()
-                print(f"  Error on {ex['prompt_id']}: {e}")
-                fail += 1
+    with VLLMEngine(args.model) as engine:
+        bodhi_wrapper = make_bodhi_wrapper(engine) if args.use_bodhi else None
+        with open(out_path, mode) as f:
+            for ex in tqdm(examples):
+                try:
+                    out = generate_response(engine, ex["prompt"], args.use_bodhi, bodhi_wrapper)
+                    trace = {
+                        "prompt_id": ex["prompt_id"],
+                        "messages": ex["prompt"],
+                        "response": out["content"],
+                        "bodhi_analysis": out["analysis"],
+                        "bodhi_metadata": out["metadata"],
+                        "tags": ex.get("example_tags", []),
+                        "source_dataset": ex.get("_source", "unknown"),
+                        "model": args.model,
+                        "bodhi": args.use_bodhi,
+                    }
+                    f.write(json.dumps(trace) + "\n")
+                    f.flush()
+                    ok += 1
+                except Exception as e:
+                    # Full traceback helps distinguish OOM from tokenizer/BODHI bugs
+                    # when a 48h run has a few failures we want to diagnose later.
+                    traceback.print_exc()
+                    print(f"  Error on {ex['prompt_id']}: {e}")
+                    fail += 1
 
     print(f"\nDone: {ok} ok, {fail} failed -> {out_path}")
 

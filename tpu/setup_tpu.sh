@@ -60,6 +60,12 @@ pip install ${PIP_FLAGS} \
     "matplotlib>=3.7,<4.0" \
     -f "${TPU_WHEEL_URL}"
 
+echo "=== Pulling vLLM-TPU Docker image ==="
+# Inference (Stages 1, 2, 4) runs vLLM inside this container rather than via
+# pip install (which installs the CUDA build, not the TPU build).
+# Pull here so the first Stage 1 run doesn't stall waiting for a 20 GB download.
+sudo docker pull vllm/vllm-tpu:latest
+
 echo "=== Final version check ==="
 python3 -c "
 import torch, torch_xla, peft, trl, transformers, accelerate

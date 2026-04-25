@@ -9,53 +9,9 @@ from collections import defaultdict
 from pathlib import Path
 
 import numpy as np
-import torch
 from tqdm import tqdm
-from transformers import AutoModelForCausalLM, AutoTokenizer
 
-# TPU detection — same pattern as train_lora.py.
-# When True: use XLA device, bfloat16, no device_map="auto".
-# Non-AWQ Qwen2.5-14B-Instruct (28 GB in bfloat16) fits on one v4 chip (32 GB).
-try:
-    import torch_xla.core.xla_model as _xm
-    _ON_TPU = True
-except ImportError:
-    _xm = None
-    _ON_TPU = False
-
-# XLA persistent compile cache — same pattern as generate_traces.py.
-if _ON_TPU:
-    try:
-        import os as _os_cache
-        _xla_cache = _os_cache.path.expanduser("~/.xla_cache")
-        _os_cache.makedirs(_xla_cache, exist_ok=True)
-        from torch_xla import runtime as _xr_cache
-        if hasattr(_xr_cache, "initialize_cache"):
-            _xr_cache.initialize_cache(_xla_cache, readonly=False)
-            print(f"XLA persistent compile cache: {_xla_cache}")
-    except Exception as _e:
-        print(f"XLA persistent cache unavailable ({_e!r}); compiles will not be saved.")
-
-# Same DynamicCache shape fix applied in generate_traces.py / eval_healthbench.py.
-# Without this, every grader.grade() call silently fails on XLA after a 15-min
-# compile, and Stage 2 produces 0 graded traces.
-if _ON_TPU:
-    try:
-        from transformers.cache_utils import DynamicLayer
-
-        def _patched_lazy_init(self, key_states):
-            self.dtype = key_states.dtype
-            self.device = key_states.device
-            shape = list(key_states.shape)
-            shape[-2] = 0
-            self.keys = torch.zeros(shape, dtype=self.dtype, device=self.device)
-            self.values = torch.zeros(shape, dtype=self.dtype, device=self.device)
-            self.is_initialized = True
-
-        DynamicLayer.lazy_initialization = _patched_lazy_init
-        print("Applied DynamicLayer.lazy_initialization patch (XLA cache fix)")
-    except (ImportError, AttributeError):
-        pass
+from scripts._vllm_engine import VLLMEngine
 
 # same template as healthbench_eval.py in the upstream repo
 GRADER_TEMPLATE = """
@@ -111,130 +67,14 @@ Return just the json object in markdown format. Do not include any other text in
 
 
 class LocalGrader:
-    def __init__(self, model_name, device="auto"):
-        print(f"Loading grader: {model_name}")
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-        if self.tokenizer.pad_token is None:
-            self.tokenizer.pad_token = self.tokenizer.eos_token
+    """Thin wrapper around VLLMEngine for grading rubric items."""
 
-        if _ON_TPU:
-            # Qwen2.5-14B bfloat16 = 28 GB.  A single v6e chip is 32 GB — that
-            # leaves only ~4 GB for KV cache + activations, which is too tight
-            # under StaticCache (max_new_tokens=512 + prompt 4096 = ~2.5 GB KV
-            # cache alone for a 14B model).  SPMD-shard across all 8 chips so
-            # each holds 1/8 of the weights (~3.5 GB) and we get plenty of
-            # headroom.  Same pattern as scripts/generate_traces.py.
-            #
-            # CORRECT ORDER (the inverse breaks from_pretrained):
-            #   1) from_pretrained on CPU
-            #   2) xr.use_spmd()
-            #   3) move params to XLA + mark_sharding
-            # use_spmd() globally intercepts set_data() — calling it before
-            # from_pretrained makes every internal weight assignment raise
-            # "incompatible tensor type".
+    def __init__(self, engine: VLLMEngine):
+        self.engine = engine
 
-            # Step 1: load on CPU.
-            self.model = AutoModelForCausalLM.from_pretrained(
-                model_name, torch_dtype=torch.bfloat16
-            )
-
-            # Step 2: try to enable SPMD now that the model is loaded.
-            try:
-                from torch_xla import runtime as _xr
-                _xr.use_spmd()
-                _spmd_active = True
-            except (ImportError, AttributeError):
-                _spmd_active = False
-
-            _xs = None
-            if _spmd_active:
-                for _spmd_mod in ("torch_xla.distributed.spmd",
-                                  "torch_xla.experimental.xla_sharding",
-                                  "torch_xla.distributed.xla_sharding"):
-                    try:
-                        import importlib as _il
-                        _xs = _il.import_module(_spmd_mod)
-                        break
-                    except ModuleNotFoundError:
-                        continue
-
-            self._device = _xm.xla_device()
-            if _xs is not None:
-                from torch_xla import runtime as _xr
-                import numpy as _np
-                import torch.nn as _nn
-                _n_dev = getattr(_xr, "addressable_device_count",
-                                 _xr.global_device_count)()
-                if _n_dev < 2:
-                    import os as _os
-                    _vfio = ([d for d in _os.listdir("/dev/vfio") if d.isdigit()]
-                             if _os.path.exists("/dev/vfio") else [])
-                    _n_dev = len(_vfio) or _n_dev
-                _device_ids = _np.arange(_n_dev)
-                _mesh = _xs.Mesh(_device_ids, (_n_dev,), ("tp",))
-                print(f"SPMD: sharding grader across {_n_dev} chips")
-                for _mod in self.model.modules():
-                    for _pname, _p in list(_mod._parameters.items()):
-                        if _p is not None:
-                            _xp = _nn.Parameter(
-                                _p.data.to(self._device),
-                                requires_grad=_p.requires_grad,
-                            )
-                            if _xp.dim() == 2 and _xp.shape[0] > 1024:
-                                _xs.mark_sharding(_xp, _mesh, (0, None))
-                            _mod._parameters[_pname] = _xp
-                    for _bname, _b in list(_mod._buffers.items()):
-                        if _b is not None:
-                            _mod._buffers[_bname] = _b.to(self._device)
-                _xm.mark_step()
-            else:
-                # Fallback: single chip placement.  May OOM under load — log
-                # rather than die mysteriously later.
-                print("WARNING: SPMD unavailable; placing 14B grader on a "
-                      "single chip — may OOM during decode.")
-                self.model = self.model.to(self._device)
-        else:
-            # GPU: bfloat16 + automatic device placement across available GPUs.
-            # (was float16 previously; bfloat16 is more stable and matches training)
-            self.model = AutoModelForCausalLM.from_pretrained(
-                model_name, torch_dtype=torch.bfloat16, device_map=device,
-            )
-            self._device = next(self.model.parameters()).device
-
-        self.model.eval()
-
-    def grade(self, prompt, max_new_tokens=512):
+    def grade(self, prompt: str, max_new_tokens: int = 512) -> str:
         msgs = [{"role": "user", "content": prompt}]
-        text = self.tokenizer.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True)
-        inputs = self.tokenizer(text, return_tensors="pt")
-        if _ON_TPU:
-            # XLA compiles a new graph for every distinct input shape; pad every
-            # grader prompt to a single fixed length (4096 — graders see long
-            # rubric+conversation prompts) so prefill compiles ONCE.  Inputs
-            # longer than the cap are passed through and may trigger one extra
-            # compile, but that's bounded.
-            _fixed_len = 4096
-            _seq_len = inputs["input_ids"].shape[1]
-            if _seq_len < _fixed_len:
-                _pad = _fixed_len - _seq_len
-                _pad_id = self.tokenizer.pad_token_id or 0
-                _pad_ids = torch.full((1, _pad), _pad_id, dtype=inputs["input_ids"].dtype)
-                _pad_mask = torch.zeros((1, _pad), dtype=inputs["attention_mask"].dtype)
-                inputs["input_ids"] = torch.cat([_pad_ids, inputs["input_ids"]], dim=1)
-                inputs["attention_mask"] = torch.cat([_pad_mask, inputs["attention_mask"]], dim=1)
-        prompt_len = inputs["input_ids"].shape[1]
-        inputs = {k: v.to(self._device) for k, v in inputs.items()}
-        with torch.no_grad():
-            # StaticCache: pre-allocate KV cache to max_new_tokens so the decode
-            # graph is one compile instead of N compiles (one per token).
-            _gen_kwargs = dict(max_new_tokens=max_new_tokens, do_sample=False)
-            if _ON_TPU:
-                _gen_kwargs["cache_implementation"] = "static"
-            out = self.model.generate(**inputs, **_gen_kwargs)
-        if _ON_TPU:
-            _xm.mark_step()
-        new_toks = out[0][prompt_len:]
-        return self.tokenizer.decode(new_toks, skip_special_tokens=True)
+        return self.engine.chat(msgs, max_new_tokens=max_new_tokens, temperature=0.0)
 
 
 def parse_json_response(text):
@@ -381,7 +221,6 @@ def main():
 
     random.seed(args.seed)
     np.random.seed(args.seed)
-    torch.manual_seed(args.seed)
     out_dir = Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -393,17 +232,17 @@ def main():
             traces.append(json.loads(line))
     print(f"Loaded {len(traces)} raw traces")
 
-    grader = LocalGrader(args.grader_model)
-
     graded = []
-    for trace in tqdm(traces, desc="Grading"):
-        rubrics = rubrics_by_id.get(trace["prompt_id"])
-        if rubrics is None:
-            print(f"  no rubrics for {trace['prompt_id']}, skipping")
-            continue
-        result = grade_trace(grader, trace["messages"], trace["response"], rubrics)
-        trace["grade"] = result
-        graded.append(trace)
+    with VLLMEngine(args.grader_model) as engine:
+        grader = LocalGrader(engine)
+        for trace in tqdm(traces, desc="Grading"):
+            rubrics = rubrics_by_id.get(trace["prompt_id"])
+            if rubrics is None:
+                print(f"  no rubrics for {trace['prompt_id']}, skipping")
+                continue
+            result = grade_trace(grader, trace["messages"], trace["response"], rubrics)
+            trace["grade"] = result
+            graded.append(trace)
 
     total_parse_failures = sum(t["grade"]["parse_failures"] for t in graded)
     total_rubric_items = sum(len(t["grade"]["criteria_results"]) for t in graded)

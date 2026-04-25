@@ -13,56 +13,13 @@ import sys
 from pathlib import Path
 
 import numpy as np
-import torch
 from tqdm import tqdm
-from transformers import AutoModelForCausalLM, AutoTokenizer, set_seed
-from peft import PeftModel
+from transformers import set_seed
 
 # make sure we can import from scripts/
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from scripts._vllm_engine import VLLMEngine
 from scripts.filter_traces import GRADER_TEMPLATE, LocalGrader, parse_json_response, grade_trace
-
-# TPU detection — same pattern used across the pipeline.
-try:
-    import torch_xla.core.xla_model as _xm
-    _ON_TPU = True
-except ImportError:
-    _xm = None
-    _ON_TPU = False
-
-# XLA persistent compile cache — same pattern as generate_traces.py.
-# Stage 4 runs eval 4× per seed; persistent cache means each LoRA-vs-base
-# graph variant is compiled at most once across all those runs.
-if _ON_TPU:
-    try:
-        _xla_cache = os.path.expanduser("~/.xla_cache")
-        os.makedirs(_xla_cache, exist_ok=True)
-        from torch_xla import runtime as _xr_cache
-        if hasattr(_xr_cache, "initialize_cache"):
-            _xr_cache.initialize_cache(_xla_cache, readonly=False)
-            print(f"XLA persistent compile cache: {_xla_cache}")
-    except Exception as _e:
-        print(f"XLA persistent cache unavailable ({_e!r}); compiles will not be saved.")
-
-# Fix for transformers DynamicCache bug on XLA/TPU — same patch as
-# generate_traces.py; see that file for the full explanation.
-if _ON_TPU:
-    try:
-        from transformers.cache_utils import DynamicLayer
-
-        def _patched_lazy_init(self, key_states):
-            self.dtype = key_states.dtype
-            self.device = key_states.device
-            shape = list(key_states.shape)
-            shape[-2] = 0
-            self.keys = torch.zeros(shape, dtype=self.dtype, device=self.device)
-            self.values = torch.zeros(shape, dtype=self.dtype, device=self.device)
-            self.is_initialized = True
-
-        DynamicLayer.lazy_initialization = _patched_lazy_init
-        print("Applied DynamicLayer.lazy_initialization patch (XLA cache fix)")
-    except (ImportError, AttributeError):
-        pass
 
 HEALTHBENCH_HARD_URL = "https://openaipublic.blob.core.windows.net/simple-evals/healthbench/hard_2025-05-08-21-00-10.jsonl"
 DATA_DIR = Path("data/raw")
@@ -91,276 +48,44 @@ def load_eval_data(sample_ids_path):
     return filtered
 
 
-def load_model(model_name, lora_path=None):
-    print(f"Loading {model_name}...")
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
-    # Gemma chat template emits {{ bos_token }} itself; default tokenize()
-    # would prepend another <bos> on top, producing "<bos><bos>...".  Skip
-    # auto-BOS; the template provides it.
-    if getattr(tokenizer, "add_bos_token", False):
-        tokenizer.add_bos_token = False
-
-    if _ON_TPU:
-        _xs = None
-        for _spmd_mod in ("torch_xla.experimental.xla_sharding",
-                          "torch_xla.distributed.xla_sharding",
-                          "torch_xla.distributed.spmd"):
-            try:
-                import importlib as _il
-                _xs = _il.import_module(_spmd_mod)
-                break
-            except ModuleNotFoundError:
-                continue
-
-        if _xs is not None:
-            from torch_xla import runtime as _xr
-            import numpy as _np
-            # CRITICAL: load model on CPU BEFORE calling use_spmd().
-            # use_spmd() globally intercepts all set_data() calls; if it is
-            # active when from_pretrained() runs, every internal weight
-            # assignment raises "incompatible tensor type".  Safe order:
-            # 1) load to CPU  2) enable SPMD  3) move params to XLA.
-            model = AutoModelForCausalLM.from_pretrained(
-                model_name, torch_dtype=torch.bfloat16
-            )
-            _xr.use_spmd()
-            # global_device_count() returns 1 in SPMD mode (1 virtual device).
-            # addressable_device_count() returns the physical chip count (8 on v6e-8).
-            _n_dev = getattr(_xr, 'addressable_device_count', _xr.global_device_count)()
-            if _n_dev < 2:
-                import os as _os
-                _vfio = [d for d in _os.listdir('/dev/vfio') if d.isdigit()] if _os.path.exists('/dev/vfio') else []
-                _n_dev = len(_vfio) or _n_dev
-            _device_ids = _np.arange(_n_dev)
-            _mesh = _xs.Mesh(_device_ids, (_n_dev,), ("tp",))
-            _dev = _xm.xla_device()
-            print(f"SPMD: sharding model across {_n_dev} chips")
-            import torch.nn as _nn
-            for _mod in model.modules():
-                for _pname, _p in list(_mod._parameters.items()):
-                    if _p is not None:
-                        _xp = _nn.Parameter(
-                            _p.data.to(_dev), requires_grad=_p.requires_grad
-                        )
-                        if _xp.dim() == 2 and _xp.shape[0] > 1024:
-                            _xs.mark_sharding(_xp, _mesh, (0, None))
-                        _mod._parameters[_pname] = _xp
-                for _bname, _b in list(_mod._buffers.items()):
-                    if _b is not None:
-                        _mod._buffers[_bname] = _b.to(_dev)
-            _xm.mark_step()
-            _device = _dev
-        else:
-            import os
-            print("SPMD unavailable; using host CPU for eval")
-            os.environ.setdefault("OMP_NUM_THREADS", str(os.cpu_count() or 8))
-            model = AutoModelForCausalLM.from_pretrained(
-                model_name, torch_dtype=torch.bfloat16, device_map="cpu"
-            )
-            _device = torch.device("cpu")
-    else:
-        model = AutoModelForCausalLM.from_pretrained(
-            model_name, torch_dtype=torch.bfloat16, device_map="auto",
-        )
-        _device = next(model.parameters()).device
-
-    if lora_path:
-        print(f"Loading LoRA adapter from {lora_path}")
-        # NOTE on TPU: do NOT call merge_and_unload().  merge_and_unload
-        # replaces LoRA-wrapped Linears with plain Linears holding merged
-        # weights (base + scale * B @ A) — which destroys the SPMD sharding
-        # annotations on the base weights and gives every chip a full 54 GB
-        # replica → OOM.  The PEFT-wrapped model produces the same outputs as
-        # a merged model anyway (just one extra small matmul per linear).
-        #
-        # Also: PEFT constructs the new lora_A / lora_B Linear modules with
-        # default device = CPU, then loads the adapter weights into them.
-        # Forward would then mix CPU adapter with XLA base → device error.
-        # Move the adapter params onto the XLA device explicitly after load.
-        model = PeftModel.from_pretrained(model, lora_path)
-        if _ON_TPU and _device is not None:
-            import torch.nn as _nn
-            for _name, _p in list(model.named_parameters()):
-                # Adapter param names contain 'lora_' (lora_A.default.weight,
-                # lora_B.default.weight, lora_embedding_*, etc.).
-                if "lora_" in _name and _p is not None and _p.device != _device:
-                    # Replace the parameter on its parent module so the new
-                    # XLA tensor is what forward() sees.
-                    _parent_path, _, _attr = _name.rpartition(".")
-                    _parent = model.get_submodule(_parent_path)
-                    _xp = _nn.Parameter(_p.data.to(_device),
-                                        requires_grad=_p.requires_grad)
-                    setattr(_parent, _attr, _xp)
-            _xm.mark_step()
-        # Don't merge — we keep the PEFT wrapper so the SPMD-sharded base
-        # weights stay sharded.
-
-    model.eval()
-    return model, tokenizer, _device
-
-
-def _tpu_pad_short_inputs(inputs, tokenizer, fixed_len=4096):
-    """Pad inputs to a single fixed length on CPU before moving to XLA.
-
-    XLA compiles a new graph for every distinct input shape; for a 27B SPMD
-    model each compile takes 20-30 min.  Padding everything to one fixed
-    length means one prefill compile covers ALL eval examples.  4096 (vs the
-    previous 2048) has the same redundancy budget the trace generator does:
-    BOHDI two-pass response-prompts can hit ~3000 tokens, and a single
-    overflow blows ~30 minutes on a fresh compile.
-    """
-    seq_len = inputs["input_ids"].shape[1]
-    if seq_len > fixed_len:
-        # Don't silently truncate; surface so the cap can be bumped.  The
-        # fresh compile is bounded — only fires for the first overflow.
-        print(f"WARN: eval input ({seq_len} tok) exceeds fixed pad ({fixed_len}); "
-              f"this triggers a fresh XLA compile (~30 min).")
-        return inputs
-    if seq_len == fixed_len:
-        return inputs
-    pad = fixed_len - seq_len
-    pad_id = tokenizer.pad_token_id or 0
-    pad_ids = torch.full((1, pad), pad_id, dtype=inputs["input_ids"].dtype)
-    pad_mask = torch.zeros((1, pad), dtype=inputs["attention_mask"].dtype)
-    return {
-        "input_ids": torch.cat([pad_ids, inputs["input_ids"]], dim=1),
-        "attention_mask": torch.cat([pad_mask, inputs["attention_mask"]], dim=1),
-    }
-
-
-def make_bodhi_wrapper(model, tokenizer, device, max_new_tokens=1024):
-    """Build a reusable BODHI wrapper around the given model."""
+def make_bodhi_wrapper(engine: VLLMEngine):
+    """Build a reusable BODHI wrapper backed by a vLLM engine."""
     from bodhi import BODHI, BODHIConfig
-
-    def chat_fn(msgs):
-        text = tokenizer.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True)
-        inputs = tokenizer(text, return_tensors="pt")
-        if _ON_TPU:
-            inputs = _tpu_pad_short_inputs(inputs, tokenizer)
-        prompt_len = inputs["input_ids"].shape[1]
-        inputs = {k: v.to(device) for k, v in inputs.items()}
-        _gen_kwargs = dict(max_new_tokens=max_new_tokens, do_sample=False)
-        if _ON_TPU:
-            _gen_kwargs["cache_implementation"] = "static"
-        with torch.no_grad():
-            out = model.generate(**inputs, **_gen_kwargs)
-        return tokenizer.decode(out[0][prompt_len:], skip_special_tokens=True)
-
+    chat_fn = lambda msgs: engine.chat(msgs)
     return BODHI(chat_function=chat_fn, config=BODHIConfig(domain="medical"))
 
 
-def gen_response(model, tokenizer, device, messages, use_bodhi, bodhi_wrapper=None, max_new_tokens=1024):
+def gen_response(engine: VLLMEngine, messages, use_bodhi, bodhi_wrapper=None, max_new_tokens=1024):
+    """Return (response_text, token_logprobs).
+
+    token_logprobs is a list of per-output-token log-probs from the generation
+    call itself (logprobs=True on vLLM).  For the BODHI path we can't intercept
+    the internal calls, so logprobs are None there.
+    """
     if not use_bodhi:
-        text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-        inputs = tokenizer(text, return_tensors="pt")
-        if _ON_TPU:
-            inputs = _tpu_pad_short_inputs(inputs, tokenizer)
-        prompt_len = inputs["input_ids"].shape[1]
-        inputs = {k: v.to(device) for k, v in inputs.items()}
-        _gen_kwargs = dict(max_new_tokens=max_new_tokens, do_sample=False)
-        if _ON_TPU:
-            _gen_kwargs["cache_implementation"] = "static"
-        with torch.no_grad():
-            out = model.generate(**inputs, **_gen_kwargs)
-        return tokenizer.decode(out[0][prompt_len:], skip_special_tokens=True)
+        text, token_logprobs = engine.chat_with_logprobs(messages, max_new_tokens)
+        return text, token_logprobs
 
     resp = bodhi_wrapper.complete(messages)
-    return resp.content
+    return resp.content, None
 
 
-def _longest_common_prefix_len(lhs, rhs):
-    """Return the shared token-prefix length between two token-id sequences."""
-    prefix_len = 0
-    for left_tok, right_tok in zip(lhs, rhs):
-        if left_tok != right_tok:
-            break
-        prefix_len += 1
-    return prefix_len
+def score_response_confidence(token_logprobs):
+    """Derive confidence metrics from per-output-token log-probs.
 
-
-def score_response_confidence(model, tokenizer, messages, response_text):
-    """Score the emitted response under the model and derive a confidence proxy.
-
-    We use the geometric mean token probability of the response tokens given the
-    prompt. This is length-normalized, model-derived, and works for both plain
-    generations and BOHDI-wrapped responses.
-
-    Per the Hugging Face chat templating docs, text produced by
-    ``apply_chat_template(tokenize=False)`` should later be tokenized with
-    ``add_special_tokens=False`` to avoid duplicating special tokens.
+    token_logprobs is the list returned by VLLMEngine.chat_with_logprobs —
+    piggybacked from the generation call itself, so no extra forward pass needed.
+    Returns None fields when logprobs are unavailable (e.g. BODHI path).
     """
-    prompt_text = tokenizer.apply_chat_template(
-        messages,
-        tokenize=False,
-        add_generation_prompt=True,
-    )
-    prompt_tokens = tokenizer(
-        prompt_text,
-        return_tensors="pt",
-        add_special_tokens=False,
-    )["input_ids"]
-    full_tokens = tokenizer(
-        prompt_text + response_text,
-        return_tensors="pt",
-        add_special_tokens=False,
-    )["input_ids"]
-
-    prompt_len = _longest_common_prefix_len(
-        prompt_tokens[0].tolist(),
-        full_tokens[0].tolist(),
-    )
-    if prompt_len < 1 or full_tokens.shape[1] <= prompt_len:
+    if not token_logprobs:
         return {
             "response_token_count": 0,
             "mean_token_logprob": None,
             "geomean_token_prob": None,
         }
-
-    response_token_count = full_tokens.shape[1] - prompt_len
-
-    # On TPU: pad inputs to a single fixed length (4096) so XLA compiles ONE
-    # forward graph for the confidence pass and reuses it across all 200 eval
-    # examples.  Without this each unique (prompt+response) length would
-    # trigger a fresh compile (10-30 min each) — making confidence scoring
-    # unusable in practice.  4096 budget: ~700-2000 token prompt (HealthBench
-    # Hard worst case) + up to 1024 response tokens + slack = comfortable.
-    if _ON_TPU:
-        _fixed = 4096
-        _seq = full_tokens.shape[1]
-        if _seq > _fixed:
-            # extremely rare for HealthBench prompts; truncate from the LEFT
-            # to preserve the response tail (the part we score).
-            full_tokens = full_tokens[:, _seq - _fixed:]
-            prompt_len = max(0, prompt_len - (_seq - _fixed))
-            _seq = _fixed
-        if _seq < _fixed:
-            _pad_n = _fixed - _seq
-            _pad_id = tokenizer.pad_token_id or 0
-            _pad_t = torch.full((1, _pad_n), _pad_id, dtype=full_tokens.dtype)
-            # left-pad so the response tail stays at the right edge (where the
-            # logits-shift below expects it).  prompt_len shifts by _pad_n.
-            full_tokens = torch.cat([_pad_t, full_tokens], dim=1)
-            prompt_len = prompt_len + _pad_n
-
-    full_tokens = full_tokens.to(model.device if hasattr(model, "device") else _xm.xla_device())
-    with torch.no_grad():
-        outputs = model(full_tokens)
-
-    target_ids = full_tokens[:, prompt_len:]
-    response_logits = outputs.logits[:, prompt_len - 1:-1, :]
-    token_log_probs = torch.log_softmax(response_logits, dim=-1).gather(
-        -1, target_ids.unsqueeze(-1)
-    ).squeeze(-1)
-    # When we left-padded, the logprobs at pad positions are meaningless;
-    # but with our left-pad scheme prompt_len already points past the pads,
-    # so target_ids contains only the real response tokens. No mask needed.
-    # response_token_count is the real (pre-pad) length saved above.
-
-    mean_logprob = float(token_log_probs.mean().item())
+    mean_logprob = float(np.mean(token_logprobs))
     return {
-        "response_token_count": int(response_token_count),
+        "response_token_count": len(token_logprobs),
         "mean_token_logprob": mean_logprob,
         "geomean_token_prob": float(np.exp(mean_logprob)),
     }
@@ -439,11 +164,6 @@ def _safe_git_sha():
 
 
 def collect_run_metadata(seed, grader_model):
-    gpu_names = []
-    if torch.cuda.is_available():
-        for idx in range(torch.cuda.device_count()):
-            gpu_names.append(torch.cuda.get_device_properties(idx).name)
-
     return {
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
         "git_sha": _safe_git_sha(),
@@ -452,9 +172,6 @@ def collect_run_metadata(seed, grader_model):
         "bodhi_version": _safe_package_version("bodhi-llm"),
         "transformers_version": _safe_package_version("transformers"),
         "peft_version": _safe_package_version("peft"),
-        "torch_version": torch.__version__,
-        "n_gpus": len(gpu_names),
-        "gpu_names": gpu_names,
     }
 
 
@@ -470,48 +187,63 @@ def main():
     parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
 
-    # Eval uses greedy decoding so scores are deterministic given fixed inputs,
-    # but BODHI internals + grader may sample — seed for stability across reruns.
+    # Greedy decoding is deterministic; seed covers BODHI internals + grader sampling.
     random.seed(args.seed)
     np.random.seed(args.seed)
-    torch.manual_seed(args.seed)
     set_seed(args.seed)
 
     examples = load_eval_data(args.sample_ids)
     if args.max_examples:
         examples = examples[:args.max_examples]
 
-    model, tokenizer, device = load_model(args.model, args.lora_path)
-    grader = LocalGrader(args.grader_model)
-
-    bodhi_wrapper = make_bodhi_wrapper(model, tokenizer, device) if args.use_bodhi else None
-
     tag = f"{'lora' if args.lora_path else 'base'}_{'bodhi' if args.use_bodhi else 'no_wrapper'}"
     print(f"\nEval: {tag}  ({len(examples)} examples)\n")
 
+    # ── Pass 1: generate responses with the inference engine ─────────────────
+    # Run inference and grading sequentially on the same 8 chips to avoid
+    # dual-server port conflicts.  VLLMEngine.__exit__ kills the container
+    # before the grader engine starts.
+    raw_generations = []  # list of {prompt_id, messages, rubrics, response, token_logprobs}
+    with VLLMEngine(args.model, lora_path=args.lora_path) as engine:
+        bodhi_wrapper = make_bodhi_wrapper(engine) if args.use_bodhi else None
+        for ex in tqdm(examples, desc=f"{tag} [inference]"):
+            resp, token_logprobs = gen_response(
+                engine, ex["prompt"], args.use_bodhi, bodhi_wrapper
+            )
+            raw_generations.append({
+                "prompt_id": ex["prompt_id"],
+                "messages": ex["prompt"],
+                "rubrics": ex["rubrics"],
+                "response": resp,
+                "token_logprobs": token_logprobs,
+            })
+    print(f"Generated {len(raw_generations)} responses; starting grader engine...")
+
+    # ── Pass 2: grade with the grader engine ──────────────────────────────────
     all_results = []
     scores = []
     model_confidences = []
     total_parse_failures = 0
     total_rubric_items = 0
-    for ex in tqdm(examples, desc=tag):
-        resp = gen_response(model, tokenizer, device, ex["prompt"], args.use_bodhi, bodhi_wrapper)
-        confidence = score_response_confidence(model, tokenizer, ex["prompt"], resp)
-        grade = grade_trace(grader, ex["prompt"], resp, ex["rubrics"])
-        all_results.append({
-            "prompt_id": ex["prompt_id"], "response": resp,
-            "score": grade["overall_score"], "tag_scores": grade["tag_scores"],
-            "criteria_results": grade["criteria_results"],
-            "parse_failures": grade["parse_failures"],
-            "model_confidence_geomean_prob": confidence["geomean_token_prob"],
-            "model_confidence_mean_token_logprob": confidence["mean_token_logprob"],
-            "response_token_count": confidence["response_token_count"],
-        })
-        scores.append(grade["overall_score"])
-        if confidence["geomean_token_prob"] is not None:
-            model_confidences.append(confidence["geomean_token_prob"])
-        total_parse_failures += grade["parse_failures"]
-        total_rubric_items += len(grade["criteria_results"])
+    with VLLMEngine(args.grader_model) as grader_engine:
+        grader = LocalGrader(grader_engine)
+        for item in tqdm(raw_generations, desc=f"{tag} [grading]"):
+            confidence = score_response_confidence(item["token_logprobs"])
+            grade = grade_trace(grader, item["messages"], item["response"], item["rubrics"])
+            all_results.append({
+                "prompt_id": item["prompt_id"], "response": item["response"],
+                "score": grade["overall_score"], "tag_scores": grade["tag_scores"],
+                "criteria_results": grade["criteria_results"],
+                "parse_failures": grade["parse_failures"],
+                "model_confidence_geomean_prob": confidence["geomean_token_prob"],
+                "model_confidence_mean_token_logprob": confidence["mean_token_logprob"],
+                "response_token_count": confidence["response_token_count"],
+            })
+            scores.append(grade["overall_score"])
+            if confidence["geomean_token_prob"] is not None:
+                model_confidences.append(confidence["geomean_token_prob"])
+            total_parse_failures += grade["parse_failures"]
+            total_rubric_items += len(grade["criteria_results"])
 
     model_brier = compute_brier_score(all_results, "model_confidence_geomean_prob")
     model_ece = compute_ece(all_results, "model_confidence_geomean_prob")
