@@ -103,9 +103,19 @@ for slot in "${TRC_SLOTS[@]}"; do
                 --format="value(name,state)" 2>/dev/null \
                 | grep "^${TPU_NAME}\b" | awk '{print $2}')
             echo "  state: ${STATE:-(gone)}"
-            # VM vanished (deleted or preempted during CREATING) — fall through to fresh create
-            if [ -z "$STATE" ] || [ "$STATE" = "DELETING" ]; then
-                echo "VM $TPU_NAME disappeared from $_ZONE, will try a fresh create."
+            # VM is unusable — fall through to fresh create.  PREEMPTED is the
+            # spot-preemption end state; the VM still exists (gcloud lists it)
+            # but cannot run our pipeline.  Without this branch, the loop hangs
+            # forever waiting for READY.  HIDDEN/UNHIDING are GCP admin states
+            # that can also stick — treat the same way.
+            if [ -z "$STATE" ] || [ "$STATE" = "DELETING" ] \
+               || [ "$STATE" = "PREEMPTED" ] \
+               || [ "$STATE" = "HIDDEN" ] || [ "$STATE" = "UNHIDING" ]; then
+                echo "VM $TPU_NAME unusable in $_ZONE (state=$STATE), will delete + try fresh create."
+                # Delete the unusable VM ourselves so the create attempt
+                # below doesn't hit ALREADY_EXISTS.
+                gcloud compute tpus tpu-vm delete "$TPU_NAME" \
+                    --zone="$_ZONE" --project="$PROJECT" --quiet 2>/dev/null || true
                 break
             fi
         done
