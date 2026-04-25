@@ -295,7 +295,11 @@ fi
 # --xla_gpu_force_compilation_parallelism=8 in the env; appending any
 # unrecognised flag (like --xla_persistent_cache_dir) causes a FATAL
 # "Unknown flags in XLA_FLAGS" crash before the first forward pass.
-_MAX=${MAX_EXAMPLES:-4800}
+# Hard-only training set. HealthBench Hard has 1000 prompts; we hold out 200
+# for evaluation (data/raw/hard_200_sample_ids.json), leaving 800 unique
+# prompts for trace generation. --exclude-ids prevents the 200 eval prompts
+# from leaking into training. Default cap of 800 = "all available trainable".
+_MAX=${MAX_EXAMPLES:-800}
 gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
     --zone="$ZONE" --project="$PROJECT" \
     --command="
@@ -305,7 +309,8 @@ export HF_TOKEN='${HF_TOKEN}'
 rm -f /tmp/gen_stage1.log
 nohup python scripts/generate_traces.py \
     --model google/medgemma-27b-text-it \
-    --datasets healthbench_hard healthbench \
+    --datasets healthbench_hard \
+    --exclude-ids data/raw/hard_200_sample_ids.json \
     --output data/sft/raw_traces.jsonl \
     --resume-from data/sft/raw_traces.jsonl \
     --use-bodhi \
