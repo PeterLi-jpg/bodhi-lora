@@ -219,7 +219,8 @@ nohup python scripts/generate_traces.py \
     > /tmp/gen_stage1.log 2>&1 &
 echo \$! > /tmp/gen_stage1.pid
 echo 'Stage 1 running in background (PID '\$(cat /tmp/gen_stage1.pid)')'
-"
+" || true  # XLA model-load pins all TPU CPUs; SSH teardown may timeout (exit 255)
+           # — the nohup process is running; the polling loop handles failure detection.
 
 TARGET="${_MAX}"
 echo "Polling Stage 1 progress (target: ${TARGET} traces)..."
