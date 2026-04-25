@@ -30,6 +30,20 @@ except ImportError:
     _xm = None
     _ON_TPU = False
 
+# XLA persistent compile cache — same pattern as generate_traces.py.
+# Stage 4 runs eval 4× per seed; persistent cache means each LoRA-vs-base
+# graph variant is compiled at most once across all those runs.
+if _ON_TPU:
+    try:
+        _xla_cache = os.path.expanduser("~/.xla_cache")
+        os.makedirs(_xla_cache, exist_ok=True)
+        from torch_xla import runtime as _xr_cache
+        if hasattr(_xr_cache, "initialize_cache"):
+            _xr_cache.initialize_cache(_xla_cache, readonly=False)
+            print(f"XLA persistent compile cache: {_xla_cache}")
+    except Exception as _e:
+        print(f"XLA persistent cache unavailable ({_e!r}); compiles will not be saved.")
+
 # Fix for transformers DynamicCache bug on XLA/TPU — same patch as
 # generate_traces.py; see that file for the full explanation.
 if _ON_TPU:
@@ -187,19 +201,26 @@ def load_model(model_name, lora_path=None):
     return model, tokenizer, _device
 
 
-def _tpu_pad_short_inputs(inputs, tokenizer, min_len=2048):
-    """Pad inputs to a fixed length on CPU before moving to XLA.
+def _tpu_pad_short_inputs(inputs, tokenizer, fixed_len=4096):
+    """Pad inputs to a single fixed length on CPU before moving to XLA.
 
     XLA compiles a new graph for every distinct input shape; for a 27B SPMD
-    model each compile takes 20-30 min.  Padding everything to a single fixed
-    length (2048) means one prefill compile covers all HealthBench prompts.
-    2048 compiles ~4x faster than 4096 (attention is O(n^2) in sequence len)
-    and still satisfies the sliding-window minimum of 1024.
+    model each compile takes 20-30 min.  Padding everything to one fixed
+    length means one prefill compile covers ALL eval examples.  4096 (vs the
+    previous 2048) has the same redundancy budget the trace generator does:
+    BOHDI two-pass response-prompts can hit ~3000 tokens, and a single
+    overflow blows ~30 minutes on a fresh compile.
     """
     seq_len = inputs["input_ids"].shape[1]
-    if seq_len >= min_len:
+    if seq_len > fixed_len:
+        # Don't silently truncate; surface so the cap can be bumped.  The
+        # fresh compile is bounded — only fires for the first overflow.
+        print(f"WARN: eval input ({seq_len} tok) exceeds fixed pad ({fixed_len}); "
+              f"this triggers a fresh XLA compile (~30 min).")
         return inputs
-    pad = min_len - seq_len
+    if seq_len == fixed_len:
+        return inputs
+    pad = fixed_len - seq_len
     pad_id = tokenizer.pad_token_id or 0
     pad_ids = torch.full((1, pad), pad_id, dtype=inputs["input_ids"].dtype)
     pad_mask = torch.zeros((1, pad), dtype=inputs["attention_mask"].dtype)
@@ -297,7 +318,33 @@ def score_response_confidence(model, tokenizer, messages, response_text):
             "geomean_token_prob": None,
         }
 
-    full_tokens = full_tokens.to(model.device)
+    response_token_count = full_tokens.shape[1] - prompt_len
+
+    # On TPU: pad inputs to a single fixed length (4096) so XLA compiles ONE
+    # forward graph for the confidence pass and reuses it across all 200 eval
+    # examples.  Without this each unique (prompt+response) length would
+    # trigger a fresh compile (10-30 min each) — making confidence scoring
+    # unusable in practice.  4096 budget: ~700-2000 token prompt (HealthBench
+    # Hard worst case) + up to 1024 response tokens + slack = comfortable.
+    if _ON_TPU:
+        _fixed = 4096
+        _seq = full_tokens.shape[1]
+        if _seq > _fixed:
+            # extremely rare for HealthBench prompts; truncate from the LEFT
+            # to preserve the response tail (the part we score).
+            full_tokens = full_tokens[:, _seq - _fixed:]
+            prompt_len = max(0, prompt_len - (_seq - _fixed))
+            _seq = _fixed
+        if _seq < _fixed:
+            _pad_n = _fixed - _seq
+            _pad_id = tokenizer.pad_token_id or 0
+            _pad_t = torch.full((1, _pad_n), _pad_id, dtype=full_tokens.dtype)
+            # left-pad so the response tail stays at the right edge (where the
+            # logits-shift below expects it).  prompt_len shifts by _pad_n.
+            full_tokens = torch.cat([_pad_t, full_tokens], dim=1)
+            prompt_len = prompt_len + _pad_n
+
+    full_tokens = full_tokens.to(model.device if hasattr(model, "device") else _xm.xla_device())
     with torch.no_grad():
         outputs = model(full_tokens)
 
@@ -306,10 +353,14 @@ def score_response_confidence(model, tokenizer, messages, response_text):
     token_log_probs = torch.log_softmax(response_logits, dim=-1).gather(
         -1, target_ids.unsqueeze(-1)
     ).squeeze(-1)
+    # When we left-padded, the logprobs at pad positions are meaningless;
+    # but with our left-pad scheme prompt_len already points past the pads,
+    # so target_ids contains only the real response tokens. No mask needed.
+    # response_token_count is the real (pre-pad) length saved above.
 
     mean_logprob = float(token_log_probs.mean().item())
     return {
-        "response_token_count": int(target_ids.shape[1]),
+        "response_token_count": int(response_token_count),
         "mean_token_logprob": mean_logprob,
         "geomean_token_prob": float(np.exp(mean_logprob)),
     }

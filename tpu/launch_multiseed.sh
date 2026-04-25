@@ -28,6 +28,13 @@ fi
 SEEDS="${SEEDS:-42 123 456}"
 GCS_DATA_PATH="${GCS_DATA_PATH:-}"
 
+# Optional Stage 4 eval cap.  Default empty = run on the full 200-prompt
+# HealthBench Hard holdout.  Set EVAL_MAX=50 (or similar) for smoke runs to
+# cut Stage 4 wall clock 4x.  Each config (4 per seed) honors the cap.
+EVAL_MAX="${EVAL_MAX:-}"
+_EVAL_MAX_FLAG=""
+[ -n "$EVAL_MAX" ] && _EVAL_MAX_FLAG="--max-examples ${EVAL_MAX}"
+
 # Optional training-method overrides (TPU: 4bit/8bit will error; only variant/rank).
 #   LORA_VARIANT=dora bash tpu/launch_multiseed.sh
 #   LORA_VARIANT=rslora bash tpu/launch_multiseed.sh
@@ -451,10 +458,10 @@ for SEED in $SEEDS; do
     IDS="data/raw/hard_200_sample_ids.json"
     HB="data/raw/healthbench_hard.jsonl data/raw/healthbench.jsonl"
     EVAL_CMD="set -e; mkdir -p ${EVAL_DIR} ${FIG_DIR}"
-    EVAL_CMD="${EVAL_CMD} && python scripts/eval_healthbench.py --model ${MODEL} --sample-ids ${IDS} --output ${EVAL_DIR}/base_no_wrapper.json"
-    EVAL_CMD="${EVAL_CMD} && python scripts/eval_healthbench.py --model ${MODEL} --use-bodhi --sample-ids ${IDS} --output ${EVAL_DIR}/base_bodhi.json"
-    EVAL_CMD="${EVAL_CMD} && python scripts/eval_healthbench.py --model ${MODEL} --lora-path ${LORA} --sample-ids ${IDS} --output ${EVAL_DIR}/lora_no_wrapper.json"
-    EVAL_CMD="${EVAL_CMD} && python scripts/eval_healthbench.py --model ${MODEL} --lora-path ${LORA} --use-bodhi --sample-ids ${IDS} --output ${EVAL_DIR}/lora_bodhi.json"
+    EVAL_CMD="${EVAL_CMD} && python scripts/eval_healthbench.py --model ${MODEL} --sample-ids ${IDS} ${_EVAL_MAX_FLAG} --output ${EVAL_DIR}/base_no_wrapper.json"
+    EVAL_CMD="${EVAL_CMD} && python scripts/eval_healthbench.py --model ${MODEL} --use-bodhi --sample-ids ${IDS} ${_EVAL_MAX_FLAG} --output ${EVAL_DIR}/base_bodhi.json"
+    EVAL_CMD="${EVAL_CMD} && python scripts/eval_healthbench.py --model ${MODEL} --lora-path ${LORA} --sample-ids ${IDS} ${_EVAL_MAX_FLAG} --output ${EVAL_DIR}/lora_no_wrapper.json"
+    EVAL_CMD="${EVAL_CMD} && python scripts/eval_healthbench.py --model ${MODEL} --lora-path ${LORA} --use-bodhi --sample-ids ${IDS} ${_EVAL_MAX_FLAG} --output ${EVAL_DIR}/lora_bodhi.json"
     EVAL_CMD="${EVAL_CMD} && python scripts/eval_ushape.py --eval-jsons ${EVAL_DIR}/base_no_wrapper.json ${EVAL_DIR}/base_bodhi.json ${EVAL_DIR}/lora_no_wrapper.json ${EVAL_DIR}/lora_bodhi.json --healthbench ${HB} --output ${EVAL_DIR}/ushape.json"
     EVAL_CMD="${EVAL_CMD} && python scripts/plot_ushape.py --input ${EVAL_DIR}/ushape.json --eval-jsons ${EVAL_DIR}/base_no_wrapper.json ${EVAL_DIR}/base_bodhi.json ${EVAL_DIR}/lora_no_wrapper.json ${EVAL_DIR}/lora_bodhi.json --healthbench ${HB} --n-bins 10 --out-dir ${FIG_DIR}"
     EVAL_CMD="${EVAL_CMD} && (if [ -f ${LORA}/trainer_state.json ]; then python scripts/plot_training.py --trainer-state ${LORA}/trainer_state.json --output ${FIG_DIR}/training_loss.png; fi)"

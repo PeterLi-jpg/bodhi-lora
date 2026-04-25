@@ -38,6 +38,23 @@ except ImportError:
     _xm = None
     _ON_TPU = False
 
+# XLA persistent compile cache — first run on a fresh VM compiles the
+# 27B-with-LoRA training graph (~40-60 min), subsequent runs (each seed,
+# resumes after preemption) load it from disk and skip compile entirely.
+# Cache lives on the boot disk under ~/.xla_cache.  Safe to set before
+# use_spmd() — initialize_cache only configures a path, doesn't intercept.
+if _ON_TPU:
+    try:
+        import os as _os_cache
+        _xla_cache = _os_cache.path.expanduser("~/.xla_cache")
+        _os_cache.makedirs(_xla_cache, exist_ok=True)
+        from torch_xla import runtime as _xr_cache
+        if hasattr(_xr_cache, "initialize_cache"):
+            _xr_cache.initialize_cache(_xla_cache, readonly=False)
+            print(f"XLA persistent compile cache: {_xla_cache}")
+    except Exception as _e:
+        print(f"XLA persistent cache unavailable ({_e!r}); compiles will not be saved.")
+
 # Why this matters:
 #   v6e-8 has 8 chips × 32 GB = 256 GB HBM.  MedGemma-27B in bfloat16 is 54 GB.
 #   accelerate's default TPU path (distributed_type=TPU + num_processes=8) gives

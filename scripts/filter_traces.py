@@ -23,6 +23,19 @@ except ImportError:
     _xm = None
     _ON_TPU = False
 
+# XLA persistent compile cache — same pattern as generate_traces.py.
+if _ON_TPU:
+    try:
+        import os as _os_cache
+        _xla_cache = _os_cache.path.expanduser("~/.xla_cache")
+        _os_cache.makedirs(_xla_cache, exist_ok=True)
+        from torch_xla import runtime as _xr_cache
+        if hasattr(_xr_cache, "initialize_cache"):
+            _xr_cache.initialize_cache(_xla_cache, readonly=False)
+            print(f"XLA persistent compile cache: {_xla_cache}")
+    except Exception as _e:
+        print(f"XLA persistent cache unavailable ({_e!r}); compiles will not be saved.")
+
 # Same DynamicCache shape fix applied in generate_traces.py / eval_healthbench.py.
 # Without this, every grader.grade() call silently fails on XLA after a 15-min
 # compile, and Stage 2 produces 0 graded traces.

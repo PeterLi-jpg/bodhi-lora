@@ -23,6 +23,24 @@ except ImportError:
     _xm = None
     _ON_TPU = False
 
+# XLA persistent compile cache — first run on a fresh VM still pays the
+# 30-60 min compile once per stage, but every subsequent invocation on the
+# SAME VM (e.g. resume after preemption, retry after a crash, or running
+# Stage 4 against the same 27B graph that Stage 1 compiled) loads the
+# compiled program directly and skips compile.  Cache lives on the boot
+# disk, survives reboots, dies with the VM.
+if _ON_TPU:
+    try:
+        import os as _os
+        _xla_cache = _os.path.expanduser("~/.xla_cache")
+        _os.makedirs(_xla_cache, exist_ok=True)
+        from torch_xla import runtime as _xr_cache
+        if hasattr(_xr_cache, "initialize_cache"):
+            _xr_cache.initialize_cache(_xla_cache, readonly=False)
+            print(f"XLA persistent compile cache: {_xla_cache}")
+    except Exception as _e:
+        print(f"XLA persistent cache unavailable ({_e!r}); compiles will not be saved.")
+
 # Fix for transformers DynamicCache bug on XLA/TPU.
 #
 # In transformers 4.57+, DynamicLayer.lazy_initialization() creates
@@ -229,9 +247,14 @@ class LocalModel:
             # XLA compiles a new graph for every distinct input shape, and each
             # compile takes 20-30 min for a 27B SPMD model.  Pad ALL prompts to
             # one fixed length so the entire run shares a single prefill graph.
-            # 2048 covers all HealthBench prompts (typically 500-1500 tokens) and
-            # compiles ~4x faster than 4096 (attention is O(n^2) in sequence len).
-            _fixed_len = 2048
+            #
+            # Why 4096 (not 2048): the BOHDI two-pass response-prompt is
+            # template (~500) + original case (up to 1500) + Pass 1 analysis
+            # (up to 1024 generated tokens) ≈ up to 3000 tokens.  At 2048 even
+            # a 5% overflow rate over 800 traces means ~40 fresh compiles ×
+            # ~30 min = 20 hours of wasted compile.  4096 has comfortable
+            # margin and pays it back in one ~2x slower forward.
+            _fixed_len = 4096
             _seq_len = inputs["input_ids"].shape[1]
             if _seq_len < _fixed_len:
                 _pad = _fixed_len - _seq_len
@@ -240,6 +263,11 @@ class LocalModel:
                 _pad_mask = torch.zeros((1, _pad), dtype=inputs["attention_mask"].dtype)
                 inputs["input_ids"] = torch.cat([_pad_ids, inputs["input_ids"]], dim=1)
                 inputs["attention_mask"] = torch.cat([_pad_mask, inputs["attention_mask"]], dim=1)
+            elif _seq_len > _fixed_len:
+                # Surface this rather than silently triggering a fresh compile.
+                # If it ever fires, bump _fixed_len.
+                print(f"WARN: input ({_seq_len} tok) exceeds fixed pad ({_fixed_len}); "
+                      f"this triggers a fresh XLA compile (~30 min).")
         prompt_len = inputs["input_ids"].shape[1]
         inputs = {k: v.to(self._device) for k, v in inputs.items()}
         with torch.no_grad():
