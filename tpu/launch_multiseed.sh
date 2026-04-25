@@ -187,22 +187,24 @@ if [ -f "./results/_rescue/raw_traces.jsonl" ]; then
 fi
 
 # Stage 1 full run: nohup + polling so SSH drops during the 4-8 hour
-# generation don't kill the process.  Poll every 5 min; expect ~4800 traces.
+# generation don't kill the process.  Poll every 5 min.
 #
 # Root cause of previous "hang at 0/1": XLA compiles the 27B SPMD graph on the
 # first forward pass, pinning all host CPUs for 20-40 min and dropping SSH.
 # The process was never dead — it just looked that way from a blocking SSH.
-# Fix: (a) nohup so the process survives SSH drops, (b) XLA persistent cache
-# so compiled graphs are saved to disk and reused for same-shape inputs within
-# the run (avoids recompiling the decode graph on every new prompt shape).
+# Fix: nohup so the process survives SSH drops.
+#
+# NOTE: do NOT set XLA_FLAGS here.  The TPU runtime already sets
+# --xla_gpu_force_compilation_parallelism=8 in the env; appending any
+# unrecognised flag (like --xla_persistent_cache_dir) causes a FATAL
+# "Unknown flags in XLA_FLAGS" crash before the first forward pass.
+_MAX=${MAX_EXAMPLES:-4800}
 gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
     --zone="$ZONE" --project="$PROJECT" \
     --command="
 export PATH=\"\$HOME/.local/bin:\$PATH\"
 cd ~/bohdi-lora
 export HF_TOKEN='${HF_TOKEN}'
-mkdir -p /tmp/xla_cache
-export XLA_FLAGS=\"\${XLA_FLAGS:+\${XLA_FLAGS} }--xla_persistent_cache_dir=/tmp/xla_cache\"
 rm -f /tmp/gen_stage1.log
 nohup python scripts/generate_traces.py \
     --model google/medgemma-27b-text-it \
@@ -210,14 +212,15 @@ nohup python scripts/generate_traces.py \
     --output data/sft/raw_traces.jsonl \
     --resume-from data/sft/raw_traces.jsonl \
     --use-bodhi \
-    --max-examples \${MAX_EXAMPLES:-4800} \
+    --max-examples ${_MAX} \
     > /tmp/gen_stage1.log 2>&1 &
 echo \$! > /tmp/gen_stage1.pid
 echo 'Stage 1 running in background (PID '\$(cat /tmp/gen_stage1.pid)')'
 "
 
-echo "Polling Stage 1 progress (target: ${MAX_EXAMPLES:-4800} traces)..."
-TARGET="${MAX_EXAMPLES:-4800}"
+TARGET="${_MAX}"
+echo "Polling Stage 1 progress (target: ${TARGET} traces)..."
+_ssh_misses=0   # consecutive polls where SSH timed out (returned nothing)
 for i in $(seq 1 576); do   # 576 × 5 min = 48 hours max
     sleep 300
     N=$(gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
@@ -227,12 +230,31 @@ for i in $(seq 1 576); do   # 576 × 5 min = 48 hours max
     echo "  Stage 1 poll $i: ${N:-0}/$TARGET traces"
     if [ "${N:-0}" -ge "$TARGET" ]; then
         echo "Stage 1 complete: $TARGET traces written."
+        _ssh_misses=0
         break
     fi
     ALIVE=$(gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
         --zone="$ZONE" --project="$PROJECT" \
         --command="pgrep -f generate_traces.py > /dev/null 2>&1 && echo alive || echo dead" 2>/dev/null \
         | grep -E '^(alive|dead)$' | tail -1)
+    if [ -z "$ALIVE" ]; then
+        # SSH timed out — TPU CPUs may be pinned during XLA compilation.
+        # Allow up to 6 consecutive misses (~30 min) before giving up.
+        _ssh_misses=$(( _ssh_misses + 1 ))
+        echo "  (SSH timeout on alive-check, miss $_ssh_misses/6)"
+        if [ "$_ssh_misses" -ge 6 ]; then
+            echo "ERROR: 6 consecutive SSH timeouts — process presumed dead."
+            echo "--- last 40 lines of gen_stage1.log ---"
+            gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
+                --zone="$ZONE" --project="$PROJECT" \
+                --command="tail -40 /tmp/gen_stage1.log 2>/dev/null || echo '(log not found)'" \
+                2>/dev/null || true
+            echo "--- end log ---"
+            exit 1
+        fi
+        continue
+    fi
+    _ssh_misses=0
     if [ "$ALIVE" = "dead" ]; then
         echo "Stage 1 process exited with ${N:-0}/$TARGET traces."
         # If we got 0 traces, something crashed early — print the log so we
