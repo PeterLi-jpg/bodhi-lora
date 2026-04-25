@@ -405,7 +405,26 @@ def main():
         "train": load_sft_jsonl(train_file),
         "validation": load_sft_jsonl(val_file),
     }
-    print(f"Train ({train_file}): {len(ds['train'])}  Val ({val_file}): {len(ds['validation'])}")
+    train_size = len(ds["train"])
+    val_size = len(ds["validation"])
+    print(f"Train ({train_file}): {train_size}  Val ({val_file}): {val_size}")
+
+    eval_dataset = ds["validation"] if val_size > 0 else None
+    eval_strategy = train_cfg["eval_strategy"]
+    # Disable best-model selection on TPU: the PEFT adapter reload at end of
+    # training calls model.load_state_dict() which under active SPMD invokes
+    # set_data on every adapter param.  Even though adapters are unsharded,
+    # the interception path is fragile — and the failure happens AFTER the
+    # last save, inside trainer.train(), so we'd lose the whole multi-hour
+    # run.  Use the LAST checkpoint instead (with cosine LR + 3 epochs the
+    # last is typically the best anyway).
+    load_best_model_at_end = not _ON_TPU
+    metric_for_best_model = "eval_loss" if load_best_model_at_end else None
+    if eval_dataset is None:
+        print("Validation split is empty; disabling eval_strategy and best-model selection.")
+        eval_strategy = "no"
+        load_best_model_at_end = False
+        metric_for_best_model = None
 
     # only compute loss on the assistant response, not on the prompt tokens
     response_template = find_response_template(_tokenizer)
@@ -418,14 +437,6 @@ def main():
     # derive bf16 from torch_dtype so the two flags can't diverge
     use_bf16 = train_cfg.get("bf16", dtype == torch.bfloat16)
 
-    # On TPU, load_best_model_at_end=True is risky: the PEFT adapter reload
-    # at end-of-training calls model.load_state_dict() which under active SPMD
-    # invokes set_data on every adapter param.  Even though adapters are
-    # unsharded, the interception path is fragile.  If it fails, we lose the
-    # entire multi-hour training run because the failure happens AFTER the
-    # last save, inside trainer.train().  Use the LAST checkpoint instead —
-    # with cosine LR + 3 epochs the last is typically best anyway.
-    _load_best = not _ON_TPU
     training_args = SFTConfig(
         output_dir=args.output_dir,
         num_train_epochs=train_cfg["num_epochs"],
@@ -436,15 +447,13 @@ def main():
         lr_scheduler_type=train_cfg["lr_scheduler_type"],
         logging_steps=train_cfg["logging_steps"],
         save_strategy=train_cfg["save_strategy"],
-        eval_strategy=train_cfg["eval_strategy"],
+        eval_strategy=eval_strategy,
         bf16=use_bf16,
         seed=seed,
         data_seed=seed,
         report_to="none",
-        load_best_model_at_end=_load_best,
-        # metric_for_best_model is only consulted when load_best_model_at_end
-        # is True, so leave it set for the GPU path.
-        metric_for_best_model="eval_loss" if _load_best else None,
+        load_best_model_at_end=load_best_model_at_end,
+        metric_for_best_model=metric_for_best_model,
         save_total_limit=3,
         gradient_checkpointing=True,
         max_seq_length=train_cfg.get("max_seq_length", 4096),
@@ -455,7 +464,7 @@ def main():
         args=training_args,
         peft_config=_peft_for_trainer,
         train_dataset=ds["train"],
-        eval_dataset=ds["validation"],
+        eval_dataset=eval_dataset,
         tokenizer=_tokenizer,
         data_collator=collator,
         formatting_func=format_example,

@@ -7,7 +7,7 @@ import pytest
 
 # mock heavy deps before import
 from unittest.mock import MagicMock
-for mod in ["torch", "transformers", "tqdm", "numpy", "peft"]:
+for mod in ["torch", "transformers", "tqdm", "peft"]:
     if mod not in sys.modules:
         sys.modules[mod] = MagicMock()
 

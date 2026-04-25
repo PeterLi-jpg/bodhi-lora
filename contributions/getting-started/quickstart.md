@@ -15,6 +15,12 @@ bash smoke.sh
 
 This runs the full four-stage pipeline (generate → filter → train → eval) on `gemma-3n-E4B-it` with 3 examples. Expected runtime: under 10 minutes on a single GPU.
 
+If you only want an ungated local wiring check, override the smoke model explicitly:
+
+```bash
+SMOKE_MODEL=Qwen/Qwen2.5-0.5B-Instruct bash smoke.sh
+```
+
 Expected outputs:
 
 ```

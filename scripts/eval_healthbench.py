@@ -4,7 +4,6 @@ import argparse
 from datetime import datetime, timezone
 from importlib import metadata
 import json
-import math
 import os
 import random
 import subprocess
@@ -250,24 +249,95 @@ def gen_response(model, tokenizer, device, messages, use_bodhi, bodhi_wrapper=No
     return resp.content
 
 
-# -- calibration metrics --
+def _longest_common_prefix_len(lhs, rhs):
+    """Return the shared token-prefix length between two token-id sequences."""
+    prefix_len = 0
+    for left_tok, right_tok in zip(lhs, rhs):
+        if left_tok != right_tok:
+            break
+        prefix_len += 1
+    return prefix_len
 
-def compute_brier_score(results):
-    """Brier score across all individual rubric criteria.
 
-    Each criterion is a binary prediction: the model either meets it or not.
-    We treat the overall example score (clamped to [0, 1]) as the model's
-    "confidence" and each criterion outcome as the ground truth.  Lower is better.
+def score_response_confidence(model, tokenizer, messages, response_text):
+    """Score the emitted response under the model and derive a confidence proxy.
+
+    We use the geometric mean token probability of the response tokens given the
+    prompt. This is length-normalized, model-derived, and works for both plain
+    generations and BOHDI-wrapped responses.
+
+    Per the Hugging Face chat templating docs, text produced by
+    ``apply_chat_template(tokenize=False)`` should later be tokenized with
+    ``add_special_tokens=False`` to avoid duplicating special tokens.
     """
+    prompt_text = tokenizer.apply_chat_template(
+        messages,
+        tokenize=False,
+        add_generation_prompt=True,
+    )
+    prompt_tokens = tokenizer(
+        prompt_text,
+        return_tensors="pt",
+        add_special_tokens=False,
+    )["input_ids"]
+    full_tokens = tokenizer(
+        prompt_text + response_text,
+        return_tensors="pt",
+        add_special_tokens=False,
+    )["input_ids"]
+
+    prompt_len = _longest_common_prefix_len(
+        prompt_tokens[0].tolist(),
+        full_tokens[0].tolist(),
+    )
+    if prompt_len < 1 or full_tokens.shape[1] <= prompt_len:
+        return {
+            "response_token_count": 0,
+            "mean_token_logprob": None,
+            "geomean_token_prob": None,
+        }
+
+    full_tokens = full_tokens.to(model.device)
+    with torch.no_grad():
+        outputs = model(full_tokens)
+
+    target_ids = full_tokens[:, prompt_len:]
+    response_logits = outputs.logits[:, prompt_len - 1:-1, :]
+    token_log_probs = torch.log_softmax(response_logits, dim=-1).gather(
+        -1, target_ids.unsqueeze(-1)
+    ).squeeze(-1)
+
+    mean_logprob = float(token_log_probs.mean().item())
+    return {
+        "response_token_count": int(target_ids.shape[1]),
+        "mean_token_logprob": mean_logprob,
+        "geomean_token_prob": float(np.exp(mean_logprob)),
+    }
+
+
+# -- confidence / calibration-style metrics --
+
+def _collect_binary_labels(results, confidence_key):
+    """Expand per-example confidence into per-criterion binary labels."""
     y_true = []
     y_pred = []
-    for r in results:
-        conf = max(0.0, min(1.0, r["score"]))
-        for crit in r["criteria_results"]:
-            # positive-point criteria only (negative ones are penalties, not predictions)
-            if crit["points"] > 0:
-                y_true.append(1.0 if crit["criteria_met"] else 0.0)
-                y_pred.append(conf)
+    for result in results:
+        confidence = result.get(confidence_key)
+        if confidence is None:
+            continue
+        confidence = max(0.0, min(1.0, float(confidence)))
+        for criterion in result["criteria_results"]:
+            # Positive-point criteria are the only ones that behave like
+            # correctness labels; negative-point criteria are penalties.
+            if criterion["points"] > 0:
+                y_true.append(1.0 if criterion["criteria_met"] else 0.0)
+                y_pred.append(confidence)
+    return y_true, y_pred
+
+
+def compute_brier_score(results, confidence_key):
+    """Brier score across positive-point rubric criteria."""
+    y_true, y_pred = _collect_binary_labels(results, confidence_key)
     if not y_true:
         return None
     y_true = np.array(y_true)
@@ -275,20 +345,9 @@ def compute_brier_score(results):
     return float(np.mean((y_pred - y_true) ** 2))
 
 
-def compute_ece(results, n_bins=10):
-    """Expected Calibration Error with equal-width bins.
-
-    Same setup as Brier: example score (clamped to [0, 1]) is the predicted
-    confidence, individual criterion outcomes are the labels.
-    """
-    y_true = []
-    y_pred = []
-    for r in results:
-        conf = max(0.0, min(1.0, r["score"]))
-        for crit in r["criteria_results"]:
-            if crit["points"] > 0:
-                y_true.append(1.0 if crit["criteria_met"] else 0.0)
-                y_pred.append(conf)
+def compute_ece(results, confidence_key, n_bins=10):
+    """Expected Calibration Error with equal-width bins."""
+    y_true, y_pred = _collect_binary_labels(results, confidence_key)
     if not y_true:
         return None
 
@@ -381,23 +440,32 @@ def main():
 
     all_results = []
     scores = []
+    model_confidences = []
     total_parse_failures = 0
     total_rubric_items = 0
     for ex in tqdm(examples, desc=tag):
         resp = gen_response(model, tokenizer, device, ex["prompt"], args.use_bodhi, bodhi_wrapper)
+        confidence = score_response_confidence(model, tokenizer, ex["prompt"], resp)
         grade = grade_trace(grader, ex["prompt"], resp, ex["rubrics"])
         all_results.append({
             "prompt_id": ex["prompt_id"], "response": resp,
             "score": grade["overall_score"], "tag_scores": grade["tag_scores"],
             "criteria_results": grade["criteria_results"],
             "parse_failures": grade["parse_failures"],
+            "model_confidence_geomean_prob": confidence["geomean_token_prob"],
+            "model_confidence_mean_token_logprob": confidence["mean_token_logprob"],
+            "response_token_count": confidence["response_token_count"],
         })
         scores.append(grade["overall_score"])
+        if confidence["geomean_token_prob"] is not None:
+            model_confidences.append(confidence["geomean_token_prob"])
         total_parse_failures += grade["parse_failures"]
         total_rubric_items += len(grade["criteria_results"])
 
-    brier = compute_brier_score(all_results)
-    ece = compute_ece(all_results)
+    model_brier = compute_brier_score(all_results, "model_confidence_geomean_prob")
+    model_ece = compute_ece(all_results, "model_confidence_geomean_prob")
+    grader_brier = compute_brier_score(all_results, "score")
+    grader_ece = compute_ece(all_results, "score")
     parse_fail_rate = (total_parse_failures / total_rubric_items) if total_rubric_items else None
 
     summary = {
@@ -408,12 +476,19 @@ def main():
         "mean": float(np.mean(scores)) if scores else None,
         "std": float(np.std(scores)) if scores else None,
         "median": float(np.median(scores)) if scores else None,
-        # NOTE: brier/ece here are NOT proper model-calibration metrics —
-        # the "confidence" used is the evaluator's overall score, not a
-        # model-derived probability. See issue #1. Treat as grader-internal
-        # consistency measures, not calibration.
-        "brier_grader_consistency": brier,
-        "ece_grader_consistency": ece,
+        "model_confidence_method": (
+            "geometric_mean_token_probability over the emitted response, "
+            "computed from next-token logprobs conditioned on the prompt"
+        ),
+        "mean_model_confidence": (
+            float(np.mean(model_confidences)) if model_confidences else None
+        ),
+        "brier_model_calibration": model_brier,
+        "ece_model_calibration": model_ece,
+        # Keep the legacy grader-derived fields so older comparisons do not
+        # silently break, but label them explicitly as grader consistency.
+        "brier_grader_consistency": grader_brier,
+        "ece_grader_consistency": grader_ece,
         "grader_parse_failure_rate": parse_fail_rate,
         "grader_parse_failures_total": total_parse_failures,
         "grader_rubric_items_total": total_rubric_items,
@@ -425,15 +500,18 @@ def main():
     with open(out, "w") as f:
         json.dump(summary, f, indent=2)
 
-    brier_str = f"{brier:.4f}" if brier is not None else "n/a"
-    ece_str = f"{ece:.4f}" if ece is not None else "n/a"
+    model_brier_str = f"{model_brier:.4f}" if model_brier is not None else "n/a"
+    model_ece_str = f"{model_ece:.4f}" if model_ece is not None else "n/a"
+    grader_brier_str = f"{grader_brier:.4f}" if grader_brier is not None else "n/a"
+    grader_ece_str = f"{grader_ece:.4f}" if grader_ece is not None else "n/a"
     mean_str = f"{summary['mean']:.4f}" if summary['mean'] is not None else "n/a"
     std_str = f"{summary['std']:.4f}" if summary['std'] is not None else "n/a"
     fail_str = f"{parse_fail_rate*100:.2f}%" if parse_fail_rate is not None else "n/a"
     print(f"\n{tag}: score={mean_str} +/- {std_str}  "
-          f"brier*={brier_str}  ece*={ece_str}  "
+          f"model_brier={model_brier_str}  model_ece={model_ece_str}  "
+          f"grader_brier*={grader_brier_str}  grader_ece*={grader_ece_str}  "
           f"grader_parse_fail={fail_str}  -> {out}")
-    print("  (* brier/ece measure grader-internal consistency, not model calibration; issue #1)")
+    print("  (* grader_brier / grader_ece are legacy grader-consistency proxies)")
 
 
 if __name__ == "__main__":

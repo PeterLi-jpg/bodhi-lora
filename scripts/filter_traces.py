@@ -286,8 +286,19 @@ def grade_trace(grader, prompt_messages, response_text, rubric_items, max_retrie
         })
 
     total_pos = sum(r["points"] for r in results if r["points"] > 0)
+    total_abs = sum(abs(r["points"]) for r in results)
     earned = sum(r["points"] for r in results if r["criteria_met"])
+    positive_items = [r for r in results if r["points"] > 0]
+    positive_items_met = sum(1 for r in positive_items if r["criteria_met"])
+
+    # ``overall_score`` preserves the historical behavior so existing runs are
+    # comparable. The extra score views make issue #4 auditable without
+    # silently changing the default training filter.
     score = earned / total_pos if total_pos > 0 else 0.0
+    absolute_score = earned / total_abs if total_abs > 0 else 0.0
+    positive_rate = (
+        positive_items_met / len(positive_items) if positive_items else 0.0
+    )
 
     # per-tag breakdown
     tag_items = defaultdict(list)
@@ -302,6 +313,15 @@ def grade_trace(grader, prompt_messages, response_text, rubric_items, max_retrie
 
     return {
         "overall_score": score,
+        "absolute_point_score": absolute_score,
+        "positive_criteria_rate": positive_rate,
+        "score_components": {
+            "earned_points": earned,
+            "positive_point_total": total_pos,
+            "absolute_point_total": total_abs,
+            "positive_criteria_total": len(positive_items),
+            "positive_criteria_met": positive_items_met,
+        },
         "criteria_results": results,
         "tag_scores": tag_scores,
         "parse_failures": parse_failures,
@@ -333,6 +353,14 @@ def main():
     )
     parser.add_argument("--output-dir", required=True)
     parser.add_argument("--min-score", type=float, default=0.4)
+    parser.add_argument(
+        "--score-field",
+        default="overall_score",
+        choices=["overall_score", "absolute_point_score", "positive_criteria_rate"],
+        help="which grade field to threshold on. "
+             "Default keeps the historical behavior; the alternatives make "
+             "issue #4 easier to audit without changing the default pipeline.",
+    )
     parser.add_argument("--val-ratio", type=float, default=0.1)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--graded-output", default=None, help="save all graded traces for debugging")
@@ -381,10 +409,13 @@ def main():
                 f.write(json.dumps(item) + "\n")
         print(f"All graded traces -> {p}")
 
-    kept = [t for t in graded if t["grade"]["overall_score"] >= args.min_score]
-    print(f"Kept {len(kept)}/{len(graded)} (threshold={args.min_score})")
+    kept = [t for t in graded if t["grade"][args.score_field] >= args.min_score]
+    print(
+        f"Kept {len(kept)}/{len(graded)} "
+        f"(score_field={args.score_field}, threshold={args.min_score})"
+    )
 
-    scores = [t["grade"]["overall_score"] for t in graded]
+    scores = [t["grade"][args.score_field] for t in graded]
     if scores:
         print(f"Scores: min={min(scores):.3f} max={max(scores):.3f} "
               f"mean={sum(scores)/len(scores):.3f} median={statistics.median(scores):.3f}")

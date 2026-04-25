@@ -47,15 +47,23 @@ export HF_TOKEN=hf_...
 ```bash
 git clone https://github.com/PeterLi-jpg/bohdi-lora.git
 cd bohdi-lora
+python3 -m venv .venv
+source .venv/bin/activate
 bash setup.sh
 ```
 
 `setup.sh`:
-1. Creates `logs/ data/raw/ data/sft/ eval/ checkpoints/`
-2. `pip install -r requirements.txt`
-3. Downloads HealthBench Hard + Full + Consensus into `data/raw/`
+1. Prints a loud warning if you install into a base/shared Python, including Conda `base`
+2. Creates `logs/ data/raw/ data/sft/ eval/ checkpoints/`
+3. Runs `python -m pip install -r requirements.txt`
+4. Runs `python -m pip check`
+5. Downloads HealthBench Hard + Full + Consensus into `data/raw/`
 
-If `pip install` fails on `autoawq`, you are on macOS — that is expected and handled by a platform marker.
+Expected macOS install messages:
+- `Ignoring autoawq` — expected, Linux/CUDA only
+- `Ignoring bitsandbytes` — expected, Linux/CUDA only
+
+If `pip check` fails after install, the active environment already contains unrelated packages with incompatible constraints. Use a fresh virtualenv or project-specific conda env and rerun `bash setup.sh`.
 
 ## 4a. Full pipeline — TPU (Google TRC)
 
@@ -151,6 +159,8 @@ gcloud compute ssh $NAME --zone=$ZONE
 # --- inside the VM ---
 git clone https://github.com/PeterLi-jpg/bohdi-lora.git
 cd bohdi-lora
+python3 -m venv .venv
+source .venv/bin/activate
 export HF_TOKEN=hf_...      # paste yours; gemma-3n-E4B-it is gated
 bash setup.sh
 # Run smoke and write to a log. DO NOT use `bash smoke.sh | tee`: piping
@@ -176,11 +186,17 @@ N_EXAMPLES=10 bash smoke.sh
 
 Validated on an M4 Max / 64 GB on 2026-04-16 — full pipeline ran in ~40 min at N_EXAMPLES=10. `bash smoke.sh` starts with a preflight check (scripts/preflight.py) that fails in ~10s if HF_TOKEN is wrong, a gated model isn't accessible, or a dep is missing, so env problems surface before trace generation.
 
+If you only want a completely ungated local wiring check, override the model explicitly:
+
+```bash
+SMOKE_MODEL=Qwen/Qwen2.5-0.5B-Instruct bash smoke.sh
+```
+
 Expected outputs:
 - `data/sft/smoke/raw_traces.jsonl` — 3 BOHDI traces
 - `data/sft/smoke/{train,val}.jsonl` — split of the graded traces
 - `checkpoints/best/` — LoRA adapter saved by SFTTrainer
-- `eval/smoke/lora.json` — eval summary with `mean`, `std`, `brier`, `ece`
+- `eval/smoke/lora.json` — eval summary with `mean`, `std`, `brier_model_calibration`, `ece_model_calibration`, and the legacy `*_grader_consistency` fields
 
 If any stage errors, fix it before moving to the full pipeline. Do not submit slurm jobs with a broken smoke test.
 
@@ -195,6 +211,8 @@ export HF_TOKEN=hf_...
 
 bash run_all.sh
 ```
+
+`run_all.sh` archives train and eval artifacts under `results/<date>_<config>_seed<N>/`.
 
 This submits four jobs as a dependency chain (`--dependency=afterok`):
 
@@ -257,7 +275,10 @@ Each per-config file contains:
   "config": "...",
   "n_examples": 200,
   "mean": 0.XX, "std": 0.XX, "median": 0.XX,
-  "brier": 0.XX, "ece": 0.XX,
+  "brier_model_calibration": 0.XX,
+  "ece_model_calibration": 0.XX,
+  "brier_grader_consistency": 0.XX,
+  "ece_grader_consistency": 0.XX,
   "results": [...]
 }
 ```
@@ -407,3 +428,13 @@ After `pip install -r requirements.txt`, capture the exact versions for later:
 pip freeze > requirements.lock.txt
 ```
 Commit `requirements.lock.txt` alongside your results so reviewers can reproduce the env.
+
+## 9. Hygiene
+
+Before opening a PR, run:
+
+```bash
+bash scripts/check_no_secrets.sh
+```
+
+This scans tracked files for common Hugging Face, OpenAI, and AWS token patterns. Generated outputs under `logs/`, `checkpoints/`, `eval/`, `data/sft/`, and `results/` are gitignored on purpose.

@@ -132,13 +132,16 @@ def main():
     if missing:
         errors.append("import failures:\n" + "\n".join(missing))
 
-    token_errs = check_hf_token()
-    if token_errs:
-        errors.append("HF_TOKEN:\n" + "\n".join(token_errs))
-    elif not args.skip_hf_access:
-        access_errs = check_hf_access(args.models)
-        if access_errs:
-            errors.append("HF access:\n" + "\n".join(access_errs))
+    if not args.skip_hf_access:
+        token_errs = check_hf_token()
+        if token_errs:
+            errors.append("HF_TOKEN:\n" + "\n".join(token_errs))
+        else:
+            access_errs = check_hf_access(args.models)
+            if access_errs:
+                errors.append("HF access:\n" + "\n".join(access_errs))
+    else:
+        print("  skipping HF_TOKEN and model-access checks")
 
     gpu_errs = check_gpu()
     if gpu_errs:

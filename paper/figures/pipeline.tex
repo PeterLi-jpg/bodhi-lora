@@ -1,0 +1,45 @@
+\begin{tikzpicture}[
+  font=\small,
+  box/.style={
+    draw,
+    very thick,
+    rounded corners=3pt,
+    align=center,
+    text width=3.1cm,
+    minimum height=1.8cm,
+    inner sep=6pt,
+  },
+  flow/.style={-{Latex[length=3mm]}, very thick},
+  stage_a/.style={box, draw=blue!55!black, fill=blue!7},
+  stage_b/.style={box, draw=teal!55!black, fill=teal!8},
+  stage_c/.style={box, draw=green!45!black, fill=green!9},
+  stage_d/.style={box, draw=orange!70!black, fill=orange!11},
+  stage_e/.style={box, draw=red!55!black, fill=red!8},
+  note/.style={
+    draw,
+    dashed,
+    rounded corners=4pt,
+    inner sep=7pt,
+    align=center,
+    font=\footnotesize,
+  },
+]
+
+\node[stage_a] (prompts) {1. HealthBench prompts\\Full + Hard\\minus 200 holdout};
+\node[stage_b, right=8mm of prompts] (wrapper) {2. BOHDI traces\\base model + wrapper\\greedy decoding};
+\node[stage_c, right=8mm of wrapper] (grader) {3. Rubric grading\\Qwen grader\\per criterion};
+\node[stage_d, right=8mm of grader] (filter) {4. Filter + split\\score threshold\\90/10 train-val};
+\node[stage_e, right=8mm of filter] (serve) {5. LoRA SFT + eval\\4 configs on holdout\\\textbf{serve time: no wrapper}};
+
+\draw[flow] (prompts) -- (wrapper);
+\draw[flow] (wrapper) -- (grader);
+\draw[flow] (grader) -- (filter);
+\draw[flow] (filter) -- (serve);
+
+\node[note, draw=teal!60!black, fit=(prompts)(wrapper)(grader)] (train_scope) {};
+\node[font=\footnotesize, above=1mm of train_scope] {training-time wrapper distillation};
+
+\node[note, draw=red!60!black, fill=red!4, below=7mm of serve, text width=3.2cm] (serve_note) {Adapter is evaluated and served without the wrapper.};
+\draw[flow, red!60!black] (serve.south) -- (serve_note.north);
+
+\end{tikzpicture}

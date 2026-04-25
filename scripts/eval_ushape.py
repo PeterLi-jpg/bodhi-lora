@@ -274,6 +274,9 @@ def main():
             "overall": overall,
             # legacy fields kept for backward compatibility with older consumers
             "overall_mean": ev.get("mean"),
+            "overall_brier_model_calibration": ev.get("brier_model_calibration"),
+            "overall_ece_model_calibration": ev.get("ece_model_calibration"),
+            "model_confidence_method": ev.get("model_confidence_method"),
             # renamed in eval_healthbench.py to reflect that these are NOT
             # model-calibration measures; see issue #1. fall back to legacy names.
             "overall_brier_grader_consistency": (

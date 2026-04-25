@@ -39,7 +39,15 @@ source .venv/bin/activate        # Mac / Linux
 bash setup.sh
 ```
 
-`setup.sh` runs `pip install -r requirements.txt` and creates the working directories (`logs/`, `data/`, `eval/`, `checkpoints/`). If `autoawq` fails on macOS, that is expected — it is Linux/CUDA-only and a platform marker skips it automatically.
+`setup.sh` now:
+- checks that a virtualenv or conda env is active
+- prints the active Python interpreter
+- runs `python -m pip install -r requirements.txt`
+- runs `python -m pip check`
+- creates the working directories (`logs/`, `data/`, `eval/`, `checkpoints/`)
+- downloads the HealthBench files into `data/raw/`
+
+If you run `setup.sh` in system Python or Conda `base`, it will print a loud warning first and continue. That path can still work, but it is the most common reason for unclear dependency conflicts. The recommended path is still a fresh env created just for this repo. Expected macOS message: `Ignoring autoawq` and `Ignoring bitsandbytes` because both are Linux/CUDA-only.
 
 ## Step 4 — Set your HuggingFace token
 

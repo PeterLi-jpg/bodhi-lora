@@ -27,6 +27,7 @@ if [ -z "${HF_TOKEN:-}" ]; then
 fi
 export HF_TOKEN
 RUN_DIR="${1:-${RUN_DIR:-results/manual_run}}"
+SECOND_GRADER_MODEL="${SECOND_GRADER_MODEL:-}"
 
 mkdir -p "$RUN_DIR/eval" "$RUN_DIR/figures"
 
@@ -53,6 +54,55 @@ python scripts/eval_healthbench.py --model "$MODEL" --lora-path "$LORA" --sample
 
 echo "--- lora + bodhi ---"
 python scripts/eval_healthbench.py --model "$MODEL" --lora-path "$LORA" --use-bodhi --sample-ids "$IDS" --output "$RUN_DIR/eval/lora_bodhi.json"
+
+if [ -n "$SECOND_GRADER_MODEL" ]; then
+    SECOND_GRADER_TAG="${SECOND_GRADER_TAG:-$(printf '%s' "$SECOND_GRADER_MODEL" | tr '/:' '__')}"
+    SECOND_GRADER_DIR="$RUN_DIR/eval/cross_grader/$SECOND_GRADER_TAG"
+    mkdir -p "$SECOND_GRADER_DIR"
+
+    echo "--- second grader pass: $SECOND_GRADER_MODEL ---"
+    python scripts/eval_healthbench.py \
+        --model "$MODEL" \
+        --sample-ids "$IDS" \
+        --grader-model "$SECOND_GRADER_MODEL" \
+        --output "$SECOND_GRADER_DIR/base_no_wrapper.json"
+
+    python scripts/eval_healthbench.py \
+        --model "$MODEL" \
+        --use-bodhi \
+        --sample-ids "$IDS" \
+        --grader-model "$SECOND_GRADER_MODEL" \
+        --output "$SECOND_GRADER_DIR/base_bodhi.json"
+
+    python scripts/eval_healthbench.py \
+        --model "$MODEL" \
+        --lora-path "$LORA" \
+        --sample-ids "$IDS" \
+        --grader-model "$SECOND_GRADER_MODEL" \
+        --output "$SECOND_GRADER_DIR/lora_no_wrapper.json"
+
+    python scripts/eval_healthbench.py \
+        --model "$MODEL" \
+        --lora-path "$LORA" \
+        --use-bodhi \
+        --sample-ids "$IDS" \
+        --grader-model "$SECOND_GRADER_MODEL" \
+        --output "$SECOND_GRADER_DIR/lora_bodhi.json"
+
+    echo "--- grader correlation report ---"
+    python scripts/grader_correlation.py \
+        --reference-jsons \
+            "$RUN_DIR/eval/base_no_wrapper.json" \
+            "$RUN_DIR/eval/base_bodhi.json" \
+            "$RUN_DIR/eval/lora_no_wrapper.json" \
+            "$RUN_DIR/eval/lora_bodhi.json" \
+        --candidate-jsons \
+            "$SECOND_GRADER_DIR/base_no_wrapper.json" \
+            "$SECOND_GRADER_DIR/base_bodhi.json" \
+            "$SECOND_GRADER_DIR/lora_no_wrapper.json" \
+            "$SECOND_GRADER_DIR/lora_bodhi.json" \
+        --output "$SECOND_GRADER_DIR/correlation.json"
+fi
 
 echo "--- U-shape stratified analysis ---"
 python scripts/eval_ushape.py \

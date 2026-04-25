@@ -39,6 +39,8 @@ bash setup.sh
 export HF_TOKEN=hf_...
 ```
 
+`setup.sh` prints a loud warning if you run it outside an isolated env, and Conda `base` is treated as shared here too because it is a common source of vague dependency conflicts. It also runs `python -m pip check` after install so broken environments fail clearly instead of much later in training.
+
 ### Windows
 
 Use [WSL2](https://learn.microsoft.com/en-us/windows/wsl/install) (Ubuntu) and follow the Mac/Linux steps above. Native Windows is not tested.
@@ -64,7 +66,7 @@ The smoke test runs the full pipeline end-to-end on a small model (`gemma-3n-E4B
 bash smoke.sh
 ```
 
-Expected runtime: under 10 minutes on a single GPU. If this passes, the full pipeline should work.
+Expected runtime: under 10 minutes on a single GPU. If this passes, the full pipeline should work. If you do not have HF access yet and only want a local wiring check, run `SMOKE_MODEL=Qwen/Qwen2.5-0.5B-Instruct bash smoke.sh`.
 
 ---
 
@@ -76,7 +78,7 @@ Jobs are submitted as a Slurm dependency chain:
 bash run_all.sh
 ```
 
-Outputs are archived under `results/<date>_<config>_seed<N>/`. See [REPRODUCIBILITY.md](REPRODUCIBILITY.md) for expected outputs and troubleshooting.
+Outputs are archived under `results/<date>_<config>_seed<N>/`. See [reproducibility.md](reproducibility.md) for expected outputs and troubleshooting.
 
 ---
 
@@ -92,9 +94,9 @@ pip install pytest
 pytest tests/ -v
 ```
 
-Tests that require `matplotlib` are automatically skipped if it is not installed. Tests that require `torch`/`transformers` are not run in CI (GPU environment only).
+Tests that require `matplotlib` are automatically skipped if it is not installed. Pure-logic tests that touch `torch` / `transformers` paths use mocks, so they still run in CI.
 
-To run the full test suite including calibration metric tests, install the complete dependencies first:
+To run the full suite against the real ML stack as well, install the complete dependencies first:
 
 ```bash
 pip install -r requirements.txt
@@ -143,8 +145,7 @@ bohdi-lora/
 ├── smoke.sh          # End-to-end smoke test (<10 min)
 ├── run_all.sh        # Full pipeline slurm dependency chain
 ├── setup.sh          # One-time environment setup
-├── CONTRIBUTING.md   # This file
-├── REPRODUCIBILITY.md
+├── contributions/    # Docs, setup, and reproducibility guides
 ├── KNOWN_ISSUES.md
 └── requirements.txt
 ```

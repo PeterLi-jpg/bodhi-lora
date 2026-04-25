@@ -18,7 +18,7 @@ TRL probes `formatting_func` on a single example first to decide whether it retu
 ## Documented, deferred to discussion
 
 ### [#1] Brier / ECE do not measure model calibration — PARTIALLY ADDRESSED
-The implementation uses the evaluator's rubric score as "confidence" and compares it against rubric outcomes from the same grading pass. That is grader-internal consistency, not model calibration. **Action taken**: the fields in eval output are renamed to `brier_grader_consistency` / `ece_grader_consistency` with an in-file comment, and the console summary now flags them (`brier*`/`ece*` with a footnote). **Still open for discussion**: whether to remove these metrics entirely or replace them with a model-derived confidence signal (logprob-based, explicit confidence output, or similar).
+The old implementation used the evaluator's rubric score as "confidence" and compared it against rubric outcomes from the same grading pass. That was grader-internal consistency, not model calibration. **Action taken**: eval output now includes `brier_model_calibration` / `ece_model_calibration`, using the geometric mean next-token probability of the emitted response as a model-derived confidence proxy, while keeping the legacy `brier_grader_consistency` / `ece_grader_consistency` fields for backward comparison. **Still open for discussion**: whether the response-level logprob proxy is strong enough for the paper, or whether the final claim should move to a richer confidence protocol (verbalized confidence, abstention head, or similar).
 
 ### [#3] Same grader for filtering and final evaluation — OPEN
 `filter_traces.py` and `eval_healthbench.py` default to the same grader family (`Qwen/Qwen2.5-14B-Instruct-AWQ`). This couples training-data selection to the evaluator used for claimed gains. **Mitigation paths**:
@@ -26,10 +26,14 @@ The implementation uses the evaluator's rubric score as "confidence" and compare
 - Report final results under a second independent grader and compare
 - Keep filter grader ≠ eval grader as policy
 
+Infrastructure now exists for an optional second grader pass via `SECOND_GRADER_MODEL=... sbatch slurm/eval_lora.sh`, plus `scripts/grader_correlation.py` to report Spearman correlation and large per-example disagreements. The paper claim remains open until a second grader is actually chosen and run.
+
 Needs team agreement before any ablation is blessed as final.
 
 ### [#4] Inconsistent filtering-score normalization — OPEN
 Score formula is `sum_of_met_points / sum_of_positive_points`. Negative rubric items contribute to the numerator as penalties but not to the denominator, so a fixed `--min-score 0.4` threshold is not comparable across prompts with different penalty structure. Data selection is therefore partially a function of rubric geometry, not just response quality.
+
+`filter_traces.py` now exposes alternate score views (`absolute_point_score`, `positive_criteria_rate`) plus `--score-field` so this can be audited without silently changing the historical default. The main pipeline still defaults to `overall_score`, so the methodological choice is still unresolved.
 
 **Options to consider**:
 - Normalize by `sum(|points|)` so the score lives on a symmetric scale
