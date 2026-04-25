@@ -237,7 +237,17 @@ class LocalModel:
         prompt_len = inputs["input_ids"].shape[1]
         inputs = {k: v.to(self._device) for k, v in inputs.items()}
         with torch.no_grad():
-            out = self.model.generate(**inputs, max_new_tokens=max_new_tokens, do_sample=False)
+            # On XLA/TPU, DynamicCache grows the KV-cache by one token per
+            # decode step: shape goes [B,H,0,D] → [B,H,1,D] → … → [B,H,N,D].
+            # XLA compiles a separate graph for every distinct tensor shape, so
+            # N decode steps = N compilations (each 10-30 min for 27B SPMD).
+            # StaticCache pre-allocates to max_new_tokens — fixed shape, one
+            # compile for the entire decode loop.
+            _cache_impl = "static" if _ON_TPU else None
+            _gen_kwargs = dict(max_new_tokens=max_new_tokens, do_sample=False)
+            if _cache_impl:
+                _gen_kwargs["cache_implementation"] = _cache_impl
+            out = self.model.generate(**inputs, **_gen_kwargs)
         if _ON_TPU:
             _xm.mark_step()
         return self.tokenizer.decode(out[0][prompt_len:], skip_special_tokens=True)
