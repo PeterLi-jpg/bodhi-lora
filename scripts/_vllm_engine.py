@@ -21,6 +21,7 @@ from the model name (≤8B → 1 chip, everything else → 8 chips).
 
 import json
 import os
+import re
 import subprocess
 import time
 import urllib.error
@@ -33,11 +34,17 @@ DEFAULT_PORT = 8000
 
 
 def _auto_tp(model_name: str) -> int:
-    """Heuristic: small models (≤8B) run fine on one chip; use all 8 for bigger ones."""
+    """Heuristic: small models (≤8B) run fine on one chip; use all 8 for bigger ones.
+
+    Uses a negative lookbehind so that multi-digit sizes like "14b" or "70b"
+    don't accidentally match single-digit tags ("4b" inside "14b" would give
+    a wrong TP=1 for a 14B model).
+    """
     name = model_name.lower()
-    for tag in ("1b", "2b", "3b", "4b", "7b", "8b"):
-        if tag in name:
-            return 1
+    # Match a standalone single-digit size tag, e.g. "4b" in "gemma-3-4b-it"
+    # but NOT "4b" embedded in "14b" or "24b".
+    if re.search(r"(?<!\d)[1-8]b(?!\w)", name):
+        return 1
     return 8
 
 
