@@ -5,12 +5,14 @@ import json
 import random
 import re
 import statistics
+import sys
 from collections import defaultdict
 from pathlib import Path
 
 import numpy as np
 from tqdm import tqdm
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from scripts._vllm_engine import VLLMEngine
 
 # same template as healthbench_eval.py in the upstream repo
