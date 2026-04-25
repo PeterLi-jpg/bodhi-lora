@@ -6,14 +6,15 @@ import random
 import re
 import statistics
 import sys
+import os
 from collections import defaultdict
 from pathlib import Path
 
 import numpy as np
 from tqdm import tqdm
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from scripts._vllm_engine import VLLMEngine
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from _vllm_engine import VLLMEngine
 
 # same template as healthbench_eval.py in the upstream repo
 GRADER_TEMPLATE = """

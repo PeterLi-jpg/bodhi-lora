@@ -16,9 +16,11 @@ import numpy as np
 from tqdm import tqdm
 from transformers import set_seed
 
-# make sure we can import from scripts/
+# Add scripts/ dir for bare-name imports and project root for package imports.
+import os as _os
+sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from scripts._vllm_engine import VLLMEngine
+from _vllm_engine import VLLMEngine
 from scripts.filter_traces import GRADER_TEMPLATE, LocalGrader, parse_json_response, grade_trace
 
 HEALTHBENCH_HARD_URL = "https://openaipublic.blob.core.windows.net/simple-evals/healthbench/hard_2025-05-08-21-00-10.jsonl"

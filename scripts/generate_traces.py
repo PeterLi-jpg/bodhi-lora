@@ -8,15 +8,17 @@ import traceback
 from pathlib import Path
 
 import sys
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+import os
+# Insert scripts/ dir so _vllm_engine can be imported as a bare module name,
+# regardless of CWD or whether the project root is on sys.path.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import numpy as np
 import torch
 from tqdm import tqdm
 from transformers import set_seed
 
-from scripts._vllm_engine import VLLMEngine
+from _vllm_engine import VLLMEngine
 
 DATA_DIR = Path("data/raw")
 
