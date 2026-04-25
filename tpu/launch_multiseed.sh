@@ -80,11 +80,14 @@ for slot in "${TRC_SLOTS[@]}"; do
         echo "Found existing VM $TPU_NAME in $_ZONE (state=$STATE) — waiting for READY..."
         while [ "$STATE" != "READY" ]; do
             sleep 15
+            # Filter by VM name so a neighbour VM (e.g. neural-operator-tpu) in
+            # a different state doesn't cause us to spin forever after deletion.
             STATE=$(gcloud compute tpus tpu-vm list --zone="$_ZONE" --project="$PROJECT" \
-                --format="value(state)" 2>/dev/null | head -1)
-            echo "  state: $STATE"
-            # VM vanished (preempted or failed during CREATING) — fall through to fresh create
-            if [ -z "$STATE" ]; then
+                --format="value(name,state)" 2>/dev/null \
+                | grep "^${TPU_NAME}\b" | awk '{print $2}')
+            echo "  state: ${STATE:-(gone)}"
+            # VM vanished (deleted or preempted during CREATING) — fall through to fresh create
+            if [ -z "$STATE" ] || [ "$STATE" = "DELETING" ]; then
                 echo "VM $TPU_NAME disappeared from $_ZONE, will try a fresh create."
                 break
             fi
