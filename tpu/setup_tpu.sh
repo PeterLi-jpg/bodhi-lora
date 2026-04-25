@@ -16,8 +16,15 @@ TORCH_VERSION="2.5.0"
 TORCH_XLA_VERSION="2.5.0"
 TPU_WHEEL_URL="https://storage.googleapis.com/libtpu-releases/index.html"
 
+# Resilience flags — files.pythonhosted.org occasionally throws ReadTimeoutError
+# on a TPU VM (the Tokyo region's egress to PyPI CDN can be flaky for minutes
+# at a time).  Default pip is 5 retries / 15s connect timeout; bumping both so a
+# transient network blip doesn't fail setup, abort the launcher, and force a
+# whole-VM rebuild.
+PIP_FLAGS="--quiet --retries 10 --timeout 120"
+
 echo "=== Installing torch ${TORCH_VERSION} + torch_xla ${TORCH_XLA_VERSION} from TPU wheel server ==="
-pip install --quiet \
+pip install ${PIP_FLAGS} \
     "torch==${TORCH_VERSION}" \
     "torch_xla[tpu]==${TORCH_XLA_VERSION}" \
     -f "${TPU_WHEEL_URL}"
@@ -34,7 +41,7 @@ echo "=== Installing remaining deps ==="
 # in trl SFTTrainer, and accelerate's TPU-mode model placement (see
 # train_lora.py SPMD setup).  An upstream patch release between runs can break
 # any of those — pinning prevents silent regressions on a 24-hour pipeline.
-pip install --quiet \
+pip install ${PIP_FLAGS} \
     "torch==${TORCH_VERSION}" \
     "bodhi-llm[all]==0.1.4" \
     "transformers==4.57.6" \
