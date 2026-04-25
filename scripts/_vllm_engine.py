@@ -104,7 +104,6 @@ class VLLMEngine:
             "--max-model-len", str(self.max_model_len),
             "--dtype", "bfloat16",
             "--port", str(self.port),
-            "--disable-log-requests",
             *lora_args,
         ]
 
