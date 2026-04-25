@@ -1,10 +1,19 @@
+# v6e-8 = 8 chips × 32 GB HBM = 256 GB total. MedGemma-27B in bf16 is 54 GB —
+# does NOT fit replicated per-chip (the default for distributed_type: TPU with
+# num_processes: 8). We use a single-process SPMD setup instead: ONE Python
+# process drives all 8 chips, with model parameters sharded across them via
+# torch_xla.distributed.spmd.mark_sharding (set up in train_lora.py).
+#
+# In SPMD mode, "per_device_train_batch_size" in SFTConfig means batch per
+# logical step (the whole 8-chip program), not per chip. Tune it in
+# configs/lora_medgemma27b_tpu.yaml.
 compute_environment: LOCAL_MACHINE
 distributed_type: TPU
 downcast_bf16: 'no'
 machine_rank: 0
 main_training_function: main
 num_machines: 1
-num_processes: 8
+num_processes: 1
 tpu_use_cluster: false
 tpu_use_sudo: false
 use_cpu: false

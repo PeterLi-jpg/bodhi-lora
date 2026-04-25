@@ -24,11 +24,20 @@ lora:
 
 training:
   num_epochs: 3
-  # per_device batch applies per chip. effective batch = per_device * num_chips * grad_accum.
-  # v6e-8:  8 *  8 * 4 =  256    v4-32: 8 * 32 * 4 = 1024    v6e-64: 8 * 64 * 4 = 2048
-  # num_chips is set by the accelerate config (accelerate_config_v6e8.yaml, v4_32.yaml, etc).
-  per_device_train_batch_size: 8
-  gradient_accumulation_steps: 4
+  # NOTE on v6e-8 + SPMD (num_processes: 1 in tpu/accelerate_config_v6e8.yaml):
+  # there's only ONE Python process driving all 8 chips, so per_device_train_
+  # batch_size is the batch for the WHOLE 8-chip program, NOT per chip.
+  # Effective batch = per_device * grad_accum (no num_processes multiplier).
+  #
+  # Memory per chip with model sharded 8-ways (~6.75 GB) + activations
+  # (replicated, since we don't shard the batch dim):
+  #   batch=2, seq=4096  → ~8-12 GB activations with grad-ckpt → fits in 32 GB
+  #   batch=4, seq=4096  → ~16-22 GB → tight, risk of OOM
+  # Keep batch small, push effective batch up via grad_accum.
+  #
+  # On non-TPU (multi-GPU), per_device is per-GPU and num_processes scales it.
+  per_device_train_batch_size: 2
+  gradient_accumulation_steps: 32        # effective batch = 64
   learning_rate: 1.0e-4
   warmup_ratio: 0.05
   lr_scheduler_type: cosine

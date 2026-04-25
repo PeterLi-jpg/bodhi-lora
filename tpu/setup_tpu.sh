@@ -28,19 +28,25 @@ python3 -c "import torch; import torch_xla; print('torch:', torch.__version__, '
 echo "=== Installing remaining deps ==="
 # Pin torch here too so pip does not silently downgrade it when resolving
 # transitive requirements from transformers / trl / peft.
+#
+# NOTE: ML libraries are pinned to EXACT versions (==).  Reason: this codebase
+# has already worked around shape bugs in transformers DynamicLayer, API drift
+# in trl SFTTrainer, and accelerate's TPU-mode model placement (see
+# train_lora.py SPMD setup).  An upstream patch release between runs can break
+# any of those — pinning prevents silent regressions on a 24-hour pipeline.
 pip install --quiet \
     "torch==${TORCH_VERSION}" \
     "bodhi-llm[all]==0.1.4" \
-    "transformers>=4.50.0,<5.0.0" \
+    "transformers==4.57.6" \
+    "peft==0.19.1" \
+    "trl==0.11.4" \
+    "accelerate==1.13.0" \
+    "datasets>=2.18.0,<4.0.0" \
     "timm>=1.0.0,<2.0.0" \
     "pillow>=10.0,<12.0" \
     "pyyaml>=6.0,<7.0" \
     "jinja2>=3.1.0" \
-    "peft>=0.10.0,<1.0.0" \
-    "trl>=0.9.0,<0.12.0" \
     "rich>=13.0,<15.0" \
-    "datasets>=2.18.0,<4.0.0" \
-    "accelerate>=0.28.0,<2.0.0" \
     "numpy>=1.24,<3.0" \
     "pandas>=2.0,<3.0" \
     "tqdm>=4.65" \

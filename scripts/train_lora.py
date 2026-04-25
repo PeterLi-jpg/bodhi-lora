@@ -25,16 +25,43 @@ import yaml
 from datasets import Dataset
 from transformers import AutoModelForCausalLM, AutoTokenizer, set_seed
 from trl import SFTTrainer, SFTConfig, DataCollatorForCompletionOnlyLM
-from peft import LoraConfig
+from peft import LoraConfig, get_peft_model
 
 # Detect whether we're running under PyTorch/XLA (Google Cloud TPU).
 # When True:  device_map="auto" must NOT be used — accelerate owns placement.
 # When False: device_map="auto" is used as before (multi-GPU or single GPU).
 try:
     import torch_xla  # noqa: F401
+    import torch_xla.core.xla_model as _xm
     _ON_TPU = True
 except ImportError:
+    _xm = None
     _ON_TPU = False
+
+# Why this matters:
+#   v6e-8 has 8 chips × 32 GB = 256 GB HBM.  MedGemma-27B in bfloat16 is 54 GB.
+#   accelerate's default TPU path (distributed_type=TPU + num_processes=8) gives
+#   each chip a FULL replica of the model (xmp.MpModelWrapper(model).to(device)
+#   in accelerator.py) — 54 GB doesn't fit on a 32 GB chip, so training OOMs at
+#   model load.
+#
+# Fix: single-process SPMD.  ONE Python process drives all 8 chips, and we shard
+# the model parameters across them with torch_xla.distributed.spmd.mark_sharding
+# (same pattern Stage 1 uses in scripts/generate_traces.py).  This matches our
+# accelerate config tpu/accelerate_config_v6e8.yaml which sets num_processes: 1.
+#
+# Activate SPMD as early as possible — before any XLA tensor is created, before
+# AutoModelForCausalLM.from_pretrained, otherwise use_spmd() refuses to engage.
+if _ON_TPU:
+    try:
+        from torch_xla import runtime as _xr
+        _xr.use_spmd()
+        print("SPMD enabled for training")
+    except (ImportError, AttributeError) as _e:
+        # Older torch_xla without SPMD — training will fall back to replicated
+        # placement, which OOMs for 27B on 32 GB chips.  Surface the issue
+        # rather than die mysteriously at model.to(device).
+        print(f"WARNING: torch_xla SPMD not available ({_e!r}); 27B training will OOM")
 
 DTYPE_MAP = {"bfloat16": torch.bfloat16, "float16": torch.float16, "float32": torch.float32}
 
@@ -230,9 +257,9 @@ def main():
     else:
         print(f"Loading {model_cfg['name']} ({dtype})...")
 
-    # On TPU, accelerate (via torch_xla) manages device placement across chips.
-    # device_map="auto" would try to use CUDA device IDs and fail; pass None
-    # instead and let accelerate distribute the model automatically.
+    # On TPU we keep device_map=None — accelerate's TPU path doesn't shard
+    # the model on its own (only does xmp.MpModelWrapper.to(device) per
+    # process).  We do the sharding manually below via SPMD.
     model = AutoModelForCausalLM.from_pretrained(
         model_cfg["name"],
         torch_dtype=dtype,
@@ -245,6 +272,64 @@ def main():
     if quant_config is not None:
         from peft import prepare_model_for_kbit_training
         model = prepare_model_for_kbit_training(model)
+
+    # ── SPMD shard: spread base-model weights across all v6e-8 chips ─────────
+    # Mirror of the inference-time sharding in generate_traces.py.  Done BEFORE
+    # PEFT wraps the model so the LoRA adapters created by get_peft_model()
+    # land on the XLA device (same device as their parent linear) but stay
+    # UNSHARDED — they're tiny (~70 MB total) and saving them is simpler when
+    # they live as a single tensor per param.
+    if _ON_TPU:
+        # Try the SPMD module names across torch_xla versions; experimental
+        # was renamed to distributed.spmd in 2.5.
+        _xs = None
+        for _spmd_mod in ("torch_xla.distributed.spmd",
+                          "torch_xla.experimental.xla_sharding",
+                          "torch_xla.distributed.xla_sharding"):
+            try:
+                import importlib as _il
+                _xs = _il.import_module(_spmd_mod)
+                print(f"SPMD module: {_spmd_mod}")
+                break
+            except ModuleNotFoundError:
+                continue
+
+        if _xs is not None:
+            from torch_xla import runtime as _xr
+            import torch.nn as _nn
+            # On v6e-8: addressable_device_count() == 8 (physical chips).
+            # global_device_count() returns 1 in SPMD mode (single virtual dev).
+            _n_dev = getattr(_xr, "addressable_device_count",
+                             _xr.global_device_count)()
+            if _n_dev < 2:
+                # Last resort — count the physical chips off /dev/vfio.
+                import os as _os
+                _vfio = ([d for d in _os.listdir("/dev/vfio") if d.isdigit()]
+                         if _os.path.exists("/dev/vfio") else [])
+                _n_dev = len(_vfio) or _n_dev
+            _device_ids = np.arange(_n_dev)
+            _mesh = _xs.Mesh(_device_ids, (_n_dev,), ("tp",))
+            _dev = _xm.xla_device()
+            print(f"SPMD: sharding base model across {_n_dev} chips")
+            # Iterate every parameter, move to XLA, and shard 2-D params with
+            # an output dim > 1024 along axis 0 ("column-parallel" shape).
+            # Direct dict assignment avoids set_data() which use_spmd() blocks.
+            for _mod in model.modules():
+                for _pname, _p in list(_mod._parameters.items()):
+                    if _p is not None:
+                        _xp = _nn.Parameter(
+                            _p.data.to(_dev),
+                            requires_grad=_p.requires_grad,
+                        )
+                        if _xp.dim() == 2 and _xp.shape[0] > 1024:
+                            _xs.mark_sharding(_xp, _mesh, (0, None))
+                        _mod._parameters[_pname] = _xp
+                for _bname, _b in list(_mod._buffers.items()):
+                    if _b is not None:
+                        _mod._buffers[_bname] = _b.to(_dev)
+            _xm.mark_step()
+        else:
+            print("WARNING: no SPMD module found in torch_xla; 27B will OOM")
 
     # -------- LoRA variant selection ------------------------------------------
     variant = lora_cfg.get("variant", "standard").lower()
@@ -274,6 +359,26 @@ def main():
         use_rslora=(variant == "rslora"),
     )
     print(f"LoRA variant: {variant}")
+
+    # On TPU we apply PEFT manually here, AFTER the base model is SPMD-sharded.
+    # Reason: SFTTrainer would otherwise call get_peft_model() inside __init__,
+    # but that runs after accelerate.prepare() which on the XLA path does
+    # nothing useful in single-process mode.  Pre-wrapping ourselves means the
+    # LoRA adapters are constructed against already-sharded base linears, so
+    # they land on the XLA device and reference the sharded weights correctly.
+    # SFTTrainer detects an existing PeftModel and skips its own wrap.
+    if _ON_TPU:
+        model = get_peft_model(model, lora_config)
+        model.print_trainable_parameters()
+        # peft_config is now baked into the model — don't pass it to SFTTrainer
+        # again (would no-op but also clutter the config snapshot).
+        _peft_for_trainer = None
+        if _xm is not None:
+            _xm.mark_step()
+    else:
+        # GPU path: keep the original behavior of letting SFTTrainer apply PEFT
+        # so quantization-prepare hooks / kbit handling stay in one place.
+        _peft_for_trainer = lora_config
 
     train_file = args.train_file or data_cfg["train_file"]
     val_file = args.val_file or data_cfg["val_file"]
@@ -319,7 +424,7 @@ def main():
     trainer = SFTTrainer(
         model=model,
         args=training_args,
-        peft_config=lora_config,
+        peft_config=_peft_for_trainer,
         train_dataset=ds["train"],
         eval_dataset=ds["validation"],
         tokenizer=_tokenizer,
