@@ -1,0 +1,49 @@
+seed: 42
+
+# SMOKE-TEST CONFIG.  Same hyperparams as lora_medgemma27b_tpu.yaml (so the
+# pipeline LOGIC is exercised identically) but on a 4B base instead of 27B.
+# Purpose: validate end-to-end pipeline (download → SPMD shard → compile →
+# generate → grade → train → eval) in 3-4 hours instead of 12+.  After this
+# greens, swap back to lora_medgemma27b_tpu.yaml for the real run.
+#
+# Memory budget on v6e-8 (8 chips × 32 GB = 256 GB):
+#   gemma-3-4b in bf16 = ~8 GB; sharded 8-ways = ~1 GB/chip — trivial.
+#   activations + KV cache at 4096 ctx = ~3-5 GB/chip.  Way under the limit.
+
+model:
+  name: google/gemma-3-4b-it
+  torch_dtype: bfloat16
+  quantization: null
+
+lora:
+  r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  target_modules:
+    - q_proj
+    - k_proj
+    - v_proj
+    - o_proj
+    - gate_proj
+    - up_proj
+    - down_proj
+  task_type: CAUSAL_LM
+  variant: standard
+
+training:
+  num_epochs: 3
+  per_device_train_batch_size: 2
+  gradient_accumulation_steps: 32        # effective batch = 64
+  learning_rate: 1.0e-4
+  warmup_ratio: 0.05
+  lr_scheduler_type: cosine
+  max_seq_length: 4096
+  logging_steps: 10
+  save_strategy: epoch
+  eval_strategy: epoch
+  bf16: true
+
+data:
+  train_file: data/sft/train.jsonl
+  val_file: data/sft/val.jsonl
+  eval_sample_ids: data/raw/hard_200_sample_ids.json

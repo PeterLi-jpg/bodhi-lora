@@ -35,6 +35,16 @@ EVAL_MAX="${EVAL_MAX:-}"
 _EVAL_MAX_FLAG=""
 [ -n "$EVAL_MAX" ] && _EVAL_MAX_FLAG="--max-examples ${EVAL_MAX}"
 
+# Model + train config — defaults to MedGemma-27B production setup.
+# Swap for a smoke run with smaller models:
+#   MODEL_NAME=google/gemma-3-4b-it TRAIN_CONFIG=configs/lora_gemma3_4b_tpu.yaml \
+#     EVAL_MAX=50 SEEDS=42 MAX_EXAMPLES=200 bash tpu/launch_multiseed.sh
+# Stage 1 (gen) and Stage 4 (eval) use MODEL_NAME; Stage 3 (train) uses
+# TRAIN_CONFIG.  These must be consistent — TRAIN_CONFIG's model.name should
+# equal MODEL_NAME or LoRA training won't be against the same base as gen/eval.
+MODEL_NAME="${MODEL_NAME:-google/medgemma-27b-text-it}"
+TRAIN_CONFIG="${TRAIN_CONFIG:-configs/lora_medgemma27b_tpu.yaml}"
+
 # Optional training-method overrides (TPU: 4bit/8bit will error; only variant/rank).
 #   LORA_VARIANT=dora bash tpu/launch_multiseed.sh
 #   LORA_VARIANT=rslora bash tpu/launch_multiseed.sh
@@ -315,7 +325,7 @@ cd ~/bohdi-lora
 export HF_TOKEN='${HF_TOKEN}'
 rm -f /tmp/gen_stage1.log
 nohup python scripts/generate_traces.py \
-    --model google/medgemma-27b-text-it \
+    --model ${MODEL_NAME} \
     --datasets healthbench_hard \
     --exclude-ids data/raw/hard_200_sample_ids.json \
     --output data/sft/raw_traces.jsonl \
@@ -442,7 +452,7 @@ for SEED in $SEEDS; do
     run_long_remote \
         "stage3_train_seed${SEED}" \
         "train_lora.py" \
-        "mkdir -p checkpoints/seed_${SEED} && PJRT_DEVICE=TPU python scripts/train_lora.py --config configs/lora_medgemma27b_tpu.yaml --seed ${SEED} --output-dir checkpoints/seed_${SEED} ${TRAIN_EXTRA_FLAGS}" \
+        "mkdir -p checkpoints/seed_${SEED} && PJRT_DEVICE=TPU python scripts/train_lora.py --config ${TRAIN_CONFIG} --seed ${SEED} --output-dir checkpoints/seed_${SEED} ${TRAIN_EXTRA_FLAGS}" \
         "checkpoints/seed_${SEED}/best/adapter_model.safetensors"
 
     # ── Stage 4: evaluate all 4 configurations ────────────────────────────────
@@ -454,7 +464,7 @@ for SEED in $SEEDS; do
     EVAL_DIR="eval/seed_${SEED}"
     FIG_DIR="figures/seed_${SEED}"
     LORA="checkpoints/seed_${SEED}/best"
-    MODEL="google/medgemma-27b-text-it"
+    MODEL="${MODEL_NAME}"
     IDS="data/raw/hard_200_sample_ids.json"
     HB="data/raw/healthbench_hard.jsonl data/raw/healthbench.jsonl"
     EVAL_CMD="set -e; mkdir -p ${EVAL_DIR} ${FIG_DIR}"
