@@ -42,7 +42,7 @@ training:
   max_seq_length: 512                    # smoke: fits per-chip HBM without grad ckpt
   logging_steps: 10
   save_strategy: epoch
-  eval_strategy: epoch
+  eval_strategy: no                      # smoke: skip in-train eval; Stage 4 handles eval
   bf16: true
 
 data:
