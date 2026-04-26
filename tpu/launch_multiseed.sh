@@ -68,19 +68,20 @@ TRAIN_EXTRA_FLAGS=""
 
 PROJECT="tokyo-micron-494016-s9"
 TPU_NAME="bohdi-lora-v4"
-TPU_RUNTIME="tpu-ubuntu2204-base"
-ZONE="us-central2-b"  # overwritten once a slot is acquired
+TPU_RUNTIME="v2-alpha-tpuv6e"
+ZONE="us-east1-d"  # overwritten once a slot is acquired
 
 echo "Seeds to run: $SEEDS"
 echo "TPU type will be shown once a slot is acquired"
 echo ""
 
-# On-demand v4-32 allocation (32 chips, us-central2-b) — no preemption.
-# v4-32 is a 4-worker pod; pipeline SSHes to worker 0 (8 chips in replicated mode).
+# TRC-granted slots — v6e-8 spot in TRC regions only.
+# v6e-8 = 8 chips × 32 GB HBM = 256 GB; spot OK for TRC quota.
 # Format: "TPU_TYPE ZONE SPOT(yes/no) _UNUSED_CFG"
 # (_UNUSED_CFG was the accelerate config path; kept for readability only.)
 TRC_SLOTS=(
-    "v4-32 us-central2-b no tpu/accelerate_config_v6e8.yaml"
+    "v6e-8 us-east1-d     yes tpu/accelerate_config_v6e8.yaml"
+    "v6e-8 europe-west4-a yes tpu/accelerate_config_v6e8.yaml"
 )
 
 # Try each slot in one pass, then sleep and retry the whole list.
