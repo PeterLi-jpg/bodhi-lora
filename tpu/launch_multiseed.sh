@@ -299,6 +299,21 @@ bash tpu/setup_tpu.sh
 export PATH=\"\$HOME/.local/bin:\$PATH\"
 pip install -q \"jinja2>=3.1.0\"
 mkdir -p data/raw data/sft eval logs
+# Pre-download HealthBench datasets so filter_traces.py and eval_healthbench.py
+# can look up rubrics on the first run without hitting a FileNotFoundError.
+python3 -c \"
+import urllib.request, pathlib
+files = {
+    'data/raw/healthbench_hard.jsonl': 'https://openaipublic.blob.core.windows.net/simple-evals/healthbench/hard_2025-05-08-21-00-10.jsonl',
+    'data/raw/healthbench.jsonl':      'https://openaipublic.blob.core.windows.net/simple-evals/healthbench/2025-05-07-06-14-12_oss_eval.jsonl',
+}
+for path, url in files.items():
+    p = pathlib.Path(path)
+    if not p.exists():
+        print(f'Downloading {path}...')
+        urllib.request.urlretrieve(url, p)
+    print(f'  {path}: {p.stat().st_size} bytes')
+\"
 "
 
 # ── Stage 1: generate traces (separate SSH so a failure here is identifiable
