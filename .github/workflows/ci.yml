@@ -31,7 +31,11 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y shellcheck
 
       - name: Lint shell scripts
-        run: shellcheck run_all.sh setup.sh smoke.sh slurm/*.sh scripts/check_no_secrets.sh
+        run: |
+          shellcheck run_all.sh setup.sh smoke.sh slurm/*.sh scripts/check_no_secrets.sh
+          # launcher has only info/warning findings (no errors), use --severity=error
+          # so CI catches actual bugs without blocking on style notes.
+          shellcheck --severity=error tpu/launch_multiseed.sh
 
       - name: Validate YAML configs
         run: |

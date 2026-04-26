@@ -68,9 +68,8 @@ TRAIN_EXTRA_FLAGS=""
 
 PROJECT="tokyo-micron-494016-s9"
 TPU_NAME="bohdi-lora-v4"
-TPU_TYPE="v6e-8"
 TPU_RUNTIME="v2-alpha-tpuv6e"
-ZONE="us-east1-d"
+ZONE="us-east1-d"  # overwritten once a slot is acquired
 
 echo "Seeds to run: $SEEDS"
 echo "TPU type will be shown once a slot is acquired"
@@ -78,7 +77,8 @@ echo ""
 
 # TRC-granted slots — v6e-8 spot in TRC regions only.
 # v6e-8 = 8 chips × 32 GB HBM = 256 GB; spot OK for TRC quota.
-# Format: "TPU_TYPE ZONE SPOT(yes/no) ACCEL_CONFIG"
+# Format: "TPU_TYPE ZONE SPOT(yes/no) _UNUSED_CFG"
+# (_UNUSED_CFG was the accelerate config path; kept for readability only.)
 TRC_SLOTS=(
     "v6e-8 us-east1-d     yes tpu/accelerate_config_v6e8.yaml"
     "v6e-8 europe-west4-a yes tpu/accelerate_config_v6e8.yaml"
@@ -90,7 +90,6 @@ MAX_ROUNDS="${MAX_ROUNDS:-200}"
 RETRY_DELAY="${RETRY_DELAY:-300}"
 
 echo "=== Acquiring TPU VM from TRC quota ==="
-ACCEL_CFG=""
 found=false
 
 # If a VM with this name already exists (e.g. from a previous interrupted run),
@@ -127,30 +126,28 @@ for slot in "${TRC_SLOTS[@]}"; do
             fi
         done
         [ "$STATE" != "READY" ] && continue
-        TPU_TYPE="$_TYPE"; ZONE="$_ZONE"; ACCEL_CFG="$_CFG"
+        ZONE="$_ZONE"
         echo "Reusing existing VM: $_TYPE in $_ZONE"
         found=true
         break
     fi
 done
 
-for round in $(seq 1 $MAX_ROUNDS); do
+for round in $(seq 1 "$MAX_ROUNDS"); do
     $found && break
     for slot in "${TRC_SLOTS[@]}"; do
         read -r _TYPE _ZONE _SPOT _CFG <<< "$slot"
         SPOT_FLAG=""
         [ "$_SPOT" = "yes" ] && SPOT_FLAG="--spot"
-        echo "  Trying $_TYPE ($(echo $_TYPE | grep -o '[0-9]*$') chips) in $_ZONE (spot=$_SPOT)..."
+        echo "  Trying $_TYPE ($(echo "$_TYPE" | grep -o '[0-9]*$') chips) in $_ZONE (spot=$_SPOT)..."
         if gcloud compute tpus tpu-vm create "$TPU_NAME" \
             --zone="$_ZONE" \
             --accelerator-type="$_TYPE" \
             --version="$TPU_RUNTIME" \
             --project="$PROJECT" \
             $SPOT_FLAG 2>&1; then
-            TPU_TYPE="$_TYPE"
             ZONE="$_ZONE"
-            ACCEL_CFG="$_CFG"
-            echo "VM created: $_TYPE ($(echo $_TYPE | grep -o '[0-9]*$') chips) in $_ZONE (spot=$_SPOT)"
+            echo "VM created: $_TYPE ($(echo "$_TYPE" | grep -o '[0-9]*$') chips) in $_ZONE (spot=$_SPOT)"
             found=true
             break
         fi
@@ -398,7 +395,7 @@ for i in $(seq 1 576); do   # 576 × 5 min = 48 hours max
     N=$(gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
         --zone="$ZONE" --project="$PROJECT" \
         --command="wc -l < ~/bohdi-lora/data/sft/raw_traces.jsonl 2>/dev/null || echo 0" 2>/dev/null \
-        | grep -E '^[0-9]+$' | tail -1)
+        | grep -E '^[0-9]+$' | tail -1) || true
     echo "  Stage 1 poll $i: ${N:-0}/$TARGET traces"
     if [ "${N:-0}" -gt 0 ]; then
         # Back up to local so we don't lose data on preemption
@@ -417,7 +414,7 @@ for i in $(seq 1 576); do   # 576 × 5 min = 48 hours max
     ALIVE=$(gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
         --zone="$ZONE" --project="$PROJECT" \
         --command="pgrep -f generate_traces.py > /dev/null 2>&1 && echo alive || echo dead" 2>/dev/null \
-        | grep -E '^(alive|dead)$' | tail -1)
+        | grep -E '^(alive|dead)$' | tail -1) || true
     if [ -z "$ALIVE" ]; then
         # SSH timed out — TPU CPUs may be pinned during XLA compilation.
         # Allow up to 6 consecutive misses (~30 min) before giving up.
@@ -602,17 +599,21 @@ for SEED in $SEEDS; do
     echo "Seed $SEED complete — results in ./results/seed_${SEED}/"
 done
 
-# ── Aggregate across all seeds ────────────────────────────────────────────────
+# ── Aggregate across all seeds (requires N >= 2) ──────────────────────────────
+# aggregate_seeds.py computes cross-seed means + 95% CIs and needs at least 2
+# seed dirs.  Single-seed smoke runs skip this step rather than crashing.
+_N_SEEDS=$(echo "$SEEDS" | wc -w | tr -d ' ')
 echo ""
-echo "=== Aggregate: multi-seed summary ==="
-SEED_DIRS_ARG=""
-for SEED in $SEEDS; do
-    SEED_DIRS_ARG="$SEED_DIRS_ARG eval/seed_${SEED}"
-done
+if [ "$_N_SEEDS" -ge 2 ]; then
+    echo "=== Aggregate: multi-seed summary ($SEEDS) ==="
+    SEED_DIRS_ARG=""
+    for SEED in $SEEDS; do
+        SEED_DIRS_ARG="$SEED_DIRS_ARG eval/seed_${SEED}"
+    done
 
-gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
-    --zone="$ZONE" --project="$PROJECT" \
-    --command="
+    gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
+        --zone="$ZONE" --project="$PROJECT" \
+        --command="
 set -euo pipefail
 export PATH=\"\$HOME/.local/bin:\$PATH\"
 cd ~/bohdi-lora
@@ -623,11 +624,14 @@ python scripts/aggregate_seeds.py \
 echo 'Aggregate done.'
 "
 
-mkdir -p ./results
-gcloud compute tpus tpu-vm scp --zone="$ZONE" --project="$PROJECT" \
-    "${TPU_NAME}:~/bohdi-lora/eval/multi_seed_summary.json" "./results/"
+    mkdir -p ./results
+    gcloud compute tpus tpu-vm scp --zone="$ZONE" --project="$PROJECT" \
+        "${TPU_NAME}:~/bohdi-lora/eval/multi_seed_summary.json" "./results/"
+    echo "Multi-seed summary: ./results/multi_seed_summary.json"
+else
+    echo "Single-seed run — skipping multi-seed aggregation (requires >= 2 seeds)."
+fi
 
 echo ""
 echo "All seeds done: $SEEDS"
 echo "Results in ./results/"
-echo "Multi-seed summary: ./results/multi_seed_summary.json"

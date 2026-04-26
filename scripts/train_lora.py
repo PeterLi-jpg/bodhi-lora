@@ -35,6 +35,12 @@ try:
     import torch_xla  # noqa: F401
     import torch_xla.core.xla_model as _xm
     _ON_TPU = True
+    # The use_reentrant=False gradient-checkpoint path (used by MedGemma-27B)
+    # calls getattr(torch, 'xla') internally.  torch_xla is a separate package
+    # so torch.xla is not set by default; alias it here to prevent AttributeError
+    # during the backward pass when gradient_checkpointing_kwargs.use_reentrant=false.
+    if not hasattr(torch, 'xla'):
+        torch.xla = torch_xla  # type: ignore[attr-defined]
 except ImportError:
     _xm = None
     _ON_TPU = False
@@ -301,6 +307,17 @@ def main():
         device_map=None if _ON_TPU else "auto",
         quantization_config=quant_config,
     )
+
+    # Disable KV cache for training.  With use_cache=True (the model default),
+    # Gemma-3's HybridCache.update() tries to slice the last (sliding_window - 1)
+    # elements from the key states.  For Gemma-3 sliding_window=1024, so it
+    # attempts index -1023 on a sequence of length max_seq_length (e.g. 512),
+    # which is out of range and XLA raises "Value out of range [-512, 511]".
+    # Disabling the cache avoids this path entirely — KV caching is only needed
+    # for autoregressive inference, not for training on full sequences.
+    # (When gradient_checkpointing=True the Trainer sets this automatically, but
+    # we set it unconditionally here so it's always safe.)
+    model.config.use_cache = False
 
     # Quantized weights need gradient checkpointing + input-grad rewiring before
     # LoRA adapters are attached. PEFT's helper handles both.
