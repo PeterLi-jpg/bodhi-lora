@@ -265,7 +265,7 @@ echo '${_name} running in background (PID '\$(cat ${_pid_file})')'
 trap '
     echo ""
     echo "=== Saving any remaining data before VM deletion ==="
-    mkdir -p "./results/_rescue"
+    mkdir -p "./results/_rescue/sft"
     # Raw traces are expensive to regenerate (~4-8 hours); save them so
     # the next run can resume via --resume-from rather than starting over.
     gcloud compute tpus tpu-vm scp \
@@ -273,6 +273,17 @@ trap '
         "${TPU_NAME}:~/bohdi-lora/data/sft/raw_traces.jsonl" "./results/_rescue/" 2>/dev/null \
         && echo "Rescued raw_traces.jsonl" \
         || echo "(no raw_traces.jsonl to rescue)"
+    # SFT data (graded + filtered) — grading takes 15-30 min so worth saving.
+    gcloud compute tpus tpu-vm scp \
+        --zone="$ZONE" --project="$PROJECT" \
+        "${TPU_NAME}:~/bohdi-lora/data/sft/train.jsonl" "./results/_rescue/sft/" 2>/dev/null \
+        && echo "Rescued sft/train.jsonl" \
+        || echo "(no sft/train.jsonl to rescue)"
+    gcloud compute tpus tpu-vm scp \
+        --zone="$ZONE" --project="$PROJECT" \
+        "${TPU_NAME}:~/bohdi-lora/data/sft/val.jsonl" "./results/_rescue/sft/" 2>/dev/null \
+        && echo "Rescued sft/val.jsonl" \
+        || echo "(no sft/val.jsonl to rescue)"
     gcloud compute tpus tpu-vm scp \
         --recurse \
         --zone="$ZONE" --project="$PROJECT" \
@@ -441,15 +452,47 @@ gcloud compute tpus tpu-vm scp \
 cp -f "./results/raw_traces.jsonl" "./results/_rescue/raw_traces.jsonl" 2>/dev/null || true
 
 # ── Stage 2: grade + filter (Qwen2.5-14B grader, long-running on TPU) ────────
-# Stage 2 runs a 14B grader over thousands of (trace, rubric_item) pairs.
+# Stage 2 runs a 14B grader over all (trace, rubric_item) pairs.
 # Each grade is a generate() call — same XLA compile / SSH-teardown failure
 # mode as Stage 1 if we run it in a foreground SSH.  Use the nohup-polling
 # helper instead.  Sentinel: data/sft/train.jsonl is written at the very end.
-run_long_remote \
-    "stage2_grade" \
-    "filter_traces.py" \
-    "python scripts/filter_traces.py --input data/sft/raw_traces.jsonl --healthbench-data data/raw/healthbench_hard.jsonl data/raw/healthbench.jsonl --output-dir data/sft --min-score ${MIN_SCORE} && touch /tmp/stage2_done" \
-    "/tmp/stage2_done"
+#
+# Preemption resilience: if train.jsonl was saved from a previous run, restore
+# it directly and skip grading entirely.
+if [ -f "./results/_rescue/sft/train.jsonl" ]; then
+    echo "=== Stage 2: restoring graded SFT data from previous run (skip re-grading) ==="
+    gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
+        --zone="$ZONE" --project="$PROJECT" \
+        --command="mkdir -p ~/bohdi-lora/data/sft" 2>/dev/null || true
+    gcloud compute tpus tpu-vm scp \
+        --zone="$ZONE" --project="$PROJECT" \
+        "./results/_rescue/sft/train.jsonl" \
+        "${TPU_NAME}:~/bohdi-lora/data/sft/train.jsonl" \
+        && echo "  Restored train.jsonl" || echo "  Restore failed — will re-grade"
+    gcloud compute tpus tpu-vm scp \
+        --zone="$ZONE" --project="$PROJECT" \
+        "./results/_rescue/sft/val.jsonl" \
+        "${TPU_NAME}:~/bohdi-lora/data/sft/val.jsonl" 2>/dev/null || true
+    gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
+        --zone="$ZONE" --project="$PROJECT" \
+        --command="touch /tmp/stage2_done" 2>/dev/null || true
+else
+    run_long_remote \
+        "stage2_grade" \
+        "filter_traces.py" \
+        "python scripts/filter_traces.py --input data/sft/raw_traces.jsonl --healthbench-data data/raw/healthbench_hard.jsonl data/raw/healthbench.jsonl --output-dir data/sft --min-score ${MIN_SCORE} && touch /tmp/stage2_done" \
+        "/tmp/stage2_done"
+    # Save SFT data to the runner immediately — survives TPU preemption.
+    echo "Saving Stage 2 SFT data to local results/_rescue/sft/..."
+    mkdir -p "./results/_rescue/sft"
+    gcloud compute tpus tpu-vm scp \
+        --zone="$ZONE" --project="$PROJECT" \
+        "${TPU_NAME}:~/bohdi-lora/data/sft/train.jsonl" "./results/_rescue/sft/" \
+        && echo "  Saved train.jsonl" || echo "  Save failed (continuing)"
+    gcloud compute tpus tpu-vm scp \
+        --zone="$ZONE" --project="$PROJECT" \
+        "${TPU_NAME}:~/bohdi-lora/data/sft/val.jsonl" "./results/_rescue/sft/" 2>/dev/null || true
+fi
 _TRAIN_LINES=$(gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
     --zone="$ZONE" --project="$PROJECT" \
     --command="wc -l < ~/bohdi-lora/data/sft/train.jsonl 2>/dev/null || echo 0" 2>/dev/null \
