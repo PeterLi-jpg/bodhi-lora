@@ -35,7 +35,7 @@ lora:
 training:
   num_epochs: 3
   per_device_train_batch_size: 1         # replicated mode: full model per chip
-  gradient_accumulation_steps: 64        # keep effective batch = 64
+  gradient_accumulation_steps: 4         # smoke: 18 examples / 4 = ~4 steps/epoch
   learning_rate: 1.0e-4
   warmup_ratio: 0.05
   lr_scheduler_type: cosine

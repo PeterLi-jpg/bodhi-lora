@@ -558,7 +558,7 @@ for SEED in $SEEDS; do
     run_long_remote \
         "stage3_train_seed${SEED}" \
         "train_lora.py" \
-        "mkdir -p checkpoints/seed_${SEED} && PJRT_DEVICE=TPU python scripts/train_lora.py --config ${TRAIN_CONFIG} --seed ${SEED} --output-dir checkpoints/seed_${SEED} ${TRAIN_EXTRA_FLAGS}" \
+        "mkdir -p checkpoints/seed_${SEED} && PJRT_DEVICE=TPU python -u scripts/train_lora.py --config ${TRAIN_CONFIG} --seed ${SEED} --output-dir checkpoints/seed_${SEED} ${TRAIN_EXTRA_FLAGS}" \
         "checkpoints/seed_${SEED}/best/adapter_model.safetensors"
 
     # ── Stage 4: evaluate all 4 configurations ────────────────────────────────

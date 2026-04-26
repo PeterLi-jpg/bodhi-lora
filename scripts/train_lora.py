@@ -517,11 +517,26 @@ def main():
     )
 
     trainer.train()
+
+    # On TPU/SPMD the computation graph is asynchronous.  Without an explicit
+    # barrier, trainer.save_model() can race against in-flight sharded tensor
+    # copies across chips and either deadlock or save partially-written weights.
+    # mark_step() flushes and waits for all pending XLA ops to complete before
+    # we touch the filesystem.
+    if _ON_TPU and _xm is not None:
+        _xm.mark_step()
+
     trainer.save_state()
     best_path = f"{args.output_dir.rstrip('/')}/best"
     trainer.save_model(best_path)
     _tokenizer.save_pretrained(best_path)
-    trainer.state.save_to_json(str(Path(best_path) / "trainer_state.json"))
+    # trainer.state may contain NaN eval_loss (e.g. when all val labels are
+    # masked).  Python's json module raises ValueError on NaN by default, so
+    # guard the save.
+    try:
+        trainer.state.save_to_json(str(Path(best_path) / "trainer_state.json"))
+    except (ValueError, TypeError) as _e:
+        print(f"trainer_state.json skipped ({_e!r}) — NaN in eval metrics")
     print(f"saved to {best_path}")
 
 
