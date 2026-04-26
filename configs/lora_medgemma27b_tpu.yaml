@@ -42,6 +42,12 @@ training:
   warmup_ratio: 0.05
   lr_scheduler_type: cosine
   max_seq_length: 4096
+  # Gradient checkpointing is required to fit activations per-chip in replicated
+  # SPMD mode.  use_reentrant=False avoids the "torch has no attribute 'xla'"
+  # error from the legacy reentrant path on TPU.
+  gradient_checkpointing: true
+  gradient_checkpointing_kwargs:
+    use_reentrant: false
   logging_steps: 10
   save_strategy: epoch
   eval_strategy: epoch

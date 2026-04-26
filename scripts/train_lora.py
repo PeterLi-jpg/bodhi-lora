@@ -494,10 +494,14 @@ def main():
         load_best_model_at_end=load_best_model_at_end,
         metric_for_best_model=metric_for_best_model,
         save_total_limit=3,
-        # torch.utils.checkpoint doesn't handle XLA device type ("xla") —
-        # getattr(torch, "xla") raises AttributeError on TPU.  Default to
-        # False; GPU runs can opt in via gradient_checkpointing: true in yaml.
+        # Gradient checkpointing: default off.  On TPU the legacy reentrant
+        # path raises AttributeError ("torch has no attribute 'xla'"); always
+        # use use_reentrant=False (non-reentrant, saved_tensors_hooks) which
+        # works on XLA.  Configs should set:
+        #   gradient_checkpointing: true
+        #   gradient_checkpointing_kwargs: {use_reentrant: false}
         gradient_checkpointing=train_cfg.get("gradient_checkpointing", False),
+        gradient_checkpointing_kwargs=train_cfg.get("gradient_checkpointing_kwargs", None),
         max_seq_length=train_cfg.get("max_seq_length", 4096),
     )
 
