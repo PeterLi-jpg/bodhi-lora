@@ -472,7 +472,10 @@ def main():
         load_best_model_at_end=load_best_model_at_end,
         metric_for_best_model=metric_for_best_model,
         save_total_limit=3,
-        gradient_checkpointing=True,
+        # torch.utils.checkpoint doesn't handle XLA device type ("xla") —
+        # getattr(torch, "xla") raises AttributeError on TPU.  Default to
+        # False; GPU runs can opt in via gradient_checkpointing: true in yaml.
+        gradient_checkpointing=train_cfg.get("gradient_checkpointing", False),
         max_seq_length=train_cfg.get("max_seq_length", 4096),
     )
 
