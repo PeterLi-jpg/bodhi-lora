@@ -68,19 +68,22 @@ TRAIN_EXTRA_FLAGS=""
 
 PROJECT="tokyo-micron-494016-s9"
 TPU_NAME="bohdi-lora-v4"
-TPU_RUNTIME="v2-alpha-tpuv6e"
+TPU_RUNTIME="v2-alpha-tpuv6e"  # overwritten per-slot once acquired
 ZONE="us-east1-d"  # overwritten once a slot is acquired
 
 echo "Seeds to run: $SEEDS"
 echo "TPU type will be shown once a slot is acquired"
 echo ""
 
-# TRC-granted slots — v6e-8 spot in TRC regions only.
-# v6e-8 = 8 chips × 32 GB HBM = 256 GB; spot OK for TRC quota.
-# Format: "TPU_TYPE ZONE SPOT(yes/no) _UNUSED_CFG"
+# TRC-granted slots — in priority order. The launcher tries each in sequence
+# and cycles back on failure, so put preferred zones first.
+# v5e-8 = 8 chips × 16 GB = 128 GB; tighter on memory but same SPMD topology.
+# Format: "TPU_TYPE ZONE SPOT(yes/no) ACCEL_CFG RUNTIME"
 TRC_SLOTS=(
-    "v6e-8 us-east1-d     yes tpu/accelerate_config_v6e8.yaml"
-    "v6e-8 europe-west4-a yes tpu/accelerate_config_v6e8.yaml"
+    "v6e-8 us-east1-d     yes tpu/accelerate_config_v6e8.yaml v2-alpha-tpuv6e"
+    "v6e-8 europe-west4-a yes tpu/accelerate_config_v6e8.yaml v2-alpha-tpuv6e"
+    "v5e-8 europe-west4-b yes tpu/accelerate_config_v6e8.yaml v2-alpha-tpuv5e"
+    "v5e-8 us-central1-a  yes tpu/accelerate_config_v6e8.yaml v2-alpha-tpuv5e"
 )
 
 # Try each slot in one pass, then sleep and retry the whole list.
@@ -94,7 +97,7 @@ found=false
 # If a VM with this name already exists (e.g. from a previous interrupted run),
 # detect its zone/type and reuse it rather than failing with ALREADY_EXISTS.
 for slot in "${TRC_SLOTS[@]}"; do
-    read -r _TYPE _ZONE _SPOT _CFG <<< "$slot"
+    read -r _TYPE _ZONE _SPOT _CFG _RUNTIME <<< "$slot"
     EXISTING=$(gcloud compute tpus tpu-vm list --zone="$_ZONE" --project="$PROJECT" \
         --format="value(name,state)" 2>/dev/null | grep "^${TPU_NAME}\b" || true)
     if [ -n "$EXISTING" ]; then
@@ -126,7 +129,8 @@ for slot in "${TRC_SLOTS[@]}"; do
         done
         [ "$STATE" != "READY" ] && continue
         ZONE="$_ZONE"
-        echo "Reusing existing VM: $_TYPE in $_ZONE"
+        TPU_RUNTIME="$_RUNTIME"
+        echo "Reusing existing VM: $_TYPE in $_ZONE (runtime=$_RUNTIME)"
         found=true
         break
     fi
@@ -135,18 +139,19 @@ done
 for round in $(seq 1 "$MAX_ROUNDS"); do
     $found && break
     for slot in "${TRC_SLOTS[@]}"; do
-        read -r _TYPE _ZONE _SPOT _CFG <<< "$slot"
+        read -r _TYPE _ZONE _SPOT _CFG _RUNTIME <<< "$slot"
         SPOT_FLAG=""
         [ "$_SPOT" = "yes" ] && SPOT_FLAG="--spot"
         echo "  Trying $_TYPE ($(echo "$_TYPE" | grep -o '[0-9]*$') chips) in $_ZONE (spot=$_SPOT)..."
         if gcloud compute tpus tpu-vm create "$TPU_NAME" \
             --zone="$_ZONE" \
             --accelerator-type="$_TYPE" \
-            --version="$TPU_RUNTIME" \
+            --version="$_RUNTIME" \
             --project="$PROJECT" \
             $SPOT_FLAG 2>&1; then
             ZONE="$_ZONE"
-            echo "VM created: $_TYPE ($(echo "$_TYPE" | grep -o '[0-9]*$') chips) in $_ZONE (spot=$_SPOT)"
+            TPU_RUNTIME="$_RUNTIME"
+            echo "VM created: $_TYPE ($(echo "$_TYPE" | grep -o '[0-9]*$') chips) in $_ZONE (spot=$_SPOT, runtime=$_RUNTIME)"
             found=true
             break
         fi
