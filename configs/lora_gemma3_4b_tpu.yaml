@@ -39,12 +39,18 @@ training:
   learning_rate: 1.0e-4
   warmup_ratio: 0.05
   lr_scheduler_type: cosine
-  max_seq_length: 512                    # smoke: fits per-chip HBM without grad ckpt
+  max_seq_length: 2048                   # smoke: grad ckpt enabled, fits replicated 4B in 31.25 GB/chip
   logging_steps: 10
   save_strategy: epoch
   eval_strategy: "no"                    # smoke: skip in-train eval; Stage 4 handles eval
                                         # NB: bare 'no' in YAML parses as bool False, must quote
   bf16: true
+  # Gradient checkpointing: recompute activations on backward to save HBM.
+  # use_reentrant=False avoids the torch.xla AttributeError on TPU.
+  # Required to fit seq=2048 within 31.25 GB/chip in replicated mode.
+  gradient_checkpointing: true
+  gradient_checkpointing_kwargs:
+    use_reentrant: false
 
 data:
   train_file: data/sft/train.jsonl

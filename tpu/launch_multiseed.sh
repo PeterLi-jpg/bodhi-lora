@@ -207,7 +207,7 @@ echo '${_name} running in background (PID '\$(cat ${_pid_file})')'
         # with no error message, skipping the SSH-timeout counter entirely.
         _done=$(gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
             --zone="$ZONE" --project="$PROJECT" \
-            --command="[ -e ${_sentinel} ] && echo done || echo pending" 2>/dev/null \
+            --command="cd ~/bohdi-lora && [ -e ${_sentinel} ] && echo done || echo pending" 2>/dev/null \
             | grep -E '^(done|pending)$' | tail -1) || true
         if [ "$_done" = "done" ]; then
             echo "${_name}: complete (sentinel ${_sentinel} present)."
@@ -239,7 +239,7 @@ echo '${_name} running in background (PID '\$(cat ${_pid_file})')'
             # (race: process finished between our two SSH calls).
             _done=$(gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
                 --zone="$ZONE" --project="$PROJECT" \
-                --command="[ -e ${_sentinel} ] && echo done || echo pending" 2>/dev/null \
+                --command="cd ~/bohdi-lora && [ -e ${_sentinel} ] && echo done || echo pending" 2>/dev/null \
                 | grep -E '^(done|pending)$' | tail -1) || true
             if [ "$_done" = "done" ]; then
                 echo "${_name}: complete (sentinel found after process exit)."
