@@ -17,6 +17,7 @@ Anything unset keeps pre-existing behavior so current configs still work.
 import argparse
 import json
 import random
+import re
 from pathlib import Path
 
 import numpy as np
@@ -37,6 +38,19 @@ try:
 except ImportError:
     _xm = None
     _ON_TPU = False
+
+def _needs_spmd(model_name: str) -> bool:
+    """Return True only for models too large to fit on one v6e chip (32 GB).
+
+    Models ≤8B in bf16 need ~16 GB — well under the per-chip limit — so SPMD
+    column-parallel sharding is unnecessary and triggers an XLA fusion-emitter
+    crash on Gemma-3 (shape_indices RET_CHECK in fusion_emitter.cc).  The 27B
+    model (54 GB bf16) does need sharding, so it still gets SPMD.
+
+    Uses the same regex as _auto_tp() in _vllm_engine.py to stay consistent.
+    """
+    return not bool(re.search(r"(?<!\d)[1-8]b(?!\w)", model_name.lower()))
+
 
 # XLA persistent compile cache — first run on a fresh VM compiles the
 # 27B-with-LoRA training graph (~40-60 min), subsequent runs (each seed,
@@ -300,7 +314,11 @@ def main():
     # land on the XLA device (same device as their parent linear) but stay
     # UNSHARDED — they're tiny (~70 MB total) and saving them is simpler when
     # they live as a single tensor per param.
-    if _ON_TPU:
+    #
+    # Skip for ≤8B models: they fit on a single v6e chip (32 GB) without any
+    # sharding.  Applying SPMD to small models triggers an XLA fusion-emitter
+    # crash in the backward pass (shape_indices RET_CHECK, fusion_emitter.cc).
+    if _ON_TPU and _needs_spmd(model_cfg["name"]):
         # Try the SPMD module names across torch_xla versions; experimental
         # was renamed to distributed.spmd in 2.5.
         _xs = None
@@ -356,6 +374,12 @@ def main():
             _xm.mark_step()
         else:
             print("WARNING: no SPMD module found in torch_xla; 27B will OOM")
+    elif _ON_TPU:
+        # Small model (≤8B): skip SPMD but still move parameters to the XLA
+        # device so the trainer doesn't try to mix CPU and TPU tensors.
+        _dev = _xm.xla_device()
+        model = model.to(_dev)
+        print(f"Small model: moved to XLA device without SPMD sharding")
 
     # -------- LoRA variant selection ------------------------------------------
     variant = lora_cfg.get("variant", "standard").lower()
