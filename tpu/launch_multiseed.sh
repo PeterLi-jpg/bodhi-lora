@@ -413,7 +413,7 @@ for i in $(seq 1 576); do   # 576 × 5 min = 48 hours max
     fi
     ALIVE=$(gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
         --zone="$ZONE" --project="$PROJECT" \
-        --command="pgrep -f generate_traces.py > /dev/null 2>&1 && echo alive || echo dead" 2>/dev/null \
+        --command="pgrep -f '[g]enerate_traces.py' > /dev/null 2>&1 && echo alive || echo dead" 2>/dev/null \
         | grep -E '^(alive|dead)$' | tail -1) || true
     if [ -z "$ALIVE" ]; then
         # SSH timed out — TPU CPUs may be pinned during XLA compilation.
@@ -501,7 +501,7 @@ if [ -f "./results/_rescue/sft/train.jsonl" ]; then
 else
     run_long_remote \
         "stage2_grade" \
-        "filter_traces.py" \
+        "[f]ilter_traces.py" \
         "python scripts/filter_traces.py --input data/sft/raw_traces.jsonl --healthbench-data data/raw/healthbench_hard.jsonl data/raw/healthbench.jsonl --output-dir data/sft --min-score ${MIN_SCORE} && touch /tmp/stage2_done" \
         "/tmp/stage2_done"
     # Save SFT data to the runner immediately — survives TPU preemption.
@@ -554,7 +554,7 @@ for SEED in $SEEDS; do
     # artifact written by trainer.save_model() at the end of training.
     run_long_remote \
         "stage3_train_seed${SEED}" \
-        "train_lora.py" \
+        "[t]rain_lora.py" \
         "mkdir -p checkpoints/seed_${SEED} && PJRT_DEVICE=TPU python -u scripts/train_lora.py --config ${TRAIN_CONFIG} --seed ${SEED} --output-dir checkpoints/seed_${SEED} ${TRAIN_EXTRA_FLAGS}" \
         "checkpoints/seed_${SEED}/best/adapter_model.safetensors"
 
@@ -582,7 +582,7 @@ for SEED in $SEEDS; do
 
     run_long_remote \
         "stage4_eval_seed${SEED}" \
-        "eval_healthbench.py|eval_ushape.py|plot_ushape.py|rubric_diff.py|plot_training.py" \
+        "[e]val_healthbench.py|[e]val_ushape.py|[p]lot_ushape.py|[r]ubric_diff.py|[p]lot_training.py" \
         "${EVAL_CMD}" \
         "${EVAL_DIR}/rubric_diff.json"
 
