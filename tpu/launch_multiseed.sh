@@ -205,10 +205,13 @@ echo '${_name} running in background (PID '\$(cat ${_pid_file})')'
     for i in $(seq 1 "$_max_iters"); do
         sleep 300
         local _done _alive
+        # || true: grep exits 1 when the TPU is gone (no output to match);
+        # without this, set -euo pipefail silently kills the launcher mid-$()
+        # with no error message, skipping the SSH-timeout counter entirely.
         _done=$(gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
             --zone="$ZONE" --project="$PROJECT" \
             --command="[ -e ${_sentinel} ] && echo done || echo pending" 2>/dev/null \
-            | grep -E '^(done|pending)$' | tail -1)
+            | grep -E '^(done|pending)$' | tail -1) || true
         if [ "$_done" = "done" ]; then
             echo "${_name}: complete (sentinel ${_sentinel} present)."
             return 0
@@ -216,7 +219,7 @@ echo '${_name} running in background (PID '\$(cat ${_pid_file})')'
         _alive=$(gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
             --zone="$ZONE" --project="$PROJECT" \
             --command="pgrep -f '${_pgrep_pat}' > /dev/null 2>&1 && echo alive || echo dead" 2>/dev/null \
-            | grep -E '^(alive|dead)$' | tail -1)
+            | grep -E '^(alive|dead)$' | tail -1) || true
         if [ -z "$_alive" ] && [ -z "$_done" ]; then
             _ssh_misses=$(( _ssh_misses + 1 ))
             echo "  ${_name} poll $i: SSH timeout (miss $_ssh_misses/6)"
@@ -240,7 +243,7 @@ echo '${_name} running in background (PID '\$(cat ${_pid_file})')'
             _done=$(gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
                 --zone="$ZONE" --project="$PROJECT" \
                 --command="[ -e ${_sentinel} ] && echo done || echo pending" 2>/dev/null \
-                | grep -E '^(done|pending)$' | tail -1)
+                | grep -E '^(done|pending)$' | tail -1) || true
             if [ "$_done" = "done" ]; then
                 echo "${_name}: complete (sentinel found after process exit)."
                 return 0
@@ -333,6 +336,12 @@ echo "=== Stage 1: generate BOHDI traces (MedGemma-27B) ==="
 
 # If a previous VM was interrupted mid-generation, restore the partial file
 # so --resume-from can skip already-done examples.
+if [ -n "$GCS_DATA_PATH" ]; then
+    echo "Checking GCS for partial traces from previous run..."
+    mkdir -p "./results/_rescue"
+    gsutil cp "${GCS_DATA_PATH}/raw_traces.jsonl" "./results/_rescue/raw_traces.jsonl" 2>/dev/null || true
+fi
+
 if [ -f "./results/_rescue/raw_traces.jsonl" ]; then
     echo "Restoring partial traces from previous run..."
     gcloud compute tpus tpu-vm scp \
@@ -391,6 +400,15 @@ for i in $(seq 1 576); do   # 576 × 5 min = 48 hours max
         --command="wc -l < ~/bohdi-lora/data/sft/raw_traces.jsonl 2>/dev/null || echo 0" 2>/dev/null \
         | grep -E '^[0-9]+$' | tail -1)
     echo "  Stage 1 poll $i: ${N:-0}/$TARGET traces"
+    if [ "${N:-0}" -gt 0 ]; then
+        # Back up to local so we don't lose data on preemption
+        mkdir -p "./results/_rescue"
+        gcloud compute tpus tpu-vm scp --zone="$ZONE" --project="$PROJECT" "${TPU_NAME}:~/bohdi-lora/data/sft/raw_traces.jsonl" "./results/_rescue/raw_traces.jsonl" 2>/dev/null || true
+        # Back up to GCS if configured
+        if [ -n "$GCS_DATA_PATH" ]; then
+            gcloud compute tpus tpu-vm ssh "$TPU_NAME" --zone="$ZONE" --project="$PROJECT" --command="gsutil cp ~/bohdi-lora/data/sft/raw_traces.jsonl ${GCS_DATA_PATH}/raw_traces.jsonl" 2>/dev/null || true
+        fi
+    fi
     if [ "${N:-0}" -ge "$TARGET" ]; then
         echo "Stage 1 complete: $TARGET traces written."
         _ssh_misses=0
@@ -459,6 +477,13 @@ cp -f "./results/raw_traces.jsonl" "./results/_rescue/raw_traces.jsonl" 2>/dev/n
 #
 # Preemption resilience: if train.jsonl was saved from a previous run, restore
 # it directly and skip grading entirely.
+if [ -n "$GCS_DATA_PATH" ]; then
+    echo "Checking GCS for graded SFT data from previous run..."
+    mkdir -p "./results/_rescue/sft"
+    gsutil cp "${GCS_DATA_PATH}/sft/train.jsonl" "./results/_rescue/sft/train.jsonl" 2>/dev/null || true
+    gsutil cp "${GCS_DATA_PATH}/sft/val.jsonl" "./results/_rescue/sft/val.jsonl" 2>/dev/null || true
+fi
+
 if [ -f "./results/_rescue/sft/train.jsonl" ]; then
     echo "=== Stage 2: restoring graded SFT data from previous run (skip re-grading) ==="
     gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
@@ -492,6 +517,11 @@ else
     gcloud compute tpus tpu-vm scp \
         --zone="$ZONE" --project="$PROJECT" \
         "${TPU_NAME}:~/bohdi-lora/data/sft/val.jsonl" "./results/_rescue/sft/" 2>/dev/null || true
+
+    if [ -n "$GCS_DATA_PATH" ]; then
+        echo "Saving Stage 2 SFT data to GCS..."
+        gcloud compute tpus tpu-vm ssh "$TPU_NAME" --zone="$ZONE" --project="$PROJECT" --command="gsutil cp ~/bohdi-lora/data/sft/train.jsonl ${GCS_DATA_PATH}/sft/train.jsonl && gsutil cp ~/bohdi-lora/data/sft/val.jsonl ${GCS_DATA_PATH}/sft/val.jsonl" 2>/dev/null || true
+    fi
 fi
 _TRAIN_LINES=$(gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
     --zone="$ZONE" --project="$PROJECT" \
