@@ -308,17 +308,19 @@ def main():
         from peft import prepare_model_for_kbit_training
         model = prepare_model_for_kbit_training(model)
 
-    # ── SPMD shard: spread base-model weights across all v6e-8 chips ─────────
-    # Mirror of the inference-time sharding in generate_traces.py.  Done BEFORE
-    # PEFT wraps the model so the LoRA adapters created by get_peft_model()
-    # land on the XLA device (same device as their parent linear) but stay
-    # UNSHARDED — they're tiny (~70 MB total) and saving them is simpler when
-    # they live as a single tensor per param.
+    # ── SPMD setup + optional sharding ──────────────────────────────────────
+    # use_spmd() MUST be called on v6e-8 regardless of model size — it
+    # initialises the multi-chip XLA runtime.  Skipping it causes the main
+    # Python thread to deadlock on a futex while waiting for chip-0's
+    # communication buffers that never get set up.
     #
-    # Skip for ≤8B models: they fit on a single v6e chip (32 GB) without any
-    # sharding.  Applying SPMD to small models triggers an XLA fusion-emitter
-    # crash in the backward pass (shape_indices RET_CHECK, fusion_emitter.cc).
-    if _ON_TPU and _needs_spmd(model_cfg["name"]):
+    # mark_sharding is only applied for large models (>8B) where the weights
+    # genuinely don't fit on one chip.  For ≤8B we call use_spmd() for the
+    # runtime init but skip sharding: all parameters are replicated across
+    # the 8-chip virtual device.  Applying mark_sharding to Gemma-3-4B
+    # triggers an XLA fusion-emitter RET_CHECK during the backward pass
+    # (shape_indices.size() == 1 with 5 indices, fusion_emitter.cc:9554).
+    if _ON_TPU:
         # Try the SPMD module names across torch_xla versions; experimental
         # was renamed to distributed.spmd in 2.5.
         _xs = None
@@ -354,9 +356,11 @@ def main():
             _device_ids = np.arange(_n_dev)
             _mesh = _xs.Mesh(_device_ids, (_n_dev,), ("tp",))
             _dev = _xm.xla_device()
-            print(f"SPMD: sharding base model across {_n_dev} chips")
-            # Iterate every parameter, move to XLA, and shard 2-D params with
-            # an output dim > 1024 along axis 0 ("column-parallel" shape).
+            do_shard = _needs_spmd(model_cfg["name"])
+            print(f"SPMD: {'sharding' if do_shard else 'replicating'} "
+                  f"base model across {_n_dev} chips")
+            # Iterate every parameter, move to XLA, and (for large models)
+            # shard 2-D params with an output dim > 1024 along axis 0.
             # Direct dict assignment avoids set_data() which use_spmd() blocks.
             for _mod in model.modules():
                 for _pname, _p in list(_mod._parameters.items()):
@@ -365,7 +369,7 @@ def main():
                             _p.data.to(_dev),
                             requires_grad=_p.requires_grad,
                         )
-                        if _xp.dim() == 2 and _xp.shape[0] > 1024:
+                        if do_shard and _xp.dim() == 2 and _xp.shape[0] > 1024:
                             _xs.mark_sharding(_xp, _mesh, (0, None))
                         _mod._parameters[_pname] = _xp
                 for _bname, _b in list(_mod._buffers.items()):
@@ -374,12 +378,6 @@ def main():
             _xm.mark_step()
         else:
             print("WARNING: no SPMD module found in torch_xla; 27B will OOM")
-    elif _ON_TPU:
-        # Small model (≤8B): skip SPMD but still move parameters to the XLA
-        # device so the trainer doesn't try to mix CPU and TPU tensors.
-        _dev = _xm.xla_device()
-        model = model.to(_dev)
-        print(f"Small model: moved to XLA device without SPMD sharding")
 
     # -------- LoRA variant selection ------------------------------------------
     variant = lora_cfg.get("variant", "standard").lower()
