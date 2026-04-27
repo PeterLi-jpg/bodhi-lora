@@ -327,7 +327,7 @@ trap '
     STAGE2_DONE=$(timeout 60 gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
         --zone="$ZONE" --project="$PROJECT" \
         --command="[ -e /tmp/stage2_done ] && echo done || echo no" 2>/dev/null \
-        | grep -E '^(done|no)$' | tail -1) || true
+        | grep -Ex "done|no" | tail -1) || true
     if [ "$STAGE2_DONE" = "done" ]; then
         gcloud compute tpus tpu-vm scp \
             --zone="$ZONE" --project="$PROJECT" \
@@ -340,7 +340,7 @@ trap '
             && echo "Rescued sft/val.jsonl" \
             || echo "(no sft/val.jsonl to rescue)"
     else
-        echo "(skipped sft/* rescue: stage2 didn't complete in this run)"
+        echo "(skipped sft/* rescue: stage2 did not complete in this run)"
     fi
     gcloud compute tpus tpu-vm scp \
         --recurse \
