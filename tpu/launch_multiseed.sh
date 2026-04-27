@@ -320,17 +320,28 @@ trap '
         "${TPU_NAME}:~/bohdi-lora/data/sft/raw_traces.jsonl" "./results/_rescue/" 2>/dev/null \
         && echo "Rescued raw_traces.jsonl" \
         || echo "(no raw_traces.jsonl to rescue)"
-    # SFT data (graded + filtered) — grading takes 15-30 min so worth saving.
-    gcloud compute tpus tpu-vm scp \
+    # SFT data (graded + filtered) — only rescue if Stage 2 actually
+    # completed (sentinel /tmp/stage2_done present on TPU).  Otherwise we
+    # were copying stale train.jsonl from a previous run that was still on
+    # the VM, which made the next iteration "skip Stage 2" with old data.
+    STAGE2_DONE=$(timeout 60 gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
         --zone="$ZONE" --project="$PROJECT" \
-        "${TPU_NAME}:~/bohdi-lora/data/sft/train.jsonl" "./results/_rescue/sft/" 2>/dev/null \
-        && echo "Rescued sft/train.jsonl" \
-        || echo "(no sft/train.jsonl to rescue)"
-    gcloud compute tpus tpu-vm scp \
-        --zone="$ZONE" --project="$PROJECT" \
-        "${TPU_NAME}:~/bohdi-lora/data/sft/val.jsonl" "./results/_rescue/sft/" 2>/dev/null \
-        && echo "Rescued sft/val.jsonl" \
-        || echo "(no sft/val.jsonl to rescue)"
+        --command="[ -e /tmp/stage2_done ] && echo done || echo no" 2>/dev/null \
+        | grep -E '^(done|no)$' | tail -1) || true
+    if [ "$STAGE2_DONE" = "done" ]; then
+        gcloud compute tpus tpu-vm scp \
+            --zone="$ZONE" --project="$PROJECT" \
+            "${TPU_NAME}:~/bohdi-lora/data/sft/train.jsonl" "./results/_rescue/sft/" 2>/dev/null \
+            && echo "Rescued sft/train.jsonl" \
+            || echo "(no sft/train.jsonl to rescue)"
+        gcloud compute tpus tpu-vm scp \
+            --zone="$ZONE" --project="$PROJECT" \
+            "${TPU_NAME}:~/bohdi-lora/data/sft/val.jsonl" "./results/_rescue/sft/" 2>/dev/null \
+            && echo "Rescued sft/val.jsonl" \
+            || echo "(no sft/val.jsonl to rescue)"
+    else
+        echo "(skipped sft/* rescue: stage2 didn't complete in this run)"
+    fi
     gcloud compute tpus tpu-vm scp \
         --recurse \
         --zone="$ZONE" --project="$PROJECT" \
