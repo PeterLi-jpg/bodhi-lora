@@ -12,6 +12,60 @@
 
 set -euo pipefail
 
+# ── Mount the data disk (if attached) and redirect HF cache there ────────────
+# A 300 GB persistent SSD is attached at TPU create time (see launch script's
+# DATA_DISKS map).  It survives preemption and avoids the 100 GB boot-disk
+# saturation we hit when medgemma + qwen + vllm-docker all coexist.
+#
+# First boot of a fresh disk: format ext4.
+# Subsequent boots: skip format, just mount.
+# If no data disk is attached (fallback zone, on-demand vN-X without the map
+# entry, etc.), fall through silently and use the boot disk's HF cache.
+DATA_DEV=""
+for d in /dev/sdb /dev/nvme0n1 /dev/nvme0n2; do
+    if [ -b "$d" ] && ! mount | grep -q " on / "; then  # /dev/sda is /
+        # check it's not the root partition's parent
+        if ! lsblk -no MOUNTPOINT "$d" 2>/dev/null | grep -q "/$"; then
+            DATA_DEV="$d"
+            break
+        fi
+    fi
+done
+
+if [ -n "$DATA_DEV" ] && [ ! -d /mnt/cache ] || ! mountpoint -q /mnt/cache 2>/dev/null; then
+    if [ -n "$DATA_DEV" ]; then
+        echo "=== Mounting data disk $DATA_DEV at /mnt/cache ==="
+        # Format only if blank (no existing fs).
+        if ! sudo blkid "$DATA_DEV" 2>/dev/null | grep -q TYPE=; then
+            echo "  formatting $DATA_DEV (first boot of fresh disk)..."
+            sudo mkfs.ext4 -F -E lazy_itable_init=0,lazy_journal_init=0 "$DATA_DEV"
+        else
+            echo "  $DATA_DEV already has a filesystem, skipping format"
+        fi
+        sudo mkdir -p /mnt/cache
+        sudo mount -o discard,defaults "$DATA_DEV" /mnt/cache 2>/dev/null || true
+        sudo chown -R "$(whoami)" /mnt/cache
+        df -h /mnt/cache | tail -1
+    fi
+fi
+
+# Point HuggingFace at the data disk if mounted; otherwise fall back to
+# default ~/.cache/huggingface on the boot disk.
+if mountpoint -q /mnt/cache 2>/dev/null; then
+    mkdir -p /mnt/cache/hf /mnt/cache/transformers
+    export HF_HOME=/mnt/cache/hf
+    export TRANSFORMERS_CACHE=/mnt/cache/transformers
+    # Persist for subsequent SSH sessions / nohup'd children.
+    {
+        echo "export HF_HOME=/mnt/cache/hf"
+        echo "export TRANSFORMERS_CACHE=/mnt/cache/transformers"
+    } | sudo tee /etc/profile.d/bohdi-hf-cache.sh > /dev/null
+    sudo chmod +x /etc/profile.d/bohdi-hf-cache.sh
+    echo "HF cache redirected to /mnt/cache (persistent SSD)."
+else
+    echo "(no data disk mounted, using boot-disk HF cache)"
+fi
+
 TORCH_VERSION="2.5.0"
 TORCH_XLA_VERSION="2.5.0"
 TPU_WHEEL_URL="https://storage.googleapis.com/libtpu-releases/index.html"

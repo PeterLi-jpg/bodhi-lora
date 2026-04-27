@@ -79,13 +79,23 @@ echo ""
 # and cycles back on failure, so put preferred zones first.
 # v5e-8 = 8 chips × 16 GB = 128 GB; tighter on memory but same SPMD topology.
 # Format: "TPU_TYPE ZONE SPOT(yes/no) ACCEL_CFG RUNTIME"
+# NOTE: bigger run uses v6e-16 with a pre-created 300GB SSD attached as
+# data disk for HF cache (see DATA_DISK below).  The disk only exists in
+# europe-west4-a; fallback zones lose the cache and re-download each run.
 TRC_SLOTS=(
-    # europe-west4-a first: us-east1-d has been heavily preempted today (3+
-    # preemptions, every iteration there has died within minutes of acquiring).
-    "v6e-8 europe-west4-a yes tpu/accelerate_config_v6e8.yaml v2-alpha-tpuv6e"
-    "v6e-8 us-east1-d     yes tpu/accelerate_config_v6e8.yaml v2-alpha-tpuv6e"
-    "v5e-8 europe-west4-b yes tpu/accelerate_config_v6e8.yaml v2-alpha-tpuv5e"
-    "v5e-8 us-central1-a  yes tpu/accelerate_config_v6e8.yaml v2-alpha-tpuv5e"
+    "v6e-16 europe-west4-a yes tpu/accelerate_config_v6e8.yaml v2-alpha-tpuv6e"
+    "v6e-8  europe-west4-a yes tpu/accelerate_config_v6e8.yaml v2-alpha-tpuv6e"
+    "v6e-8  us-east1-d     yes tpu/accelerate_config_v6e8.yaml v2-alpha-tpuv6e"
+    "v5e-8  europe-west4-b yes tpu/accelerate_config_v6e8.yaml v2-alpha-tpuv5e"
+    "v5e-8  us-central1-a  yes tpu/accelerate_config_v6e8.yaml v2-alpha-tpuv5e"
+)
+
+# Persistent data disk for HF model cache (only in europe-west4-a).
+# Lets us survive preemption without re-downloading 50+GB of weights each
+# time, AND eliminates the chronic 100GB-boot-disk pressure (model caches
+# of medgemma+qwen+vllm-docker would saturate it otherwise).
+declare -A DATA_DISKS=(
+    ["europe-west4-a"]="bohdi-cache-eur4a"
 )
 
 # Try each slot in one pass, then sleep and retry the whole list.
@@ -145,11 +155,18 @@ for round in $(seq 1 "$MAX_ROUNDS"); do
         SPOT_FLAG=""
         [ "$_SPOT" = "yes" ] && SPOT_FLAG="--spot"
         echo "  Trying $_TYPE ($(echo "$_TYPE" | grep -o '[0-9]*$') chips) in $_ZONE (spot=$_SPOT)..."
+        # Attach data disk if we have one in this zone (HF cache persistence).
+        DATA_DISK_FLAG=""
+        if [ -n "${DATA_DISKS[$_ZONE]:-}" ]; then
+            DATA_DISK_FLAG="--data-disk=source=projects/${PROJECT}/zones/${_ZONE}/disks/${DATA_DISKS[$_ZONE]},mode=read-write"
+            echo "    (attaching data disk: ${DATA_DISKS[$_ZONE]})"
+        fi
         if gcloud compute tpus tpu-vm create "$TPU_NAME" \
             --zone="$_ZONE" \
             --accelerator-type="$_TYPE" \
             --version="$_RUNTIME" \
             --project="$PROJECT" \
+            $DATA_DISK_FLAG \
             $SPOT_FLAG 2>&1; then
             ZONE="$_ZONE"
             TPU_RUNTIME="$_RUNTIME"
