@@ -423,7 +423,7 @@ export GEN_CONCURRENCY='${GEN_CONCURRENCY:-12}'
 rm -f /tmp/gen_stage1.log
 nohup python scripts/generate_traces.py \
     --model ${MODEL_NAME} \
-    --datasets healthbench_hard \
+    --datasets healthbench_hard healthbench \
     --exclude-ids data/raw/hard_200_sample_ids.json \
     --output data/sft/raw_traces.jsonl \
     --resume-from data/sft/raw_traces.jsonl \
