@@ -159,18 +159,15 @@ for round in $(seq 1 "$MAX_ROUNDS"); do
         SPOT_FLAG=""
         [ "$_SPOT" = "yes" ] && SPOT_FLAG="--spot"
         echo "  Trying $_TYPE ($(echo "$_TYPE" | grep -o '[0-9]*$') chips) in $_ZONE (spot=$_SPOT)..."
-        # Attach data disk if we have one in this zone (HF cache persistence).
-        DATA_DISK_FLAG=""
-        if [ -n "${DATA_DISKS[$_ZONE]:-}" ]; then
-            DATA_DISK_FLAG="--data-disk=source=projects/${PROJECT}/zones/${_ZONE}/disks/${DATA_DISKS[$_ZONE]},mode=read-write"
-            echo "    (attaching data disk: ${DATA_DISKS[$_ZONE]})"
-        fi
+        # NOTE: --data-disk on create was causing INTERNAL errors on every
+        # spot v6e-8 attempt today (verified by probe: same params without
+        # data disk created cleanly).  Disabling for now; would need to
+        # attach via the alpha attach-disk command post-create instead.
         if gcloud compute tpus tpu-vm create "$TPU_NAME" \
             --zone="$_ZONE" \
             --accelerator-type="$_TYPE" \
             --version="$_RUNTIME" \
             --project="$PROJECT" \
-            $DATA_DISK_FLAG \
             $SPOT_FLAG 2>&1; then
             ZONE="$_ZONE"
             TPU_RUNTIME="$_RUNTIME"
