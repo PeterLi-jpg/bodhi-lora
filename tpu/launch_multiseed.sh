@@ -171,9 +171,13 @@ fi
 # Without this, a single hung SSH (e.g. after a TPU preemption where the
 # control plane still routes but the VM kernel is gone) blocks the launcher
 # indefinitely — we saw this leave the launcher stuck for 3+ hours overnight.
-# 90s is generous; even on a busy TPU the alive-check pgrep returns in <5s.
+#
+# Default 1800s (30 min) is generous enough for the long setup SSH (Docker
+# image pull + pip install of torch_xla can take 10+ min on a fresh VM).
+# Polling-loop call sites override with TPU_SSH_TIMEOUT=90 so a hung VM is
+# detected quickly there.
 tpu_ssh() {
-    timeout "${TPU_SSH_TIMEOUT:-90}" gcloud compute tpus tpu-vm ssh "$@"
+    timeout "${TPU_SSH_TIMEOUT:-1800}" gcloud compute tpus tpu-vm ssh "$@"
 }
 
 # Generic remote long-task runner — same nohup-launch + poll-from-launcher
@@ -219,7 +223,9 @@ echo '${_name} running in background (PID '\$(cat ${_pid_file})')'
         # || true: grep exits 1 when the TPU is gone (no output to match);
         # without this, set -euo pipefail silently kills the launcher mid-$()
         # with no error message, skipping the SSH-timeout counter entirely.
-        _done=$(tpu_ssh "$TPU_NAME" \
+        # Use short timeout for polling — a hung VM should be detected fast,
+        # not waited on for the default 30 min.
+        _done=$(TPU_SSH_TIMEOUT=90 tpu_ssh "$TPU_NAME" \
             --zone="$ZONE" --project="$PROJECT" \
             --command="cd ~/bohdi-lora && [ -e ${_sentinel} ] && echo done || echo pending" 2>/dev/null \
             | grep -E '^(done|pending)$' | tail -1) || true
@@ -227,7 +233,7 @@ echo '${_name} running in background (PID '\$(cat ${_pid_file})')'
             echo "${_name}: complete (sentinel ${_sentinel} present)."
             return 0
         fi
-        _alive=$(tpu_ssh "$TPU_NAME" \
+        _alive=$(TPU_SSH_TIMEOUT=90 tpu_ssh "$TPU_NAME" \
             --zone="$ZONE" --project="$PROJECT" \
             --command="pgrep -f '${_pgrep_pat}' > /dev/null 2>&1 && echo alive || echo dead" 2>/dev/null \
             | grep -E '^(alive|dead)$' | tail -1) || true
@@ -406,7 +412,7 @@ echo "Polling Stage 1 progress (target: ${TARGET} traces)..."
 _ssh_misses=0   # consecutive polls where SSH timed out (returned nothing)
 for i in $(seq 1 576); do   # 576 × 5 min = 48 hours max
     sleep 300
-    N=$(tpu_ssh "$TPU_NAME" \
+    N=$(TPU_SSH_TIMEOUT=90 tpu_ssh "$TPU_NAME" \
         --zone="$ZONE" --project="$PROJECT" \
         --command="wc -l < ~/bohdi-lora/data/sft/raw_traces.jsonl 2>/dev/null || echo 0" 2>/dev/null \
         | grep -E '^[0-9]+$' | tail -1) || true
@@ -425,7 +431,7 @@ for i in $(seq 1 576); do   # 576 × 5 min = 48 hours max
         _ssh_misses=0
         break
     fi
-    ALIVE=$(tpu_ssh "$TPU_NAME" \
+    ALIVE=$(TPU_SSH_TIMEOUT=90 tpu_ssh "$TPU_NAME" \
         --zone="$ZONE" --project="$PROJECT" \
         --command="pgrep -f '[g]enerate_traces.py' > /dev/null 2>&1 && echo alive || echo dead" 2>/dev/null \
         | grep -E '^(alive|dead)$' | tail -1) || true
