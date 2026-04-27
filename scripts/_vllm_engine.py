@@ -155,21 +155,46 @@ class VLLMEngine:
             print(f"  vllm serve stopped", flush=True)
 
     def _wait_ready(self, timeout_s: int = 2700) -> None:
+        # /health goes 200 the moment the FastAPI process is up, BEFORE the
+        # chat-completions route is registered.  We learned the hard way that
+        # firing 16 concurrent requests at a "healthy" server can get 800 fast
+        # 404s in a row.  So: poll /health first, then send a one-token test
+        # chat to confirm /v1/chat/completions is actually serving.
         health_url = f"http://localhost:{self.port}/health"
+        chat_url   = f"http://localhost:{self.port}/v1/chat/completions"
         deadline = time.time() + timeout_s
         last_log = time.time()
+        health_ok = False
         while time.time() < deadline:
             try:
-                with urllib.request.urlopen(health_url, timeout=5) as r:
-                    if r.status == 200:
-                        elapsed = int(time.time() - (deadline - timeout_s))
-                        print(f"  vllm serve ready ({elapsed}s)", flush=True)
-                        return
+                if not health_ok:
+                    with urllib.request.urlopen(health_url, timeout=5) as r:
+                        health_ok = r.status == 200
+                if health_ok:
+                    # Send a tiny probe to /v1/chat/completions to confirm
+                    # the actual inference route is wired up.
+                    probe = {
+                        "model": self.model,
+                        "messages": [{"role": "user", "content": "hi"}],
+                        "max_tokens": 1,
+                        "temperature": 0.0,
+                    }
+                    req = urllib.request.Request(
+                        chat_url,
+                        data=json.dumps(probe).encode(),
+                        headers={"Content-Type": "application/json"},
+                    )
+                    with urllib.request.urlopen(req, timeout=30) as r:
+                        if r.status == 200:
+                            elapsed = int(time.time() - (deadline - timeout_s))
+                            print(f"  vllm serve ready ({elapsed}s)", flush=True)
+                            return
             except Exception:
                 pass
             if time.time() - last_log > 30:
                 elapsed = int(time.time() - (deadline - timeout_s))
-                print(f"  waiting for vllm serve... ({elapsed}s)", flush=True)
+                state = "chat-routing" if health_ok else "starting"
+                print(f"  waiting for vllm serve [{state}]... ({elapsed}s)", flush=True)
                 last_log = time.time()
             time.sleep(5)
         raise RuntimeError(
