@@ -590,6 +590,32 @@ if [ "${_TRAIN_LINES:-0}" -lt "${TRAIN_FLOOR}" ]; then
     exit 1
 fi
 
+# Free up disk + drain TPU before Stage 3 (training).
+#
+# Same hazard as the Stage 1 → 2 transition: Stage 2's Qwen-14B vLLM
+# container holds TPU resources after its python process exits.  And
+# the Qwen HF cache (~28 GB) + libtpu state would push the boot disk
+# over capacity once MedGemma-27B (~54 GB) re-downloads for training.
+echo "Clearing Stage 2 model cache + draining TPU before Stage 3..."
+tpu_ssh "$TPU_NAME" \
+    --zone="$ZONE" --project="$PROJECT" \
+    --command="
+        # Stop any vllm-tpu containers (running or paused)
+        VLLM_C=\$(sudo docker ps -aq --filter 'ancestor=vllm/vllm-tpu:latest' 2>/dev/null)
+        [ -n \"\$VLLM_C\" ] && sudo docker rm -f \$VLLM_C 2>/dev/null || true
+        # Kill any leftover python that might still hold the TPU
+        sudo pkill -9 -f 'filter_traces|generate_traces|eval_healthbench' 2>/dev/null || true
+        df -h / | tail -1
+        # Clear Qwen-14B cache; Stage 3 doesn't need it (only Stage 4 does, and
+        # Stage 4 will re-download fresh after training is done).
+        sudo rm -rf ~/.cache/huggingface/hub/models--Qwen--Qwen2.5-14B-Instruct
+        sudo docker system prune -f 2>/dev/null || true
+        df -h / | tail -1
+        echo 'sleeping 30s for TPU to fully release...'
+        sleep 30
+        echo 'disk cleared, TPU drained'
+    " 2>&1 || true
+
 # ── Train each seed sequentially ──────────────────────────────────────────────
 for SEED in $SEEDS; do
     echo ""
@@ -610,6 +636,22 @@ for SEED in $SEEDS; do
         "mkdir -p checkpoints/seed_${SEED} && PJRT_DEVICE=TPU python -u scripts/train_lora.py --config ${TRAIN_CONFIG} --seed ${SEED} --output-dir checkpoints/seed_${SEED} ${TRAIN_EXTRA_FLAGS}" \
         "checkpoints/seed_${SEED}/best/adapter_model.safetensors"
 
+    # Drain TPU before Stage 4: training holds the chips and Stage 4 spins up
+    # 8 fresh vLLM containers (4 inference + 4 grader).  Without a drain, the
+    # first one hits 'Engine core initialization failed' just like Stage 2 did.
+    echo "Draining TPU before Stage 4 (eval)..."
+    tpu_ssh "$TPU_NAME" \
+        --zone="$ZONE" --project="$PROJECT" \
+        --command="
+            VLLM_C=\$(sudo docker ps -aq --filter 'ancestor=vllm/vllm-tpu:latest' 2>/dev/null)
+            [ -n \"\$VLLM_C\" ] && sudo docker rm -f \$VLLM_C 2>/dev/null || true
+            sudo pkill -9 -f 'train_lora|generate_traces|filter_traces|eval_healthbench' 2>/dev/null || true
+            sudo docker system prune -f 2>/dev/null || true
+            echo 'sleeping 30s for TPU to release...'
+            sleep 30
+            echo 'TPU drained'
+        " 2>&1 || true
+
     # ── Stage 4: evaluate all 4 configurations ────────────────────────────────
     # Same long-running pattern as the other stages.  Sentinel: rubric_diff.json
     # is the very last artifact produced; if it exists, the whole eval finished.
@@ -622,10 +664,17 @@ for SEED in $SEEDS; do
     MODEL="${MODEL_NAME}"
     IDS="data/raw/hard_200_sample_ids.json"
     HB="data/raw/healthbench_hard.jsonl data/raw/healthbench.jsonl"
+    # Drain helper: each eval spins up its own vLLM (inference + grader),
+    # so between configs we kill leftover containers + sleep 30s for the
+    # TPU to release.  Without this, the second eval crashes on Engine init.
+    DRAIN="(sudo docker ps -aq --filter 'ancestor=vllm/vllm-tpu:latest' | xargs -r sudo docker rm -f >/dev/null 2>&1 || true) && sleep 30"
     EVAL_CMD="set -e; mkdir -p ${EVAL_DIR} ${FIG_DIR}"
     EVAL_CMD="${EVAL_CMD} && python scripts/eval_healthbench.py --model ${MODEL} --sample-ids ${IDS} ${_EVAL_MAX_FLAG} --output ${EVAL_DIR}/base_no_wrapper.json"
+    EVAL_CMD="${EVAL_CMD} && ${DRAIN}"
     EVAL_CMD="${EVAL_CMD} && python scripts/eval_healthbench.py --model ${MODEL} --use-bodhi --sample-ids ${IDS} ${_EVAL_MAX_FLAG} --output ${EVAL_DIR}/base_bodhi.json"
+    EVAL_CMD="${EVAL_CMD} && ${DRAIN}"
     EVAL_CMD="${EVAL_CMD} && python scripts/eval_healthbench.py --model ${MODEL} --lora-path ${LORA} --sample-ids ${IDS} ${_EVAL_MAX_FLAG} --output ${EVAL_DIR}/lora_no_wrapper.json"
+    EVAL_CMD="${EVAL_CMD} && ${DRAIN}"
     EVAL_CMD="${EVAL_CMD} && python scripts/eval_healthbench.py --model ${MODEL} --lora-path ${LORA} --use-bodhi --sample-ids ${IDS} ${_EVAL_MAX_FLAG} --output ${EVAL_DIR}/lora_bodhi.json"
     EVAL_CMD="${EVAL_CMD} && python scripts/eval_ushape.py --eval-jsons ${EVAL_DIR}/base_no_wrapper.json ${EVAL_DIR}/base_bodhi.json ${EVAL_DIR}/lora_no_wrapper.json ${EVAL_DIR}/lora_bodhi.json --healthbench ${HB} --output ${EVAL_DIR}/ushape.json"
     EVAL_CMD="${EVAL_CMD} && python scripts/plot_ushape.py --input ${EVAL_DIR}/ushape.json --eval-jsons ${EVAL_DIR}/base_no_wrapper.json ${EVAL_DIR}/base_bodhi.json ${EVAL_DIR}/lora_no_wrapper.json ${EVAL_DIR}/lora_bodhi.json --healthbench ${HB} --n-bins 10 --out-dir ${FIG_DIR}"
