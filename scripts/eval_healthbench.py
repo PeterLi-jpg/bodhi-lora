@@ -202,23 +202,45 @@ def main():
     print(f"\nEval: {tag}  ({len(examples)} examples)\n")
 
     # ── Pass 1: generate responses with the inference engine ─────────────────
-    # Run inference and grading sequentially on the same 8 chips to avoid
-    # dual-server port conflicts.  VLLMEngine.__exit__ kills the container
-    # before the grader engine starts.
+    # Concurrent generation — vLLM batches concurrent requests server-side.
+    # 16 is conservative; we saw vLLM crash at 32 on Qwen-14B grading.
+    # Per-task try/except so one HTTP error doesn't kill all 200 examples.
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    EVAL_CONCURRENCY = int(os.environ.get("EVAL_CONCURRENCY", "16"))
+
     raw_generations = []  # list of {prompt_id, messages, rubrics, response, token_logprobs}
+    failed_inference = []
     with VLLMEngine(args.model, lora_path=args.lora_path) as engine:
         bodhi_wrapper = make_bodhi_wrapper(engine) if args.use_bodhi else None
-        for ex in tqdm(examples, desc=f"{tag} [inference]"):
-            resp, token_logprobs = gen_response(
-                engine, ex["prompt"], args.use_bodhi, bodhi_wrapper
-            )
-            raw_generations.append({
-                "prompt_id": ex["prompt_id"],
-                "messages": ex["prompt"],
-                "rubrics": ex["rubrics"],
-                "response": resp,
-                "token_logprobs": token_logprobs,
-            })
+
+        def _gen_one(ex):
+            try:
+                resp, token_logprobs = gen_response(
+                    engine, ex["prompt"], args.use_bodhi, bodhi_wrapper
+                )
+                return {
+                    "prompt_id": ex["prompt_id"],
+                    "messages": ex["prompt"],
+                    "rubrics": ex["rubrics"],
+                    "response": resp,
+                    "token_logprobs": token_logprobs,
+                }, None
+            except Exception as e:
+                return None, (ex.get("prompt_id", "?"), repr(e))
+
+        with ThreadPoolExecutor(max_workers=EVAL_CONCURRENCY) as ex_pool:
+            futures = [ex_pool.submit(_gen_one, ex) for ex in examples]
+            for fut in tqdm(as_completed(futures), total=len(futures), desc=f"{tag} [inference]"):
+                gen, err = fut.result()
+                if gen is not None:
+                    raw_generations.append(gen)
+                else:
+                    failed_inference.append(err)
+
+    if failed_inference:
+        print(f"WARNING: {len(failed_inference)} inference failures (skipped):")
+        for pid, err in failed_inference[:5]:
+            print(f"  {pid}: {err}")
     print(f"Generated {len(raw_generations)} responses; starting grader engine...")
 
     # ── Pass 2: grade with the grader engine ──────────────────────────────────
@@ -227,25 +249,44 @@ def main():
     model_confidences = []
     total_parse_failures = 0
     total_rubric_items = 0
+    failed_grading = []
     with VLLMEngine(args.grader_model) as grader_engine:
         grader = LocalGrader(grader_engine)
-        for item in tqdm(raw_generations, desc=f"{tag} [grading]"):
-            confidence = score_response_confidence(item["token_logprobs"])
-            grade = grade_trace(grader, item["messages"], item["response"], item["rubrics"])
-            all_results.append({
-                "prompt_id": item["prompt_id"], "response": item["response"],
-                "score": grade["overall_score"], "tag_scores": grade["tag_scores"],
-                "criteria_results": grade["criteria_results"],
-                "parse_failures": grade["parse_failures"],
-                "model_confidence_geomean_prob": confidence["geomean_token_prob"],
-                "model_confidence_mean_token_logprob": confidence["mean_token_logprob"],
-                "response_token_count": confidence["response_token_count"],
-            })
-            scores.append(grade["overall_score"])
-            if confidence["geomean_token_prob"] is not None:
-                model_confidences.append(confidence["geomean_token_prob"])
-            total_parse_failures += grade["parse_failures"]
-            total_rubric_items += len(grade["criteria_results"])
+
+        def _grade_one(item):
+            try:
+                confidence = score_response_confidence(item["token_logprobs"])
+                grade = grade_trace(grader, item["messages"], item["response"], item["rubrics"])
+                return {
+                    "prompt_id": item["prompt_id"], "response": item["response"],
+                    "score": grade["overall_score"], "tag_scores": grade["tag_scores"],
+                    "criteria_results": grade["criteria_results"],
+                    "parse_failures": grade["parse_failures"],
+                    "model_confidence_geomean_prob": confidence["geomean_token_prob"],
+                    "model_confidence_mean_token_logprob": confidence["mean_token_logprob"],
+                    "response_token_count": confidence["response_token_count"],
+                }, None
+            except Exception as e:
+                return None, (item.get("prompt_id", "?"), repr(e))
+
+        with ThreadPoolExecutor(max_workers=EVAL_CONCURRENCY) as ex_pool:
+            futures = [ex_pool.submit(_grade_one, item) for item in raw_generations]
+            for fut in tqdm(as_completed(futures), total=len(futures), desc=f"{tag} [grading]"):
+                result, err = fut.result()
+                if result is not None:
+                    all_results.append(result)
+                    scores.append(result["score"])
+                    if result["model_confidence_geomean_prob"] is not None:
+                        model_confidences.append(result["model_confidence_geomean_prob"])
+                    total_parse_failures += result["parse_failures"]
+                    total_rubric_items += len(result["criteria_results"])
+                else:
+                    failed_grading.append(err)
+
+    if failed_grading:
+        print(f"WARNING: {len(failed_grading)} grading failures (skipped):")
+        for pid, err in failed_grading[:5]:
+            print(f"  {pid}: {err}")
 
     model_brier = compute_brier_score(all_results, "model_confidence_geomean_prob")
     model_ece = compute_ece(all_results, "model_confidence_geomean_prob")
