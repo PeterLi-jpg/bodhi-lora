@@ -239,6 +239,13 @@ echo '${_name} running in background (PID '\$(cat ${_pid_file})')'
             --zone="$ZONE" --project="$PROJECT" \
             --command="pgrep -f '${_pgrep_pat}' > /dev/null 2>&1 && echo alive || echo dead" 2>/dev/null \
             | grep -E '^(alive|dead)$' | tail -1) || true
+        # Periodic-rescue hook: if RUN_LONG_RESCUE_CMD is set, run it on each
+        # poll so partial work is preserved across preemption.  E.g. for
+        # Stage 3 we SCP checkpoints/ from the TPU to ./results/_rescue/ so
+        # the next iteration can resume_from_checkpoint instead of step 0.
+        if [ -n "${RUN_LONG_RESCUE_CMD:-}" ]; then
+            ( eval "$RUN_LONG_RESCUE_CMD" ) >/dev/null 2>&1 || true
+        fi
         if [ -z "$_alive" ] && [ -z "$_done" ]; then
             _ssh_misses=$(( _ssh_misses + 1 ))
             echo "  ${_name} poll $i: SSH timeout (miss $_ssh_misses/6)"
@@ -620,6 +627,22 @@ tpu_ssh "$TPU_NAME" \
 for SEED in $SEEDS; do
     echo ""
     echo "=== Stage 3: training seed $SEED ==="
+    # Restore any rescued checkpoints from a previous interrupted training run.
+    # train_lora.py will detect them and pass resume_from_checkpoint=True to
+    # SFTTrainer, picking up at the last save instead of step 0.
+    if [ -d "./results/_rescue/checkpoints/seed_${SEED}" ] && \
+       [ -n "$(ls -A ./results/_rescue/checkpoints/seed_${SEED} 2>/dev/null)" ]; then
+        echo "Restoring rescued checkpoints for seed_${SEED} to TPU..."
+        tpu_ssh "$TPU_NAME" \
+            --zone="$ZONE" --project="$PROJECT" \
+            --command="mkdir -p ~/bohdi-lora/checkpoints/seed_${SEED}" 2>/dev/null || true
+        gcloud compute tpus tpu-vm scp --recurse \
+            --zone="$ZONE" --project="$PROJECT" \
+            "./results/_rescue/checkpoints/seed_${SEED}/" \
+            "${TPU_NAME}:~/bohdi-lora/checkpoints/seed_${SEED}/" \
+            && echo "  Restored checkpoints" \
+            || echo "  Restore failed (continuing without resume)"
+    fi
     # NOTE: do NOT use 'accelerate launch'.  accelerate's tpu_launcher
     # ALWAYS calls xmp.spawn() with no nprocs arg, which forks
     # addressable_device_count() processes (= 8 on v6e-8).  Each forked
@@ -630,11 +653,20 @@ for SEED in $SEEDS; do
     # HF Trainer's native XLA path picks up SPMD without xmp.spawn.
     # Sentinel: <output-dir>/best/adapter_model.safetensors is the final
     # artifact written by trainer.save_model() at the end of training.
+    # Periodic checkpoint rescue: every 5-min poll, SCP checkpoints/seed_N
+    # from TPU to runner so preemption mid-training only loses ~5 min.
+    mkdir -p "./results/_rescue/checkpoints"
+    RUN_LONG_RESCUE_CMD="gcloud compute tpus tpu-vm scp --recurse \
+        --zone=\"$ZONE\" --project=\"$PROJECT\" \
+        \"${TPU_NAME}:~/bohdi-lora/checkpoints/seed_${SEED}\" \
+        \"./results/_rescue/checkpoints/\""
+    export RUN_LONG_RESCUE_CMD
     run_long_remote \
         "stage3_train_seed${SEED}" \
         "[t]rain_lora.py" \
         "mkdir -p checkpoints/seed_${SEED} && PJRT_DEVICE=TPU python -u scripts/train_lora.py --config ${TRAIN_CONFIG} --seed ${SEED} --output-dir checkpoints/seed_${SEED} ${TRAIN_EXTRA_FLAGS}" \
         "checkpoints/seed_${SEED}/best/adapter_model.safetensors"
+    unset RUN_LONG_RESCUE_CMD
 
     # Drain TPU before Stage 4: training holds the chips and Stage 4 spins up
     # 8 fresh vLLM containers (4 inference + 4 grader).  Without a drain, the

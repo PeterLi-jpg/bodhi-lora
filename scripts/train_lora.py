@@ -533,7 +533,21 @@ def main():
         formatting_func=format_example,
     )
 
-    trainer.train()
+    # Resume from the latest checkpoint if one exists in output_dir.  This
+    # makes preemption recovery cheap: rescued checkpoints are SCP'd back to
+    # the new VM, training resumes from the last save instead of step 0.
+    # `resume_from_checkpoint=True` is a no-op (starts fresh) if no checkpoint
+    # is present, so safe on first run.
+    from pathlib import Path as _Path
+    _ckpt_dir = _Path(train_args.output_dir)
+    _has_ckpt = _ckpt_dir.exists() and any(
+        p.name.startswith("checkpoint-") for p in _ckpt_dir.iterdir()
+    )
+    if _has_ckpt:
+        print(f"Found existing checkpoint(s) in {train_args.output_dir}, resuming.")
+        trainer.train(resume_from_checkpoint=True)
+    else:
+        trainer.train()
 
     # On TPU/SPMD the computation graph is asynchronous.  Without an explicit
     # barrier, trainer.save_model() can race against in-flight sharded tensor
