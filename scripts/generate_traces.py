@@ -210,11 +210,16 @@ def main():
     mode = "a" if done_ids else "w"
     ok, fail = 0, 0
 
-    # Short-circuit: if the resume file already has all the traces we need,
-    # don't bother spinning up vLLM.  Booting and tearing down a 27B vLLM
-    # container holds the TPU for ~30 s and was breaking the next stage's
-    # vLLM init.
-    if len(examples) == 0:
+    # Short-circuit: if the resume file already has at least max_examples
+    # traces, we have enough — don't bother spinning up vLLM.  Booting and
+    # tearing down a 27B vLLM container holds the TPU for ~5 min and used
+    # to break the next stage's vLLM init too.
+    #
+    # Two cases that count as "have enough":
+    #   - len(examples) == 0 after resume filter (no prompts left to do)
+    #   - len(done_ids) >= max_examples (already at target, even if a
+    #     reshuffled prompt order leaves some extras to do)
+    if len(examples) == 0 or (args.max_examples and len(done_ids) >= args.max_examples):
         print(f"Nothing to generate (have {len(done_ids)} traces, need "
               f"{args.max_examples or 'all'}). Skipping vLLM startup.")
         return
