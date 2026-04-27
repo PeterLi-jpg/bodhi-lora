@@ -421,6 +421,7 @@ tpu_ssh "$TPU_NAME" \
 export PATH=\"\$HOME/.local/bin:\$PATH\"
 cd ~/bohdi-lora
 export HF_TOKEN='${HF_TOKEN}'
+export GEN_CONCURRENCY='${GEN_CONCURRENCY:-12}'
 rm -f /tmp/gen_stage1.log
 nohup python scripts/generate_traces.py \
     --model ${MODEL_NAME} \
