@@ -79,15 +79,18 @@ echo ""
 # and cycles back on failure, so put preferred zones first.
 # v5e-8 = 8 chips × 16 GB = 128 GB; tighter on memory but same SPMD topology.
 # Format: "TPU_TYPE ZONE SPOT(yes/no) ACCEL_CFG RUNTIME"
-# NOTE: bigger run uses v6e-16 with a pre-created 300GB SSD attached as
-# data disk for HF cache (see DATA_DISK below).  The disk only exists in
-# europe-west4-a; fallback zones lose the cache and re-download each run.
+# NOTE: v6e-16 is a multi-host TPU pod and Cloud TPU requires shared disks
+# across pods to be READ_ONLY.  Our HF-cache data disk needs RW so the first
+# run can download model weights to it.  Stuck with single-host v6e-8 on
+# the RW data-disk path.  (Concurrency in stages 1/2/4 is the main throughput
+# lever anyway, not chip count.)  If we want v6e-16 later: pre-populate the
+# disk on v6e-8, then mark the source disk RO and add a second slot for
+# v6e-16 that mounts it RO.
 TRC_SLOTS=(
-    "v6e-16 europe-west4-a yes tpu/accelerate_config_v6e8.yaml v2-alpha-tpuv6e"
-    "v6e-8  europe-west4-a yes tpu/accelerate_config_v6e8.yaml v2-alpha-tpuv6e"
-    "v6e-8  us-east1-d     yes tpu/accelerate_config_v6e8.yaml v2-alpha-tpuv6e"
-    "v5e-8  europe-west4-b yes tpu/accelerate_config_v6e8.yaml v2-alpha-tpuv5e"
-    "v5e-8  us-central1-a  yes tpu/accelerate_config_v6e8.yaml v2-alpha-tpuv5e"
+    "v6e-8 europe-west4-a yes tpu/accelerate_config_v6e8.yaml v2-alpha-tpuv6e"
+    "v6e-8 us-east1-d     yes tpu/accelerate_config_v6e8.yaml v2-alpha-tpuv6e"
+    "v5e-8 europe-west4-b yes tpu/accelerate_config_v6e8.yaml v2-alpha-tpuv5e"
+    "v5e-8 us-central1-a  yes tpu/accelerate_config_v6e8.yaml v2-alpha-tpuv5e"
 )
 
 # Persistent data disk for HF model cache (only in europe-west4-a).
