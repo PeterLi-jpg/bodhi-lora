@@ -486,18 +486,34 @@ gcloud compute tpus tpu-vm scp \
 # Also update the rescue copy so the restore path is consistent.
 cp -f "./results/raw_traces.jsonl" "./results/_rescue/raw_traces.jsonl" 2>/dev/null || true
 
-# Free up disk before Stage 2: MedGemma-27B HF cache (~54 GB) is no longer
-# needed and would push the 100 GB boot disk over capacity when Qwen-14B
-# (~28 GB) and the vllm Docker image are added on top.
-echo "Clearing Stage 1 model cache to free disk space..."
+# Free up disk AND fully release TPU resources before Stage 2.
+#
+# Why this is critical: after Stage 1's vLLM container exits, the TPU chips
+# are still owned (by libtpu / the dead python process / kernel state) for
+# a few seconds.  If Stage 2's vLLM container starts before this drains,
+# `EngineCore` init fails and the whole vLLM crashes on startup.  Symptom
+# is the container exits with "Engine core initialization failed".
+#
+# We also force-kill any lingering vllm-tpu containers (in case Stage 1's
+# context manager didn't get to run __exit__ — e.g. if we hard-killed
+# generate_traces.py earlier).  And we kill any python that has the TPU
+# device file open.  And we sleep 30s for everything to settle.
+echo "Clearing Stage 1 model cache + draining TPU before Stage 2..."
 tpu_ssh "$TPU_NAME" \
     --zone="$ZONE" --project="$PROJECT" \
     --command="
+        # Force-stop any vllm-tpu containers (running or paused)
+        VLLM_C=\$(sudo docker ps -aq --filter 'ancestor=vllm/vllm-tpu:latest' 2>/dev/null)
+        [ -n \"\$VLLM_C\" ] && sudo docker rm -f \$VLLM_C 2>/dev/null || true
+        # Kill any leftover python that might still hold the TPU
+        sudo pkill -9 -f 'generate_traces|filter_traces|eval_healthbench' 2>/dev/null || true
         df -h / | tail -1
         sudo rm -rf ~/.cache/huggingface/hub/models--google--medgemma-27b-text-it
         sudo docker system prune -f 2>/dev/null || true
         df -h / | tail -1
-        echo 'disk cleared'
+        echo 'sleeping 30s for TPU to fully release...'
+        sleep 30
+        echo 'disk cleared, TPU drained'
     " 2>&1 || true
 
 # ── Stage 2: grade + filter (Qwen2.5-14B grader, long-running on TPU) ────────
