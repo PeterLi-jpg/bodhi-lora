@@ -243,6 +243,13 @@ def main():
             print(f"  {pid}: {err}")
     print(f"Generated {len(raw_generations)} responses; starting grader engine...")
 
+    # Drain TPU before spinning up the grader vLLM. Without a small sleep,
+    # the grader engine hits "Engine core initialization failed" because the
+    # inference container's TPU resources haven't fully released yet.
+    import time as _t
+    print("  draining TPU 30s before grader startup...", flush=True)
+    _t.sleep(30)
+
     # ── Pass 2: grade with the grader engine ──────────────────────────────────
     all_results = []
     scores = []
