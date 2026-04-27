@@ -470,6 +470,20 @@ gcloud compute tpus tpu-vm scp \
 # Also update the rescue copy so the restore path is consistent.
 cp -f "./results/raw_traces.jsonl" "./results/_rescue/raw_traces.jsonl" 2>/dev/null || true
 
+# Free up disk before Stage 2: MedGemma-27B HF cache (~54 GB) is no longer
+# needed and would push the 100 GB boot disk over capacity when Qwen-14B
+# (~28 GB) and the vllm Docker image are added on top.
+echo "Clearing Stage 1 model cache to free disk space..."
+gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
+    --zone="$ZONE" --project="$PROJECT" \
+    --command="
+        df -h / | tail -1
+        rm -rf ~/.cache/huggingface/hub/models--google--medgemma-27b-text-it
+        docker system prune -f 2>/dev/null || true
+        df -h / | tail -1
+        echo 'disk cleared'
+    " 2>&1 || true
+
 # ── Stage 2: grade + filter (Qwen2.5-14B grader, long-running on TPU) ────────
 # Stage 2 runs a 14B grader over all (trace, rubric_item) pairs.
 # Each grade is a generate() call — same XLA compile / SSH-teardown failure
