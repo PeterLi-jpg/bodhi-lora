@@ -166,6 +166,16 @@ if ! $found; then
     exit 1
 fi
 
+# tpu_ssh: gcloud SSH wrapper with a hard timeout.
+#
+# Without this, a single hung SSH (e.g. after a TPU preemption where the
+# control plane still routes but the VM kernel is gone) blocks the launcher
+# indefinitely — we saw this leave the launcher stuck for 3+ hours overnight.
+# 90s is generous; even on a busy TPU the alive-check pgrep returns in <5s.
+tpu_ssh() {
+    timeout "${TPU_SSH_TIMEOUT:-90}" gcloud compute tpus tpu-vm ssh "$@"
+}
+
 # Generic remote long-task runner — same nohup-launch + poll-from-launcher
 # pattern that Stage 1 uses, but reusable for Stages 2/3/4.  Without this,
 # every long stage hits the same SSH-teardown failure mode: the TPU host CPUs
@@ -189,7 +199,7 @@ run_long_remote() {
     local _log="/tmp/${_name}.log" _pid_file="/tmp/${_name}.pid"
 
     echo "=== ${_name}: launching on TPU ==="
-    gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
+    tpu_ssh "$TPU_NAME" \
         --zone="$ZONE" --project="$PROJECT" \
         --command="
 export PATH=\"\$HOME/.local/bin:\$PATH\"
@@ -209,7 +219,7 @@ echo '${_name} running in background (PID '\$(cat ${_pid_file})')'
         # || true: grep exits 1 when the TPU is gone (no output to match);
         # without this, set -euo pipefail silently kills the launcher mid-$()
         # with no error message, skipping the SSH-timeout counter entirely.
-        _done=$(gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
+        _done=$(tpu_ssh "$TPU_NAME" \
             --zone="$ZONE" --project="$PROJECT" \
             --command="cd ~/bohdi-lora && [ -e ${_sentinel} ] && echo done || echo pending" 2>/dev/null \
             | grep -E '^(done|pending)$' | tail -1) || true
@@ -217,7 +227,7 @@ echo '${_name} running in background (PID '\$(cat ${_pid_file})')'
             echo "${_name}: complete (sentinel ${_sentinel} present)."
             return 0
         fi
-        _alive=$(gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
+        _alive=$(tpu_ssh "$TPU_NAME" \
             --zone="$ZONE" --project="$PROJECT" \
             --command="pgrep -f '${_pgrep_pat}' > /dev/null 2>&1 && echo alive || echo dead" 2>/dev/null \
             | grep -E '^(alive|dead)$' | tail -1) || true
@@ -227,7 +237,7 @@ echo '${_name} running in background (PID '\$(cat ${_pid_file})')'
             if [ "$_ssh_misses" -ge 6 ]; then
                 echo "ERROR: ${_name}: 6 consecutive SSH timeouts."
                 echo "--- last 40 lines of ${_log} ---"
-                gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
+                tpu_ssh "$TPU_NAME" \
                     --zone="$ZONE" --project="$PROJECT" \
                     --command="tail -40 ${_log} 2>/dev/null || echo '(log not found)'" \
                     2>/dev/null || true
@@ -241,7 +251,7 @@ echo '${_name} running in background (PID '\$(cat ${_pid_file})')'
         if [ "$_alive" = "dead" ]; then
             # Process exited — recheck sentinel one more time before declaring failure
             # (race: process finished between our two SSH calls).
-            _done=$(gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
+            _done=$(tpu_ssh "$TPU_NAME" \
                 --zone="$ZONE" --project="$PROJECT" \
                 --command="cd ~/bohdi-lora && [ -e ${_sentinel} ] && echo done || echo pending" 2>/dev/null \
                 | grep -E '^(done|pending)$' | tail -1) || true
@@ -251,7 +261,7 @@ echo '${_name} running in background (PID '\$(cat ${_pid_file})')'
             fi
             echo "ERROR: ${_name} exited but sentinel ${_sentinel} is missing."
             echo "--- last 40 lines of ${_log} ---"
-            gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
+            tpu_ssh "$TPU_NAME" \
                 --zone="$ZONE" --project="$PROJECT" \
                 --command="tail -40 ${_log} 2>/dev/null || echo '(log not found)'" \
                 2>/dev/null || true
@@ -302,7 +312,7 @@ trap '
 
 # ── One-time setup ────────────────────────────────────────────────────────────
 echo "=== One-time setup (deps + repo) ==="
-gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
+tpu_ssh "$TPU_NAME" \
     --zone="$ZONE" --project="$PROJECT" \
     --command="
 set -euo pipefail
@@ -370,7 +380,7 @@ fi
 # prompts for trace generation. --exclude-ids prevents the 200 eval prompts
 # from leaking into training. Default cap of 800 = "all available trainable".
 _MAX=${MAX_EXAMPLES:-800}
-gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
+tpu_ssh "$TPU_NAME" \
     --zone="$ZONE" --project="$PROJECT" \
     --command="
 export PATH=\"\$HOME/.local/bin:\$PATH\"
@@ -396,7 +406,7 @@ echo "Polling Stage 1 progress (target: ${TARGET} traces)..."
 _ssh_misses=0   # consecutive polls where SSH timed out (returned nothing)
 for i in $(seq 1 576); do   # 576 × 5 min = 48 hours max
     sleep 300
-    N=$(gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
+    N=$(tpu_ssh "$TPU_NAME" \
         --zone="$ZONE" --project="$PROJECT" \
         --command="wc -l < ~/bohdi-lora/data/sft/raw_traces.jsonl 2>/dev/null || echo 0" 2>/dev/null \
         | grep -E '^[0-9]+$' | tail -1) || true
@@ -407,7 +417,7 @@ for i in $(seq 1 576); do   # 576 × 5 min = 48 hours max
         gcloud compute tpus tpu-vm scp --zone="$ZONE" --project="$PROJECT" "${TPU_NAME}:~/bohdi-lora/data/sft/raw_traces.jsonl" "./results/_rescue/raw_traces.jsonl" 2>/dev/null || true
         # Back up to GCS if configured
         if [ -n "$GCS_DATA_PATH" ]; then
-            gcloud compute tpus tpu-vm ssh "$TPU_NAME" --zone="$ZONE" --project="$PROJECT" --command="gsutil cp ~/bohdi-lora/data/sft/raw_traces.jsonl ${GCS_DATA_PATH}/raw_traces.jsonl" 2>/dev/null || true
+            tpu_ssh "$TPU_NAME" --zone="$ZONE" --project="$PROJECT" --command="gsutil cp ~/bohdi-lora/data/sft/raw_traces.jsonl ${GCS_DATA_PATH}/raw_traces.jsonl" 2>/dev/null || true
         fi
     fi
     if [ "${N:-0}" -ge "$TARGET" ]; then
@@ -415,7 +425,7 @@ for i in $(seq 1 576); do   # 576 × 5 min = 48 hours max
         _ssh_misses=0
         break
     fi
-    ALIVE=$(gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
+    ALIVE=$(tpu_ssh "$TPU_NAME" \
         --zone="$ZONE" --project="$PROJECT" \
         --command="pgrep -f '[g]enerate_traces.py' > /dev/null 2>&1 && echo alive || echo dead" 2>/dev/null \
         | grep -E '^(alive|dead)$' | tail -1) || true
@@ -427,7 +437,7 @@ for i in $(seq 1 576); do   # 576 × 5 min = 48 hours max
         if [ "$_ssh_misses" -ge 6 ]; then
             echo "ERROR: 6 consecutive SSH timeouts — process presumed dead."
             echo "--- last 40 lines of gen_stage1.log ---"
-            gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
+            tpu_ssh "$TPU_NAME" \
                 --zone="$ZONE" --project="$PROJECT" \
                 --command="tail -40 /tmp/gen_stage1.log 2>/dev/null || echo '(log not found)'" \
                 2>/dev/null || true
@@ -443,7 +453,7 @@ for i in $(seq 1 576); do   # 576 × 5 min = 48 hours max
         # can diagnose the error without SSH-ing in manually.
         if [ "${N:-0}" -eq 0 ]; then
             echo "--- last 40 lines of gen_stage1.log ---"
-            gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
+            tpu_ssh "$TPU_NAME" \
                 --zone="$ZONE" --project="$PROJECT" \
                 --command="tail -40 /tmp/gen_stage1.log 2>/dev/null || echo '(log not found)'" \
                 2>/dev/null || true
@@ -454,7 +464,7 @@ for i in $(seq 1 576); do   # 576 × 5 min = 48 hours max
         break
     fi
 done
-echo "Generate done: $(gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
+echo "Generate done: $(tpu_ssh "$TPU_NAME" \
     --zone="$ZONE" --project="$PROJECT" \
     --command="wc -l < ~/bohdi-lora/data/sft/raw_traces.jsonl 2>/dev/null || echo 0" 2>/dev/null \
     | grep -E '^[0-9]+$' | tail -1) traces"
@@ -474,7 +484,7 @@ cp -f "./results/raw_traces.jsonl" "./results/_rescue/raw_traces.jsonl" 2>/dev/n
 # needed and would push the 100 GB boot disk over capacity when Qwen-14B
 # (~28 GB) and the vllm Docker image are added on top.
 echo "Clearing Stage 1 model cache to free disk space..."
-gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
+tpu_ssh "$TPU_NAME" \
     --zone="$ZONE" --project="$PROJECT" \
     --command="
         df -h / | tail -1
@@ -501,7 +511,7 @@ fi
 
 if [ -f "./results/_rescue/sft/train.jsonl" ]; then
     echo "=== Stage 2: restoring graded SFT data from previous run (skip re-grading) ==="
-    gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
+    tpu_ssh "$TPU_NAME" \
         --zone="$ZONE" --project="$PROJECT" \
         --command="mkdir -p ~/bohdi-lora/data/sft" 2>/dev/null || true
     gcloud compute tpus tpu-vm scp \
@@ -513,7 +523,7 @@ if [ -f "./results/_rescue/sft/train.jsonl" ]; then
         --zone="$ZONE" --project="$PROJECT" \
         "./results/_rescue/sft/val.jsonl" \
         "${TPU_NAME}:~/bohdi-lora/data/sft/val.jsonl" 2>/dev/null || true
-    gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
+    tpu_ssh "$TPU_NAME" \
         --zone="$ZONE" --project="$PROJECT" \
         --command="touch /tmp/stage2_done" 2>/dev/null || true
 else
@@ -535,10 +545,10 @@ else
 
     if [ -n "$GCS_DATA_PATH" ]; then
         echo "Saving Stage 2 SFT data to GCS..."
-        gcloud compute tpus tpu-vm ssh "$TPU_NAME" --zone="$ZONE" --project="$PROJECT" --command="gsutil cp ~/bohdi-lora/data/sft/train.jsonl ${GCS_DATA_PATH}/sft/train.jsonl && gsutil cp ~/bohdi-lora/data/sft/val.jsonl ${GCS_DATA_PATH}/sft/val.jsonl" 2>/dev/null || true
+        tpu_ssh "$TPU_NAME" --zone="$ZONE" --project="$PROJECT" --command="gsutil cp ~/bohdi-lora/data/sft/train.jsonl ${GCS_DATA_PATH}/sft/train.jsonl && gsutil cp ~/bohdi-lora/data/sft/val.jsonl ${GCS_DATA_PATH}/sft/val.jsonl" 2>/dev/null || true
     fi
 fi
-_TRAIN_LINES=$(gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
+_TRAIN_LINES=$(tpu_ssh "$TPU_NAME" \
     --zone="$ZONE" --project="$PROJECT" \
     --command="wc -l < ~/bohdi-lora/data/sft/train.jsonl 2>/dev/null || echo 0" 2>/dev/null \
     | grep -E '^[0-9]+$' | tail -1)
@@ -629,7 +639,7 @@ if [ "$_N_SEEDS" -ge 2 ]; then
         SEED_DIRS_ARG="$SEED_DIRS_ARG eval/seed_${SEED}"
     done
 
-    gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
+    tpu_ssh "$TPU_NAME" \
         --zone="$ZONE" --project="$PROJECT" \
         --command="
 set -euo pipefail
