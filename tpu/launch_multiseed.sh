@@ -99,6 +99,7 @@ TRC_SLOTS=(
 # of medgemma+qwen+vllm-docker would saturate it otherwise).
 declare -A DATA_DISKS=(
     ["europe-west4-a"]="bohdi-cache-eur4a"
+    ["us-east1-d"]="bohdi-cache-use1d"
 )
 
 # Try each slot in one pass, then sleep and retry the whole list.
