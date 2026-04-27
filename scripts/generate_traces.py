@@ -210,6 +210,15 @@ def main():
     mode = "a" if done_ids else "w"
     ok, fail = 0, 0
 
+    # Short-circuit: if the resume file already has all the traces we need,
+    # don't bother spinning up vLLM.  Booting and tearing down a 27B vLLM
+    # container holds the TPU for ~30 s and was breaking the next stage's
+    # vLLM init.
+    if len(examples) == 0:
+        print(f"Nothing to generate (have {len(done_ids)} traces, need "
+              f"{args.max_examples or 'all'}). Skipping vLLM startup.")
+        return
+
     with VLLMEngine(args.model) as engine:
         bodhi_wrapper = make_bodhi_wrapper(engine) if args.use_bodhi else None
         with open(out_path, mode) as f:
