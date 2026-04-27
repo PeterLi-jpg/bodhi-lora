@@ -235,17 +235,34 @@ def main():
             traces.append(json.loads(line))
     print(f"Loaded {len(traces)} raw traces")
 
+    # Concurrent grading — vLLM batches concurrent requests server-side, so
+    # submitting N at once gives ~Nx throughput up to its scheduling limit.
+    # 32 workers is conservative; tune if vLLM's queue saturates.
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    GRADER_CONCURRENCY = int(os.environ.get("GRADER_CONCURRENCY", "32"))
+
     graded = []
     with VLLMEngine(args.grader_model) as engine:
         grader = LocalGrader(engine)
-        for trace in tqdm(traces, desc="Grading"):
+        # Filter to traces that have rubrics (preserve original skip-and-print behavior)
+        tasks = []
+        for trace in traces:
             rubrics = rubrics_by_id.get(trace["prompt_id"])
             if rubrics is None:
                 print(f"  no rubrics for {trace['prompt_id']}, skipping")
                 continue
+            tasks.append((trace, rubrics))
+
+        def _grade_one(args_pair):
+            trace, rubrics = args_pair
             result = grade_trace(grader, trace["messages"], trace["response"], rubrics)
             trace["grade"] = result
-            graded.append(trace)
+            return trace
+
+        with ThreadPoolExecutor(max_workers=GRADER_CONCURRENCY) as ex:
+            futures = [ex.submit(_grade_one, t) for t in tasks]
+            for fut in tqdm(as_completed(futures), total=len(futures), desc="Grading"):
+                graded.append(fut.result())
 
     total_parse_failures = sum(t["grade"]["parse_failures"] for t in graded)
     total_rubric_items = sum(len(t["grade"]["criteria_results"]) for t in graded)
