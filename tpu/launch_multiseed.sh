@@ -89,8 +89,8 @@ echo ""
 TRC_SLOTS=(
     "v6e-8 europe-west4-a yes tpu/accelerate_config_v6e8.yaml v2-alpha-tpuv6e"
     "v6e-8 us-east1-d     yes tpu/accelerate_config_v6e8.yaml v2-alpha-tpuv6e"
-    "v5e-8 europe-west4-b yes tpu/accelerate_config_v6e8.yaml v2-alpha-tpuv5e"
-    "v5e-8 us-central1-a  yes tpu/accelerate_config_v6e8.yaml v2-alpha-tpuv5e"
+    "v5e-8 europe-west4-b yes tpu/accelerate_config_v6e8.yaml v2-alpha-tpuv5-lite"
+    "v5e-8 us-central1-a  yes tpu/accelerate_config_v6e8.yaml v2-alpha-tpuv5-lite"
 )
 
 # Persistent data disk for HF model cache (only in europe-west4-a).
