@@ -478,8 +478,8 @@ gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
     --zone="$ZONE" --project="$PROJECT" \
     --command="
         df -h / | tail -1
-        rm -rf ~/.cache/huggingface/hub/models--google--medgemma-27b-text-it
-        docker system prune -f 2>/dev/null || true
+        sudo rm -rf ~/.cache/huggingface/hub/models--google--medgemma-27b-text-it
+        sudo docker system prune -f 2>/dev/null || true
         df -h / | tail -1
         echo 'disk cleared'
     " 2>&1 || true
