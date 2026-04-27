@@ -154,7 +154,7 @@ class VLLMEngine:
             self._container_id = None
             print(f"  vllm serve stopped", flush=True)
 
-    def _wait_ready(self, timeout_s: int = 1800) -> None:
+    def _wait_ready(self, timeout_s: int = 2700) -> None:
         health_url = f"http://localhost:{self.port}/health"
         deadline = time.time() + timeout_s
         last_log = time.time()
