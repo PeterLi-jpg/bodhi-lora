@@ -237,11 +237,14 @@ def main():
 
     # Concurrent grading — vLLM batches concurrent requests server-side, so
     # submitting N at once gives ~Nx throughput up to its scheduling limit.
-    # 32 workers is conservative; tune if vLLM's queue saturates.
+    # 16 is a sweet spot: with 32 we saw vLLM crash from KV-cache pressure
+    # mid-run on Qwen2.5-14B with TP=8 (issue: single bad trace took down
+    # the whole pipeline). Keep this conservative.
     from concurrent.futures import ThreadPoolExecutor, as_completed
-    GRADER_CONCURRENCY = int(os.environ.get("GRADER_CONCURRENCY", "32"))
+    GRADER_CONCURRENCY = int(os.environ.get("GRADER_CONCURRENCY", "16"))
 
     graded = []
+    failed_traces = []
     with VLLMEngine(args.grader_model) as engine:
         grader = LocalGrader(engine)
         # Filter to traces that have rubrics (preserve original skip-and-print behavior)
@@ -255,14 +258,30 @@ def main():
 
         def _grade_one(args_pair):
             trace, rubrics = args_pair
-            result = grade_trace(grader, trace["messages"], trace["response"], rubrics)
-            trace["grade"] = result
-            return trace
+            try:
+                result = grade_trace(grader, trace["messages"], trace["response"], rubrics)
+                trace["grade"] = result
+                return trace, None
+            except Exception as e:
+                # Don't let one bad trace (e.g. transient vLLM HTTP error,
+                # malformed prompt) take down the whole pipeline. Log and skip.
+                return None, (trace.get("prompt_id", "?"), repr(e))
 
         with ThreadPoolExecutor(max_workers=GRADER_CONCURRENCY) as ex:
             futures = [ex.submit(_grade_one, t) for t in tasks]
             for fut in tqdm(as_completed(futures), total=len(futures), desc="Grading"):
-                graded.append(fut.result())
+                trace, err = fut.result()
+                if trace is not None:
+                    graded.append(trace)
+                else:
+                    failed_traces.append(err)
+
+    if failed_traces:
+        print(f"\nWARNING: {len(failed_traces)} traces failed grading and were skipped:")
+        for pid, err in failed_traces[:10]:
+            print(f"  {pid}: {err}")
+        if len(failed_traces) > 10:
+            print(f"  ... and {len(failed_traces) - 10} more")
 
     total_parse_failures = sum(t["grade"]["parse_failures"] for t in graded)
     total_rubric_items = sum(len(t["grade"]["criteria_results"]) for t in graded)
