@@ -219,32 +219,56 @@ def main():
               f"{args.max_examples or 'all'}). Skipping vLLM startup.")
         return
 
+    # Concurrent inference — vLLM batches concurrent requests server-side.
+    # Default 16 workers (= 16 in-flight requests, since BODHI's two passes
+    # are sequential within a single worker thread).  Override per hardware:
+    #   GEN_CONCURRENCY=8   for v6e-8  (safe: ~16-24 in-flight ceiling)
+    #   GEN_CONCURRENCY=16  for v6e-16 (safe: ~32-48 in-flight ceiling)
+    #   GEN_CONCURRENCY=24  for v6e-16 stretch
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    import threading
+    GEN_CONCURRENCY = int(os.environ.get("GEN_CONCURRENCY", "16"))
+
     with VLLMEngine(args.model) as engine:
         bodhi_wrapper = make_bodhi_wrapper(engine) if args.use_bodhi else None
+        # Lock around the JSONL append: workers can finish in any order, but
+        # f.write() / f.flush() must not interleave or we get corrupt lines.
+        write_lock = threading.Lock()
+
+        def _gen_one(ex):
+            try:
+                out = generate_response(engine, ex["prompt"], args.use_bodhi, bodhi_wrapper)
+                return {
+                    "prompt_id": ex["prompt_id"],
+                    "messages": ex["prompt"],
+                    "response": out["content"],
+                    "bodhi_analysis": out["analysis"],
+                    "bodhi_metadata": out["metadata"],
+                    "tags": ex.get("example_tags", []),
+                    "source_dataset": ex.get("_source", "unknown"),
+                    "model": args.model,
+                    "bodhi": args.use_bodhi,
+                }, None
+            except Exception as e:
+                # Per-task try/except: a single bad prompt or transient HTTP
+                # error from vLLM should not kill the whole run.  Collect the
+                # error and keep going.
+                return None, (ex.get("prompt_id", "?"), repr(e))
+
         with open(out_path, mode) as f:
-            for ex in tqdm(examples):
-                try:
-                    out = generate_response(engine, ex["prompt"], args.use_bodhi, bodhi_wrapper)
-                    trace = {
-                        "prompt_id": ex["prompt_id"],
-                        "messages": ex["prompt"],
-                        "response": out["content"],
-                        "bodhi_analysis": out["analysis"],
-                        "bodhi_metadata": out["metadata"],
-                        "tags": ex.get("example_tags", []),
-                        "source_dataset": ex.get("_source", "unknown"),
-                        "model": args.model,
-                        "bodhi": args.use_bodhi,
-                    }
-                    f.write(json.dumps(trace) + "\n")
-                    f.flush()
-                    ok += 1
-                except Exception as e:
-                    # Full traceback helps distinguish OOM from tokenizer/BODHI bugs
-                    # when a 48h run has a few failures we want to diagnose later.
-                    traceback.print_exc()
-                    print(f"  Error on {ex['prompt_id']}: {e}")
-                    fail += 1
+            with ThreadPoolExecutor(max_workers=GEN_CONCURRENCY) as ex_pool:
+                futures = [ex_pool.submit(_gen_one, ex) for ex in examples]
+                for fut in tqdm(as_completed(futures), total=len(futures)):
+                    trace, err = fut.result()
+                    if trace is not None:
+                        with write_lock:
+                            f.write(json.dumps(trace) + "\n")
+                            f.flush()
+                        ok += 1
+                    else:
+                        pid, err_repr = err
+                        print(f"  Error on {pid}: {err_repr}")
+                        fail += 1
 
     print(f"\nDone: {ok} ok, {fail} failed -> {out_path}")
 
