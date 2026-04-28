@@ -23,7 +23,7 @@ lora:
   variant: standard
 
 training:
-  num_epochs: 3
+  num_epochs: 5
   # NOTE on v6e-8 + SPMD (num_processes: 1 in tpu/accelerate_config_v6e8.yaml):
   # there's only ONE Python process driving all 8 chips, so per_device_train_
   # batch_size is the batch for the WHOLE 8-chip program, NOT per chip.
