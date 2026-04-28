@@ -67,6 +67,40 @@ def _detect_accelerator() -> str:
     return "gpu"  # default — let docker fail loudly if neither is present
 
 
+def _detect_run_mode() -> str:
+    """Return 'docker' or 'subprocess'.
+
+    On TPU and bare-metal GPU hosts we run vLLM inside a Docker container
+    (TPU image bundles libtpu, GPU image bundles CUDA + nccl deps without
+    polluting the host's pip env).  Inside cloud GPU pods (RunPod, Lambda
+    Labs container instances, k8s sidecars), the pod IS already a container
+    and there is no Docker daemon to nest into — we have to run vLLM as a
+    plain Python subprocess on the host.
+
+    Detection order:
+      1. ``BODHI_VLLM_MODE`` env var  ('docker' / 'subprocess')   — override.
+      2. ``/.dockerenv`` exists                                    — we are
+         already inside a container; default to subprocess.
+      3. ``docker info`` succeeds                                  — daemon
+         reachable, use docker.
+      4. Otherwise                                                 — subprocess.
+    """
+    explicit = os.environ.get("BODHI_VLLM_MODE", "").lower()
+    if explicit in ("docker", "subprocess"):
+        return explicit
+    if os.path.exists("/.dockerenv"):
+        return "subprocess"
+    try:
+        subprocess.run(
+            ["docker", "info"],
+            check=True, capture_output=True, timeout=5,
+        )
+        return "docker"
+    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+    return "subprocess"
+
+
 def _auto_tp(model_name: str) -> int:
     """Heuristic: small models (≤8B) run fine on one chip; use all 8 for bigger ones.
 
@@ -110,6 +144,9 @@ class VLLMEngine:
         self._lora_path_host = os.path.realpath(lora_path) if lora_path else None
         self._lora_name = "adapter" if lora_path else None
         self._container_id: Optional[str] = None
+        # Subprocess mode lifecycle handle (only set when run_mode='subprocess')
+        self._proc: Optional[subprocess.Popen] = None
+        self._run_mode = _detect_run_mode()
 
     # ── path translation ────────────────────────────────────────────────────
 
@@ -173,21 +210,63 @@ class VLLMEngine:
             *serve_cmd,
         ]
 
+    def _build_subprocess_cmd(self) -> List[str]:
+        """Build a plain `vllm serve` cmd that runs on the host directly.
+
+        Used inside cloud GPU pods (RunPod, Lambda Labs container instances,
+        etc.) where the pod IS already a container and there is no Docker
+        daemon to nest into.  vLLM must be pip-installed in the pod's
+        Python env (launch_gpu.sh does this).  Paths are NOT translated —
+        the lora adapter dir is read directly from disk.
+        """
+        lora_args: List[str] = []
+        if self._lora_path_host:
+            lora_args = [
+                "--enable-lora",
+                "--lora-modules", f"{self._lora_name}={self._lora_path_host}",
+            ]
+        return [
+            "vllm", "serve", self.model,
+            "--tensor-parallel-size", str(self.tp_size),
+            "--max-model-len", str(self.max_model_len),
+            "--dtype", "bfloat16",
+            "--port", str(self.port),
+            *lora_args,
+        ]
+
     def start(self) -> "VLLMEngine":
         lora_tag = f", lora={self._lora_name}" if self._lora_name else ""
         print(
             f"Starting vllm serve: {self.model} "
-            f"(TP={self.tp_size}, port={self.port}{lora_tag})",
+            f"(TP={self.tp_size}, port={self.port}{lora_tag}, "
+            f"mode={self._run_mode})",
             flush=True,
         )
-        cmd = self._build_docker_cmd()
-        result = subprocess.run(cmd, capture_output=True, text=True)
-        if result.returncode != 0:
-            raise RuntimeError(
-                f"docker run failed:\n{result.stderr.strip()}"
+        if self._run_mode == "docker":
+            cmd = self._build_docker_cmd()
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            if result.returncode != 0:
+                raise RuntimeError(f"docker run failed:\n{result.stderr.strip()}")
+            self._container_id = result.stdout.strip()
+            print(f"  container: {self._container_id[:12]}", flush=True)
+        else:
+            # subprocess mode — run vllm directly on the host, redirect
+            # stdout / stderr to a log file so it doesn't pollute our terminal
+            # (vllm is chatty and the chat-probe in _wait_ready already tells
+            # us when it's ready).
+            cmd = self._build_subprocess_cmd()
+            log_path = os.path.expanduser(f"~/vllm_serve_{self.port}.log")
+            log_fh = open(log_path, "w")
+            env = {
+                **os.environ,
+                "HF_TOKEN": self.hf_token,
+                "VLLM_LOGGING_LEVEL": "WARNING",
+            }
+            self._proc = subprocess.Popen(
+                cmd, stdout=log_fh, stderr=subprocess.STDOUT, env=env,
+                preexec_fn=os.setsid,  # new pgid so we can kill the whole tree
             )
-        self._container_id = result.stdout.strip()
-        print(f"  container: {self._container_id[:12]}", flush=True)
+            print(f"  subprocess pid={self._proc.pid}, log={log_path}", flush=True)
         self._wait_ready()
         return self
 
@@ -198,7 +277,20 @@ class VLLMEngine:
                 capture_output=True,
             )
             self._container_id = None
-            print(f"  vllm serve stopped", flush=True)
+            print(f"  vllm serve stopped (docker)", flush=True)
+        elif self._proc is not None:
+            # Kill the whole process group so any child workers spawned by
+            # vllm (engine workers, log streams, etc.) go down cleanly.
+            try:
+                os.killpg(os.getpgid(self._proc.pid), 15)  # SIGTERM
+                self._proc.wait(timeout=15)
+            except (ProcessLookupError, subprocess.TimeoutExpired):
+                try:
+                    os.killpg(os.getpgid(self._proc.pid), 9)  # SIGKILL
+                except ProcessLookupError:
+                    pass
+            self._proc = None
+            print(f"  vllm serve stopped (subprocess)", flush=True)
 
     def _wait_ready(self, timeout_s: int = 2700) -> None:
         # /health goes 200 the moment the FastAPI process is up, BEFORE the
