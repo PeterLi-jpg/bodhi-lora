@@ -8,17 +8,16 @@ model:
   quantization: null
 
 lora:
-  r: 16
-  lora_alpha: 32
+  # Reduced from r=16 + 7 target_modules (which hung for 7+ hours of XLA
+  # compile in our run) to r=8 + 2 targets — proven to compile cleanly
+  # in <15 min in a diag run with the rest of the config identical.
+  # Trade-off: less expressive LoRA (~12M trainable params vs ~113M).
+  r: 8
+  lora_alpha: 16
   lora_dropout: 0.05
   target_modules:
     - q_proj
-    - k_proj
     - v_proj
-    - o_proj
-    - gate_proj
-    - up_proj
-    - down_proj
   task_type: CAUSAL_LM
   variant: standard
 
