@@ -45,6 +45,46 @@ except ImportError:
     _xm = None
     _ON_TPU = False
 
+# FSDPv2 setup — replaces the manual mark_sharding loop we used previously.
+# This must run BEFORE any model load: setting XLA_USE_SPMD=1 and calling
+# xr.use_spmd() activates the SPMD runtime; calling it AFTER an XLA tensor
+# has been allocated raises "SPMD must be enabled before any device alloc".
+#
+# Manual mark_sharding on Gemma-3 27B was hanging the first-step XLA compile
+# for 30+ min with the cache frozen at ~4 MB — torch_xla 2.5's fusion-
+# emitter regression on Gemma-3 (#8591) plus a manually-partitioned graph
+# the compiler had to legalize on every recompile.  FSDPv2 (xla_fsdp_v2:
+# True in fsdp_config) is the HF/Google blessed path on v6e and unblocks
+# scan_layers in 2.6+.  See https://huggingface.co/docs/optimum-tpu .
+#
+# We do the init ourselves rather than relying on optimum-tpu's
+# use_fsdp_v2() because that helper is essentially three lines and pinning
+# optimum-tpu's transitive deps is fragile (it tugs at transformers /
+# accelerate / peft).  optimum-tpu IS still useful for its
+# get_fsdp_training_args() helper which maps model class -> decoder layer
+# class — we try it later but fall back to a hand-rolled config if it
+# doesn't recognise the model (e.g., Gemma-3).
+_fsdp_v2 = None
+if _ON_TPU:
+    import os as _os_spmd
+    _os_spmd.environ.setdefault("PJRT_DEVICE", "TPU")
+    _os_spmd.environ["XLA_USE_SPMD"] = "1"
+    try:
+        from torch_xla import runtime as _xr_init
+        if hasattr(_xr_init, "use_spmd"):
+            _xr_init.use_spmd()
+            print("FSDPv2: XLA_USE_SPMD=1 set, xr.use_spmd() called.")
+    except Exception as _e:
+        print(f"WARNING: xr.use_spmd() init failed ({_e!r}); "
+              "FSDPv2 may not work — training will likely OOM on Gemma-3 27B.")
+    try:
+        from optimum.tpu import fsdp_v2 as _fsdp_v2  # used for get_fsdp_training_args
+        print("optimum-tpu fsdp_v2 helper available")
+    except ImportError:
+        # not fatal — we have a manual fallback for get_fsdp_training_args
+        _fsdp_v2 = None
+        print("optimum-tpu not installed; using manual FSDPv2 config")
+
 def _needs_spmd(model_name: str) -> bool:
     """Return True only for models too large to fit on one v6e chip (32 GB).
 
@@ -82,20 +122,19 @@ if _ON_TPU:
 #   in accelerator.py) — 54 GB doesn't fit on a 32 GB chip, so training OOMs at
 #   model load.
 #
-# Fix: single-process SPMD.  ONE Python process drives all 8 chips, and we shard
-# the model parameters across them with torch_xla.distributed.spmd.mark_sharding
-# (same pattern Stage 1 uses in scripts/generate_traces.py).  This matches our
-# accelerate config tpu/accelerate_config_v6e8.yaml which sets num_processes: 1.
+# Fix: single-process SPMD via FSDPv2.  ONE Python process drives all 8 chips
+# and the model parameters get sharded across them by HF Trainer's FSDP
+# plugin (xla_fsdp_v2: True), wrapping every Gemma3DecoderLayer in an XLA FSDP
+# unit.  This matches our accelerate config tpu/accelerate_config_v6e8.yaml
+# (num_processes: 1) and replaces the previous manual mark_sharding loop that
+# was hanging the first-step XLA compile on Gemma-3 27B for 30+ min.
 #
-# IMPORTANT — DO NOT call xr.use_spmd() at module level.  use_spmd() globally
-# intercepts every set_data() call; if it is active when from_pretrained()
-# runs, every internal weight assignment raises "incompatible tensor type"
-# (this is documented in scripts/generate_traces.py / eval_healthbench.py).
-# The correct order is:
-#   1) from_pretrained on CPU
-#   2) xr.use_spmd()
-#   3) move params to XLA + mark_sharding
-# All of which now happen inside main() in that order.
+# Note about ordering: with optimum.tpu.fsdp_v2.use_fsdp_v2() (called above
+# at import time), it IS safe to enable SPMD before from_pretrained — the
+# v2 backend uses XLA_USE_SPMD=1 which doesn't intercept set_data() the way
+# the manual xr.use_spmd() + mark_sharding pattern did.  This is also why
+# scripts/generate_traces.py and eval_healthbench.py still use the old
+# "use_spmd after model load" order: they don't go through optimum-tpu.
 
 DTYPE_MAP = {"bfloat16": torch.bfloat16, "float16": torch.float16, "float32": torch.float32}
 
@@ -325,90 +364,19 @@ def main():
         from peft import prepare_model_for_kbit_training
         model = prepare_model_for_kbit_training(model)
 
-    # ── SPMD setup + optional sharding ──────────────────────────────────────
-    # use_spmd() MUST be called on v6e-8 regardless of model size — it
-    # initialises the multi-chip XLA runtime.  Skipping it causes the main
-    # Python thread to deadlock on a futex while waiting for chip-0's
-    # communication buffers that never get set up.
-    #
-    # mark_sharding is only applied for large models (>8B) where the weights
-    # genuinely don't fit on one chip.  For ≤8B we call use_spmd() for the
-    # runtime init but skip sharding: all parameters are replicated across
-    # the 8-chip virtual device.  Applying mark_sharding to Gemma-3-4B
-    # triggers an XLA fusion-emitter RET_CHECK during the backward pass
-    # (shape_indices.size() == 1 with 5 indices, fusion_emitter.cc:9554).
-    if _ON_TPU:
-        # Try the SPMD module names across torch_xla versions; experimental
-        # was renamed to distributed.spmd in 2.5.
-        _xs = None
-        for _spmd_mod in ("torch_xla.distributed.spmd",
-                          "torch_xla.experimental.xla_sharding",
-                          "torch_xla.distributed.xla_sharding"):
-            try:
-                import importlib as _il
-                _xs = _il.import_module(_spmd_mod)
-                print(f"SPMD module: {_spmd_mod}")
-                break
-            except ModuleNotFoundError:
-                continue
-
-        if _xs is not None:
-            from torch_xla import runtime as _xr
-            import torch.nn as _nn
-            # NOW that from_pretrained is done (model is on CPU), it's safe to
-            # enable SPMD.  Doing this earlier breaks from_pretrained because
-            # use_spmd() globally intercepts set_data() and the loader does
-            # many such assignments while building the model.
-            _xr.use_spmd()
-            # On v6e-8: addressable_device_count() == 8 (physical chips).
-            # global_device_count() returns 1 in SPMD mode (single virtual dev).
-            _n_dev = getattr(_xr, "addressable_device_count",
-                             _xr.global_device_count)()
-            if _n_dev < 2:
-                # Last resort — count the physical chips off /dev/vfio.
-                import os as _os
-                _vfio = ([d for d in _os.listdir("/dev/vfio") if d.isdigit()]
-                         if _os.path.exists("/dev/vfio") else [])
-                _n_dev = len(_vfio) or _n_dev
-            _device_ids = np.arange(_n_dev)
-            _mesh = _xs.Mesh(_device_ids, (_n_dev,), ("tp",))
-            _dev = _xm.xla_device()
-            do_shard = _needs_spmd(model_cfg["name"])
-            print(f"SPMD: {'sharding' if do_shard else 'replicating'} "
-                  f"base model across {_n_dev} chips")
-            # Iterate every parameter, move to XLA, and shard the big
-            # decoder-layer weights (attention + MLP) along output dim.
-            #
-            # CRITICAL: skip the embedding table and lm_head.  They have
-            # vocab_size on dim 0 (262144 for Gemma-3) which:
-            #  - is often the same physical tensor (tied weights), so the
-            #    iteration calls mark_sharding on it twice and GSPMD has
-            #    to reconcile.
-            #  - sharding the vocab dim turns every embedding lookup into
-            #    an expensive all-gather across chips, ballooning the
-            #    forward graph and slowing compile.
-            # We detect them by shape[0] > 100000 (vocab dim is far larger
-            # than any hidden/intermediate dim — Gemma-3 has hidden=5376,
-            # intermediate=21504, vocab=262144).  Replicated, the embed
-            # table is ~2.7 GB per chip, which fits comfortably in 32 GB.
-            for _mod in model.modules():
-                for _pname, _p in list(_mod._parameters.items()):
-                    if _p is not None:
-                        _xp = _nn.Parameter(
-                            _p.data.to(_dev),
-                            requires_grad=_p.requires_grad,
-                        )
-                        if (do_shard and _xp.dim() == 2
-                                and _xp.shape[0] > 1024
-                                and _xp.shape[0] < 100000):  # skip vocab-size dim
-                            _xs.mark_sharding(_xp, _mesh, (0, None))
-                        _mod._parameters[_pname] = _xp
-                for _bname, _b in list(_mod._buffers.items()):
-                    if _b is not None:
-                        _mod._buffers[_bname] = _b.to(_dev)
-            _xm.mark_step()
-        else:
-            print("WARNING: no SPMD module found in torch_xla; 27B will OOM")
+    # ── FSDPv2 sharding ──────────────────────────────────────────────────────
+    # Sharding is now handled by FSDPv2 inside the HF Trainer (configured via
+    # SFTConfig fsdp + fsdp_config below).  use_fsdp_v2() was already called
+    # at module import so XLA_USE_SPMD=1 and the runtime is initialized.
+    # The Trainer's FSDP plugin walks the model graph and wraps every module
+    # whose class name matches transformer_layer_cls_to_wrap (Gemma3DecoderLayer
+    # for medgemma) — sharding the LARGE per-layer weights across all 8 chips
+    # while replicating embeddings + lm_head.  This avoids the manual
+    # mark_sharding loop's pitfalls (vocab-dim gathers, tied-weight reconcile,
+    # and the manually-partitioned graph that the compiler had to legalize
+    # on every recompile).  Per HF/optimum-tpu blog posts, this is the
+    # blessed path for Gemma + LoRA on v6e and reduces "hours of compile"
+    # to minutes.
 
     # -------- LoRA variant selection ------------------------------------------
     variant = lora_cfg.get("variant", "standard").lower()
@@ -439,31 +407,24 @@ def main():
     )
     print(f"LoRA variant: {variant}")
 
-    # On TPU we apply PEFT manually here, AFTER the base model is SPMD-sharded.
-    # Reason: SFTTrainer would otherwise call get_peft_model() inside __init__,
-    # but that runs after accelerate.prepare() which on the XLA path does
-    # nothing useful in single-process mode.  Pre-wrapping ourselves means the
-    # LoRA adapters are constructed against already-sharded base linears, so
-    # they land on the XLA device and reference the sharded weights correctly.
+    # On TPU under FSDPv2, the Trainer wraps decoder layers AFTER PEFT is
+    # applied (so adapter Linears get bundled inside their parent
+    # Gemma3DecoderLayer's FSDP unit).  We pre-apply PEFT here for the same
+    # reason as the GPU path: keep adapter construction next to the base
+    # model load so quant + LoRA + FSDP are all consistent in one place.
     # SFTTrainer detects an existing PeftModel and skips its own wrap.
+    #
+    # Note: we no longer need the is_parallelizable=True hack to suppress
+    # model.to(device).  Under FSDPv2 (xla_fsdp_v2: True), accelerate's
+    # FullyShardedDataParallelPlugin handles XLA device placement during
+    # Trainer's prepare() call — it builds the sharded modules directly on
+    # the XLA device.  set_data interception is no longer in play, since
+    # use_fsdp_v2() uses XLA_USE_SPMD=1 + the v2 backend rather than the
+    # old manual mark_sharding interception.
     if _ON_TPU:
         model = get_peft_model(model, lora_config)
         model.print_trainable_parameters()
-        # Tell HF Trainer "model placement is already handled" so it does NOT
-        # call model.to(args.device) at __init__ time (transformers 4.57
-        # trainer.py L612).  Under active SPMD, .to() invokes set_data() on
-        # every parameter — that's intercepted and may raise "incompatible
-        # tensor type" because the params are already sharded XLA tensors.
-        # Setting is_parallelizable + model_parallel makes Trainer's
-        # `is_model_parallel` property True, which flips
-        # `place_model_on_device` off (see trainer.py L587-594).
-        model.is_parallelizable = True
-        model.model_parallel = True
-        # peft_config is now baked into the model — don't pass it to SFTTrainer
-        # again (would no-op but also clutter the config snapshot).
         _peft_for_trainer = None
-        if _xm is not None:
-            _xm.mark_step()
     else:
         # GPU path: keep the original behavior of letting SFTTrainer apply PEFT
         # so quantization-prepare hooks / kbit handling stay in one place.
@@ -519,6 +480,42 @@ def main():
     # derive bf16 from torch_dtype so the two flags can't diverge
     use_bf16 = train_cfg.get("bf16", dtype == torch.bfloat16)
 
+    # ── FSDPv2 trainer args ─────────────────────────────────────────────────
+    # Build the fsdp / fsdp_config kwargs that tell HF Trainer to wrap each
+    # decoder-layer module (here Gemma3DecoderLayer for medgemma-27b) in an
+    # XLA FSDP-v2 unit.  We try optimum-tpu's get_fsdp_training_args() first
+    # — it auto-detects the right transformer_layer_cls_to_wrap from the
+    # model's architecture string.  If that helper isn't installed or
+    # doesn't recognize the model class (older optimum-tpu versions don't
+    # know Gemma-3), fall back to a manual config keyed on
+    # Gemma3DecoderLayer (the per-layer module on medgemma-27b-text-it).
+    _fsdp_kwargs = {}
+    if _ON_TPU:
+        _fsdp_kwargs = {
+            "fsdp": "full_shard",
+            "fsdp_config": {
+                # Gemma3DecoderLayer is the per-layer module on
+                # google/medgemma-27b-text-it.  Update if base model changes.
+                "transformer_layer_cls_to_wrap": ["Gemma3DecoderLayer"],
+                "xla": True,
+                "xla_fsdp_v2": True,
+                "xla_fsdp_grad_ckpt": train_cfg.get(
+                    "gradient_checkpointing", False
+                ),
+            },
+        }
+        if _fsdp_v2 is not None:
+            try:
+                _detected = _fsdp_v2.get_fsdp_training_args(model)
+                # Only adopt optimum-tpu's recommendation if it returned a
+                # valid config — older versions raise on unknown model types.
+                if _detected and "fsdp_config" in _detected:
+                    _fsdp_kwargs = _detected
+                    print("FSDPv2 args from optimum-tpu.get_fsdp_training_args()")
+            except Exception as _e:
+                print(f"get_fsdp_training_args failed ({_e!r}); using manual config")
+        print(f"FSDPv2 trainer args: {_fsdp_kwargs}")
+
     training_args = SFTConfig(
         output_dir=args.output_dir,
         num_train_epochs=train_cfg["num_epochs"],
@@ -546,6 +543,7 @@ def main():
         gradient_checkpointing=train_cfg.get("gradient_checkpointing", False),
         gradient_checkpointing_kwargs=train_cfg.get("gradient_checkpointing_kwargs", None),
         max_seq_length=train_cfg.get("max_seq_length", 4096),
+        **_fsdp_kwargs,
     )
 
     trainer = SFTTrainer(
