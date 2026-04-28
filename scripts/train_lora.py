@@ -485,9 +485,21 @@ def main():
     # only compute loss on the assistant response, not on the prompt tokens
     response_template = find_response_template(_tokenizer)
     print(f"Response template for masking: {response_template!r}")
+    # pad_to_multiple_of=max_seq_length forces every batch to be padded to
+    # exactly max_seq_length (since SFTTrainer truncates to max_seq_length
+    # during tokenization, all examples are <= max_seq_length, so the next
+    # multiple is always exactly max_seq_length).
+    #
+    # Without this, the default collator pads each batch to the longest
+    # example IN THAT BATCH — so a dataset with varied sequence lengths
+    # produces dozens of distinct batch shapes, and XLA compiles a fresh
+    # HLO graph for each.  On a 27B SPMD model with each compile taking
+    # 30+ minutes, that's an effectively-infinite loop.  Saw a 7+ hour
+    # hang in this exact configuration.
     collator = DataCollatorForCompletionOnlyLM(
         response_template=response_template,
         tokenizer=_tokenizer,
+        pad_to_multiple_of=train_cfg["max_seq_length"],
     )
 
     # derive bf16 from torch_dtype so the two flags can't diverge
