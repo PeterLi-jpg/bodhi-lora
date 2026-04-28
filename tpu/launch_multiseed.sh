@@ -640,8 +640,10 @@ tpu_ssh "$TPU_NAME" \
         # Stop any vllm-tpu containers (running or paused)
         VLLM_C=\$(sudo docker ps -aq --filter 'ancestor=vllm/vllm-tpu:latest' 2>/dev/null)
         [ -n \"\$VLLM_C\" ] && sudo docker rm -f \$VLLM_C 2>/dev/null || true
-        # Kill any leftover python that might still hold the TPU
-        sudo pkill -9 -f 'filter_traces|generate_traces|eval_healthbench' 2>/dev/null || true
+        # Kill any leftover python that might still hold the TPU.  Include
+        # train_lora — a hung XLA compile from a previous iteration can sit
+        # on the TPU forever if not killed (saw a 1+ hour mark_step hang).
+        sudo pkill -9 -f 'filter_traces|generate_traces|eval_healthbench|train_lora' 2>/dev/null || true
         df -h / | tail -1
         # Clear Qwen-14B cache; Stage 3 doesn't need it (only Stage 4 does, and
         # Stage 4 will re-download fresh after training is done).
