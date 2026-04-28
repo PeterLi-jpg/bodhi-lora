@@ -66,8 +66,14 @@ else
     echo "(no data disk mounted, using boot-disk HF cache)"
 fi
 
-TORCH_VERSION="2.5.0"
-TORCH_XLA_VERSION="2.5.0"
+# torch_xla 2.7 ships the C++11 ABI wheels (~20% goodput improvement on
+# tracing-bound jobs) and includes scan_layers + the fix for the v6e
+# fusion-emitter regression in 2.5 (#8591) that hangs Gemma-3 SPMD compile
+# for hours.  Manual mark_sharding on Gemma-3 27B was hanging at "0/70 steps"
+# for 30+ min with cache stagnant — the blessed path on v6e is FSDPv2 instead
+# (xla_fsdp_v2: True), wired in train_lora.py via optimum-tpu's use_fsdp_v2().
+TORCH_VERSION="2.7.0"
+TORCH_XLA_VERSION="2.7.0"
 TPU_WHEEL_URL="https://storage.googleapis.com/libtpu-releases/index.html"
 
 # Resilience flags — files.pythonhosted.org occasionally throws ReadTimeoutError
@@ -113,6 +119,14 @@ pip install ${PIP_FLAGS} \
     "tqdm>=4.65" \
     "matplotlib>=3.7,<4.0" \
     -f "${TPU_WHEEL_URL}"
+
+# optimum-tpu provides the FSDPv2 helpers (use_fsdp_v2/ get_fsdp_training_args)
+# that wire torch_xla's XLA FSDP v2 into HuggingFace Trainer.  We install it
+# without an upstream pin because the API is stable across recent versions and
+# the package is small (pure-Python wrappers around torch_xla).  --no-deps
+# keeps it from yanking transformers/torch back to its own pinned versions.
+echo "=== Installing optimum-tpu (FSDPv2 helpers) ==="
+pip install ${PIP_FLAGS} --no-deps "optimum-tpu>=0.2.0"
 
 echo "=== Pulling vLLM-TPU Docker image ==="
 # Inference (Stages 1, 2, 4) runs vLLM inside this container rather than via
