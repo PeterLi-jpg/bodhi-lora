@@ -43,19 +43,24 @@ training:
   # perspective when the TPU went unreachable.
   # On v6e-16 (512 GB), batch=4 + grad_accum=16 is fine — switch back if
   # you ever get a v6e-16 working.
-  per_device_train_batch_size: 2
-  gradient_accumulation_steps: 32        # effective batch = 64
+  # Empirically diagnosed: torch_xla 2.5 + Gemma-3 SPMD + gradient_checkpointing
+  # makes first-step compile take 2h+ (or never converge — observed multiple
+  # 2-3 hour 0/70 hangs).  A diag run with grad_ckpt=false + seq=1024 + batch=1
+  # compiled cleanly in <10 min and started writing GBs to the persistent cache.
+  # So: turn grad_ckpt OFF, drop seq to 1024, drop per_device_batch to 1 to
+  # keep memory in check without grad_ckpt.
+  #
+  # Activation memory on v6e-8 with batch=1 seq=1024 27B (sharded 1/8 per chip,
+  # bf16, no grad_ckpt): ~3 GB per chip — comfortable in 32 GB HBM.
+  # Effective batch stays at 64 via grad_accum=64.
+  per_device_train_batch_size: 1
+  gradient_accumulation_steps: 64        # effective batch = 64
   learning_rate: 1.0e-4
   warmup_ratio: 0.05
   lr_scheduler_type: cosine
-  max_seq_length: 2048
-  # Gradient checkpointing is required to fit activations per-chip in replicated
-  # SPMD mode.  use_reentrant=False avoids the "torch has no attribute 'xla'"
-  # error from the legacy reentrant path on TPU.
-  gradient_checkpointing: true
-  gradient_checkpointing_kwargs:
-    use_reentrant: false
-  logging_steps: 10
+  max_seq_length: 1024
+  gradient_checkpointing: false
+  logging_steps: 5
   save_strategy: epoch
   eval_strategy: epoch
   bf16: true
