@@ -52,12 +52,12 @@ if [ "${SKIP_DEPS:-0}" != "1" ]; then
         "tqdm>=4.65" \
         "rich>=13.0,<15.0" \
         "matplotlib>=3.7,<4.0"
-    # vLLM for Stage 4 inference.  Pip install picks the CUDA build
-    # automatically on a GPU host.  We do this via Docker (vllm/vllm-openai
-    # auto-selected by _vllm_engine.py) so the image's CUDA / nccl matches
-    # the wheel — but still need the python client for the openai-compat call
-    # path.  vLLM's pip wheel ships the client, so install once locally too.
-    sudo docker pull vllm/vllm-openai:latest
+    # vLLM for Stage 4 inference.  In subprocess mode (used inside a cloud
+    # GPU pod where there is no host docker daemon), `vllm serve` is run
+    # directly as a Python subprocess by _vllm_engine.py — so we need vllm
+    # pip-installed here.  pip auto-selects the CUDA wheel on Nvidia hosts.
+    # No `docker pull` step in this path: the pod is already a container.
+    pip install --quiet "vllm>=0.6.5,<0.10"
 fi
 
 # ── 2. Stage 3: LoRA SFT ───────────────────────────────────────────────────
