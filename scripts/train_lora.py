@@ -376,9 +376,21 @@ def main():
             do_shard = _needs_spmd(model_cfg["name"])
             print(f"SPMD: {'sharding' if do_shard else 'replicating'} "
                   f"base model across {_n_dev} chips")
-            # Iterate every parameter, move to XLA, and (for large models)
-            # shard 2-D params with an output dim > 1024 along axis 0.
-            # Direct dict assignment avoids set_data() which use_spmd() blocks.
+            # Iterate every parameter, move to XLA, and shard the big
+            # decoder-layer weights (attention + MLP) along output dim.
+            #
+            # CRITICAL: skip the embedding table and lm_head.  They have
+            # vocab_size on dim 0 (262144 for Gemma-3) which:
+            #  - is often the same physical tensor (tied weights), so the
+            #    iteration calls mark_sharding on it twice and GSPMD has
+            #    to reconcile.
+            #  - sharding the vocab dim turns every embedding lookup into
+            #    an expensive all-gather across chips, ballooning the
+            #    forward graph and slowing compile.
+            # We detect them by shape[0] > 100000 (vocab dim is far larger
+            # than any hidden/intermediate dim — Gemma-3 has hidden=5376,
+            # intermediate=21504, vocab=262144).  Replicated, the embed
+            # table is ~2.7 GB per chip, which fits comfortably in 32 GB.
             for _mod in model.modules():
                 for _pname, _p in list(_mod._parameters.items()):
                     if _p is not None:
@@ -386,7 +398,9 @@ def main():
                             _p.data.to(_dev),
                             requires_grad=_p.requires_grad,
                         )
-                        if do_shard and _xp.dim() == 2 and _xp.shape[0] > 1024:
+                        if (do_shard and _xp.dim() == 2
+                                and _xp.shape[0] > 1024
+                                and _xp.shape[0] < 100000):  # skip vocab-size dim
                             _xs.mark_sharding(_xp, _mesh, (0, None))
                         _mod._parameters[_pname] = _xp
                 for _bname, _b in list(_mod._buffers.items()):
