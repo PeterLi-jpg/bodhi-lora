@@ -732,14 +732,18 @@ for SEED in $SEEDS; do
     # so between configs we kill leftover containers + sleep 30s for the
     # TPU to release.  Without this, the second eval crashes on Engine init.
     DRAIN="(sudo docker ps -aq --filter 'ancestor=vllm/vllm-tpu:latest' | xargs -r sudo docker rm -f >/dev/null 2>&1 || true) && sleep 30"
+    # SKIP wrapper: skip an eval if its output JSON already exists.  Without this,
+    # if Stage 4 dies after 2 of 4 configs done and we restart, we redo all 4
+    # (each ~15 min) instead of just the missing 2.
+    SKIP() { echo "[ -s ${EVAL_DIR}/$1 ] && echo '  $1 already exists, skipping' || python scripts/eval_healthbench.py $2 --output ${EVAL_DIR}/$1"; }
     EVAL_CMD="set -e; mkdir -p ${EVAL_DIR} ${FIG_DIR}"
-    EVAL_CMD="${EVAL_CMD} && python scripts/eval_healthbench.py --model ${MODEL} --sample-ids ${IDS} ${_EVAL_MAX_FLAG} --output ${EVAL_DIR}/base_no_wrapper.json"
+    EVAL_CMD="${EVAL_CMD} && $(SKIP base_no_wrapper.json "--model ${MODEL} --sample-ids ${IDS} ${_EVAL_MAX_FLAG}")"
     EVAL_CMD="${EVAL_CMD} && ${DRAIN}"
-    EVAL_CMD="${EVAL_CMD} && python scripts/eval_healthbench.py --model ${MODEL} --use-bodhi --sample-ids ${IDS} ${_EVAL_MAX_FLAG} --output ${EVAL_DIR}/base_bodhi.json"
+    EVAL_CMD="${EVAL_CMD} && $(SKIP base_bodhi.json      "--model ${MODEL} --use-bodhi --sample-ids ${IDS} ${_EVAL_MAX_FLAG}")"
     EVAL_CMD="${EVAL_CMD} && ${DRAIN}"
-    EVAL_CMD="${EVAL_CMD} && python scripts/eval_healthbench.py --model ${MODEL} --lora-path ${LORA} --sample-ids ${IDS} ${_EVAL_MAX_FLAG} --output ${EVAL_DIR}/lora_no_wrapper.json"
+    EVAL_CMD="${EVAL_CMD} && $(SKIP lora_no_wrapper.json "--model ${MODEL} --lora-path ${LORA} --sample-ids ${IDS} ${_EVAL_MAX_FLAG}")"
     EVAL_CMD="${EVAL_CMD} && ${DRAIN}"
-    EVAL_CMD="${EVAL_CMD} && python scripts/eval_healthbench.py --model ${MODEL} --lora-path ${LORA} --use-bodhi --sample-ids ${IDS} ${_EVAL_MAX_FLAG} --output ${EVAL_DIR}/lora_bodhi.json"
+    EVAL_CMD="${EVAL_CMD} && $(SKIP lora_bodhi.json      "--model ${MODEL} --lora-path ${LORA} --use-bodhi --sample-ids ${IDS} ${_EVAL_MAX_FLAG}")"
     EVAL_CMD="${EVAL_CMD} && python scripts/eval_ushape.py --eval-jsons ${EVAL_DIR}/base_no_wrapper.json ${EVAL_DIR}/base_bodhi.json ${EVAL_DIR}/lora_no_wrapper.json ${EVAL_DIR}/lora_bodhi.json --healthbench ${HB} --output ${EVAL_DIR}/ushape.json"
     EVAL_CMD="${EVAL_CMD} && python scripts/plot_ushape.py --input ${EVAL_DIR}/ushape.json --eval-jsons ${EVAL_DIR}/base_no_wrapper.json ${EVAL_DIR}/base_bodhi.json ${EVAL_DIR}/lora_no_wrapper.json ${EVAL_DIR}/lora_bodhi.json --healthbench ${HB} --n-bins 10 --out-dir ${FIG_DIR}"
     EVAL_CMD="${EVAL_CMD} && (if [ -f ${LORA}/trainer_state.json ]; then python scripts/plot_training.py --trainer-state ${LORA}/trainer_state.json --output ${FIG_DIR}/training_loss.png; fi)"
