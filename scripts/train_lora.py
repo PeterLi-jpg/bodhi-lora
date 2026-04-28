@@ -28,6 +28,60 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, set_seed
 from trl import SFTTrainer, SFTConfig, DataCollatorForCompletionOnlyLM
 from peft import LoraConfig, get_peft_model
 
+
+class _RequiresGradOnlyOptimizerSFTTrainer(SFTTrainer):
+    """SFTTrainer that builds the optimizer from requires_grad=True params only.
+
+    Workaround for transformers#39795 — under FSDP + LoRA on transformers
+    >= 4.50, HF's default ``create_optimizer`` ends up allocating optimizer
+    state for ALL parameters (not just trainable ones).  For MedGemma-27B
+    that is 27B × 8 bytes (Adam m + v in fp32) ≈ 216 GB of host RAM, and
+    the XLA compile thread starts page-thrashing.  Filtering on
+    ``p.requires_grad`` reduces the optimizer state to the actual ~13 M
+    LoRA adapter params (≈ 100 MB) and lets the compile finish without
+    exhausting host memory.
+
+    We mirror HF Trainer's two-group structure (decay vs. no-decay on
+    bias / LayerNorm) so weight-decay behaviour matches the upstream
+    defaults — just gated on requires_grad.
+    """
+
+    def create_optimizer(self):
+        if self.optimizer is not None:
+            return self.optimizer
+        no_decay_substrings = ("bias", "LayerNorm.weight", "layernorm.weight")
+        decay_params = [
+            p for n, p in self.model.named_parameters()
+            if p.requires_grad
+            and not any(s in n for s in no_decay_substrings)
+        ]
+        no_decay_params = [
+            p for n, p in self.model.named_parameters()
+            if p.requires_grad
+            and any(s in n for s in no_decay_substrings)
+        ]
+        n_decay = sum(p.numel() for p in decay_params)
+        n_no_decay = sum(p.numel() for p in no_decay_params)
+        print(
+            f"create_optimizer: {n_decay + n_no_decay:,} trainable params "
+            f"({n_decay:,} with weight_decay, {n_no_decay:,} without). "
+            f"requires_grad-filter saves ~{(27_000_000_000 - n_decay - n_no_decay) * 8 / 1e9:.0f} GB "
+            f"of optimizer state vs. the buggy all-param path."
+        )
+        optimizer_grouped_parameters = [
+            {"params": decay_params, "weight_decay": self.args.weight_decay},
+            {"params": no_decay_params, "weight_decay": 0.0},
+        ]
+        # Reuse HF's optimizer-class + kwarg resolution so any optim_type
+        # config setting (adamw_torch, adafactor, etc.) is honoured.
+        optimizer_cls, optimizer_kwargs = self.get_optimizer_cls_and_kwargs(
+            self.args
+        )
+        self.optimizer = optimizer_cls(
+            optimizer_grouped_parameters, **optimizer_kwargs
+        )
+        return self.optimizer
+
 # Detect whether we're running under PyTorch/XLA (Google Cloud TPU).
 # When True:  device_map="auto" must NOT be used — accelerate owns placement.
 # When False: device_map="auto" is used as before (multi-GPU or single GPU).
@@ -543,7 +597,14 @@ def main():
         **_fsdp_kwargs,
     )
 
-    trainer = SFTTrainer(
+    # On TPU we use _RequiresGradOnlyOptimizerSFTTrainer so the optimizer
+    # state is sized to the ~13 M LoRA params instead of all 27 B base params
+    # (transformers#39795 workaround — drops 216 GB of host RAM and stops
+    # the XLA compile thread from page-thrashing).  The override is a no-op
+    # on GPU since the bug is FSDP-specific, but using one class for both
+    # paths keeps the call site simple.
+    _trainer_cls = _RequiresGradOnlyOptimizerSFTTrainer if _ON_TPU else SFTTrainer
+    trainer = _trainer_cls(
         model=model,
         args=training_args,
         peft_config=_peft_for_trainer,
