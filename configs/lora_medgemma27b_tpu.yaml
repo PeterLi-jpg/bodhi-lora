@@ -36,13 +36,15 @@ training:
   # Keep batch small, push effective batch up via grad_accum.
   #
   # On non-TPU (multi-GPU), per_device is per-GPU and num_processes scales it.
-  # v6e-16 has 16 chips × 32 GB HBM = 512 GB. With model sharded 16-ways
-  # (~3.4 GB/chip for 27B bf16) there's plenty of headroom for batch=4 at
-  # seq=4096.  Halving grad_accum from 32 → 16 keeps effective batch = 64
-  # but doubles steps-per-minute, which matters when the dataset is small.
-  # If you're back on v6e-8, set per_device=2, grad_accum=32.
-  per_device_train_batch_size: 4
-  gradient_accumulation_steps: 16        # effective batch = 64
+  # On v6e-8 (256 GB total HBM), batch=2 + grad_accum=32 = effective 64 is
+  # the safe configuration.  batch=4 on v6e-8 is "tight, risk of OOM" per
+  # original config notes — and may have been silently OOMing Stage 3
+  # repeatedly in this run, looking like preemption from the launcher's
+  # perspective when the TPU went unreachable.
+  # On v6e-16 (512 GB), batch=4 + grad_accum=16 is fine — switch back if
+  # you ever get a v6e-16 working.
+  per_device_train_batch_size: 2
+  gradient_accumulation_steps: 32        # effective batch = 64
   learning_rate: 1.0e-4
   warmup_ratio: 0.05
   lr_scheduler_type: cosine
