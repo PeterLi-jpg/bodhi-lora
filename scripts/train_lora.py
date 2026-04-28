@@ -407,28 +407,25 @@ def main():
     )
     print(f"LoRA variant: {variant}")
 
-    # On TPU under FSDPv2, the Trainer wraps decoder layers AFTER PEFT is
-    # applied (so adapter Linears get bundled inside their parent
-    # Gemma3DecoderLayer's FSDP unit).  We pre-apply PEFT here for the same
-    # reason as the GPU path: keep adapter construction next to the base
-    # model load so quant + LoRA + FSDP are all consistent in one place.
-    # SFTTrainer detects an existing PeftModel and skips its own wrap.
+    # IMPORTANT — do NOT pre-apply PEFT here on TPU.  SFTTrainer (TRL 0.11+)
+    # has a known bug (trl#3926) where, if you pass a PeftModel as `model`,
+    # it calls prepare_model_for_kbit_training() on the already-PEFT'd
+    # model and freezes 100 % of params (trainable% drops to 0 — training
+    # silently does nothing for hours).  The supported pattern is:
     #
-    # Note: we no longer need the is_parallelizable=True hack to suppress
-    # model.to(device).  Under FSDPv2 (xla_fsdp_v2: True), accelerate's
-    # FullyShardedDataParallelPlugin handles XLA device placement during
-    # Trainer's prepare() call — it builds the sharded modules directly on
-    # the XLA device.  set_data interception is no longer in play, since
-    # use_fsdp_v2() uses XLA_USE_SPMD=1 + the v2 backend rather than the
-    # old manual mark_sharding interception.
-    if _ON_TPU:
-        model = get_peft_model(model, lora_config)
-        model.print_trainable_parameters()
-        _peft_for_trainer = None
-    else:
-        # GPU path: keep the original behavior of letting SFTTrainer apply PEFT
-        # so quantization-prepare hooks / kbit handling stay in one place.
-        _peft_for_trainer = lora_config
+    #     SFTTrainer(model=base_model, peft_config=lora_config, ...)
+    #
+    # Under that pattern SFTTrainer calls get_peft_model() itself inside
+    # __init__, BEFORE accelerator.prepare(), so when the FSDPv2 plugin
+    # wraps each Gemma3DecoderLayer the LoRA adapter Linears are already
+    # bundled inside their parent layer and end up in the same FSDP unit.
+    #
+    # Old comment about "needing to pre-wrap before SPMD-sharding so set_data
+    # interception doesn't fire" no longer applies under FSDPv2 — the v2
+    # backend uses XLA_USE_SPMD=1 (not the manual xr.use_spmd() set_data
+    # interception path) and accelerate handles XLA device placement via
+    # the FSDP plugin during prepare().
+    _peft_for_trainer = lora_config
 
     train_file = args.train_file or data_cfg["train_file"]
     val_file = args.val_file or data_cfg["val_file"]
@@ -585,6 +582,24 @@ def main():
     best_path = f"{args.output_dir.rstrip('/')}/best"
     trainer.save_model(best_path)
     _tokenizer.save_pretrained(best_path)
+
+    # transformers#36004 workaround: under xla_fsdp_v2 the Trainer's save_model
+    # path writes a near-base-model state_dict (no adapter_model.safetensors,
+    # no adapter_config.json), so the directory we just wrote is NOT a valid
+    # PEFT adapter and Stage 4 eval would fail with "Found missing adapter
+    # keys while loading the checkpoint".  Save the LoRA adapter explicitly
+    # via PeftModel.save_pretrained, which strips out the base weights and
+    # emits the small adapter-only files.  accelerator.unwrap_model peels off
+    # the FSDP wrap so we get back the PeftModel.
+    if _ON_TPU:
+        try:
+            _peft_model = trainer.accelerator.unwrap_model(trainer.model)
+            _peft_model.save_pretrained(best_path, safe_serialization=True)
+            print(f"LoRA adapter saved via PeftModel.save_pretrained -> {best_path}")
+        except Exception as _e:
+            print(f"WARNING: explicit adapter save failed ({_e!r}); "
+                  f"the checkpoint at {best_path} may be missing adapter "
+                  "weights (transformers#36004) and Stage 4 eval will fail.")
     # trainer.state may contain NaN eval_loss (e.g. when all val labels are
     # masked).  Python's json module raises ValueError on NaN by default, so
     # guard the save.
