@@ -29,8 +29,42 @@ import urllib.request
 from typing import List, Optional, Tuple
 
 
-DOCKER_IMAGE = "vllm/vllm-tpu:latest"
+DOCKER_IMAGE_TPU = "vllm/vllm-tpu:latest"
+DOCKER_IMAGE_GPU = "vllm/vllm-openai:latest"
 DEFAULT_PORT = 8000
+
+
+def _detect_accelerator() -> str:
+    """Return 'tpu' or 'gpu' based on what the host is.
+
+    Checks (in order):
+      1. ``BODHI_VLLM_ACCEL`` env var  ('tpu' / 'gpu')  — explicit override.
+      2. ``PJRT_DEVICE`` env var  ('TPU')               — set on Cloud TPU VMs.
+      3. ``/dev/vfio`` directory exists                 — TPU char devices live here.
+      4. ``nvidia-smi`` exits 0                          — Nvidia GPU host.
+
+    Default fallback is 'gpu' so a stock CUDA box "just works" without
+    setting any env vars.  An explicit override is the only way to force
+    TPU mode if both detections somehow fire.
+    """
+    explicit = os.environ.get("BODHI_VLLM_ACCEL", "").lower()
+    if explicit in ("tpu", "gpu"):
+        return explicit
+    if os.environ.get("PJRT_DEVICE", "").upper() == "TPU":
+        return "tpu"
+    if os.path.exists("/dev/vfio") and any(
+        d.isdigit() for d in os.listdir("/dev/vfio")
+    ):
+        return "tpu"
+    try:
+        subprocess.run(
+            ["nvidia-smi", "-L"],
+            check=True, capture_output=True, timeout=5,
+        )
+        return "gpu"
+    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+    return "gpu"  # default — let docker fail loudly if neither is present
 
 
 def _auto_tp(model_name: str) -> int:
@@ -114,16 +148,28 @@ class VLLMEngine:
             *lora_args,
         ]
 
+        # On TPU we mount /dev with --privileged so the container can talk to
+        # libtpu via the chip char-devices.  On GPU we instead pass --gpus=all
+        # which Docker translates to the right nvidia runtime args.  The same
+        # vllm serve cmd works on either image.
+        accel = _detect_accelerator()
+        if accel == "tpu":
+            device_args = ["--privileged"]
+            image = DOCKER_IMAGE_TPU
+        else:
+            device_args = ["--gpus", "all"]
+            image = DOCKER_IMAGE_GPU
+
         return [
             "sudo", "docker", "run", "-d",
-            "--privileged", "--net=host",
+            *device_args, "--net=host",
             "-v", "/dev/shm:/dev/shm", "--shm-size", "10gb",
             "-v", f"{self._hf_cache_host}:/hf_cache",
             "-v", f"{self._home_host}:/host_home",
             "-e", f"HF_HOME=/hf_cache",
             "-e", f"HF_TOKEN={self.hf_token}",
             "-e", "VLLM_LOGGING_LEVEL=WARNING",
-            DOCKER_IMAGE,
+            image,
             *serve_cmd,
         ]
 
