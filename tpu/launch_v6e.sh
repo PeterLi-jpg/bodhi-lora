@@ -100,12 +100,17 @@ else
     echo "already be on this VM (e.g. scp'd in). Training will fail if they are absent."
 fi
 
-echo "=== Running training (v6e-64, 64 TPU chips) ==="
+echo "=== Running training (v6e-64, 64 TPU chips, single-process SPMD) ==="
 export HF_TOKEN="${HF_TOKEN}"
-
-accelerate launch \
-    --config_file tpu/accelerate_config_v6e64.yaml \
-    scripts/train_lora.py \
+export PJRT_DEVICE=TPU
+# Direct python invocation, NOT accelerate launch:
+# the accelerate tpu_launcher always xmp.spawn()s addressable_device_count()
+# processes (8 on v6e-8, 64 on v6e-64), but train_lora.py does single-
+# process SPMD via XLA_USE_SPMD=1 + FSDPv2 (HF Trainer fsdp plugin shards
+# across all chips from one Python process). xmp.spawn would have each
+# child try to load a full 54 GB MedGemma-27B replica and immediately OOM.
+# Same rationale as tpu/launch_multiseed.sh:678-686 and smoke_27b_tpu.sh:115-121.
+python scripts/train_lora.py \
     --config configs/lora_medgemma27b_tpu.yaml \
     --output-dir checkpoints
 
