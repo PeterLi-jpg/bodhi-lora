@@ -118,7 +118,18 @@ echo "--- 3b/3: train a few steps on the smoke set ---"
 # which is incompatible with our single-process SPMD design (one python
 # process drives all 8 chips, sharding via mark_sharding). Plain `python`
 # with PJRT_DEVICE=TPU lets HF Trainer's native XLA path pick up SPMD.
-python scripts/train_lora.py --config "$RUNTIME_CONFIG"
+#
+# --train-file / --val-file pin the smoke to its own filtered output.
+# Without them, train_lora.py reads data.train_file from the runtime
+# yaml, which inherits configs/lora_medgemma27b_tpu.yaml's production
+# paths (data/sft/{train,val}.jsonl) and silently trains on whatever
+# stale full-pipeline data happens to be on disk — observed on
+# bohdi-lora-v4 where 838 leftover examples were used instead of the
+# 4-example smoke set.
+python scripts/train_lora.py \
+    --config "$RUNTIME_CONFIG" \
+    --train-file data/sft/smoke_27b/train.jsonl \
+    --val-file data/sft/smoke_27b/val.jsonl
 
 echo
 echo "=== smoke_27b_tpu PASSED | $(date) ==="
