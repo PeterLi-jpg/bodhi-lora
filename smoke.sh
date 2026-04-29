@@ -119,7 +119,15 @@ echo "--- 4a/4: train 1 epoch on the smoke set ---"
 # with our single-process SPMD design (see launch_multiseed.sh comments).
 # Plain `python` works on Mac/CPU/GPU.  The TPU production path is its own
 # launcher (tpu/launch_multiseed.sh).
-python scripts/train_lora.py --config "$RUNTIME_CONFIG"
+#
+# --train-file / --val-file pin the smoke to data/sft/smoke/.  Without
+# them, train_lora.py reads the runtime yaml's data.train_file, which
+# inherits the base config's data/sft/{train,val}.jsonl and silently
+# trains on stale full-pipeline output if any happens to be present.
+python scripts/train_lora.py \
+    --config "$RUNTIME_CONFIG" \
+    --train-file data/sft/smoke/train.jsonl \
+    --val-file data/sft/smoke/val.jsonl
 
 echo "--- 4b/4: eval on $N_EXAMPLES examples ---"
 python scripts/eval_healthbench.py \
