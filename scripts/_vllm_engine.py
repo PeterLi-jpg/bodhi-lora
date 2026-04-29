@@ -191,6 +191,12 @@ class VLLMEngine:
             "--max-model-len", str(self.max_model_len),
             "--dtype", "bfloat16",
             "--port", str(self.port),
+            # --enforce-eager: skip CUDA-graph pre-capture.  vllm 0.9 with
+            # --enable-lora captures ~67 graph shapes and each takes ~2 min
+            # on A100, totalling 130+ min before the first prompt is served.
+            # Eager mode is slightly slower per-token at runtime but pays
+            # off massively for short eval runs (200 prompts).
+            "--enforce-eager",
             *lora_args,
         ]
 
