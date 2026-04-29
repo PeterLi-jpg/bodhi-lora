@@ -19,6 +19,27 @@ import sys
 from typing import List
 
 
+# TPU detection mirrors scripts/_vllm_engine.py:_detect_accelerator and
+# scripts/train_lora.py:_ON_TPU. setup_tpu.sh deliberately does NOT install
+# autoawq / bitsandbytes on TPU hosts (they are CUDA-only), so the GPU-flavored
+# preflight checks below need to skip them when we are on a TPU.
+def _on_tpu() -> bool:
+    if os.environ.get("PJRT_DEVICE", "").upper() == "TPU":
+        return True
+    if os.path.isdir("/dev/vfio") and any(
+        d.isdigit() for d in os.listdir("/dev/vfio")
+    ):
+        return True
+    try:
+        import torch_xla  # noqa: F401
+        return True
+    except ImportError:
+        return False
+
+
+_ON_TPU = _on_tpu()
+
+
 # Deps that must import for the main scripts to even start.
 REQUIRED_IMPORTS = [
     "torch", "transformers", "peft", "trl", "datasets",
@@ -26,9 +47,11 @@ REQUIRED_IMPORTS = [
     "accelerate", "huggingface_hub",
 ]
 
-# Linux-only: autoawq is CUDA-built and platform-gated in requirements.txt.
-# Module name is `awq` (pip name is autoawq).
-if sys.platform == "linux":
+# autoawq is CUDA-built and platform-gated in requirements.txt to
+# `sys_platform == "linux"`. On TPU hosts setup_tpu.sh skips it
+# intentionally, so don't require it there. Module name is `awq`
+# (pip name is autoawq).
+if sys.platform == "linux" and not _ON_TPU:
     REQUIRED_IMPORTS.append("awq")
 
 
@@ -73,8 +96,13 @@ def check_hf_access(models: List[str]) -> List[str]:
     return failed
 
 
-def check_gpu() -> List[str]:
-    """Fail on Linux (slurm) if no CUDA. Warn only on macOS where MPS is used."""
+def check_accelerator() -> List[str]:
+    """Validate the accelerator the host actually has.
+
+    Linux + TPU: torch_xla must import and an XLA device must be visible.
+    Linux + GPU: CUDA must be available and >=1 device visible.
+    macOS: warn-only (MPS).
+    """
     try:
         import torch
     except ImportError as e:
@@ -86,7 +114,19 @@ def check_gpu() -> List[str]:
             return []
         return ["  (warning) MPS not available on Mac; smoke will be CPU-only and slow"]
 
-    # Linux: we expect CUDA. No CUDA on a slurm GPU job = misallocation.
+    if _ON_TPU:
+        try:
+            import torch_xla  # noqa: F401
+            import torch_xla.core.xla_model as xm
+        except ImportError as e:
+            return [f"  TPU host detected but torch_xla import failed: {e}"]
+        try:
+            _ = xm.xla_device()
+        except Exception as e:
+            return [f"  torch_xla imported but xla_device() failed (libtpu missing?): {e}"]
+        return []
+
+    # Linux GPU expected.
     if not torch.cuda.is_available():
         return ["  CUDA is not available (but we're on Linux — likely GPU allocation missing)"]
     if torch.cuda.device_count() == 0:
@@ -95,10 +135,17 @@ def check_gpu() -> List[str]:
 
 
 def print_env_summary():
-    """Emit info useful in slurm logs for debugging later."""
+    """Emit info useful in slurm/TPU logs for debugging later."""
     try:
         import torch
-        print(f"  torch        {torch.__version__}  cuda={torch.cuda.is_available()}")
+        accel_info = f"cuda={torch.cuda.is_available()}"
+        if _ON_TPU:
+            try:
+                import torch_xla
+                accel_info += f"  xla={torch_xla.__version__}"
+            except ImportError:
+                accel_info += "  xla=missing"
+        print(f"  torch        {torch.__version__}  {accel_info}")
         if torch.cuda.is_available():
             for i in range(torch.cuda.device_count()):
                 p = torch.cuda.get_device_properties(i)
@@ -143,14 +190,15 @@ def main():
     else:
         print("  skipping HF_TOKEN and model-access checks")
 
-    gpu_errs = check_gpu()
-    if gpu_errs:
-        # treat Mac MPS/warnings separately from Linux CUDA failures
-        is_warn_only = all("(warning)" in e for e in gpu_errs)
+    accel_errs = check_accelerator()
+    if accel_errs:
+        # treat Mac MPS/warnings separately from hard accelerator failures
+        is_warn_only = all("(warning)" in e for e in accel_errs)
         if is_warn_only:
-            print("\n".join(gpu_errs))
+            print("\n".join(accel_errs))
         else:
-            errors.append("GPU:\n" + "\n".join(gpu_errs))
+            label = "TPU" if _ON_TPU else "GPU"
+            errors.append(f"{label}:\n" + "\n".join(accel_errs))
 
     if errors:
         print("\n=== PREFLIGHT FAILED ===")
