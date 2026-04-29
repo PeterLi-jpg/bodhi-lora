@@ -641,17 +641,19 @@ def main():
 
     trainer.save_state()
     best_path = f"{args.output_dir.rstrip('/')}/best"
-    trainer.save_model(best_path)
-    _tokenizer.save_pretrained(best_path)
+    Path(best_path).mkdir(parents=True, exist_ok=True)
 
-    # transformers#36004 workaround: under xla_fsdp_v2 the Trainer's save_model
-    # path writes a near-base-model state_dict (no adapter_model.safetensors,
-    # no adapter_config.json), so the directory we just wrote is NOT a valid
-    # PEFT adapter and Stage 4 eval would fail with "Found missing adapter
-    # keys while loading the checkpoint".  Save the LoRA adapter explicitly
-    # via PeftModel.save_pretrained, which strips out the base weights and
-    # emits the small adapter-only files.  accelerator.unwrap_model peels off
-    # the FSDP wrap so we get back the PeftModel.
+    # transformers#36004: under xla_fsdp_v2 the Trainer's save_model path
+    # writes a near-base-model state_dict (~18 GB on Gemma-3 27B) — this
+    # is NOT a valid PEFT adapter (no adapter_model.safetensors, no
+    # adapter_config.json) AND it fills the boot disk on a stock Cloud TPU
+    # VM mid-write, taking the rest of save_pretrained down with it.
+    # On TPU we therefore skip trainer.save_model() entirely and write
+    # ONLY the LoRA adapter via PeftModel.save_pretrained.  Stage 4 eval
+    # loads the base model from HF and the adapter from this directory,
+    # so the base state_dict isn't needed here.
+    # On GPU (HF/DDP/FSDP, not xla_fsdp_v2) save_model emits a valid
+    # adapter via PEFT integration, so keep the existing path.
     if _ON_TPU:
         try:
             _peft_model = trainer.accelerator.unwrap_model(trainer.model)
@@ -661,6 +663,9 @@ def main():
             print(f"WARNING: explicit adapter save failed ({_e!r}); "
                   f"the checkpoint at {best_path} may be missing adapter "
                   "weights (transformers#36004) and Stage 4 eval will fail.")
+    else:
+        trainer.save_model(best_path)
+    _tokenizer.save_pretrained(best_path)
     # trainer.state may contain NaN eval_loss (e.g. when all val labels are
     # masked).  Python's json module raises ValueError on NaN by default, so
     # guard the save.
