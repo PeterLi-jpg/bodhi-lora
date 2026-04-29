@@ -232,7 +232,7 @@ If hedge rate is uniformly high regardless of quartile, the training signal is u
 
 ### A — Pretraining contamination probe ([#72](https://github.com/PeterLi-jpg/bohdi-lora/issues/72))
 
-If positive, every other number in this file is meaningless. Run this first.
+If positive, every other number in this file is meaningless. Run this first. Probe protocol: feed base model the first 30 tokens of 100 random HealthBench Hard prompts; flag if exact-completion rate is significantly elevated vs random medical text baseline (p < 0.05).
 
 | Probe | Status | model | exact-completion rate (%) | n probes | p-value vs baseline |
 |---|---|---|---|---|---|
@@ -241,7 +241,7 @@ If positive, every other number in this file is meaningless. Run this first.
 
 ### B — Human expert grader validation ([#73](https://github.com/PeterLi-jpg/bohdi-lora/issues/73))
 
-Cohen's kappa between Qwen-14B and physician consensus. Below 0.6 means the grader is unreliable for the calibration claims. Defer to Zineb, Ash Doulla, Hillary, Felipe.
+Cohen's kappa between Qwen-14B and physician consensus on a sample of 50 responses per configuration (200 total), graded blind by ≥2 board-certified physicians. **Success threshold: kappa ≥ 0.6 across both physicians; below this the grader is unreliable for any calibration claim in this file.** Defer to Zineb, Ash Doulla, Hillary, Felipe.
 
 | Config | Status | n responses graded | physician 1 vs Qwen-14B kappa | physician 2 vs Qwen-14B kappa | inter-physician kappa | overall agreement % |
 |---|---|---|---|---|---|---|
