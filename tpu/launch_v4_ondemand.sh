@@ -75,10 +75,15 @@ else
 fi
 
 export HF_TOKEN="${HF_TOKEN}"
-
-accelerate launch \
-    --config_file tpu/accelerate_config_v4_32.yaml \
-    scripts/train_lora.py \
+export PJRT_DEVICE=TPU
+# Direct python invocation, NOT accelerate launch.
+# The accelerate tpu_launcher always xmp.spawn()s addressable_device_count()
+# processes (32 on v4-32), but train_lora.py runs single-process SPMD via
+# XLA_USE_SPMD=1 + FSDPv2 (HF Trainer fsdp plugin shards across all chips
+# from one Python process). With xmp.spawn, each child would try to load a
+# full 54 GB MedGemma-27B replica and immediately OOM.
+# Same rationale as tpu/launch_multiseed.sh:678-686 and smoke_27b_tpu.sh:115-121.
+python scripts/train_lora.py \
     --config configs/lora_medgemma27b_tpu.yaml \
     --output-dir checkpoints
 
