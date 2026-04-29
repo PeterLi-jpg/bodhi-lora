@@ -81,9 +81,15 @@ def _detect_run_mode() -> str:
       1. ``BODHI_VLLM_MODE`` env var  ('docker' / 'subprocess')   — override.
       2. ``/.dockerenv`` exists                                    — we are
          already inside a container; default to subprocess.
-      3. ``docker info`` succeeds                                  — daemon
-         reachable, use docker.
+      3. ``sudo docker info`` succeeds                             — daemon
+         reachable via sudo (matches the launch path which uses
+         ``sudo docker run``); use docker.
       4. Otherwise                                                 — subprocess.
+
+    The probe uses ``sudo`` deliberately: the actual container start in
+    ``_build_docker_cmd`` uses ``sudo docker run``, so a host where the
+    user is not in the ``docker`` group but does have NOPASSWD sudo for
+    docker (the typical Cloud TPU VM setup) reaches docker mode here too.
     """
     explicit = os.environ.get("BODHI_VLLM_MODE", "").lower()
     if explicit in ("docker", "subprocess"):
@@ -92,7 +98,7 @@ def _detect_run_mode() -> str:
         return "subprocess"
     try:
         subprocess.run(
-            ["docker", "info"],
+            ["sudo", "-n", "docker", "info"],
             check=True, capture_output=True, timeout=5,
         )
         return "docker"
