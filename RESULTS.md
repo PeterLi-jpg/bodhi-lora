@@ -1,5 +1,9 @@
 # RESULTS
 
+**Eval protocol (applies to all sections):** test set = 5 independent 200-sample draws from HealthBench Hard 1K (seeds 0–4); scores = mean ± std across those 5 draws. Training uses Hard 1K + Full ~5K minus the per-seed eval draw. Run `scripts/check_dataset_overlap.py --seeds 5 --tag-overlap --train-jsonl data/sft/train.jsonl` before every cluster job. See #3 for the full protocol. Do not fill any cell from a single draw.
+
+---
+
 ## TLDR
 
 - **Claim 1 — BOHDI wrapper improves calibration:** The paper claims the BOHDI prompt wrapper reduces overconfidence in model outputs. Requires Main Evaluation calibration columns (Brier, ECE) and Calibration Validity Spearman rho. NOT RUN.
@@ -40,14 +44,16 @@ Tests whether BOHDI wrapper and LoRA fine-tuning improve clinical answer quality
 
 ---
 
-## 2. Calibration Validity (#1, #12)
+## 2. Calibration Validity (#1 open; #12 closed — token-logprob extraction implemented)
 
-Tests whether the token-logprob proxy is a valid stand-in for verbalized confidence, and whether it correlates with rubric scores.
+Tests whether the token-logprob proxy correlates with rubric outcomes. `#12` is resolved (logprobs extracted during eval); `#1` remains open (proxy validity unconfirmed).
 
 | Config | Status | geomean token prob vs rubric Spearman rho | verbalized confidence (planned) | token-logprob proxy valid? |
 |---|---|---|---|---|
 | Base | NOT RUN | -- | -- | -- |
+| Base+BOHDI | NOT RUN | -- | -- | -- |
 | LoRA no wrapper | NOT RUN | -- | -- | -- |
+| LoRA+BOHDI | NOT RUN | -- | -- | -- |
 
 Note: grader Brier/ECE are legacy grader-consistency proxies, not model calibration.
 
@@ -108,6 +114,38 @@ Whether training on safety-heavy vs non-safety traces drives theme-specific vs g
 | Full pool | NOT RUN | -- | -- | -- |
 | Safety-only | NOT RUN | -- | -- | -- |
 | Non-safety | NOT RUN | -- | -- | -- |
+
+### F — BOHDI wrapper component ablation (#69)
+
+Which component of the BOHDI wrapper drives the behavioral change in the LoRA.
+
+| BOHDI component removed | Status | HB-Hard score | delta vs full BOHDI LoRA |
+|---|---|---|---|
+| None (full BOHDI) | NOT RUN | -- | -- |
+| Domain framing | NOT RUN | -- | -- |
+| Calibration prompt | NOT RUN | -- | -- |
+| Abstention instruction | NOT RUN | -- | -- |
+| Multi-turn clarification | NOT RUN | -- | -- |
+
+### G — Multi-seed training variance (#70)
+
+Whether gains are robust to LoRA weight initialization seed (independent of eval-draw seeds).
+
+| Init seed | Status | HB-Hard score (mean across 5 eval draws) | std across 5 eval draws |
+|---|---|---|---|
+| seed 0 | NOT RUN | -- | -- |
+| seed 1 | NOT RUN | -- | -- |
+| seed 2 | NOT RUN | -- | -- |
+
+### H — Score filter sensitivity (#71, #4)
+
+Whether the choice of `--score-field` in `filter_traces.py` materially changes the trained LoRA.
+
+| Score field | Status | Training set size | HB-Hard score | delta vs overall_score |
+|---|---|---|---|---|
+| overall_score (default) | NOT RUN | -- | -- | -- |
+| positive_criteria_rate | NOT RUN | -- | -- | -- |
+| absolute_point_score | NOT RUN | -- | -- | -- |
 
 ---
 
