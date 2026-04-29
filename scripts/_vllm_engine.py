@@ -141,12 +141,14 @@ class VLLMEngine:
         lora_path: Optional[str] = None,
         port: int = DEFAULT_PORT,
         hf_token: Optional[str] = None,
+        enforce_eager: bool = True,
     ):
         self.model = model
         self.tp_size = tp_size if tp_size is not None else _auto_tp(model)
         self.max_model_len = max_model_len
         self.port = port
         self.hf_token = hf_token or os.environ.get("HF_TOKEN", "")
+        self._enforce_eager = enforce_eager
         self._hf_cache_host = os.path.expanduser("~/.cache/huggingface")
         self._home_host = os.path.expanduser("~")
         # Resolve lora_path to absolute so the container mount is correct.
@@ -195,8 +197,11 @@ class VLLMEngine:
             # --enable-lora captures ~67 graph shapes and each takes ~2 min
             # on A100, totalling 130+ min before the first prompt is served.
             # Eager mode is slightly slower per-token at runtime but pays
-            # off massively for short eval runs (200 prompts).
-            "--enforce-eager",
+            # off massively for short eval runs (200 prompts).  Default
+            # ON; opt out with enforce_eager=False (e.g. latency benchmark
+            # where graph-mode throughput matters and the long capture
+            # cost is acceptable).
+            *(["--enforce-eager"] if self._enforce_eager else []),
             *lora_args,
         ]
 
@@ -246,6 +251,11 @@ class VLLMEngine:
             "--max-model-len", str(self.max_model_len),
             "--dtype", "bfloat16",
             "--port", str(self.port),
+            # Match the docker-mode default so the two run-modes behave
+            # consistently: --enforce-eager is on by default to skip the
+            # ~130-min CUDA-graph capture hang on LoRA, opt out for
+            # latency benchmarking.
+            *(["--enforce-eager"] if self._enforce_eager else []),
             *lora_args,
         ]
 
