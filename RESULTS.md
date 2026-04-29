@@ -19,7 +19,14 @@ Tests whether BOHDI wrapper and LoRA fine-tuning improve clinical answer quality
 **Data split (enforced — see #3):**
 - **Training pool:** HealthBench Hard (1000 examples) + HealthBench Full (5000 examples), deduplicated by `prompt_id` → ~5000 unique prompts. Run through the BOHDI wrapper, graded, and filtered to produce `data/sft/train.jsonl`.
 - **Test set:** 5 independent 200-sample draws from HealthBench Hard (1000 examples), one per seed (seeds 0–4). Each draw is a different random subset of the 1K Hard examples. Scores are reported as mean ± std across the 5 draws. This gives a variance estimate on the evaluation without requiring 5 full training runs.
-- **Important:** the 200 samples used for each eval seed must be excluded from training data generation via `--exclude-ids` for that seed's draw. Verify with `scripts/check_dataset_overlap.py` before every cluster run. Do not report any number from a single-seed draw.
+- **Leakage prevention:** for each seed, the 200-sample draw must be excluded from training data generation via `--exclude-ids`. Run the pre-training leakage check before every cluster job:
+  ```
+  python scripts/check_dataset_overlap.py \
+      --train-jsonl data/sft/train.jsonl \
+      --seeds 5 \
+      --tag-overlap
+  ```
+  This checks (1) no eval IDs leaked into the training file per seed, and (2) tag/theme distribution is balanced. Do not report any number from a single-seed draw.
 
 | Config | Status | HB-Hard score (mean±std, 5 seeds) | Brier model | ECE model | Brier grader* | ECE grader* | Mean tokens | Parse fail % |
 |---|---|---|---|---|---|---|---|---|
