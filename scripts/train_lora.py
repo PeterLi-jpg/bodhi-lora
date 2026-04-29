@@ -657,7 +657,23 @@ def main():
     if _ON_TPU:
         try:
             _peft_model = trainer.accelerator.unwrap_model(trainer.model)
-            _peft_model.save_pretrained(best_path, safe_serialization=True)
+            # PEFT's safetensors backend calls tensor.data_ptr() under the
+            # hood, which raises "invalid python storage" on xla_fsdp_v2-
+            # sharded params (they are XLA-virtual; no CPU data pointer).
+            # Gather LoRA params to CPU first and pass them in via the
+            # state_dict kwarg so PEFT serializes a real CPU state dict.
+            # Only requires_grad params are LoRA deltas — base weights stay
+            # out of the file (8.4M params, ~16 MB on disk).
+            _adapter_cpu = {
+                name: param.detach().cpu()
+                for name, param in _peft_model.named_parameters()
+                if param.requires_grad
+            }
+            _peft_model.save_pretrained(
+                best_path,
+                safe_serialization=True,
+                state_dict=_adapter_cpu,
+            )
             print(f"LoRA adapter saved via PeftModel.save_pretrained -> {best_path}")
         except Exception as _e:
             print(f"WARNING: explicit adapter save failed ({_e!r}); "
