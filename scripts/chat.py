@@ -17,6 +17,21 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import PeftModel
 
 
+# Same pattern as train_lora.py:85-100. On a TPU host, device_map="auto"
+# triggers accelerate's CUDA placement (it inspects nvidia-smi/cuda
+# available); we want torch_xla to own placement instead.
+try:
+    import torch_xla  # noqa: F401
+    _ON_TPU = True
+except ImportError:
+    _ON_TPU = False
+
+
+def _device_map_for_host(on_tpu: bool):
+    """device_map gating; mirrors train_lora.py:400 convention."""
+    return None if on_tpu else "auto"
+
+
 def load_model(base_name, lora_path, dtype=torch.bfloat16):
     # Use the checkpoint's tokenizer when available; SFTTrainer may have
     # updated pad/eos from training and we want the exact same tokenization
@@ -26,7 +41,9 @@ def load_model(base_name, lora_path, dtype=torch.bfloat16):
         tokenizer.pad_token = tokenizer.eos_token
 
     model = AutoModelForCausalLM.from_pretrained(
-        base_name, torch_dtype=dtype, device_map="auto"
+        base_name,
+        torch_dtype=dtype,
+        device_map=_device_map_for_host(_ON_TPU),
     )
     if lora_path:
         model = PeftModel.from_pretrained(model, lora_path)

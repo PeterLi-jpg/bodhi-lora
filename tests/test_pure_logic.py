@@ -415,3 +415,16 @@ def test_aggregate_computes_means_and_rates(monkeypatch):
     # scope_bounded_rate is the share with scope_bounding >= 2.
     assert agg["scope_bounded_rate"] == 0.5
     assert agg["appropriate_hedging_rate"] == 0.5
+
+
+# ── chat.py TPU device_map gating (issue: TPU readiness) ─────────────────
+
+def test_chat_device_map_for_host(monkeypatch):
+    chat = import_with_mocks(
+        "scripts.chat",
+        ["torch", "transformers", "peft"],
+        monkeypatch,
+    )
+    # The decision helper is pure boolean; doesn't need TPU detection mocks.
+    assert chat._device_map_for_host(on_tpu=False) == "auto"
+    assert chat._device_map_for_host(on_tpu=True) is None
