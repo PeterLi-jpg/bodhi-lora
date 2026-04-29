@@ -151,10 +151,10 @@
       "epoch": 5.0,
       "step": 70,
       "total_flos": 6.592384474231603e+17,
-      "train_loss": 0.49211129801613945,
-      "train_runtime": 3557.3033,
-      "train_samples_per_second": 1.178,
-      "train_steps_per_second": 0.02
+      "train_loss": 0.0,
+      "train_runtime": 0.0557,
+      "train_samples_per_second": 75194.076,
+      "train_steps_per_second": 1256.226
     }
   ],
   "logging_steps": 5,
