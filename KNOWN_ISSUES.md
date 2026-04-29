@@ -42,6 +42,11 @@ Score formula is `sum_of_met_points / sum_of_positive_points`. Negative rubric i
 
 Needs a call on which normalization to use, and a re-derivation of the filter threshold.
 
+### [#65] enforce-eager flag now opt-in for graph mode — RESOLVED
+`scripts/_vllm_engine.py` previously hard-coded `--enforce-eager` in `_build_docker_cmd` while `_build_subprocess_cmd` silently omitted it, so the same code path produced different vLLM runtime modes depending on whether the host had a Docker daemon. Both builders now derive the flag from a new `enforce_eager: bool = True` kwarg on `VLLMEngine`, so the two run-modes stay in sync.
+
+`enforce_eager=True` remains the production-eval default — turning it off triggers the ~130 min CUDA-graph capture hang on LoRA in vllm 0.9, which is still unresolved upstream. The new `scripts/latency_benchmark.py` defaults to `--enforce-eager` for all 4 configs (`base_no_wrapper`, `base_bodhi`, `lora_no_wrapper`, `lora_bodhi`) so the paper's base-vs-LoRA latency comparison stays apples-to-apples. Pass `--no-enforce-eager` only after the graph-capture hang is fixed; until then it pays the full capture cost on every config.
+
 ## Infrastructure for reporting and robustness
 
 These aren't issues per se, but directly support the reviewer concerns that drive #1, #3, #4 and the paper overall.

@@ -169,3 +169,25 @@ def test_summarize_bootstrap_is_seeded():
     )
 
     assert summary_a == summary_b
+
+
+def test_vllm_engine_enforce_eager_flag():
+    """Issue #65: --enforce-eager must be conditional on the kwarg.
+
+    Default True preserves the old behavior (graph-capture hang on LoRA);
+    explicit False is needed for the latency benchmark to compare graph mode.
+    Both docker and subprocess builds must agree, otherwise the run-mode
+    silently changes the eval profile.
+    """
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from _vllm_engine import VLLMEngine
+
+    eng_default = VLLMEngine(model="google/gemma-3-4b-it", tp_size=1)
+    assert eng_default._enforce_eager is True
+    assert "--enforce-eager" in eng_default._build_docker_cmd()
+    assert "--enforce-eager" in eng_default._build_subprocess_cmd()
+
+    eng_off = VLLMEngine(model="google/gemma-3-4b-it", tp_size=1, enforce_eager=False)
+    assert eng_off._enforce_eager is False
+    assert "--enforce-eager" not in eng_off._build_docker_cmd()
+    assert "--enforce-eager" not in eng_off._build_subprocess_cmd()
