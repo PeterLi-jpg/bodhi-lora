@@ -113,7 +113,16 @@ def _auto_tp(model_name: str) -> int:
     # but NOT "4b" embedded in "14b" or "24b".
     if re.search(r"(?<!\d)[1-8]b(?!\w)", name):
         return 1
-    return 8
+    # Cap by actual visible GPU count so single-GPU pods (RunPod, Lambda, etc.)
+    # don't try TP=8 against a 1-GPU placement group and hang.
+    try:
+        out = subprocess.check_output(
+            ["nvidia-smi", "-L"], text=True, timeout=5,
+        )
+        n = max(1, sum(1 for l in out.splitlines() if l.strip().startswith("GPU ")))
+        return min(8, n)
+    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+        return 8
 
 
 class VLLMEngine:
