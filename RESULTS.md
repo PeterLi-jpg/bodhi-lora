@@ -17,9 +17,9 @@
 Tests whether BOHDI wrapper and LoRA fine-tuning improve clinical answer quality and calibration on HealthBench-Hard.
 
 **Data split (enforced — see #3):**
-- **Training pool:** HealthBench Hard (1000 examples) + HealthBench Full (5000 examples), deduplicated by `prompt_id` → ~5000 unique prompts, minus the 200 holdout IDs. These are run through the BOHDI wrapper, graded, and filtered to produce `data/sft/train.jsonl`.
-- **Test set:** 200-sample holdout drawn exclusively from HealthBench Hard (`data/raw/hard_200_sample_ids.json`). Hard-isolated — zero overlap with training data. Verify with `scripts/check_dataset_overlap.py` before every cluster run.
-- **Seeds:** all scores are mean ± std across **5 different training seeds** (seeds 0–4), each producing an independent LoRA checkpoint evaluated on the same 200-sample holdout. Do not fill any cell from a single-seed run.
+- **Training pool:** HealthBench Hard (1000 examples) + HealthBench Full (5000 examples), deduplicated by `prompt_id` → ~5000 unique prompts. Run through the BOHDI wrapper, graded, and filtered to produce `data/sft/train.jsonl`.
+- **Test set:** 5 independent 200-sample draws from HealthBench Hard (1000 examples), one per seed (seeds 0–4). Each draw is a different random subset of the 1K Hard examples. Scores are reported as mean ± std across the 5 draws. This gives a variance estimate on the evaluation without requiring 5 full training runs.
+- **Important:** the 200 samples used for each eval seed must be excluded from training data generation via `--exclude-ids` for that seed's draw. Verify with `scripts/check_dataset_overlap.py` before every cluster run. Do not report any number from a single-seed draw.
 
 | Config | Status | HB-Hard score (mean±std, 5 seeds) | Brier model | ECE model | Brier grader* | ECE grader* | Mean tokens | Parse fail % |
 |---|---|---|---|---|---|---|---|---|
