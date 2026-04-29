@@ -27,14 +27,14 @@ PROJECT="tokyo-micron-494016-s9"
 RESULTS_DIR="./results"
 mkdir -p "$RESULTS_DIR"
 
-# Each entry: "VM_NAME  ACCELERATOR_TYPE  ZONE  RUNTIME  SPOT_FLAG  ACCEL_CONFIG  SEED"
+# Each entry: "VM_NAME  ACCELERATOR_TYPE  ZONE  RUNTIME  SPOT_FLAG  SEED"
 JOBS=(
-    "bohdi-v4-ondemand  v4-32   us-central2-b   tpu-vm-base  ''       accelerate_config_v4_32.yaml    42"
-    "bohdi-v4-spot      v4-32   us-central2-b   tpu-vm-base  --spot   accelerate_config_v4_32.yaml    123"
-    "bohdi-v5e-usw      v5e-64  us-central1-a   tpu-vm-base  --spot   accelerate_config_v5e64.yaml    456"
-    "bohdi-v5e-eu       v5e-64  europe-west4-b  tpu-vm-base  --spot   accelerate_config_v5e64.yaml    789"
-    "bohdi-v6e-use      v6e-64  us-east1-d      tpu-vm-base  --spot   accelerate_config_v6e64.yaml    1337"
-    "bohdi-v6e-eu       v6e-64  europe-west4-a  tpu-vm-base  --spot   accelerate_config_v6e64.yaml    2024"
+    "bohdi-v4-ondemand  v4-32   us-central2-b   tpu-vm-base  ''       42"
+    "bohdi-v4-spot      v4-32   us-central2-b   tpu-vm-base  --spot   123"
+    "bohdi-v5e-usw      v5e-64  us-central1-a   tpu-vm-base  --spot   456"
+    "bohdi-v5e-eu       v5e-64  europe-west4-b  tpu-vm-base  --spot   789"
+    "bohdi-v6e-use      v6e-64  us-east1-d      tpu-vm-base  --spot   1337"
+    "bohdi-v6e-eu       v6e-64  europe-west4-a  tpu-vm-base  --spot   2024"
 )
 
 echo "Launching ${#JOBS[@]} VMs in parallel..."
@@ -44,7 +44,7 @@ PID_FILE="/tmp/bohdi_tpu_pids.txt"
 > "$PID_FILE"
 
 for JOB in "${JOBS[@]}"; do
-    read -r VM_NAME TPU_TYPE ZONE RUNTIME SPOT_FLAG ACCEL_CFG SEED <<< "$JOB"
+    read -r VM_NAME TPU_TYPE ZONE RUNTIME SPOT_FLAG SEED <<< "$JOB"
 
     echo "Launching $VM_NAME ($TPU_TYPE, zone $ZONE, seed $SEED)..."
 
@@ -94,9 +94,15 @@ fi
 
 export HF_TOKEN='${HF_TOKEN}'
 
-accelerate launch \
-    --config_file tpu/${ACCEL_CFG} \
-    scripts/train_lora.py \
+export PJRT_DEVICE=TPU
+# Direct python invocation, NOT accelerate launch:
+# accelerate's tpu_launcher always xmp.spawn()s addressable_device_count()
+# processes (32 on v4-32, 64 on v5e-64/v6e-64), but train_lora.py does
+# single-process SPMD via XLA_USE_SPMD=1 + FSDPv2 (HF Trainer fsdp plugin
+# shards across all chips from one Python process). xmp.spawn would have
+# each child try to load a full 54 GB MedGemma-27B replica and immediately OOM.
+# Same rationale as tpu/launch_multiseed.sh:678-686 and smoke_27b_tpu.sh:115-121.
+python scripts/train_lora.py \
     --config configs/lora_medgemma27b_tpu.yaml \
     --seed ${SEED} \
     --output-dir checkpoints
