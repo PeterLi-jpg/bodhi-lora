@@ -8,6 +8,14 @@
 #   - HF_TOKEN only if using a gated Gemma / MedGemma smoke model
 #
 # Runs in ~5-10 min on a single consumer GPU. CPU-only works but is slow.
+#
+# SCOPE: This smoke runs gemma-3n-E4B-it (4B), not the 27B target model.
+# A passing smoke means the pipeline does NOT crash — it does NOT prove
+# MedGemma-27B training will succeed. 27B-specific bugs (FSDP+LoRA
+# sharding edge cases, quantization behavior, tensor-parallel topology)
+# are not exercised here. For a 27B-targeted smoke, run smoke_27b_tpu.sh
+# on a v6e-8 (~30 min).
+#
 
 set -euo pipefail
 
