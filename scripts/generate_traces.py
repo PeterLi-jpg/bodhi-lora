@@ -19,6 +19,7 @@ from tqdm import tqdm
 from transformers import set_seed
 
 from _vllm_engine import VLLMEngine
+from _bodhi_ablation import make_ablated_bodhi_config
 
 DATA_DIR = Path("data/raw")
 
@@ -97,28 +98,44 @@ def load_exclude_ids(paths):
     return ids
 
 
-def make_bodhi_wrapper(engine):
-    """Set up BODHI wrapper once, reuse across examples."""
-    from bodhi import BODHI, BODHIConfig
+def make_bodhi_wrapper(engine, ablate_component: str = "none"):
+    """Set up BODHI wrapper once, reuse across examples.
+
+    ``ablate_component`` is one of the values accepted by
+    ``make_ablated_bodhi_config``. ``"none"`` is the production wrapper
+    (medical domain, all components active).
+    """
+    from bodhi import BODHI
     chat_fn = lambda msgs: engine.chat(msgs)
-    return BODHI(chat_function=chat_fn, config=BODHIConfig(domain="medical"))
+    config = make_ablated_bodhi_config(ablate_component)
+    return BODHI(chat_function=chat_fn, config=config)
 
 
-def generate_response(engine, messages, use_bodhi, bodhi_wrapper=None):
+def generate_response(engine, messages, use_bodhi, bodhi_wrapper=None,
+                      ablate_component: str = "none"):
     """Return {content, analysis, metadata}. analysis/metadata are None for
     non-BODHI runs so callers get a stable schema.
 
     Per Sebastian: saving analysis + metadata lets us audit *why* the model
     decided what it did, not just what it said — critical for finding where
     the humility wrapper went wrong on specific examples.
+
+    ``ablate_component`` is stamped into the returned metadata dict so each
+    row carries its own provenance (paper figure-3 ablation, issue #69).
     """
     if not use_bodhi:
-        return {"content": engine.chat(messages), "analysis": None, "metadata": None}
+        return {
+            "content": engine.chat(messages),
+            "analysis": None,
+            "metadata": {"ablate_component": ablate_component},
+        }
     resp = bodhi_wrapper.complete(messages)
+    metadata = dict(resp.metadata) if resp.metadata else {}
+    metadata["ablate_component"] = ablate_component
     return {
         "content": resp.content,
         "analysis": resp.analysis,
-        "metadata": resp.metadata,
+        "metadata": metadata,
     }
 
 
@@ -136,6 +153,15 @@ def main():
                              "1000 Hard prompts from training.")
     parser.add_argument("--output", required=True)
     parser.add_argument("--use-bodhi", action="store_true")
+    parser.add_argument(
+        "--ablate-component",
+        choices=["none", "no_calibration", "no_questions",
+                 "no_abstention", "no_domain_framing"],
+        default="none",
+        help="Disable one BODHI wrapper component for the paper figure-3 "
+             "ablation (issue #69). Only meaningful when --use-bodhi is set. "
+             "'none' (default) = production wrapper.",
+    )
     parser.add_argument("--max-examples", type=int, default=None)
     parser.add_argument("--resume-from", default=None)
     parser.add_argument("--seed", type=int, default=42)
@@ -171,6 +197,7 @@ def main():
         # training corpus. Refuse to resume on mismatch unless --force-resume.
         prev_models = set()
         prev_bodhi = set()
+        prev_ablate = set()
         with open(args.resume_from) as f:
             for line in f:
                 try:
@@ -180,19 +207,28 @@ def main():
                         prev_models.add(row["model"])
                     if "bodhi" in row:
                         prev_bodhi.add(row["bodhi"])
+                    if "ablate_component" in row:
+                        prev_ablate.add(row["ablate_component"])
                 except (json.JSONDecodeError, KeyError):
                     pass  # skip corrupt lines from interrupted runs
 
         model_mismatch = prev_models and prev_models != {args.model}
         bodhi_mismatch = prev_bodhi and prev_bodhi != {args.use_bodhi}
-        if model_mismatch or bodhi_mismatch:
+        # Mixing ablation tags would invalidate the figure-3 ablation (issue
+        # #69): different rows would have been generated with different
+        # wrapper components disabled. Treat it like the model/bodhi mismatch.
+        ablate_mismatch = prev_ablate and prev_ablate != {args.ablate_component}
+        if model_mismatch or bodhi_mismatch or ablate_mismatch:
             msg = (
                 f"resume config mismatch — refusing to append to {args.resume_from}\n"
                 f"  existing rows: model={prev_models or '{unknown}'} "
-                f"bodhi={prev_bodhi or '{unknown}'}\n"
-                f"  this run:      model={{{args.model!r}}} bodhi={{{args.use_bodhi}}}\n"
+                f"bodhi={prev_bodhi or '{unknown}'} "
+                f"ablate={prev_ablate or '{unknown}'}\n"
+                f"  this run:      model={{{args.model!r}}} "
+                f"bodhi={{{args.use_bodhi}}} "
+                f"ablate={{{args.ablate_component!r}}}\n"
                 f"  re-running with different settings would silently mix "
-                f"outputs (issue #6/7)\n"
+                f"outputs (issue #6/7, #69)\n"
                 f"  if you truly want to append across settings, pass --force-resume"
             )
             if not args.force_resume:
@@ -201,9 +237,11 @@ def main():
 
         examples = [ex for ex in examples if ex["prompt_id"] not in done_ids]
         print(f"Resuming, skipping {len(done_ids)} already done "
-              f"(prev model={prev_models or '?'} bodhi={prev_bodhi or '?'})")
+              f"(prev model={prev_models or '?'} bodhi={prev_bodhi or '?'} "
+              f"ablate={prev_ablate or '?'})")
 
-    print(f"\nGenerating {len(examples)} traces, bodhi={args.use_bodhi}\n")
+    print(f"\nGenerating {len(examples)} traces, bodhi={args.use_bodhi}, "
+          f"ablate={args.ablate_component}\n")
 
     out_path = Path(args.output)
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -235,14 +273,20 @@ def main():
     GEN_CONCURRENCY = int(os.environ.get("GEN_CONCURRENCY", "16"))
 
     with VLLMEngine(args.model) as engine:
-        bodhi_wrapper = make_bodhi_wrapper(engine) if args.use_bodhi else None
+        bodhi_wrapper = (
+            make_bodhi_wrapper(engine, ablate_component=args.ablate_component)
+            if args.use_bodhi else None
+        )
         # Lock around the JSONL append: workers can finish in any order, but
         # f.write() / f.flush() must not interleave or we get corrupt lines.
         write_lock = threading.Lock()
 
         def _gen_one(ex):
             try:
-                out = generate_response(engine, ex["prompt"], args.use_bodhi, bodhi_wrapper)
+                out = generate_response(
+                    engine, ex["prompt"], args.use_bodhi, bodhi_wrapper,
+                    ablate_component=args.ablate_component,
+                )
                 return {
                     "prompt_id": ex["prompt_id"],
                     "messages": ex["prompt"],
@@ -253,6 +297,9 @@ def main():
                     "source_dataset": ex.get("_source", "unknown"),
                     "model": args.model,
                     "bodhi": args.use_bodhi,
+                    # Top-level for the resume-from consistency check.
+                    # Also lives inside bodhi_metadata for analysis tools.
+                    "ablate_component": args.ablate_component,
                 }, None
             except Exception as e:
                 # Per-task try/except: a single bad prompt or transient HTTP
