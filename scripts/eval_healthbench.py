@@ -330,6 +330,7 @@ def main():
         "mean": float(np.mean(scores)) if scores else None,
         "std": float(np.std(scores)) if scores else None,
         "median": float(np.median(scores)) if scores else None,
+        "score_metric": "normalized_score",
         "model_confidence_method": (
             "geometric_mean_token_probability over the emitted response, "
             "computed from next-token logprobs conditioned on the prompt"

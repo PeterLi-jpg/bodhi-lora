@@ -30,17 +30,12 @@ Infrastructure now exists for an optional second grader pass via `SECOND_GRADER_
 
 Needs team agreement before any ablation is blessed as final.
 
-### [#4] Inconsistent filtering-score normalization — OPEN
-Score formula is `sum_of_met_points / sum_of_positive_points`. Negative rubric items contribute to the numerator as penalties but not to the denominator, so a fixed `--min-score 0.4` threshold is not comparable across prompts with different penalty structure. Data selection is therefore partially a function of rubric geometry, not just response quality.
+### [#4] Inconsistent filtering-score normalization — FIXED
+Filtering and eval now use a normalized rubric score that accounts for both the positive ceiling and the negative penalty floor:
 
-`filter_traces.py` now exposes alternate score views (`absolute_point_score`, `positive_criteria_rate`) plus `--score-field` so this can be audited without silently changing the historical default. The main pipeline still defaults to `overall_score`, so the methodological choice is still unresolved.
+`normalized_score = (earned_points - negative_points) / (positive_points - negative_points)`
 
-**Options to consider**:
-- Normalize by `sum(|points|)` so the score lives on a symmetric scale
-- Apply per-prompt z-scoring before the filter
-- Require a minimum fraction of positive items met, independent of points
-
-Needs a call on which normalization to use, and a re-derivation of the filter threshold.
+This makes a fixed threshold such as `--min-score 0.4` comparable across prompts with different penalty structure. The previous positive-only score is still emitted as `positive_score` for analysis. The alternate audit views (`absolute_point_score`, `positive_criteria_rate`) plus `--score-field` are still available in `filter_traces.py` so the old default can be re-derived without silently changing the new default.
 
 ### [#65] enforce-eager flag now opt-in for graph mode — RESOLVED
 `scripts/_vllm_engine.py` previously hard-coded `--enforce-eager` in `_build_docker_cmd` while `_build_subprocess_cmd` silently omitted it, so the same code path produced different vLLM runtime modes depending on whether the host had a Docker daemon. Both builders now derive the flag from a new `enforce_eager: bool = True` kwarg on `VLLMEngine`, so the two run-modes stay in sync.
