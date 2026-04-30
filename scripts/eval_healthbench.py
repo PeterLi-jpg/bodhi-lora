@@ -20,7 +20,7 @@ from transformers import set_seed
 import os as _os
 sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from _vllm_engine import VLLMEngine
+from _vllm_engine import VLLMEngine, _detect_accelerator
 from scripts.filter_traces import GRADER_TEMPLATE, LocalGrader, parse_json_response, grade_trace
 
 HEALTHBENCH_HARD_URL = "https://openaipublic.blob.core.windows.net/simple-evals/healthbench/hard_2025-05-08-21-00-10.jsonl"
@@ -210,7 +210,28 @@ def main():
 
     raw_generations = []  # list of {prompt_id, messages, rubrics, response, token_logprobs}
     failed_inference = []
-    with VLLMEngine(args.model, lora_path=args.lora_path) as engine:
+
+    # On TPU + LoRA, vllm/vllm-tpu's add_lora is unimplemented (see
+    # scripts/_vllm_engine.py guard). Use the transformers+PEFT-on-XLA
+    # backend instead. It serializes inference internally so concurrent
+    # ThreadPoolExecutor calls become serial — slower wall clock, but
+    # this is the only TPU path that produces lora_* eval results.
+    _use_xla_lora = (
+        args.lora_path is not None and _detect_accelerator() == "tpu"
+    )
+    if _use_xla_lora:
+        from _xla_lora_inference import XLALoRAEngine
+        engine_ctx = XLALoRAEngine(args.model, lora_path=args.lora_path)
+        _eval_concurrency = 1
+        print(
+            f"TPU+LoRA detected — using XLA direct-inference backend "
+            f"(vllm-tpu lacks add_lora). Concurrency forced to 1."
+        )
+    else:
+        engine_ctx = VLLMEngine(args.model, lora_path=args.lora_path)
+        _eval_concurrency = EVAL_CONCURRENCY
+
+    with engine_ctx as engine:
         bodhi_wrapper = make_bodhi_wrapper(engine) if args.use_bodhi else None
 
         def _gen_one(ex):
@@ -228,7 +249,7 @@ def main():
             except Exception as e:
                 return None, (ex.get("prompt_id", "?"), repr(e))
 
-        with ThreadPoolExecutor(max_workers=EVAL_CONCURRENCY) as ex_pool:
+        with ThreadPoolExecutor(max_workers=_eval_concurrency) as ex_pool:
             futures = [ex_pool.submit(_gen_one, ex) for ex in examples]
             for fut in tqdm(as_completed(futures), total=len(futures), desc=f"{tag} [inference]"):
                 gen, err = fut.result()
