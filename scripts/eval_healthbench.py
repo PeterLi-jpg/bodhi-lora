@@ -184,6 +184,19 @@ def main():
     parser.add_argument("--use-bodhi", action="store_true")
     parser.add_argument("--sample-ids", required=True)
     parser.add_argument("--grader-model", default="Qwen/Qwen2.5-14B-Instruct")
+    # Issue #3: optional second grader pass (can be passed multiple times for
+    # 3+ graders). Each entry adds a "secondary_grader_runs[N]" dict to the
+    # output JSON with the same shape as the primary run, so downstream
+    # tools (scripts/grader_correlation.py) can compare across graders
+    # without re-running inference. The primary grader is unchanged so
+    # existing eval numbers stay comparable across the 5 seeds.
+    parser.add_argument("--secondary-grader-model", action="append",
+                        default=[],
+                        help="Additional grader model(s) to run as a "
+                             "second pass over the same generated responses. "
+                             "Repeat the flag for multiple graders. "
+                             "Each adds a secondary_grader_runs entry to "
+                             "the output JSON without re-running inference.")
     parser.add_argument("--output", required=True)
     parser.add_argument("--max-examples", type=int, default=None)
     parser.add_argument("--seed", type=int, default=42)
@@ -322,6 +335,64 @@ def main():
     grader_ece = compute_ece(all_results, "score")
     parse_fail_rate = (total_parse_failures / total_rubric_items) if total_rubric_items else None
 
+    # ── Pass 2b: optional secondary grader(s) — issue #3 ──────────────────────
+    # When --secondary-grader-model is set, re-grade the same generated
+    # responses with each secondary grader and append a result block per
+    # grader to ``secondary_grader_runs``. This lets the paper report a
+    # cross-grader correlation (per scripts/grader_correlation.py) without
+    # changing the primary grader, so the headline numbers stay stable.
+    secondary_grader_runs = []
+    for sec_model in args.secondary_grader_model:
+        print(f"  starting secondary grader {sec_model}...", flush=True)
+        _t.sleep(30)  # drain TPU before spinning up the next vLLM container
+        sec_results = []
+        sec_scores = []
+        sec_parse_failures = 0
+        sec_rubric_items = 0
+        with VLLMEngine(sec_model) as sec_engine:
+            sec_grader = LocalGrader(sec_engine)
+
+            def _grade_one_sec(item):
+                try:
+                    grade = grade_trace(sec_grader, item["messages"],
+                                        item["response"], item["rubrics"])
+                    return {
+                        "prompt_id": item["prompt_id"],
+                        "response": item["response"],
+                        "score": grade["overall_score"],
+                        "tag_scores": grade["tag_scores"],
+                        "criteria_results": grade["criteria_results"],
+                        "parse_failures": grade["parse_failures"],
+                    }, None
+                except Exception as e:
+                    return None, (item.get("prompt_id", "?"), repr(e))
+
+            with ThreadPoolExecutor(max_workers=EVAL_CONCURRENCY) as ex_pool:
+                futures = [ex_pool.submit(_grade_one_sec, item) for item in raw_generations]
+                for fut in tqdm(as_completed(futures), total=len(futures),
+                                desc=f"{tag} [grading {sec_model}]"):
+                    result, err = fut.result()
+                    if result is not None:
+                        sec_results.append(result)
+                        sec_scores.append(result["score"])
+                        sec_parse_failures += result["parse_failures"]
+                        sec_rubric_items += len(result["criteria_results"])
+        sec_parse_fail_rate = (
+            sec_parse_failures / sec_rubric_items if sec_rubric_items else None
+        )
+        secondary_grader_runs.append({
+            "grader_model": sec_model,
+            "mean": float(np.mean(sec_scores)) if sec_scores else None,
+            "std": float(np.std(sec_scores)) if sec_scores else None,
+            "median": float(np.median(sec_scores)) if sec_scores else None,
+            "brier_grader_consistency": compute_brier_score(sec_results, "score"),
+            "ece_grader_consistency": compute_ece(sec_results, "score"),
+            "grader_parse_failure_rate": sec_parse_fail_rate,
+            "grader_parse_failures_total": sec_parse_failures,
+            "grader_rubric_items_total": sec_rubric_items,
+            "results": sec_results,
+        })
+
     summary = {
         "config": tag, "model": args.model,
         "lora_path": args.lora_path, "use_bodhi": args.use_bodhi,
@@ -348,6 +419,7 @@ def main():
         "grader_parse_failures_total": total_parse_failures,
         "grader_rubric_items_total": total_rubric_items,
         "results": all_results,
+        "secondary_grader_runs": secondary_grader_runs,
     }
 
     out = Path(args.output)
