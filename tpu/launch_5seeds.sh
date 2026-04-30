@@ -1,9 +1,14 @@
 #!/bin/bash
-# launch_3seeds.sh — fan out 3 v6e-8 spot VMs in parallel, one seed per VM.
+# launch_5seeds.sh — fan out 5 v6e-8 spot VMs in parallel, one seed per VM.
+#
+# Why 5: scripts/aggregate_seeds.py only emits across-seed percentile 95%
+# CIs when n_seeds >= 5 (line 101 of that file). 5 is also the default
+# in scripts/run_multi_seed.sh ("42 7 13 99 101"). Going to 5 from 3
+# unlocks the across-seed CI band the paper needs.
 #
 # Quota: TRC grants 64 v6e chips in europe-west4-a + 64 in us-east1-d.
-# 3 v6e-8 = 24 chips total, well within either zone alone — we still split
-# 2/1 across zones for resilience against zone-level capacity wobble.
+# 5 v6e-8 = 40 chips total. We split 3 in eur4a (24 chips) + 2 in use1d
+# (16 chips) — both well within the 64-chip-per-zone quota.
 #
 # Per-VM workflow:
 #   1. acquire v6e-8 spot (with retry on capacity errors)
@@ -30,14 +35,17 @@
 # Usage:
 #   export HF_TOKEN=...                              # required (in .env is fine)
 #   GCS_DATA_PATH=gs://bucket/path                   # optional, skips Stage 1+2
-#   SEEDS="42 7 13"                                  # optional override (default 42 7 13)
-#   bash tpu/launch_3seeds.sh
+#   SEEDS="42 7 13 99 101"                           # optional override (default 42 7 13 99 101)
+#   bash tpu/launch_5seeds.sh
 #
-# Cancel everything (clean up all 3 VMs):
-#   kill $(cat /tmp/bohdi_3seeds_pids.txt)
-#   gcloud compute tpus tpu-vm delete bohdi-seed42 --zone=europe-west4-a --quiet
-#   gcloud compute tpus tpu-vm delete bohdi-seed7  --zone=us-east1-d     --quiet
-#   gcloud compute tpus tpu-vm delete bohdi-seed13 --zone=europe-west4-a --quiet
+# Cancel everything (clean up all 5 VMs):
+#   kill $(cat /tmp/bohdi_5seeds_pids.txt)
+#   for n in 42 7 13; do
+#       gcloud compute tpus tpu-vm delete bohdi-seed$n --zone=europe-west4-a --quiet
+#   done
+#   for n in 99 101; do
+#       gcloud compute tpus tpu-vm delete bohdi-seed$n --zone=us-east1-d --quiet
+#   done
 
 set -euo pipefail
 
@@ -54,17 +62,26 @@ RUNTIME="v2-alpha-tpuv6e"
 RESULTS_DIR="./results"
 mkdir -p "$RESULTS_DIR"
 
-# 3 seeds × 2 v6e-8 zones (eur4a 2× + use1d 1×). 16 chips in eur4a fits
-# the 64-chip quota; if eur4a runs hot we still get the use1d slot.
-SEEDS="${SEEDS:-42 7 13}"
+# 5 seeds split 3 in europe-west4-a + 2 in us-east1-d. 24 chips in eur4a
+# and 16 chips in use1d both fit the 64-chip quota; if one zone runs hot,
+# the other still hosts its share. Default seed list mirrors
+# scripts/run_multi_seed.sh so multi-seed comparisons stay consistent.
+SEEDS="${SEEDS:-42 7 13 99 101}"
 read -r -a SEED_ARR <<< "$SEEDS"
-if [ "${#SEED_ARR[@]}" -ne 3 ]; then
-    echo "ERROR: SEEDS must list exactly 3 seeds (got: ${#SEED_ARR[@]})" >&2
+if [ "${#SEED_ARR[@]}" -ne 5 ]; then
+    echo "ERROR: SEEDS must list exactly 5 seeds (got: ${#SEED_ARR[@]})" >&2
     exit 1
 fi
 
-ZONES=("europe-west4-a" "us-east1-d" "europe-west4-a")
-VM_NAMES=("bohdi-seed${SEED_ARR[0]}" "bohdi-seed${SEED_ARR[1]}" "bohdi-seed${SEED_ARR[2]}")
+# Index 0..2 -> eur4a (3 VMs), index 3..4 -> use1d (2 VMs).
+ZONES=("europe-west4-a" "europe-west4-a" "europe-west4-a" "us-east1-d" "us-east1-d")
+VM_NAMES=(
+    "bohdi-seed${SEED_ARR[0]}"
+    "bohdi-seed${SEED_ARR[1]}"
+    "bohdi-seed${SEED_ARR[2]}"
+    "bohdi-seed${SEED_ARR[3]}"
+    "bohdi-seed${SEED_ARR[4]}"
+)
 
 # Optional shared data location. When set, each VM skips Stage 1+2 and
 # downloads ${GCS_DATA_PATH}/train.jsonl + val.jsonl. Recommended — saves
@@ -75,13 +92,13 @@ GCS_DATA_PATH="${GCS_DATA_PATH:-}"
 # giving up on a particular VM. Each retry waits 60s.
 CREATE_RETRIES="${CREATE_RETRIES:-5}"
 
-echo "=== launch_3seeds: 3 v6e-8 spot VMs in parallel ==="
+echo "=== launch_5seeds: 5 v6e-8 spot VMs in parallel (3 eur4a + 2 use1d) ==="
 echo "  seeds: ${SEEDS}"
 echo "  GCS_DATA_PATH: ${GCS_DATA_PATH:-(not set — each VM will run Stage 1+2)}"
 echo "  results -> $RESULTS_DIR/seed_<N>/"
 echo
 
-PID_FILE="/tmp/bohdi_3seeds_pids.txt"
+PID_FILE="/tmp/bohdi_5seeds_pids.txt"
 > "$PID_FILE"
 
 # Build the remote pipeline command once — same script on every VM, only
@@ -174,7 +191,7 @@ echo "=== seed ${SEED} pipeline complete ===" >> ~/pipeline.log
 REMOTE
 }
 
-for i in 0 1 2; do
+for i in 0 1 2 3 4; do
     SEED="${SEED_ARR[$i]}"
     ZONE="${ZONES[$i]}"
     VM_NAME="${VM_NAMES[$i]}"
@@ -245,7 +262,7 @@ for i in 0 1 2; do
 done
 
 echo
-echo "All 3 jobs spawned. PIDs: $(cat "$PID_FILE")"
+echo "All 5 jobs spawned. PIDs: $(cat "$PID_FILE")"
 echo "Open the dashboard at http://localhost:8000 to watch progress."
 echo
 echo "Waiting for all VMs to finish..."
