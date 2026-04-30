@@ -288,9 +288,15 @@ else
         fi
     fi
 
+    # filter_traces.py loads HealthBench rubrics directly from the raw
+    # JSONL files via --healthbench-data, so they need to be present even
+    # when we skip Stage 1 (resume from a pre-generated raw_traces.jsonl).
+    # download_data.py is idempotent (checks before downloading), so it's
+    # safe to run unconditionally.
+    python -u scripts/download_data.py >> ~/pipeline.log 2>&1
+
     if [ ! -s data/sft/raw_traces.jsonl ]; then
         echo "--- 1/4 generate BODHI traces (leader=${IS_LEADER}) ---" | tee -a ~/pipeline.log
-        python -u scripts/download_data.py >> ~/pipeline.log 2>&1
         python -u scripts/generate_traces.py \\
             --model google/medgemma-27b-text-it \\
             --datasets healthbench_hard healthbench \\
