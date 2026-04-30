@@ -18,10 +18,15 @@
 #        - or run Stage 1 (gen) + Stage 2 (filter) themselves
 #   4. Stage 3: train LoRA (configs/lora_medgemma27b_tpu.yaml, --seed N)
 #   5. Stage 4: eval 4 configs (base_no_wrapper / base_bodhi /
-#      lora_no_wrapper / lora_bodhi). LoRA configs use the XLA direct-
-#      inference backend (PR #93) since vllm-tpu lacks add_lora.
-#   6. SCP results back to ./results/seed_<N>/ on the local box
-#   7. delete the VM (trap on EXIT)
+#      lora_no_wrapper / lora_bodhi). LoRA configs go through the
+#      XLALoRAEngine merge-then-serve path (PR #93/#96) since vllm-tpu
+#      lacks add_lora.
+#   6. Stage 5: epistemic-virtue grading via scripts/eval_epistemic.py
+#      over the same 4 response files — independent of HealthBench
+#      rubric scores, addresses the "do humility-trained outputs
+#      actually exhibit humility?" measurement gap.
+#   7. SCP results back to ./results/seed_<N>/ on the local box
+#   8. delete the VM (trap on EXIT)
 #
 # Each VM writes ~/pipeline.log + ~/{setup,gen,filter,train,eval}.log.
 # scripts/dashboard polls these — open http://localhost:8000 while it runs.
@@ -222,6 +227,36 @@ run_eval "base_bodhi"       "--model google/medgemma-27b-text-it --use-bodhi"
 run_eval "lora_no_wrapper"  "--model google/medgemma-27b-text-it --lora-path \$LORA_DIR"
 run_eval "lora_bodhi"       "--model google/medgemma-27b-text-it --lora-path \$LORA_DIR --use-bodhi"
 echo EVAL_OK >> ~/pipeline.log
+
+# ── Stage 5: epistemic-virtue grading ─────────────────────────────────────
+# eval_epistemic.py grades the same 4 response files on BODHI epistemic
+# virtues (uncertainty acknowledgment, active inquiry, abstention, etc.)
+# independent of HealthBench rubric correctness — answering the
+# "do humility-trained outputs actually exhibit humility?" question that
+# rubric scores can't. Same Qwen grader as Stage 4 to keep methodology
+# consistent. Skipped if any of the 4 input JSONs is missing (i.e. a
+# Stage 4 config failed earlier — the eval_epistemic CLI requires real
+# response files, not empty ones).
+echo "--- 5/5 epistemic virtue eval ---" | tee -a ~/pipeline.log
+EPISTEMIC_INPUTS=()
+for cfg in base_no_wrapper base_bodhi lora_no_wrapper lora_bodhi; do
+    if [ -s "eval/seed_${SEED}/\${cfg}.json" ]; then
+        EPISTEMIC_INPUTS+=("eval/seed_${SEED}/\${cfg}.json")
+    fi
+done
+if [ \${#EPISTEMIC_INPUTS[@]} -eq 0 ]; then
+    echo "no Stage 4 outputs to feed eval_epistemic.py — skipping" >> ~/pipeline.log
+elif [ -s "eval/seed_${SEED}/epistemic_scores.json" ]; then
+    echo "epistemic_scores.json already exists, skipping" >> ~/pipeline.log
+else
+    python -u scripts/eval_epistemic.py \\
+        --response-files "\${EPISTEMIC_INPUTS[@]}" \\
+        --grader-model Qwen/Qwen2.5-14B-Instruct \\
+        --output "eval/seed_${SEED}/epistemic_scores.json" \\
+        --seed ${SEED} >> ~/eval.log 2>&1 \\
+    || echo "eval_epistemic FAILED" >> ~/pipeline.log
+fi
+echo EPISTEMIC_OK >> ~/pipeline.log
 
 echo "=== seed ${SEED} pipeline complete ===" >> ~/pipeline.log
 REMOTE
