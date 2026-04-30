@@ -214,6 +214,14 @@ class VLLMEngine:
             "--max-model-len", str(self.max_model_len),
             "--dtype", "bfloat16",
             "--port", str(self.port),
+            # max-num-seqs caps how many sequences the scheduler runs in
+            # parallel. The default is conservative on TPU; raising it
+            # to 128 lets PagedAttention pack each step's batch fuller
+            # for the long offline-batch jobs (Stage 1 generates ~12000
+            # sequences). Sized so 128 seqs * max_model_len fits in HBM
+            # alongside a 27B-bf16 weight checkpoint (~54 GB) on a
+            # v6e-8 (256 GB HBM).
+            "--max-num-seqs", "128",
             # --enforce-eager: skip CUDA-graph pre-capture.  vllm 0.9 with
             # --enable-lora captures ~67 graph shapes and each takes ~2 min
             # on A100, totalling 130+ min before the first prompt is served.
@@ -272,6 +280,9 @@ class VLLMEngine:
             "--max-model-len", str(self.max_model_len),
             "--dtype", "bfloat16",
             "--port", str(self.port),
+            # Match docker-mode batching capacity; see comment in
+            # _build_docker_cmd.
+            "--max-num-seqs", "128",
             # Match the docker-mode default so the two run-modes behave
             # consistently: --enforce-eager is on by default to skip the
             # ~130-min CUDA-graph capture hang on LoRA, opt out for

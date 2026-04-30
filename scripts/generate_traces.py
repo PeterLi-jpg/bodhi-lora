@@ -262,15 +262,28 @@ def main():
               f"{args.max_examples or 'all'}). Skipping vLLM startup.")
         return
 
-    # Concurrent inference — vLLM batches concurrent requests server-side.
-    # Default 16 workers (= 16 in-flight requests, since BODHI's two passes
-    # are sequential within a single worker thread).  Override per hardware:
-    #   GEN_CONCURRENCY=8   for v6e-8  (safe: ~16-24 in-flight ceiling)
-    #   GEN_CONCURRENCY=16  for v6e-16 (safe: ~32-48 in-flight ceiling)
-    #   GEN_CONCURRENCY=24  for v6e-16 stretch
+    # Concurrent inference: vLLM batches concurrent requests server-side via
+    # PagedAttention + continuous batching, so feeding the scheduler more
+    # in-flight requests lets it pack each batch fuller and amortizes
+    # prefill cost across more decode steps.
+    #
+    # The previous default (16) was severely under-subscribed for a 27B
+    # model on v6e-8 (256 GB HBM, ~200 GB free for KV after weights): the
+    # vLLM scheduler's max-num-seqs is 128+ on this footprint, so clamping
+    # the client to 16 left most scheduler slots empty. Bumping the default
+    # to 32 doubles in-flight requests while staying well under the server
+    # ceiling so first-run hardware behavior is predictable. See
+    # https://blog.vllm.ai/2024/09/05/perf-update.html for the underlying
+    # PagedAttention + continuous-batching behavior.
+    #
+    # Override per hardware:
+    #   GEN_CONCURRENCY=32   v6e-8   (default)
+    #   GEN_CONCURRENCY=64   v6e-8   stretch (verify HBM headroom in vllm startup log)
+    #   GEN_CONCURRENCY=128  v6e-16  (more HBM, more KV-cache slots)
+    #   GEN_CONCURRENCY=8    fallback if you hit HBM OOM at startup
     from concurrent.futures import ThreadPoolExecutor, as_completed
     import threading
-    GEN_CONCURRENCY = int(os.environ.get("GEN_CONCURRENCY", "16"))
+    GEN_CONCURRENCY = int(os.environ.get("GEN_CONCURRENCY", "32"))
 
     with VLLMEngine(args.model) as engine:
         bodhi_wrapper = (
