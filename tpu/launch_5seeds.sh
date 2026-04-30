@@ -87,20 +87,23 @@ mkdir -p "$RESULTS_DIR"
 # scripts/run_multi_seed.sh so multi-seed comparisons stay consistent.
 SEEDS="${SEEDS:-42 7 13 99 101}"
 read -r -a SEED_ARR <<< "$SEEDS"
-if [ "${#SEED_ARR[@]}" -ne 5 ]; then
-    echo "ERROR: SEEDS must list exactly 5 seeds (got: ${#SEED_ARR[@]})" >&2
+N_SEEDS="${#SEED_ARR[@]}"
+if [ "$N_SEEDS" -lt 1 ] || [ "$N_SEEDS" -gt 5 ]; then
+    echo "ERROR: SEEDS must list 1-5 seeds (got: $N_SEEDS)" >&2
     exit 1
 fi
 
-# Index 0..2 -> eur4a (3 VMs), index 3..4 -> use1d (2 VMs).
-ZONES=("europe-west4-a" "europe-west4-a" "europe-west4-a" "us-east1-d" "us-east1-d")
-VM_NAMES=(
-    "bohdi-seed${SEED_ARR[0]}"
-    "bohdi-seed${SEED_ARR[1]}"
-    "bohdi-seed${SEED_ARR[2]}"
-    "bohdi-seed${SEED_ARR[3]}"
-    "bohdi-seed${SEED_ARR[4]}"
-)
+# Slots 0..2 -> eur4a, slots 3..4 -> use1d. We slice this to N_SEEDS so
+# a smoke run with SEEDS="42" gets one eur4a VM, SEEDS="42 7" gets two
+# eur4a, SEEDS="42 7 13 99" gets three eur4a + one use1d, and the full
+# default gets the canonical 3 + 2 split. Across-seed CIs from
+# scripts/aggregate_seeds.py still need n_seeds>=5 in the final paper run.
+ZONE_SLOTS=("europe-west4-a" "europe-west4-a" "europe-west4-a" "us-east1-d" "us-east1-d")
+ZONES=("${ZONE_SLOTS[@]:0:$N_SEEDS}")
+VM_NAMES=()
+for s in "${SEED_ARR[@]}"; do
+    VM_NAMES+=("bohdi-seed${s}")
+done
 
 # Optional shared data location. When set, each VM skips Stage 1+2 and
 # downloads ${GCS_DATA_PATH}/train.jsonl + val.jsonl. Recommended — saves
@@ -213,7 +216,13 @@ mkdir -p data/sft eval checkpoints logs "checkpoints/seed_${SEED}"
 #   \${GCS_OUTPUT_PATH}/seed_<N>/val.jsonl
 #   \${GCS_OUTPUT_PATH}/seed_<N>/checkpoints/...  ← per-seed (LoRA init)
 #   \${GCS_OUTPUT_PATH}/seed_<N>/eval/...
-GCS_BASE="\${GCS_OUTPUT_PATH:+\${GCS_OUTPUT_PATH%/}}"
+# GCS_OUTPUT_PATH lives only on the LOCAL launcher (heredoc-build time).
+# Bake the resolved value in here without backslashes so the remote VM
+# sees a literal path. The previous \${GCS_OUTPUT_PATH...} form expanded
+# on the remote, where the env var is unset -> GCS_BASE was empty,
+# resume + sidecar upload paths silently no-op'd, and every VM ran
+# Stage 1 from scratch (and lost training state on every preempt).
+GCS_BASE="${GCS_OUTPUT_PATH:+${GCS_OUTPUT_PATH%/}}"
 GCS_SEED_DIR="\${GCS_BASE:+\${GCS_BASE}/seed_${SEED}}"
 if [ -n "\${GCS_SEED_DIR:-}" ]; then
     echo "--- 0b checking \${GCS_SEED_DIR} for prior progress ---" | tee -a ~/pipeline.log
@@ -408,7 +417,7 @@ echo "=== seed ${SEED} pipeline complete ===" >> ~/pipeline.log
 REMOTE
 }
 
-for i in 0 1 2 3 4; do
+for ((i=0; i<N_SEEDS; i++)); do
     SEED="${SEED_ARR[$i]}"
     ZONE="${ZONES[$i]}"
     VM_NAME="${VM_NAMES[$i]}"
