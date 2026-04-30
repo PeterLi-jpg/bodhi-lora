@@ -110,22 +110,38 @@ echo "--- 0/1 setup_tpu.sh ---" | tee -a ~/pipeline.log
 bash tpu/setup_tpu.sh > ~/setup.log 2>&1 || { echo "setup FAILED" >> ~/pipeline.log; exit 1; }
 echo SETUP_OK >> ~/pipeline.log
 
-mkdir -p data/sft
+mkdir -p data/sft data/raw
 
-# Resume: if raw_traces.jsonl already lives in GCS (e.g. a previous run
-# of this script finished), skip Stage 1 entirely.
+# Resume base: if raw_traces.jsonl already exists in GCS (e.g. a partial
+# run from a prior preempted attempt), pull it down so generate_traces.py
+# can resume against it. The generate script self-skips when nothing is
+# left to do, so this path doubles as the "Stage 1 already complete"
+# fast-exit. Eval prompt IDs are fed via --exclude-ids so the eval set
+# (data/raw/hard_200_sample_ids.json, 200 of the 1000 healthbench_hard
+# prompts) never lands in the SFT corpus.
 if gsutil -q stat "${GCS_BASE}/raw_traces.jsonl" 2>/dev/null; then
-    echo "--- raw_traces.jsonl already in GCS, nothing to do ---" | tee -a ~/pipeline.log
-    echo STAGE1_OK >> ~/pipeline.log
-    exit 0
+    echo "--- pulling resume base from ${GCS_BASE}/raw_traces.jsonl ---" | tee -a ~/pipeline.log
+    gsutil -q cp "${GCS_BASE}/raw_traces.jsonl" data/sft/raw_traces.jsonl
+    echo "  resume rows: \$(wc -l < data/sft/raw_traces.jsonl 2>/dev/null || echo 0)" >> ~/pipeline.log
 fi
 
-echo "--- 1/1 generate BODHI traces ---" | tee -a ~/pipeline.log
+echo "--- 1/1 generate BODHI traces (with resume + eval-id exclusion) ---" | tee -a ~/pipeline.log
 python -u scripts/download_data.py >> ~/pipeline.log 2>&1
+# --resume-from points at the same path as --output; if generate_traces
+# finds it, it skips done prompt_ids and appends. --exclude-ids drops
+# the 200 healthbench_hard eval prompts so the SFT corpus has zero
+# overlap with Stage 4 eval (--sample-ids in eval_healthbench.py).
+# --force-resume tolerates rescue files that pre-date the
+# ablate_component metadata field (issue #69 added it; older rows
+# omit it, which would otherwise trigger the resume-config-mismatch
+# guard).
 python -u scripts/generate_traces.py \\
     --model google/medgemma-27b-text-it \\
     --datasets healthbench_hard healthbench \\
     --output data/sft/raw_traces.jsonl \\
+    --resume-from data/sft/raw_traces.jsonl \\
+    --exclude-ids data/raw/hard_200_sample_ids.json \\
+    --force-resume \\
     --use-bodhi \\
     > ~/gen.log 2>&1
 echo GEN_OK >> ~/pipeline.log
@@ -134,6 +150,7 @@ echo GEN_OK >> ~/pipeline.log
 # followers poll for.
 echo "--- uploading raw_traces.jsonl to ${GCS_BASE}/raw_traces.jsonl ---" | tee -a ~/pipeline.log
 gsutil -q -m cp data/sft/raw_traces.jsonl "${GCS_BASE}/raw_traces.jsonl"
+echo "  final rows: \$(wc -l < data/sft/raw_traces.jsonl)" >> ~/pipeline.log
 echo STAGE1_OK >> ~/pipeline.log
 echo "=== Stage 1 complete; raw_traces.jsonl in GCS ==="
 REMOTE
@@ -179,13 +196,14 @@ if ! gsutil ls "$GCS_BASE/" >/dev/null 2>&1; then
     exit 1
 fi
 
-# Already in GCS? Skip the whole VM acquisition.
-if gsutil -q stat "${GCS_BASE}/raw_traces.jsonl" 2>/dev/null; then
-    echo "raw_traces.jsonl already exists at ${GCS_BASE}/raw_traces.jsonl"
-    echo "(skipping VM acquisition; remove the file in GCS first if you want to regenerate)"
-    trap - EXIT
-    exit 0
-fi
+# NOTE: we no longer fast-exit when raw_traces.jsonl exists in GCS,
+# because the file may be PARTIAL (e.g. the rescue file from a prior
+# preempted run). The VM-side resume path (in build_remote_cmd) pulls
+# the existing file as a resume base and lets generate_traces.py skip
+# already-done prompt_ids. If the file is already complete after
+# resume + exclude filtering, generate_traces.py prints "Nothing to
+# generate" and exits 0 without spinning up vLLM, so the chip-time
+# cost of a no-op call is just one setup_tpu.sh run (~10 min).
 
 preempt_attempt=0
 while :; do
