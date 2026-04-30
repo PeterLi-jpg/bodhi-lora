@@ -98,8 +98,19 @@ fi
 # eur4a, SEEDS="42 7 13 99" gets three eur4a + one use1d, and the full
 # default gets the canonical 3 + 2 split. Across-seed CIs from
 # scripts/aggregate_seeds.py still need n_seeds>=5 in the final paper run.
-ZONE_SLOTS=("europe-west4-a" "europe-west4-a" "europe-west4-a" "us-east1-d" "us-east1-d")
-ZONES=("${ZONE_SLOTS[@]:0:$N_SEEDS}")
+if [ -n "${ZONES_OVERRIDE:-}" ]; then
+    # Explicit per-seed zone list, e.g. when launching followers around an
+    # already-running VM in another zone. Must list one zone per seed,
+    # space-separated. Example: ZONES_OVERRIDE="europe-west4-a europe-west4-a us-east1-d us-east1-d"
+    read -r -a ZONES <<< "$ZONES_OVERRIDE"
+    if [ "${#ZONES[@]}" -ne "$N_SEEDS" ]; then
+        echo "ERROR: ZONES_OVERRIDE has ${#ZONES[@]} entries, need $N_SEEDS" >&2
+        exit 1
+    fi
+else
+    ZONE_SLOTS=("europe-west4-a" "europe-west4-a" "europe-west4-a" "us-east1-d" "us-east1-d")
+    ZONES=("${ZONE_SLOTS[@]:0:$N_SEEDS}")
+fi
 VM_NAMES=()
 for s in "${SEED_ARR[@]}"; do
     VM_NAMES+=("bohdi-seed${s}")
@@ -331,6 +342,17 @@ else
     gcs_upload data/sft/train.jsonl train.jsonl
     gcs_upload data/sft/val.jsonl val.jsonl
 fi
+
+# The Stage-2 grader (and any Stage-1 generation if it ran) used a
+# vllm-tpu Docker container with --privileged, started via 'sudo docker
+# run', so the bind-mounted ~/.cache/huggingface fills up with
+# root-owned files. train_lora.py runs as the regular user and would
+# hit "PermissionError: [Errno 13] Permission denied" on the first
+# AutoTokenizer.from_pretrained() download attempt. Chown the cache
+# back to the user before Stage 3 so HF Hub downloads can proceed.
+# Also covers ~/.xla_cache for the XLA persistent compile cache, which
+# may not exist yet on a fresh VM (hence the 2>/dev/null silencing).
+sudo chown -R "$USER:$USER" ~/.cache/huggingface ~/.xla_cache 2>/dev/null || true
 
 echo "--- 3/4 train LoRA seed=${SEED} ---" | tee -a ~/pipeline.log
 # Sidecar: rsync checkpoints/seed_<SEED>/ to GCS every 5 min while
