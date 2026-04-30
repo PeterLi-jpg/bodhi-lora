@@ -268,6 +268,21 @@ def find_response_template(tokenizer):
     )
 
 
+def latest_checkpoint(output_dir):
+    root = Path(output_dir)
+    checkpoints = []
+    for path in root.glob("checkpoint-*"):
+        try:
+            step = int(path.name.split("-", 1)[1])
+        except (IndexError, ValueError):
+            continue
+        checkpoints.append((step, path))
+    if not checkpoints:
+        return None
+    checkpoints.sort()
+    return str(checkpoints[-1][1])
+
+
 def main():
     global _tokenizer
 
@@ -577,7 +592,13 @@ def main():
         lr_scheduler_type=train_cfg["lr_scheduler_type"],
         logging_steps=train_cfg["logging_steps"],
         save_strategy=train_cfg["save_strategy"],
+        save_steps=train_cfg.get("save_steps"),
+        # eval_strategy is the local variable so we can flip to "no" when
+        # the validation split is empty (see line ~510). Setting save_steps
+        # / eval_steps from the yaml lets configs use save_strategy: steps
+        # for mid-epoch checkpointing (issue #23).
         eval_strategy=eval_strategy,
+        eval_steps=train_cfg.get("eval_steps"),
         bf16=use_bf16,
         seed=seed,
         data_seed=seed,
@@ -615,19 +636,14 @@ def main():
         formatting_func=format_example,
     )
 
-    # Resume from the latest checkpoint if one exists in output_dir.  This
-    # makes preemption recovery cheap: rescued checkpoints are SCP'd back to
-    # the new VM, training resumes from the last save instead of step 0.
-    # `resume_from_checkpoint=True` is a no-op (starts fresh) if no checkpoint
-    # is present, so safe on first run.
-    from pathlib import Path as _Path
-    _ckpt_dir = _Path(args.output_dir)
-    _has_ckpt = _ckpt_dir.exists() and any(
-        p.name.startswith("checkpoint-") for p in _ckpt_dir.iterdir()
-    )
-    if _has_ckpt:
-        print(f"Found existing checkpoint(s) in {args.output_dir}, resuming.")
-        trainer.train(resume_from_checkpoint=True)
+    # Resume from the latest checkpoint if one exists in output_dir.  Issue #23:
+    # combined with save_strategy=steps + save_steps in the config, this makes
+    # preemption recovery cheap — rescued checkpoints are SCP'd back to the
+    # new VM and training resumes from the last save instead of step 0.
+    resume_path = latest_checkpoint(args.output_dir)
+    if resume_path:
+        print(f"Resuming from checkpoint: {resume_path}")
+        trainer.train(resume_from_checkpoint=resume_path)
     else:
         trainer.train()
 
