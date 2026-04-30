@@ -142,15 +142,24 @@ def grade_trace(grader, prompt_messages, response_text, rubric_items, max_retrie
         })
 
     total_pos = sum(r["points"] for r in results if r["points"] > 0)
+    total_neg = sum(r["points"] for r in results if r["points"] < 0)
     total_abs = sum(abs(r["points"]) for r in results)
     earned = sum(r["points"] for r in results if r["criteria_met"])
     positive_items = [r for r in results if r["points"] > 0]
     positive_items_met = sum(1 for r in positive_items if r["criteria_met"])
 
-    # ``overall_score`` preserves the historical behavior so existing runs are
-    # comparable. The extra score views make issue #4 auditable without
-    # silently changing the default training filter.
-    score = earned / total_pos if total_pos > 0 else 0.0
+    # Per issue #4: ``overall_score`` is now the symmetric normalized form
+    # ``(earned - neg) / (pos - neg)`` — bounded in [0, 1], comparable
+    # across prompts with different penalty structure. The legacy
+    # positive-only view (``earned / total_pos``) stays under
+    # ``positive_score`` for backward analysis, and the alternate audit
+    # views from earlier (``absolute_point_score``, ``positive_criteria_rate``)
+    # remain available so anyone can re-derive results under the old metric.
+    positive_score = earned / total_pos if total_pos > 0 else 0.0
+    score_range = total_pos - total_neg
+    normalized_score = (
+        (earned - total_neg) / score_range if score_range > 0 else 0.0
+    )
     absolute_score = earned / total_abs if total_abs > 0 else 0.0
     positive_rate = (
         positive_items_met / len(positive_items) if positive_items else 0.0
@@ -168,12 +177,15 @@ def grade_trace(grader, prompt_messages, response_text, rubric_items, max_retrie
             tag_scores[tag] = sum(r["points"] for r in items if r["criteria_met"]) / pos
 
     return {
-        "overall_score": score,
+        "overall_score": normalized_score,
+        "normalized_score": normalized_score,
+        "positive_score": positive_score,
         "absolute_point_score": absolute_score,
         "positive_criteria_rate": positive_rate,
         "score_components": {
             "earned_points": earned,
             "positive_point_total": total_pos,
+            "negative_point_total": total_neg,
             "absolute_point_total": total_abs,
             "positive_criteria_total": len(positive_items),
             "positive_criteria_met": positive_items_met,
@@ -300,6 +312,9 @@ def main():
                 f.write(json.dumps(item) + "\n")
         print(f"All graded traces -> {p}")
 
+    # ``--score-field`` defaults to overall_score, which is now the
+    # normalized formula. Existing audits using --score-field absolute_point_score
+    # / positive_criteria_rate / positive_score still work.
     kept = [t for t in graded if t["grade"][args.score_field] >= args.min_score]
     print(
         f"Kept {len(kept)}/{len(graded)} "
@@ -308,7 +323,7 @@ def main():
 
     scores = [t["grade"][args.score_field] for t in graded]
     if scores:
-        print(f"Scores: min={min(scores):.3f} max={max(scores):.3f} "
+        print(f"Normalized scores: min={min(scores):.3f} max={max(scores):.3f} "
               f"mean={sum(scores)/len(scores):.3f} median={statistics.median(scores):.3f}")
 
     random.shuffle(kept)
