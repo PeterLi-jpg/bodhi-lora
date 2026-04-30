@@ -50,12 +50,26 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ENV_FILE="${SCRIPT_DIR}/../.env"
-if [ -z "${HF_TOKEN:-}" ] && [ -f "$ENV_FILE" ]; then
+# Walk up looking for a .env file. Worktrees check ../.env (parent worktree)
+# AND ../../.env / ../../../../.env / etc. so a clone deep inside
+# .claude/worktrees still finds the repo-root .env.
+ENV_FILE=""
+_d="$SCRIPT_DIR"
+for _ in 1 2 3 4 5 6; do
+    _d="$(dirname "$_d")"
+    if [ -f "${_d}/.env" ]; then ENV_FILE="${_d}/.env"; break; fi
+done
+if [ -n "$ENV_FILE" ] && [ -z "${HF_TOKEN:-}" ]; then
     # shellcheck source=/dev/null
-    source "$ENV_FILE"
+    set -a; source "$ENV_FILE"; set +a
 fi
 : "${HF_TOKEN:?HF_TOKEN not set — add HF_TOKEN=hf_... to .env or export it}"
+
+# GH_TOKEN: required for the private repo clone on the VM. We honor an
+# explicit env var, then ``gh auth token`` as a fallback (the user already
+# has gh authenticated for everything else in this codebase).
+GH_TOKEN="${GH_TOKEN:-$(gh auth token 2>/dev/null || true)}"
+: "${GH_TOKEN:?GH_TOKEN not set and 'gh auth token' returned empty — auth gh or export GH_TOKEN}"
 
 PROJECT="tokyo-micron-494016-s9"
 RUNTIME="v2-alpha-tpuv6e"
@@ -89,8 +103,17 @@ VM_NAMES=(
 GCS_DATA_PATH="${GCS_DATA_PATH:-}"
 
 # How many times to retry spot-create on TRC capacity errors before
-# giving up on a particular VM. Each retry waits 60s.
-CREATE_RETRIES="${CREATE_RETRIES:-5}"
+# giving up on a particular VM. Each retry waits 60s. Default of 200 *
+# 60s = up to ~3.3h per per-attempt acquisition window — TRC v6e-8 spot
+# capacity is highly variable and the launchers in this repo (e.g.
+# launch_multiseed.sh) use similar long-retry loops.
+CREATE_RETRIES="${CREATE_RETRIES:-200}"
+
+# How many times the per-VM subshell will reacquire after a preempt.
+# Set to 0 to disable preempt-retry (a single failed run gives up).
+# Default 10 = up to 10 fresh acquisitions per seed, which roughly
+# matches the longest-running TRC spot session we have observed.
+MAX_PREEMPT_RETRIES="${MAX_PREEMPT_RETRIES:-10}"
 
 echo "=== launch_5seeds: 5 v6e-8 spot VMs in parallel (3 eur4a + 2 use1d) ==="
 echo "  seeds: ${SEEDS}"
@@ -102,21 +125,34 @@ PID_FILE="/tmp/bohdi_5seeds_pids.txt"
 > "$PID_FILE"
 
 # Build the remote pipeline command once — same script on every VM, only
-# the SEED env var differs per VM. We embed HF_TOKEN inline (visible in
-# the gcloud SSH command's argv); if you need stricter token hygiene,
-# write it to ~/.bohdi-env on the VM via stdin and source it inside the
-# heredoc instead.
+# the SEED env var differs per VM. Tokens are NOT embedded inline (they
+# would appear in the gcloud SSH argv and in process listings on the VM);
+# instead the per-VM subshell pushes them to ~/.bohdi-env via stdin in
+# a separate SSH call, and this script sources them.
 build_remote_cmd() {
     local SEED="$1"
     cat <<REMOTE
 set -euo pipefail
+# Tokens were stashed in ~/.bohdi-env by the launcher's stdin push.
+if [ -f ~/.bohdi-env ]; then
+    set -a; source ~/.bohdi-env; set +a
+fi
+: "\${HF_TOKEN:?HF_TOKEN missing from ~/.bohdi-env}"
+: "\${GH_TOKEN:?GH_TOKEN missing from ~/.bohdi-env}"
 export PJRT_DEVICE=TPU
-export HF_TOKEN='${HF_TOKEN}'
 
+# Private-repo clone via in-memory token-injected URL. The
+# ``url.<...>.insteadOf`` config rewrites the github.com origin only for
+# THIS git invocation, so the token never lands in ~/.git/config.
 if [ ! -d ~/bohdi-lora ]; then
-    git clone https://github.com/PeterLi-jpg/bohdi-lora.git ~/bohdi-lora
+    git -c "url.https://x-access-token:\${GH_TOKEN}@github.com/.insteadOf=https://github.com/" \\
+        clone https://github.com/PeterLi-jpg/bohdi-lora.git ~/bohdi-lora
 fi
 cd ~/bohdi-lora
+# Always pull so a re-acquired VM picks up any post-launch fixes on main.
+git -c "url.https://x-access-token:\${GH_TOKEN}@github.com/.insteadOf=https://github.com/" \\
+    fetch origin main 2>&1 | tail -2 || true
+git reset --hard origin/main 2>&1 | tail -1 || true
 
 echo "--- 0/4 setup_tpu.sh ---" | tee -a ~/pipeline.log
 bash tpu/setup_tpu.sh > ~/setup.log 2>&1 || { echo "setup FAILED" >> ~/pipeline.log; exit 1; }
@@ -204,57 +240,145 @@ for i in 0 1 2 3 4; do
     (
         set -euo pipefail
 
-        # Acquire the VM with a retry loop. TRC v6e-8 spot has
-        # occasional "internal error" capacity wobbles; we retry a few
-        # times before giving up on this seed.
-        attempt=0
-        until gcloud compute tpus tpu-vm create "$VM_NAME" \
-            --zone="$ZONE" \
-            --accelerator-type="v6e-8" \
-            --version="$RUNTIME" \
-            --project="$PROJECT" \
-            --spot 2>&1 | tee -a "$LOG"; do
-            attempt=$((attempt + 1))
-            if [ "$attempt" -ge "$CREATE_RETRIES" ]; then
-                echo "[$VM_NAME] giving up after $attempt attempts" | tee -a "$LOG"
-                exit 0
-            fi
-            echo "[$VM_NAME] capacity error, retry $attempt/$CREATE_RETRIES in 60s..." | tee -a "$LOG"
-            sleep 60
-        done
+        # Per-VM helpers — closures over $VM_NAME / $ZONE / $LOG.
+        log()  { printf '[%s %s] %s\n' "$(date -u +%H:%M:%S)" "$VM_NAME" "$*" | tee -a "$LOG"; }
 
-        # Trap: always copy results back and delete the VM, even on
-        # SIGINT or pipeline failure.
-        cleanup() {
-            echo "[$VM_NAME] copying results + deleting VM..." | tee -a "$LOG"
+        try_create() {
+            # Acquire one v6e-8 spot in $ZONE with capacity-error retries.
+            # Returns 0 on success, 1 if we burn through all retries.
+            local attempt=0
+            until gcloud compute tpus tpu-vm create "$VM_NAME" \
+                --zone="$ZONE" \
+                --accelerator-type="v6e-8" \
+                --version="$RUNTIME" \
+                --project="$PROJECT" \
+                --spot >>"$LOG" 2>&1; do
+                attempt=$((attempt + 1))
+                if [ "$attempt" -ge "$CREATE_RETRIES" ]; then
+                    log "create gave up after $attempt attempts"
+                    return 1
+                fi
+                log "create error, retry $attempt/$CREATE_RETRIES in 60s..."
+                sleep 60
+            done
+            log "VM created"
+            return 0
+        }
+
+        push_tokens() {
+            # Stash GH_TOKEN + HF_TOKEN to ~/.bohdi-env on the VM via
+            # stdin, mode 600. The tokens never appear in process listings
+            # or the gcloud --command argv.
+            printf '%s\n%s\n' "$GH_TOKEN" "$HF_TOKEN" \
+                | gcloud alpha compute tpus tpu-vm ssh "$VM_NAME" \
+                    --zone="$ZONE" --project="$PROJECT" --tunnel-through-iap \
+                    --command='read -r G; read -r H; umask 077; { echo "GH_TOKEN=$G"; echo "HF_TOKEN=$H"; } > ~/.bohdi-env; chmod 600 ~/.bohdi-env' \
+                    >>"$LOG" 2>&1
+        }
+
+        run_pipeline() {
+            # Run the heredoc-built pipeline. Returns SSH's exit code:
+            #   0   pipeline ran, EVAL_OK marker present
+            #   ≠0  SSH died (preempt, network, or pipeline error)
+            local remote_cmd
+            remote_cmd="$(build_remote_cmd "$SEED")"
+            gcloud alpha compute tpus tpu-vm ssh "$VM_NAME" \
+                --zone="$ZONE" --project="$PROJECT" --tunnel-through-iap \
+                --command="$remote_cmd" >>"$LOG" 2>&1
+        }
+
+        eval_marker_present() {
+            # Probe for the EVAL_OK marker in ~/pipeline.log. Returns 0 if
+            # the pipeline ran to completion (or 1 otherwise / on any
+            # SSH failure).
+            gcloud alpha compute tpus tpu-vm ssh "$VM_NAME" \
+                --zone="$ZONE" --project="$PROJECT" --tunnel-through-iap \
+                --command='grep -q ^EVAL_OK ~/pipeline.log' >/dev/null 2>&1
+        }
+
+        vm_state() {
+            gcloud compute tpus tpu-vm describe "$VM_NAME" \
+                --zone="$ZONE" --project="$PROJECT" \
+                --format="value(state)" 2>/dev/null \
+                || echo "MISSING"
+        }
+
+        scp_back() {
+            # Best-effort copy of checkpoints + eval JSONs + pipeline.log
+            # to ./results/seed_<N>/. Never fails the parent shell.
             gcloud alpha compute tpus tpu-vm scp --recurse \
                 --zone="$ZONE" --project="$PROJECT" --tunnel-through-iap \
                 "${VM_NAME}:~/bohdi-lora/checkpoints/seed_${SEED}" "$SEED_DIR/" \
-                2>&1 | tee -a "$LOG" || echo "  (no checkpoints to copy)" | tee -a "$LOG"
+                >>"$LOG" 2>&1 || log "  (no checkpoints to copy)"
             gcloud alpha compute tpus tpu-vm scp --recurse \
                 --zone="$ZONE" --project="$PROJECT" --tunnel-through-iap \
                 "${VM_NAME}:~/bohdi-lora/eval/seed_${SEED}" "$SEED_DIR/" \
-                2>&1 | tee -a "$LOG" || echo "  (no eval to copy)" | tee -a "$LOG"
+                >>"$LOG" 2>&1 || log "  (no eval to copy)"
             gcloud alpha compute tpus tpu-vm scp \
                 --zone="$ZONE" --project="$PROJECT" --tunnel-through-iap \
                 "${VM_NAME}:~/pipeline.log" "${SEED_DIR}/pipeline.log" \
-                2>&1 | tee -a "$LOG" || true
+                >>"$LOG" 2>&1 || true
+        }
+
+        delete_vm() {
             gcloud compute tpus tpu-vm delete "$VM_NAME" \
-                --zone="$ZONE" --project="$PROJECT" --quiet 2>/dev/null || true
-            echo "[$VM_NAME] cleaned up" | tee -a "$LOG"
+                --zone="$ZONE" --project="$PROJECT" --quiet \
+                >>"$LOG" 2>&1 || true
+        }
+
+        # Trap on EXIT — runs after the outer retry loop ends, no matter
+        # how (success / preempt-give-up / SIGINT). Always tries to copy
+        # whatever lives on the current VM and delete it.
+        cleanup() {
+            log "cleanup: copy results + delete VM"
+            scp_back
+            delete_vm
+            log "cleaned up"
         }
         trap cleanup EXIT
 
-        # Run the pipeline. SSH stays open until the remote command
-        # returns; on preempt/network blip the SSH dies but the VM keeps
-        # running — re-running this script will reuse the existing VM
-        # and the eval-skip-if-output-exists logic resumes.
-        REMOTE_CMD="$(build_remote_cmd "$SEED")"
-        gcloud alpha compute tpus tpu-vm ssh "$VM_NAME" \
-            --zone="$ZONE" --project="$PROJECT" --tunnel-through-iap \
-            --command="$REMOTE_CMD" 2>&1 | tee -a "$LOG"
+        # ── outer retry loop ──────────────────────────────────────────────
+        # If the pipeline finishes cleanly (EVAL_OK), we exit successfully.
+        # If the VM gets preempted before EVAL_OK, we delete + reacquire in
+        # the SAME zone (per the user's spec — staying in zone keeps the
+        # persistent disk attachment + zone-affinity behavior consistent).
+        preempt_attempt=0
+        while :; do
+            if ! try_create; then
+                log "exhausted create retries — giving up on this seed"
+                exit 0
+            fi
+            push_tokens
+            run_pipeline   # never let a non-zero kill the parent; we check below
+            if eval_marker_present; then
+                log "pipeline complete (EVAL_OK)"
+                break
+            fi
 
-        echo "[$VM_NAME] pipeline finished" | tee -a "$LOG"
+            # Pipeline didn't finish. Inspect VM state to decide what to do.
+            state=$(vm_state)
+            log "SSH ended without EVAL_OK; vm state=$state"
+
+            if [ "$state" = "PREEMPTED" ] || [ "$state" = "MISSING" ]; then
+                preempt_attempt=$((preempt_attempt + 1))
+                if [ "$preempt_attempt" -ge "$MAX_PREEMPT_RETRIES" ]; then
+                    log "hit MAX_PREEMPT_RETRIES=$MAX_PREEMPT_RETRIES, giving up"
+                    break
+                fi
+                log "preempted — deleting + reacquiring in same zone (attempt $preempt_attempt/$MAX_PREEMPT_RETRIES)"
+                # Best-effort grab whatever results survived on the VM
+                # before we delete it (most work is wiped with the boot
+                # disk, but eval/seed_N JSONs may be there).
+                scp_back
+                delete_vm
+                sleep 30
+                continue
+            fi
+
+            # Something else (pipeline error not preempt). Stop retrying.
+            log "non-preempt failure — not retrying"
+            break
+        done
     ) &
 
     echo "$!" >> "$PID_FILE"
