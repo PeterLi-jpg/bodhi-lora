@@ -419,11 +419,21 @@ class VLLMEngine:
     def chat(
         self,
         messages: list,
-        max_new_tokens: int = 1024,
+        max_new_tokens: int = 2048,
         temperature: float = 0.0,
         top_p: float = 1.0,
     ) -> str:
-        """Generate a response for the given messages; return text only."""
+        """Generate a response for the given messages; return text only.
+
+        Default max_new_tokens=2048: HealthBench responses (especially
+        the BODHI two-pass analysis) routinely run 4000+ chars. The
+        previous default of 1024 capped about 22% of the responses
+        mid-sentence (audit on the 4799-row Stage 1 output, 2026-04-30):
+        responses ending mid-letter at the 4000-4900 char window were
+        clearly truncated. Doubling the cap to 2048 gives ~8000 chars
+        of headroom while still leaving room in max_model_len=4096
+        for typical 1500-2000 token healthbench prompts.
+        """
         model_id = self._lora_name or self.model
         resp = self._post({
             "model": model_id,
@@ -437,7 +447,7 @@ class VLLMEngine:
     def chat_with_logprobs(
         self,
         messages: list,
-        max_new_tokens: int = 1024,
+        max_new_tokens: int = 2048,
         temperature: float = 0.0,
     ) -> Tuple[str, List[float]]:
         """Generate a response and return (text, per_token_logprobs).
@@ -445,6 +455,9 @@ class VLLMEngine:
         Requests logprobs=True so vLLM returns the log-probability of each
         emitted token.  Used by score_response_confidence — avoids a separate
         forward pass (prompt_logprobs is untested on the TPU backend).
+
+        Default max_new_tokens matches chat() for consistency: 2048 to avoid
+        mid-sentence truncation on long medical responses.
         """
         model_id = self._lora_name or self.model
         resp = self._post({
