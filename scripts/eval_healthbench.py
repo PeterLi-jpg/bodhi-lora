@@ -212,24 +212,24 @@ def main():
     failed_inference = []
 
     # On TPU + LoRA, vllm/vllm-tpu's add_lora is unimplemented (see
-    # scripts/_vllm_engine.py guard). Use the transformers+PEFT-on-XLA
-    # backend instead. It serializes inference internally so concurrent
-    # ThreadPoolExecutor calls become serial — slower wall clock, but
-    # this is the only TPU path that produces lora_* eval results.
+    # scripts/_vllm_engine.py guard). XLALoRAEngine merges the adapter
+    # into the base on CPU and then serves the merged checkpoint via
+    # a regular VLLMEngine (no lora_path → add_lora is never called).
+    # Inference speed matches base-model serving, so the regular
+    # EVAL_CONCURRENCY applies — vllm batches under the hood.
     _use_xla_lora = (
         args.lora_path is not None and _detect_accelerator() == "tpu"
     )
     if _use_xla_lora:
         from _xla_lora_inference import XLALoRAEngine
         engine_ctx = XLALoRAEngine(args.model, lora_path=args.lora_path)
-        _eval_concurrency = 1
         print(
-            f"TPU+LoRA detected — using XLA direct-inference backend "
-            f"(vllm-tpu lacks add_lora). Concurrency forced to 1."
+            "TPU+LoRA detected — using merge-then-serve backend "
+            "(vllm-tpu lacks add_lora, XLALoRAEngine merges on CPU first)."
         )
     else:
         engine_ctx = VLLMEngine(args.model, lora_path=args.lora_path)
-        _eval_concurrency = EVAL_CONCURRENCY
+    _eval_concurrency = EVAL_CONCURRENCY
 
     with engine_ctx as engine:
         bodhi_wrapper = make_bodhi_wrapper(engine) if args.use_bodhi else None
