@@ -122,9 +122,29 @@ MAX_PREEMPT_RETRIES="${MAX_PREEMPT_RETRIES:-10}"
 
 echo "=== launch_5seeds: 5 v6e-8 spot VMs in parallel (3 eur4a + 2 use1d) ==="
 echo "  seeds: ${SEEDS}"
-echo "  GCS_DATA_PATH: ${GCS_DATA_PATH:-(not set — each VM will run Stage 1+2)}"
+echo "  GCS_DATA_PATH:   ${GCS_DATA_PATH:-(not set — each VM will run Stage 1+2)}"
+echo "  GCS_OUTPUT_PATH: ${GCS_OUTPUT_PATH:-(not set — preempts will lose progress)}"
 echo "  results -> $RESULTS_DIR/seed_<N>/"
 echo
+
+if [ -z "${GCS_OUTPUT_PATH:-}" ]; then
+    cat <<'WARN' >&2
+
+WARNING: GCS_OUTPUT_PATH is not set. Each preempt will lose all
+progress for that seed (boot disk wiped). To survive preempts, set
+GCS_OUTPUT_PATH to a bucket the TPUs can write to:
+
+  GCS_OUTPUT_PATH=gs://your-bucket/bohdi-runs bash tpu/launch_5seeds.sh
+
+The launcher uploads stage outputs (raw_traces, train/val, training
+checkpoints, eval JSONs) to ${GCS_OUTPUT_PATH}/seed_<N>/ as it goes,
+and a re-acquired VM after a preempt downloads whatever survived
+before continuing — so a preempt costs at most one stage's increment,
+not the whole run.
+
+WARN
+fi
+
 
 PID_FILE="/tmp/bohdi_5seeds_pids.txt"
 > "$PID_FILE"
@@ -163,23 +183,90 @@ echo "--- 0/4 setup_tpu.sh ---" | tee -a ~/pipeline.log
 bash tpu/setup_tpu.sh > ~/setup.log 2>&1 || { echo "setup FAILED" >> ~/pipeline.log; exit 1; }
 echo SETUP_OK >> ~/pipeline.log
 
-mkdir -p data/sft eval checkpoints logs
+mkdir -p data/sft eval checkpoints logs "checkpoints/seed_${SEED}"
 
-if [ -n "${GCS_DATA_PATH}" ]; then
+# ── Resume from prior progress in GCS, if any ─────────────────────────────
+# Each stage's output is uploaded to GCS as it lands (see "upload"
+# blocks below). On a preempt + reacquire the new VM downloads
+# whatever survived before continuing, so the worst case is losing
+# one stage's increment instead of the whole run.
+#
+# Layout:
+#   \${GCS_OUTPUT_PATH}/raw_traces.jsonl          ← shared across all 5 seeds
+#                                                  (BODHI is deterministic
+#                                                  with greedy decoding,
+#                                                  so Stage 1 produces the
+#                                                  same traces regardless
+#                                                  of seed; first seed to
+#                                                  finish wins, others skip)
+#   \${GCS_OUTPUT_PATH}/seed_<N>/train.jsonl      ← per-seed (filter shuffle)
+#   \${GCS_OUTPUT_PATH}/seed_<N>/val.jsonl
+#   \${GCS_OUTPUT_PATH}/seed_<N>/checkpoints/...  ← per-seed (LoRA init)
+#   \${GCS_OUTPUT_PATH}/seed_<N>/eval/...
+GCS_BASE="\${GCS_OUTPUT_PATH:+\${GCS_OUTPUT_PATH%/}}"
+GCS_SEED_DIR="\${GCS_BASE:+\${GCS_BASE}/seed_${SEED}}"
+if [ -n "\${GCS_SEED_DIR:-}" ]; then
+    echo "--- 0b checking \${GCS_SEED_DIR} for prior progress ---" | tee -a ~/pipeline.log
+    # Shared across-seeds Stage 1 output first.
+    gsutil -q cp "\${GCS_BASE}/raw_traces.jsonl" data/sft/raw_traces.jsonl 2>/dev/null \\
+        && echo "  resumed: raw_traces.jsonl from GCS (shared across seeds)" >> ~/pipeline.log || true
+    # Per-seed inputs/outputs.
+    gsutil -q cp "\${GCS_SEED_DIR}/train.jsonl" data/sft/train.jsonl 2>/dev/null \\
+        && echo "  resumed: train.jsonl from GCS" >> ~/pipeline.log || true
+    gsutil -q cp "\${GCS_SEED_DIR}/val.jsonl" data/sft/val.jsonl 2>/dev/null \\
+        && echo "  resumed: val.jsonl from GCS" >> ~/pipeline.log || true
+    gsutil -q -m rsync -r "\${GCS_SEED_DIR}/checkpoints/" "checkpoints/seed_${SEED}/" 2>/dev/null \\
+        && echo "  resumed: checkpoints from GCS" >> ~/pipeline.log || true
+    gsutil -q -m rsync -r "\${GCS_SEED_DIR}/eval/" "eval/seed_${SEED}/" 2>/dev/null \\
+        && echo "  resumed: eval JSONs from GCS" >> ~/pipeline.log || true
+fi
+
+# Helper: upload a path to GCS if GCS_OUTPUT_PATH is set, never fail loudly.
+gcs_upload() {
+    local local_path="\$1"
+    local remote_subpath="\$2"
+    [ -z "\${GCS_SEED_DIR:-}" ] && return 0
+    [ -e "\$local_path" ] || return 0
+    gsutil -q -m cp -r "\$local_path" "\${GCS_SEED_DIR}/\${remote_subpath}" 2>&1 \\
+        | tail -3 >> ~/pipeline.log || true
+}
+gcs_rsync() {
+    local local_path="\$1"
+    local remote_subpath="\$2"
+    [ -z "\${GCS_SEED_DIR:-}" ] && return 0
+    [ -d "\$local_path" ] || return 0
+    gsutil -q -m rsync -r "\$local_path" "\${GCS_SEED_DIR}/\${remote_subpath}" 2>&1 \\
+        | tail -3 >> ~/pipeline.log || true
+}
+
+if [ -n "${GCS_DATA_PATH}" ] && [ ! -s data/sft/train.jsonl ]; then
     echo "--- 1+2/4 download pre-graded data from ${GCS_DATA_PATH} ---" | tee -a ~/pipeline.log
     gsutil -m cp "${GCS_DATA_PATH}/train.jsonl" data/sft/train.jsonl
     gsutil -m cp "${GCS_DATA_PATH}/val.jsonl"   data/sft/val.jsonl
     echo DATA_DOWNLOADED >> ~/pipeline.log
+elif [ -s data/sft/train.jsonl ] && [ -s data/sft/val.jsonl ]; then
+    echo "--- 1+2/4 train/val.jsonl already present (resumed), skipping Stage 1+2 ---" | tee -a ~/pipeline.log
 else
-    echo "--- 1/4 generate BODHI traces (this VM, no GCS shortcut) ---" | tee -a ~/pipeline.log
-    python -u scripts/download_data.py >> ~/pipeline.log 2>&1
-    python -u scripts/generate_traces.py \\
-        --model google/medgemma-27b-text-it \\
-        --datasets healthbench_hard healthbench \\
-        --output data/sft/raw_traces.jsonl \\
-        --use-bodhi \\
-        > ~/gen.log 2>&1
-    echo GEN_OK >> ~/pipeline.log
+    if [ ! -s data/sft/raw_traces.jsonl ]; then
+        echo "--- 1/4 generate BODHI traces (this VM, no GCS shortcut) ---" | tee -a ~/pipeline.log
+        python -u scripts/download_data.py >> ~/pipeline.log 2>&1
+        python -u scripts/generate_traces.py \\
+            --model google/medgemma-27b-text-it \\
+            --datasets healthbench_hard healthbench \\
+            --output data/sft/raw_traces.jsonl \\
+            --use-bodhi \\
+            > ~/gen.log 2>&1
+        echo GEN_OK >> ~/pipeline.log
+        # raw_traces.jsonl is identical across seeds (BODHI = greedy decode);
+        # publish to the shared GCS path so the other 4 seeds skip Stage 1.
+        if [ -n "\${GCS_BASE:-}" ]; then
+            gsutil -q -m cp data/sft/raw_traces.jsonl "\${GCS_BASE}/raw_traces.jsonl" 2>&1 \\
+                | tail -3 >> ~/pipeline.log || true
+            echo "  uploaded raw_traces.jsonl to shared GCS path" >> ~/pipeline.log
+        fi
+    else
+        echo "--- 1/4 raw_traces.jsonl already present (resumed), skipping Stage 1 ---" | tee -a ~/pipeline.log
+    fi
 
     echo "--- 2/4 filter+grade with seed ${SEED} ---" | tee -a ~/pipeline.log
     python -u scripts/filter_traces.py \\
@@ -192,15 +279,35 @@ else
         --seed ${SEED} \\
         > ~/filter.log 2>&1
     echo FILTER_OK >> ~/pipeline.log
+    gcs_upload data/sft/train.jsonl train.jsonl
+    gcs_upload data/sft/val.jsonl val.jsonl
 fi
 
 echo "--- 3/4 train LoRA seed=${SEED} ---" | tee -a ~/pipeline.log
+# Sidecar: rsync checkpoints/seed_<SEED>/ to GCS every 5 min while
+# training runs. Trap kills it after train_lora.py exits regardless
+# of how — preempt, success, or python exception.
+SIDECAR_PID=""
+if [ -n "\${GCS_SEED_DIR:-}" ]; then
+    (
+        while true; do
+            sleep 300
+            gsutil -q -m rsync -r "checkpoints/seed_${SEED}/" "\${GCS_SEED_DIR}/checkpoints/" 2>&1 \\
+                | tail -3 >> ~/pipeline.log || true
+        done
+    ) &
+    SIDECAR_PID=\$!
+    echo "  GCS rsync sidecar pid=\${SIDECAR_PID} (every 300s)" >> ~/pipeline.log
+fi
+trap '[ -n "'"\${SIDECAR_PID}"'" ] && kill '"\${SIDECAR_PID}"' 2>/dev/null || true' EXIT
 python -u scripts/train_lora.py \\
     --config configs/lora_medgemma27b_tpu.yaml \\
     --seed ${SEED} \\
     --output-dir "checkpoints/seed_${SEED}" \\
     > ~/train.log 2>&1
 echo TRAIN_OK >> ~/pipeline.log
+[ -n "\${SIDECAR_PID}" ] && kill \${SIDECAR_PID} 2>/dev/null || true
+gcs_rsync "checkpoints/seed_${SEED}/" "checkpoints/"
 
 echo "--- 4/4 eval 4 configs (base/lora x wrapper/no-wrapper) ---" | tee -a ~/pipeline.log
 mkdir -p "eval/seed_${SEED}"
@@ -223,9 +330,13 @@ run_eval() {
 }
 
 run_eval "base_no_wrapper"  "--model google/medgemma-27b-text-it"
+gcs_rsync "eval/seed_${SEED}/" "eval/"
 run_eval "base_bodhi"       "--model google/medgemma-27b-text-it --use-bodhi"
+gcs_rsync "eval/seed_${SEED}/" "eval/"
 run_eval "lora_no_wrapper"  "--model google/medgemma-27b-text-it --lora-path \$LORA_DIR"
+gcs_rsync "eval/seed_${SEED}/" "eval/"
 run_eval "lora_bodhi"       "--model google/medgemma-27b-text-it --lora-path \$LORA_DIR --use-bodhi"
+gcs_rsync "eval/seed_${SEED}/" "eval/"
 echo EVAL_OK >> ~/pipeline.log
 
 # ── Stage 5: epistemic-virtue grading ─────────────────────────────────────
@@ -257,6 +368,7 @@ else
     || echo "eval_epistemic FAILED" >> ~/pipeline.log
 fi
 echo EPISTEMIC_OK >> ~/pipeline.log
+gcs_rsync "eval/seed_${SEED}/" "eval/"
 
 echo "=== seed ${SEED} pipeline complete ===" >> ~/pipeline.log
 REMOTE
@@ -384,7 +496,15 @@ for i in 0 1 2 3 4; do
                 exit 0
             fi
             push_tokens
-            run_pipeline   # never let a non-zero kill the parent; we check below
+            # `|| true` is load-bearing: under `set -e` (top of this file)
+            # a non-zero return from this function — which happens any
+            # time the SSH session dies, including a normal preempt —
+            # would kill the parent subshell BEFORE the eval_marker_present
+            # / vm_state checks below could fire. We observed all 4
+            # preempted seeds bypass the retry loop and exit during the
+            # first live multi-seed run; this guard wires the retry path
+            # back up.
+            run_pipeline || true   # exit code is checked via eval_marker_present below
             if eval_marker_present; then
                 log "pipeline complete (EVAL_OK)"
                 break
