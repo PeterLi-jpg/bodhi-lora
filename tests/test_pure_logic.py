@@ -196,6 +196,26 @@ def test_vllm_engine_enforce_eager_flag():
     assert "--enforce-eager" not in eng_off._build_subprocess_cmd()
 
 
+def test_vllm_engine_lora_on_tpu_raises_fast(monkeypatch):
+    """vllm/vllm-tpu doesn't implement add_lora; we must not let the caller
+    spin up a doomed engine and poll a dead container for 45 minutes.
+    """
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import _vllm_engine
+
+    monkeypatch.setattr(_vllm_engine, "_detect_accelerator", lambda: "tpu")
+
+    import pytest as _pytest
+    with _pytest.raises(NotImplementedError, match="vllm/vllm-tpu"):
+        _vllm_engine.VLLMEngine(
+            model="google/medgemma-27b-text-it", tp_size=1,
+            lora_path="checkpoints/best",
+        )
+
+    # Without lora_path, TPU detection is fine and construction succeeds.
+    _ = _vllm_engine.VLLMEngine(model="google/medgemma-27b-text-it", tp_size=1)
+
+
 # ── contamination_probe.py (issue #72) ───────────────────────────────────
 
 def _import_contamination_probe(monkeypatch):

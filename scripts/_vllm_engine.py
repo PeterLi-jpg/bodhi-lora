@@ -149,6 +149,21 @@ class VLLMEngine:
         hf_token: Optional[str] = None,
         enforce_eager: bool = True,
     ):
+        # vllm/vllm-tpu does NOT implement add_lora as of writing — the engine
+        # boots, then crashes inside init_static_loras with NotImplementedError
+        # ~30s into startup. Without this guard the caller's _wait_ready()
+        # polls the dead container for the full 45-minute timeout. Fail fast
+        # with a clear pointer to the GPU pod path the production pipeline
+        # already uses for Stage 4 eval (see scripts/launch_gpu.sh + the
+        # subprocess-mode addition in _detect_run_mode below).
+        if lora_path and _detect_accelerator() == "tpu":
+            raise NotImplementedError(
+                "vllm/vllm-tpu does not support LoRA serving (NotImplementedError "
+                "in add_lora). Run Stage 4 eval / latency benchmark on a GPU pod "
+                "instead — see scripts/launch_gpu.sh. Train on TPU, eval on GPU "
+                "is the supported topology."
+            )
+
         self.model = model
         self.tp_size = tp_size if tp_size is not None else _auto_tp(model)
         self.max_model_len = max_model_len
