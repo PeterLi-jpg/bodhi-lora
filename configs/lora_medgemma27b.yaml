@@ -35,8 +35,10 @@ training:
   lr_scheduler_type: cosine
   max_seq_length: 4096
   logging_steps: 10
-  save_strategy: epoch
-  eval_strategy: epoch
+  save_strategy: steps
+  save_steps: 100
+  eval_strategy: steps
+  eval_steps: 100
   bf16: true
 
 data:
