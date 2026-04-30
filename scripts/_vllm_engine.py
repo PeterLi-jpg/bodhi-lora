@@ -143,7 +143,7 @@ class VLLMEngine:
         self,
         model: str,
         tp_size: Optional[int] = None,
-        max_model_len: int = 4096,
+        max_model_len: int = 8192,
         lora_path: Optional[str] = None,
         port: int = DEFAULT_PORT,
         hf_token: Optional[str] = None,
@@ -215,13 +215,18 @@ class VLLMEngine:
             "--dtype", "bfloat16",
             "--port", str(self.port),
             # max-num-seqs caps how many sequences the scheduler runs in
-            # parallel. The default is conservative on TPU; raising it
-            # to 128 lets PagedAttention pack each step's batch fuller
-            # for the long offline-batch jobs (Stage 1 generates ~12000
-            # sequences). Sized so 128 seqs * max_model_len fits in HBM
-            # alongside a 27B-bf16 weight checkpoint (~54 GB) on a
-            # v6e-8 (256 GB HBM).
-            "--max-num-seqs", "128",
+            # parallel. KV-cache footprint is roughly
+            # max_num_seqs * max_model_len * 360 KB/token for medgemma-27b
+            # (28 layers x 8 GQA KV heads x 256 dim x 2 bytes bf16). On a
+            # v6e-8 (256 GB HBM, ~200 GB free after weights):
+            #   max_model_len=4096, max_num_seqs=128 -> 188 GB  (was prior config)
+            #   max_model_len=8192, max_num_seqs=64  -> 188 GB  (current; same fit)
+            # We picked the second option after BODHI's two-pass started
+            # producing prompts >2048 tokens (the analysis from pass 1
+            # is fed back as input to pass 2), which would clip at
+            # max_model_len=4096. 64 server slots is still well above
+            # the 32-thread client cap so no client-side queuing.
+            "--max-num-seqs", "64",
             # --enforce-eager: skip CUDA-graph pre-capture.  vllm 0.9 with
             # --enable-lora captures ~67 graph shapes and each takes ~2 min
             # on A100, totalling 130+ min before the first prompt is served.
@@ -282,7 +287,7 @@ class VLLMEngine:
             "--port", str(self.port),
             # Match docker-mode batching capacity; see comment in
             # _build_docker_cmd.
-            "--max-num-seqs", "128",
+            "--max-num-seqs", "64",
             # Match the docker-mode default so the two run-modes behave
             # consistently: --enforce-eager is on by default to skip the
             # ~130-min CUDA-graph capture hang on LoRA, opt out for
@@ -431,8 +436,9 @@ class VLLMEngine:
         mid-sentence (audit on the 4799-row Stage 1 output, 2026-04-30):
         responses ending mid-letter at the 4000-4900 char window were
         clearly truncated. Doubling the cap to 2048 gives ~8000 chars
-        of headroom while still leaving room in max_model_len=4096
-        for typical 1500-2000 token healthbench prompts.
+        of headroom while still leaving room in max_model_len=8192
+        for typical 1500-2000 token healthbench prompts plus BODHI's
+        pass-1 analysis (which becomes pass-2 input).
         """
         model_id = self._lora_name or self.model
         resp = self._post({
