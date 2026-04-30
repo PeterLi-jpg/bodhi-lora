@@ -150,12 +150,22 @@ PID_FILE="/tmp/bohdi_5seeds_pids.txt"
 > "$PID_FILE"
 
 # Build the remote pipeline command once — same script on every VM, only
-# the SEED env var differs per VM. Tokens are NOT embedded inline (they
-# would appear in the gcloud SSH argv and in process listings on the VM);
-# instead the per-VM subshell pushes them to ~/.bohdi-env via stdin in
-# a separate SSH call, and this script sources them.
+# the SEED env var (and IS_LEADER flag) differs per VM. Tokens are NOT
+# embedded inline (they would appear in the gcloud SSH argv and in
+# process listings on the VM); instead the per-VM subshell pushes them
+# to ~/.bohdi-env via stdin in a separate SSH call, and this script
+# sources them.
+#
+# Stage-1 leader-elect: ``IS_LEADER=1`` means this VM does the trace
+# generation (Stage 1) itself and uploads to GCS. ``IS_LEADER=0`` (the
+# other 4 seeds) waits up to STAGE1_WAIT_S for the leader's
+# raw_traces.jsonl to land in GCS, then downloads + skips Stage 1. The
+# leader is whichever seed appears first in $SEEDS — by default seed 42.
+# Followers fall through to running Stage 1 themselves if the wait
+# times out, so a preempted leader doesn't strand the followers.
 build_remote_cmd() {
     local SEED="$1"
+    local IS_LEADER="$2"
     cat <<REMOTE
 set -euo pipefail
 # Tokens were stashed in ~/.bohdi-env by the launcher's stdin push.
@@ -247,8 +257,30 @@ if [ -n "${GCS_DATA_PATH}" ] && [ ! -s data/sft/train.jsonl ]; then
 elif [ -s data/sft/train.jsonl ] && [ -s data/sft/val.jsonl ]; then
     echo "--- 1+2/4 train/val.jsonl already present (resumed), skipping Stage 1+2 ---" | tee -a ~/pipeline.log
 else
+    if [ ! -s data/sft/raw_traces.jsonl ] && [ "${IS_LEADER}" = "0" ] && [ -n "\${GCS_BASE:-}" ]; then
+        # Follower: poll GCS for the leader's raw_traces.jsonl. Falls
+        # through to local Stage 1 if the leader doesn't deliver in
+        # STAGE1_WAIT_S seconds (default 6 hours — Stage 1 takes ~3-5h
+        # so this gives the leader generous slack including a preempt).
+        STAGE1_WAIT_S="\${STAGE1_WAIT_S:-21600}"
+        echo "--- 1/4 follower waiting for leader's raw_traces.jsonl (up to \${STAGE1_WAIT_S}s) ---" \\
+            | tee -a ~/pipeline.log
+        deadline=\$((SECONDS + STAGE1_WAIT_S))
+        while [ \$SECONDS -lt \$deadline ]; do
+            if gsutil -q stat "\${GCS_BASE}/raw_traces.jsonl" 2>/dev/null; then
+                gsutil -q cp "\${GCS_BASE}/raw_traces.jsonl" data/sft/raw_traces.jsonl
+                echo "  follower received shared raw_traces.jsonl from GCS" >> ~/pipeline.log
+                break
+            fi
+            sleep 60
+        done
+        if [ ! -s data/sft/raw_traces.jsonl ]; then
+            echo "  follower wait timed out — falling through to local Stage 1" >> ~/pipeline.log
+        fi
+    fi
+
     if [ ! -s data/sft/raw_traces.jsonl ]; then
-        echo "--- 1/4 generate BODHI traces (this VM, no GCS shortcut) ---" | tee -a ~/pipeline.log
+        echo "--- 1/4 generate BODHI traces (leader=${IS_LEADER}) ---" | tee -a ~/pipeline.log
         python -u scripts/download_data.py >> ~/pipeline.log 2>&1
         python -u scripts/generate_traces.py \\
             --model google/medgemma-27b-text-it \\
@@ -259,13 +291,15 @@ else
         echo GEN_OK >> ~/pipeline.log
         # raw_traces.jsonl is identical across seeds (BODHI = greedy decode);
         # publish to the shared GCS path so the other 4 seeds skip Stage 1.
+        # Note: the leader uploads first; a follower that fell through
+        # the wait timeout also uploads (idempotent — same content).
         if [ -n "\${GCS_BASE:-}" ]; then
             gsutil -q -m cp data/sft/raw_traces.jsonl "\${GCS_BASE}/raw_traces.jsonl" 2>&1 \\
                 | tail -3 >> ~/pipeline.log || true
             echo "  uploaded raw_traces.jsonl to shared GCS path" >> ~/pipeline.log
         fi
     else
-        echo "--- 1/4 raw_traces.jsonl already present (resumed), skipping Stage 1 ---" | tee -a ~/pipeline.log
+        echo "--- 1/4 raw_traces.jsonl already present (resumed/follower), skipping Stage 1 ---" | tee -a ~/pipeline.log
     fi
 
     echo "--- 2/4 filter+grade with seed ${SEED} ---" | tee -a ~/pipeline.log
@@ -378,11 +412,15 @@ for i in 0 1 2 3 4; do
     SEED="${SEED_ARR[$i]}"
     ZONE="${ZONES[$i]}"
     VM_NAME="${VM_NAMES[$i]}"
+    # First seed in $SEEDS is the Stage-1 leader. The other 4 are
+    # followers that wait for the leader's raw_traces.jsonl to land in
+    # GCS (saves ~5h x 4 = 20h of duplicated trace generation).
+    if [ "$i" -eq 0 ]; then IS_LEADER=1; else IS_LEADER=0; fi
     SEED_DIR="${RESULTS_DIR}/seed_${SEED}"
     mkdir -p "$SEED_DIR"
     LOG="${SEED_DIR}/launch.log"
 
-    echo "Launching $VM_NAME (seed $SEED, $ZONE)..."
+    echo "Launching $VM_NAME (seed $SEED, $ZONE, leader=$IS_LEADER)..."
 
     (
         set -euo pipefail
@@ -426,9 +464,9 @@ for i in 0 1 2 3 4; do
         run_pipeline() {
             # Run the heredoc-built pipeline. Returns SSH's exit code:
             #   0   pipeline ran, EVAL_OK marker present
-            #   ≠0  SSH died (preempt, network, or pipeline error)
+            #   non-zero  SSH died (preempt, network, or pipeline error)
             local remote_cmd
-            remote_cmd="$(build_remote_cmd "$SEED")"
+            remote_cmd="$(build_remote_cmd "$SEED" "$IS_LEADER")"
             gcloud alpha compute tpus tpu-vm ssh "$VM_NAME" \
                 --zone="$ZONE" --project="$PROJECT" --tunnel-through-iap \
                 --command="$remote_cmd" >>"$LOG" 2>&1
