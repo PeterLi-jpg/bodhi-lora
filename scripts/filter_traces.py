@@ -12,6 +12,7 @@ from pathlib import Path
 
 import numpy as np
 from tqdm import tqdm
+from transformers import set_seed
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from _vllm_engine import VLLMEngine
@@ -243,8 +244,12 @@ def main():
     )
     args = parser.parse_args()
 
+    # The grader runs Qwen-14B via vLLM (HF transformers under the hood);
+    # without set_seed(), grader sampling drifts across runs even with the
+    # same --seed. Mirrors train_lora.py's seeding block (audit N4).
     random.seed(args.seed)
     np.random.seed(args.seed)
+    set_seed(args.seed)
     out_dir = Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -312,14 +317,27 @@ def main():
         if len(failed_traces) > 10:
             print(f"  ... and {len(failed_traces) - 10} more")
 
+    # Aggregate per-trace parse_failures into a single end-of-run summary so
+    # grader instability shows up without grepping stage logs (audit N7).
+    # Each parse failure is otherwise silently folded in as a "criteria not met"
+    # rubric item — under heavy load Qwen-14B can hit 10-30% parse-failure
+    # rates and still produce a plausible-looking score distribution.
     total_parse_failures = sum(t["grade"]["parse_failures"] for t in graded)
     total_rubric_items = sum(len(t["grade"]["criteria_results"]) for t in graded)
     print(f"Graded {len(graded)}/{len(traces)}")
     if total_rubric_items:
         pct = 100.0 * total_parse_failures / total_rubric_items
-        print(f"Grader parse failures: {total_parse_failures}/{total_rubric_items} "
-              f"rubric items ({pct:.2f}%) — high values indicate grader unreliability, "
-              f"not model failure (see issue #5)")
+        print(
+            f"  parse failures: {total_parse_failures}/{total_rubric_items} "
+            f"({pct:.1f}%)",
+            file=sys.stderr,
+        )
+        if total_parse_failures > 0.05 * total_rubric_items:
+            print(
+                f"  WARNING: parse-failure rate {pct:.1f}% > 5% "
+                f"— grader may be unstable",
+                file=sys.stderr,
+            )
 
     if args.graded_output:
         p = Path(args.graded_output)
