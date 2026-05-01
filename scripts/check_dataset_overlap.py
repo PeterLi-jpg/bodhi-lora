@@ -191,15 +191,15 @@ def main():
             print(f"leakage (fixed eval): clean — 0/{len(eval_ids)} eval IDs in training file")
 
     # --- Check 3b: Full HealthBench Hard exclusion ---
-    # Post-issue-#60: training pool excludes *all 1000* Hard prompts so any
-    # bootstrap draw from Hard (any seed) is automatically held out. Catch
-    # any Hard prompt in train, not just the fixed 200.
+    # Training pool excludes all 1K HealthBench Hard prompts so per-seed
+    # bootstrap eval is honestly held-out (see RESULTS.md). Catch any Hard
+    # prompt in train, not just the fixed 200.
     if train_ids:
         hard_leak = hard_ids & train_ids
         if hard_leak:
             sample = sorted(hard_leak)[:5]
             print(f"\nDATA LEAKAGE: {len(hard_leak)} HealthBench Hard prompts in "
-                  f"training file (post-#60 invariant: all 1K Hard must be excluded).")
+                  f"training file (training pool must exclude all 1K Hard).")
             print(f"  first {len(sample)}: {sample}")
             raise SystemExit("Abort — training data contains HealthBench Hard. "
                              "Pass --exclude-ids data/raw/healthbench_hard.jsonl to "

@@ -41,6 +41,52 @@ Stages 1, 2, 4, and 5 are unchanged regardless of which Stage 3 path runs.
 
 Run `bash scripts/check_no_secrets.sh` before opening a PR if you touched config or environment files. Generated outputs under `logs/`, `checkpoints/`, `eval/`, `data/sft/`, and `results/` are intentionally gitignored.
 
+## Architecture
+
+The pipeline is five stages. Each stage's output is the next stage's input; intermediate state lives on disk so any stage can be resumed independently.
+
+```
+Stage 1 (generate_traces.py)         -> data/sft/raw_traces.jsonl
+                                        (~4000 BODHI traces from HealthBench Full minus Hard)
+
+Stage 2 (filter_traces.py)           -> data/sft/seed_<N>/{train,val}.jsonl
+                                        (rubric-graded; defensive --exclude-ids drops Hard)
+
+    [preflight: check_dataset_overlap.py - aborts on Hard leakage]
+
+Stage 3 (train_lora.py OR
+         train_lora_maxtext.py)      -> checkpoints/seed_<N>/best/
+                                        (LoRA r=8, q_proj+v_proj, MedGemma-27B base)
+
+Stage 4 (eval_healthbench.py)        -> eval/seed_<N>/{base,base_bodhi,lora,lora_bodhi}.json
+                                        (per-seed bootstrap; 200 of 1K Hard, deterministic per seed)
+
+Stage 5 (aggregate_seeds.py)         -> eval/multi_seed_summary.json
+                                        (mean +/- std + 95% CI across 5 seeds)
+```
+
+## Hardware requirements
+
+- Stage 1 (BODHI inference): TPU v6e-8 spot (TRC quota free) OR H100 80GB
+- Stage 2 (Qwen-14B grader -> now Llama-3.1-8B post-grader-swap): same as Stage 1
+- Stage 3 (LoRA train of 27B): TPU v6e-8 (PyTorch+torch_xla OR MaxText)
+- Stage 4 (eval): same as Stage 1
+- Disk: 100 GB boot + tmpfs `/dev/shm` (~700 GB) for HF cache; or attach a 300 GB SSD
+- Memory: ~256 GB host RAM, ~256 GB HBM on v6e-8
+
+## Troubleshooting
+
+- `ENOSPC` on Stage 2 grader: `setup_tpu.sh` redirects HF cache to `/dev/shm` (tmpfs). Verify via `df -h /dev/shm` on the VM.
+- vLLM startup timeout: check vllm-tpu Docker logs at `~/vllm_serve_*.log`.
+- GCS auth expired: re-run `gcloud auth login` + `gcloud auth application-default login`.
+- Capacity errors (gRPC code 8): TRC v6e-8 spot is free but contended. Try eur4a evening (US morning) or us-east1-d.
+- Missing `bodhi`/`peft` modules in CI: see `.github/workflows/ci.yml` install line; PR #128 added bodhi-llm.
+- Stage 1 trace gen takes ~30h+: that's the BODHI two-pass cost on 4K prompts. Use `MAX_EXAMPLES=100` for smoke.
+
+## Cite this work
+
+Paper in progress. Citation TBD.
+
 ## Pipeline
 
 ```bash
