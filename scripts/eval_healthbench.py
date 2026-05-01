@@ -73,11 +73,36 @@ def gen_response(engine: VLLMEngine, messages, use_bodhi, bodhi_wrapper=None, ma
 
 
 def score_response_confidence(token_logprobs):
-    """Derive confidence metrics from per-output-token log-probs.
+    """Derive a token-fluency proxy from per-output-token log-probs.
 
-    token_logprobs is the list returned by VLLMEngine.chat_with_logprobs —
-    piggybacked from the generation call itself, so no extra forward pass needed.
+    token_logprobs is the list returned by VLLMEngine.chat_with_logprobs,
+    piggybacked from the generation call itself (no extra forward pass).
     Returns None fields when logprobs are unavailable (e.g. BODHI path).
+
+    WARNING: this is a FLUENCY metric, not a clinical-calibration metric.
+    The downstream Brier / ECE numbers derived from `geomean_token_prob`
+    (written out as `model_fluency_geomean_prob` per result) should NOT
+    be cited as model-calibration claims without explicitly noting the
+    following limitations:
+
+    1. Measures fluency, not confidence. Common medical phrasing has high
+       per-token probabilities regardless of clinical accuracy, so a
+       confidently wrong answer can score as high as a correct one.
+    2. Response-level metric applied per-criterion. The same scalar is
+       broadcast across every rubric item for a response, so a 2000-token
+       answer with 15 rubric items inflates the effective sample size 15x
+       while contributing zero additional calibration signal.
+    3. Brier expansion bias. `_collect_binary_labels()` emits one
+       (y_true, y_pred) pair per positive-point criterion per example, so
+       the Brier score is dominated by prompts with many rubric items
+       rather than by calibration quality.
+    4. ECE bin pathology. Token-prob geomeans typically sit in 0.3-0.7,
+       so the 0-0.1 and 0.9-1.0 bins are near-empty and the 10-bin ECE
+       estimate is unstable.
+
+    Use the cross-grader path (--secondary-grader-model) for calibration
+    claims. This proxy is retained for backwards-comparable per-response
+    fluency reporting only.
     """
     if not token_logprobs:
         return {
@@ -202,6 +227,17 @@ def main():
     parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
 
+    # Calibration-honesty notice (audit C2): make it impossible to read
+    # downstream Brier/ECE numbers off the per-item geomean probability
+    # without seeing the limitations. stderr keeps stdout clean for any
+    # tool that pipes JSON through.
+    print(
+        "NOTE: 'geomean_token_prob' measures token fluency, not clinical "
+        "calibration; see RESULTS.md for the limitations and use the "
+        "cross-grader path for calibration claims.",
+        file=sys.stderr,
+    )
+
     # Greedy decoding is deterministic; seed covers BODHI internals + grader sampling.
     random.seed(args.seed)
     np.random.seed(args.seed)
@@ -303,7 +339,7 @@ def main():
                     "score": grade["overall_score"], "tag_scores": grade["tag_scores"],
                     "criteria_results": grade["criteria_results"],
                     "parse_failures": grade["parse_failures"],
-                    "model_confidence_geomean_prob": confidence["geomean_token_prob"],
+                    "model_fluency_geomean_prob": confidence["geomean_token_prob"],
                     "model_confidence_mean_token_logprob": confidence["mean_token_logprob"],
                     "response_token_count": confidence["response_token_count"],
                 }, None
@@ -317,8 +353,8 @@ def main():
                 if result is not None:
                     all_results.append(result)
                     scores.append(result["score"])
-                    if result["model_confidence_geomean_prob"] is not None:
-                        model_confidences.append(result["model_confidence_geomean_prob"])
+                    if result["model_fluency_geomean_prob"] is not None:
+                        model_confidences.append(result["model_fluency_geomean_prob"])
                     total_parse_failures += result["parse_failures"]
                     total_rubric_items += len(result["criteria_results"])
                 else:
@@ -329,8 +365,8 @@ def main():
         for pid, err in failed_grading[:5]:
             print(f"  {pid}: {err}")
 
-    model_brier = compute_brier_score(all_results, "model_confidence_geomean_prob")
-    model_ece = compute_ece(all_results, "model_confidence_geomean_prob")
+    model_brier = compute_brier_score(all_results, "model_fluency_geomean_prob")
+    model_ece = compute_ece(all_results, "model_fluency_geomean_prob")
     grader_brier = compute_brier_score(all_results, "score")
     grader_ece = compute_ece(all_results, "score")
     parse_fail_rate = (total_parse_failures / total_rubric_items) if total_rubric_items else None
