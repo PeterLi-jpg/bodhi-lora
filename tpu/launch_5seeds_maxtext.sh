@@ -382,9 +382,14 @@ echo "--- 2.5/4 preflight leakage gate ---" | tee -a ~/pipeline.log
 # resumed run (train/val.jsonl pulled from GCS) Stage 1 was skipped, so
 # call here unconditionally.
 python -u scripts/download_data.py >> ~/pipeline.log 2>&1 || true
-python -u scripts/check_dataset_overlap.py \\
-    --train-jsonl data/sft/train.jsonl \\
-    --tag-overlap >> ~/pipeline.log 2>&1
+# SKIP_OVERLAP_CHECK=1 escape hatch for audit/replay runs (per #124).
+if [ "\${SKIP_OVERLAP_CHECK:-0}" = "1" ]; then
+    echo "WARNING: SKIP_OVERLAP_CHECK=1 — skipping leakage gate" | tee -a ~/pipeline.log
+else
+    python -u scripts/check_dataset_overlap.py \\
+        --train-jsonl data/sft/train.jsonl \\
+        --tag-overlap >> ~/pipeline.log 2>&1
+fi
 echo PREFLIGHT_OK >> ~/pipeline.log
 
 # The Stage-2 grader (and any Stage-1 generation if it ran) used a
