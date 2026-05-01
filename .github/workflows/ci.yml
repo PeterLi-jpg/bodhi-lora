@@ -36,20 +36,22 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
+          # Dev tools (pytest etc.) live in requirements-dev.txt. Install
+          # those first so the rest of this step can rely on pip-resolver
+          # state being primed.
+          python -m pip install -r requirements-dev.txt
           # CPU subset of the ML stack so importorskip(torch/transformers/peft)
-          # paths actually run instead of silently skipping.
+          # paths actually run in CI instead of silently skipping.
           # Excludes torch_xla, jax[tpu], autoawq, bitsandbytes (GPU/TPU only).
+          # bodhi-llm[all] is needed by test_bodhi_ablation.py; the [all]
+          # extra only adds openai, no torch/transformers churn.
           python -m pip install \
-            "pyyaml>=6.0" \
-            "numpy>=1.24,<3.0" \
             "torch==2.7.0" \
             "transformers==4.57.6" \
             "peft==0.19.1" \
             "safetensors" \
             "datasets>=2.18.0,<4.0.0" \
-            "bodhi-llm==0.1.4"
-          # requirements-dev.txt may not exist yet on this branch; fall back to pytest only.
-          python -m pip install -r requirements-dev.txt 2>/dev/null || python -m pip install pytest
+            "bodhi-llm[all]==0.1.4"
 
       - name: Compile Python sources
         run: python -m py_compile scripts/*.py
