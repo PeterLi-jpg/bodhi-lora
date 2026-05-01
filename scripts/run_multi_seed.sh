@@ -79,9 +79,15 @@ for SEED in $SEEDS; do
     echo "--- preflight: leakage gate (seed $SEED) ---"
     # Aborts non-zero if any HealthBench Hard prompt landed in train.jsonl.
     # Issue #60 invariant: all 1K Hard must be excluded so bootstrap eval is honest.
-    python scripts/check_dataset_overlap.py \
-        --train-jsonl "$SFT_DIR/train.jsonl" \
-        --tag-overlap
+    # Skip with SKIP_OVERLAP_CHECK=1 only for audit/replay runs that have
+    # already documented the contamination in writing (per Max's #124 escape hatch).
+    if [ "${SKIP_OVERLAP_CHECK:-0}" = "1" ]; then
+        echo "WARNING: SKIP_OVERLAP_CHECK=1 — skipping leakage gate (issue #60)"
+    else
+        python scripts/check_dataset_overlap.py \
+            --train-jsonl "$SFT_DIR/train.jsonl" \
+            --tag-overlap
+    fi
 
     echo "--- train (seed $SEED) ---"
     python scripts/train_lora.py \
