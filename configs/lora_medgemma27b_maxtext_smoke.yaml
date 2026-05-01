@@ -53,4 +53,6 @@ data:
 
 paths:
   maxtext_orbax_checkpoint: ~/.cache/maxtext/medgemma-27b
-  maxtext_dataset_dir: ~/.cache/maxtext/medgemma-27b/dataset
+  # Must match the launcher's --output-dir
+  # (tpu/launch_5seeds_maxtext.sh writes data/sft/maxtext).
+  maxtext_dataset_dir: data/sft/maxtext
