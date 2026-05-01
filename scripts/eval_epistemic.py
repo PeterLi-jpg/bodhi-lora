@@ -312,7 +312,7 @@ def main():
              "to give the grader the original case. Auto-downloaded if missing.",
     )
     parser.add_argument(
-        "--grader-model", default="Qwen/Qwen2.5-14B-Instruct",
+        "--grader-model", default="meta-llama/Llama-3.1-8B-Instruct",
         help="Same default as filter_traces.py / eval_healthbench.py.",
     )
     parser.add_argument("--output", required=True)
