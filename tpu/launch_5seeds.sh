@@ -499,23 +499,36 @@ for ((i=0; i<N_SEEDS; i++)); do
         }
 
         launch_pipeline_detached() {
-            # Pipe the heredoc body to the VM via stdin, save it as
-            # ~/run_pipeline.sh, then start it as a fully-detached
-            # background daemon. nohup + setsid + < /dev/null + & + disown
-            # together make the process immune to the SIGHUP that fires
-            # when the IAP tunnel between this launcher and the VM drops
-            # (which happens routinely on multi-hour TPU jobs - long SSH
-            # sessions over IAP are not a supported pattern). Stdout +
-            # stderr land in ~/run_pipeline.log on the VM. Returns when
-            # the SSH probe returns (typically <10s) - the pipeline keeps
-            # running on the VM independently from there on.
+            # Stage the heredoc as a local temp file, scp it to the VM,
+            # then ssh to start it as a fully-detached background daemon.
+            # nohup + setsid + < /dev/null + & + disown together make the
+            # process immune to the SIGHUP that fires when the IAP tunnel
+            # between this launcher and the VM drops (which happens
+            # routinely on multi-hour TPU jobs - long SSH sessions over
+            # IAP are not a supported pattern). Stdout + stderr land in
+            # ~/run_pipeline.log on the VM. Returns when the launch SSH
+            # returns (typically <10s); the pipeline keeps running on
+            # the VM independently from there on.
+            #
+            # We use scp + ssh rather than piping the heredoc body into
+            # ssh's stdin because gcloud-ssh through IAP does not
+            # reliably forward stdin to the remote --command (the
+            # short-lived push_tokens path uses 'read' which appears to
+            # work, but a longer 'cat > file' path observed empty input
+            # in the live run, leaving run_pipeline.sh as a 0-byte file).
             local remote_cmd
             remote_cmd="$(build_remote_cmd "$SEED" "$IS_LEADER")"
-            printf '%s' "$remote_cmd" \
-                | gcloud alpha compute tpus tpu-vm ssh "$VM_NAME" \
-                    --zone="$ZONE" --project="$PROJECT" --tunnel-through-iap \
-                    --command='cat > ~/run_pipeline.sh && chmod +x ~/run_pipeline.sh && nohup setsid bash ~/run_pipeline.sh > ~/run_pipeline.log 2>&1 < /dev/null & disown; echo "daemon launched, pid=$!"' \
-                    >>"$LOG" 2>&1
+            local local_script="${SEED_DIR}/run_pipeline.sh"
+            printf '%s' "$remote_cmd" > "$local_script"
+            chmod +x "$local_script"
+            gcloud alpha compute tpus tpu-vm scp \
+                --zone="$ZONE" --project="$PROJECT" --tunnel-through-iap \
+                "$local_script" "${VM_NAME}:~/run_pipeline.sh" \
+                >>"$LOG" 2>&1
+            gcloud alpha compute tpus tpu-vm ssh "$VM_NAME" \
+                --zone="$ZONE" --project="$PROJECT" --tunnel-through-iap \
+                --command='chmod +x ~/run_pipeline.sh && nohup setsid bash ~/run_pipeline.sh > ~/run_pipeline.log 2>&1 < /dev/null & disown; echo "daemon launched, pid=$!"' \
+                >>"$LOG" 2>&1
         }
 
         probe_status() {
