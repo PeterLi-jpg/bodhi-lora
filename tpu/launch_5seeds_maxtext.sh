@@ -123,6 +123,19 @@ GCS_DATA_PATH="${GCS_DATA_PATH:-}"
 # family from the primary Qwen grader).
 SECOND_GRADER_MODEL="${SECOND_GRADER_MODEL:-}"
 
+# Smoke knobs (mirrors tpu/launch_multiseed.sh).
+# MAX_EXAMPLES caps Stage 1 trace generation; EVAL_MAX caps Stage 4 eval
+# prompts. TRAIN_CONFIG overrides the train YAML — point at
+# configs/lora_medgemma27b_maxtext_smoke.yaml for a fast end-to-end check.
+# All three are empty by default = full production run.
+MAX_EXAMPLES="${MAX_EXAMPLES:-}"
+EVAL_MAX="${EVAL_MAX:-}"
+TRAIN_CONFIG="${TRAIN_CONFIG:-configs/lora_medgemma27b_maxtext.yaml}"
+_GEN_MAX_FLAG=""
+[ -n "$MAX_EXAMPLES" ] && _GEN_MAX_FLAG="--max-examples ${MAX_EXAMPLES}"
+_EVAL_MAX_FLAG=""
+[ -n "$EVAL_MAX" ] && _EVAL_MAX_FLAG="--max-examples ${EVAL_MAX}"
+
 # How many times to retry spot-create on TRC capacity errors before
 # giving up on a particular VM. Each retry waits 60s. Default of 200 *
 # 60s = up to ~3.3h per per-attempt acquisition window — TRC v6e-8 spot
@@ -319,6 +332,7 @@ else
             --exclude-ids data/raw/healthbench_hard.jsonl data/raw/hard_200_sample_ids.json \\
             --output data/sft/raw_traces.jsonl \\
             --use-bodhi \\
+            ${_GEN_MAX_FLAG} \\
             > ~/gen.log 2>&1
         echo GEN_OK >> ~/pipeline.log
         # raw_traces.jsonl is identical across seeds (BODHI = greedy decode);
@@ -428,7 +442,7 @@ if [ -n "\${GCS_SEED_DIR:-}" ]; then
 fi
 trap '[ -n "'"\${SIDECAR_PID}"'" ] && kill '"\${SIDECAR_PID}"' 2>/dev/null || true' EXIT
 python -u scripts/train_lora_maxtext.py \\
-    --config configs/lora_medgemma27b_maxtext.yaml \\
+    --config ${TRAIN_CONFIG} \\
     --seed ${SEED} \\
     --output-dir "checkpoints/seed_${SEED}" \\
     > ~/train.log 2>&1
@@ -468,6 +482,7 @@ run_eval() {
         --sample-ids "\$SEED_IDS" \\
         --grader-model "\$grader" \\
         --output "\$out" \\
+        ${_EVAL_MAX_FLAG} \\
         --seed ${SEED} >> ~/eval.log 2>&1 || echo "eval \$name FAILED" >> ~/pipeline.log
 }
 
