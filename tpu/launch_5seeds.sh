@@ -560,8 +560,8 @@ for ((i=0; i<N_SEEDS; i++)); do
         # setup_tpu.sh formats + mounts /dev/sdb at /mnt/cache and redirects
         # HF_HOME there.
         case "$ZONE" in
-            europe-west4-a) DATA_DISK_FLAG="--data-disks=name=bohdi-cache-eur4a,mode=read-write" ;;
-            us-east1-d)     DATA_DISK_FLAG="--data-disks=name=bohdi-cache-use1d,mode=read-write" ;;
+            europe-west4-a) DATA_DISK_FLAG="--data-disk=source=projects/${PROJECT}/zones/${ZONE}/disks/bohdi-cache-eur4a,mode=read-write" ;;
+            us-east1-d)     DATA_DISK_FLAG="--data-disk=source=projects/${PROJECT}/zones/${ZONE}/disks/bohdi-cache-use1d,mode=read-write" ;;
             *)              DATA_DISK_FLAG="" ;;
         esac
 
