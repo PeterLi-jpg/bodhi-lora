@@ -1,0 +1,63 @@
+# MaxText LoRA fine-tune of MedGemma-27B (Stage 3, Phase 1).
+#
+# Mirrors configs/lora_medgemma27b_tpu.yaml so a side-by-side run produces
+# the same training semantics.  The only meaningful differences:
+#   - paths.maxtext_orbax_checkpoint  -> orbax base-model checkpoint
+#                                        (output of Unit 4's HF -> orbax converter).
+#   - paths.maxtext_dataset_dir       -> MaxText-formatted train/val shards
+#                                        (output of Unit 5's dataset converter).
+#
+# The launcher (Unit 8) invokes scripts/train_lora_maxtext.py with
+# --config <this file> --seed <int> --output-dir <path> per-VM.
+
+seed: 42
+
+model:
+  name: google/medgemma-27b-text-it
+  # MaxText runs in bf16 weights / bf16 compute; quantization is GPU-only and
+  # not relevant on TPU (256 GB HBM on v6e-8 is plenty for a 54 GB bf16 model).
+  torch_dtype: bfloat16
+  quantization: null
+
+lora:
+  # Same defaults as the torch_xla path: r=8 + 2 target modules compiled
+  # cleanly in <15 min on v6e-8 in the diagnostic run.  ~12M trainable params.
+  r: 8
+  lora_alpha: 16
+  lora_dropout: 0.05
+  target_modules:
+    - q_proj
+    - v_proj
+  task_type: CAUSAL_LM
+  variant: standard
+
+training:
+  num_epochs: 5
+  # On a single SPMD process driving all 8 chips of v6e-8, per_device_train_
+  # batch_size is the batch for the WHOLE 8-chip program (not per chip).
+  # Effective batch = per_device * grad_accum = 1 * 64 = 64.
+  per_device_train_batch_size: 1
+  gradient_accumulation_steps: 64
+  learning_rate: 1.0e-4
+  warmup_ratio: 0.05
+  lr_scheduler_type: cosine
+  max_seq_length: 1024
+  logging_steps: 5
+  save_strategy: epoch
+  eval_strategy: epoch
+  bf16: true
+
+data:
+  train_file: data/sft/train.jsonl
+  val_file: data/sft/val.jsonl
+  eval_sample_ids: data/raw/hard_200_sample_ids.json
+
+paths:
+  # Output of Unit 4 (scripts/maxtext_lora/convert_hf_to_orbax.py).
+  # An orbax checkpoint of the base MedGemma-27B in MaxText's parameter
+  # layout. Train entry point loads this read-only as the starting weights.
+  maxtext_orbax_checkpoint: ~/.cache/maxtext/medgemma-27b
+  # Output of Unit 5 (scripts/maxtext_lora/convert_dataset.py).
+  # MaxText-formatted train + val shards; the train entry point builds its
+  # iterator by pointing at this directory.
+  maxtext_dataset_dir: ~/.cache/maxtext/medgemma-27b/dataset
