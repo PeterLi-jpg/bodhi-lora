@@ -498,24 +498,101 @@ for ((i=0; i<N_SEEDS; i++)); do
                     >>"$LOG" 2>&1
         }
 
-        run_pipeline() {
-            # Run the heredoc-built pipeline. Returns SSH's exit code:
-            #   0   pipeline ran, EVAL_OK marker present
-            #   non-zero  SSH died (preempt, network, or pipeline error)
+        launch_pipeline_detached() {
+            # Pipe the heredoc body to the VM via stdin, save it as
+            # ~/run_pipeline.sh, then start it as a fully-detached
+            # background daemon. nohup + setsid + < /dev/null + & + disown
+            # together make the process immune to the SIGHUP that fires
+            # when the IAP tunnel between this launcher and the VM drops
+            # (which happens routinely on multi-hour TPU jobs - long SSH
+            # sessions over IAP are not a supported pattern). Stdout +
+            # stderr land in ~/run_pipeline.log on the VM. Returns when
+            # the SSH probe returns (typically <10s) - the pipeline keeps
+            # running on the VM independently from there on.
             local remote_cmd
             remote_cmd="$(build_remote_cmd "$SEED" "$IS_LEADER")"
-            gcloud alpha compute tpus tpu-vm ssh "$VM_NAME" \
-                --zone="$ZONE" --project="$PROJECT" --tunnel-through-iap \
-                --command="$remote_cmd" >>"$LOG" 2>&1
+            printf '%s' "$remote_cmd" \
+                | gcloud alpha compute tpus tpu-vm ssh "$VM_NAME" \
+                    --zone="$ZONE" --project="$PROJECT" --tunnel-through-iap \
+                    --command='cat > ~/run_pipeline.sh && chmod +x ~/run_pipeline.sh && nohup setsid bash ~/run_pipeline.sh > ~/run_pipeline.log 2>&1 < /dev/null & disown; echo "daemon launched, pid=$!"' \
+                    >>"$LOG" 2>&1
         }
 
-        eval_marker_present() {
-            # Probe for the EVAL_OK marker in ~/pipeline.log. Returns 0 if
-            # the pipeline ran to completion (or 1 otherwise / on any
-            # SSH failure).
-            gcloud alpha compute tpus tpu-vm ssh "$VM_NAME" \
+        probe_status() {
+            # Short SSH probe (~5-10s). Echoes one of:
+            #   DONE         - EPISTEMIC_OK in pipeline.log (Stage 5 finished)
+            #   RUNNING      - daemon process still alive
+            #   DIED         - daemon gone but no terminal marker (real failure)
+            #   UNREACHABLE  - SSH itself failed (return code via stdout)
+            # Looks for EPISTEMIC_OK rather than EVAL_OK because Stage 5
+            # is the last stage; an EVAL_OK without EPISTEMIC_OK means
+            # we are partway through but not done.
+            local out
+            out=$(gcloud alpha compute tpus tpu-vm ssh "$VM_NAME" \
                 --zone="$ZONE" --project="$PROJECT" --tunnel-through-iap \
-                --command='grep -q ^EVAL_OK ~/pipeline.log' >/dev/null 2>&1
+                --command='if grep -q "^EPISTEMIC_OK" ~/pipeline.log 2>/dev/null; then
+                    echo DONE
+                elif pgrep -f "run_pipeline.sh" > /dev/null 2>&1; then
+                    echo RUNNING
+                else
+                    echo DIED
+                fi' 2>/dev/null) || { echo UNREACHABLE; return; }
+            echo "$out" | tr -d "[:space:]"
+        }
+
+        wait_for_completion() {
+            # Poll probe_status every $POLL_INTERVAL_S seconds until DONE,
+            # DIED, or PREEMPTED. Tolerates a few consecutive UNREACHABLE
+            # probes (transient IAP glitches) before checking VM state.
+            #   returns 0 -> DONE (EPISTEMIC_OK)
+            #   returns 1 -> PREEMPTED (need to reacquire)
+            #   returns 2 -> DIED (non-preempt failure - daemon exited
+            #                without writing EPISTEMIC_OK)
+            local POLL_INTERVAL_S="${POLL_INTERVAL_S:-90}"
+            local probe_fail_count=0
+            local probe_fail_max=5
+            local last_status="?"
+            while :; do
+                sleep "$POLL_INTERVAL_S"
+                local s
+                s=$(probe_status)
+                if [ "$s" != "$last_status" ]; then
+                    log "probe: $s"
+                    last_status="$s"
+                fi
+                case "$s" in
+                    DONE) return 0 ;;
+                    DIED)
+                        # Could be a real Python failure OR a preempt that
+                        # wiped the boot disk + the daemon. Check VM state
+                        # to disambiguate before declaring non-preempt.
+                        local state
+                        state=$(vm_state)
+                        if [ "$state" = "PREEMPTED" ] || [ "$state" = "MISSING" ]; then
+                            return 1
+                        fi
+                        return 2
+                        ;;
+                    UNREACHABLE)
+                        probe_fail_count=$((probe_fail_count + 1))
+                        if [ "$probe_fail_count" -ge "$probe_fail_max" ]; then
+                            local state
+                            state=$(vm_state)
+                            log "$probe_fail_max consecutive UNREACHABLE probes; vm state=$state"
+                            if [ "$state" = "PREEMPTED" ] || [ "$state" = "MISSING" ]; then
+                                return 1
+                            fi
+                            # VM is READY but we can't talk to it; treat
+                            # as a transient and keep polling. Reset count
+                            # so a brief outage does not give up.
+                            probe_fail_count=0
+                        fi
+                        ;;
+                    RUNNING)
+                        probe_fail_count=0
+                        ;;
+                esac
+            done
         }
 
         vm_state() {
@@ -560,10 +637,15 @@ for ((i=0; i<N_SEEDS; i++)); do
         trap cleanup EXIT
 
         # ── outer retry loop ──────────────────────────────────────────────
-        # If the pipeline finishes cleanly (EVAL_OK), we exit successfully.
-        # If the VM gets preempted before EVAL_OK, we delete + reacquire in
-        # the SAME zone (per the user's spec — staying in zone keeps the
-        # persistent disk attachment + zone-affinity behavior consistent).
+        # The pipeline runs as a detached daemon on the VM (started by
+        # launch_pipeline_detached + nohup + setsid). The local launcher
+        # holds NO long-running SSH session; instead it polls the daemon
+        # every POLL_INTERVAL_S seconds via short SSH connections that
+        # are insulated from IAP tunnel drops. This is the structural fix
+        # for the failure mode where multi-hour heredoc-over-IAP sessions
+        # would routinely drop, kill the heredoc on the remote, and the
+        # launcher would mis-classify the drop as a "non-preempt failure"
+        # and delete the VM.
         preempt_attempt=0
         while :; do
             if ! try_create; then
@@ -571,43 +653,37 @@ for ((i=0; i<N_SEEDS; i++)); do
                 exit 0
             fi
             push_tokens
-            # `|| true` is load-bearing: under `set -e` (top of this file)
-            # a non-zero return from this function — which happens any
-            # time the SSH session dies, including a normal preempt —
-            # would kill the parent subshell BEFORE the eval_marker_present
-            # / vm_state checks below could fire. We observed all 4
-            # preempted seeds bypass the retry loop and exit during the
-            # first live multi-seed run; this guard wires the retry path
-            # back up.
-            run_pipeline || true   # exit code is checked via eval_marker_present below
-            if eval_marker_present; then
-                log "pipeline complete (EVAL_OK)"
-                break
-            fi
-
-            # Pipeline didn't finish. Inspect VM state to decide what to do.
-            state=$(vm_state)
-            log "SSH ended without EVAL_OK; vm state=$state"
-
-            if [ "$state" = "PREEMPTED" ] || [ "$state" = "MISSING" ]; then
-                preempt_attempt=$((preempt_attempt + 1))
-                if [ "$preempt_attempt" -ge "$MAX_PREEMPT_RETRIES" ]; then
-                    log "hit MAX_PREEMPT_RETRIES=$MAX_PREEMPT_RETRIES, giving up"
+            launch_pipeline_detached
+            wait_for_completion
+            rc=$?
+            case $rc in
+                0)
+                    log "pipeline complete (EPISTEMIC_OK)"
                     break
-                fi
-                log "preempted — deleting + reacquiring in same zone (attempt $preempt_attempt/$MAX_PREEMPT_RETRIES)"
-                # Best-effort grab whatever results survived on the VM
-                # before we delete it (most work is wiped with the boot
-                # disk, but eval/seed_N JSONs may be there).
-                scp_back
-                delete_vm
-                sleep 30
-                continue
-            fi
-
-            # Something else (pipeline error not preempt). Stop retrying.
-            log "non-preempt failure — not retrying"
-            break
+                    ;;
+                1)
+                    # PREEMPTED or MISSING - reacquire in same zone.
+                    preempt_attempt=$((preempt_attempt + 1))
+                    if [ "$preempt_attempt" -ge "$MAX_PREEMPT_RETRIES" ]; then
+                        log "hit MAX_PREEMPT_RETRIES=$MAX_PREEMPT_RETRIES, giving up"
+                        break
+                    fi
+                    log "preempted — reacquiring (attempt $preempt_attempt/$MAX_PREEMPT_RETRIES)"
+                    # Most work is in GCS already (sidecar uploads); SCP
+                    # is best-effort for anything not yet rsync'd.
+                    scp_back
+                    delete_vm
+                    sleep 30
+                    continue
+                    ;;
+                2)
+                    # Daemon exited without EPISTEMIC_OK and the VM is
+                    # still READY - a real Python/pipeline failure (not
+                    # a tunnel drop, which the daemon survives now).
+                    log "daemon exited without completion marker — non-preempt failure, not retrying"
+                    break
+                    ;;
+            esac
         done
     ) &
 
