@@ -25,7 +25,7 @@ matplotlib>=3.7,<4.0
 # install the CPU build so `import maxtext` works for unit tests; the [tpu]
 # extra is grabbed by tpu/setup_tpu.sh on the actual Cloud TPU VM.  Floors
 # mirror MaxText's own pin (see third_party/maxtext/VENDOR.md).
-jax>=0.9.2,!=0.7.1
-flax>=0.12.6
-orbax-checkpoint>=0.11.36
-optax>=0.2.8
+jax>=0.4.30,<0.7
+flax>=0.10
+orbax-checkpoint>=0.11
+optax>=0.2.4

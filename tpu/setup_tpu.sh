@@ -130,19 +130,22 @@ pip install ${PIP_FLAGS} --no-deps "optimum-tpu>=0.2.0"
 
 # JAX stack for the vendored MaxText baseline (third_party/maxtext).
 # Stage 3 is the only stage that uses MaxText, and it runs as its own process,
-# so jax and torch_xla don't try to claim TPU chips simultaneously.  Floors
-# mirror third_party/maxtext/src/dependencies/requirements/generated_requirements/tpu-requirements.txt
-# at the pinned MaxText commit (see third_party/maxtext/VENDOR.md).  Upper
-# bounds are intentionally absent — MaxText itself does not cap, and pinning
-# would block routine TPU runtime updates.
+# so jax and torch_xla don't try to claim TPU chips simultaneously.
+#
+# Note: third_party/maxtext's pinned tpu-requirements.txt floors are
+# jax>=0.9.2 / flax>=0.12.6 / orbax-checkpoint>=0.11.36 / optax>=0.2.8,
+# but those reflect an unreleased pre-0.7 JAX series not yet on PyPI
+# (PyPI tops out at jax 0.6.x as of 2026-04). We relax the floors here
+# to the latest PyPI-available versions that still expose the pjit /
+# shard_map / orbax APIs MaxText uses on TPU.
 echo "=== Installing JAX stack for MaxText baseline ==="
 # `jax[tpu]` pulls libtpu from PyPI directly; no -f flag needed (the
 # TPU_WHEEL_URL above is torch_xla's libtpu mirror, a separate distribution).
 pip install ${PIP_FLAGS} \
-    "jax[tpu]>=0.9.2,!=0.7.1" \
-    "flax>=0.12.6" \
-    "orbax-checkpoint>=0.11.36" \
-    "optax>=0.2.8"
+    "jax[tpu]>=0.4.30,<0.7" \
+    "flax>=0.10" \
+    "orbax-checkpoint>=0.11" \
+    "optax>=0.2.4"
 
 echo "=== Pulling vLLM-TPU Docker image ==="
 # Inference (Stages 1, 2, 4) runs vLLM inside this container rather than via
