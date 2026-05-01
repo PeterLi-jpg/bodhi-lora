@@ -41,14 +41,21 @@ def load_prompt_ids(path):
 
 
 def load_hard_with_tags(path):
-    """Return list of {prompt_id, tags} dicts from a HealthBench JSONL."""
+    """Return list of {prompt_id, tags} dicts from a HealthBench JSONL.
+
+    Accepts both upstream HealthBench rows (``example_tags``) and our trace /
+    train rows (``tags``, copied through by ``generate_traces.py``). Without
+    this fallback, ``--tag-overlap`` against ``data/sft/train.jsonl`` or
+    ``raw_traces.jsonl`` silently reports every tag as missing on the train
+    side and the imbalance check is meaningless.
+    """
     rows = []
     with open(path) as f:
         for line in f:
             obj = json.loads(line)
             rows.append({
                 "prompt_id": obj["prompt_id"],
-                "tags": obj.get("example_tags", []),
+                "tags": obj.get("example_tags", obj.get("tags", [])),
             })
     return rows
 
