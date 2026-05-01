@@ -34,8 +34,17 @@ from pathlib import Path
 def load_prompt_ids(path):
     ids = set()
     with open(path) as f:
-        for line in f:
-            obj = json.loads(line)
+        for lineno, line in enumerate(f, start=1):
+            # mirror load_hard_with_tags: skip blank lines so a stray trailing
+            # newline doesn't trip the JSON parser.
+            if not line.strip():
+                continue
+            try:
+                obj = json.loads(line)
+            except json.JSONDecodeError as e:
+                raise SystemExit(
+                    f"check_dataset_overlap: malformed JSON at {path}:{lineno}"
+                ) from e
             ids.add(obj["prompt_id"])
     return ids
 
@@ -51,8 +60,15 @@ def load_hard_with_tags(path):
     """
     rows = []
     with open(path) as f:
-        for line in f:
-            obj = json.loads(line)
+        for lineno, line in enumerate(f, start=1):
+            if not line.strip():
+                continue
+            try:
+                obj = json.loads(line)
+            except json.JSONDecodeError as e:
+                raise SystemExit(
+                    f"check_dataset_overlap: malformed JSON at {path}:{lineno}"
+                ) from e
             rows.append({
                 "prompt_id": obj["prompt_id"],
                 "tags": obj.get("example_tags", obj.get("tags", [])),
@@ -107,9 +123,11 @@ def draw_seed_subset(hard_rows, n, seed):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--healthbench",
-                        default="data/raw/healthbench.jsonl")
+                        default="data/raw/healthbench.jsonl",
+                        help="HealthBench Full prompts JSONL (one row per prompt).")
     parser.add_argument("--healthbench-hard",
-                        default="data/raw/healthbench_hard.jsonl")
+                        default="data/raw/healthbench_hard.jsonl",
+                        help="HealthBench Hard prompts JSONL (one row per prompt).")
     parser.add_argument("--eval-ids",
                         default="data/raw/hard_200_sample_ids.json",
                         help="fixed 200-prompt holdout (legacy single-seed path)")
