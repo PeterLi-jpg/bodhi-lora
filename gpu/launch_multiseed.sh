@@ -109,9 +109,12 @@ if [ -f "data/sft/train.jsonl" ] && [ -f "data/sft/val.jsonl" ]; then
     echo "  data/sft/train.jsonl + val.jsonl already exist — skipping filter."
     echo "  Delete them to re-filter: rm data/sft/train.jsonl data/sft/val.jsonl"
 else
+    # Defensive --exclude-ids drops any HealthBench Hard rows that may have
+    # survived in a legacy raw_traces.jsonl (issue #60).
     python scripts/filter_traces.py \
         --input data/sft/raw_traces.jsonl \
         --healthbench-data data/raw/healthbench_hard.jsonl data/raw/healthbench.jsonl \
+        --exclude-ids data/raw/healthbench_hard.jsonl data/raw/hard_200_sample_ids.json \
         --output-dir data/sft \
         --min-score 0.4
 fi

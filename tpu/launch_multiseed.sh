@@ -419,10 +419,10 @@ fi
 # --xla_gpu_force_compilation_parallelism=8 in the env; appending any
 # unrecognised flag (like --xla_persistent_cache_dir) causes a FATAL
 # "Unknown flags in XLA_FLAGS" crash before the first forward pass.
-# Hard-only training set. HealthBench Hard has 1000 prompts; we hold out 200
-# for evaluation (data/raw/hard_200_sample_ids.json), leaving 800 unique
-# prompts for trace generation. --exclude-ids prevents the 200 eval prompts
-# from leaking into training. Default cap of 800 = "all available trainable".
+# Full-only training set. We exclude all 1000 HealthBench Hard prompts so the
+# per-seed bootstrap eval (drawn from Hard, issue #60) is honestly held-out.
+# Training pool is then HealthBench Full minus Hard ≈ 4000 unique prompts,
+# so MAX_EXAMPLES=800 caps to a fraction of available; bump if you want more.
 _MAX=${MAX_EXAMPLES:-800}
 tpu_ssh "$TPU_NAME" \
     --zone="$ZONE" --project="$PROJECT" \
@@ -435,7 +435,7 @@ rm -f /tmp/gen_stage1.log
 nohup python scripts/generate_traces.py \
     --model ${MODEL_NAME} \
     --datasets healthbench_hard healthbench \
-    --exclude-ids data/raw/hard_200_sample_ids.json \
+    --exclude-ids data/raw/healthbench_hard.jsonl data/raw/hard_200_sample_ids.json \
     --output data/sft/raw_traces.jsonl \
     --resume-from data/sft/raw_traces.jsonl \
     --use-bodhi \
@@ -591,7 +591,7 @@ else
     run_long_remote \
         "stage2_grade" \
         "[f]ilter_traces.py" \
-        "python scripts/filter_traces.py --input data/sft/raw_traces.jsonl --healthbench-data data/raw/healthbench_hard.jsonl data/raw/healthbench.jsonl --output-dir data/sft --min-score ${MIN_SCORE} && touch /tmp/stage2_done" \
+        "python scripts/filter_traces.py --input data/sft/raw_traces.jsonl --healthbench-data data/raw/healthbench_hard.jsonl data/raw/healthbench.jsonl --exclude-ids data/raw/healthbench_hard.jsonl data/raw/hard_200_sample_ids.json --output-dir data/sft --min-score ${MIN_SCORE} && touch /tmp/stage2_done" \
         "/tmp/stage2_done"
     # Save SFT data to the runner immediately — survives TPU preemption.
     echo "Saving Stage 2 SFT data to local results/_rescue/sft/..."

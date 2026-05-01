@@ -40,8 +40,18 @@ python scripts/preflight.py
 python scripts/download_data.py
 
 MODEL="google/medgemma-27b-text-it"
-IDS="data/raw/hard_200_sample_ids.json"
 LORA="$RUN_DIR/checkpoints/best"
+
+# Per-seed bootstrap eval draw (issue #60). Default seed=42; override with
+# SEED=<n>. Pass IDS=<path> to bypass the bootstrap and use a custom file.
+SEED="${SEED:-42}"
+if [ -z "${IDS:-}" ]; then
+    IDS="data/raw/hard_seed_${SEED}.json"
+    python scripts/make_bootstrap_eval_ids.py \
+        --healthbench-jsonl data/raw/healthbench_hard.jsonl \
+        --seed "$SEED" \
+        --output "$IDS"
+fi
 
 echo "--- base, no wrapper ---"
 python scripts/eval_healthbench.py --model "$MODEL" --sample-ids "$IDS" --output "$RUN_DIR/eval/base_no_wrapper.json"

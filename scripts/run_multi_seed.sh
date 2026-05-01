@@ -24,7 +24,9 @@ cd "${BOHDI_DIR:-$(dirname "$0")/..}"
 SEEDS="${SEEDS:-42 7 13 99 101}"
 CONFIG="${CONFIG:-configs/lora_medgemma27b.yaml}"
 MODEL="${MODEL:-google/medgemma-27b-text-it}"
-IDS="${IDS:-data/raw/hard_200_sample_ids.json}"
+# Bootstrap eval: each seed gets its own 200-prompt random draw from the 1000
+# HealthBench Hard prompts (issue #60). Per-seed files live at
+# data/raw/hard_seed_<N>.json and are generated below if missing.
 GRADER="${GRADER:-Qwen/Qwen2.5-14B-Instruct-AWQ}"
 MIN_SCORE="${MIN_SCORE:-0.4}"
 VAL_RATIO="${VAL_RATIO:-0.1}"
@@ -62,14 +64,24 @@ for SEED in $SEEDS; do
     echo "=========================================================="
 
     echo "--- filter (seed $SEED) ---"
+    # Defensive --exclude-ids drops any HealthBench Hard rows that may
+    # have survived in a legacy raw_traces.jsonl (issue #60).
     python scripts/filter_traces.py \
         --input "$RAW_TRACES" \
         --healthbench-data data/raw/healthbench_hard.jsonl data/raw/healthbench.jsonl \
+        --exclude-ids data/raw/healthbench_hard.jsonl data/raw/hard_200_sample_ids.json \
         --grader-model "$GRADER" \
         --output-dir "$SFT_DIR" \
         --min-score "$MIN_SCORE" \
         --val-ratio "$VAL_RATIO" \
         --seed "$SEED"
+
+    echo "--- preflight: leakage gate (seed $SEED) ---"
+    # Aborts non-zero if any HealthBench Hard prompt landed in train.jsonl.
+    # Issue #60 invariant: all 1K Hard must be excluded so bootstrap eval is honest.
+    python scripts/check_dataset_overlap.py \
+        --train-jsonl "$SFT_DIR/train.jsonl" \
+        --tag-overlap
 
     echo "--- train (seed $SEED) ---"
     python scripts/train_lora.py \
@@ -80,13 +92,20 @@ for SEED in $SEEDS; do
         --output-dir "$CKPT_DIR"
 
     echo "--- eval 4 configs (seed $SEED) ---"
-    python scripts/eval_healthbench.py --model "$MODEL" --sample-ids "$IDS" \
+    # Per-seed bootstrap eval draw (issue #60): a deterministic 200-prompt
+    # subset of the 1000 HealthBench Hard prompts, unique to this seed.
+    SEED_IDS="data/raw/hard_seed_${SEED}.json"
+    python scripts/make_bootstrap_eval_ids.py \
+        --healthbench-jsonl data/raw/healthbench_hard.jsonl \
+        --seed "$SEED" \
+        --output "$SEED_IDS"
+    python scripts/eval_healthbench.py --model "$MODEL" --sample-ids "$SEED_IDS" \
         --output "$EVAL_DIR/base_no_wrapper.json" --seed "$SEED"
-    python scripts/eval_healthbench.py --model "$MODEL" --use-bodhi --sample-ids "$IDS" \
+    python scripts/eval_healthbench.py --model "$MODEL" --use-bodhi --sample-ids "$SEED_IDS" \
         --output "$EVAL_DIR/base_bodhi.json" --seed "$SEED"
-    python scripts/eval_healthbench.py --model "$MODEL" --lora-path "$CKPT_DIR/best" --sample-ids "$IDS" \
+    python scripts/eval_healthbench.py --model "$MODEL" --lora-path "$CKPT_DIR/best" --sample-ids "$SEED_IDS" \
         --output "$EVAL_DIR/lora_no_wrapper.json" --seed "$SEED"
-    python scripts/eval_healthbench.py --model "$MODEL" --lora-path "$CKPT_DIR/best" --use-bodhi --sample-ids "$IDS" \
+    python scripts/eval_healthbench.py --model "$MODEL" --lora-path "$CKPT_DIR/best" --use-bodhi --sample-ids "$SEED_IDS" \
         --output "$EVAL_DIR/lora_bodhi.json" --seed "$SEED"
 
     # Optional cross-grader second pass — same 4 configs, same prompt
