@@ -128,6 +128,22 @@ pip install ${PIP_FLAGS} \
 echo "=== Installing optimum-tpu (FSDPv2 helpers) ==="
 pip install ${PIP_FLAGS} --no-deps "optimum-tpu>=0.2.0"
 
+# JAX stack for the vendored MaxText baseline (third_party/maxtext).
+# Stage 3 is the only stage that uses MaxText, and it runs as its own process,
+# so jax and torch_xla don't try to claim TPU chips simultaneously.  Floors
+# mirror third_party/maxtext/src/dependencies/requirements/generated_requirements/tpu-requirements.txt
+# at the pinned MaxText commit (see third_party/maxtext/VENDOR.md).  Upper
+# bounds are intentionally absent — MaxText itself does not cap, and pinning
+# would block routine TPU runtime updates.
+echo "=== Installing JAX stack for MaxText baseline ==="
+# `jax[tpu]` pulls libtpu from PyPI directly; no -f flag needed (the
+# TPU_WHEEL_URL above is torch_xla's libtpu mirror, a separate distribution).
+pip install ${PIP_FLAGS} \
+    "jax[tpu]>=0.9.2,!=0.7.1" \
+    "flax>=0.12.6" \
+    "orbax-checkpoint>=0.11.36" \
+    "optax>=0.2.8"
+
 echo "=== Pulling vLLM-TPU Docker image ==="
 # Inference (Stages 1, 2, 4) runs vLLM inside this container rather than via
 # pip install (which installs the CUDA build, not the TPU build).
@@ -137,12 +153,17 @@ sudo docker pull vllm/vllm-tpu:latest
 echo "=== Final version check ==="
 python3 -c "
 import torch, torch_xla, peft, trl, transformers, accelerate
+import jax, flax, optax, orbax.checkpoint
 print('torch:', torch.__version__)
 print('torch_xla:', torch_xla.__version__)
 print('transformers:', transformers.__version__)
 print('peft:', peft.__version__)
 print('trl:', trl.__version__)
 print('accelerate:', accelerate.__version__)
+print('jax:', jax.__version__)
+print('flax:', flax.__version__)
+print('optax:', optax.__version__)
+print('orbax-checkpoint:', orbax.checkpoint.__version__)
 "
 
 echo "=== setup_tpu.sh done ==="
