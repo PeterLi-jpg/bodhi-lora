@@ -10,7 +10,7 @@
 #   bash scripts/run_multi_seed.sh
 #
 # Optional: cross-grader pass for the paper's bias-control story.
-#   SECOND_GRADER_MODEL=meta-llama/Llama-3.1-70B-Instruct  # off by default; ~12h H100 if set
+#   SECOND_GRADER_MODEL=Qwen/Qwen2.5-14B-Instruct  # off by default; ~12h H100 if set
 # When set, each seed re-grades the four eval configs with this second
 # grader and writes per-seed Spearman correlation to
 # eval/seed_<N>/cross_grader/<tag>/correlation.json.
@@ -27,15 +27,15 @@ MODEL="${MODEL:-google/medgemma-27b-text-it}"
 # Bootstrap eval: each seed gets its own 200-prompt random draw from the 1000
 # HealthBench Hard prompts (issue #60). Per-seed files live at
 # data/raw/hard_seed_<N>.json and are generated below if missing.
-GRADER="${GRADER:-Qwen/Qwen2.5-14B-Instruct-AWQ}"
+GRADER="${GRADER:-meta-llama/Llama-3.1-8B-Instruct}"
 MIN_SCORE="${MIN_SCORE:-0.4}"
 VAL_RATIO="${VAL_RATIO:-0.1}"
 
 # Optional second-pass grader for the cross-grader bias-control sweep.
 # When unset (the default) we skip the extra ~12h H100 of grader compute.
-# Recommended secondary: meta-llama/Llama-3.1-70B-Instruct (different
-# family from the primary Qwen grader, breaking the "graded by your own
-# evaluator" critique).
+# Recommended secondary: Qwen/Qwen2.5-14B-Instruct (different family from
+# the primary Llama grader, breaking the "graded by your own evaluator"
+# critique).
 SECOND_GRADER_MODEL="${SECOND_GRADER_MODEL:-}"
 
 RAW_TRACES="data/sft/raw_traces.jsonl"

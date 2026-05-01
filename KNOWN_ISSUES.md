@@ -24,7 +24,7 @@ Training now checkpoints on aligned step intervals instead of epoch boundaries. 
 The old implementation used the evaluator's rubric score as "confidence" and compared it against rubric outcomes from the same grading pass. That was grader-internal consistency, not model calibration. **Action taken**: eval output now includes `brier_model_calibration` / `ece_model_calibration`, using the geometric mean next-token probability of the emitted response as a model-derived confidence proxy, while keeping the legacy `brier_grader_consistency` / `ece_grader_consistency` fields for backward comparison. **Still open for discussion**: whether the response-level logprob proxy is strong enough for the paper, or whether the final claim should move to a richer confidence protocol (verbalized confidence, abstention head, or similar).
 
 ### [#3] Same grader for filtering and final evaluation — OPEN
-`filter_traces.py` and `eval_healthbench.py` default to the same grader family (`Qwen/Qwen2.5-14B-Instruct-AWQ`). This couples training-data selection to the evaluator used for claimed gains. **Mitigation paths**:
+`filter_traces.py` and `eval_healthbench.py` default to the same grader family (`meta-llama/Llama-3.1-8B-Instruct`). This couples training-data selection to the evaluator used for claimed gains. **Mitigation paths**:
 - Use a distinct grader for final eval (simplest — change `--grader-model` in `slurm/eval_lora.sh`)
 - Report final results under a second independent grader and compare
 - Keep filter grader ≠ eval grader as policy

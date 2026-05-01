@@ -168,7 +168,7 @@ Out-of-distribution accuracy on a standard medical QA benchmark.
 
 Whether scores are stable across different grader models.
 
-| Config | Status | Qwen-14B score | Llama-70B score | delta | Spearman rho |
+| Config | Status | Llama-3.1-8B score | Qwen-14B score | delta | Spearman rho |
 |---|---|---|---|---|---|
 | Base | NOT RUN | -- | -- | -- | -- |
 | Base+BOHDI | NOT RUN | -- | -- | -- | -- |
@@ -240,9 +240,9 @@ If positive, every other number in this file is meaningless. Run this first. Pro
 
 ### B — Human expert grader validation ([#73](https://github.com/PeterLi-jpg/bohdi-lora/issues/73))
 
-Cohen's kappa between Qwen-14B and physician consensus on a sample of 50 responses per configuration (200 total), graded blind by ≥2 board-certified physicians. **Success threshold: kappa ≥ 0.6 across both physicians; below this the grader is unreliable for any calibration claim in this file.** Defer to Zineb, Ash Doulla, Hillary, Felipe.
+Cohen's kappa between the primary grader (Llama-3.1-8B-Instruct) and physician consensus on a sample of 50 responses per configuration (200 total), graded blind by ≥2 board-certified physicians. **Success threshold: kappa ≥ 0.6 across both physicians; below this the grader is unreliable for any calibration claim in this file.** Defer to Zineb, Ash Doulla, Hillary, Felipe.
 
-| Config | Status | n responses graded | physician 1 vs Qwen-14B kappa | physician 2 vs Qwen-14B kappa | inter-physician kappa | overall agreement % |
+| Config | Status | n responses graded | physician 1 vs Llama-3.1-8B kappa | physician 2 vs Llama-3.1-8B kappa | inter-physician kappa | overall agreement % |
 |---|---|---|---|---|---|---|
 | Base | NOT RUN | -- | -- | -- | -- | -- |
 | Base+BOHDI | NOT RUN | -- | -- | -- | -- | -- |
