@@ -225,9 +225,26 @@ def main():
     parser.add_argument("--fail-threshold", type=float, default=0.4,
                         help="score below this counts as a failure (default 0.4, "
                              "matches filter_traces default)")
-    parser.add_argument("--tertile-on-holdout-only", action="store_true",
-                        help="compute tier cutoffs on eval subset rather than full dataset "
-                             "(default: use full HealthBench)")
+    # Tier cutoffs: by default we now compute on the eval (holdout) subset
+    # rather than full HealthBench. Reason (audit N3): the eval typically
+    # covers ~200 examples but full Hard has 1000, so tertiles of full Hard
+    # do NOT match tertiles of the eval (easy/medium/hard buckets end up
+    # mismatched with what the run actually scored). Pass
+    # --tertile-on-full-dataset to restore the old behavior.
+    parser.add_argument("--tertile-on-holdout-only",
+                        dest="tertile_on_holdout_only",
+                        action="store_true",
+                        default=True,
+                        help="compute tier cutoffs on eval (holdout) subset only. "
+                             "DEFAULT as of audit N3 fix; flag retained for "
+                             "explicit-opt-in callers and back-compat.")
+    parser.add_argument("--tertile-on-full-dataset",
+                        dest="tertile_on_holdout_only",
+                        action="store_false",
+                        help="compute tier cutoffs on the full HealthBench "
+                             "metadata file rather than the eval subset. "
+                             "Use only if your eval covers the entire dataset; "
+                             "otherwise tier sizes will be unbalanced.")
     parser.add_argument("--bootstrap", type=int, default=0,
                         help="nonparametric bootstrap resamples for 95%% CIs "
                              "(default 0 = disabled; 1000 is a reasonable paper number)")
