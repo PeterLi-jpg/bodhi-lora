@@ -49,21 +49,35 @@ if [ -n "$DATA_DEV" ] && [ ! -d /mnt/cache ] || ! mountpoint -q /mnt/cache 2>/de
     fi
 fi
 
-# Point HuggingFace at the data disk if mounted; otherwise fall back to
-# default ~/.cache/huggingface on the boot disk.
+# Point HuggingFace at a roomy filesystem in priority order:
+#   1. /mnt/cache (persistent SSD, if attached) — survives preempt
+#   2. /dev/shm  (tmpfs, RAM-backed, ~700GB on v6e-8) — wiped on reboot
+#                but big enough for medgemma-27b (54G) + qwen-14b (28G)
+#                + orbax checkpoint (54G) all at once
+#   3. boot disk default — only ~97GB; saturates at Stage 2 grader load
+HF_CACHE_ROOT=""
 if mountpoint -q /mnt/cache 2>/dev/null; then
-    mkdir -p /mnt/cache/hf /mnt/cache/transformers
-    export HF_HOME=/mnt/cache/hf
-    export TRANSFORMERS_CACHE=/mnt/cache/transformers
+    HF_CACHE_ROOT=/mnt/cache
+    echo "HF cache: /mnt/cache (persistent SSD, survives preempt)."
+elif [ -d /dev/shm ] && [ "$(df -BG /dev/shm | awk 'NR==2 {gsub(/G/,"",$4); print $4}')" -ge 200 ]; then
+    # /dev/shm has enough headroom for the worst case (~140GB peak); use it.
+    HF_CACHE_ROOT=/dev/shm
+    echo "HF cache: /dev/shm (tmpfs, ~$(df -BG /dev/shm | awk 'NR==2 {print $4}') free, wiped on reboot)."
+else
+    echo "WARNING: no /mnt/cache and /dev/shm too small; falling back to boot disk."
+    echo "  Stage 2 grader (qwen-14b, ~28GB) may ENOSPC if boot disk fills."
+fi
+
+if [ -n "$HF_CACHE_ROOT" ]; then
+    mkdir -p "${HF_CACHE_ROOT}/hf" "${HF_CACHE_ROOT}/transformers"
+    export HF_HOME="${HF_CACHE_ROOT}/hf"
+    export TRANSFORMERS_CACHE="${HF_CACHE_ROOT}/transformers"
     # Persist for subsequent SSH sessions / nohup'd children.
     {
-        echo "export HF_HOME=/mnt/cache/hf"
-        echo "export TRANSFORMERS_CACHE=/mnt/cache/transformers"
+        echo "export HF_HOME=${HF_CACHE_ROOT}/hf"
+        echo "export TRANSFORMERS_CACHE=${HF_CACHE_ROOT}/transformers"
     } | sudo tee /etc/profile.d/bohdi-hf-cache.sh > /dev/null
     sudo chmod +x /etc/profile.d/bohdi-hf-cache.sh
-    echo "HF cache redirected to /mnt/cache (persistent SSD)."
-else
-    echo "(no data disk mounted, using boot-disk HF cache)"
 fi
 
 # torch_xla 2.7 ships the C++11 ABI wheels (~20% goodput improvement on

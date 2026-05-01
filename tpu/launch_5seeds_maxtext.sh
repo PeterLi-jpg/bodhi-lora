@@ -610,6 +610,9 @@ for ((i=0; i<N_SEEDS; i++)); do
         try_create() {
             # Acquire one v6e-8 spot in $ZONE with capacity-error retries.
             # Returns 0 on success, 1 if we burn through all retries.
+            # No data disk: setup_tpu.sh redirects HF cache to /dev/shm
+            # (tmpfs, ~700 GB on v6e-8 hosts) so the 100 GB boot disk doesn't
+            # ENOSPC when medgemma+qwen+orbax all sit in cache simultaneously.
             local attempt=0
             until gcloud compute tpus tpu-vm create "$VM_NAME" \
                 --zone="$ZONE" \
