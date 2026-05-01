@@ -41,10 +41,14 @@ _ON_TPU = _on_tpu()
 
 
 # Deps that must import for the main scripts to even start.
+# vllm is required on every host that runs inference (CUDA build on GPU,
+# vLLM-TPU Docker on TPU); without it generate_traces / eval_healthbench
+# crash 5+ minutes in. Keep it unconditional so preflight catches the
+# missing wheel up-front.
 REQUIRED_IMPORTS = [
     "torch", "transformers", "peft", "trl", "datasets",
     "bodhi", "timm", "PIL", "rich", "yaml", "numpy", "tqdm",
-    "accelerate", "huggingface_hub",
+    "accelerate", "huggingface_hub", "vllm",
 ]
 
 # autoawq is CUDA-built and platform-gated in requirements.txt to
