@@ -106,10 +106,16 @@ def test_export_maxtext_lora_to_peft_help():
     This script writes the HF PEFT adapter that Stage 4 reads. The
     contract it must satisfy is documented in
     docs/maxtext_migration.md.
+
+    The script imports torch + safetensors at module load time, so
+    --help fails on dev/CI environments without those installed.
+    Skip cleanly in that case rather than fail the smoke test.
     """
     script = ROOT / "scripts" / "export_maxtext_lora_to_peft.py"
     if not script.exists():
         pytest.skip(f"{script} not present; Unit 6 not merged")
+    pytest.importorskip("torch", reason="torch not installed; --help imports torch")
+    pytest.importorskip("safetensors", reason="safetensors not installed")
     _help_runs(script)
 
 
