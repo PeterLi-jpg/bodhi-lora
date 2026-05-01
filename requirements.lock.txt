@@ -1,3 +1,6 @@
+# Snapshot of a working install (transitive dep versions). NOT the source of
+# truth for installs; see requirements.txt + tpu/setup_tpu.sh. Regenerate
+# periodically via `pip freeze` after a successful prod run.
 accelerate==1.13.0
 aiohappyeyeballs==2.6.1
 aiohttp==3.13.5
