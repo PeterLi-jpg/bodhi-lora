@@ -141,35 +141,88 @@ def generate_response(engine, messages, use_bodhi, bodhi_wrapper=None,
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", default="google/medgemma-27b-text-it")
-    parser.add_argument("--datasets", nargs="+", default=["healthbench_hard", "healthbench"],
-                        choices=list(DATASET_URLS.keys()))
-    parser.add_argument("--exclude-ids", nargs="+", default=None,
-                        help="one or more files listing prompt_ids to skip. "
-                             "Accepts .json (list or {prompt_ids: [...]}) and "
-                             ".jsonl (reads prompt_id from each row). For the "
-                             "HealthBench-only generalization experiment, pass "
-                             "data/raw/healthbench_hard.jsonl here to drop all "
-                             "1000 Hard prompts from training.")
-    parser.add_argument("--output", required=True)
-    parser.add_argument("--use-bodhi", action="store_true")
+    parser.add_argument(
+        "--model",
+        default="google/medgemma-27b-text-it",
+        help="HF model to call via vLLM for trace generation",
+    )
+    parser.add_argument(
+        "--datasets",
+        nargs="+",
+        default=["healthbench_hard", "healthbench"],
+        choices=list(DATASET_URLS.keys()),
+        help="Names of HealthBench datasets to draw prompts from "
+             "(e.g., healthbench_hard healthbench)",
+    )
+    parser.add_argument(
+        "--exclude-ids",
+        nargs="+",
+        default=None,
+        help="One or more JSON/JSONL files of prompt_ids to exclude from "
+             "generation. Accepts .json (list or {prompt_ids: [...]}) and "
+             ".jsonl (reads prompt_id from each row). For the "
+             "HealthBench-only generalization experiment, pass "
+             "data/raw/healthbench_hard.jsonl here to drop all 1000 Hard "
+             "prompts from training.",
+    )
+    parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write the JSONL of generated BODHI traces",
+    )
+    parser.add_argument(
+        "--use-bodhi",
+        action="store_true",
+        help="Wrap inference in the BODHI calibration prompt "
+             "(default: bare inference)",
+    )
     parser.add_argument(
         "--ablate-component",
         choices=["none", "no_calibration", "no_questions",
                  "no_abstention", "no_domain_framing"],
         default="none",
-        help="Disable one BODHI wrapper component for the paper figure-3 "
-             "ablation (issue #69). Only meaningful when --use-bodhi is set. "
+        help="Which BODHI component to ablate "
+             "(none|no_calibration|no_questions|no_abstention|"
+             "no_domain_framing) for the paper figure-3 ablation "
+             "(issue #69). Only meaningful when --use-bodhi is set. "
              "'none' (default) = production wrapper.",
     )
-    parser.add_argument("--max-examples", type=int, default=None)
-    parser.add_argument("--resume-from", default=None)
-    parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--force-resume", action="store_true",
-                        help="skip the model/bodhi metadata consistency check on resume "
-                             "(issue #6/7). Only use when you intentionally want to "
-                             "append rows generated with different settings.")
+    parser.add_argument(
+        "--max-examples",
+        type=int,
+        default=None,
+        help="Cap on number of prompts to generate (debugging / smoke)",
+    )
+    parser.add_argument(
+        "--resume-from",
+        default=None,
+        help="Path to existing raw_traces.jsonl; resume by skipping "
+             "already-done prompt_ids",
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=42,
+        help="RNG seed for shuffling and BODHI internals (default 42)",
+    )
+    parser.add_argument(
+        "--force-resume",
+        action="store_true",
+        help="Skip the resume-config-mismatch guard (dangerous; use only "
+             "for replay/audit). The guard exists to refuse appending rows "
+             "generated with different model/bodhi/ablate settings "
+             "(issue #6/7).",
+    )
     args = parser.parse_args()
+
+    # Expand ~ in any path the user may have passed so $HOME-relative paths
+    # work without manual expansion. Done after parse_args so we mutate the
+    # values once, before they are used downstream.
+    args.output = str(Path(args.output).expanduser())
+    if args.resume_from:
+        args.resume_from = str(Path(args.resume_from).expanduser())
+    if args.exclude_ids:
+        args.exclude_ids = [str(Path(p).expanduser()) for p in args.exclude_ids]
 
     # Greedy decoding is deterministic without a seed, but the BODHI wrapper
     # may use sampling internally (prompt shuffling, tie-breaking) — seed so
@@ -198,6 +251,7 @@ def main():
         prev_models = set()
         prev_bodhi = set()
         prev_ablate = set()
+        n_skipped_malformed = 0
         with open(args.resume_from) as f:
             for line in f:
                 try:
@@ -210,7 +264,14 @@ def main():
                     if "ablate_component" in row:
                         prev_ablate.add(row["ablate_component"])
                 except (json.JSONDecodeError, KeyError):
-                    pass  # skip corrupt lines from interrupted runs
+                    # Skip corrupt lines from interrupted runs, but count them
+                    # so the operator sees how much truncation happened.
+                    n_skipped_malformed += 1
+        if n_skipped_malformed:
+            print(
+                f"WARNING: skipped {n_skipped_malformed} malformed rows during resume",
+                file=sys.stderr,
+            )
 
         model_mismatch = prev_models and prev_models != {args.model}
         bodhi_mismatch = prev_bodhi and prev_bodhi != {args.use_bodhi}
@@ -314,11 +375,14 @@ def main():
                     # Also lives inside bodhi_metadata for analysis tools.
                     "ablate_component": args.ablate_component,
                 }, None
-            except Exception as e:
+            except Exception:
                 # Per-task try/except: a single bad prompt or transient HTTP
                 # error from vLLM should not kill the whole run.  Collect the
-                # error and keep going.
-                return None, (ex.get("prompt_id", "?"), repr(e))
+                # full traceback (last 30 frames) so we can actually debug
+                # which call inside generate_response blew up, instead of
+                # losing it to repr(e).
+                tb = "\n".join(traceback.format_exc().strip().splitlines()[-30:])
+                return None, (ex.get("prompt_id", "?"), tb)
 
         with open(out_path, mode) as f:
             with ThreadPoolExecutor(max_workers=GEN_CONCURRENCY) as ex_pool:
@@ -331,8 +395,8 @@ def main():
                             f.flush()
                         ok += 1
                     else:
-                        pid, err_repr = err
-                        print(f"  Error on {pid}: {err_repr}")
+                        pid, err_tb = err
+                        print(f"  Error on {pid}:\n{err_tb}")
                         fail += 1
 
     print(f"\nDone: {ok} ok, {fail} failed -> {out_path}")
