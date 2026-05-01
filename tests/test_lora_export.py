@@ -25,16 +25,32 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-# Skip the entire module on CI/dev boxes without these ML deps installed.
-# The exporter itself imports them lazily, so this only gates testing.
-pytest.importorskip("safetensors", reason="safetensors not installed")
-pytest.importorskip("torch", reason="torch not installed")
-pytest.importorskip("peft", reason="peft not installed")
-import torch
+# Each test guards itself with pytest.importorskip via _require_ml_deps()
+# rather than a module-level skip. A module-level skip silently swallows
+# all 9 tests on CI/dev boxes without ML deps; per-test skips show one
+# line per test in pytest -v so it's obvious which deps are missing.
+#
+# torch is imported inside the one test that needs it, keeping module
+# import itself dep-free.
 
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
+
+
+def _require_ml_deps():
+    """Per-test gate: skip with a clear reason if any ML dep is missing.
+
+    The exporter under test imports torch, safetensors, peft, and yaml
+    at module load, so every test that drives ``exporter.main`` needs
+    all four present. Calling this at the top of each test produces one
+    skip-line per test in pytest -v output, instead of the previous
+    module-level skip that silently swallowed all 9 tests.
+    """
+    pytest.importorskip("safetensors", reason="safetensors not installed")
+    pytest.importorskip("torch", reason="torch not installed")
+    pytest.importorskip("peft", reason="peft not installed")
+    pytest.importorskip("yaml", reason="pyyaml not installed")
 
 
 # ---------------------------------------------------------------------------
@@ -154,6 +170,7 @@ def _run_export(monkeypatch, tmp_path, *, flax_orientation: bool):
 
 
 def test_adapter_config_schema(monkeypatch, tmp_path):
+    _require_ml_deps()
     output_dir = _run_export(monkeypatch, tmp_path, flax_orientation=True)
 
     cfg_path = output_dir / "adapter_config.json"
@@ -175,6 +192,7 @@ def test_adapter_config_schema(monkeypatch, tmp_path):
 
 
 def test_safetensors_keys_match_peft(monkeypatch, tmp_path):
+    _require_ml_deps()
     from safetensors.torch import load_file
 
     output_dir = _run_export(monkeypatch, tmp_path, flax_orientation=True)
@@ -219,6 +237,8 @@ def test_safetensors_keys_match_peft(monkeypatch, tmp_path):
 
 def test_peft_model_loads_exported_adapter(monkeypatch, tmp_path):
     """End-to-end: exported dir is loadable via PeftModel.from_pretrained."""
+    _require_ml_deps()
+    pytest.importorskip("transformers", reason="transformers not installed")
     from peft import PeftModel
 
     output_dir = _run_export(monkeypatch, tmp_path, flax_orientation=True)
@@ -243,6 +263,7 @@ def test_handles_already_peft_oriented_weights(monkeypatch, tmp_path):
     be transposed.  We feed in the same values once in Flax orientation
     and once in PEFT orientation and confirm the saved tensors agree.
     """
+    _require_ml_deps()
     from safetensors.torch import load_file
     from scripts import export_maxtext_lora_to_peft as exporter
 
@@ -301,6 +322,7 @@ def test_missing_target_modules_raises(monkeypatch, tmp_path):
     """If the user asks for target_modules the checkpoint doesn't have,
     the exporter should print a warning and (when nothing remains) fail
     loudly rather than silently writing an empty adapter."""
+    _require_ml_deps()
     from scripts import export_maxtext_lora_to_peft as exporter
 
     fake_tree = _fake_orbax_tree(flax_orientation=True)
@@ -321,6 +343,7 @@ def test_missing_target_modules_raises(monkeypatch, tmp_path):
 def test_no_lora_leaves_raises(monkeypatch, tmp_path):
     """Empty / unrecognised orbax tree should fail clearly, not silently
     produce a zero-tensor adapter."""
+    _require_ml_deps()
     from scripts import export_maxtext_lora_to_peft as exporter
 
     monkeypatch.setattr(
@@ -342,6 +365,7 @@ def test_yaml_config_provides_defaults(monkeypatch, tmp_path):
     """YAML config should drive r/alpha/dropout/target_modules/variant
     when no CLI override is given.  This is the production call path
     from Unit 7's training entry."""
+    _require_ml_deps()
     from safetensors.torch import load_file
     from scripts import export_maxtext_lora_to_peft as exporter
 
@@ -380,6 +404,7 @@ def test_bf16_tensors_round_trip(monkeypatch, tmp_path):
     """ml_dtypes.bfloat16 arrays from JAX should land as torch.bfloat16
     in the safetensors file (no float32 promotion that would double
     the on-disk size)."""
+    _require_ml_deps()
     pytest.importorskip("ml_dtypes")
     import ml_dtypes
     from safetensors.torch import load_file
@@ -420,6 +445,8 @@ def test_bf16_tensors_round_trip(monkeypatch, tmp_path):
     ])
 
     weights = load_file(str(output_dir / "adapter_model.safetensors"))
+    import torch  # safe: _require_ml_deps() above already gated torch
+
     for tensor in weights.values():
         assert tensor.dtype == torch.bfloat16, (
             f"expected bf16, got {tensor.dtype} — bf16 path lost dtype"
@@ -433,6 +460,7 @@ def test_maxtext_alias_names_resolve(monkeypatch, tmp_path):
     eaten by leaf-key stripping (it isn't in _LEAF_KEYS for this exact
     reason).
     """
+    _require_ml_deps()
     from safetensors.torch import load_file
     from scripts import export_maxtext_lora_to_peft as exporter
 

@@ -5,9 +5,23 @@ from pathlib import Path
 
 import pytest
 
-# mock heavy deps before import
+# Mock heavy / first-party deps before import. The chain
+# filter_traces -> generate_traces -> _bodhi_ablation -> bodhi means we
+# also have to stub the bodhi package and its prompts submodule, otherwise
+# collection blows up on bare dev/CI envs without bodhi installed.
+#
+# Only mock modules that the import chain actually touches. Mocking
+# unused modules (e.g. peft) leaks the MagicMock into sys.modules and
+# fools later tests' importorskip checks into thinking the dep is real.
 from unittest.mock import MagicMock
-for mod in ["torch", "transformers", "tqdm", "peft"]:
+for mod in [
+    "torch",
+    "transformers",
+    "tqdm",
+    "bodhi",
+    "bodhi.prompts",
+    "bodhi.constants",
+]:
     if mod not in sys.modules:
         sys.modules[mod] = MagicMock()
 
