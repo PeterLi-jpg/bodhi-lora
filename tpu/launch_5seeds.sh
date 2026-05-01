@@ -491,11 +491,19 @@ for ((i=0; i<N_SEEDS; i++)); do
             # Stash GH_TOKEN + HF_TOKEN to ~/.bohdi-env on the VM via
             # stdin, mode 600. The tokens never appear in process listings
             # or the gcloud --command argv.
+            #
+            # `|| log "..."` is load-bearing under `set -e`: a transient
+            # IAP failure here would tear down the parent subshell before
+            # the daemon-launch + retry path can run. The daemon won't
+            # start if the tokens didn't push (the heredoc fails with
+            # "HF_TOKEN missing from ~/.bohdi-env"), but wait_for_completion
+            # will see that as DIED and route to the correct preempt /
+            # non-preempt classification.
             printf '%s\n%s\n' "$GH_TOKEN" "$HF_TOKEN" \
                 | gcloud alpha compute tpus tpu-vm ssh "$VM_NAME" \
                     --zone="$ZONE" --project="$PROJECT" --tunnel-through-iap \
                     --command='read -r G; read -r H; umask 077; { echo "GH_TOKEN=$G"; echo "HF_TOKEN=$H"; } > ~/.bohdi-env; chmod 600 ~/.bohdi-env' \
-                    >>"$LOG" 2>&1
+                    >>"$LOG" 2>&1 || log "push_tokens ssh failed (transient IAP, daemon may fail to start)"
         }
 
         launch_pipeline_detached() {
@@ -521,14 +529,21 @@ for ((i=0; i<N_SEEDS; i++)); do
             local local_script="${SEED_DIR}/run_pipeline.sh"
             printf '%s' "$remote_cmd" > "$local_script"
             chmod +x "$local_script"
+            # The `|| log "..."` guards are load-bearing under `set -e`:
+            # a transient IAP failure (4003 'failed to connect to backend')
+            # in either gcloud call would otherwise tear down the parent
+            # subshell BEFORE wait_for_completion could see whether the
+            # daemon actually started. We log the failure and fall through
+            # to wait_for_completion, which will probe via short SSH and
+            # detect DIED/UNREACHABLE/PREEMPTED on its own.
             gcloud alpha compute tpus tpu-vm scp \
                 --zone="$ZONE" --project="$PROJECT" --tunnel-through-iap \
                 "$local_script" "${VM_NAME}:~/run_pipeline.sh" \
-                >>"$LOG" 2>&1
+                >>"$LOG" 2>&1 || log "scp run_pipeline.sh failed (will retry via wait/probe)"
             gcloud alpha compute tpus tpu-vm ssh "$VM_NAME" \
                 --zone="$ZONE" --project="$PROJECT" --tunnel-through-iap \
                 --command='chmod +x ~/run_pipeline.sh && nohup setsid bash ~/run_pipeline.sh > ~/run_pipeline.log 2>&1 < /dev/null & disown; echo "daemon launched, pid=$!"' \
-                >>"$LOG" 2>&1
+                >>"$LOG" 2>&1 || log "daemon launch ssh failed (will retry via wait/probe)"
         }
 
         probe_status() {
