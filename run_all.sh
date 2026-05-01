@@ -27,6 +27,16 @@ echo "train_lora submitted: $JOB3 (waits for $JOB2)"
 JOB4=$(sbatch --parsable --dependency=afterok:"$JOB3" slurm/eval_lora.sh "$RUN_DIR")
 echo "eval_lora submitted: $JOB4 (waits for $JOB3)"
 
+if [ "${GENERALIZATION:-0}" = "1" ]; then
+    G_RUN_DIR="${GENERALIZATION_RUN_DIR:-${RUN_DIR}_generalization}"
+    G_JOB1=$(sbatch --parsable slurm/generalization.sh)
+    echo "generalization submitted: $G_JOB1"
+
+    G_JOB2=$(sbatch --parsable --dependency=afterok:"$G_JOB1" slurm/generalization_train_eval.sh "$G_RUN_DIR")
+    echo "generalization_train_eval submitted: $G_JOB2 (waits for $G_JOB1)"
+    echo "generalization outputs will be archived under: $G_RUN_DIR"
+fi
+
 echo ""
 echo "full pipeline queued: $JOB1 -> $JOB2 -> $JOB3 -> $JOB4"
 echo "run outputs will be archived under: $RUN_DIR"
