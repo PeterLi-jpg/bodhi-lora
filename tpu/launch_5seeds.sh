@@ -221,6 +221,11 @@ git reset --hard origin/main 2>&1 | tail -1 || true
 echo "--- 0/4 setup_tpu.sh ---" | tee -a ~/pipeline.log
 bash tpu/setup_tpu.sh > ~/setup.log 2>&1 || { echo "setup FAILED" >> ~/pipeline.log; exit 1; }
 echo SETUP_OK >> ~/pipeline.log
+# /etc/profile.d/bohdi-hf-cache.sh is sourced only by login shells; this
+# daemon is non-login. Source it explicitly so HF_HOME + TRANSFORMERS_CACHE
+# point at /dev/shm (or /mnt/cache) instead of the default ~/.cache.
+[ -f /etc/profile.d/bohdi-hf-cache.sh ] && source /etc/profile.d/bohdi-hf-cache.sh
+echo "  HF_HOME=\${HF_HOME:-(unset)}" >> ~/pipeline.log
 
 mkdir -p data/sft eval checkpoints logs "checkpoints/seed_${SEED}"
 

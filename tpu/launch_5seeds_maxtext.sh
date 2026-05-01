@@ -222,6 +222,13 @@ git reset --hard origin/main 2>&1 | tail -1 || true
 echo "--- 0/4 setup_tpu.sh ---" | tee -a ~/pipeline.log
 bash tpu/setup_tpu.sh > ~/setup.log 2>&1 || { echo "setup FAILED" >> ~/pipeline.log; exit 1; }
 echo SETUP_OK >> ~/pipeline.log
+# /etc/profile.d/bohdi-hf-cache.sh is sourced only by login shells; this
+# daemon is non-login (nohup setsid bash). Source it explicitly so HF_HOME
+# + TRANSFORMERS_CACHE actually point at /dev/shm (or /mnt/cache). Without
+# this the huggingface library ignores the redirect and downloads to the
+# default ~/.cache/huggingface on the boot disk, ENOSPC at Stage 2.
+[ -f /etc/profile.d/bohdi-hf-cache.sh ] && source /etc/profile.d/bohdi-hf-cache.sh
+echo "  HF_HOME=\${HF_HOME:-(unset)}" >> ~/pipeline.log
 
 mkdir -p data/sft eval checkpoints logs "checkpoints/seed_${SEED}"
 
