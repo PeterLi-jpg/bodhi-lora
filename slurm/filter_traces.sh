@@ -41,7 +41,7 @@ python scripts/filter_traces.py \
     --input data/sft/raw_traces.jsonl \
     --healthbench-data data/raw/healthbench_hard.jsonl data/raw/healthbench.jsonl \
     --exclude-ids data/raw/healthbench_hard.jsonl data/raw/hard_200_sample_ids.json \
-    --grader-model meta-llama/Llama-3.1-8B-Instruct \
+    --grader-model Qwen/Qwen2.5-14B-Instruct \
     --output-dir data/sft/ \
     --min-score 0.4 \
     --val-ratio 0.1 \

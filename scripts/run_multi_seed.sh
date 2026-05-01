@@ -27,15 +27,17 @@ MODEL="${MODEL:-google/medgemma-27b-text-it}"
 # Bootstrap eval: each seed gets its own 200-prompt random draw from the 1000
 # HealthBench Hard prompts (issue #60). Per-seed files live at
 # data/raw/hard_seed_<N>.json and are generated below if missing.
-GRADER="${GRADER:-meta-llama/Llama-3.1-8B-Instruct}"
+GRADER="${GRADER:-Qwen/Qwen2.5-14B-Instruct}"
 MIN_SCORE="${MIN_SCORE:-0.4}"
 VAL_RATIO="${VAL_RATIO:-0.1}"
 
 # Optional second-pass grader for the cross-grader bias-control sweep.
 # When unset (the default) we skip the extra ~12h H100 of grader compute.
-# Recommended secondary: Qwen/Qwen2.5-14B-Instruct (different family from
-# the primary Llama grader, breaking the "graded by your own evaluator"
-# critique).
+# The cross-grader runs against eval outputs, so it must differ from
+# eval's primary grader (Llama-3.1-8B-Instruct). Recommended secondary:
+# Qwen/Qwen2.5-14B-Instruct — same family as the filter grader, but a
+# different family from the eval primary, so it breaks the "graded by
+# your own evaluator" critique on the reported numbers.
 SECOND_GRADER_MODEL="${SECOND_GRADER_MODEL:-}"
 
 RAW_TRACES="data/sft/raw_traces.jsonl"
