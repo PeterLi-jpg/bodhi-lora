@@ -375,7 +375,7 @@ else
         --input data/sft/raw_traces.jsonl \\
         --healthbench-data data/raw/healthbench_hard.jsonl data/raw/healthbench.jsonl \\
         --exclude-ids data/raw/healthbench_hard.jsonl data/raw/hard_200_sample_ids.json \\
-        --grader-model meta-llama/Llama-3.1-8B-Instruct \\
+        --grader-model Qwen/Qwen2.5-14B-Instruct \\
         --output-dir data/sft \\
         --min-score 0.4 \\
         --val-ratio 0.1 \\
@@ -554,8 +554,9 @@ echo EVAL_OK >> ~/pipeline.log
 # non-empty we re-grade the same 4 configs over the same prompt IDs but
 # with --grader-model "\${SECOND_GRADER_MODEL}", then run
 # scripts/grader_correlation.py to report Spearman ρ vs. the primary
-# Qwen grader. Same configs, same IDs — only the grader differs — so
-# the correlation is on apples-to-apples scores.
+# Llama eval grader. Same configs, same IDs — only the grader differs —
+# so the correlation is on apples-to-apples scores. Pick a family
+# different from Llama (e.g. Qwen/Qwen2.5-14B-Instruct).
 SECOND_GRADER_MODEL="${SECOND_GRADER_MODEL}"
 if [ -n "\${SECOND_GRADER_MODEL}" ]; then
     SECOND_GRADER_TAG="\$(printf '%s' "\${SECOND_GRADER_MODEL}" | tr '/:' '__')"

@@ -277,9 +277,10 @@ def main():
         "--grader-model",
         default="meta-llama/Llama-3.1-8B-Instruct",
         help="HF model name for the rubric grader. Default Llama-3.1-8B-Instruct "
-             "(different family from prior Qwen-14B to break the "
-             "grade-by-your-own-evaluator critique; see SECOND_GRADER_MODEL "
-             "in the launchers for the cross-grader pass).",
+             "(asymmetric design: filter_traces.py uses Qwen2.5-14B-Instruct, "
+             "eval uses Llama-3.1-8B — different families decouple training-data "
+             "selection from reported metrics; see SECOND_GRADER_MODEL in the "
+             "launchers for an extra cross-grader bias-control pass).",
     )
     # Issue #3: optional second grader pass (can be passed multiple times for
     # 3+ graders). Each entry adds a "secondary_grader_runs[N]" dict to the

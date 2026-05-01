@@ -69,8 +69,8 @@ Required model access:
 |---|---|
 | [google/medgemma-27b-text-it](https://huggingface.co/google/medgemma-27b-text-it) | Base model (full run) |
 | [google/gemma-3n-E4B-it](https://huggingface.co/google/gemma-3n-E4B-it) | Smoke test |
-| [meta-llama/Llama-3.1-8B-Instruct](https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct) | Primary grader (full run) |
-| [Qwen/Qwen2.5-14B-Instruct](https://huggingface.co/Qwen/Qwen2.5-14B-Instruct) | Recommended cross-grader (`SECOND_GRADER_MODEL`, optional) |
+| [Qwen/Qwen2.5-14B-Instruct](https://huggingface.co/Qwen/Qwen2.5-14B-Instruct) | Filter-side grader (Stage 2) |
+| [meta-llama/Llama-3.1-8B-Instruct](https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct) | Eval-side grader (Stage 4/5) |
 
 ## Windows
 
