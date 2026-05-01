@@ -46,6 +46,15 @@ def load_eval_data(sample_ids_path):
     eval_ids = set(data)
 
     filtered = [ex for ex in examples if ex["prompt_id"] in eval_ids]
+    # Abort loudly: a missing/malformed IDs file or zero ID overlap would
+    # otherwise produce a near-empty results JSON with exit code 0.
+    if not filtered:
+        raise SystemExit(
+            f"No eval examples loaded from {sample_ids_path}: 0 IDs matched "
+            f"against {len(examples)} HealthBench Hard rows. Check that the "
+            f"file exists, contains a JSON list (or {{'prompt_ids': [...]}}), "
+            f"and that IDs match the dataset."
+        )
     print(f"{len(filtered)} eval examples loaded")
     return filtered
 
