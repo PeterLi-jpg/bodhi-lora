@@ -127,13 +127,13 @@ def _train(cfg: dict, seed: int, output_dir: str) -> None:
         raise FileNotFoundError(
             f"orbax base-model checkpoint not found at {orbax_ckpt}.  "
             "Run Unit 4's HF -> orbax converter first "
-            "(scripts/maxtext_lora/convert_hf_to_orbax.py)."
+            "(scripts/convert_medgemma_to_maxtext.py)."
         )
     if not Path(dataset_dir).exists():
         raise FileNotFoundError(
             f"MaxText dataset dir not found at {dataset_dir}.  "
             "Run Unit 5's dataset converter first "
-            "(scripts/maxtext_lora/convert_dataset.py)."
+            "(scripts/convert_traces_to_maxtext.py)."
         )
 
     output_dir = _expand(output_dir)
