@@ -103,14 +103,19 @@ python scripts/generate_traces.py \
     --use-bodhi \
     --max-examples "$N_EXAMPLES"
 
-echo "--- 3a/3: grade and filter (threshold lowered so nothing is dropped) ---"
+echo "--- 3a/3: grade and filter (production threshold to exercise the gate) ---"
+# Match run_multi_seed.sh's MIN_SCORE=0.4 and VAL_RATIO=0.1 so the smoke
+# actually exercises the same gate + split as production. With small
+# N_EXAMPLES it's possible 0 traces survive; that's fine as smoke output
+# (train_lora.py errors loudly on empty train.jsonl) and surfaces grader
+# regressions before cluster time burns.
 python scripts/filter_traces.py \
     --input data/sft/smoke_27b/raw_traces.jsonl \
     --healthbench-data data/raw/healthbench_hard.jsonl \
     --grader-model "$GRADER" \
     --output-dir data/sft/smoke_27b \
-    --min-score -999 \
-    --val-ratio 0.34
+    --min-score 0.4 \
+    --val-ratio 0.1
 
 echo "--- 3b/3: train a few steps on the smoke set ---"
 # Same rationale as smoke.sh: do NOT use `accelerate launch`. accelerate's
