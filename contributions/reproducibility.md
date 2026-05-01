@@ -33,11 +33,11 @@ Accept the terms on each model page while logged into HF, then set `HF_TOKEN`:
 | `google/medgemma-27b-text-it` | base model (paper target) | https://huggingface.co/google/medgemma-27b-text-it |
 | `google/gemma-3n-E4B-it` | smoke / local iteration | https://huggingface.co/google/gemma-3n-E4B-it |
 | `google/gemma-3n-E2B-it` | fallback if E4B OOMs | https://huggingface.co/google/gemma-3n-E2B-it |
-| `meta-llama/Llama-3.1-8B-Instruct` | primary grader — full pipeline (GPU + TPU) | https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct |
-| `Qwen/Qwen2.5-14B-Instruct` | recommended cross-grader (`SECOND_GRADER_MODEL`) | https://huggingface.co/Qwen/Qwen2.5-14B-Instruct |
+| `Qwen/Qwen2.5-14B-Instruct` | filter-side grader — Stage 2 training-data selection | https://huggingface.co/Qwen/Qwen2.5-14B-Instruct |
+| `meta-llama/Llama-3.1-8B-Instruct` | eval-side grader — Stage 4/5 reported metrics | https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct |
 | `Qwen/Qwen2.5-0.5B-Instruct` | grader (smoke) | ungated |
 
-Note: the primary grader is `Llama-3.1-8B-Instruct` (bfloat16) so it runs on both GPU and TPU. The recommended cross-grader (`SECOND_GRADER_MODEL=Qwen/Qwen2.5-14B-Instruct`) lives in a different family from the primary, breaking the "graded by your own evaluator" critique.
+Note: the pipeline uses an **asymmetric grader default** — filter is `Qwen2.5-14B-Instruct`, eval is `Llama-3.1-8B-Instruct` (bfloat16, GPU + TPU). Different families, so training-data selection is decoupled from the evaluator used for claimed gains. For an additional bias-control sweep, set `SECOND_GRADER_MODEL=...` to a family different from the eval primary (e.g. `SECOND_GRADER_MODEL=Qwen/Qwen2.5-14B-Instruct`).
 
 ```bash
 export HF_TOKEN=hf_...

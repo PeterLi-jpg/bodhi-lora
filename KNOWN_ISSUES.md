@@ -23,15 +23,14 @@ Training now checkpoints on aligned step intervals instead of epoch boundaries. 
 ### [#1] Brier / ECE do not measure model calibration — PARTIALLY ADDRESSED
 The old implementation used the evaluator's rubric score as "confidence" and compared it against rubric outcomes from the same grading pass. That was grader-internal consistency, not model calibration. **Action taken**: eval output now includes `brier_model_calibration` / `ece_model_calibration`, using the geometric mean next-token probability of the emitted response as a model-derived confidence proxy, while keeping the legacy `brier_grader_consistency` / `ece_grader_consistency` fields for backward comparison. **Still open for discussion**: whether the response-level logprob proxy is strong enough for the paper, or whether the final claim should move to a richer confidence protocol (verbalized confidence, abstention head, or similar).
 
-### [#3] Same grader for filtering and final evaluation — OPEN
-`filter_traces.py` and `eval_healthbench.py` default to the same grader family (`meta-llama/Llama-3.1-8B-Instruct`). This couples training-data selection to the evaluator used for claimed gains. **Mitigation paths**:
-- Use a distinct grader for final eval (simplest — change `--grader-model` in `slurm/eval_lora.sh`)
-- Report final results under a second independent grader and compare
-- Keep filter grader ≠ eval grader as policy
+### [#3] Same grader for filtering and final evaluation — ADDRESSED (asymmetric default)
+The pipeline now ships an **asymmetric grader default**: `filter_traces.py` uses `Qwen/Qwen2.5-14B-Instruct` and `eval_healthbench.py` / `eval_epistemic.py` use `meta-llama/Llama-3.1-8B-Instruct`. Training-data selection and reported metrics are graded by **different model families**, so the "graded by your own evaluator" critique no longer applies to the headline numbers.
 
-Infrastructure now exists for an optional second grader pass via `SECOND_GRADER_MODEL=... sbatch slurm/eval_lora.sh`, plus `scripts/grader_correlation.py` to report Spearman correlation and large per-example disagreements. The paper claim remains open until a second grader is actually chosen and run.
+For an additional bias-control sweep, set `SECOND_GRADER_MODEL=...` (any family different from Llama, e.g. `Qwen/Qwen2.5-14B-Instruct`) — the launcher re-grades the four eval configs with the second grader and runs `scripts/grader_correlation.py` to report Spearman ρ vs. the primary Llama grader.
 
-Needs team agreement before any ablation is blessed as final.
+Both gated models need HF access:
+- https://huggingface.co/Qwen/Qwen2.5-14B-Instruct (filter)
+- https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct (eval)
 
 ### [#4] Inconsistent filtering-score normalization — FIXED
 Filtering and eval now use a normalized rubric score that accounts for both the positive ceiling and the negative penalty floor:

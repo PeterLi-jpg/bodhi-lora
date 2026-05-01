@@ -260,9 +260,12 @@ def main():
     parser.add_argument("--healthbench-data", required=True, nargs="+")
     parser.add_argument(
         "--grader-model",
-        default="meta-llama/Llama-3.1-8B-Instruct",  # primary grader; bfloat16, works on GPU and TPU
-        # Recommended cross-grader for SECOND_GRADER_MODEL: Qwen/Qwen2.5-14B-Instruct
-        # (or Qwen/Qwen2.5-14B-Instruct-AWQ on GPU when VRAM is tight; needs autoawq, CUDA only).
+        # Asymmetric design: filter uses Qwen2.5-14B-Instruct, eval uses
+        # Llama-3.1-8B-Instruct (see scripts/eval_healthbench.py default).
+        # Decoupling the filter grader from the eval grader breaks the
+        # "graded by your own evaluator" critique — training data is
+        # selected under one family, results are reported under another.
+        default="Qwen/Qwen2.5-14B-Instruct",
     )
     parser.add_argument("--output-dir", required=True)
     parser.add_argument("--min-score", type=float, default=0.4)

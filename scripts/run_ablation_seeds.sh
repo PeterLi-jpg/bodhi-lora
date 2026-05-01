@@ -26,7 +26,7 @@
 #   TRAIN_CONFIG=configs/lora_medgemma27b_tpu.yaml
 #   MODEL=google/medgemma-27b-text-it
 #   IDS=data/raw/hard_200_sample_ids.json
-#   GRADER=meta-llama/Llama-3.1-8B-Instruct
+#   GRADER=Qwen/Qwen2.5-14B-Instruct       # filter-side grader (eval is Llama-3.1-8B)
 #   MIN_SCORE=0.4
 #   VAL_RATIO=0.1
 #
@@ -44,7 +44,7 @@ N_EXAMPLES="${N_EXAMPLES:-300}"
 TRAIN_CONFIG="${TRAIN_CONFIG:-configs/lora_medgemma27b_tpu.yaml}"
 MODEL="${MODEL:-google/medgemma-27b-text-it}"
 IDS="${IDS:-data/raw/hard_200_sample_ids.json}"
-GRADER="${GRADER:-meta-llama/Llama-3.1-8B-Instruct}"
+GRADER="${GRADER:-Qwen/Qwen2.5-14B-Instruct}"
 MIN_SCORE="${MIN_SCORE:-0.4}"
 VAL_RATIO="${VAL_RATIO:-0.1}"
 
