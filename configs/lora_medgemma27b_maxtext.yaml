@@ -41,7 +41,11 @@ training:
   learning_rate: 1.0e-4
   warmup_ratio: 0.05
   lr_scheduler_type: cosine
-  max_seq_length: 1024
+  # max_seq_length 2048 (bumped from 1024 to dramatically reduce truncation;
+  # _vllm_engine.py noted ~22% of responses were capped at 1024). 4096 would
+  # OOM on v6e-8 with grad_accum=64 + FSDPv2; keep at 2048 unless the memory
+  # math is re-checked. See audit C4.
+  max_seq_length: 2048
   logging_steps: 5
   save_strategy: epoch
   eval_strategy: epoch
