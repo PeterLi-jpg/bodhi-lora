@@ -170,7 +170,18 @@ class VLLMEngine:
         self.port = port
         self.hf_token = hf_token or os.environ.get("HF_TOKEN", "")
         self._enforce_eager = enforce_eager
-        self._hf_cache_host = os.path.expanduser("~/.cache/huggingface")
+        # Honor the host's HF_HOME redirect (set by tpu/setup_tpu.sh to
+        # /dev/shm/hf when no /mnt/cache disk is attached). Without this, the
+        # vLLM Docker container's HF cache always bind-mounted to the boot
+        # disk's ~/.cache/huggingface, even when the launcher's daemon had
+        # HF_HOME pointing at tmpfs — Stage 1 medgemma (54G) + Stage 2
+        # llama-grader (16G) + Stage 4 merged checkpoint (54G) saturated the
+        # 100G boot disk every time. Bind-mounting the actual HF_HOME path
+        # routes vLLM's downloads to wherever HF_HOME points (typically the
+        # 700G /dev/shm tmpfs).
+        self._hf_cache_host = os.environ.get("HF_HOME") or os.path.expanduser(
+            "~/.cache/huggingface"
+        )
         self._home_host = os.path.expanduser("~")
         # Resolve lora_path to absolute so the container mount is correct.
         self._lora_path_host = os.path.realpath(lora_path) if lora_path else None
