@@ -34,7 +34,7 @@ python scripts/download_data.py
 python scripts/filter_traces.py \
     --input data/sft/raw_traces_healthbench_only.jsonl \
     --healthbench-data data/raw/healthbench.jsonl \
-    --grader-model Qwen/Qwen2.5-14B-Instruct-AWQ \
+    --grader-model meta-llama/Llama-3.1-8B-Instruct \
     --output-dir data/sft/generalization \
     --min-score 0.4 \
     --val-ratio 0.1 \

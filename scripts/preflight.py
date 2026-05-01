@@ -167,7 +167,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__.strip())
     parser.add_argument(
         "--models", nargs="+",
-        default=["google/medgemma-27b-text-it", "Qwen/Qwen2.5-14B-Instruct-AWQ"],
+        default=["google/medgemma-27b-text-it", "meta-llama/Llama-3.1-8B-Instruct"],
         help="HF model ids to verify access to. Default: production targets.",
     )
     parser.add_argument(

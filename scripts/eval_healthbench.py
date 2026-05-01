@@ -275,9 +275,11 @@ def main():
     )
     parser.add_argument(
         "--grader-model",
-        default="Qwen/Qwen2.5-14B-Instruct",
-        help="HF model name for the rubric grader (default Llama-3.1-8B-Instruct "
-             "since the grader-swap PR).",
+        default="meta-llama/Llama-3.1-8B-Instruct",
+        help="HF model name for the rubric grader. Default Llama-3.1-8B-Instruct "
+             "(different family from prior Qwen-14B to break the "
+             "grade-by-your-own-evaluator critique; see SECOND_GRADER_MODEL "
+             "in the launchers for the cross-grader pass).",
     )
     # Issue #3: optional second grader pass (can be passed multiple times for
     # 3+ graders). Each entry adds a "secondary_grader_runs[N]" dict to the

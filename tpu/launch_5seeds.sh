@@ -41,14 +41,14 @@
 #   export HF_TOKEN=...                              # required (in .env is fine)
 #   GCS_DATA_PATH=gs://bucket/path                   # optional, skips Stage 1+2
 #   SEEDS="42 7 13 99 101"                           # optional override (default 42 7 13 99 101)
-#   SECOND_GRADER_MODEL=meta-llama/Llama-3.1-70B-Instruct  # optional cross-grader pass
+#   SECOND_GRADER_MODEL=Qwen/Qwen2.5-14B-Instruct  # optional cross-grader pass
 #   bash tpu/launch_5seeds.sh
 #
 # Cross-grader pass: when SECOND_GRADER_MODEL is set, each VM re-grades
 # the same 4 eval configs with that model and reports Spearman ρ
 # between the two graders. Off by default (adds ~12h H100 of grader
 # compute per seed). Recommended secondary: a different family from
-# the primary Qwen grader, e.g. meta-llama/Llama-3.1-70B-Instruct.
+# the primary Llama grader, e.g. Qwen/Qwen2.5-14B-Instruct.
 #
 # Cancel everything (clean up all 5 VMs):
 #   kill $(cat /tmp/bohdi_5seeds_pids.txt)
@@ -131,8 +131,8 @@ GCS_DATA_PATH="${GCS_DATA_PATH:-}"
 # Optional second-pass grader for the cross-grader bias-control sweep.
 # When set, each VM re-grades the 4 eval configs with this model after
 # Stage 4. Off by default — significant grader compute (~12h H100 per
-# seed). Recommended: meta-llama/Llama-3.1-70B-Instruct (different
-# family from the primary Qwen grader).
+# seed). Recommended: Qwen/Qwen2.5-14B-Instruct (different family from
+# the primary Llama grader).
 SECOND_GRADER_MODEL="${SECOND_GRADER_MODEL:-}"
 
 # How many times to retry spot-create on TRC capacity errors before
@@ -358,7 +358,7 @@ else
         --input data/sft/raw_traces.jsonl \\
         --healthbench-data data/raw/healthbench_hard.jsonl data/raw/healthbench.jsonl \\
         --exclude-ids data/raw/healthbench_hard.jsonl data/raw/hard_200_sample_ids.json \\
-        --grader-model Qwen/Qwen2.5-14B-Instruct \\
+        --grader-model meta-llama/Llama-3.1-8B-Instruct \\
         --output-dir data/sft \\
         --min-score 0.4 \\
         --val-ratio 0.1 \\
@@ -423,6 +423,22 @@ echo TRAIN_OK >> ~/pipeline.log
 [ -n "\${SIDECAR_PID}" ] && kill \${SIDECAR_PID} 2>/dev/null || true
 gcs_rsync "checkpoints/seed_${SEED}/" "checkpoints/"
 
+# Stage 4/5 cleanup: each eval_healthbench.py call spins up a vLLM-TPU
+# Docker container (inference + grader) and may write merged base+LoRA
+# scratch checkpoints under ~/bodhi_merged_*. Without cleanup, leftover
+# containers hold the TPU and the merged dirs can fill the boot disk.
+# Called explicitly after Stages 4 and 5, and on EXIT so partial
+# failures (preempt, OOM, killed shell) still clean up.
+cleanup_eval() {
+    sudo docker ps --filter ancestor=vllm/vllm-tpu -q \\
+        | xargs -r sudo docker stop 2>/dev/null || true
+    rm -rf ~/bodhi_merged_* 2>/dev/null || true
+    # Belt-and-suspenders: the Stage-3 sidecar trap also kills SIDECAR_PID,
+    # but if we replace that trap (below) we still want this guarantee.
+    [ -n "\${SIDECAR_PID:-}" ] && kill \${SIDECAR_PID} 2>/dev/null || true
+}
+trap cleanup_eval EXIT
+
 echo "--- 4/4 eval 4 configs (base/lora x wrapper/no-wrapper) ---" | tee -a ~/pipeline.log
 mkdir -p "eval/seed_${SEED}"
 LORA_DIR="checkpoints/seed_${SEED}/best"
@@ -458,7 +474,7 @@ run_eval() {
 }
 
 PRIMARY_DIR="eval/seed_${SEED}"
-PRIMARY_GRADER="Qwen/Qwen2.5-14B-Instruct"
+PRIMARY_GRADER="meta-llama/Llama-3.1-8B-Instruct"
 run_eval "base_no_wrapper"  "\$PRIMARY_DIR" "\$PRIMARY_GRADER" "--model google/medgemma-27b-text-it"
 gcs_rsync "eval/seed_${SEED}/" "eval/"
 run_eval "base_bodhi"       "\$PRIMARY_DIR" "\$PRIMARY_GRADER" "--model google/medgemma-27b-text-it --use-bodhi"
@@ -516,10 +532,16 @@ fi
 # virtues (uncertainty acknowledgment, active inquiry, abstention, etc.)
 # independent of HealthBench rubric correctness — answering the
 # "do humility-trained outputs actually exhibit humility?" question that
-# rubric scores can't. Same Qwen grader as Stage 4 to keep methodology
-# consistent. Skipped if any of the 4 input JSONs is missing (i.e. a
-# Stage 4 config failed earlier — the eval_epistemic CLI requires real
-# response files, not empty ones).
+# rubric scores can't. Same Llama-3.1-8B-Instruct grader as Stage 4 to
+# keep methodology consistent. Skipped if any of the 4 input JSONs is
+# missing (i.e. a Stage 4 config failed earlier — the eval_epistemic
+# CLI requires real response files, not empty ones).
+#
+# Cleanup before Stage 5: free the TPU/Docker state + merged-LoRA scratch
+# from Stage 4 (and Stage 4b if it ran) so eval_epistemic spins up a
+# clean vLLM container instead of contending with the previous one.
+cleanup_eval
+
 echo "--- 5/5 epistemic virtue eval ---" | tee -a ~/pipeline.log
 EPISTEMIC_INPUTS=()
 for cfg in base_no_wrapper base_bodhi lora_no_wrapper lora_bodhi; do
@@ -534,13 +556,20 @@ elif [ -s "eval/seed_${SEED}/epistemic_scores.json" ]; then
 else
     python -u scripts/eval_epistemic.py \\
         --response-files "\${EPISTEMIC_INPUTS[@]}" \\
-        --grader-model Qwen/Qwen2.5-14B-Instruct \\
+        --grader-model meta-llama/Llama-3.1-8B-Instruct \\
         --output "eval/seed_${SEED}/epistemic_scores.json" \\
         --seed ${SEED} >> ~/eval.log 2>&1 \\
     || echo "eval_epistemic FAILED" >> ~/pipeline.log
 fi
 echo EPISTEMIC_OK >> ~/pipeline.log
 gcs_rsync "eval/seed_${SEED}/" "eval/"
+
+# End-of-Stage-5 cleanup: stop any lingering vLLM-TPU container and
+# wipe merged-base+LoRA scratch dirs. The EXIT trap also fires
+# cleanup_eval, but calling it explicitly here means cleanup happens
+# before the "pipeline complete" line prints (success-path ordering).
+# cleanup_eval is idempotent so the second EXIT-trap call is a no-op.
+cleanup_eval
 
 echo "=== seed ${SEED} pipeline complete ===" >> ~/pipeline.log
 REMOTE

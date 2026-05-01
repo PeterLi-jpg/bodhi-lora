@@ -33,10 +33,11 @@ Accept the terms on each model page while logged into HF, then set `HF_TOKEN`:
 | `google/medgemma-27b-text-it` | base model (paper target) | https://huggingface.co/google/medgemma-27b-text-it |
 | `google/gemma-3n-E4B-it` | smoke / local iteration | https://huggingface.co/google/gemma-3n-E4B-it |
 | `google/gemma-3n-E2B-it` | fallback if E4B OOMs | https://huggingface.co/google/gemma-3n-E2B-it |
-| `Qwen/Qwen2.5-14B-Instruct` | grader — full pipeline (GPU + TPU) | https://huggingface.co/Qwen/Qwen2.5-14B-Instruct |
+| `meta-llama/Llama-3.1-8B-Instruct` | primary grader — full pipeline (GPU + TPU) | https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct |
+| `Qwen/Qwen2.5-14B-Instruct` | recommended cross-grader (`SECOND_GRADER_MODEL`) | https://huggingface.co/Qwen/Qwen2.5-14B-Instruct |
 | `Qwen/Qwen2.5-0.5B-Instruct` | grader (smoke) | ungated |
 
-Note: the grader is `Qwen2.5-14B-Instruct` (bfloat16, not AWQ) so it runs on both GPU and TPU. AWQ requires CUDA and cannot run on TPU.
+Note: the primary grader is `Llama-3.1-8B-Instruct` (bfloat16) so it runs on both GPU and TPU. The recommended cross-grader (`SECOND_GRADER_MODEL=Qwen/Qwen2.5-14B-Instruct`) lives in a different family from the primary, breaking the "graded by your own evaluator" critique.
 
 ```bash
 export HF_TOKEN=hf_...
