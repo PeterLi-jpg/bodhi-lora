@@ -9,10 +9,10 @@
 #      scripts/train_lora.py + configs/lora_medgemma27b_tpu.yaml.
 #   2. Before training, the VM converts the HF MedGemma-27B checkpoint to
 #      MaxText's Orbax format if ~/.cache/maxtext/medgemma-27b/ is missing
-#      (Unit 4's converter, scripts/convert_hf_to_maxtext.py).
+#      (Unit 4's converter, scripts/convert_medgemma_to_maxtext.py).
 #   3. The train/val JSONL produced by Stage 2 is post-processed into the
 #      MaxText input layout (Unit 5's dataset converter,
-#      scripts/convert_dataset_for_maxtext.py).
+#      scripts/convert_traces_to_maxtext.py).
 #   4. Stage 4 (eval) is unchanged — Unit 6's exporter writes a PEFT-format
 #      LoRA adapter to checkpoints/seed_<N>/best/, so the existing
 #      vllm-tpu LoRA eval path keeps working as-is.
@@ -414,9 +414,9 @@ sudo chown -R "$USER:$USER" ~/.cache/huggingface ~/.xla_cache ~/.cache/maxtext 2
 if [ ! -d ~/.cache/maxtext/medgemma-27b ] || [ -z "\$(ls -A ~/.cache/maxtext/medgemma-27b 2>/dev/null)" ]; then
     echo "--- 3a/4 convert HF MedGemma-27B → MaxText Orbax ---" | tee -a ~/pipeline.log
     mkdir -p ~/.cache/maxtext
-    python -u scripts/convert_hf_to_maxtext.py \\
-        --hf-model google/medgemma-27b-text-it \\
-        --output-dir ~/.cache/maxtext/medgemma-27b \\
+    python -u scripts/convert_medgemma_to_maxtext.py \\
+        --hf-path google/medgemma-27b-text-it \\
+        --output ~/.cache/maxtext/medgemma-27b \\
         > ~/convert_ckpt.log 2>&1
     echo CONVERT_CKPT_OK >> ~/pipeline.log
 else
@@ -431,9 +431,10 @@ fi
 if [ ! -d data/sft/maxtext ] || [ -z "\$(ls -A data/sft/maxtext 2>/dev/null)" ]; then
     echo "--- 3b/4 convert train/val.jsonl → MaxText format ---" | tee -a ~/pipeline.log
     mkdir -p data/sft/maxtext
-    python -u scripts/convert_dataset_for_maxtext.py \\
+    python -u scripts/convert_traces_to_maxtext.py \\
         --train data/sft/train.jsonl \\
         --val data/sft/val.jsonl \\
+        --tokenizer google/medgemma-27b-text-it \\
         --output-dir data/sft/maxtext \\
         > ~/convert_data.log 2>&1
     echo CONVERT_DATA_OK >> ~/pipeline.log
