@@ -1,0 +1,30 @@
+name: Lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: ['*']
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  shellcheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Install shellcheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+
+      - name: Lint shell scripts
+        run: |
+          shellcheck run_all.sh setup.sh smoke.sh slurm/*.sh scripts/check_no_secrets.sh
+          # launcher has only info/warning findings (no errors); use --severity=error
+          # so CI catches actual bugs without blocking on style notes.
+          shellcheck --severity=error tpu/launch_multiseed.sh
