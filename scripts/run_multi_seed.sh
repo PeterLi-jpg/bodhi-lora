@@ -9,6 +9,12 @@
 # or (defaults to 5 seeds):
 #   bash scripts/run_multi_seed.sh
 #
+# Optional: cross-grader pass for the paper's bias-control story.
+#   SECOND_GRADER_MODEL=meta-llama/Llama-3.1-70B-Instruct  # off by default; ~12h H100 if set
+# When set, each seed re-grades the four eval configs with this second
+# grader and writes per-seed Spearman correlation to
+# eval/seed_<N>/cross_grader/<tag>/correlation.json.
+#
 # Expects data/sft/raw_traces.jsonl to already exist (run
 # scripts/generate_traces.py first, or slurm/generate_traces.sh).
 
@@ -23,6 +29,13 @@ GRADER="${GRADER:-Qwen/Qwen2.5-14B-Instruct-AWQ}"
 MIN_SCORE="${MIN_SCORE:-0.4}"
 VAL_RATIO="${VAL_RATIO:-0.1}"
 
+# Optional second-pass grader for the cross-grader bias-control sweep.
+# When unset (the default) we skip the extra ~12h H100 of grader compute.
+# Recommended secondary: meta-llama/Llama-3.1-70B-Instruct (different
+# family from the primary Qwen grader, breaking the "graded by your own
+# evaluator" critique).
+SECOND_GRADER_MODEL="${SECOND_GRADER_MODEL:-}"
+
 RAW_TRACES="data/sft/raw_traces.jsonl"
 if [ ! -f "$RAW_TRACES" ]; then
     echo "ERROR: $RAW_TRACES not found. Run scripts/generate_traces.py first." >&2
@@ -30,11 +43,12 @@ if [ ! -f "$RAW_TRACES" ]; then
 fi
 
 echo "Multi-seed run:"
-echo "  seeds:     $SEEDS"
-echo "  config:    $CONFIG"
-echo "  grader:    $GRADER"
-echo "  min_score: $MIN_SCORE"
-echo "  val_ratio: $VAL_RATIO"
+echo "  seeds:        $SEEDS"
+echo "  config:       $CONFIG"
+echo "  grader:       $GRADER"
+echo "  min_score:    $MIN_SCORE"
+echo "  val_ratio:    $VAL_RATIO"
+echo "  2nd grader:   ${SECOND_GRADER_MODEL:-(off — set SECOND_GRADER_MODEL to enable cross-grader pass)}"
 echo
 
 for SEED in $SEEDS; do
@@ -74,6 +88,46 @@ for SEED in $SEEDS; do
         --output "$EVAL_DIR/lora_no_wrapper.json" --seed "$SEED"
     python scripts/eval_healthbench.py --model "$MODEL" --lora-path "$CKPT_DIR/best" --use-bodhi --sample-ids "$IDS" \
         --output "$EVAL_DIR/lora_bodhi.json" --seed "$SEED"
+
+    # Optional cross-grader second pass — same 4 configs, same prompt
+    # IDs, but graded by SECOND_GRADER_MODEL. Lets us report Spearman
+    # correlation between the primary (Qwen) grader and a different
+    # family (e.g. Llama-3.1-70B-Instruct) so the paper can't be
+    # dismissed with "you optimized for your own evaluator". Only runs
+    # when SECOND_GRADER_MODEL is set (significant grader compute).
+    if [ -n "$SECOND_GRADER_MODEL" ]; then
+        SECOND_GRADER_TAG="${SECOND_GRADER_TAG:-$(printf '%s' "$SECOND_GRADER_MODEL" | tr '/:' '__')}"
+        SECOND_GRADER_DIR="$EVAL_DIR/cross_grader/$SECOND_GRADER_TAG"
+        mkdir -p "$SECOND_GRADER_DIR"
+
+        echo "--- cross-grader pass: $SECOND_GRADER_MODEL (seed $SEED) ---"
+        python scripts/eval_healthbench.py --model "$MODEL" --sample-ids "$IDS" \
+            --grader-model "$SECOND_GRADER_MODEL" \
+            --output "$SECOND_GRADER_DIR/base_no_wrapper.json" --seed "$SEED"
+        python scripts/eval_healthbench.py --model "$MODEL" --use-bodhi --sample-ids "$IDS" \
+            --grader-model "$SECOND_GRADER_MODEL" \
+            --output "$SECOND_GRADER_DIR/base_bodhi.json" --seed "$SEED"
+        python scripts/eval_healthbench.py --model "$MODEL" --lora-path "$CKPT_DIR/best" --sample-ids "$IDS" \
+            --grader-model "$SECOND_GRADER_MODEL" \
+            --output "$SECOND_GRADER_DIR/lora_no_wrapper.json" --seed "$SEED"
+        python scripts/eval_healthbench.py --model "$MODEL" --lora-path "$CKPT_DIR/best" --use-bodhi --sample-ids "$IDS" \
+            --grader-model "$SECOND_GRADER_MODEL" \
+            --output "$SECOND_GRADER_DIR/lora_bodhi.json" --seed "$SEED"
+
+        echo "--- grader correlation (seed $SEED) ---"
+        python scripts/grader_correlation.py \
+            --reference-jsons \
+                "$EVAL_DIR/base_no_wrapper.json" \
+                "$EVAL_DIR/base_bodhi.json" \
+                "$EVAL_DIR/lora_no_wrapper.json" \
+                "$EVAL_DIR/lora_bodhi.json" \
+            --candidate-jsons \
+                "$SECOND_GRADER_DIR/base_no_wrapper.json" \
+                "$SECOND_GRADER_DIR/base_bodhi.json" \
+                "$SECOND_GRADER_DIR/lora_no_wrapper.json" \
+                "$SECOND_GRADER_DIR/lora_bodhi.json" \
+            --output "$SECOND_GRADER_DIR/correlation.json"
+    fi
 done
 
 echo
