@@ -17,6 +17,7 @@ Usage:
 
 import argparse
 import json
+import os
 from pathlib import Path
 from random import Random
 
@@ -44,11 +45,18 @@ def main():
 
     ids = []
     with open(args.healthbench_jsonl) as f:
-        for line in f:
-            line = line.strip()
+        for lineno, raw in enumerate(f, start=1):
+            line = raw.strip()
             if not line:
                 continue
-            ids.append(json.loads(line)["prompt_id"])
+            try:
+                obj = json.loads(line)
+            except json.JSONDecodeError as e:
+                raise SystemExit(
+                    f"make_bootstrap_eval_ids: malformed JSON at "
+                    f"{args.healthbench_jsonl}:{lineno}"
+                ) from e
+            ids.append(obj["prompt_id"])
     if len(ids) < args.size:
         raise SystemExit(
             f"only {len(ids)} prompts in {args.healthbench_jsonl}, "
@@ -60,7 +68,12 @@ def main():
     drawn = sorted(rng.sample(ids, args.size))
 
     out.parent.mkdir(parents=True, exist_ok=True)
-    with open(out, "w") as f:
+    # Atomic write: launchers run multiple seeds in parallel, and two processes
+    # racing on the same output path could otherwise interleave bytes. Write to
+    # a sibling .tmp and os.replace it into place (POSIX rename is atomic), so
+    # the loser of the race clobbers fully or not at all, never half-written.
+    tmp = out.with_suffix(out.suffix + ".tmp")
+    with open(tmp, "w") as f:
         json.dump({
             "description": (f"Bootstrap eval draw: {args.size} of "
                             f"{len(ids)} HealthBench Hard prompts, "
@@ -71,6 +84,7 @@ def main():
             "source": str(args.healthbench_jsonl),
             "prompt_ids": drawn,
         }, f, indent=2)
+    os.replace(tmp, out)
     print(f"wrote {len(drawn)} prompt_ids to {out}")
 
 
