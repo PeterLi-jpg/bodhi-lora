@@ -185,7 +185,7 @@ class XLALoRAEngine:
     def chat(
         self,
         messages: list,
-        max_new_tokens: int = 1024,
+        max_new_tokens: int = 2048,
         temperature: float = 0.0,
         top_p: float = 1.0,
     ) -> str:
@@ -197,7 +197,7 @@ class XLALoRAEngine:
     def chat_with_logprobs(
         self,
         messages: list,
-        max_new_tokens: int = 1024,
+        max_new_tokens: int = 2048,
         temperature: float = 0.0,
     ) -> Tuple[str, List[float]]:
         return self._inner.chat_with_logprobs(
