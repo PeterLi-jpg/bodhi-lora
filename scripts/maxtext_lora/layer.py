@@ -3,6 +3,15 @@
 `LoraDense` wraps a base `flax.linen.Dense` with two low-rank matrices A and B.
 The forward pass returns `base(x) + (alpha/rank) * dropout(x @ A) @ B`.
 
+Two construction modes are supported:
+  - Standalone (``base=None``): ``LoraDense`` instantiates its own internal
+    ``nn.Dense`` named ``"base"``. Used by the unit tests and any caller that
+    just wants a drop-in low-rank Dense.
+  - Wrapping (``base=<nn.Dense>``): ``LoraDense`` reuses a pre-existing
+    ``nn.Dense`` instance for the full-rank projection. The injector path
+    uses this so the wrapped LoRA module shares the original Dense's params
+    instead of creating a fresh (uninitialised) one.
+
 Init follows PEFT's default (LoraLayer.reset_lora_parameters):
   - A: kaiming_uniform with a=sqrt(5)  (== flax's lecun-style init for the rank-r fan-in)
   - B: zeros, so the LoRA contribution is exactly 0 at step 0 and the wrapped
@@ -20,7 +29,7 @@ via the `partition_axis_names` constructor arg if a fork uses different names.
 
 from __future__ import annotations
 
-from typing import Sequence, Tuple
+from typing import Any, Sequence, Tuple
 
 import flax.linen as nn
 import jax
@@ -41,9 +50,14 @@ class LoraDense(nn.Module):
         rank: LoRA rank ``r``. Must be > 0.
         alpha: LoRA scaling factor. Effective scale is ``alpha / rank``.
         dropout: probability for the LoRA dropout applied to the input of A.
-        use_bias: passed through to the base Dense.
+        use_bias: passed through to the base Dense (only when ``base`` is None).
         a_axes: partition-spec axes for the A matrix (rank-2: (in, r)).
         b_axes: partition-spec axes for the B matrix (rank-2: (r, out)).
+        base: optional pre-built ``nn.Dense`` to use for the full-rank
+            projection. If None, a fresh Dense named ``"base"`` is created
+            inside this module. The injector passes the original Dense it's
+            wrapping so the LoRA module shares (rather than re-allocates)
+            the base params.
     """
 
     features: int
@@ -53,6 +67,9 @@ class LoraDense(nn.Module):
     use_bias: bool = True
     a_axes: Sequence[str | None] = DEFAULT_A_AXES
     b_axes: Sequence[str | None] = DEFAULT_B_AXES
+    # Keep ``base`` last so adding it doesn't reorder the existing fields —
+    # Flax treats the dataclass field order as part of the module identity.
+    base: Any = None
 
     @nn.compact
     def __call__(self, x: jax.Array, *, deterministic: bool = True) -> jax.Array:
@@ -63,11 +80,18 @@ class LoraDense(nn.Module):
         # Base full-rank projection. Frozen during LoRA fine-tuning by the caller
         # (the injector will mark base params as non-trainable); LoraDense itself
         # does not enforce that — it just exposes the params.
-        base = nn.Dense(
-            features=self.features,
-            use_bias=self.use_bias,
-            name="base",
-        )
+        if self.base is None:
+            base = nn.Dense(
+                features=self.features,
+                use_bias=self.use_bias,
+                name="base",
+            )
+            base_out = base(x)
+        else:
+            # Reuse the caller-supplied Dense. We don't re-name it: Flax has
+            # already assigned it a name in its parent scope, so calling it
+            # here just re-applies the existing module.
+            base_out = self.base(x)
 
         # PEFT default: A ~ kaiming_uniform(a=sqrt(5)), B = 0.
         # variance_scaling(scale=1/3, fan_in, uniform) reproduces torch's
@@ -90,8 +114,6 @@ class LoraDense(nn.Module):
             (self.rank, self.features),
             jnp.float32,
         )
-
-        base_out = base(x)
 
         # Drop on the input of A — matches PEFT's LoraLayer where dropout is
         # applied before the down-projection.

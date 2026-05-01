@@ -107,16 +107,24 @@ def _replace_child(parent: Any, field: str, idx: int | None, new_child: Any) -> 
 def _wrap_in_lora(base_dense: Any, rank: int, alpha: float, dropout: float) -> Any:
     """Build a LoraDense wrapping ``base_dense`` with the given hyperparams.
 
-    ``LoraDense`` (Unit 2) takes ``base`` (the frozen Dense), ``rank``,
-    ``alpha``, and ``dropout`` as constructor args. We pass them by
-    keyword so a future Unit-2 reorder of positional args doesn't break us.
+    ``LoraDense`` takes ``features`` (output dim, required), and optionally
+    ``base`` (the pre-built frozen Dense), plus ``rank`` / ``alpha`` /
+    ``dropout``. We pull ``features`` off the wrapped Dense so the LoRA
+    factor's output dim matches the base. Everything is passed by keyword
+    so a future field-order tweak doesn't break us.
     """
     if not _HAS_LORA_DENSE:
         raise ImportError(
             "scripts.maxtext_lora.layer.LoraDense not found. Unit 2 must be "
             "merged before the injector can run."
         )
-    return LoraDense(base=base_dense, rank=rank, alpha=alpha, dropout=dropout)
+    return LoraDense(
+        features=base_dense.features,
+        base=base_dense,
+        rank=rank,
+        alpha=alpha,
+        dropout=dropout,
+    )
 
 
 def _walk_and_inject(
