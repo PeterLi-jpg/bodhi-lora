@@ -448,3 +448,112 @@ def test_chat_device_map_for_host(monkeypatch):
     # The decision helper is pure boolean; doesn't need TPU detection mocks.
     assert chat._device_map_for_host(on_tpu=False) == "auto"
     assert chat._device_map_for_host(on_tpu=True) is None
+
+
+# ── check_dataset_overlap.py leakage gate (issue #60) ────────────────────
+#
+# These tests pin the contract that scripts/run_multi_seed.sh now relies on
+# as a preflight gate: contamination MUST exit non-zero, clean MUST exit zero.
+# If either of these flips silently, the multi-seed pipeline starts shipping
+# memorization scores again.
+
+def _import_check_dataset_overlap():
+    sys.modules.pop("scripts.check_dataset_overlap", None)
+    return importlib.import_module("scripts.check_dataset_overlap")
+
+
+def _write_jsonl(path, rows):
+    path.write_text("\n".join(json.dumps(r) for r in rows) + "\n")
+
+
+def _seed_overlap_files(tmp_path, train_overlap_with_hard):
+    """Lay out a minimal HealthBench-shaped fixture.
+
+    Hard has 10 prompts; Full is a superset; eval-ids holds out 2.
+    `train_overlap_with_hard` controls whether the train file leaks.
+    """
+    hard_rows = [{"prompt_id": f"hard_{i}", "example_tags": ["t"]} for i in range(10)]
+    full_rows = hard_rows + [
+        {"prompt_id": f"full_{i}", "example_tags": ["t"]} for i in range(20)
+    ]
+    eval_ids = [hard_rows[0]["prompt_id"], hard_rows[1]["prompt_id"]]
+    if train_overlap_with_hard:
+        # Trace-format rows use 'tags', not 'example_tags' — exercise the
+        # field fallback in load_hard_with_tags too.
+        train_rows = [
+            {"prompt_id": hard_rows[3]["prompt_id"], "tags": ["t"]},
+            {"prompt_id": hard_rows[4]["prompt_id"], "tags": ["t"]},
+        ]
+    else:
+        train_rows = [{"prompt_id": "full_19", "tags": ["t"]}]
+
+    full_path = tmp_path / "healthbench.jsonl"
+    hard_path = tmp_path / "healthbench_hard.jsonl"
+    eval_path = tmp_path / "hard_eval.json"
+    train_path = tmp_path / "train.jsonl"
+
+    _write_jsonl(full_path, full_rows)
+    _write_jsonl(hard_path, hard_rows)
+    eval_path.write_text(json.dumps(eval_ids))
+    _write_jsonl(train_path, train_rows)
+
+    return full_path, hard_path, eval_path, train_path
+
+
+def test_check_dataset_overlap_passes_when_clean(monkeypatch, tmp_path, capsys):
+    cdo = _import_check_dataset_overlap()
+    full, hard, evalf, train = _seed_overlap_files(tmp_path, train_overlap_with_hard=False)
+
+    monkeypatch.setattr(sys, "argv", [
+        "check_dataset_overlap.py",
+        "--healthbench", str(full),
+        "--healthbench-hard", str(hard),
+        "--eval-ids", str(evalf),
+        "--train-jsonl", str(train),
+        "--seeds", "3",
+        "--draw-size", "5",
+    ])
+
+    cdo.main()  # must not raise
+
+    out = capsys.readouterr().out
+    assert "overlap check passed" in out
+
+
+def test_check_dataset_overlap_aborts_on_per_seed_leakage(monkeypatch, tmp_path):
+    cdo = _import_check_dataset_overlap()
+    full, hard, evalf, train = _seed_overlap_files(tmp_path, train_overlap_with_hard=True)
+
+    monkeypatch.setattr(sys, "argv", [
+        "check_dataset_overlap.py",
+        "--healthbench", str(full),
+        "--healthbench-hard", str(hard),
+        "--eval-ids", str(evalf),
+        "--train-jsonl", str(train),
+        # draw-size 10 = the entire 10-prompt Hard set, so any train ID that
+        # is also in Hard will appear in every per-seed draw.
+        "--seeds", "3",
+        "--draw-size", "10",
+    ])
+
+    import pytest as _pytest
+    with _pytest.raises(SystemExit):
+        cdo.main()
+
+
+def test_load_hard_with_tags_falls_back_to_tags_field(tmp_path):
+    """The field-name fallback is the difference between ``--tag-overlap``
+    actually working on train.jsonl and silently reporting empty tags.
+    """
+    cdo = _import_check_dataset_overlap()
+    p = tmp_path / "trace.jsonl"
+    _write_jsonl(p, [
+        {"prompt_id": "x", "tags": ["emergency_referrals", "hedging"]},
+        {"prompt_id": "y", "example_tags": ["context_seeking"]},
+        {"prompt_id": "z"},
+    ])
+    rows = cdo.load_hard_with_tags(str(p))
+    by_id = {r["prompt_id"]: r["tags"] for r in rows}
+    assert by_id["x"] == ["emergency_referrals", "hedging"]
+    assert by_id["y"] == ["context_seeking"]
+    assert by_id["z"] == []

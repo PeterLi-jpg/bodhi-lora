@@ -29,6 +29,32 @@ if [ ! -f "$RAW_TRACES" ]; then
     exit 1
 fi
 
+# --- preflight: dataset leakage gate (issue #60) ---
+#
+# The eval protocol bootstraps 5 independent 200-sample draws from the 1K Hard
+# set (seeds 0..4 — see scripts/check_dataset_overlap.py and RESULTS.md). If
+# raw_traces.jsonl was generated with only --exclude-ids hard_200_sample_ids.json
+# (the legacy default in tpu/launch_stage1.sh and slurm/generate_traces.sh),
+# ~80% of every per-seed eval draw is contaminated by the training pool and
+# the headline scores measure memorization, not generalization.
+#
+# check_dataset_overlap.py exits non-zero on any prompt_id leakage between the
+# training pool and any of the 5 per-seed draws, so set -e here aborts the
+# whole multi-seed run before we burn cluster time on a contaminated experiment.
+#
+# Skip with SKIP_OVERLAP_CHECK=1 only for audit/replay runs where you have
+# already accounted for the contamination in writing.
+SKIP_OVERLAP_CHECK="${SKIP_OVERLAP_CHECK:-0}"
+if [ "$SKIP_OVERLAP_CHECK" = "1" ]; then
+    echo "WARNING: SKIP_OVERLAP_CHECK=1 — skipping dataset leakage gate (issue #60)"
+else
+    echo "--- preflight: dataset leakage gate (issue #60) ---"
+    python scripts/check_dataset_overlap.py \
+        --train-jsonl "$RAW_TRACES" \
+        --seeds 5
+    echo
+fi
+
 echo "Multi-seed run:"
 echo "  seeds:     $SEEDS"
 echo "  config:    $CONFIG"
