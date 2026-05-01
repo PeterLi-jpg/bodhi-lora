@@ -28,6 +28,15 @@ See [contributions/reproducibility.md](contributions/reproducibility.md) for ste
 
 `setup.sh` now prints a loud warning if you run it outside an isolated env, or from Conda `base`, because shared/base Python environments are the main source of confusing dependency conflicts.
 
+## Stage 3: PyTorch and MaxText paths
+
+Stage 3 (LoRA fine-tune of MedGemma-27B) has two backends:
+
+- **PyTorch** (default, in tree): `scripts/train_lora.py` driven by `tpu/launch_5seeds.sh`. Used on GPU and as the TPU fallback.
+- **MaxText** (JAX-native, forked): `scripts/train_lora_maxtext.py`. Added because PyTorch + `torch_xla` 2.7 + FSDPv2 + Gemma-3-27B hangs on the first `mark_step` for over an hour on TPU. See [docs/maxtext_migration.md](docs/maxtext_migration.md) for why we forked, what changed, the Phase 2 run plan, and the HF-PEFT-adapter contract that keeps Stage 4 unchanged.
+
+Stages 1, 2, 4, and 5 are unchanged regardless of which Stage 3 path runs.
+
 ## Hygiene
 
 Run `bash scripts/check_no_secrets.sh` before opening a PR if you touched config or environment files. Generated outputs under `logs/`, `checkpoints/`, `eval/`, `data/sft/`, and `results/` are intentionally gitignored.
