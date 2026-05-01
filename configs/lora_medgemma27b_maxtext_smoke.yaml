@@ -1,0 +1,56 @@
+# Smoke variant of configs/lora_medgemma27b_maxtext.yaml — only goal is to
+# verify the MaxText path runs end-to-end on a v6e-8 (HF -> orbax conversion,
+# dataset prep, LoRA injection, first mark_step, optimizer step, checkpoint
+# save, PEFT export). NOT a research config.
+#
+# Combined with launcher env vars MAX_EXAMPLES=100 EVAL_MAX=10 and a single
+# seed, total wall clock is roughly: ~10-20 min Stage 1 (gen) + ~10-20 min
+# Stage 3a (HF -> orbax), + ~30-60 min Stage 3b (compile + a few train
+# steps) + ~5-10 min Stage 4 (eval). Use only for pipeline validation.
+
+seed: 42
+
+model:
+  name: google/medgemma-27b-text-it
+  torch_dtype: bfloat16
+  quantization: null
+
+lora:
+  # Same shape as production so the codepath being tested matches.
+  r: 8
+  lora_alpha: 16
+  lora_dropout: 0.05
+  target_modules:
+    - q_proj
+    - v_proj
+  task_type: CAUSAL_LM
+  variant: standard
+
+training:
+  # Smoke: 1 epoch. With ~30-60 train rows after Stage 2 filter and
+  # gradient_accumulation_steps=4, that's ~7-15 effective steps — enough
+  # to confirm the optimizer fires + checkpoint persists, not enough to
+  # measure anything.
+  num_epochs: 1
+  per_device_train_batch_size: 1
+  # 4 instead of 64 — keeps wall-clock short on the smoke train pool.
+  gradient_accumulation_steps: 4
+  learning_rate: 1.0e-4
+  warmup_ratio: 0.05
+  lr_scheduler_type: cosine
+  # 1024 (down from 2048) for faster compile in the smoke. Real run keeps
+  # 2048 to capture full BODHI responses.
+  max_seq_length: 1024
+  logging_steps: 1
+  save_strategy: epoch
+  eval_strategy: epoch
+  bf16: true
+
+data:
+  train_file: data/sft/train.jsonl
+  val_file: data/sft/val.jsonl
+  eval_sample_ids: data/raw/hard_200_sample_ids.json
+
+paths:
+  maxtext_orbax_checkpoint: ~/.cache/maxtext/medgemma-27b
+  maxtext_dataset_dir: ~/.cache/maxtext/medgemma-27b/dataset
