@@ -41,7 +41,14 @@
 #   export HF_TOKEN=...                              # required (in .env is fine)
 #   GCS_DATA_PATH=gs://bucket/path                   # optional, skips Stage 1+2
 #   SEEDS="42 7 13 99 101"                           # optional override (default 42 7 13 99 101)
+#   SECOND_GRADER_MODEL=meta-llama/Llama-3.1-70B-Instruct  # optional cross-grader pass
 #   bash tpu/launch_5seeds.sh
+#
+# Cross-grader pass: when SECOND_GRADER_MODEL is set, each VM re-grades
+# the same 4 eval configs with that model and reports Spearman ρ
+# between the two graders. Off by default (adds ~12h H100 of grader
+# compute per seed). Recommended secondary: a different family from
+# the primary Qwen grader, e.g. meta-llama/Llama-3.1-70B-Instruct.
 #
 # Cancel everything (clean up all 5 VMs):
 #   kill $(cat /tmp/bohdi_5seeds_pids.txt)
@@ -121,6 +128,13 @@ done
 # ~5h of duplicated trace generation per VM (15h total).
 GCS_DATA_PATH="${GCS_DATA_PATH:-}"
 
+# Optional second-pass grader for the cross-grader bias-control sweep.
+# When set, each VM re-grades the 4 eval configs with this model after
+# Stage 4. Off by default — significant grader compute (~12h H100 per
+# seed). Recommended: meta-llama/Llama-3.1-70B-Instruct (different
+# family from the primary Qwen grader).
+SECOND_GRADER_MODEL="${SECOND_GRADER_MODEL:-}"
+
 # How many times to retry spot-create on TRC capacity errors before
 # giving up on a particular VM. Each retry waits 60s. Default of 200 *
 # 60s = up to ~3.3h per per-attempt acquisition window — TRC v6e-8 spot
@@ -136,8 +150,9 @@ MAX_PREEMPT_RETRIES="${MAX_PREEMPT_RETRIES:-10}"
 
 echo "=== launch_5seeds: 5 v6e-8 spot VMs in parallel (3 eur4a + 2 use1d) ==="
 echo "  seeds: ${SEEDS}"
-echo "  GCS_DATA_PATH:   ${GCS_DATA_PATH:-(not set — each VM will run Stage 1+2)}"
-echo "  GCS_OUTPUT_PATH: ${GCS_OUTPUT_PATH:-(not set — preempts will lose progress)}"
+echo "  GCS_DATA_PATH:        ${GCS_DATA_PATH:-(not set — each VM will run Stage 1+2)}"
+echo "  GCS_OUTPUT_PATH:      ${GCS_OUTPUT_PATH:-(not set — preempts will lose progress)}"
+echo "  SECOND_GRADER_MODEL:  ${SECOND_GRADER_MODEL:-(not set — cross-grader pass disabled)}"
 echo "  results -> $RESULTS_DIR/seed_<N>/"
 echo
 
@@ -384,31 +399,80 @@ echo "--- 4/4 eval 4 configs (base/lora x wrapper/no-wrapper) ---" | tee -a ~/pi
 mkdir -p "eval/seed_${SEED}"
 LORA_DIR="checkpoints/seed_${SEED}/best"
 
+# run_eval: write \$1.json under \$2 graded by \$3, with model+wrapper args from \$4.
+# Used both by the primary pass (out_dir=eval/seed_<N>, grader=Qwen) and
+# the optional cross-grader pass below (out_dir=cross_grader/<tag>,
+# grader=\${SECOND_GRADER_MODEL}). Skips if the output already exists so
+# preempt-resume picks up where it left off.
 run_eval() {
-    local name="\$1" args="\$2"
-    local out="eval/seed_${SEED}/\${name}.json"
+    local name="\$1" out_dir="\$2" grader="\$3" args="\$4"
+    local out="\${out_dir}/\${name}.json"
     if [ -s "\$out" ]; then
-        echo "[\$name] already exists, skipping" >> ~/pipeline.log
+        echo "[\$name @ \$grader] already exists, skipping" >> ~/pipeline.log
         return
     fi
-    echo "--- 4.\$name ---" | tee -a ~/pipeline.log
+    echo "--- eval \$name @ \$grader ---" | tee -a ~/pipeline.log
     # shellcheck disable=SC2086
     python -u scripts/eval_healthbench.py \$args \\
         --sample-ids data/raw/hard_200_sample_ids.json \\
-        --grader-model Qwen/Qwen2.5-14B-Instruct \\
+        --grader-model "\$grader" \\
         --output "\$out" \\
         --seed ${SEED} >> ~/eval.log 2>&1 || echo "eval \$name FAILED" >> ~/pipeline.log
 }
 
-run_eval "base_no_wrapper"  "--model google/medgemma-27b-text-it"
+PRIMARY_DIR="eval/seed_${SEED}"
+PRIMARY_GRADER="Qwen/Qwen2.5-14B-Instruct"
+run_eval "base_no_wrapper"  "\$PRIMARY_DIR" "\$PRIMARY_GRADER" "--model google/medgemma-27b-text-it"
 gcs_rsync "eval/seed_${SEED}/" "eval/"
-run_eval "base_bodhi"       "--model google/medgemma-27b-text-it --use-bodhi"
+run_eval "base_bodhi"       "\$PRIMARY_DIR" "\$PRIMARY_GRADER" "--model google/medgemma-27b-text-it --use-bodhi"
 gcs_rsync "eval/seed_${SEED}/" "eval/"
-run_eval "lora_no_wrapper"  "--model google/medgemma-27b-text-it --lora-path \$LORA_DIR"
+run_eval "lora_no_wrapper"  "\$PRIMARY_DIR" "\$PRIMARY_GRADER" "--model google/medgemma-27b-text-it --lora-path \$LORA_DIR"
 gcs_rsync "eval/seed_${SEED}/" "eval/"
-run_eval "lora_bodhi"       "--model google/medgemma-27b-text-it --lora-path \$LORA_DIR --use-bodhi"
+run_eval "lora_bodhi"       "\$PRIMARY_DIR" "\$PRIMARY_GRADER" "--model google/medgemma-27b-text-it --lora-path \$LORA_DIR --use-bodhi"
 gcs_rsync "eval/seed_${SEED}/" "eval/"
 echo EVAL_OK >> ~/pipeline.log
+
+# ── Stage 4b: optional cross-grader pass ──────────────────────────────────
+# SECOND_GRADER_MODEL is baked in from the local launcher (literal value
+# or empty string — local-side \${VAR} expansion, NO backslash). When
+# non-empty we re-grade the same 4 configs over the same prompt IDs but
+# with --grader-model "\${SECOND_GRADER_MODEL}", then run
+# scripts/grader_correlation.py to report Spearman ρ vs. the primary
+# Qwen grader. Same configs, same IDs — only the grader differs — so
+# the correlation is on apples-to-apples scores.
+SECOND_GRADER_MODEL="${SECOND_GRADER_MODEL}"
+if [ -n "\${SECOND_GRADER_MODEL}" ]; then
+    SECOND_GRADER_TAG="\$(printf '%s' "\${SECOND_GRADER_MODEL}" | tr '/:' '__')"
+    SECOND_GRADER_DIR="\${PRIMARY_DIR}/cross_grader/\${SECOND_GRADER_TAG}"
+    mkdir -p "\${SECOND_GRADER_DIR}"
+    echo "--- 4b/5 cross-grader pass: \${SECOND_GRADER_MODEL} ---" | tee -a ~/pipeline.log
+
+    run_eval "base_no_wrapper"  "\$SECOND_GRADER_DIR" "\$SECOND_GRADER_MODEL" "--model google/medgemma-27b-text-it"
+    gcs_rsync "eval/seed_${SEED}/" "eval/"
+    run_eval "base_bodhi"       "\$SECOND_GRADER_DIR" "\$SECOND_GRADER_MODEL" "--model google/medgemma-27b-text-it --use-bodhi"
+    gcs_rsync "eval/seed_${SEED}/" "eval/"
+    run_eval "lora_no_wrapper"  "\$SECOND_GRADER_DIR" "\$SECOND_GRADER_MODEL" "--model google/medgemma-27b-text-it --lora-path \$LORA_DIR"
+    gcs_rsync "eval/seed_${SEED}/" "eval/"
+    run_eval "lora_bodhi"       "\$SECOND_GRADER_DIR" "\$SECOND_GRADER_MODEL" "--model google/medgemma-27b-text-it --lora-path \$LORA_DIR --use-bodhi"
+    gcs_rsync "eval/seed_${SEED}/" "eval/"
+
+    echo "--- 4b/5 grader correlation ---" | tee -a ~/pipeline.log
+    python -u scripts/grader_correlation.py \\
+        --reference-jsons \\
+            "\${PRIMARY_DIR}/base_no_wrapper.json" \\
+            "\${PRIMARY_DIR}/base_bodhi.json" \\
+            "\${PRIMARY_DIR}/lora_no_wrapper.json" \\
+            "\${PRIMARY_DIR}/lora_bodhi.json" \\
+        --candidate-jsons \\
+            "\${SECOND_GRADER_DIR}/base_no_wrapper.json" \\
+            "\${SECOND_GRADER_DIR}/base_bodhi.json" \\
+            "\${SECOND_GRADER_DIR}/lora_no_wrapper.json" \\
+            "\${SECOND_GRADER_DIR}/lora_bodhi.json" \\
+        --output "\${SECOND_GRADER_DIR}/correlation.json" \\
+        >> ~/eval.log 2>&1 || echo "grader_correlation FAILED" >> ~/pipeline.log
+    echo XGRADER_OK >> ~/pipeline.log
+    gcs_rsync "eval/seed_${SEED}/" "eval/"
+fi
 
 # ── Stage 5: epistemic-virtue grading ─────────────────────────────────────
 # eval_epistemic.py grades the same 4 response files on BODHI epistemic
