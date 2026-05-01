@@ -24,6 +24,12 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+
+# Skip the entire module on CI/dev boxes without these ML deps installed.
+# The exporter itself imports them lazily, so this only gates testing.
+pytest.importorskip("safetensors", reason="safetensors not installed")
+pytest.importorskip("torch", reason="torch not installed")
+pytest.importorskip("peft", reason="peft not installed")
 import torch
 
 
