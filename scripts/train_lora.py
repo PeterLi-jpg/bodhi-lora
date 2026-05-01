@@ -195,7 +195,38 @@ DTYPE_MAP = {"bfloat16": torch.bfloat16, "float16": torch.float16, "float32": to
 # Known LoRA variants we support via PEFT's LoraConfig flags.
 LORA_VARIANTS = ("standard", "dora", "rslora")
 
+# FSDPv2 transformer_layer_cls_to_wrap. Single source of truth, also used
+# by the runtime guard below. HF renamed this between Gemma-2 and Gemma-3,
+# and optimum-tpu silently wraps NOTHING on a class-name mismatch (see
+# _verify_wrap_class_present() for why we fail loud instead).
+WRAP_CLASS_NAMES = ["Gemma3DecoderLayer"]
+
 _tokenizer = None
+
+
+def _verify_wrap_class_present(model, wrap_cls_names):
+    """Fail fast if the FSDP wrap class is missing from the model.
+
+    optimum-tpu's FSDPv2 plugin walks model.modules() and wraps anything
+    whose class name appears in ``transformer_layer_cls_to_wrap``. If the
+    list is stale (e.g. HF renamed the layer class between Gemma-2 and
+    Gemma-3), the wrap function silently matches nothing: every layer
+    stays unsharded, the 27B model OOMs at 256 GB host RAM, and the user
+    gets a misleading allocator error 30+ min into the run.
+
+    Catch the rename here with a clear message that points at the fix.
+    """
+    found = {type(m).__name__ for m in model.modules()}
+    missing = [c for c in wrap_cls_names if c not in found]
+    if missing:
+        # Bias the suggestions toward likely decoder-layer candidates so
+        # the user can quickly spot the new class name.
+        candidates = sorted(c for c in found if "Layer" in c or "Decoder" in c)
+        raise RuntimeError(
+            f"FSDP transformer_layer_cls_to_wrap={wrap_cls_names!r} not "
+            f"found in model. Was the layer class renamed in transformers? "
+            f"Candidate classes in this model: {candidates[:10]}"
+        )
 
 
 def load_sft_jsonl(path):
@@ -416,6 +447,8 @@ def main():
         quantization_config=quant_config,
     )
 
+    _verify_wrap_class_present(model, WRAP_CLASS_NAMES)
+
     # Disable KV cache for training.  With use_cache=True (the model default),
     # Gemma-3's HybridCache.update() tries to slice the last (sliding_window - 1)
     # elements from the key states.  For Gemma-3 sliding_window=1024, so it
@@ -561,8 +594,10 @@ def main():
             "fsdp": "full_shard",
             "fsdp_config": {
                 # Gemma3DecoderLayer is the per-layer module on
-                # google/medgemma-27b-text-it.  Update if base model changes.
-                "transformer_layer_cls_to_wrap": ["Gemma3DecoderLayer"],
+                # google/medgemma-27b-text-it.  Update WRAP_CLASS_NAMES at
+                # the top of this file if the base model changes; the
+                # _verify_wrap_class_present() guard reads the same list.
+                "transformer_layer_cls_to_wrap": list(WRAP_CLASS_NAMES),
                 "xla": True,
                 "xla_fsdp_v2": True,
                 "xla_fsdp_grad_ckpt": train_cfg.get(
