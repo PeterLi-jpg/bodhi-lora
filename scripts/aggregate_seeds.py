@@ -86,22 +86,51 @@ def _collect_per_seed_results(seed_dirs):
 
 
 def _aggregate_metric_across_seeds(values, ci=0.95):
-    """Given a list of numbers (one per seed), return mean/std/min/max/CI."""
+    """Given a list of numbers (one per seed), return mean/std/min/max/CI.
+
+    Honesty contract for downstream tools (audit N1, N2):
+      * std is None when N<2 (no second sample to estimate spread from);
+        previously we emitted 0.0 which read as "zero variance" instead of
+        "undefined."
+      * ci_low/ci_high are ALWAYS present; None when N<5. Callers can
+        distinguish "skipped" from "computed and was 0-width."
+      * note / ci_method strings document why each field is what it is.
+    """
     values = [v for v in values if v is not None]
     if not values:
         return {"n_seeds": 0}
+
+    n = len(values)
+    if n >= 2:
+        std_val = float(statistics.stdev(values))
+        std_note = None
+    else:
+        std_val = None
+        std_note = "stdev undefined for n_seeds<2"
+
+    if n >= 5:
+        lo, hi = (1 - ci) / 2 * 100, (1 + ci) / 2 * 100
+        ci_low = float(np.percentile(values, lo))
+        ci_high = float(np.percentile(values, hi))
+        ci_method = f"percentile-{int(ci * 100)} (n>=5)"
+    else:
+        ci_low = None
+        ci_high = None
+        ci_method = "skipped (n<5)"
+
     out = {
-        "n_seeds": len(values),
+        "n_seeds": n,
         "mean": float(statistics.mean(values)),
-        "std": float(statistics.stdev(values)) if len(values) >= 2 else 0.0,
+        "std": std_val,
         "min": float(min(values)),
         "max": float(max(values)),
         "values": [float(v) for v in values],
+        "ci_low": ci_low,
+        "ci_high": ci_high,
+        "ci_method": ci_method,
     }
-    if len(values) >= 5:
-        lo, hi = (1 - ci) / 2 * 100, (1 + ci) / 2 * 100
-        out["ci_low"] = float(np.percentile(values, lo))
-        out["ci_high"] = float(np.percentile(values, hi))
+    if std_note is not None:
+        out["note"] = std_note
     return out
 
 
@@ -186,12 +215,18 @@ def main():
     with open(out, "w") as f:
         json.dump(summary, f, indent=2)
 
-    # Quick console readout for cluster logs.
+    # Quick console readout for cluster logs. std may be None (n_seeds<2);
+    # render as "n/a" rather than 0.000 so readers don't mistake "undefined"
+    # for "zero variance."
+    def _fmt_std(s, precision):
+        v = s.get("std")
+        return f"{v:.{precision}f}" if v is not None else "n/a"
+
     print("\n=== Across-seed headline (overall mean ± std) ===")
     for cfg in CONFIG_NAMES:
         s = summary["configs"][cfg]["overall_mean"]
         if s.get("n_seeds"):
-            print(f"  {cfg:<20} {s['mean']:.3f} ± {s['std']:.3f}  "
+            print(f"  {cfg:<20} {s['mean']:.3f} ± {_fmt_std(s, 3)}  "
                   f"(n={s['n_seeds']})")
 
     print("\n=== Across-seed by tier (fail rate ± std) ===")
@@ -201,7 +236,7 @@ def main():
         for tier in ("easy", "medium", "hard"):
             t = summary["configs"][cfg]["by_tier"].get(tier, {}).get("fail_rate", {})
             if t.get("n_seeds"):
-                cells.append(f"{t['mean']:.2f} ± {t['std']:.2f}")
+                cells.append(f"{t['mean']:.2f} ± {_fmt_std(t, 2)}")
             else:
                 cells.append("-")
         print(f"  {cfg:<20} " + " ".join(f"{c:>16}" for c in cells))
