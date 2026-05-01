@@ -35,10 +35,14 @@ python scripts/preflight.py
 
 python scripts/download_data.py
 
+# Exclude all 1000 HealthBench Hard prompts from training so the per-seed
+# bootstrap eval (drawn from Hard) is honestly held-out (issue #60).
+# HealthBench Hard ⊂ HealthBench Full, so the .jsonl drops every Hard prompt;
+# we also pass the 200-sample file explicitly as belt-and-suspenders.
 python scripts/generate_traces.py \
     --model google/medgemma-27b-text-it \
     --datasets healthbench_hard healthbench \
-    --exclude-ids data/raw/hard_200_sample_ids.json \
+    --exclude-ids data/raw/healthbench_hard.jsonl data/raw/hard_200_sample_ids.json \
     --output data/sft/raw_traces.jsonl \
     --use-bodhi \
     --resume-from data/sft/raw_traces.jsonl

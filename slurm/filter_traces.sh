@@ -35,9 +35,12 @@ python scripts/preflight.py
 
 python scripts/download_data.py
 
+# Defensive --exclude-ids drops any HealthBench Hard rows that may have
+# survived in a legacy raw_traces.jsonl (issue #60).
 python scripts/filter_traces.py \
     --input data/sft/raw_traces.jsonl \
     --healthbench-data data/raw/healthbench_hard.jsonl data/raw/healthbench.jsonl \
+    --exclude-ids data/raw/healthbench_hard.jsonl data/raw/hard_200_sample_ids.json \
     --grader-model Qwen/Qwen2.5-14B-Instruct-AWQ \
     --output-dir data/sft/ \
     --min-score 0.4 \

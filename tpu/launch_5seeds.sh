@@ -323,9 +323,12 @@ else
 
     if [ ! -s data/sft/raw_traces.jsonl ]; then
         echo "--- 1/4 generate BODHI traces (leader=${IS_LEADER}) ---" | tee -a ~/pipeline.log
+        # Exclude all 1000 HealthBench Hard prompts so per-seed bootstrap
+        # eval is honestly held-out (issue #60).
         python -u scripts/generate_traces.py \\
             --model google/medgemma-27b-text-it \\
             --datasets healthbench_hard healthbench \\
+            --exclude-ids data/raw/healthbench_hard.jsonl data/raw/hard_200_sample_ids.json \\
             --output data/sft/raw_traces.jsonl \\
             --use-bodhi \\
             > ~/gen.log 2>&1
@@ -344,9 +347,12 @@ else
     fi
 
     echo "--- 2/4 filter+grade with seed ${SEED} ---" | tee -a ~/pipeline.log
+    # Defensive --exclude-ids drops any HealthBench Hard rows that may have
+    # survived in a legacy raw_traces.jsonl (issue #60).
     python -u scripts/filter_traces.py \\
         --input data/sft/raw_traces.jsonl \\
         --healthbench-data data/raw/healthbench_hard.jsonl data/raw/healthbench.jsonl \\
+        --exclude-ids data/raw/healthbench_hard.jsonl data/raw/hard_200_sample_ids.json \\
         --grader-model Qwen/Qwen2.5-14B-Instruct \\
         --output-dir data/sft \\
         --min-score 0.4 \\
@@ -357,6 +363,15 @@ else
     gcs_upload data/sft/train.jsonl train.jsonl
     gcs_upload data/sft/val.jsonl val.jsonl
 fi
+
+# Preflight leakage gate (issue #60). Aborts the run before training if any
+# HealthBench Hard prompt ended up in train.jsonl. Cheap to run; invaluable
+# when something upstream regresses (e.g., a stale GCS resume base).
+echo "--- 2.5/4 preflight leakage gate ---" | tee -a ~/pipeline.log
+python -u scripts/check_dataset_overlap.py \\
+    --train-jsonl data/sft/train.jsonl \\
+    --tag-overlap >> ~/pipeline.log 2>&1
+echo PREFLIGHT_OK >> ~/pipeline.log
 
 # The Stage-2 grader (and any Stage-1 generation if it ran) used a
 # vllm-tpu Docker container with --privileged, started via 'sudo docker
@@ -399,6 +414,15 @@ echo "--- 4/4 eval 4 configs (base/lora x wrapper/no-wrapper) ---" | tee -a ~/pi
 mkdir -p "eval/seed_${SEED}"
 LORA_DIR="checkpoints/seed_${SEED}/best"
 
+# Per-seed bootstrap eval draw (issue #60): each seed gets its own random
+# 200-prompt subset of the 1000 HealthBench Hard prompts. Generated once
+# per VM since SEED is fixed per VM in this fan-out.
+SEED_IDS="data/raw/hard_seed_${SEED}.json"
+python -u scripts/make_bootstrap_eval_ids.py \\
+    --healthbench-jsonl data/raw/healthbench_hard.jsonl \\
+    --seed ${SEED} \\
+    --output "\$SEED_IDS" >> ~/pipeline.log 2>&1
+
 # run_eval: write \$1.json under \$2 graded by \$3, with model+wrapper args from \$4.
 # Used both by the primary pass (out_dir=eval/seed_<N>, grader=Qwen) and
 # the optional cross-grader pass below (out_dir=cross_grader/<tag>,
@@ -414,7 +438,7 @@ run_eval() {
     echo "--- eval \$name @ \$grader ---" | tee -a ~/pipeline.log
     # shellcheck disable=SC2086
     python -u scripts/eval_healthbench.py \$args \\
-        --sample-ids data/raw/hard_200_sample_ids.json \\
+        --sample-ids "\$SEED_IDS" \\
         --grader-model "\$grader" \\
         --output "\$out" \\
         --seed ${SEED} >> ~/eval.log 2>&1 || echo "eval \$name FAILED" >> ~/pipeline.log
