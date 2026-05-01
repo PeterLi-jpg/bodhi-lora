@@ -1,18 +1,59 @@
 """Aggregate per-seed eval outputs into across-seed means, stds, and 95% CIs.
 
-Expects a directory layout like::
+Inputs
+------
+For each seed there is one directory matching the ``--seed-dirs`` glob (e.g.
+``eval/seed_42``). Each directory holds the per-config outputs of
+``scripts/eval_healthbench.py``::
 
     eval/seed_42/{base_no_wrapper,base_bodhi,lora_no_wrapper,lora_bodhi}.json
     eval/seed_7/{...}
     eval/seed_13/{...}
 
-for N >= 2 seed directories. Each JSON is the output of
-scripts/eval_healthbench.py. For each (config, metric), we compute mean
-and std across seeds, plus a percentile-based 95% CI if N is large
-enough (>= 5). Stratified U-shape numbers are re-aggregated per seed
-via eval_ushape.py and then combined across seeds.
+The HealthBench JSONL passed via ``--healthbench`` is consulted for tier
+metadata (``pos_points`` per prompt) so the across-seed numbers can be
+re-stratified by difficulty tier and by example tag (theme).
 
-Usage:
+Outputs
+-------
+A single aggregate summary JSON written to ``--output``. For every (config,
+metric) it records ``mean`` / ``std`` / ``min`` / ``max`` / ``values`` plus a
+percentile-based 95 % CI when there are at least 5 seeds. Stratified U-shape
+numbers (by_tier, by_theme) are re-aggregated per seed via ``eval_ushape.py``
+helpers and then combined across seeds, so ``aggregate_seeds`` benefits
+automatically when the U-shape math changes.
+
+How ``--seed-dirs`` is resolved
+-------------------------------
+Each pattern is passed to ``glob.glob`` if it contains shell wildcards
+(``*?[``); otherwise it is treated as a literal path. Resulting paths are
+filtered to those that are actually directories, deduplicated, and sorted.
+The script aborts if fewer than 2 seed directories are found, since a single
+seed cannot meaningfully estimate run-to-run spread.
+
+Honesty contract for downstream tools
+-------------------------------------
+``_aggregate_metric_across_seeds`` is the single source of truth for how the
+across-seed numbers are reported. It guarantees:
+
+* ``std`` is ``None`` when ``n_seeds < 2`` (no second sample to estimate
+  spread from). A ``"note"`` field carries the reason
+  (``"stdev undefined for n_seeds<2"``). Older versions returned 0.0, which
+  read as "zero variance" and silently understated uncertainty.
+* ``ci_low`` / ``ci_high`` are ALWAYS present: they are ``None`` when
+  ``n_seeds < 5``. ``ci_method`` documents whether the CI was computed
+  (``"percentile-95 (n>=5)"``) or skipped (``"skipped (n<5)"``), so a
+  consumer can tell "we didn't compute it" from "we computed it and the
+  width was zero."
+* Non-finite values (``NaN`` / ``Inf``) in the per-seed inputs are filtered
+  out before any statistic is computed. ``n_excluded_nan`` reports how many
+  values were dropped, so a partial corruption is visible rather than
+  silently averaging garbage.
+
+Usage
+-----
+::
+
     python scripts/aggregate_seeds.py \\
         --seed-dirs eval/seed_* \\
         --healthbench data/raw/healthbench_hard.jsonl \\
@@ -22,6 +63,7 @@ Usage:
 import argparse
 import glob
 import json
+import math
 import statistics
 from collections import defaultdict
 from pathlib import Path
@@ -68,6 +110,21 @@ def _seed_label(path):
     return base
 
 
+def _load_eval_json(path):
+    """Load a per-seed eval JSON with file context on parse failure.
+
+    The aggregate run touches dozens of JSONs; if any one of them is
+    truncated (e.g. the eval job was killed mid-write), the cluster log
+    needs the path to debug. A bare json.JSONDecodeError stack trace from
+    deep inside ``json.load`` is not enough to tell which file broke.
+    """
+    try:
+        with open(path) as f:
+            return json.load(f)
+    except (json.JSONDecodeError, OSError) as e:
+        raise SystemExit(f"aggregate_seeds: malformed JSON in {path}: {e}")
+
+
 def _collect_per_seed_results(seed_dirs):
     """For each seed-directory, load the four config JSONs."""
     per_seed = {}
@@ -78,8 +135,7 @@ def _collect_per_seed_results(seed_dirs):
             p = Path(d) / f"{cfg}.json"
             if not p.exists():
                 continue
-            with open(p) as f:
-                configs[cfg] = json.load(f)
+            configs[cfg] = _load_eval_json(p)
         if configs:
             per_seed[label] = configs
     return per_seed
@@ -88,21 +144,35 @@ def _collect_per_seed_results(seed_dirs):
 def _aggregate_metric_across_seeds(values, ci=0.95):
     """Given a list of numbers (one per seed), return mean/std/min/max/CI.
 
-    Honesty contract for downstream tools (audit N1, N2):
+    Honesty contract for downstream tools (audit N1, N2, N3):
       * std is None when N<2 (no second sample to estimate spread from);
         previously we emitted 0.0 which read as "zero variance" instead of
         "undefined."
       * ci_low/ci_high are ALWAYS present; None when N<5. Callers can
         distinguish "skipped" from "computed and was 0-width."
       * note / ci_method strings document why each field is what it is.
+      * NaN / Inf are filtered before any statistic is computed and the
+        count is reported as ``n_excluded_nan``, so partial corruption is
+        visible rather than silently averaging garbage.
     """
-    values = [v for v in values if v is not None]
-    if not values:
-        return {"n_seeds": 0}
+    raw = list(values)
+    # Drop None first (missing per-seed value), then non-finite (NaN/Inf).
+    # Tracking n_excluded_nan separately from None lets downstream readers
+    # distinguish "this seed didn't report the metric" from "this seed
+    # reported a corrupt number." Both should be visible.
+    non_none = [v for v in raw if v is not None]
+    finite = [v for v in non_none if math.isfinite(v)]
+    n_excluded_nan = len(non_none) - len(finite)
 
-    n = len(values)
+    if not finite:
+        out = {"n_seeds": 0}
+        if n_excluded_nan:
+            out["n_excluded_nan"] = n_excluded_nan
+        return out
+
+    n = len(finite)
     if n >= 2:
-        std_val = float(statistics.stdev(values))
+        std_val = float(statistics.stdev(finite))
         std_note = None
     else:
         std_val = None
@@ -110,8 +180,8 @@ def _aggregate_metric_across_seeds(values, ci=0.95):
 
     if n >= 5:
         lo, hi = (1 - ci) / 2 * 100, (1 + ci) / 2 * 100
-        ci_low = float(np.percentile(values, lo))
-        ci_high = float(np.percentile(values, hi))
+        ci_low = float(np.percentile(finite, lo))
+        ci_high = float(np.percentile(finite, hi))
         ci_method = f"percentile-{int(ci * 100)} (n>=5)"
     else:
         ci_low = None
@@ -120,14 +190,15 @@ def _aggregate_metric_across_seeds(values, ci=0.95):
 
     out = {
         "n_seeds": n,
-        "mean": float(statistics.mean(values)),
+        "mean": float(statistics.mean(finite)),
         "std": std_val,
-        "min": float(min(values)),
-        "max": float(max(values)),
-        "values": [float(v) for v in values],
+        "min": float(min(finite)),
+        "max": float(max(finite)),
+        "values": [float(v) for v in finite],
         "ci_low": ci_low,
         "ci_high": ci_high,
         "ci_method": ci_method,
+        "n_excluded_nan": n_excluded_nan,
     }
     if std_note is not None:
         out["note"] = std_note
@@ -135,14 +206,47 @@ def _aggregate_metric_across_seeds(values, ci=0.95):
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--seed-dirs", nargs="+", required=True,
-                        help="per-seed eval dirs (e.g. eval/seed_*); shell "
-                             "globs are expanded if the shell doesn't.")
-    parser.add_argument("--healthbench", nargs="+", required=True,
-                        help="HealthBench JSONL files with metadata")
-    parser.add_argument("--output", required=True)
-    parser.add_argument("--fail-threshold", type=float, default=0.4)
+    parser = argparse.ArgumentParser(
+        description=(
+            "Aggregate per-seed HealthBench eval outputs into across-seed "
+            "means, stds, and 95% CIs (when n>=5)."
+        ),
+    )
+    parser.add_argument(
+        "--seed-dirs",
+        nargs="+",
+        required=True,
+        help=(
+            "Glob pattern matching per-seed eval directories "
+            "(e.g., 'eval/seed_*'). Shell globs are re-expanded inside the "
+            "script for the case where the caller's shell didn't expand them."
+        ),
+    )
+    parser.add_argument(
+        "--healthbench",
+        nargs="+",
+        required=True,
+        help=(
+            "Path(s) to HealthBench JSONL files used for tier metadata "
+            "(pos_points per prompt and example_tags). Multiple paths are "
+            "merged."
+        ),
+    )
+    parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write the aggregate summary JSON.",
+    )
+    parser.add_argument(
+        "--fail-threshold",
+        type=float,
+        default=0.4,
+        help=(
+            "Per-config failure-rate threshold (e.g. 0.4 = 40%%); per-prompt "
+            "scores below this count as failures when computing fail-rate "
+            "by tier and by theme."
+        ),
+    )
     args = parser.parse_args()
 
     seed_dirs = _expand_seed_dirs(args.seed_dirs)
