@@ -553,18 +553,6 @@ for ((i=0; i<N_SEEDS; i++)); do
         # Per-VM helpers — closures over $VM_NAME / $ZONE / $LOG.
         log()  { printf '[%s %s] %s\n' "$(date -u +%H:%M:%S)" "$VM_NAME" "$*" | tee -a "$LOG"; }
 
-        # Attach a 300 GB persistent SSD (created out-of-band) when one is
-        # available in $ZONE. Without it, MedGemma-27B (~54 GB) + Qwen2.5-14B
-        # bf16 (~28 GB) + vllm-tpu Docker (~17 GB) saturates the 100 GB boot
-        # disk and Stage 2's grader download crashes with ENOSPC.
-        # setup_tpu.sh formats + mounts /dev/sdb at /mnt/cache and redirects
-        # HF_HOME there.
-        case "$ZONE" in
-            europe-west4-a) DATA_DISK_FLAG="--data-disks=name=bohdi-cache-eur4a,mode=read-write" ;;
-            us-east1-d)     DATA_DISK_FLAG="--data-disks=name=bohdi-cache-use1d,mode=read-write" ;;
-            *)              DATA_DISK_FLAG="" ;;
-        esac
-
         try_create() {
             # Acquire one v6e-8 spot in $ZONE with capacity-error retries.
             # Returns 0 on success, 1 if we burn through all retries.
@@ -577,7 +565,6 @@ for ((i=0; i<N_SEEDS; i++)); do
                 --accelerator-type="v6e-8" \
                 --version="$RUNTIME" \
                 --project="$PROJECT" \
-                ${DATA_DISK_FLAG} \
                 --spot >>"$LOG" 2>&1; do
                 attempt=$((attempt + 1))
                 if [ "$attempt" -ge "$CREATE_RETRIES" ]; then
