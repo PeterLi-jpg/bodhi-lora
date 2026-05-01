@@ -272,6 +272,19 @@ if [ -n "\${GCS_SEED_DIR:-}" ]; then
         && echo "  resumed: checkpoints from GCS" >> ~/pipeline.log || true
     gsutil -q -m rsync -r "\${GCS_SEED_DIR}/eval/" "eval/seed_${SEED}/" 2>/dev/null \\
         && echo "  resumed: eval JSONs from GCS" >> ~/pipeline.log || true
+    # Stage 3a Orbax checkpoint (~54 GB). Probe for "0/items" — a path that
+    # only exists on a complete conversion — so a half-uploaded checkpoint
+    # doesn't trip the Stage 3a skip-if-present guard with a corrupt cache.
+    if gsutil -q ls "\${GCS_SEED_DIR}/maxtext/medgemma-27b/0/items" >/dev/null 2>&1; then
+        mkdir -p ~/.cache/maxtext/medgemma-27b
+        gsutil -q -m rsync -r "\${GCS_SEED_DIR}/maxtext/medgemma-27b/" ~/.cache/maxtext/medgemma-27b/ \\
+            && echo "--- 0c resumed: maxtext orbax checkpoint from GCS ---" >> ~/pipeline.log || true
+    fi
+    if gsutil -q ls "\${GCS_SEED_DIR}/maxtext/dataset/" >/dev/null 2>&1; then
+        mkdir -p data/sft/maxtext
+        gsutil -q -m rsync -r "\${GCS_SEED_DIR}/maxtext/dataset/" data/sft/maxtext/ \\
+            && echo "--- 0c resumed: maxtext dataset from GCS ---" >> ~/pipeline.log || true
+    fi
 fi
 
 # Helper: upload a path to GCS if GCS_OUTPUT_PATH is set, never fail loudly.
@@ -419,6 +432,8 @@ if [ ! -d ~/.cache/maxtext/medgemma-27b ] || [ -z "\$(ls -A ~/.cache/maxtext/med
         --output ~/.cache/maxtext/medgemma-27b \\
         > ~/convert_ckpt.log 2>&1
     echo CONVERT_CKPT_OK >> ~/pipeline.log
+    # Persist to GCS so the next preempt+reacquire skips the ~10-15min reconvert.
+    gcs_rsync ~/.cache/maxtext/medgemma-27b/ maxtext/medgemma-27b/
 else
     echo "--- 3a/4 MaxText Orbax checkpoint already present, skipping conversion ---" | tee -a ~/pipeline.log
 fi
@@ -438,6 +453,7 @@ if [ ! -d data/sft/maxtext ] || [ -z "\$(ls -A data/sft/maxtext 2>/dev/null)" ];
         --output-dir data/sft/maxtext \\
         > ~/convert_data.log 2>&1
     echo CONVERT_DATA_OK >> ~/pipeline.log
+    gcs_rsync data/sft/maxtext/ maxtext/dataset/
 else
     echo "--- 3b/4 MaxText-format dataset already present, skipping conversion ---" | tee -a ~/pipeline.log
 fi
