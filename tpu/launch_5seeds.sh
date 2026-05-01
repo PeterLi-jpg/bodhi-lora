@@ -373,6 +373,9 @@ fi
 # HealthBench Hard prompt ended up in train.jsonl. Cheap to run; invaluable
 # when something upstream regresses (e.g., a stale GCS resume base).
 echo "--- 2.5/4 preflight leakage gate ---" | tee -a ~/pipeline.log
+# Idempotent fetch — preflight gate reads the raw HealthBench JSONLs
+# which Stage 1 normally downloads, but a resumed run skipped Stage 1.
+python -u scripts/download_data.py >> ~/pipeline.log 2>&1 || true
 python -u scripts/check_dataset_overlap.py \\
     --train-jsonl data/sft/train.jsonl \\
     --tag-overlap >> ~/pipeline.log 2>&1
