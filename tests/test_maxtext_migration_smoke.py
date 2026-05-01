@@ -107,7 +107,7 @@ def test_export_maxtext_lora_to_peft_help():
     contract it must satisfy is documented in
     docs/maxtext_migration.md.
 
-    The script imports torch + safetensors at module load time, so
+    The script imports torch + safetensors + peft at module load time, so
     --help fails on dev/CI environments without those installed.
     Skip cleanly in that case rather than fail the smoke test.
     """
@@ -116,6 +116,7 @@ def test_export_maxtext_lora_to_peft_help():
         pytest.skip(f"{script} not present; Unit 6 not merged")
     pytest.importorskip("torch", reason="torch not installed; --help imports torch")
     pytest.importorskip("safetensors", reason="safetensors not installed")
+    pytest.importorskip("peft", reason="peft not installed; --help imports peft")
     _help_runs(script)
 
 
