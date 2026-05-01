@@ -15,6 +15,7 @@ from tqdm import tqdm
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from _vllm_engine import VLLMEngine
+from generate_traces import load_exclude_ids
 
 # same template as healthbench_eval.py in the upstream repo
 GRADER_TEMPLATE = """
@@ -232,6 +233,14 @@ def main():
     parser.add_argument("--val-ratio", type=float, default=0.1)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--graded-output", default=None, help="save all graded traces for debugging")
+    # Belt-and-suspenders: even if a stale raw_traces.jsonl resumed past
+    # the Stage-1 --exclude-ids change, this drops contaminated rows here
+    # so they never reach training (issue #60).
+    parser.add_argument(
+        "--exclude-ids", nargs="+", default=None,
+        help="One or more .json/.jsonl files of prompt_ids to drop from the "
+             "input traces. Same format as scripts/generate_traces.py.",
+    )
     args = parser.parse_args()
 
     random.seed(args.seed)
@@ -246,6 +255,14 @@ def main():
         for line in f:
             traces.append(json.loads(line))
     print(f"Loaded {len(traces)} raw traces")
+
+    if args.exclude_ids:
+        exclude = load_exclude_ids(args.exclude_ids)
+        before = len(traces)
+        traces = [t for t in traces if t.get("prompt_id") not in exclude]
+        dropped = before - len(traces)
+        print(f"Excluded {dropped} traces via --exclude-ids ({len(exclude)} ids); "
+              f"{len(traces)} remain")
 
     # Concurrent grading — vLLM batches concurrent requests server-side, so
     # submitting N at once gives ~Nx throughput up to its scheduling limit.
