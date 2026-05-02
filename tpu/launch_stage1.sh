@@ -96,6 +96,9 @@ fi
 : "\${HF_TOKEN:?HF_TOKEN missing from ~/.bohdi-env}"
 : "\${GH_TOKEN:?GH_TOKEN missing from ~/.bohdi-env}"
 export PJRT_DEVICE=TPU
+# Pin to the py3.11 venv that setup_tpu.sh installs, so PATH ordering
+# can't drop us back onto system python 3.10.
+PY=~/.venv-py311/bin/python
 
 if [ ! -d ~/bohdi-lora ]; then
     git -c "url.https://x-access-token:\${GH_TOKEN}@github.com/.insteadOf=https://github.com/" \\
@@ -129,7 +132,7 @@ if gsutil -q stat "${GCS_BASE}/raw_traces.jsonl" 2>/dev/null; then
 fi
 
 echo "--- 1/1 generate BODHI traces (with resume + eval-id exclusion) ---" | tee -a ~/pipeline.log
-python -u scripts/download_data.py >> ~/pipeline.log 2>&1
+\${PY} -u scripts/download_data.py >> ~/pipeline.log 2>&1
 # --resume-from points at the same path as --output; if generate_traces
 # finds it, it skips done prompt_ids and appends.  --exclude-ids drops
 # all 1000 HealthBench Hard prompts so the SFT corpus has zero overlap
@@ -138,7 +141,7 @@ python -u scripts/download_data.py >> ~/pipeline.log 2>&1
 # ablate_component metadata field (issue #69 added it; older rows
 # omit it, which would otherwise trigger the resume-config-mismatch
 # guard).
-python -u scripts/generate_traces.py \\
+\${PY} -u scripts/generate_traces.py \\
     --model google/medgemma-27b-text-it \\
     --datasets healthbench_hard healthbench \\
     --output data/sft/raw_traces.jsonl \\

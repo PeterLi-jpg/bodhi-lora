@@ -204,6 +204,9 @@ fi
 : "\${HF_TOKEN:?HF_TOKEN missing from ~/.bohdi-env}"
 : "\${GH_TOKEN:?GH_TOKEN missing from ~/.bohdi-env}"
 export PJRT_DEVICE=TPU
+# Pin to the py3.11 venv that setup_tpu.sh installs, so PATH ordering
+# can't drop us back onto system python 3.10.
+PY=~/.venv-py311/bin/python
 
 # Private-repo clone via in-memory token-injected URL. The
 # ``url.<...>.insteadOf`` config rewrites the github.com origin only for
@@ -324,13 +327,13 @@ else
     # when we skip Stage 1 (resume from a pre-generated raw_traces.jsonl).
     # download_data.py is idempotent (checks before downloading), so it's
     # safe to run unconditionally.
-    python -u scripts/download_data.py >> ~/pipeline.log 2>&1
+    \${PY} -u scripts/download_data.py >> ~/pipeline.log 2>&1
 
     if [ ! -s data/sft/raw_traces.jsonl ]; then
         echo "--- 1/4 generate BODHI traces (leader=${IS_LEADER}) ---" | tee -a ~/pipeline.log
         # Exclude all 1000 HealthBench Hard prompts so per-seed bootstrap
         # eval is honestly held-out (issue #60).
-        python -u scripts/generate_traces.py \\
+        \${PY} -u scripts/generate_traces.py \\
             --model google/medgemma-27b-text-it \\
             --datasets healthbench_hard healthbench \\
             --exclude-ids data/raw/healthbench_hard.jsonl data/raw/hard_200_sample_ids.json \\
@@ -354,7 +357,7 @@ else
     echo "--- 2/4 filter+grade with seed ${SEED} ---" | tee -a ~/pipeline.log
     # Defensive --exclude-ids drops any HealthBench Hard rows that may have
     # survived in a legacy raw_traces.jsonl (issue #60).
-    python -u scripts/filter_traces.py \\
+    \${PY} -u scripts/filter_traces.py \\
         --input data/sft/raw_traces.jsonl \\
         --healthbench-data data/raw/healthbench_hard.jsonl data/raw/healthbench.jsonl \\
         --exclude-ids data/raw/healthbench_hard.jsonl data/raw/hard_200_sample_ids.json \\
@@ -375,12 +378,12 @@ fi
 echo "--- 2.5/4 preflight leakage gate ---" | tee -a ~/pipeline.log
 # Idempotent fetch — preflight gate reads the raw HealthBench JSONLs
 # which Stage 1 normally downloads, but a resumed run skipped Stage 1.
-python -u scripts/download_data.py >> ~/pipeline.log 2>&1 || true
+\${PY} -u scripts/download_data.py >> ~/pipeline.log 2>&1 || true
 # SKIP_OVERLAP_CHECK=1 escape hatch for audit/replay runs (per #124).
 if [ "\${SKIP_OVERLAP_CHECK:-0}" = "1" ]; then
     echo "WARNING: SKIP_OVERLAP_CHECK=1 — skipping leakage gate" | tee -a ~/pipeline.log
 else
-    python -u scripts/check_dataset_overlap.py \\
+    \${PY} -u scripts/check_dataset_overlap.py \\
         --train-jsonl data/sft/train.jsonl \\
         --tag-overlap >> ~/pipeline.log 2>&1
 fi
@@ -414,7 +417,7 @@ if [ -n "\${GCS_SEED_DIR:-}" ]; then
     echo "  GCS rsync sidecar pid=\${SIDECAR_PID} (every 300s)" >> ~/pipeline.log
 fi
 trap '[ -n "'"\${SIDECAR_PID}"'" ] && kill '"\${SIDECAR_PID}"' 2>/dev/null || true' EXIT
-python -u scripts/train_lora.py \\
+\${PY} -u scripts/train_lora.py \\
     --config configs/lora_medgemma27b_tpu.yaml \\
     --seed ${SEED} \\
     --output-dir "checkpoints/seed_${SEED}" \\
@@ -447,7 +450,7 @@ LORA_DIR="checkpoints/seed_${SEED}/best"
 # 200-prompt subset of the 1000 HealthBench Hard prompts. Generated once
 # per VM since SEED is fixed per VM in this fan-out.
 SEED_IDS="data/raw/hard_seed_${SEED}.json"
-python -u scripts/make_bootstrap_eval_ids.py \\
+\${PY} -u scripts/make_bootstrap_eval_ids.py \\
     --healthbench-jsonl data/raw/healthbench_hard.jsonl \\
     --seed ${SEED} \\
     --output "\$SEED_IDS" >> ~/pipeline.log 2>&1
@@ -466,7 +469,7 @@ run_eval() {
     fi
     echo "--- eval \$name @ \$grader ---" | tee -a ~/pipeline.log
     # shellcheck disable=SC2086
-    python -u scripts/eval_healthbench.py \$args \\
+    \${PY} -u scripts/eval_healthbench.py \$args \\
         --sample-ids "\$SEED_IDS" \\
         --grader-model "\$grader" \\
         --output "\$out" \\
@@ -511,7 +514,7 @@ if [ -n "\${SECOND_GRADER_MODEL}" ]; then
     gcs_rsync "eval/seed_${SEED}/" "eval/"
 
     echo "--- 4b/5 grader correlation ---" | tee -a ~/pipeline.log
-    python -u scripts/grader_correlation.py \\
+    \${PY} -u scripts/grader_correlation.py \\
         --reference-jsons \\
             "\${PRIMARY_DIR}/base_no_wrapper.json" \\
             "\${PRIMARY_DIR}/base_bodhi.json" \\
@@ -555,7 +558,7 @@ if [ \${#EPISTEMIC_INPUTS[@]} -eq 0 ]; then
 elif [ -s "eval/seed_${SEED}/epistemic_scores.json" ]; then
     echo "epistemic_scores.json already exists, skipping" >> ~/pipeline.log
 else
-    python -u scripts/eval_epistemic.py \\
+    \${PY} -u scripts/eval_epistemic.py \\
         --response-files "\${EPISTEMIC_INPUTS[@]}" \\
         --grader-model meta-llama/Llama-3.1-8B-Instruct \\
         --output "eval/seed_${SEED}/epistemic_scores.json" \\

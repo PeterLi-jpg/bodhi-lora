@@ -229,6 +229,9 @@ run_long_remote() {
 export PATH=\"\$HOME/.local/bin:\$PATH\"
 cd ~/bohdi-lora
 export HF_TOKEN='${HF_TOKEN}'
+# Export so the inner 'bash -c' inherits PY; \${PY} in \${_remote_cmd}
+# resolves on the TPU VM, not the local launcher.
+export PY=\$HOME/.venv-py311/bin/python
 rm -f ${_log}
 nohup bash -c '${_remote_cmd}' > ${_log} 2>&1 &
 echo \$! > ${_pid_file}
@@ -366,11 +369,14 @@ bash tpu/setup_tpu.sh
 # Ensure jinja2 meets apply_chat_template requirement (>=3.1.0).
 # setup_tpu.sh pins it, but transitive deps can downgrade it; re-pin here.
 export PATH=\"\$HOME/.local/bin:\$PATH\"
+# Pin to the py3.11 venv that setup_tpu.sh installs, so PATH ordering
+# can't drop us back onto system python 3.10.
+PY=\$HOME/.venv-py311/bin/python
 pip install -q \"jinja2>=3.1.0\"
 mkdir -p data/raw data/sft eval logs
 # Pre-download HealthBench datasets so filter_traces.py and eval_healthbench.py
 # can look up rubrics on the first run without hitting a FileNotFoundError.
-python3 -c \"
+\${PY} -c \"
 import urllib.request, pathlib
 files = {
     'data/raw/healthbench_hard.jsonl': 'https://openaipublic.blob.core.windows.net/simple-evals/healthbench/hard_2025-05-08-21-00-10.jsonl',
@@ -696,7 +702,7 @@ for SEED in $SEEDS; do
     run_long_remote \
         "stage3_train_seed${SEED}" \
         "[t]rain_lora.py" \
-        "mkdir -p checkpoints/seed_${SEED} && PJRT_DEVICE=TPU python -u scripts/train_lora.py --config ${TRAIN_CONFIG} --seed ${SEED} --output-dir checkpoints/seed_${SEED} ${TRAIN_EXTRA_FLAGS}" \
+        "mkdir -p checkpoints/seed_${SEED} && PJRT_DEVICE=TPU \${PY} -u scripts/train_lora.py --config ${TRAIN_CONFIG} --seed ${SEED} --output-dir checkpoints/seed_${SEED} ${TRAIN_EXTRA_FLAGS}" \
         "checkpoints/seed_${SEED}/best/adapter_model.safetensors"
     unset RUN_LONG_RESCUE_CMD
 
