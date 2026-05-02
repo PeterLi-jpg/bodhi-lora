@@ -34,6 +34,18 @@ from typing import Any, Sequence, Tuple
 import flax.linen as nn
 import jax
 import jax.numpy as jnp
+import numpy as np
+
+# NNX is a separate Flax flavour. MaxText's ``DenseGeneral`` is NNX, so the
+# wrapper that lives next to it has to be NNX too — Linen modules can't
+# directly own NNX submodules. We import lazily so the file stays
+# importable on a CPU dev box where flax may be installed but nnx is not.
+try:
+    from flax import nnx  # type: ignore[import-not-found]
+    _HAS_NNX = True
+except ImportError:
+    nnx = None  # type: ignore[assignment]
+    _HAS_NNX = False
 
 
 # (in-axes, out-axes) partition spec for A and B. A is replicated on both axes;
@@ -129,3 +141,163 @@ class LoraDense(nn.Module):
         scaling = self.alpha / self.rank
         lora_out = (lora_in @ a) @ b
         return base_out + scaling * lora_out
+
+
+# ──────────────────────────────────────────────────────────────────────
+# NNX wrapper: LoraDenseGeneral
+# ──────────────────────────────────────────────────────────────────────
+# MaxText's Gemma-3 attention/MLP projections are
+# ``maxtext.layers.linears.DenseGeneral`` (an ``nnx.Module``). Their output
+# can be multi-axis — e.g. ``query`` projects ``(B, T, hidden)`` to
+# ``(B, T, num_query_heads, head_dim)``. The Linen ``LoraDense`` above
+# only handles single-axis output and can't host an NNX child, so we add
+# a sibling NNX wrapper that:
+#
+#   1. Holds the original DenseGeneral (so its frozen kernel is reused —
+#      no doubled memory for the 27 B base).
+#   2. Allocates ``lora_a: (in_dim, r)`` and ``lora_b: (r, out_dim_total)``
+#      as ``nnx.Param``s, where ``out_dim_total = prod(out_features_shape)``.
+#   3. Forward = base(x) + scaling * reshape((x @ A) @ B, (..., *out_features_shape)).
+#
+# The flat ``lora_b`` shape (rather than ``(r, *out_features_shape)``) is
+# intentional: the export step (``scripts/export_maxtext_lora_to_peft``)
+# already handles 2D LoRA matrices, and PEFT's HuggingFace adapter
+# format also stores 2D ``lora_A`` / ``lora_B``. Reshaping at forward
+# time keeps the on-disk layout flat and round-trippable.
+#
+# UNTESTED on TPU: this wrapper has not yet been exercised on a real v6e
+# with MaxText. Local unit tests (``tests/test_maxtext_lora_layer.py``)
+# verify the math against a numpy/Linen toy DenseGeneral; production
+# behaviour around ``nnx.Param`` sharding on the v6e mesh and the
+# interaction with MaxText's ``shard_mode`` field is the first
+# smoke-debug surface to watch for.
+
+# Sharding: replicate ``lora_a`` (small: in × r), shard ``lora_b`` output
+# dim along the model axis to mirror MaxText's kernel sharding. The
+# axis names match the conventional MaxText mesh ('data', 'fsdp',
+# 'model'); override at the call site if a fork uses different names.
+DEFAULT_NNX_A_SHARDING: tuple[str | None, ...] = (None, None)
+DEFAULT_NNX_B_SHARDING: tuple[str | None, ...] = (None, "model")
+
+
+def _flatten_features(shape: tuple[int, ...] | int) -> int:
+    """Product of a (possibly multi-axis) features shape, returning a flat int."""
+    if isinstance(shape, int):
+        return int(shape)
+    return int(np.prod(tuple(shape)))
+
+
+if _HAS_NNX:
+
+    class LoraDenseGeneral(nnx.Module):
+        """NNX low-rank adapter wrapping a MaxText ``DenseGeneral``.
+
+        Unlike ``LoraDense`` (Linen, single-axis output), this wrapper
+        owns an NNX ``DenseGeneral`` whose output may be multi-axis. The
+        LoRA factors are kept flat (``(in_dim, r)`` and ``(r, out_total)``);
+        the multi-axis reshape happens at forward time.
+
+        Args:
+            base: the original ``DenseGeneral`` instance to wrap. Its
+                ``in_features_shape`` and ``out_features_shape`` are
+                read at init time to size the LoRA factors.
+            rank: LoRA rank ``r``. Must be > 0.
+            alpha: LoRA scaling. Effective scale = ``alpha / rank``.
+            dropout: input-side dropout probability. The forward
+                currently treats every call as deterministic
+                (no dropout) until an NNX dropout RNG plumbing lands.
+            a_sharding: per-axis logical mesh-axis names for ``lora_a``.
+            b_sharding: per-axis logical mesh-axis names for ``lora_b``.
+            rngs: NNX RNG state. Must include a ``params`` stream.
+        """
+
+        def __init__(
+            self,
+            base: Any,
+            rank: int = 8,
+            alpha: float = 16.0,
+            dropout: float = 0.0,
+            a_sharding: tuple[str | None, ...] = DEFAULT_NNX_A_SHARDING,
+            b_sharding: tuple[str | None, ...] = DEFAULT_NNX_B_SHARDING,
+            *,
+            rngs: Any,
+        ) -> None:
+            if rank <= 0:
+                raise ValueError(f"LoraDenseGeneral.rank must be > 0, got {rank}")
+            if rngs is None:
+                raise ValueError(
+                    "LoraDenseGeneral requires nnx.Rngs (the inject_lora call site "
+                    "passes one explicitly so the LoRA factor init is reproducible)."
+                )
+
+            self.base = base
+            self.rank = int(rank)
+            self.alpha = float(alpha)
+            # NOTE: dropout currently informational only — the forward path
+            # threads no dropout RNG, matching MaxText's own DenseGeneral
+            # behaviour (no dropout on attention projections). Plumbing a
+            # dropout RNG through nnx is a follow-up if a config ever
+            # requests non-zero LoRA dropout.
+            self.dropout_rate = float(dropout)
+
+            in_dim = _flatten_features(base.in_features_shape)
+            out_total = _flatten_features(base.out_features_shape)
+            self._out_features_shape: tuple[int, ...] = tuple(
+                base.out_features_shape
+                if not isinstance(base.out_features_shape, int)
+                else (base.out_features_shape,)
+            )
+
+            # PEFT-style init: A ~ kaiming_uniform(a=sqrt(5)), B = 0. Same math
+            # as LoraDense above, just routed through nnx.Param. We use
+            # variance_scaling(1/3, fan_in, uniform) which matches PyTorch's
+            # kaiming_uniform with the default leaky_relu(sqrt(5)) gain.
+            a_init = nnx.initializers.variance_scaling(
+                scale=1.0 / 3.0, mode="fan_in", distribution="uniform"
+            )
+            b_init = nnx.initializers.zeros_init()
+
+            self.lora_a = nnx.Param(
+                a_init(rngs.params(), (in_dim, self.rank), jnp.float32),
+                sharding=a_sharding,
+            )
+            self.lora_b = nnx.Param(
+                b_init(rngs.params(), (self.rank, out_total), jnp.float32),
+                sharding=b_sharding,
+            )
+
+        def __call__(
+            self,
+            inputs: jax.Array,
+            _initializing: bool = False,
+            out_sharding: Any = None,
+        ) -> jax.Array:
+            """Mirrors DenseGeneral's call signature so callers don't notice the swap."""
+            base_out = self.base(
+                inputs,
+                _initializing=_initializing,
+                out_sharding=out_sharding,
+            )
+
+            # x is typically (B, T, in_dim) for Gemma-3 q/k/v projections.
+            # If DenseGeneral is contracting on multiple axes (rare on the
+            # paths we target — q/k/v all contract a single hidden axis),
+            # the flat (in_dim, r) factor still works because the input
+            # contract dim is the trailing dim by default (axis=-1).
+            x = jnp.asarray(inputs, base_out.dtype)
+
+            a = jnp.asarray(self.lora_a[...], base_out.dtype)
+            b = jnp.asarray(self.lora_b[...], base_out.dtype)
+
+            lora_flat = (x @ a) @ b  # shape (..., out_total)
+            # Reshape trailing axis to match base_out's multi-axis shape.
+            lora_out = lora_flat.reshape(
+                lora_flat.shape[:-1] + self._out_features_shape
+            )
+            scaling = self.alpha / max(1, self.rank)
+            return base_out + scaling * lora_out
+
+else:
+    # NNX not installed — keep an obvious marker so importers can detect
+    # the case without raising at module load.
+    LoraDenseGeneral = None  # type: ignore[assignment]

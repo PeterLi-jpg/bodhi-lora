@@ -165,3 +165,111 @@ def test_param_shapes_match_rank_and_alpha():
     b_arr = b.value if hasattr(b, "value") else b
     assert a_arr.shape == (IN_DIM, RANK)
     assert b_arr.shape == (RANK, OUT_DIM)
+
+
+# ──────────────────────────────────────────────────────────────────────
+# LoraDenseGeneral (NNX wrapper for MaxText DenseGeneral)
+# ──────────────────────────────────────────────────────────────────────
+# Skipped when nnx isn't installed. Exercises the multi-axis output
+# reshape path that the Linen ``LoraDense`` doesn't cover. Uses a tiny
+# duck-typed fake DenseGeneral instead of MaxText's real one (the real
+# one needs Quant config + nnx_wrappers + the full vendored tree).
+
+try:
+    from flax import nnx  # type: ignore[import-not-found]
+    from scripts.maxtext_lora.layer import LoraDenseGeneral
+    _NNX_AVAILABLE = LoraDenseGeneral is not None
+except Exception:  # pragma: no cover
+    nnx = None  # type: ignore[assignment]
+    LoraDenseGeneral = None  # type: ignore[assignment]
+    _NNX_AVAILABLE = False
+
+
+_skip_no_nnx = pytest.mark.skipif(
+    not _NNX_AVAILABLE,
+    reason="flax.nnx not installed; LoraDenseGeneral not exercisable here.",
+)
+
+
+if _NNX_AVAILABLE:
+
+    class _FakeDenseGeneral(nnx.Module):
+        """Tiny duck-typed stand-in for MaxText's DenseGeneral.
+
+        Implements the surface ``LoraDenseGeneral`` reads:
+        ``in_features_shape`` and ``out_features_shape``, plus a
+        ``__call__`` matching DenseGeneral's signature.
+        """
+
+        def __init__(
+            self,
+            in_features_shape: tuple[int, ...],
+            out_features_shape: tuple[int, ...],
+            *,
+            rngs,
+        ) -> None:
+            self.in_features_shape = in_features_shape
+            self.out_features_shape = out_features_shape
+            shape = tuple(in_features_shape) + tuple(out_features_shape)
+            init = nnx.initializers.normal(stddev=0.02)
+            self.kernel = nnx.Param(init(rngs.params(), shape, jnp.float32))
+
+        def __call__(self, x, _initializing=False, out_sharding=None):
+            in_total = 1
+            for d in self.in_features_shape:
+                in_total *= d
+            out_shape = tuple(self.out_features_shape)
+            kernel_flat = self.kernel[...].reshape(in_total, -1)
+            out_flat = x @ kernel_flat
+            return out_flat.reshape(out_flat.shape[:-1] + out_shape)
+
+
+@_skip_no_nnx
+def test_dense_general_lora_zero_at_init():
+    """LoRA contribution is identically zero at init (B=0), so wrapper output
+    matches the base DenseGeneral output."""
+    rngs = nnx.Rngs(params=jax.random.PRNGKey(7))
+    base = _FakeDenseGeneral((4,), (3, 5), rngs=rngs)
+    wrap_rngs = nnx.Rngs(params=jax.random.PRNGKey(11))
+    wrapped = LoraDenseGeneral(
+        base=base, rank=2, alpha=4.0, dropout=0.0, rngs=wrap_rngs
+    )
+    x = jnp.ones((2, 4), dtype=jnp.float32)
+    y_base = base(x)
+    y_wrap = wrapped(x)
+    assert y_base.shape == (2, 3, 5)
+    assert y_wrap.shape == (2, 3, 5)
+    assert jnp.allclose(y_base, y_wrap)
+
+
+@_skip_no_nnx
+def test_dense_general_lora_factor_shapes():
+    """A is (in_total, r); B is (r, out_total). Confirm flat layout."""
+    rngs = nnx.Rngs(params=jax.random.PRNGKey(7))
+    base = _FakeDenseGeneral((4,), (3, 5), rngs=rngs)
+    wrap_rngs = nnx.Rngs(params=jax.random.PRNGKey(11))
+    wrapped = LoraDenseGeneral(
+        base=base, rank=2, alpha=4.0, dropout=0.0, rngs=wrap_rngs
+    )
+    a = wrapped.lora_a[...]
+    b = wrapped.lora_b[...]
+    assert a.shape == (4, 2)
+    assert b.shape == (2, 15)
+
+
+@_skip_no_nnx
+def test_dense_general_lora_nonzero_after_perturbing_b():
+    """If B is non-zero, the LoRA delta equals scaling * reshape((x @ A) @ B)."""
+    rngs = nnx.Rngs(params=jax.random.PRNGKey(7))
+    base = _FakeDenseGeneral((4,), (3, 5), rngs=rngs)
+    wrap_rngs = nnx.Rngs(params=jax.random.PRNGKey(11))
+    wrapped = LoraDenseGeneral(
+        base=base, rank=2, alpha=4.0, dropout=0.0, rngs=wrap_rngs
+    )
+    new_b = jnp.arange(2 * 15, dtype=jnp.float32).reshape(2, 15)
+    wrapped.lora_b.value = new_b
+    x = jnp.ones((2, 4), dtype=jnp.float32)
+    delta = wrapped(x) - base(x)
+    a = wrapped.lora_a[...]
+    expected = ((x @ a) @ new_b).reshape(2, 3, 5) * (4.0 / 2)
+    assert jnp.allclose(delta, expected, atol=1e-5)

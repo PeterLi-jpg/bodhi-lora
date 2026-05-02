@@ -185,12 +185,26 @@ def _merge_base_into_params(params, restored, lora_filter_mask=None):
 
     expected_base = max(1, total_params - lora_count)
     match_ratio = matched / expected_base
-    if matched == 0 or match_ratio < 0.5:
-        raise RuntimeError(f"orbax merge: only {matched}/{total_params} base params matched "
-                           f"(expected ~{expected_base} non-LoRA leaves; ratio={match_ratio:.2f}). "
-                           "The orbax pytree layout disagrees with the init tree; fix "
-                           "_unwrap_orbax_state or the converter output rather than training "
-                           "on a mostly-random base.")
+    # Tightened from "match_ratio < 0.5" — a partial merge that clears
+    # 50-99% still trains on a partially-random base. Require the merge
+    # to find every expected base leaf. ``MERGE_TOLERANCE`` is the
+    # number of unmatched leaves we'll forgive (default 0). Override
+    # via ``BOHDI_MERGE_TOLERANCE`` env var on a per-run basis if a
+    # known-quirky orbax layout legitimately drops a small number of
+    # auxiliary leaves (e.g. step counters that aren't in our init).
+    import os
+    tolerance = int(os.environ.get("BOHDI_MERGE_TOLERANCE", "0"))
+    missing = expected_base - matched
+    if matched == 0 or missing > tolerance:
+        raise RuntimeError(
+            f"orbax merge: only {matched}/{expected_base} base params matched "
+            f"(missing {missing}; ratio={match_ratio:.2f}; "
+            f"tolerance={tolerance}). The orbax pytree layout disagrees with "
+            "the init tree; fix _unwrap_orbax_state or the converter output "
+            "rather than training on a partially-random base. Set "
+            "BOHDI_MERGE_TOLERANCE=<n> to permit up to n unmatched leaves "
+            "if you know a small number are legitimate aux state."
+        )
     return merged
 
 
