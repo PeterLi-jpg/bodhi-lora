@@ -18,6 +18,39 @@ TRL probes `formatting_func` on a single example first to decide whether it retu
 ### [#23] Mid-epoch checkpoint resume — FIXED
 Training now checkpoints on aligned step intervals instead of epoch boundaries. The default config uses matching `save_strategy: steps` and `eval_strategy: steps` values so `load_best_model_at_end=True` remains valid, and `scripts/train_lora.py` auto-resumes from the latest `checkpoint-*` directory under `--output-dir` when one is present.
 
+## Open / blocked
+
+### Stage 3b (MaxText LoRA training) — STRUCTURALLY BROKEN
+
+`scripts/train_lora_maxtext.py` was committed as the Stage 3 training entry but has **never run end-to-end on a TPU VM**. Smoke runs v9–v11 each died in `setup_tpu.sh` before the trainer was reached, masking the issues below until the v167 setup hardening let setup pass. Confirmed against the vendored `third_party/maxtext` source.
+
+**Bugs in `scripts/train_lora_maxtext.py`:**
+
+| Line | Issue | Reality |
+|---|---|---|
+| 102 | `sys.path.insert(0, third_party/maxtext)` | should be `third_party/maxtext/src` (matches `scripts/convert_medgemma_to_maxtext.py:73`) |
+| 107 | `from MaxText import pyconfig` | package is lowercase `maxtext`; pyconfig lives at `maxtext.configs.pyconfig` |
+| 108 | `from MaxText.experimental.sft import sft_trainer` | no such module; SFT lives at `maxtext.trainers.post_train.sft.train_sft` |
+| 219 | `dataset_loader.build_iterators(...)` | function does not exist anywhere — the `dataset_loader` alias in `scripts/maxtext_lora/__init__.py` resolves to `scripts/convert_traces_to_maxtext.py`, which is the offline JSONL writer, not an iterator builder |
+| 252 | `sft_trainer.train(config=, model=, params=, train_iter=, eval_iter=, trainable_param_filter=, on_first_step=, ...)` | the actual upstream API is `train_sft.train(mt_config, goodput_recorder=None)` — takes one config object and constructs everything internally; none of these kwargs exist |
+| 282 | `export_peft.write_adapter(orbax_checkpoint=, base_model_name=, rank=, alpha=, dropout=, variant=)` | function is `write_peft_adapter` with a different signature (takes pre-extracted `weights` dict). There is an `export(orbax_path, output_dir, base_model, settings)` end-to-end helper — call site must use either |
+
+**Underlying architectural blocker — Python version mismatch:**
+
+MaxText's SFT path delegates to **Tunix** (`from tunix.sft import peft_trainer` inside `train_sft.py`). `google-tunix` on PyPI requires **Python 3.11+**. TPU v6e VMs ship **Python 3.10** (and the rest of the bohdi-llm stack — vLLM-TPU container, torch_xla 2.7, optimum-tpu — is pinned to py3.10). So even with all five line-level fixes above, the import `from maxtext.trainers.post_train.sft import train_sft` would fail at module load with a missing-Tunix error.
+
+**Why we can't just fall back to torch_xla:**
+
+Per `docs/maxtext_migration.md` and commit `2460ac9`, Stage 3 on torch_xla 2.7 + FSDPv2 + Gemma-3-27B hangs on the first `xm.mark_step()` for 30+ min on v6e with no progress and no useful stderr. That's the whole reason MaxText was forked. Switching the launcher back to `tpu/launch_5seeds.sh` would replace "fast AttributeError" with "30+ min silent hang then nothing."
+
+**Paths forward (require explicit decision):**
+
+1. **Custom JAX training loop** — bypass Tunix, write a minimal SFT loop on top of MaxText's model + Optax. Multi-day work; needs live TPU iteration to validate. Avoids the py3.11 wall.
+2. **Upgrade v6e VM image to Python 3.11** — multi-week infra; need to verify the rest of the bohdi-llm stack (vLLM-TPU, torch_xla, optimum-tpu) supports py3.11.
+3. **Ship without Stage 3 LoRA results** — smoke and report Stages 1+2+4+5 only, with a stub or empty PEFT adapter at `checkpoints/seed_<N>/best/`. Validates ~80% of the pipeline; loses the LoRA-trained results.
+
+Until one of these is taken, **`tpu/launch_5seeds_maxtext.sh` cannot complete Stage 3 on the current v6e image**.
+
 ## Documented, deferred to discussion
 
 ### [#1] Brier / ECE do not measure model calibration — PARTIALLY ADDRESSED
