@@ -22,15 +22,30 @@ set -euo pipefail
 # If no data disk is attached (fallback zone, on-demand vN-X without the map
 # entry, etc.), fall through silently and use the boot disk's HF cache.
 DATA_DEV=""
-for d in /dev/sdb /dev/nvme0n1 /dev/nvme0n2; do
-    if [ -b "$d" ] && ! mount | grep -q " on / "; then  # /dev/sda is /
-        # check it's not the root partition's parent
-        if ! lsblk -no MOUNTPOINT "$d" 2>/dev/null | grep -q "/$"; then
-            DATA_DEV="$d"
-            break
-        fi
+CANDIDATES="/dev/sdb /dev/nvme0n1 /dev/nvme0n2"
+echo "=== Detecting data disk (candidates: ${CANDIDATES}) ==="
+for d in $CANDIDATES; do
+    if [ ! -b "$d" ]; then
+        echo "  ${d}: not present, skipping"
+        continue
     fi
+    # Skip if this device (or any of its partitions) hosts the root filesystem.
+    # The previous check used `mount | grep -q " on / "`, which always matched
+    # the root mount line regardless of $d, so the loop never selected anything.
+    if lsblk -no MOUNTPOINT "$d" 2>/dev/null | grep -q "^/$"; then
+        echo "  ${d}: hosts root filesystem, skipping"
+        continue
+    fi
+    DATA_DEV="$d"
+    echo "  ${d}: selected as data device"
+    break
 done
+
+if [ -n "$DATA_DEV" ]; then
+    echo "=== Data disk detection: DATA_DEV=${DATA_DEV} ==="
+else
+    echo "=== Data disk detection: DATA_DEV=(none, using boot disk + /dev/shm) ==="
+fi
 
 if [ -n "$DATA_DEV" ] && [ ! -d /mnt/cache ] || ! mountpoint -q /mnt/cache 2>/dev/null; then
     if [ -n "$DATA_DEV" ]; then
