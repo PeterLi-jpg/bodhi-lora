@@ -930,8 +930,15 @@ for ((i=0; i<N_SEEDS; i++)); do
             fi
             push_tokens
             launch_pipeline_detached
-            wait_for_completion
-            rc=$?
+            # Capture rc explicitly: `wait_for_completion; rc=$?` is broken
+            # under `set -e` because a non-zero return from the function
+            # (the PREEMPTED / DIED paths) kills the subshell *before*
+            # `rc=$?` runs, so the case below — and the preempt-retry
+            # branch — never fires. v18 hit this: VM was preempted at
+            # 3min uptime, probe correctly detected PREEMPTED, but the
+            # outer loop exited via the EXIT trap with no reacquisition.
+            # The `if`-form is a tested context so set -e leaves it alone.
+            if wait_for_completion; then rc=0; else rc=$?; fi
             case $rc in
                 0)
                     log "pipeline complete (EPISTEMIC_OK)"
