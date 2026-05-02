@@ -35,21 +35,15 @@ Training now checkpoints on aligned step intervals instead of epoch boundaries. 
 | 252 | `sft_trainer.train(config=, model=, params=, train_iter=, eval_iter=, trainable_param_filter=, on_first_step=, ...)` | the actual upstream API is `train_sft.train(mt_config, goodput_recorder=None)` — takes one config object and constructs everything internally; none of these kwargs exist |
 | 282 | `export_peft.write_adapter(orbax_checkpoint=, base_model_name=, rank=, alpha=, dropout=, variant=)` | function is `write_peft_adapter` with a different signature (takes pre-extracted `weights` dict). There is an `export(orbax_path, output_dir, base_model, settings)` end-to-end helper — call site must use either |
 
-**Underlying architectural blocker — Python version mismatch:**
+**Underlying architectural blocker — Python version mismatch — RESOLVED by PR #182:**
 
-MaxText's SFT path delegates to **Tunix** (`from tunix.sft import peft_trainer` inside `train_sft.py`). `google-tunix` on PyPI requires **Python 3.11+**. TPU v6e VMs ship **Python 3.10** (and the rest of the bohdi-llm stack — vLLM-TPU container, torch_xla 2.7, optimum-tpu — is pinned to py3.10). So even with all five line-level fixes above, the import `from maxtext.trainers.post_train.sft import train_sft` would fail at module load with a missing-Tunix error.
+History: MaxText's SFT path delegates to **Tunix** (`from tunix.sft import peft_trainer` inside `train_sft.py`). `google-tunix` on PyPI requires **Python 3.11+**, while TPU v6e VMs ship **Python 3.10** by default. So with the stock image, the import `from maxtext.trainers.post_train.sft import train_sft` failed at module load with a missing-Tunix error.
 
-**Why we can't just fall back to torch_xla:**
+Resolution: `tpu/setup_tpu.sh` (PR #182) now installs `python3.11` via apt on the v6e VM and creates a project venv at `~/.venv-py311` containing the full bohdi-llm + MaxText + Tunix stack. PR #185 routed every TPU launcher's `python` / `python -u` invocation through that venv, so launchers no longer pick up the system py3.10. The py3.11 wall is closed.
+
+**Why we can't fall back to torch_xla (kept for historical context):**
 
 Per `docs/maxtext_migration.md` and commit `2460ac9`, Stage 3 on torch_xla 2.7 + FSDPv2 + Gemma-3-27B hangs on the first `xm.mark_step()` for 30+ min on v6e with no progress and no useful stderr. That's the whole reason MaxText was forked. Switching the launcher back to `tpu/launch_5seeds.sh` would replace "fast AttributeError" with "30+ min silent hang then nothing."
-
-**Paths forward (require explicit decision):**
-
-1. **Custom JAX training loop** — bypass Tunix, write a minimal SFT loop on top of MaxText's model + Optax. Multi-day work; needs live TPU iteration to validate. Avoids the py3.11 wall.
-2. **Upgrade v6e VM image to Python 3.11** — multi-week infra; need to verify the rest of the bohdi-llm stack (vLLM-TPU, torch_xla, optimum-tpu) supports py3.11.
-3. **Ship without Stage 3 LoRA results** — smoke and report Stages 1+2+4+5 only, with a stub or empty PEFT adapter at `checkpoints/seed_<N>/best/`. Validates ~80% of the pipeline; loses the LoRA-trained results.
-
-Until one of these is taken, **`tpu/launch_5seeds_maxtext.sh` cannot complete Stage 3 on the current v6e image**.
 
 ## Documented, deferred to discussion
 

@@ -17,7 +17,8 @@ This guide covers environment setup on Mac, Linux, and Windows, how to run the p
 
 ### Prerequisites
 
-- Python 3.10, 3.11, or 3.12
+- Dev box / GPU: Python 3.10, 3.11, or 3.12 (3.11 recommended).
+- TPU (v6e): Python 3.11 required, provisioned automatically by `tpu/setup_tpu.sh` via apt + venv at `~/.venv-py311`.
 - [Conda](https://docs.conda.io/en/latest/miniconda.html) (recommended) or `pip` + `venv`
 - A HuggingFace account with access to [google/medgemma-27b-text-it](https://huggingface.co/google/medgemma-27b-text-it) (accept Google Health AI terms on the model card)
 - GPU with ≥ 40 GB VRAM for the full model (A100/H100). For the smoke test, a smaller GPU or CPU is fine.
