@@ -348,6 +348,14 @@ def _train(cfg: dict, seed: int, output_dir: str) -> None:
         "scan_layers=False",
         "use_multimodal=False",
     ]
+    # Optional pyconfig overrides (e.g. parallelism axes for the smoke).
+    # The smoke YAML sets ici_fsdp_parallelism=1 + ici_tensor_parallelism=-1
+    # because per_device_batch_size=1 + ici_fsdp_parallelism=-1 fails MaxText's
+    # flash-attention assertion (query.shape[0]=1/devices_in_data_fsdp=8). For
+    # production runs the section is absent -> MaxText defaults apply.
+    pyconfig_overrides = cfg.get("pyconfig_overrides") or {}
+    for key, value in pyconfig_overrides.items():
+        mt_argv.append(f"{key}={value}")
     # MaxText's pyconfig expects argv[0]=script name and argv[1]=base YAML
     # path; everything after is key=value overrides. Mirror the converter
     # script's pattern so the trainer doesn't crash on initialize().
