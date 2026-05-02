@@ -974,7 +974,10 @@ echo "Waiting for all VMs to finish..."
 # subshell that exited non-zero (e.g. exhausted create retries) and let
 # the launcher itself report success. Pair each PID with its seed/VM so
 # the failure summary names the actual seed instead of just a PID.
-mapfile -t SUBSHELL_PIDS < "$PID_FILE"
+SUBSHELL_PIDS=()
+while IFS= read -r _pid_line; do
+    [ -n "$_pid_line" ] && SUBSHELL_PIDS+=("$_pid_line")
+done < "$PID_FILE"
 overall_rc=0
 failed_seeds=()
 for ((i=0; i<N_SEEDS; i++)); do
