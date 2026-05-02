@@ -8,6 +8,8 @@ tokens (the masking contract from convert_traces_to_maxtext.py).
 
 from __future__ import annotations
 
+import importlib.util
+import inspect
 import json
 from pathlib import Path
 
@@ -273,4 +275,96 @@ def test_input_ids_labels_length_mismatch(tmp_path: Path) -> None:
             gradient_accumulation_steps=1,
             max_seq_length=8,
             seed=0,
+        )
+
+
+def test_build_iterators_default_format_is_maxtext(fake_dataset: Path) -> None:
+    """The output_format kwarg defaults to 'maxtext' so existing callers
+    keep getting dict batches with no behavior change."""
+    sig = inspect.signature(dl.build_iterators)
+    assert sig.parameters["output_format"].default == "maxtext"
+
+    # Functional check: no output_format -> dict batches with the legacy keys.
+    train_iter, _, _ = dl.build_iterators(
+        dataset_dir=str(fake_dataset),
+        train_file=None,
+        val_file=None,
+        per_device_batch_size=2,
+        gradient_accumulation_steps=2,
+        max_seq_length=8,
+        seed=42,
+    )
+    batch = next(train_iter)
+    assert isinstance(batch, dict)
+    assert set(batch.keys()) == {"input_ids", "labels", "loss_mask"}
+
+
+@pytest.mark.skipif(
+    importlib.util.find_spec("tunix") is None,
+    reason="tunix not installed in this environment",
+)
+def test_build_iterators_tunix_format_yields_TrainingInput(fake_dataset: Path) -> None:
+    """output_format='tunix' wraps each batch in a TrainingInput with
+    input_tokens=input_ids and a boolean input_mask derived from labels
+    != LABEL_IGNORE_ID."""
+    # Sibling tests (test_filter_traces) install a MagicMock as
+    # sys.modules['tqdm'] so they can collect on dev boxes without
+    # tqdm. Tunix's transitive import chain hits
+    # ``from tqdm.contrib.concurrent import thread_map`` which then
+    # blows up because the mock isn't a real package. Heal sys.modules
+    # by dropping any non-real tqdm entry before importing tunix —
+    # leaves the real package free to import normally.
+    import sys
+
+    if "tqdm" in sys.modules:
+        mod = sys.modules["tqdm"]
+        if not getattr(mod, "__file__", None):
+            del sys.modules["tqdm"]
+
+    from tunix.sft.peft_trainer import TrainingInput
+
+    train_iter, eval_iter, steps_per_epoch = dl.build_iterators(
+        dataset_dir=str(fake_dataset),
+        train_file=None,
+        val_file=None,
+        per_device_batch_size=2,
+        gradient_accumulation_steps=2,  # global batch = 4
+        max_seq_length=8,
+        seed=42,
+        output_format="tunix",
+    )
+    assert steps_per_epoch == 2
+
+    batch = next(train_iter)
+    assert isinstance(batch, TrainingInput)
+    assert batch.input_tokens.shape == (4, 8)
+    assert batch.input_mask.shape == (4, 8)
+    assert batch.input_tokens.dtype == np.int32
+    assert batch.input_mask.dtype == np.bool_
+    # Mask must mark non-(-100) label positions as True.
+    # Each train row has labels [-100,-100,-100,13,14] padded with -100 to 8;
+    # so positions 3,4 are True and the rest False.
+    expected_mask = np.array(
+        [[False, False, False, True, True, False, False, False]] * 4
+    )
+    assert np.array_equal(batch.input_mask, expected_mask)
+
+    # Eval iterator is also wrapped.
+    eval_batch = next(eval_iter)
+    assert isinstance(eval_batch, TrainingInput)
+
+
+def test_build_iterators_invalid_format_raises(fake_dataset: Path) -> None:
+    """Anything other than 'maxtext' / 'tunix' must error with a clear
+    message — silently falling back would hide config typos."""
+    with pytest.raises(ValueError, match="Unknown output_format"):
+        dl.build_iterators(
+            dataset_dir=str(fake_dataset),
+            train_file=None,
+            val_file=None,
+            per_device_batch_size=2,
+            gradient_accumulation_steps=2,
+            max_seq_length=8,
+            seed=0,
+            output_format="garbage",
         )
