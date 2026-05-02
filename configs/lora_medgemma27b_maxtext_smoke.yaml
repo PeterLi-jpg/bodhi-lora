@@ -17,12 +17,15 @@ model:
 
 lora:
   # Same shape as production so the codepath being tested matches.
+  # MaxText's Gemma-3 attention attributes are `query`/`key`/`value`/`out`
+  # (separate, fused_qkv defaults to False); the exporter aliases these
+  # back to HF's q_proj/v_proj names when writing the PEFT adapter.
   r: 8
   lora_alpha: 16
   lora_dropout: 0.05
   target_modules:
-    - q_proj
-    - v_proj
+    - query
+    - value
   task_type: CAUSAL_LM
   variant: standard
 
