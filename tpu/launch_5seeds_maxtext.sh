@@ -232,6 +232,9 @@ fi
 echo "--- 0/4 setup_tpu.sh ---" | tee -a ~/pipeline.log
 bash tpu/setup_tpu.sh > ~/setup.log 2>&1 || { echo "setup FAILED" >> ~/pipeline.log; exit 1; }
 echo SETUP_OK >> ~/pipeline.log
+# Use the venv interpreter created by setup_tpu.sh (system python3 is 3.10
+# on v6e VMs; we need 3.11). Backslash-\$ keeps the expansion remote-side.
+PY=~/.venv-py311/bin/python
 # /etc/profile.d/bohdi-hf-cache.sh is sourced only by login shells; this
 # daemon is non-login (nohup setsid bash). Source it explicitly so HF_HOME
 # + TRANSFORMERS_CACHE actually point at /dev/shm (or /mnt/cache). Without
@@ -350,13 +353,13 @@ else
     # when we skip Stage 1 (resume from a pre-generated raw_traces.jsonl).
     # download_data.py is idempotent (checks before downloading), so it's
     # safe to run unconditionally.
-    python -u scripts/download_data.py >> ~/pipeline.log 2>&1
+    \${PY} -u scripts/download_data.py >> ~/pipeline.log 2>&1
 
     if [ ! -s data/sft/raw_traces.jsonl ]; then
         echo "--- 1/4 generate BODHI traces (leader=${IS_LEADER}) ---" | tee -a ~/pipeline.log
         # Exclude all 1000 HealthBench Hard prompts so per-seed bootstrap
         # eval is honestly held-out (issue #60).
-        python -u scripts/generate_traces.py \\
+        \${PY} -u scripts/generate_traces.py \\
             --model google/medgemma-27b-text-it \\
             --datasets healthbench_hard healthbench \\
             --exclude-ids data/raw/healthbench_hard.jsonl data/raw/hard_200_sample_ids.json \\
@@ -381,7 +384,7 @@ else
     echo "--- 2/4 filter+grade with seed ${SEED} ---" | tee -a ~/pipeline.log
     # Defensive --exclude-ids drops any HealthBench Hard rows that may have
     # survived in a legacy raw_traces.jsonl (issue #60).
-    python -u scripts/filter_traces.py \\
+    \${PY} -u scripts/filter_traces.py \\
         --input data/sft/raw_traces.jsonl \\
         --healthbench-data data/raw/healthbench_hard.jsonl data/raw/healthbench.jsonl \\
         --exclude-ids data/raw/healthbench_hard.jsonl data/raw/hard_200_sample_ids.json \\
@@ -404,12 +407,12 @@ echo "--- 2.5/4 preflight leakage gate ---" | tee -a ~/pipeline.log
 # HealthBench JSONL files. Stage 1 normally fetches them, but on a
 # resumed run (train/val.jsonl pulled from GCS) Stage 1 was skipped, so
 # call here unconditionally.
-python -u scripts/download_data.py >> ~/pipeline.log 2>&1 || true
+\${PY} -u scripts/download_data.py >> ~/pipeline.log 2>&1 || true
 # SKIP_OVERLAP_CHECK=1 escape hatch for audit/replay runs (per #124).
 if [ "\${SKIP_OVERLAP_CHECK:-0}" = "1" ]; then
     echo "WARNING: SKIP_OVERLAP_CHECK=1 — skipping leakage gate" | tee -a ~/pipeline.log
 else
-    python -u scripts/check_dataset_overlap.py \\
+    \${PY} -u scripts/check_dataset_overlap.py \\
         --train-jsonl data/sft/train.jsonl \\
         --tag-overlap >> ~/pipeline.log 2>&1
 fi
@@ -437,7 +440,7 @@ sudo chown -R "$USER:$USER" ~/.cache/huggingface ~/.xla_cache ~/.cache/maxtext 2
 if [ ! -d ~/.cache/maxtext/medgemma-27b ] || [ -z "\$(ls -A ~/.cache/maxtext/medgemma-27b 2>/dev/null)" ]; then
     echo "--- 3a/4 convert HF MedGemma-27B → MaxText Orbax ---" | tee -a ~/pipeline.log
     mkdir -p ~/.cache/maxtext
-    python -u scripts/convert_medgemma_to_maxtext.py \\
+    \${PY} -u scripts/convert_medgemma_to_maxtext.py \\
         --hf-path google/medgemma-27b-text-it \\
         --output ~/.cache/maxtext/medgemma-27b \\
         > ~/convert_ckpt.log 2>&1
@@ -456,7 +459,7 @@ fi
 if [ ! -d data/sft/maxtext ] || [ -z "\$(ls -A data/sft/maxtext 2>/dev/null)" ]; then
     echo "--- 3b/4 convert train/val.jsonl → MaxText format ---" | tee -a ~/pipeline.log
     mkdir -p data/sft/maxtext
-    python -u scripts/convert_traces_to_maxtext.py \\
+    \${PY} -u scripts/convert_traces_to_maxtext.py \\
         --train data/sft/train.jsonl \\
         --val data/sft/val.jsonl \\
         --tokenizer google/medgemma-27b-text-it \\
@@ -485,7 +488,7 @@ if [ -n "\${GCS_SEED_DIR:-}" ]; then
     echo "  GCS rsync sidecar pid=\${SIDECAR_PID} (every 300s)" >> ~/pipeline.log
 fi
 trap '[ -n "'"\${SIDECAR_PID}"'" ] && kill '"\${SIDECAR_PID}"' 2>/dev/null || true' EXIT
-python -u scripts/train_lora_maxtext.py \\
+\${PY} -u scripts/train_lora_maxtext.py \\
     --config ${TRAIN_CONFIG} \\
     --seed ${SEED} \\
     --output-dir "checkpoints/seed_${SEED}" \\
@@ -519,7 +522,7 @@ LORA_DIR="checkpoints/seed_${SEED}/best"
 # Per-seed bootstrap eval draw (issue #60): each seed gets its own random
 # 200-prompt subset of the 1000 HealthBench Hard prompts.
 SEED_IDS="data/raw/hard_seed_${SEED}.json"
-python -u scripts/make_bootstrap_eval_ids.py \\
+\${PY} -u scripts/make_bootstrap_eval_ids.py \\
     --healthbench-jsonl data/raw/healthbench_hard.jsonl \\
     --seed ${SEED} \\
     --output "\$SEED_IDS" >> ~/pipeline.log 2>&1
@@ -538,7 +541,7 @@ run_eval() {
     fi
     echo "--- eval \$name @ \$grader ---" | tee -a ~/pipeline.log
     # shellcheck disable=SC2086
-    if python -u scripts/eval_healthbench.py \$args \\
+    if \${PY} -u scripts/eval_healthbench.py \$args \\
             --sample-ids "\$SEED_IDS" \\
             --grader-model "\$grader" \\
             --output "\$out" \\
@@ -596,7 +599,7 @@ if [ -n "\${SECOND_GRADER_MODEL}" ]; then
     gcs_rsync "eval/seed_${SEED}/" "eval/"
 
     echo "--- 4b/5 grader correlation ---" | tee -a ~/pipeline.log
-    python -u scripts/grader_correlation.py \\
+    \${PY} -u scripts/grader_correlation.py \\
         --reference-jsons \\
             "\${PRIMARY_DIR}/base_no_wrapper.json" \\
             "\${PRIMARY_DIR}/base_bodhi.json" \\
@@ -649,7 +652,7 @@ else
     # The only path that genuinely runs eval_epistemic.py. Write the marker
     # only on a clean exit; on failure the explicit FAILED line goes to
     # pipeline.log without EPISTEMIC_OK so the dashboard sees "not done".
-    if python -u scripts/eval_epistemic.py \\
+    if \${PY} -u scripts/eval_epistemic.py \\
             --response-files "\${EPISTEMIC_INPUTS[@]}" \\
             --grader-model meta-llama/Llama-3.1-8B-Instruct \\
             --output "eval/seed_${SEED}/epistemic_scores.json" \\
