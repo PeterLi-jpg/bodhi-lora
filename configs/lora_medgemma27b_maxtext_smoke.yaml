@@ -64,3 +64,17 @@ paths:
   # Must match the launcher's --output-dir
   # (tpu/launch_5seeds_maxtext.sh writes data/sft/maxtext).
   maxtext_dataset_dir: data/sft/maxtext
+
+# pyconfig_overrides: passed verbatim to MaxText pyconfig.initialize() as
+# key=value flags. v24 hit AssertionError in tpu_flash_attention because
+# per_device_batch_size=1 + ici_fsdp_parallelism=-1 (auto-shards to 8) gives
+# devices_in_data_fsdp=8 but query.shape[0]=1, failing the
+# (query.shape[0]/devices_in_data_fsdp).is_integer() check. Disable FSDP for
+# the smoke and route parallelism through tensor parallelism instead — the
+# 27B model fits comfortably across 8 chips on TP, and the assertion
+# trivially passes (anything/1 is integer). Production runs with grad_accum=64
+# don't hit this assertion (their per-device batch divides cleanly), so this
+# override is smoke-only.
+pyconfig_overrides:
+  ici_fsdp_parallelism: 1
+  ici_tensor_parallelism: -1
