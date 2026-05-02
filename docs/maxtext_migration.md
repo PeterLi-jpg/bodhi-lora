@@ -42,31 +42,51 @@ top of MaxText's existing Gemma-3 modeling code.
   `tpu/launch_5seeds.sh` are untouched. If the JAX path hits an issue
   we can fall back without touching Stages 1, 2, 4, or 5.
 
-## Run plan (Phase 2 integration)
+## Run plan
 
-Phase 1 is the per-unit pytest skip-aware smokes (this PR is Unit 9 of
-Phase 1). Phase 2 is the live integration on a TPU VM:
+The three Stage 3 scripts and how they chain together. Flag names below
+match `--help` for each script as of this writing; re-run `--help` if
+in doubt.
 
-1. **Convert MedGemma weights once** to MaxText's checkpoint format:
+1. **Convert MedGemma weights once** to MaxText's orbax format:
    ```
    python scripts/convert_medgemma_to_maxtext.py \
-       --hf-model google/medgemma-27b-text-it \
+       --hf-path google/medgemma-27b-text-it \
        --output gs://bohdi-cache/maxtext/medgemma27b/
    ```
-   This is a one-time cost. The converted checkpoint is reused across
-   every seed and every retry.
-2. **Smoke single seed** end to end on one v6e-8:
+   The converter writes the actual checkpoint under `{output}/0/items`.
+   This is a one-time cost; the converted checkpoint is reused across
+   every seed and every retry. The base-checkpoint path is read by the
+   trainer through the YAML config (`load_parameters_path`), not via a
+   CLI flag.
+2. **Train one seed** end to end on a v6e-8. The trainer's CLI is
+   intentionally tiny; everything else (base checkpoint path, LoRA
+   rank, dataset paths, optimizer) lives in the YAML:
    ```
    python scripts/train_lora_maxtext.py \
-       --config configs/lora_medgemma27b_tpu.yaml \
+       --config configs/lora_medgemma27b_maxtext.yaml \
        --seed 42 \
-       --output-dir checkpoints/seed_42 \
-       --base-checkpoint gs://bohdi-cache/maxtext/medgemma27b/
-   python scripts/export_maxtext_lora_to_peft.py \
-       --maxtext-checkpoint checkpoints/seed_42/maxtext/best \
-       --output checkpoints/seed_42/best
+       --output-dir checkpoints/seed_42
    ```
-3. **Verify Stage 4 round-trips** the exported adapter with the
+   `--output-dir` produces two subdirs: `<output-dir>/orbax/` (periodic
+   LoRA orbax checkpoints) and `<output-dir>/best/` (the final HF/PEFT
+   adapter the eval consumes).
+3. **Export the orbax LoRA to a PEFT adapter** if you need to invoke
+   the exporter manually (the trainer already writes `<output-dir>/best/`
+   on its own; this step is for re-exporting from a saved orbax step):
+   ```
+   python scripts/export_maxtext_lora_to_peft.py \
+       --orbax-path checkpoints/seed_42/orbax/<step> \
+       --output-dir checkpoints/seed_42/best \
+       --base-model google/medgemma-27b-text-it \
+       --config configs/lora_medgemma27b_maxtext.yaml
+   ```
+   `--orbax-path` is the leaf step directory, not the CheckpointManager
+   root. `--config` lets the exporter read `r`, `lora_alpha`,
+   `target_modules`, and `variant` from the same YAML the trainer used;
+   individual CLI flags (`--lora-r`, `--lora-alpha`, `--target-modules`,
+   etc.) override YAML values when present.
+4. **Verify Stage 4 round-trips** the exported adapter with the
    existing eval script, no code changes:
    ```
    python scripts/eval_healthbench.py \
@@ -76,9 +96,37 @@ Phase 1). Phase 2 is the live integration on a TPU VM:
        --output eval/seed_42/lora_no_wrapper.json
    ```
    If this works, the contract holds.
-4. **5-seed production run** under `tpu/launch_5seeds.sh` (or a sibling
-   `launch_5seeds_maxtext.sh` once the smoke is green) over the
-   canonical seeds `42 7 13 99 101`.
+
+## How to run a smoke
+
+End-to-end smoke is one command via `tpu/launch_5seeds_maxtext.sh`,
+which fans out to TPU spot VMs and runs the full Stage 1 -> 2 -> 3 -> 4
+chain per seed. The launcher consumes a few env vars to scope the run
+down to a fast end-to-end check on one seed:
+
+```
+GCS_OUTPUT_PATH=gs://your-bucket/bohdi-runs \
+SEEDS="42" \
+MAX_EXAMPLES=100 \
+EVAL_MAX=10 \
+TRAIN_CONFIG=configs/lora_medgemma27b_maxtext_smoke.yaml \
+bash tpu/launch_5seeds_maxtext.sh
+```
+
+- `GCS_OUTPUT_PATH` is strongly recommended: every preempt without it
+  loses local-disk progress. With it, traces, checkpoints, and eval
+  JSONs are mirrored to `${GCS_OUTPUT_PATH}/seed_<N>/`.
+- `SEEDS` defaults to `42 7 13 99 101`; override to a single seed for
+  the smoke.
+- `MAX_EXAMPLES` caps Stage 1 trace generation; `EVAL_MAX` caps Stage 4
+  eval prompts. Both are passed through to the underlying scripts as
+  `--max-examples`.
+- `TRAIN_CONFIG` swaps the train YAML; the smoke variant
+  (`configs/lora_medgemma27b_maxtext_smoke.yaml`) shrinks steps and
+  batch size for a fast end-to-end check.
+
+For the full 5-seed production run, drop the smoke env-vars and let the
+defaults hold (`SEEDS="42 7 13 99 101"`, `TRAIN_CONFIG=configs/lora_medgemma27b_maxtext.yaml`).
 
 ## Checkpoint format (contract for the exporter)
 
