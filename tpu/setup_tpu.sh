@@ -163,19 +163,26 @@ echo "=== Installing JAX stack for MaxText baseline ==="
 # utilities, ml_collections used by maxtext.configs). v9 caught
 # omegaconf as the first missing dep at Stage 3a; install the full set
 # here so the converter and trainer don't crash on a fresh v6e VM.
+#
+# Floors are deliberately below MaxText's tpu-requirements.txt — that
+# file pins versions that require Python 3.11+ (etils 1.14+,
+# ml-collections 1.1+, jaxtyping 0.3.9+, psutil 7.2+, etc.), but
+# v6e VMs ship Python 3.10. v10 caught etils 1.14.0 as the first
+# unavailable pin. Lower floors are still recent enough to expose
+# the modules MaxText imports.
 pip install ${PIP_FLAGS} \
     "jax[tpu]>=0.4.30,<0.7" \
     "flax>=0.10" \
     "orbax-checkpoint>=0.11" \
     "optax>=0.2.4" \
     "omegaconf>=2.3.0" \
-    "etils[epath]>=1.14.0" \
-    "qwix>=0.1.6" \
-    "jaxtyping>=0.3.9" \
-    "psutil>=7.2.2" \
-    "google-cloud-storage>=3.10.1" \
-    "chex>=0.1.91" \
-    "ml-collections>=1.1.0"
+    "etils[epath]>=1.7.0" \
+    "qwix>=0.0.1" \
+    "jaxtyping>=0.2.20" \
+    "psutil>=5.9" \
+    "google-cloud-storage>=2.14" \
+    "chex>=0.1.85" \
+    "ml-collections>=0.1.1"
 
 echo "=== Pulling vLLM-TPU Docker image ==="
 # Inference (Stages 1, 2, 4) runs vLLM inside this container rather than via
