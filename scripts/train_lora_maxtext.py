@@ -303,9 +303,19 @@ def _train(cfg: dict, seed: int, output_dir: str) -> None:
     Path(best_out).mkdir(parents=True, exist_ok=True)
 
     # --- Build MaxText config ------------------------------------------------
+    # MaxText's converter (scripts/convert_medgemma_to_maxtext.py) writes the
+    # actual orbax shards to {output}/0/items, where "0" is the step number
+    # the converter saves at. MaxText's load_params_from_path expects the
+    # full path INCLUDING the trailing /0/items (see
+    # third_party/maxtext/src/maxtext/utils/model_creation_utils.py line 466
+    # for the canonical construction). The smoke YAML stores the parent
+    # directory in paths.maxtext_orbax_checkpoint, so we append /0/items
+    # here for both load_parameters_path (config flag, mostly informational
+    # for this trainer) and the actual restore call below.
+    orbax_load_path = str(Path(orbax_ckpt) / "0" / "items")
     mt_argv = [
         "model_name=gemma3-27b",
-        f"load_parameters_path={orbax_ckpt}",
+        f"load_parameters_path={orbax_load_path}",
         f"dataset_path={dataset_dir}",
         f"per_device_batch_size={train_cfg['per_device_train_batch_size']}",
         f"gradient_accumulation_steps={train_cfg['gradient_accumulation_steps']}",
@@ -314,8 +324,21 @@ def _train(cfg: dict, seed: int, output_dir: str) -> None:
         f"dtype={'bfloat16' if train_cfg.get('bf16', True) else 'float32'}",
         f"base_output_directory={orbax_out}",
         f"run_name=lora_seed_{seed}",
-        f"data_seed={seed}",
+        # data_shuffle_seed is the canonical pyconfig key (see
+        # third_party/maxtext/src/maxtext/configs/base.yml). The previous
+        # data_seed name was rejected by pyconfig's strict field check.
+        f"data_shuffle_seed={seed}",
         f"init_weights_seed={seed}",
+        # Match the converter's output layout: scan_layers=False produces
+        # unstacked per-layer params (model.layers.0.X, model.layers.1.X, ...),
+        # which is what convert_medgemma_to_maxtext.py writes. The pyconfig
+        # default is True (stacked, [n_layers, ...]), so without this
+        # override the init param tree shape disagrees with the orbax
+        # checkpoint and the restore merge fails. use_multimodal=False for
+        # the same reason: the converter ran with use_multimodal=False, so
+        # the on-disk tree has no vision-tower keys.
+        "scan_layers=False",
+        "use_multimodal=False",
     ]
     # MaxText's pyconfig expects argv[0]=script name and argv[1]=base YAML
     # path; everything after is key=value overrides. Mirror the converter
@@ -351,7 +374,7 @@ def _train(cfg: dict, seed: int, output_dir: str) -> None:
     # format flags and constructs the right ``restore_args`` from an
     # abstract-shaped params tree. The abstract tree is just our
     # already-initialized ``params`` mapped to ShapeDtypeStruct.
-    print(f"Restoring base weights from {orbax_ckpt}...", flush=True)
+    print(f"Restoring base weights from {orbax_load_path}...", flush=True)
     abstract_params = jax.tree_util.tree_map(
         lambda p: jax.ShapeDtypeStruct(
             shape=p.shape, dtype=p.dtype,
@@ -376,7 +399,7 @@ def _train(cfg: dict, seed: int, output_dir: str) -> None:
     with mesh, nn_partitioning.axis_rules(mt_cfg.logical_axis_rules):
         try:
             restored_inner = mt_checkpointing.load_params_from_path(
-                str(Path(orbax_ckpt).resolve()),
+                str(Path(orbax_load_path).resolve()),
                 abstract_inner,
                 checkpoint_storage_concurrent_gb=96,
             )
@@ -394,7 +417,7 @@ def _train(cfg: dict, seed: int, output_dir: str) -> None:
                 flush=True,
             )
             restored = ocp.PyTreeCheckpointer().restore(
-                str(Path(orbax_ckpt).resolve())
+                str(Path(orbax_load_path).resolve())
             )
         params = _merge_base_into_params(params, restored, lora_filter_mask)
     print("Base weights restored.", flush=True)
