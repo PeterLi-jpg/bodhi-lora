@@ -8,8 +8,9 @@ active context-seeking, scope bounding, calibrated hedging.
 This script grades pre-generated responses on six epistemic dimensions
 INDEPENDENT of medical correctness: a response can be medically wrong but
 epistemically humble (good on these axes), or medically right but
-overconfident (bad). It uses the same local Qwen-2.5-14B grader as
-filter_traces.py / eval_healthbench.py — no OpenAI API.
+overconfident (bad). It uses the same local Llama-3.1-8B grader as
+eval_healthbench.py (the eval-side default after the asymmetric grader
+swap in #163; filter_traces.py uses Qwen-14B). No OpenAI API.
 
 Operates on already-generated response files. Does not re-run inference.
 
