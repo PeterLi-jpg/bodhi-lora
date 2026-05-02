@@ -365,6 +365,8 @@ tpu_ssh "$TPU_NAME" \
 set -euo pipefail
 git clone https://github.com/PeterLi-jpg/bohdi-lora.git ~/bohdi-lora 2>/dev/null || (cd ~/bohdi-lora && git pull)
 cd ~/bohdi-lora
+# Legacy torch_xla path — train_lora.py imports torch_xla, so request it.
+export BOHDI_INSTALL_TORCH_XLA=1
 bash tpu/setup_tpu.sh
 # Ensure jinja2 meets apply_chat_template requirement (>=3.1.0).
 # setup_tpu.sh pins it, but transitive deps can downgrade it; re-pin here.
