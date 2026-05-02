@@ -738,7 +738,15 @@ def apply_lora(
             "dropout": dropout_key,
             "aqt": aqt_key,
         }
-        bsz = int(mt_cfg.per_device_batch_size)
+        # The trainer's dataloader yields batches of shape
+        # (per_device_batch_size * gradient_accumulation_steps, max_seq_length)
+        # (see scripts/maxtext_lora/dataset_loader.py:268). Initing with the
+        # smaller per_device_batch_size traces a different shape than runtime,
+        # which forces a JAX recompile on the first train_step call and, under
+        # FSDP, also trips IndivisibleError when bsz < ici_fsdp_parallelism.
+        # Match the runtime batch here so init's traced shape lines up with
+        # what _train_step actually sees.
+        bsz = int(mt_cfg.per_device_batch_size) * int(mt_cfg.gradient_accumulation_steps)
         seqlen = int(mt_cfg.max_target_length)
         dummy_inputs = jnp.zeros((bsz, seqlen), dtype=jnp.int32)
         dummy_positions = jnp.broadcast_to(
