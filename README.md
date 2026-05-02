@@ -35,6 +35,12 @@ See [contributions/reproducibility.md](contributions/reproducibility.md) for ste
 
 ## Stage 3: PyTorch and MaxText paths
 
+> **Note:** Stage 3 (TPU LoRA SFT) recently migrated from custom MaxText glue
+> to Google's tunix + qwix path. The new launcher is `tpu/launch_5seeds_tunix.sh`.
+> See [contributions/tunix-migration.md](contributions/tunix-migration.md) for
+> details. The old MaxText path (`tpu/launch_5seeds_maxtext.sh`) remains
+> available until the tunix path is verified end-to-end on TPU.
+
 Stage 3 (LoRA fine-tune of MedGemma-27B) has two backends:
 
 - **PyTorch** (default, in tree): `scripts/train_lora.py` driven by `tpu/launch_5seeds.sh`. Used on GPU and as the TPU fallback.
