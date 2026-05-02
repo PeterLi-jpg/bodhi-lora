@@ -248,6 +248,14 @@ def _train(cfg: dict, seed: int, output_dir: str) -> None:
     maxtext_src = repo_root / "third_party" / "maxtext" / "src"
     if str(maxtext_src) not in sys.path:
         sys.path.insert(0, str(maxtext_src))
+    # When invoked as ``python scripts/train_lora_maxtext.py`` Python adds
+    # the script's directory (scripts/) to sys.path, not the repo root, so
+    # ``from scripts.maxtext_lora import ...`` below would otherwise fail
+    # with ModuleNotFoundError. Adding the repo root explicitly keeps the
+    # absolute-package import working regardless of how the launcher
+    # invokes the script.
+    if str(repo_root) not in sys.path:
+        sys.path.insert(0, str(repo_root))
 
     # CORRECTED imports — package is lowercase ``maxtext`` and pyconfig
     # lives under ``maxtext.configs``. The previous ``MaxText.experimental.sft``
