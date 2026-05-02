@@ -82,6 +82,8 @@ git clone https://github.com/PeterLi-jpg/bohdi-lora.git ~/bohdi-lora
 cd ~/bohdi-lora
 
 echo "=== Setting up deps ==="
+# Legacy torch_xla path — train_lora.py imports torch_xla, so request it.
+export BOHDI_INSTALL_TORCH_XLA=1
 bash tpu/setup_tpu.sh
 
 # Use the venv interpreter created by setup_tpu.sh. System python3 on

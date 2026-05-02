@@ -38,6 +38,21 @@ PIP=~/.venv-py311/bin/pip
 } | sudo tee /etc/profile.d/bohdi-venv.sh > /dev/null
 sudo chmod +x /etc/profile.d/bohdi-venv.sh
 
+# ── torch_xla install gate ──────────────────────────────────────────────────
+# torch_xla 2.7 (~3 GB wheel + 5-8 min install) is only used by the legacy
+# launchers — launch_5seeds.sh, launch_v6e.sh, launch_v4_ondemand.sh,
+# launch_all_seeds.sh, launch_multiseed.sh — which call scripts/train_lora.py.
+# The MaxText path (launch_5seeds_maxtext.sh -> train_lora_maxtext.py) is
+# pure JAX; Stages 1/2/4 run inside the vLLM-TPU Docker container with its
+# own torch internally; Stage 3a (HF -> Orbax converter) and Stage 3b (LoRA
+# train) never import torch_xla. We also avoid a libtpu version race where
+# torch_xla's libtpu pin and jax[tpu]'s libtpu pin try to coexist.
+#
+# Default OFF. Legacy launchers export BOHDI_INSTALL_TORCH_XLA=1 before
+# calling this script; the MaxText launcher leaves it unset.
+INSTALL_TORCH_XLA="${BOHDI_INSTALL_TORCH_XLA:-0}"
+echo "=== torch_xla install: $([ "$INSTALL_TORCH_XLA" = "1" ] && echo "YES (legacy path)" || echo "skipped (MaxText path)") ==="
+
 # ── Mount the data disk (if attached) and redirect HF cache there ────────────
 # A 300 GB persistent SSD is attached at TPU create time (see launch script's
 # DATA_DISKS map).  It survives preemption and avoids the 100 GB boot-disk
@@ -121,12 +136,13 @@ if [ -n "$HF_CACHE_ROOT" ]; then
     sudo chmod +x /etc/profile.d/bohdi-hf-cache.sh
 fi
 
-# torch_xla 2.7 ships the C++11 ABI wheels (~20% goodput improvement on
-# tracing-bound jobs) and includes scan_layers + the fix for the v6e
-# fusion-emitter regression in 2.5 (#8591) that hangs Gemma-3 SPMD compile
-# for hours.  Manual mark_sharding on Gemma-3 27B was hanging at "0/70 steps"
-# for 30+ min with cache stagnant — the blessed path on v6e is FSDPv2 instead
-# (xla_fsdp_v2: True), wired in train_lora.py via optimum-tpu's use_fsdp_v2().
+# torch_xla 2.7 (legacy path only — see INSTALL_TORCH_XLA gate above):
+#   ships C++11 ABI wheels (~20% goodput on tracing-bound jobs) and includes
+#   the fix for the v6e fusion-emitter regression in 2.5 (#8591) that hangs
+#   Gemma-3 SPMD compile for hours. Manual mark_sharding on Gemma-3 27B was
+#   hanging at "0/70 steps" for 30+ min with cache stagnant — the blessed
+#   path on v6e is FSDPv2 (xla_fsdp_v2: True), wired in train_lora.py via
+#   optimum-tpu's use_fsdp_v2().
 TORCH_VERSION="2.7.0"
 TORCH_XLA_VERSION="2.7.0"
 TPU_WHEEL_URL="https://storage.googleapis.com/libtpu-releases/index.html"
@@ -146,26 +162,36 @@ PIP_FLAGS="--quiet --retries 10 --timeout 120"
 echo "=== Upgrading pip / setuptools / wheel ==="
 ${PIP} install ${PIP_FLAGS} -U pip setuptools wheel
 
-echo "=== Installing torch ${TORCH_VERSION} + torch_xla ${TORCH_XLA_VERSION} from TPU wheel server ==="
-${PIP} install ${PIP_FLAGS} \
-    "torch==${TORCH_VERSION}" \
-    "torch_xla[tpu]==${TORCH_XLA_VERSION}" \
-    -f "${TPU_WHEEL_URL}"
+if [ "$INSTALL_TORCH_XLA" = "1" ]; then
+    echo "=== Installing torch ${TORCH_VERSION} + torch_xla ${TORCH_XLA_VERSION} from TPU wheel server (legacy path) ==="
+    ${PIP} install ${PIP_FLAGS} \
+        "torch==${TORCH_VERSION}" \
+        "torch_xla[tpu]==${TORCH_XLA_VERSION}" \
+        -f "${TPU_WHEEL_URL}"
 
-echo "=== Verifying torch_xla import ==="
-${PY} -c "import torch; import torch_xla; print('torch:', torch.__version__, '| xla:', torch_xla.__version__)"
+    echo "=== Verifying torch_xla import ==="
+    ${PY} -c "import torch; import torch_xla; print('torch:', torch.__version__, '| xla:', torch_xla.__version__)"
+fi
 
 echo "=== Installing remaining deps ==="
-# Pin torch here too so pip does not silently downgrade it when resolving
-# transitive requirements from transformers / trl / peft.
+# When INSTALL_TORCH_XLA=1, torch was already installed above from the TPU
+# wheel server and the explicit pin below prevents transformers/trl/peft from
+# silently downgrading it. When INSTALL_TORCH_XLA=0 (MaxText path), torch
+# comes transitively from transformers — Stage 1 (generate_traces.py) imports
+# torch directly and Stage 3a (HF -> Orbax converter) loads HF state dicts;
+# both work fine with the PyPI CPU build.
 #
 # NOTE: ML libraries are pinned to EXACT versions (==).  Reason: this codebase
 # has already worked around shape bugs in transformers DynamicLayer, API drift
 # in trl SFTTrainer, and accelerate's TPU-mode model placement (see
 # train_lora.py SPMD setup).  An upstream patch release between runs can break
 # any of those — pinning prevents silent regressions on a 24-hour pipeline.
+_TORCH_PIN_ARGS=()
+if [ "$INSTALL_TORCH_XLA" = "1" ]; then
+    _TORCH_PIN_ARGS=("torch==${TORCH_VERSION}" -f "${TPU_WHEEL_URL}")
+fi
 ${PIP} install ${PIP_FLAGS} \
-    "torch==${TORCH_VERSION}" \
+    "${_TORCH_PIN_ARGS[@]}" \
     "bodhi-llm[all]==0.1.4" \
     "transformers==4.57.6" \
     "peft==0.19.1" \
@@ -183,13 +209,14 @@ ${PIP} install ${PIP_FLAGS} \
     "matplotlib>=3.7,<4.0" \
     -f "${TPU_WHEEL_URL}"
 
-# optimum-tpu provides the FSDPv2 helpers (use_fsdp_v2/ get_fsdp_training_args)
-# that wire torch_xla's XLA FSDP v2 into HuggingFace Trainer.  We install it
-# without an upstream pin because the API is stable across recent versions and
-# the package is small (pure-Python wrappers around torch_xla).  --no-deps
-# keeps it from yanking transformers/torch back to its own pinned versions.
-echo "=== Installing optimum-tpu (FSDPv2 helpers) ==="
-${PIP} install ${PIP_FLAGS} --no-deps "optimum-tpu>=0.2.0"
+# optimum-tpu (legacy path only) provides the FSDPv2 helpers (use_fsdp_v2/
+# get_fsdp_training_args) that wire torch_xla's XLA FSDP v2 into HuggingFace
+# Trainer. Pure-Python wrappers around torch_xla; useless without it.
+# --no-deps keeps it from yanking transformers/torch back to its own pins.
+if [ "$INSTALL_TORCH_XLA" = "1" ]; then
+    echo "=== Installing optimum-tpu (FSDPv2 helpers, legacy path) ==="
+    ${PIP} install ${PIP_FLAGS} --no-deps "optimum-tpu>=0.2.0"
+fi
 
 # JAX stack + MaxText runtime deps for third_party/maxtext (vendored).
 # Stage 3 is the only stage that uses MaxText, and it runs as its own process,
@@ -262,8 +289,13 @@ import sys, pathlib
 repo_root = pathlib.Path.home() / 'bohdi-lora'
 sys.path.insert(0, str(repo_root / 'third_party' / 'maxtext' / 'src'))
 
-# Main ML stack (Stages 1-2-4 vLLM grading; Stage 3 LoRA train)
-import torch, torch_xla, peft, trl, transformers, accelerate
+# Main ML stack: torch comes from transformers as a transitive dep on the
+# MaxText path; torch_xla only when INSTALL_TORCH_XLA=1 (legacy launchers).
+# The shell expands \${INSTALL_TORCH_XLA} into '0' or '1' before Python sees it.
+import torch, peft, trl, transformers, accelerate
+_install_torch_xla = ${INSTALL_TORCH_XLA} == 1
+if _install_torch_xla:
+    import torch_xla  # noqa: F401
 
 # JAX stack
 import jax, flax, optax, orbax.checkpoint, chex
@@ -309,7 +341,8 @@ assert _mm(flax.__version__) >= (0, 12, 7), f'flax {flax.__version__} < 0.12.7'
 assert _mm(chex.__version__) >= (0, 1, 91), f'chex {chex.__version__} < 0.1.91'
 
 print('torch:', torch.__version__)
-print('torch_xla:', torch_xla.__version__)
+if _install_torch_xla:
+    print('torch_xla:', torch_xla.__version__)
 print('transformers:', transformers.__version__)
 print('peft:', peft.__version__)
 print('trl:', trl.__version__)
