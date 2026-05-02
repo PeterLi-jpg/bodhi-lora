@@ -206,6 +206,8 @@ def _train(cfg: dict, seed: int, output_dir: str) -> None:
     # trainer (it requires Python 3.11+ which v6e doesn't have), so we
     # don't import it at all.
     from maxtext.configs import pyconfig
+    from maxtext.common import checkpointing as mt_checkpointing
+    from flax.linen import partitioning as nn_partitioning
 
     from scripts.maxtext_lora import lora_inject
     from scripts.maxtext_lora import dataset_loader
@@ -291,20 +293,53 @@ def _train(cfg: dict, seed: int, output_dir: str) -> None:
           flush=True)
 
     # --- Restore the base orbax checkpoint into params -----------------------
-    # UNTESTED: the orbax checkpoint produced by
-    # scripts/convert_medgemma_to_maxtext.py uses MaxText's
-    # save_weights_to_checkpoint (llama_or_mistral_ckpt module). The
-    # raw PyTreeCheckpointer call below may need restore_args
-    # (sharding, OCDBT, Zarr3) — MaxText's own loader sets these. If
-    # this fails on the first TPU run, swap to
-    # ``maxtext.common.checkpointing._load_full_state_from_path`` and
-    # pass restore_args derived from the abstract param tree. Keeping
-    # the simple form here so the failure surface is small and easy
-    # to read.
+    # Use MaxText's ``load_params_from_path`` rather than raw
+    # PyTreeCheckpointer().restore() — the helper handles OCDBT / Zarr3
+    # format flags and constructs the right ``restore_args`` from an
+    # abstract-shaped params tree. The abstract tree is just our
+    # already-initialized ``params`` mapped to ShapeDtypeStruct.
     print(f"Restoring base weights from {orbax_ckpt}...", flush=True)
-    restorer = ocp.PyTreeCheckpointer()
-    restored = restorer.restore(str(Path(orbax_ckpt).resolve()))
-    params = _merge_base_into_params(params, restored)
+    abstract_params = jax.tree_util.tree_map(
+        lambda p: jax.ShapeDtypeStruct(
+            shape=p.shape, dtype=p.dtype,
+            sharding=getattr(p, "sharding", None),
+        ),
+        params,
+    )
+    # Strip the ``params`` outer key for load_params_from_path —
+    # MaxText saves the inner ``params`` dict under the ``params`` key
+    # of the on-disk checkpoint (see save_params_to_path). The helper
+    # peels that wrapper itself; we hand it the inner abstract.
+    abstract_inner = abstract_params.get("params", abstract_params) \
+        if isinstance(abstract_params, dict) else abstract_params
+    # Wrap restore in mesh + axis_rules — MaxText's setup_decode_state
+    # does the same (line 1289 of maxtext_utils.py: ``with
+    # nn_partitioning.axis_rules(config.logical_axis_rules):
+    # checkpointing.load_params_from_path(...)``). Without the context
+    # the restored arrays may end up replicated, blowing memory on
+    # the 27 B base.
+    mesh = model.mesh
+    with mesh, nn_partitioning.axis_rules(mt_cfg.logical_axis_rules):
+        try:
+            restored_inner = mt_checkpointing.load_params_from_path(
+                str(Path(orbax_ckpt).resolve()),
+                abstract_inner,
+                checkpoint_storage_concurrent_gb=96,
+            )
+            restored = {"params": restored_inner} \
+                if isinstance(params, dict) and "params" in params \
+                else restored_inner
+        except Exception as e:
+            print(
+                f"WARNING: load_params_from_path failed ({e!r}). Falling "
+                "back to raw PyTreeCheckpointer().restore() — sharding "
+                "may be wrong but this gives a clearer error to iterate on.",
+                flush=True,
+            )
+            restored = ocp.PyTreeCheckpointer().restore(
+                str(Path(orbax_ckpt).resolve())
+            )
+        params = _merge_base_into_params(params, restored)
     print("Base weights restored.", flush=True)
 
     # --- Dataset iterators ---------------------------------------------------
@@ -338,7 +373,12 @@ def _train(cfg: dict, seed: int, output_dir: str) -> None:
         )
 
     tx = optax.masked(base_tx, mask=_mask_fn)
-    opt_state = tx.init(params)
+    # Init the optimizer state inside mesh + axis_rules so the Adam
+    # moments inherit the LoRA params' sharding (LoRA params are tiny
+    # so this is cheap, but doing it under context keeps the jit'd
+    # train_step's sharding inference consistent).
+    with model.mesh, nn_partitioning.axis_rules(mt_cfg.logical_axis_rules):
+        opt_state = tx.init(params)
 
     # --- jit'd train_step + eval_step ----------------------------------------
     def _ce_loss(logits, labels, loss_mask):
@@ -407,8 +447,16 @@ def _train(cfg: dict, seed: int, output_dir: str) -> None:
         logits = _forward(params_tree, batch["input_ids"], dropout_rng, params_rng, False)
         return _ce_loss(logits, batch["labels"], batch["loss_mask"]), rng
 
-    train_step = jax.jit(_train_step)
-    eval_step = jax.jit(_eval_step)
+    # JIT under mesh + axis_rules so the train_step's input/output
+    # shardings propagate from the model's PartitionSpec annotations.
+    # Without this context the optimizer state may be replicated
+    # across all chips (LoRA-sized, so OK) but the model params would
+    # also be replicated (27 B × 8 chips = OOM). Keeping the context
+    # active for both jit and the loop body ensures consistency.
+    mesh = model.mesh
+    with mesh, nn_partitioning.axis_rules(mt_cfg.logical_axis_rules):
+        train_step = jax.jit(_train_step)
+        eval_step = jax.jit(_eval_step)
 
     # --- Training loop -------------------------------------------------------
     print(f"--- training: {num_epochs} epoch(s), {total_steps} total step(s) ---",
@@ -419,52 +467,60 @@ def _train(cfg: dict, seed: int, output_dir: str) -> None:
     global_step = 0
     logging_steps = int(train_cfg.get("logging_steps", 5))
 
-    for epoch in range(num_epochs):
-        for _ in range(steps_per_epoch):
-            np_batch = next(train_iter)
-            batch = {k: jnp.asarray(v) for k, v in np_batch.items()}
-            params, opt_state, loss, rng = train_step(params, opt_state, batch, rng)
-            global_step += 1
+    # Run the loop inside the same mesh + axis_rules context as the jit
+    # so cross-device collectives use the correct partition spec.
+    with mesh, nn_partitioning.axis_rules(mt_cfg.logical_axis_rules):
+        for epoch in range(num_epochs):
+            for _ in range(steps_per_epoch):
+                np_batch = next(train_iter)
+                batch = {k: jnp.asarray(v) for k, v in np_batch.items()}
+                params, opt_state, loss, rng = train_step(params, opt_state, batch, rng)
+                global_step += 1
 
-            if not first_step_logged:
-                first_step_logged = True
-                elapsed_min = (time.monotonic() - t_start) / 60.0
-                # The launcher's compile-done detector greps for this exact
-                # phrase to know XLA compile finished.
-                print(f"first step landed in {elapsed_min:.1f} min", flush=True)
+                if not first_step_logged:
+                    first_step_logged = True
+                    elapsed_min = (time.monotonic() - t_start) / 60.0
+                    # The launcher's compile-done detector greps for this
+                    # exact phrase to know XLA compile finished.
+                    print(f"first step landed in {elapsed_min:.1f} min", flush=True)
 
-            if global_step % logging_steps == 0 or global_step == total_steps:
-                jax.block_until_ready(loss)
-                print(f"step {global_step}/{total_steps} loss={float(loss):.4f}",
+                if global_step % logging_steps == 0 or global_step == total_steps:
+                    jax.block_until_ready(loss)
+                    print(f"step {global_step}/{total_steps} loss={float(loss):.4f}",
+                          flush=True)
+
+            # End of epoch: eval + per-epoch orbax save
+            eval_iter_for_epoch = dataset_loader.build_iterators(
+                dataset_dir=dataset_dir,
+                train_file=train_file,
+                val_file=val_file,
+                per_device_batch_size=train_cfg["per_device_train_batch_size"],
+                gradient_accumulation_steps=train_cfg["gradient_accumulation_steps"],
+                max_seq_length=train_cfg["max_seq_length"],
+                seed=seed,
+            )[1]  # eval_iter
+            eval_losses = []
+            for np_batch in eval_iter_for_epoch:
+                batch = {k: jnp.asarray(v) for k, v in np_batch.items()}
+                loss, rng = eval_step(params, batch, rng)
+                eval_losses.append(float(loss))
+            if eval_losses:
+                mean_eval = sum(eval_losses) / len(eval_losses)
+                print(f"epoch {epoch + 1}/{num_epochs} eval_loss={mean_eval:.4f}",
                       flush=True)
 
-        # End of epoch: eval + per-epoch orbax save
-        eval_iter_for_epoch = dataset_loader.build_iterators(
-            dataset_dir=dataset_dir,
-            train_file=train_file,
-            val_file=val_file,
-            per_device_batch_size=train_cfg["per_device_train_batch_size"],
-            gradient_accumulation_steps=train_cfg["gradient_accumulation_steps"],
-            max_seq_length=train_cfg["max_seq_length"],
-            seed=seed,
-        )[1]  # eval_iter
-        eval_losses = []
-        for np_batch in eval_iter_for_epoch:
-            batch = {k: jnp.asarray(v) for k, v in np_batch.items()}
-            loss, rng = eval_step(params, batch, rng)
-            eval_losses.append(float(loss))
-        if eval_losses:
-            mean_eval = sum(eval_losses) / len(eval_losses)
-            print(f"epoch {epoch + 1}/{num_epochs} eval_loss={mean_eval:.4f}",
-                  flush=True)
-
-        # Save the LoRA factors only (filter the params tree by the mask).
-        epoch_dir = orbax_out / f"step-{global_step}"
-        lora_only = jax.tree_util.tree_map(
-            lambda p, m: p if bool(m) else None, params, lora_filter_mask
-        )
-        ocp.PyTreeCheckpointer().save(str(epoch_dir.resolve()), lora_only)
-        print(f"saved orbax LoRA checkpoint to {epoch_dir}", flush=True)
+            # Save the full params tree (base + LoRA). The downstream
+            # exporter (export_maxtext_lora_to_peft.export) walks the
+            # restored pytree and only keeps leaves matching ``lora_a`` /
+            # ``lora_b`` patterns, so saving the full tree is correct.
+            # We tried saving only LoRA leaves (replacing base with None)
+            # but PyTreeCheckpointer doesn't accept None leaves; falling
+            # back to full save costs ~50 GB per epoch on disk but matches
+            # MaxText's own checkpoint pattern and avoids a custom
+            # save/restore protocol.
+            epoch_dir = orbax_out / f"step-{global_step}"
+            ocp.PyTreeCheckpointer().save(str(epoch_dir.resolve()), params)
+            print(f"saved orbax checkpoint to {epoch_dir}", flush=True)
 
     # --- Final export to PEFT ------------------------------------------------
     final_ckpt = orbax_out / f"step-{global_step}"

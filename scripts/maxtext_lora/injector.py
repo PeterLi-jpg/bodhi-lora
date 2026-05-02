@@ -398,19 +398,23 @@ def apply_lora(
     # Init the full params pytree (base + LoRA) once. The base weights
     # will be overwritten by the orbax restore in the trainer; the
     # LoRA factors stay as initialized (lora_a kaiming, lora_b zeros).
+    #
+    # Three RNG collections like MaxText's init_initial_state (see
+    # third_party/maxtext/src/maxtext/utils/maxtext_utils.py:1247):
+    # ``params`` for weight init, ``dropout`` for dropout layers,
+    # ``aqt`` for AQT (quantization noise) sampling. Missing ``aqt``
+    # raises a ``KeyError`` from inside the Gemma-3 quantization
+    # decorator on the first init pass.
+    params_key, dropout_key, aqt_key = jax.random.split(
+        jax.random.PRNGKey(seed), 3
+    )
     init_rngs = {
-        "params": jax.random.PRNGKey(seed),
-        "dropout": jax.random.PRNGKey(seed + 1),
+        "params": params_key,
+        "dropout": dropout_key,
+        "aqt": aqt_key,
     }
-    # MaxText pre_train.train.loss_fn (lines 136-148) shows the real
-    # call signature: positional ``inputs``, ``inputs_position``, and
-    # then a fan of kwargs for segmentation / multimodal / mutables.
-    # ``model.init`` takes the same signature as ``model.apply`` since
-    # Flax dispatches both through ``__call__``. We init with the
-    # minimal text-only single-segment shape — multimodal Gemma-3 has
-    # the encoder paths gated on config.use_multimodal so passing None
-    # is correct for the text-only MedGemma-27B path.
     import jax.numpy as jnp
+    from flax.linen import partitioning as nn_partitioning
     bsz = int(mt_cfg.per_device_batch_size)
     seqlen = int(mt_cfg.max_target_length)
     dummy_inputs = jnp.zeros((bsz, seqlen), dtype=jnp.int32)
@@ -418,17 +422,25 @@ def apply_lora(
         jnp.arange(seqlen, dtype=jnp.int32), (bsz, seqlen)
     )
     dummy_segmentation = jnp.ones((bsz, seqlen), dtype=jnp.int32)
-    variables = model.init(
-        init_rngs,
-        dummy_inputs,
-        dummy_positions,
-        decoder_segment_ids=dummy_segmentation,
-        encoder_images=None,
-        encoder_image_masks=None,
-        enable_dropout=False,  # init pass; no dropout
-        decoder_target_tokens=dummy_inputs,
-        decoder_target_mask=dummy_segmentation,
-    )
+
+    # Init under mesh + logical_axis_rules so the model's
+    # ``with_partitioning`` annotations on its Dense kernels resolve to
+    # real PartitionSpecs (and the resulting params are sharded across
+    # the v6e fsdp axis instead of replicated). This mirrors
+    # ``maxtext_utils.get_abstract_param`` (lines 1280+) which uses the
+    # same context for jax.eval_shape.
+    with mesh, nn_partitioning.axis_rules(mt_cfg.logical_axis_rules):
+        variables = model.init(
+            init_rngs,
+            dummy_inputs,
+            dummy_positions,
+            decoder_segment_ids=dummy_segmentation,
+            encoder_images=None,
+            encoder_image_masks=None,
+            enable_dropout=False,  # init pass; no dropout
+            decoder_target_tokens=dummy_inputs,
+            decoder_target_mask=dummy_segmentation,
+        )
 
     lora_filter_mask = _build_lora_filter_mask(variables)
     return model, variables, lora_filter_mask
