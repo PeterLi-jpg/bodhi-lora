@@ -4,7 +4,8 @@ Environment setup for Mac, Linux, and Windows.
 
 ## Requirements
 
-- Python 3.10, 3.11, or 3.12 (3.11 recommended)
+- Dev box / GPU: Python 3.10, 3.11, or 3.12 (3.11 recommended).
+- TPU (v6e): Python 3.11 required, provisioned automatically by `tpu/setup_tpu.sh` via apt + venv at `~/.venv-py311`.
 - [Conda](https://docs.conda.io/en/latest/miniconda.html) or `pip` + `venv`
 - CUDA 12.1+ for GPU runs (Linux only)
 - A HuggingFace account with access to gated models (see below)
