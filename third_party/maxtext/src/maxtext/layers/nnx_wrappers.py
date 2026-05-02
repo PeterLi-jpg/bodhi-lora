@@ -29,7 +29,17 @@ from flax.nnx import graph
 from flax.nnx import variablelib
 from flax.nnx.bridge import module as bdg_module
 from flax.nnx.module import Module
-from flax.nnx import Pytree
+try:
+    from flax.nnx import Pytree
+except ImportError:
+    # flax 0.10.x (py3.10-compatible) does not expose ``Pytree`` at the
+    # ``flax.nnx`` top level. The only consumer in this file is the
+    # ``isinstance(value, Pytree)`` guard further down, which decides
+    # whether ``value`` is an NNX-tracked entity. ``flax.nnx.Module`` is
+    # a close enough proxy for that check and avoids the multi-week
+    # alternative of rebuilding the v6e VM image on Python 3.11 (where
+    # flax 0.11+ with native ``Pytree`` is available).
+    from flax.nnx import Module as Pytree  # type: ignore[assignment]
 from flax.nnx.rnglib import Rngs
 import jax
 from jax import tree_util as jtu
