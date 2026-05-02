@@ -191,83 +191,122 @@ ${PIP} install ${PIP_FLAGS} \
 echo "=== Installing optimum-tpu (FSDPv2 helpers) ==="
 ${PIP} install ${PIP_FLAGS} --no-deps "optimum-tpu>=0.2.0"
 
-# JAX stack for the vendored MaxText baseline (third_party/maxtext).
+# JAX stack + MaxText runtime deps for third_party/maxtext (vendored).
 # Stage 3 is the only stage that uses MaxText, and it runs as its own process,
 # so jax and torch_xla don't try to claim TPU chips simultaneously.
 #
-# py3.11 is provisioned at the top of this script via apt + venv, so
-# MaxText's tpu-requirements.txt floors (etils 1.14+, ml-collections 1.1+,
-# jaxtyping 0.3.9+, psutil 7.2+, chex 0.1.91+, etc.) apply naturally.
+# Floor versions track MaxText's
+#   third_party/maxtext/src/dependencies/requirements/requirements_decoupled_jax_0_7.1.txt
+# (the file's name is misleading — it's the latest "decoupled jax" recipe and
+# its actual jax pin is the current stable, 0.10.x as of 2026-05). On py3.11
+# every floor below resolves cleanly; on py3.10 several do not, which is why
+# we provision py3.11 at the top of this script.
 #
-# We KEEP the jax[tpu]>=0.4.30,<0.7 pin: MaxText's tpu-requirements.txt
-# pins jax>=0.9.2 but that's an unreleased pre-0.7 series not yet on PyPI
-# (PyPI tops out at jax 0.6.x as of 2026-04). Bumping jax is a separate
-# decision once 0.9 ships.
-echo "=== Installing JAX stack for MaxText baseline ==="
+# v9-v17 each died on a different missing transitive dep — flax.nnx.Pytree,
+# tokamax (vendored splash-attention kernels), tiktoken (HF tokenizer fallback),
+# sympy (rope helpers in maxtext.layers.engram), tensorflow_text /
+# tensorflow_datasets (input pipeline), grain (dataset sharding), tensorstore
+# (orbax storage backend), safetensors / sentencepiece (tokenizer loading).
+# Pre-flight pip resolution + `import maxtext.*` on a clean py3.11 venv showed
+# all of them are reachable from `import maxtext.checkpoint_conversion.to_maxtext`,
+# so install them all here. Adding a dep is dramatically cheaper than another
+# 70-min smoke crash.
+echo "=== Installing JAX stack + MaxText runtime deps ==="
 # `jax[tpu]` pulls libtpu from PyPI directly; no -f flag needed (the
 # TPU_WHEEL_URL above is torch_xla's libtpu mirror, a separate distribution).
-#
-# Beyond the JAX 4-pack, MaxText's runtime modules import several extra
-# packages (omegaconf for config dataclasses, etils for path helpers,
-# qwix for LoRA, jaxtyping for shape annotations, psutil for memory
-# probes, google-cloud-storage for the Orbax converter, chex for tree
-# utilities, ml_collections used by maxtext.configs). v9 caught
-# omegaconf as the first missing dep at Stage 3a; install the full set
-# here so the converter and trainer don't crash on a fresh v6e VM.
-#
-# flax>=0.11 is required so flax.nnx.Pytree is native (the shim in
-# nnx_wrappers.py becomes a no-op).
 ${PIP} install ${PIP_FLAGS} \
-    "jax[tpu]>=0.4.30,<0.7" \
-    "flax>=0.11.0" \
-    "orbax-checkpoint>=0.11" \
-    "optax>=0.2.4" \
-    "omegaconf>=2.3.0" \
-    "etils[epath]>=1.14.0" \
+    "absl_py>=2.3.1" \
+    "jax[tpu]>=0.10.0,<0.11" \
+    "jaxlib>=0.10.0" \
+    "flax>=0.12.7" \
+    "orbax-checkpoint>=0.11.25" \
+    "optax>=0.2.6" \
+    "chex>=0.1.91" \
     "qwix>=0.1.6" \
+    "pathwaysutils>=0.1.8" \
+    "aqtp>=0.9.0" \
+    "tokamax>=0.0.12" \
+    "ml-collections>=1.1.0" \
+    "ml_dtypes>=0.5.3" \
+    "etils[epath]>=1.14.0" \
     "jaxtyping>=0.3.9" \
     "psutil>=7.2.2" \
     "google-cloud-storage>=3.10.1" \
-    "chex>=0.1.91" \
-    "ml-collections>=1.1.0" \
-    "pathwaysutils>=0.1.8" \
-    "aqtp>=0.9.0"
+    "omegaconf>=2.3.0" \
+    "tensorstore>=0.1.76" \
+    "grain>=0.2.12" \
+    "huggingface_hub>=0.35.3" \
+    "tiktoken>=0.12.0" \
+    "safetensors>=0.6.2" \
+    "sentencepiece>=0.2.1" \
+    "sympy>=1.12" \
+    "evaluate>=0.4.6" \
+    "nltk>=3.9.2" \
+    "jsonlines>=4.0.0" \
+    "tabulate>=0.9.0" \
+    "parameterized>=0.9.0" \
+    "tensorflow>=2.19.1" \
+    "tensorflow_text>=2.19.0" \
+    "tensorflow_datasets>=4.9.9"
 
 echo "=== Final version check ==="
-# v9, v10, v11 each died ~70 min into Stage 3a because this check only
-# imported the JAX 4-pack — missing deps for the MaxText converter
-# weren't surfaced until Stage 3a actually ran. We now import every
-# external module the production stages 3a/3b/4/5 actually use, plus
-# the MaxText sub-packages so any further dep-tree gap fails here, not
-# at smoke-time. Repo path is added so `import maxtext...` resolves
-# against the vendored third_party/maxtext.
+# v9-v17 each died ~70 min into Stage 3a because this check only imported
+# a narrow slice of MaxText's transitive deps. We now import every
+# external module the production stages 3a/3b/4/5 actually use, plus the
+# MaxText sub-packages so any further dep-tree gap fails here, not at
+# smoke-time. Repo path is added so `import maxtext...` resolves against
+# the vendored third_party/maxtext.
 python3.11 --version
 ${PY} -c "
 import sys, pathlib
 repo_root = pathlib.Path.home() / 'bohdi-lora'
 sys.path.insert(0, str(repo_root / 'third_party' / 'maxtext' / 'src'))
 
+# Main ML stack (Stages 1-2-4 vLLM grading; Stage 3 LoRA train)
 import torch, torch_xla, peft, trl, transformers, accelerate
-import jax, flax, optax, orbax.checkpoint
-import omegaconf, etils.epath, ml_collections, jaxtyping, psutil, chex
+
+# JAX stack
+import jax, flax, optax, orbax.checkpoint, chex
+import jaxtyping  # noqa: F401  (maxtext shape annotations)
+import ml_dtypes  # noqa: F401  (maxtext dtype helpers)
+
+# MaxText auxiliary deps surfaced by v9-v17
+import omegaconf, etils.epath, ml_collections, psutil
 import google.cloud.storage  # noqa: F401  (Stage 3a Orbax ckpt loader)
 import pathwaysutils  # noqa: F401  (transitive: maxtext.utils.elastic_utils)
 import aqt.jax.v2.aqt_tensor  # noqa: F401  (transitive: maxtext.layers.initializers)
+import qwix  # noqa: F401  (transitive: maxtext.layers.quantizations)
+import tokamax  # noqa: F401  (transitive: maxtext.layers.attention_op splash kernel)
+import tensorstore  # noqa: F401  (transitive: orbax storage backend)
+import grain  # noqa: F401  (transitive: maxtext.input_pipeline)
+import huggingface_hub  # noqa: F401  (transitive: maxtext.input_pipeline.tokenizer)
+import tiktoken  # noqa: F401  (transitive: maxtext.input_pipeline.tokenizer)
+import safetensors  # noqa: F401  (transitive: orbax HF converter)
+import sentencepiece  # noqa: F401  (transitive: maxtext.input_pipeline.tokenizer)
+import sympy  # noqa: F401  (transitive: maxtext.layers.engram rope helpers)
+import tensorflow  # noqa: F401  (transitive: maxtext.input_pipeline)
+import tensorflow_text  # noqa: F401  (transitive: maxtext.input_pipeline.tokenizer)
+import tensorflow_datasets  # noqa: F401  (transitive: maxtext.input_pipeline)
 
 # Stage 3a / 3b: the MaxText pipeline modules that died on missing deps
-# in v9-v11. Force-import them here so any further missing transitive
+# in v9-v17. Force-import them here so any further missing transitive
 # dep surfaces in setup, not 70 minutes into Stage 3a.
 import maxtext.checkpoint_conversion.to_maxtext  # noqa: F401
 import maxtext.configs.pyconfig  # noqa: F401
 import maxtext.utils.max_utils  # noqa: F401
+import maxtext.layers.nnx_wrappers  # noqa: F401  (Pytree integration)
+import maxtext.layers.attention_op  # noqa: F401  (tokamax splash kernel)
+import maxtext.layers.quantizations  # noqa: F401  (qwix sparsity API)
 
-# Confirm flax is at least 0.11 so flax.nnx.Pytree is native (no shim
-# needed). Higher is fine; we only fail on regressions below the floor.
-# Tolerate prerelease suffixes (e.g. '0.11.0rc1') by stripping non-digits.
+# Confirm jax / flax / chex / qwix versions match MaxText's runtime
+# expectations. Tolerate prerelease suffixes by stripping non-digits.
 import re
-_parts = re.findall(r'\d+', flax.__version__)
-flax_major_minor = tuple(int(x) for x in _parts[:2])
-assert flax_major_minor >= (0, 11), f'flax {flax.__version__} < 0.11'
+def _mm(v):
+    parts = re.findall(r'\d+', v)
+    return tuple(int(x) for x in parts[:3])
+assert _mm(jax.__version__) >= (0, 10, 0), f'jax {jax.__version__} < 0.10'
+assert _mm(flax.__version__) >= (0, 12, 7), f'flax {flax.__version__} < 0.12.7'
+assert _mm(chex.__version__) >= (0, 1, 91), f'chex {chex.__version__} < 0.1.91'
 
 print('torch:', torch.__version__)
 print('torch_xla:', torch_xla.__version__)
@@ -279,10 +318,12 @@ print('jax:', jax.__version__)
 print('flax:', flax.__version__)
 print('optax:', optax.__version__)
 print('orbax-checkpoint:', orbax.checkpoint.__version__)
+print('chex:', chex.__version__)
+print('qwix:', getattr(qwix, '__version__', '?'))
+print('tokamax:', getattr(tokamax, '__version__', '?'))
 print('omegaconf:', omegaconf.__version__)
 print('etils:', etils.__version__)
 print('ml_collections:', ml_collections.__version__)
-print('chex:', chex.__version__)
 print('maxtext: importable')
 "
 
