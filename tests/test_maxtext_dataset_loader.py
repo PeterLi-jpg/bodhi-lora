@@ -221,6 +221,38 @@ def test_too_small_for_batch_raises(tmp_path: Path) -> None:
         )
 
 
+def test_val_too_small_raises(tmp_path: Path) -> None:
+    """Val set smaller than global_batch_size must error. _eval_iter
+    drops partial last batches, so a too-small val split would yield
+    zero batches and the trainer would silently log no eval line.
+    Symmetric with the train-too-small guard."""
+    # Train must clear its own guard (>= global_batch_size rows) so that
+    # the val guard is the one that fires.
+    _write_tokenized(
+        tmp_path / "train.tokenized.jsonl",
+        [
+            {"input_ids": [1, 2], "labels": [-100, 2]},
+            {"input_ids": [3, 4], "labels": [-100, 4]},
+            {"input_ids": [5, 6], "labels": [-100, 6]},
+            {"input_ids": [7, 8], "labels": [-100, 8]},
+        ],
+    )
+    _write_tokenized(
+        tmp_path / "val.tokenized.jsonl",
+        [{"input_ids": [9, 10], "labels": [-100, 10]}],
+    )
+    with pytest.raises(ValueError, match=r"val set .* too small"):
+        dl.build_iterators(
+            dataset_dir=str(tmp_path),
+            train_file=None,
+            val_file=None,
+            per_device_batch_size=2,
+            gradient_accumulation_steps=2,  # global=4, val has 1 row
+            max_seq_length=8,
+            seed=0,
+        )
+
+
 def test_input_ids_labels_length_mismatch(tmp_path: Path) -> None:
     """A row with mismatched input_ids/labels lengths is corrupt — the
     converter never emits this — bail rather than train on noise."""
