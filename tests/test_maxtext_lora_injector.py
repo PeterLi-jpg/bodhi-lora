@@ -251,3 +251,74 @@ def test_inject_lora_rejects_non_module():
             alpha=16.0,
             dropout=0.05,
         )
+
+
+# ---------------------------------------------------------------------------
+# DenseGeneral (NNX) recognition: issue #6.
+#
+# MaxText's Gemma-3 attention layers expose `query`/`key`/`value`/`out`
+# (separate projections, since fused_qkv defaults to False) as
+# `DenseGeneral(nnx.Module)`. The Linen-only walker used to skip these
+# entirely; the injector now recognises them via duck-typing
+# (`in_features_shape` + `out_features_shape` + `kernel`) and raises a
+# clear NotImplementedError at wrap time. Production NNX-LoRA wrapping is a
+# follow-up; the test just pins the recognition path so a future change
+# can't silently regress to the "no targets matching" failure mode.
+# ---------------------------------------------------------------------------
+
+class _FakeDenseGeneral(nn.Module):
+    """Linen-side stub that quacks like a MaxText NNX DenseGeneral.
+
+    It declares the three duck-typed attributes the injector keys on
+    (``in_features_shape``, ``out_features_shape``, ``kernel``) so the
+    NotImplementedError path fires without dragging in the real NNX module.
+    Inheriting from ``nn.Module`` is just to satisfy ``_is_flax_module`` so
+    the walker descends into the parent and reaches this stub.
+    """
+    hidden: int = 8
+
+    def __post_init__(self):
+        # Multi-axis output, like attention's query: (num_heads, head_dim).
+        object.__setattr__(self, "in_features_shape", (self.hidden,))
+        object.__setattr__(self, "out_features_shape", (2, self.hidden // 2))
+        # Sentinel: anything truthy passes the hasattr check.
+        object.__setattr__(self, "kernel", object())
+        super().__post_init__()
+
+
+class _AttnWithDenseGeneralQuery(nn.Module):
+    hidden: int = 8
+
+    def __post_init__(self):
+        object.__setattr__(self, "query", _FakeDenseGeneral(hidden=self.hidden))
+        # A non-target plain Dense so the walk has something else to skip.
+        object.__setattr__(self, "out", nn.Dense(self.hidden))
+        super().__post_init__()
+
+
+def test_inject_lora_raises_not_implemented_for_dense_general():
+    """If a target name resolves to a DenseGeneral-shaped module, we want a
+    loud NotImplementedError at wrap time, not a silent miss-shape."""
+    parent = _AttnWithDenseGeneralQuery(hidden=8)
+    with pytest.raises(NotImplementedError, match="DenseGeneral"):
+        injector.inject_lora(
+            parent,
+            target_modules=["query"],
+            rank=8,
+            alpha=16.0,
+            dropout=0.05,
+        )
+
+
+def test_is_dense_general_duck_typing():
+    """The duck-type check should recognise objects that expose all three
+    sentinel attributes regardless of class."""
+    class _Quack:
+        in_features_shape = (8,)
+        out_features_shape = (2, 4)
+        kernel = object()
+
+    assert injector._is_dense_general(_Quack())
+    # nn.Dense is NOT a DenseGeneral; it has `features`, not the shape tuples.
+    assert not injector._is_dense_general(nn.Dense(8))
+    assert not injector._is_dense_general(object())

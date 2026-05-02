@@ -41,6 +41,20 @@ except ImportError:
     nn = None  # type: ignore[assignment]
     _HAS_FLAX = False
 
+# NNX is a separate module from Linen. MaxText's Gemma-3 attention/MLP
+# projections are ``DenseGeneral(nnx.Module)`` instances (see
+# third_party/maxtext/src/maxtext/layers/linears.py), which the Linen-only
+# walker would skip. We import nnx if available so the walker can recognise
+# either flavour; production wrapping of NNX modules is a follow-up (see
+# _wrap_in_lora below: we raise NotImplementedError until a real NNX-aware
+# LoraDense lands).
+try:
+    from flax import nnx  # type: ignore[import-not-found]
+    _HAS_NNX = True
+except ImportError:
+    nnx = None  # type: ignore[assignment]
+    _HAS_NNX = False
+
 # Unit 2 supplies LoraDense. We import lazily so a missing Unit-2 file
 # surfaces as an ImportError at inject_lora() call time, not at module
 # import time. Keeps test collection clean.
@@ -53,12 +67,36 @@ except ImportError:
 
 
 def _is_flax_module(obj: Any) -> bool:
-    """True if obj is a flax.linen.Module instance.
+    """True if obj is a Flax module: either Linen ``nn.Module`` or NNX ``nnx.Module``.
 
-    Returns False on bare envs where flax isn't importable, so this file
-    stays usable for static analysis even without the runtime deps.
+    The injector walks both kinds: MaxText's own layers are NNX (e.g.
+    ``DenseGeneral``), while the Linen-bridge wrapper that ``model_creation_utils``
+    sometimes returns is plain Linen. Returns False on bare envs where flax
+    isn't importable, so this file stays usable for static analysis even
+    without the runtime deps.
     """
-    return _HAS_FLAX and isinstance(obj, nn.Module)
+    if _HAS_FLAX and isinstance(obj, nn.Module):
+        return True
+    if _HAS_NNX and isinstance(obj, nnx.Module):
+        return True
+    return False
+
+
+def _is_dense_general(obj: Any) -> bool:
+    """True if ``obj`` looks like MaxText's ``DenseGeneral`` (duck-typed).
+
+    We can't ``isinstance``-check ``DenseGeneral`` here without importing
+    MaxText (which pulls in its own JAX/Flax deps and sometimes runs setup
+    side-effects), so we use the same duck-type the wrapper would need
+    anyway: ``in_features_shape`` + ``out_features_shape`` tuples and a
+    ``kernel`` attribute. Linen's ``nn.Dense`` has ``features`` (a single
+    int) instead and is detected separately.
+    """
+    return (
+        hasattr(obj, "in_features_shape")
+        and hasattr(obj, "out_features_shape")
+        and hasattr(obj, "kernel")
+    )
 
 
 def _iter_child_modules(parent: Any) -> Iterator[tuple[str, int | None, Any]]:
@@ -107,16 +145,38 @@ def _replace_child(parent: Any, field: str, idx: int | None, new_child: Any) -> 
 def _wrap_in_lora(base_dense: Any, rank: int, alpha: float, dropout: float) -> Any:
     """Build a LoraDense wrapping ``base_dense`` with the given hyperparams.
 
-    ``LoraDense`` takes ``features`` (output dim, required), and optionally
-    ``base`` (the pre-built frozen Dense), plus ``rank`` / ``alpha`` /
-    ``dropout``. We pull ``features`` off the wrapped Dense so the LoRA
-    factor's output dim matches the base. Everything is passed by keyword
-    so a future field-order tweak doesn't break us.
+    Two base shapes are recognised:
+
+    * Linen ``nn.Dense``: has ``features: int``. The existing ``LoraDense``
+      wraps it directly; output dim is ``base.features``.
+    * MaxText NNX ``DenseGeneral``: has ``out_features_shape`` (a tuple) and
+      ``in_features_shape`` (also a tuple). Its output may be multi-axis
+      (e.g. attention's ``query`` projects to
+      ``(num_query_heads, head_dim)``), which the current Linen-only
+      ``LoraDense`` does not handle. We raise ``NotImplementedError`` with
+      a clear message rather than silently producing a wrapper that builds
+      mis-shaped LoRA factors.
+
+    Everything is passed by keyword so a future field-order tweak doesn't
+    break us.
     """
     if not _HAS_LORA_DENSE:
         raise ImportError(
             "scripts.maxtext_lora.layer.LoraDense not found. Unit 2 must be "
             "merged before the injector can run."
+        )
+    if _is_dense_general(base_dense):
+        # NNX DenseGeneral wrapping is intentionally a follow-up: it needs
+        # an NNX-flavoured LoraDense that handles multi-axis outputs (q/k/v
+        # project to (num_heads, head_dim), MLP wi to (intermediate_dim,)).
+        # Crash with context instead of producing a broken wrapper.
+        raise NotImplementedError(
+            "inject_lora encountered a DenseGeneral target "
+            f"(in_features_shape={getattr(base_dense, 'in_features_shape', None)!r}, "
+            f"out_features_shape={getattr(base_dense, 'out_features_shape', None)!r}). "
+            "The current LoraDense only wraps flax.linen.Dense; an NNX-aware "
+            "LoraDense for DenseGeneral is a follow-up. See "
+            "scripts/maxtext_lora/layer.py and the PR description for #6."
         )
     return LoraDense(
         features=base_dense.features,

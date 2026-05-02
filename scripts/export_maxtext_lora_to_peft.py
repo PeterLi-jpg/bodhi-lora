@@ -462,7 +462,16 @@ def export(
         # Honour the YAML's intent — drop anything we didn't ask for and
         # warn loudly about modules that were configured but not found
         # (almost always a bug in the training run).
-        requested_set = set(requested)
+        #
+        # The YAML can specify modules using either HF names (q_proj, v_proj,
+        # gate_proj, ...) or MaxText names (query, value, wi_0, wo, ...).
+        # ``found_targets`` from collect_lora_weights is already normalised
+        # to HF names, so we run the requested list through the same alias
+        # map before intersecting; otherwise a YAML that says ``query``
+        # would silently fail to match a checkpoint that holds ``q_proj``.
+        requested_set = {
+            _PROJECTION_ALIASES.get(m.lower(), m) for m in requested
+        }
         target_modules = [m for m in found_targets if m in requested_set]
         missing = sorted(requested_set - set(found_targets))
         extra = sorted(set(found_targets) - requested_set)
