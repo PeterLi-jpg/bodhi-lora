@@ -84,6 +84,12 @@ cd ~/bohdi-lora
 echo "=== Setting up deps ==="
 bash tpu/setup_tpu.sh
 
+# Use the venv interpreter created by setup_tpu.sh. System python3 on
+# v6e VMs is 3.10; we need 3.11. Backslash-\$ defers expansion to the
+# remote shell (this is an unquoted heredoc, so unescaped \${PY} would
+# be expanded locally to an empty string).
+PY=~/.venv-py311/bin/python
+
 echo "=== Making data dirs ==="
 mkdir -p data/sft eval checkpoints logs
 
@@ -110,7 +116,7 @@ export PJRT_DEVICE=TPU
 # across all chips from one Python process). xmp.spawn would have each
 # child try to load a full 54 GB MedGemma-27B replica and immediately OOM.
 # Same rationale as tpu/launch_multiseed.sh:678-686 and smoke_27b_tpu.sh:115-121.
-python scripts/train_lora.py \
+\${PY} scripts/train_lora.py \
     --config configs/lora_medgemma27b_tpu.yaml \
     --output-dir checkpoints
 
