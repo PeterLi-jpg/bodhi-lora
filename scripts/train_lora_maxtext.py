@@ -92,28 +92,71 @@ def _expand(path: str) -> str:
     return os.path.expanduser(os.path.expandvars(path))
 
 
+def _unwrap_orbax_state(restored):
+    """Some MaxText orbax saves wrap the param tree under ``state.params``
+    or ``params``; some don't. Walk down known wrapper keys until we
+    find a leaf shaped like the model's param tree (i.e. has nested
+    decoder/embedder/etc. children). Returns the unwrapped tree."""
+    if not isinstance(restored, dict):
+        return restored
+    # Heuristic: if the restored dict has exactly one of these wrappers,
+    # peel it. Stop when the next level no longer has a single-key
+    # wrapper structure.
+    for wrapper in ("state", "params"):
+        if (
+            isinstance(restored, dict)
+            and len(restored) == 1
+            and wrapper in restored
+            and isinstance(restored[wrapper], dict)
+        ):
+            restored = restored[wrapper]
+    return restored
+
+
 def _merge_base_into_params(params, restored):
     """Overwrite ``params`` leaves with values from ``restored`` wherever
     paths match. Leaves only present in ``params`` (the LoRA factors)
     are preserved untouched.
 
-    UNTESTED: assumes ``params`` and ``restored`` use the same nested
-    dict / Flax FrozenDict shape rooted at ``"params"`` and that base
-    leaves match by exact path. Real MaxText orbax saves may nest
-    inside a ``state.params`` wrapper or strip the leading ``params``
-    key; first TPU iteration tells us which.
+    Defensive against orbax-wrapper differences: ``_unwrap_orbax_state``
+    peels common wrappers (``state.params``, ``params``) before
+    matching. Whatever remains is matched by string-form path against
+    the LoRA-injected init tree.
+
+    Logs a summary of (matched, total) leaves so the first-iteration
+    operator can see whether the merge actually replaced base weights —
+    a low match count means the path layouts disagree and we'll need
+    a different unwrap strategy.
     """
     import jax
 
+    restored_inner = _unwrap_orbax_state(restored)
     flat_params = jax.tree_util.tree_flatten_with_path(params)[0]
-    flat_restored, _ = jax.tree_util.tree_flatten_with_path(restored)
+    flat_restored = jax.tree_util.tree_flatten_with_path(restored_inner)[0]
     restored_lookup = {tuple(str(k) for k in path): leaf for path, leaf in flat_restored}
 
-    def _replace(path, leaf):
-        key = tuple(str(k) for k in path)
-        return restored_lookup.get(key, leaf)
+    matched = 0
 
-    return jax.tree_util.tree_map_with_path(_replace, params)
+    def _replace(path, leaf):
+        nonlocal matched
+        key = tuple(str(k) for k in path)
+        if key in restored_lookup:
+            matched += 1
+            return restored_lookup[key]
+        return leaf
+
+    merged = jax.tree_util.tree_map_with_path(_replace, params)
+    total_params = len(flat_params)
+    total_restored = len(flat_restored)
+    print(
+        f"[orbax merge] matched {matched}/{total_params} param leaves "
+        f"(restored tree had {total_restored} leaves). LoRA factors "
+        f"in init = {total_params - matched}. If matched is much "
+        "lower than (total - LoRA factor count), the orbax pytree "
+        "layout differs from the init tree — adjust _unwrap_orbax_state.",
+        flush=True,
+    )
+    return merged
 
 
 def _build_lr_schedule(train_cfg: dict, total_steps: int):
@@ -318,21 +361,40 @@ def _train(cfg: dict, seed: int, output_dir: str) -> None:
         masked = per_tok * shift_mask
         return masked.sum() / (shift_mask.sum() + 1e-8)
 
-    def _forward(params_tree, inputs, dropout_rng):
-        # UNTESTED: Gemma-3's MaxText model.apply may take more positional
-        # args (decoder_positions, decoder_segment_ids, etc.). If this
-        # fails, look at how maxtext.utils.maxtext_utils.init_initial_state
-        # constructs the batch dict and mirror its keys.
-        return model.apply(
-            params_tree, inputs,
-            rngs={"dropout": dropout_rng},
+    def _forward(params_tree, inputs, dropout_rng, params_rng, is_train):
+        # Match MaxText pre_train.loss_fn (third_party/maxtext/.../pre_train/train.py
+        # lines 136-148) — model.apply takes positional ``inputs`` and
+        # ``inputs_position`` followed by a fan of kwargs. The model
+        # returns ``(logits, intermediate_outputs)``; we discard the
+        # second element since our loss is computed externally on the
+        # logits + our explicit loss_mask.
+        bsz, seqlen = inputs.shape
+        positions = jnp.broadcast_to(
+            jnp.arange(seqlen, dtype=jnp.int32), (bsz, seqlen)
         )
+        segmentation = jnp.ones((bsz, seqlen), dtype=jnp.int32)
+        logits, _intermediates = model.apply(
+            params_tree,
+            inputs,
+            positions,
+            decoder_segment_ids=segmentation,
+            encoder_images=None,
+            encoder_image_masks=None,
+            enable_dropout=is_train,
+            rngs={"dropout": dropout_rng, "params": params_rng},
+            mutable=["intermediates"],
+            decoder_target_tokens=inputs,  # not used for loss; placeholder for in-model paths
+            decoder_target_mask=segmentation,
+        )
+        return logits
 
     def _train_step(params_tree, opt_state_tree, batch, rng):
-        rng, sub = jax.random.split(rng)
+        # Three RNGs: dropout, params (used by MaxText's AQT quantization
+        # noise sampling), and the next-step seed.
+        rng, dropout_rng, params_rng = jax.random.split(rng, 3)
 
         def loss_fn(p):
-            logits = _forward(p, batch["input_ids"], sub)
+            logits = _forward(p, batch["input_ids"], dropout_rng, params_rng, True)
             return _ce_loss(logits, batch["labels"], batch["loss_mask"])
 
         loss, grads = jax.value_and_grad(loss_fn)(params_tree)
@@ -341,8 +403,8 @@ def _train(cfg: dict, seed: int, output_dir: str) -> None:
         return new_params, new_opt_state, loss, rng
 
     def _eval_step(params_tree, batch, rng):
-        rng, sub = jax.random.split(rng)
-        logits = _forward(params_tree, batch["input_ids"], sub)
+        rng, dropout_rng, params_rng = jax.random.split(rng, 3)
+        logits = _forward(params_tree, batch["input_ids"], dropout_rng, params_rng, False)
         return _ce_loss(logits, batch["labels"], batch["loss_mask"]), rng
 
     train_step = jax.jit(_train_step)

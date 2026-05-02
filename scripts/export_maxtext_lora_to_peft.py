@@ -49,8 +49,11 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 import numpy as np
 import torch
 import yaml
-from peft import LoraConfig
-from safetensors.torch import save_file
+# Note: ``peft`` and ``safetensors`` are imported inside the functions
+# that need them rather than at module top, so the lazy alias in
+# ``scripts/maxtext_lora/__init__.py`` remains importable on a CPU dev
+# box where the heavy ML stack isn't installed (e.g. for unit tests
+# that only need the module-loading path).
 
 
 # Map MaxText-style projection names -> HF Gemma-3 target_modules names.
@@ -362,6 +365,13 @@ def write_peft_adapter(
     JSON dict here would silently bit-rot when peft adds / renames
     fields — rebuilding through the dataclass keeps the schema honest.
     """
+    # Imported lazily so the module is importable on a CPU dev box where
+    # peft / safetensors aren't installed (the lazy alias in
+    # ``scripts/maxtext_lora/__init__.py`` would otherwise break for
+    # callers that only want ``write_adapter`` symbol-tested).
+    from peft import LoraConfig
+    from safetensors.torch import save_file
+
     output_dir.mkdir(parents=True, exist_ok=True)
 
     cfg = LoraConfig(

@@ -402,18 +402,33 @@ def apply_lora(
         "params": jax.random.PRNGKey(seed),
         "dropout": jax.random.PRNGKey(seed + 1),
     }
-    # UNTESTED: Gemma-3's model.init signature on the vendored MaxText
-    # may take more than ``input_ids``. The trainer's first compile
-    # will tell us if extra positional args are needed (positions,
-    # segmentation, etc.). When that breaks, look at how
-    # `maxtext.utils.maxtext_utils.init_initial_state` constructs the
-    # input dict — that's the source of truth for the model.apply
-    # signature.
-    dummy_inputs = jax.numpy.zeros(
-        (mt_cfg.per_device_batch_size, mt_cfg.max_target_length),
-        dtype=jax.numpy.int32,
+    # MaxText pre_train.train.loss_fn (lines 136-148) shows the real
+    # call signature: positional ``inputs``, ``inputs_position``, and
+    # then a fan of kwargs for segmentation / multimodal / mutables.
+    # ``model.init`` takes the same signature as ``model.apply`` since
+    # Flax dispatches both through ``__call__``. We init with the
+    # minimal text-only single-segment shape — multimodal Gemma-3 has
+    # the encoder paths gated on config.use_multimodal so passing None
+    # is correct for the text-only MedGemma-27B path.
+    import jax.numpy as jnp
+    bsz = int(mt_cfg.per_device_batch_size)
+    seqlen = int(mt_cfg.max_target_length)
+    dummy_inputs = jnp.zeros((bsz, seqlen), dtype=jnp.int32)
+    dummy_positions = jnp.broadcast_to(
+        jnp.arange(seqlen, dtype=jnp.int32), (bsz, seqlen)
     )
-    variables = model.init(init_rngs, dummy_inputs)
+    dummy_segmentation = jnp.ones((bsz, seqlen), dtype=jnp.int32)
+    variables = model.init(
+        init_rngs,
+        dummy_inputs,
+        dummy_positions,
+        decoder_segment_ids=dummy_segmentation,
+        encoder_images=None,
+        encoder_image_masks=None,
+        enable_dropout=False,  # init pass; no dropout
+        decoder_target_tokens=dummy_inputs,
+        decoder_target_mask=dummy_segmentation,
+    )
 
     lora_filter_mask = _build_lora_filter_mask(variables)
     return model, variables, lora_filter_mask
