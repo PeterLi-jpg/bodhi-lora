@@ -44,13 +44,16 @@ import numpy as np
 # Same constant the converter writes (see scripts/convert_traces_to_maxtext.py).
 LABEL_IGNORE_ID = -100
 
-# Default Gemma-3 pad token id. The converter doesn't write a pad column
-# (its rows are variable-length); we pad here at batch time. The id we
-# pick only matters for positions where loss_mask == 0 — the trainer's
-# loss masks them out — so any non-special id is fine. Gemma-3's
-# canonical pad is the same as its eos token (id 1 in the SentencePiece
-# vocab). Override via ``pad_id`` kwarg if your tokenizer differs.
+# Default pad token id. The converter doesn't write a pad column (its
+# rows are variable-length); we pad here at batch time. The id only
+# matters for the input_ids tensor, never for the loss: loss is masked
+# at every pad position (loss_mask=0 wherever labels==-100), so the
+# value the model sees at a pad slot has no gradient effect. We use 0
+# because it's a valid token id in every Gemma vocab; any non-special
+# id would do. Override via the ``pad_id`` kwarg if your tokenizer
+# requires a specific pad id.
 DEFAULT_PAD_ID = 0
+
 
 
 def _read_tokenized_jsonl(path: Path) -> List[Dict[str, Any]]:
@@ -243,6 +246,13 @@ def build_iterators(
         should normally have been caught earlier by
         ``train_lora_maxtext.py``'s own existence check, but having the
         same guard here keeps unit tests honest.
+        ValueError if either split has fewer rows than
+        ``global_batch_size``. Both iterators drop the partial last
+        batch, so a too-small split would yield zero batches — training
+        would crash on the empty step count and eval would silently
+        emit no line at all. We fail fast here with a fix-it message
+        pointing at per_device_batch_size / gradient_accumulation_steps
+        / data.val_ratio.
     """
     train_path = _resolve_path(dataset_dir, train_file, "train")
     val_path = _resolve_path(dataset_dir, val_file, "val")
@@ -268,6 +278,17 @@ def build_iterators(
             f"train set ({len(train_rows)} rows) too small for "
             f"global_batch_size={global_batch_size}; reduce "
             "per_device_batch_size or gradient_accumulation_steps."
+        )
+
+    # Mirror of the train guard. _eval_iter drops partial batches, so a
+    # val split smaller than global_batch_size would yield zero batches
+    # and the trainer's eval_losses list would stay empty — no eval line
+    # logged, silent. Fail loudly instead.
+    if len(val_rows) < global_batch_size:
+        raise ValueError(
+            f"val set ({len(val_rows)} rows) too small for global_batch_size={global_batch_size}; "
+            "eval would yield zero batches. Either reduce per_device_batch_size * gradient_accumulation_steps "
+            "or use a larger val set (consider lowering data.val_ratio in the YAML)."
         )
 
     train = _train_iter(train_rows, global_batch_size, max_seq_length, pad_id, seed)
