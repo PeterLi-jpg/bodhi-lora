@@ -215,9 +215,19 @@ if [ ! -d ~/bohdi-lora ]; then
 fi
 cd ~/bohdi-lora
 # Always pull so a re-acquired VM picks up any post-launch fixes on main.
-git -c "url.https://x-access-token:\${GH_TOKEN}@github.com/.insteadOf=https://github.com/" \\
-    fetch origin main 2>&1 | tail -2 || true
-git reset --hard origin/main 2>&1 | tail -1 || true
+# Do NOT swallow failures here: if fetch/reset fails the daemon would silently
+# run stale code, and the launcher's wait loop would later see "DONE" against
+# whatever ancient checkout was on disk. Abort instead so wait_for_completion
+# classifies it as a real failure.
+if ! git -c "url.https://x-access-token:\${GH_TOKEN}@github.com/.insteadOf=https://github.com/" \\
+        fetch origin main 2>&1 | tail -2; then
+    echo "git fetch origin main FAILED" >> ~/pipeline.log
+    exit 1
+fi
+if ! git reset --hard origin/main 2>&1 | tail -1; then
+    echo "git reset --hard origin/main FAILED" >> ~/pipeline.log
+    exit 1
+fi
 
 echo "--- 0/4 setup_tpu.sh ---" | tee -a ~/pipeline.log
 bash tpu/setup_tpu.sh > ~/setup.log 2>&1 || { echo "setup FAILED" >> ~/pipeline.log; exit 1; }
@@ -524,29 +534,41 @@ run_eval() {
     local out="\${out_dir}/\${name}.json"
     if [ -s "\$out" ]; then
         echo "[\$name @ \$grader] already exists, skipping" >> ~/pipeline.log
-        return
+        return 0
     fi
     echo "--- eval \$name @ \$grader ---" | tee -a ~/pipeline.log
     # shellcheck disable=SC2086
-    python -u scripts/eval_healthbench.py \$args \\
-        --sample-ids "\$SEED_IDS" \\
-        --grader-model "\$grader" \\
-        --output "\$out" \\
-        ${_EVAL_MAX_FLAG} \\
-        --seed ${SEED} >> ~/eval.log 2>&1 || echo "eval \$name FAILED" >> ~/pipeline.log
+    if python -u scripts/eval_healthbench.py \$args \\
+            --sample-ids "\$SEED_IDS" \\
+            --grader-model "\$grader" \\
+            --output "\$out" \\
+            ${_EVAL_MAX_FLAG} \\
+            --seed ${SEED} >> ~/eval.log 2>&1; then
+        return 0
+    fi
+    echo "eval \$name FAILED" >> ~/pipeline.log
+    return 1
 }
 
 PRIMARY_DIR="eval/seed_${SEED}"
 PRIMARY_GRADER="meta-llama/Llama-3.1-8B-Instruct"
-run_eval "base_no_wrapper"  "\$PRIMARY_DIR" "\$PRIMARY_GRADER" "--model google/medgemma-27b-text-it"
+# Track per-config failures so EVAL_OK is only written when all 4 graded
+# successfully. Capture each call's exit status without letting set -e
+# abort the rest of the pass; partial eval results are still worth saving.
+eval_fail_count=0
+run_eval "base_no_wrapper"  "\$PRIMARY_DIR" "\$PRIMARY_GRADER" "--model google/medgemma-27b-text-it" || eval_fail_count=\$((eval_fail_count + 1))
 gcs_rsync "eval/seed_${SEED}/" "eval/"
-run_eval "base_bodhi"       "\$PRIMARY_DIR" "\$PRIMARY_GRADER" "--model google/medgemma-27b-text-it --use-bodhi"
+run_eval "base_bodhi"       "\$PRIMARY_DIR" "\$PRIMARY_GRADER" "--model google/medgemma-27b-text-it --use-bodhi" || eval_fail_count=\$((eval_fail_count + 1))
 gcs_rsync "eval/seed_${SEED}/" "eval/"
-run_eval "lora_no_wrapper"  "\$PRIMARY_DIR" "\$PRIMARY_GRADER" "--model google/medgemma-27b-text-it --lora-path \$LORA_DIR"
+run_eval "lora_no_wrapper"  "\$PRIMARY_DIR" "\$PRIMARY_GRADER" "--model google/medgemma-27b-text-it --lora-path \$LORA_DIR" || eval_fail_count=\$((eval_fail_count + 1))
 gcs_rsync "eval/seed_${SEED}/" "eval/"
-run_eval "lora_bodhi"       "\$PRIMARY_DIR" "\$PRIMARY_GRADER" "--model google/medgemma-27b-text-it --lora-path \$LORA_DIR --use-bodhi"
+run_eval "lora_bodhi"       "\$PRIMARY_DIR" "\$PRIMARY_GRADER" "--model google/medgemma-27b-text-it --lora-path \$LORA_DIR --use-bodhi" || eval_fail_count=\$((eval_fail_count + 1))
 gcs_rsync "eval/seed_${SEED}/" "eval/"
-echo EVAL_OK >> ~/pipeline.log
+if [ "\$eval_fail_count" -eq 0 ]; then
+    echo EVAL_OK >> ~/pipeline.log
+else
+    echo "EVAL_FAILED (\$eval_fail_count/4 configs failed)" >> ~/pipeline.log
+fi
 
 # ── Stage 4b: optional cross-grader pass ──────────────────────────────────
 # SECOND_GRADER_MODEL is baked in from the local launcher (literal value
@@ -614,18 +636,29 @@ for cfg in base_no_wrapper base_bodhi lora_no_wrapper lora_bodhi; do
     fi
 done
 if [ \${#EPISTEMIC_INPUTS[@]} -eq 0 ]; then
+    # Stage 4 produced nothing usable. Don't write EPISTEMIC_OK; the
+    # dashboard parser treats a missing marker as "in progress / failed",
+    # which is the honest state here.
     echo "no Stage 4 outputs to feed eval_epistemic.py — skipping" >> ~/pipeline.log
 elif [ -s "eval/seed_${SEED}/epistemic_scores.json" ]; then
+    # Resume path: a prior incarnation of this seed already produced the
+    # output (pulled back from GCS). The work succeeded; mark done.
     echo "epistemic_scores.json already exists, skipping" >> ~/pipeline.log
+    echo EPISTEMIC_OK >> ~/pipeline.log
 else
-    python -u scripts/eval_epistemic.py \\
-        --response-files "\${EPISTEMIC_INPUTS[@]}" \\
-        --grader-model meta-llama/Llama-3.1-8B-Instruct \\
-        --output "eval/seed_${SEED}/epistemic_scores.json" \\
-        --seed ${SEED} >> ~/eval.log 2>&1 \\
-    || echo "eval_epistemic FAILED" >> ~/pipeline.log
+    # The only path that genuinely runs eval_epistemic.py. Write the marker
+    # only on a clean exit; on failure the explicit FAILED line goes to
+    # pipeline.log without EPISTEMIC_OK so the dashboard sees "not done".
+    if python -u scripts/eval_epistemic.py \\
+            --response-files "\${EPISTEMIC_INPUTS[@]}" \\
+            --grader-model meta-llama/Llama-3.1-8B-Instruct \\
+            --output "eval/seed_${SEED}/epistemic_scores.json" \\
+            --seed ${SEED} >> ~/eval.log 2>&1; then
+        echo EPISTEMIC_OK >> ~/pipeline.log
+    else
+        echo "eval_epistemic FAILED" >> ~/pipeline.log
+    fi
 fi
-echo EPISTEMIC_OK >> ~/pipeline.log
 gcs_rsync "eval/seed_${SEED}/" "eval/"
 
 # End-of-Stage-5 cleanup: stop any lingering vLLM-TPU container and
@@ -828,7 +861,7 @@ for ((i=0; i<N_SEEDS; i++)); do
         }
 
         scp_back() {
-            # Best-effort copy of checkpoints + eval JSONs + pipeline.log
+            # Best-effort copy of checkpoints + eval JSONs + daemon-side logs
             # to ./results_maxtext/seed_<N>/. Never fails the parent shell.
             gcloud alpha compute tpus tpu-vm scp --recurse \
                 --zone="$ZONE" --project="$PROJECT" --tunnel-through-iap \
@@ -838,10 +871,22 @@ for ((i=0; i<N_SEEDS; i++)); do
                 --zone="$ZONE" --project="$PROJECT" --tunnel-through-iap \
                 "${VM_NAME}:~/bohdi-lora/eval/seed_${SEED}" "$SEED_DIR/" \
                 >>"$LOG" 2>&1 || log "  (no eval to copy)"
+            # Pull the daemon-side logs so post-mortem doesn't require a live
+            # SSH back to the VM (which is often already deleted by the time
+            # we look). Each scp tolerates a missing file independently;
+            # e.g. setup.log won't exist if setup_tpu.sh never ran.
             gcloud alpha compute tpus tpu-vm scp \
                 --zone="$ZONE" --project="$PROJECT" --tunnel-through-iap \
                 "${VM_NAME}:~/pipeline.log" "${SEED_DIR}/pipeline.log" \
                 >>"$LOG" 2>&1 || true
+            gcloud alpha compute tpus tpu-vm scp \
+                --zone="$ZONE" --project="$PROJECT" --tunnel-through-iap \
+                "${VM_NAME}:~/setup.log" "${SEED_DIR}/setup.log" \
+                2>/dev/null || true
+            gcloud alpha compute tpus tpu-vm scp \
+                --zone="$ZONE" --project="$PROJECT" --tunnel-through-iap \
+                "${VM_NAME}:~/run_pipeline.log" "${SEED_DIR}/run_pipeline.log" \
+                2>/dev/null || true
         }
 
         delete_vm() {
@@ -874,8 +919,11 @@ for ((i=0; i<N_SEEDS; i++)); do
         preempt_attempt=0
         while :; do
             if ! try_create; then
+                # Exit non-zero so the parent's `wait` sees this seed as a
+                # real failure, not a successful no-op. Without this the
+                # launcher itself reports exit 0 even when no work happened.
                 log "exhausted create retries — giving up on this seed"
-                exit 0
+                exit 1
             fi
             push_tokens
             launch_pipeline_detached
@@ -921,7 +969,35 @@ echo "All $N_SEEDS jobs spawned. PIDs: $(cat "$PID_FILE")"
 echo "Open the dashboard at http://localhost:8000 to watch progress."
 echo
 echo "Waiting for all VMs to finish..."
-wait
+
+# Wait per-PID and aggregate exit codes. A bare `wait` would mask any
+# subshell that exited non-zero (e.g. exhausted create retries) and let
+# the launcher itself report success. Pair each PID with its seed/VM so
+# the failure summary names the actual seed instead of just a PID.
+mapfile -t SUBSHELL_PIDS < "$PID_FILE"
+overall_rc=0
+failed_seeds=()
+for ((i=0; i<N_SEEDS; i++)); do
+    pid="${SUBSHELL_PIDS[$i]:-}"
+    if [ -z "$pid" ]; then continue; fi
+    # Capture rc on its own line: in `if ! wait; then rc=$?` the $? would
+    # be 0 (the negated-test result), not the wait exit code we want.
+    rc=0
+    wait "$pid" || rc=$?
+    if [ "$rc" -ne 0 ]; then
+        overall_rc=1
+        failed_seeds+=("seed=${SEED_ARR[$i]} vm=${VM_NAMES[$i]} rc=$rc")
+        echo "ERROR: ${VM_NAMES[$i]} (seed ${SEED_ARR[$i]}) exited $rc" >&2
+    fi
+done
+
 echo
 echo "All seeds done. Results in $RESULTS_DIR/seed_*/"
 ls -la "$RESULTS_DIR" 2>/dev/null || true
+
+if [ "$overall_rc" -ne 0 ]; then
+    echo
+    echo "FAILED seeds:" >&2
+    for f in "${failed_seeds[@]}"; do echo "  $f" >&2; done
+    exit "$overall_rc"
+fi
