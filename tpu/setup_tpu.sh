@@ -155,11 +155,27 @@ pip install ${PIP_FLAGS} --no-deps "optimum-tpu>=0.2.0"
 echo "=== Installing JAX stack for MaxText baseline ==="
 # `jax[tpu]` pulls libtpu from PyPI directly; no -f flag needed (the
 # TPU_WHEEL_URL above is torch_xla's libtpu mirror, a separate distribution).
+#
+# Beyond the JAX 4-pack, MaxText's runtime modules import several extra
+# packages (omegaconf for config dataclasses, etils for path helpers,
+# qwix for LoRA, jaxtyping for shape annotations, psutil for memory
+# probes, google-cloud-storage for the Orbax converter, chex for tree
+# utilities, ml_collections used by maxtext.configs). v9 caught
+# omegaconf as the first missing dep at Stage 3a; install the full set
+# here so the converter and trainer don't crash on a fresh v6e VM.
 pip install ${PIP_FLAGS} \
     "jax[tpu]>=0.4.30,<0.7" \
     "flax>=0.10" \
     "orbax-checkpoint>=0.11" \
-    "optax>=0.2.4"
+    "optax>=0.2.4" \
+    "omegaconf>=2.3.0" \
+    "etils[epath]>=1.14.0" \
+    "qwix>=0.1.6" \
+    "jaxtyping>=0.3.9" \
+    "psutil>=7.2.2" \
+    "google-cloud-storage>=3.10.1" \
+    "chex>=0.1.91" \
+    "ml-collections>=1.1.0"
 
 echo "=== Pulling vLLM-TPU Docker image ==="
 # Inference (Stages 1, 2, 4) runs vLLM inside this container rather than via
