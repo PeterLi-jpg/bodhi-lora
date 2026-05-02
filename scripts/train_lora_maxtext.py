@@ -135,6 +135,20 @@ def _train(cfg: dict, seed: int, output_dir: str) -> None:
             "Run Unit 5's dataset converter first "
             "(scripts/convert_traces_to_maxtext.py)."
         )
+    # Also verify the actual files MaxText will read are present. An
+    # empty dataset_dir (e.g. the converter wrote to a different path,
+    # or an interrupted run left the dir but no files) would otherwise
+    # let MaxText spin up XLA compile for 30-60 min before crashing
+    # with a cryptic "no data to consume" error. Fail fast here instead.
+    _expected = ["train.jsonl", "val.jsonl"]
+    _missing = [f for f in _expected if not (Path(dataset_dir) / f).is_file()]
+    if _missing:
+        raise FileNotFoundError(
+            f"MaxText dataset dir {dataset_dir} is missing expected files: "
+            f"{_missing}.  Run scripts/convert_traces_to_maxtext.py to "
+            "produce them, or check that the converter wrote to the same "
+            "path the trainer reads."
+        )
 
     output_dir = _expand(output_dir)
     Path(output_dir).mkdir(parents=True, exist_ok=True)
