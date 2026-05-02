@@ -92,6 +92,22 @@ def _expand(path: str) -> str:
     return os.path.expanduser(os.path.expandvars(path))
 
 
+def _maxtext_base_config_path() -> str:
+    """Resolve the absolute path to MaxText's base.yml under third_party/.
+
+    MaxText's pyconfig.initialize expects argv[1] to be the base config
+    YAML path; the rest are key=value overrides. Mirrors
+    ``scripts/convert_medgemma_to_maxtext.py:_maxtext_base_config_path``.
+    Falls back to the relative form if vendoring isn't in place yet so
+    --help stays unit-testable without the vendored tree.
+    """
+    repo_root = Path(__file__).resolve().parent.parent
+    candidate = repo_root / "third_party" / "maxtext" / "src" / "maxtext" / "configs" / "base.yml"
+    if candidate.is_file():
+        return str(candidate)
+    return "src/maxtext/configs/base.yml"
+
+
 def _unwrap_orbax_state(restored):
     """Some MaxText orbax saves wrap the param tree under ``state.params``
     or ``params``; some don't. Walk down known wrapper keys until we
@@ -113,7 +129,7 @@ def _unwrap_orbax_state(restored):
     return restored
 
 
-def _merge_base_into_params(params, restored):
+def _merge_base_into_params(params, restored, lora_filter_mask=None):
     """Overwrite ``params`` leaves with values from ``restored`` wherever
     paths match. Leaves only present in ``params`` (the LoRA factors)
     are preserved untouched.
@@ -123,10 +139,10 @@ def _merge_base_into_params(params, restored):
     matching. Whatever remains is matched by string-form path against
     the LoRA-injected init tree.
 
-    Logs a summary of (matched, total) leaves so the first-iteration
-    operator can see whether the merge actually replaced base weights —
-    a low match count means the path layouts disagree and we'll need
-    a different unwrap strategy.
+    Aborts hard if the merge clearly did not work: zero matches, or
+    fewer than half of the expected base leaves matched. ``lora_count``
+    is computed from the LoRA filter mask if provided (preferred), else
+    inferred by walking ``params`` for ``lora_a`` / ``lora_b`` paths.
     """
     import jax
 
@@ -148,14 +164,33 @@ def _merge_base_into_params(params, restored):
     merged = jax.tree_util.tree_map_with_path(_replace, params)
     total_params = len(flat_params)
     total_restored = len(flat_restored)
+
+    if lora_filter_mask is not None:
+        lora_count = sum(
+            1 for x in jax.tree_util.tree_leaves(lora_filter_mask) if bool(x)
+        )
+    else:
+        lora_count = sum(
+            1 for path, _ in flat_params if _is_lora_path(path)
+        )
+
     print(
         f"[orbax merge] matched {matched}/{total_params} param leaves "
         f"(restored tree had {total_restored} leaves). LoRA factors "
-        f"in init = {total_params - matched}. If matched is much "
-        "lower than (total - LoRA factor count), the orbax pytree "
-        "layout differs from the init tree — adjust _unwrap_orbax_state.",
+        f"in init = {lora_count}. If matched is much lower than "
+        "(total - LoRA factor count), the orbax pytree layout differs "
+        "from the init tree; adjust _unwrap_orbax_state.",
         flush=True,
     )
+
+    expected_base = max(1, total_params - lora_count)
+    match_ratio = matched / expected_base
+    if matched == 0 or match_ratio < 0.5:
+        raise RuntimeError(f"orbax merge: only {matched}/{total_params} base params matched "
+                           f"(expected ~{expected_base} non-LoRA leaves; ratio={match_ratio:.2f}). "
+                           "The orbax pytree layout disagrees with the init tree; fix "
+                           "_unwrap_orbax_state or the converter output rather than training "
+                           "on a mostly-random base.")
     return merged
 
 
@@ -268,7 +303,11 @@ def _train(cfg: dict, seed: int, output_dir: str) -> None:
         f"data_seed={seed}",
         f"init_weights_seed={seed}",
     ]
-    mt_cfg = pyconfig.initialize(mt_argv)
+    # MaxText's pyconfig expects argv[0]=script name and argv[1]=base YAML
+    # path; everything after is key=value overrides. Mirror the converter
+    # script's pattern so the trainer doesn't crash on initialize().
+    _base_yml_path = _maxtext_base_config_path()
+    mt_cfg = pyconfig.initialize(["train_lora_maxtext.py", _base_yml_path, *mt_argv])
     print(f"MaxText config initialized: model={model_cfg['name']!r} "
           f"seed={seed} output_dir={output_dir!r}", flush=True)
 
@@ -330,17 +369,20 @@ def _train(cfg: dict, seed: int, output_dir: str) -> None:
             restored = {"params": restored_inner} \
                 if isinstance(params, dict) and "params" in params \
                 else restored_inner
-        except Exception as e:
+        except (OSError, ValueError, KeyError, RuntimeError) as e:
+            # Narrow exception list so KeyboardInterrupt / SystemExit and
+            # other genuinely fatal errors propagate; we only want to
+            # fall back on storage / shape / key-mismatch failures.
             print(
                 f"WARNING: load_params_from_path failed ({e!r}). Falling "
-                "back to raw PyTreeCheckpointer().restore() — sharding "
+                "back to raw PyTreeCheckpointer().restore(); sharding "
                 "may be wrong but this gives a clearer error to iterate on.",
                 flush=True,
             )
             restored = ocp.PyTreeCheckpointer().restore(
                 str(Path(orbax_ckpt).resolve())
             )
-        params = _merge_base_into_params(params, restored)
+        params = _merge_base_into_params(params, restored, lora_filter_mask)
     print("Base weights restored.", flush=True)
 
     # --- Dataset iterators ---------------------------------------------------
@@ -534,6 +576,16 @@ def _train(cfg: dict, seed: int, output_dir: str) -> None:
         dropout=lora_cfg.get("lora_dropout", 0.05),
         variant=lora_cfg.get("variant", "standard"),
     )
+
+    # Stage 4's _xla_lora_inference does AutoTokenizer.from_pretrained on
+    # this directory; without the tokenizer files alongside the adapter
+    # it crashes. Mirrors torch_xla's trainer (scripts/train_lora.py).
+    # Drop this in BEFORE trainer_state.json is written so operators that
+    # treat trainer_state.json as the "done" sentinel only see a complete
+    # adapter dir.
+    from transformers import AutoTokenizer
+    tokenizer = AutoTokenizer.from_pretrained(model_cfg["name"])
+    tokenizer.save_pretrained(str(best_out))
 
     # Mirror torch_xla's trainer_state.json so Stage 4 can confirm the
     # run finished without parsing orbax internals.
