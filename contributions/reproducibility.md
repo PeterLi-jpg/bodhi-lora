@@ -21,7 +21,8 @@ Two fully-supported paths — pick one:
 - See section 4b (GPU) for setup
 
 ### Software
-- Python 3.10 or 3.11 (tested on 3.11; 3.12 works but CUDA wheel coverage lags)
+- Python 3.10 or 3.11 on the dev box / GPU side (tested on 3.11; 3.12 works but CUDA wheel coverage lags)
+- On TPU, Python 3.11 is required. `tpu/setup_tpu.sh` provisions it automatically via apt and a venv at `~/.venv-py311`, so the launcher scripts just work. Pinning 3.11 lets us pick up MaxText's natural dependency floors and drop the cascade of py3.10 compat shims we previously needed.
 - CUDA 12.1+ for the GPU run
 - Linux for the full run (slurm + autoawq). macOS is fine for smoke/dev (autoawq is skipped via platform marker).
 
