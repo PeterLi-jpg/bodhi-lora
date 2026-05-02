@@ -97,6 +97,14 @@ TPU_WHEEL_URL="https://storage.googleapis.com/libtpu-releases/index.html"
 # whole-VM rebuild.
 PIP_FLAGS="--quiet --retries 10 --timeout 120"
 
+# v6e VMs ship with an old setuptools that crashes when source-building
+# packages with newer metadata (canonicalize_version() got an unexpected
+# keyword argument 'strip_trailing_zero'). v11 hit this when omegaconf
+# pulled antlr4-python3-runtime as a sdist. Upgrade pip + setuptools +
+# wheel before any other pip install so source-builds don't blow up.
+echo "=== Upgrading pip / setuptools / wheel ==="
+pip install ${PIP_FLAGS} -U pip setuptools wheel
+
 echo "=== Installing torch ${TORCH_VERSION} + torch_xla ${TORCH_XLA_VERSION} from TPU wheel server ==="
 pip install ${PIP_FLAGS} \
     "torch==${TORCH_VERSION}" \
