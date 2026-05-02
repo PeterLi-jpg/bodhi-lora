@@ -22,6 +22,15 @@ try:
     import jax.numpy as jnp
     import flax.linen as nn  # noqa: F401
     from jax.sharding import Mesh, NamedSharding, PartitionSpec  # noqa: F401
+    # set_mesh: jax >= 0.5 thread-local context manager that pins a concrete
+    # mesh, so flax.core.spmd.shard_value can resolve sharding annotations on
+    # nnx.Params that are created outside model.init's mesh block. The
+    # LoraDenseGeneral unit tests instantiate the layer eagerly (no init),
+    # which trips flip/4844's eager-sharding rule without a global mesh.
+    try:
+        from jax.sharding import set_mesh  # type: ignore[attr-defined]
+    except ImportError:  # pragma: no cover - older jax
+        set_mesh = None  # type: ignore[assignment]
 
     from scripts.maxtext_lora.layer import LoraDense
 
@@ -224,6 +233,16 @@ if _NNX_AVAILABLE:
             return out_flat.reshape(out_flat.shape[:-1] + out_shape)
 
 
+# LoraDenseGeneral creates nnx.Param(..., sharding=...) at __init__ time.
+# Newer flax (>= 0.12) demands a mesh context whenever a sharding annotation
+# is present on a variable (flip/4844 eager-sharding). Production hits this
+# through apply_lora's `with mesh, nn_partitioning.axis_rules(...)` block;
+# in unit tests we pin a single-device CPU mesh whose axis name matches the
+# LoraDenseGeneral defaults (DEFAULT_NNX_B_SHARDING = (None, "model")).
+def _single_device_lora_mesh():
+    return Mesh(jax.devices("cpu")[:1], axis_names=("model",))
+
+
 @_skip_no_nnx
 def test_dense_general_lora_zero_at_init():
     """LoRA contribution is identically zero at init (B=0), so wrapper output
@@ -231,9 +250,10 @@ def test_dense_general_lora_zero_at_init():
     rngs = nnx.Rngs(params=jax.random.PRNGKey(7))
     base = _FakeDenseGeneral((4,), (3, 5), rngs=rngs)
     wrap_rngs = nnx.Rngs(params=jax.random.PRNGKey(11))
-    wrapped = LoraDenseGeneral(
-        base=base, rank=2, alpha=4.0, dropout=0.0, rngs=wrap_rngs
-    )
+    with set_mesh(_single_device_lora_mesh()):
+        wrapped = LoraDenseGeneral(
+            base=base, rank=2, alpha=4.0, dropout=0.0, rngs=wrap_rngs
+        )
     x = jnp.ones((2, 4), dtype=jnp.float32)
     y_base = base(x)
     y_wrap = wrapped(x)
@@ -248,9 +268,10 @@ def test_dense_general_lora_factor_shapes():
     rngs = nnx.Rngs(params=jax.random.PRNGKey(7))
     base = _FakeDenseGeneral((4,), (3, 5), rngs=rngs)
     wrap_rngs = nnx.Rngs(params=jax.random.PRNGKey(11))
-    wrapped = LoraDenseGeneral(
-        base=base, rank=2, alpha=4.0, dropout=0.0, rngs=wrap_rngs
-    )
+    with set_mesh(_single_device_lora_mesh()):
+        wrapped = LoraDenseGeneral(
+            base=base, rank=2, alpha=4.0, dropout=0.0, rngs=wrap_rngs
+        )
     a = wrapped.lora_a[...]
     b = wrapped.lora_b[...]
     assert a.shape == (4, 2)
@@ -263,9 +284,10 @@ def test_dense_general_lora_nonzero_after_perturbing_b():
     rngs = nnx.Rngs(params=jax.random.PRNGKey(7))
     base = _FakeDenseGeneral((4,), (3, 5), rngs=rngs)
     wrap_rngs = nnx.Rngs(params=jax.random.PRNGKey(11))
-    wrapped = LoraDenseGeneral(
-        base=base, rank=2, alpha=4.0, dropout=0.0, rngs=wrap_rngs
-    )
+    with set_mesh(_single_device_lora_mesh()):
+        wrapped = LoraDenseGeneral(
+            base=base, rank=2, alpha=4.0, dropout=0.0, rngs=wrap_rngs
+        )
     new_b = jnp.arange(2 * 15, dtype=jnp.float32).reshape(2, 15)
     wrapped.lora_b.value = new_b
     x = jnp.ones((2, 4), dtype=jnp.float32)
