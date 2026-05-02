@@ -65,6 +65,16 @@ except ImportError:
     LoraDense = None  # type: ignore[assignment]
     _HAS_LORA_DENSE = False
 
+# LoraDenseGeneral is the NNX sibling of LoraDense, used to wrap MaxText's
+# multi-axis ``DenseGeneral`` projections (q/k/v on Gemma-3). Imported
+# lazily for the same CPU-dev-box reasons.
+try:
+    from scripts.maxtext_lora.layer import LoraDenseGeneral  # type: ignore[import-not-found]
+    _HAS_LORA_DG = LoraDenseGeneral is not None
+except ImportError:
+    LoraDenseGeneral = None  # type: ignore[assignment]
+    _HAS_LORA_DG = False
+
 
 def _is_flax_module(obj: Any) -> bool:
     """True if obj is a Flax module: either Linen ``nn.Module`` or NNX ``nnx.Module``.
@@ -142,41 +152,52 @@ def _replace_child(parent: Any, field: str, idx: int | None, new_child: Any) -> 
     object.__setattr__(parent, field, new_seq)
 
 
-def _wrap_in_lora(base_dense: Any, rank: int, alpha: float, dropout: float) -> Any:
-    """Build a LoraDense wrapping ``base_dense`` with the given hyperparams.
+def _wrap_in_lora(
+    base_dense: Any,
+    rank: int,
+    alpha: float,
+    dropout: float,
+    *,
+    rngs: Any = None,
+) -> Any:
+    """Build a LoRA wrapper for ``base_dense`` with the given hyperparams.
 
     Two base shapes are recognised:
 
-    * Linen ``nn.Dense``: has ``features: int``. The existing ``LoraDense``
-      wraps it directly; output dim is ``base.features``.
-    * MaxText NNX ``DenseGeneral``: has ``out_features_shape`` (a tuple) and
-      ``in_features_shape`` (also a tuple). Its output may be multi-axis
-      (e.g. attention's ``query`` projects to
-      ``(num_query_heads, head_dim)``), which the current Linen-only
-      ``LoraDense`` does not handle. We raise ``NotImplementedError`` with
-      a clear message rather than silently producing a wrapper that builds
-      mis-shaped LoRA factors.
+    * Linen ``nn.Dense``: has ``features: int``. ``LoraDense`` wraps it
+      directly; output dim is ``base.features``.
+    * MaxText NNX ``DenseGeneral``: has ``in_features_shape`` and
+      ``out_features_shape`` tuples. ``LoraDenseGeneral`` wraps it; the
+      LoRA factors are flat (``(in_dim, r)`` and ``(r, prod(out_shape))``)
+      and the multi-axis reshape happens at forward time. Requires NNX
+      ``rngs`` for parameter init — the injector passes one through from
+      ``inject_lora``'s seed.
 
     Everything is passed by keyword so a future field-order tweak doesn't
     break us.
     """
     if not _HAS_LORA_DENSE:
         raise ImportError(
-            "scripts.maxtext_lora.layer.LoraDense not found. Unit 2 must be "
-            "merged before the injector can run."
+            "scripts.maxtext_lora.layer.LoraDense not found. The layer "
+            "module must be importable before the injector can run."
         )
     if _is_dense_general(base_dense):
-        # NNX DenseGeneral wrapping is intentionally a follow-up: it needs
-        # an NNX-flavoured LoraDense that handles multi-axis outputs (q/k/v
-        # project to (num_heads, head_dim), MLP wi to (intermediate_dim,)).
-        # Crash with context instead of producing a broken wrapper.
-        raise NotImplementedError(
-            "inject_lora encountered a DenseGeneral target "
-            f"(in_features_shape={getattr(base_dense, 'in_features_shape', None)!r}, "
-            f"out_features_shape={getattr(base_dense, 'out_features_shape', None)!r}). "
-            "The current LoraDense only wraps flax.linen.Dense; an NNX-aware "
-            "LoraDense for DenseGeneral is a follow-up. See "
-            "scripts/maxtext_lora/layer.py and the PR description for #6."
+        if not _HAS_LORA_DG:
+            raise ImportError(
+                "scripts.maxtext_lora.layer.LoraDenseGeneral is not "
+                "available — flax NNX likely isn't installed in this env."
+            )
+        if rngs is None:
+            raise ValueError(
+                "inject_lora must pass nnx.Rngs to wrap a DenseGeneral; "
+                "the LoRA factor init needs a params RNG stream."
+            )
+        return LoraDenseGeneral(
+            base=base_dense,
+            rank=rank,
+            alpha=alpha,
+            dropout=dropout,
+            rngs=rngs,
         )
     return LoraDense(
         features=base_dense.features,
@@ -195,12 +216,17 @@ def _walk_and_inject(
     dropout: float,
     path: tuple[str, ...] = (),
     injected_paths: list[tuple[str, ...]] | None = None,
+    *,
+    rngs: Any = None,
 ) -> list[tuple[str, ...]]:
     """Recursively walk ``module``, swap matching children for LoraDense.
 
     Returns the list of fully-qualified paths (e.g. ``("layers", "0",
     "self_attn", "q_proj")``) where injection happened, so the caller can
     build the optimizer partition spec without a second walk.
+
+    ``rngs`` is forwarded to ``_wrap_in_lora`` for any DenseGeneral target
+    that needs an NNX RNG for parameter init. Linen targets ignore it.
     """
     if injected_paths is None:
         injected_paths = []
@@ -213,7 +239,7 @@ def _walk_and_inject(
         # Match by attribute name. PEFT does the same: the "is it really a
         # Dense?" duck-type check is weak (subclasses, custom Linears).
         if field in target_modules:
-            new_child = _wrap_in_lora(child, rank, alpha, dropout)
+            new_child = _wrap_in_lora(child, rank, alpha, dropout, rngs=rngs)
             _replace_child(module, field, idx, new_child)
             injected_paths.append(child_path)
             # Don't recurse into a freshly-wrapped LoraDense: its base IS
@@ -228,6 +254,7 @@ def _walk_and_inject(
             dropout,
             path=child_path,
             injected_paths=injected_paths,
+            rngs=rngs,
         )
 
     return injected_paths
@@ -270,6 +297,8 @@ def inject_lora(
     rank: int,
     alpha: float,
     dropout: float,
+    *,
+    rngs: Any = None,
 ):
     """Inject LoRA adapters into a Gemma-3 Flax model.
 
@@ -324,6 +353,7 @@ def inject_lora(
         rank=rank,
         alpha=float(alpha),
         dropout=float(dropout),
+        rngs=rngs,
     )
 
     if not injected_paths:
@@ -446,17 +476,25 @@ def apply_lora(
     mesh = maxtext_utils.get_mesh_from_config(mt_cfg)
     model = model_creation_utils.from_config(mt_cfg, mesh=mesh)
 
-    # Inject LoRA wrappers into q_proj / v_proj / etc. inject_lora
-    # mutates ``model`` in place AND returns it. The partition_spec it
-    # also returns is the per-LoRA-factor PartitionSpec covering only
-    # the new params; we keep it for future sharding tweaks but the
-    # filter mask below is what optax.masked() needs.
+    # Inject LoRA wrappers into the matched targets (e.g. ``query`` and
+    # ``value`` for MaxText Gemma-3, which are NNX ``DenseGeneral``).
+    # ``inject_lora`` mutates ``model`` in place AND returns it.
+    #
+    # NNX-flavoured ``LoraDenseGeneral`` needs an ``nnx.Rngs`` for its
+    # parameter init at *injection* time (the LoRA factors are eager,
+    # not lazy like Linen). Build one off the same seed the trainer is
+    # using so a re-injection produces identical LoRA factors.
+    if _HAS_NNX:
+        inject_rngs = nnx.Rngs(params=jax.random.PRNGKey(seed + 5000))
+    else:
+        inject_rngs = None
     inject_lora(
         model,
         target_modules=target_modules,
         rank=rank,
         alpha=alpha,
         dropout=dropout,
+        rngs=inject_rngs,
     )
 
     # Init the full params pytree (base + LoRA) once. The base weights
