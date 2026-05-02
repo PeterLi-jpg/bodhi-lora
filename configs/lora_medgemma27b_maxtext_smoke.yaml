@@ -46,9 +46,13 @@ training:
   learning_rate: 1.0e-4
   warmup_ratio: 0.05
   lr_scheduler_type: cosine
-  # 1024 (down from 2048) for faster compile in the smoke. Real run keeps
-  # 2048 to capture full BODHI responses.
-  max_seq_length: 1024
+  # 256 for the smoke — ~4x cut to activation memory vs 1024. v26 OOMed at
+  # model.init under TP=8 (FSDP=1) at seq_len=1024 with the 27B model:
+  #   "Attempting to allocate 220.50M. That was not possible. There are
+  #    139.62M free.; (0x0x0_HBM0)"
+  # Smoke just needs to verify the pipeline runs end-to-end; sequence
+  # length doesn't matter for that. Real run keeps 2048.
+  max_seq_length: 256
   logging_steps: 1
   save_strategy: epoch
   eval_strategy: epoch
