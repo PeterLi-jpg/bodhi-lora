@@ -190,7 +190,8 @@ pip install ${PIP_FLAGS} \
     "psutil>=5.9" \
     "google-cloud-storage>=2.14" \
     "chex>=0.1.85" \
-    "ml-collections>=0.1.1"
+    "ml-collections>=0.1.1" \
+    "pathwaysutils>=0.1.8"
 
 echo "=== Final version check ==="
 # v9, v10, v11 each died ~70 min into Stage 3a because this check only
@@ -209,6 +210,7 @@ import torch, torch_xla, peft, trl, transformers, accelerate
 import jax, flax, optax, orbax.checkpoint
 import omegaconf, etils.epath, ml_collections, jaxtyping, psutil, chex
 import google.cloud.storage  # noqa: F401  (Stage 3a Orbax ckpt loader)
+import pathwaysutils  # noqa: F401  (transitive: maxtext.utils.elastic_utils)
 
 # Stage 3a / 3b: the MaxText pipeline modules that died on missing deps
 # in v9-v11. Force-import them here so any further missing transitive
