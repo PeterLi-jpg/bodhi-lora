@@ -178,6 +178,11 @@ echo "=== Installing JAX stack for MaxText baseline ==="
 # v6e VMs ship Python 3.10. v10 caught etils 1.14.0 as the first
 # unavailable pin. Lower floors are still recent enough to expose
 # the modules MaxText imports.
+#
+# pathwaysutils ceiling: v13 caught the jax<0.7 vs jax>=0.7.2 conflict.
+# pathwaysutils 0.1.5+ requires jax>=0.7.2 (an unreleased series), so
+# we pin <0.1.5 to keep the resolver inside our jax floor of 0.6.2
+# (which is still on PyPI for py3.10).
 pip install ${PIP_FLAGS} \
     "jax[tpu]>=0.4.30,<0.7" \
     "flax>=0.10" \
@@ -191,7 +196,7 @@ pip install ${PIP_FLAGS} \
     "google-cloud-storage>=2.14" \
     "chex>=0.1.85" \
     "ml-collections>=0.1.1" \
-    "pathwaysutils>=0.1.8"
+    "pathwaysutils>=0.1.3,<0.1.5"
 
 echo "=== Final version check ==="
 # v9, v10, v11 each died ~70 min into Stage 3a because this check only
