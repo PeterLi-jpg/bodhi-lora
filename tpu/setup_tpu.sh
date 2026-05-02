@@ -12,6 +12,32 @@
 
 set -euo pipefail
 
+# ── Provision Python 3.11 in a venv ──────────────────────────────────────────
+# v6e TPU VMs run Ubuntu 22.04, where python3.11 is in the standard apt
+# universe. The vendored MaxText (third_party/maxtext) was built for py3.11+,
+# so its tpu-requirements.txt floors (etils 1.14+, ml-collections 1.1+,
+# jaxtyping 0.3.9+, psutil 7.2+, etc.) only resolve cleanly on 3.11. Running
+# the rest of this script through ${PIP} / ${PY} keeps every install + import
+# check inside the same interpreter.
+echo "=== Installing Python 3.11 (Ubuntu 22.04 universe) ==="
+sudo apt-get update -qq
+sudo apt-get install -y python3.11 python3.11-venv python3.11-dev
+
+if [ ! -d ~/.venv-py311 ]; then
+    python3.11 -m venv ~/.venv-py311
+fi
+PY=~/.venv-py311/bin/python
+PIP=~/.venv-py311/bin/pip
+
+# Persist venv activation for non-login shells (subsequent SSH sessions and
+# nohup'd children that the launchers spawn). Mirrors the bohdi-hf-cache.sh
+# pattern below.
+{
+    echo "export PATH=\$HOME/.venv-py311/bin:\$PATH"
+    echo "export VIRTUAL_ENV=\$HOME/.venv-py311"
+} | sudo tee /etc/profile.d/bohdi-venv.sh > /dev/null
+sudo chmod +x /etc/profile.d/bohdi-venv.sh
+
 # ── Mount the data disk (if attached) and redirect HF cache there ────────────
 # A 300 GB persistent SSD is attached at TPU create time (see launch script's
 # DATA_DISKS map).  It survives preemption and avoids the 100 GB boot-disk
@@ -118,16 +144,16 @@ PIP_FLAGS="--quiet --retries 10 --timeout 120"
 # pulled antlr4-python3-runtime as a sdist. Upgrade pip + setuptools +
 # wheel before any other pip install so source-builds don't blow up.
 echo "=== Upgrading pip / setuptools / wheel ==="
-pip install ${PIP_FLAGS} -U pip setuptools wheel
+${PIP} install ${PIP_FLAGS} -U pip setuptools wheel
 
 echo "=== Installing torch ${TORCH_VERSION} + torch_xla ${TORCH_XLA_VERSION} from TPU wheel server ==="
-pip install ${PIP_FLAGS} \
+${PIP} install ${PIP_FLAGS} \
     "torch==${TORCH_VERSION}" \
     "torch_xla[tpu]==${TORCH_XLA_VERSION}" \
     -f "${TPU_WHEEL_URL}"
 
 echo "=== Verifying torch_xla import ==="
-python3 -c "import torch; import torch_xla; print('torch:', torch.__version__, '| xla:', torch_xla.__version__)"
+${PY} -c "import torch; import torch_xla; print('torch:', torch.__version__, '| xla:', torch_xla.__version__)"
 
 echo "=== Installing remaining deps ==="
 # Pin torch here too so pip does not silently downgrade it when resolving
@@ -138,7 +164,7 @@ echo "=== Installing remaining deps ==="
 # in trl SFTTrainer, and accelerate's TPU-mode model placement (see
 # train_lora.py SPMD setup).  An upstream patch release between runs can break
 # any of those — pinning prevents silent regressions on a 24-hour pipeline.
-pip install ${PIP_FLAGS} \
+${PIP} install ${PIP_FLAGS} \
     "torch==${TORCH_VERSION}" \
     "bodhi-llm[all]==0.1.4" \
     "transformers==4.57.6" \
@@ -163,18 +189,20 @@ pip install ${PIP_FLAGS} \
 # the package is small (pure-Python wrappers around torch_xla).  --no-deps
 # keeps it from yanking transformers/torch back to its own pinned versions.
 echo "=== Installing optimum-tpu (FSDPv2 helpers) ==="
-pip install ${PIP_FLAGS} --no-deps "optimum-tpu>=0.2.0"
+${PIP} install ${PIP_FLAGS} --no-deps "optimum-tpu>=0.2.0"
 
 # JAX stack for the vendored MaxText baseline (third_party/maxtext).
 # Stage 3 is the only stage that uses MaxText, and it runs as its own process,
 # so jax and torch_xla don't try to claim TPU chips simultaneously.
 #
-# Note: third_party/maxtext's pinned tpu-requirements.txt floors are
-# jax>=0.9.2 / flax>=0.12.6 / orbax-checkpoint>=0.11.36 / optax>=0.2.8,
-# but those reflect an unreleased pre-0.7 JAX series not yet on PyPI
-# (PyPI tops out at jax 0.6.x as of 2026-04). We relax the floors here
-# to the latest PyPI-available versions that still expose the pjit /
-# shard_map / orbax APIs MaxText uses on TPU.
+# py3.11 is provisioned at the top of this script via apt + venv, so
+# MaxText's tpu-requirements.txt floors (etils 1.14+, ml-collections 1.1+,
+# jaxtyping 0.3.9+, psutil 7.2+, chex 0.1.91+, etc.) apply naturally.
+#
+# We KEEP the jax[tpu]>=0.4.30,<0.7 pin: MaxText's tpu-requirements.txt
+# pins jax>=0.9.2 but that's an unreleased pre-0.7 series not yet on PyPI
+# (PyPI tops out at jax 0.6.x as of 2026-04). Bumping jax is a separate
+# decision once 0.9 ships.
 echo "=== Installing JAX stack for MaxText baseline ==="
 # `jax[tpu]` pulls libtpu from PyPI directly; no -f flag needed (the
 # TPU_WHEEL_URL above is torch_xla's libtpu mirror, a separate distribution).
@@ -187,31 +215,22 @@ echo "=== Installing JAX stack for MaxText baseline ==="
 # omegaconf as the first missing dep at Stage 3a; install the full set
 # here so the converter and trainer don't crash on a fresh v6e VM.
 #
-# Floors are deliberately below MaxText's tpu-requirements.txt — that
-# file pins versions that require Python 3.11+ (etils 1.14+,
-# ml-collections 1.1+, jaxtyping 0.3.9+, psutil 7.2+, etc.), but
-# v6e VMs ship Python 3.10. v10 caught etils 1.14.0 as the first
-# unavailable pin. Lower floors are still recent enough to expose
-# the modules MaxText imports.
-#
-# pathwaysutils ceiling: v13 caught the jax<0.7 vs jax>=0.7.2 conflict.
-# pathwaysutils 0.1.5+ requires jax>=0.7.2 (an unreleased series), so
-# we pin <0.1.5 to keep the resolver inside our jax floor of 0.6.2
-# (which is still on PyPI for py3.10).
-pip install ${PIP_FLAGS} \
+# flax>=0.11 is required so flax.nnx.Pytree is native (the shim in
+# nnx_wrappers.py becomes a no-op).
+${PIP} install ${PIP_FLAGS} \
     "jax[tpu]>=0.4.30,<0.7" \
-    "flax>=0.10" \
+    "flax>=0.11.0" \
     "orbax-checkpoint>=0.11" \
     "optax>=0.2.4" \
     "omegaconf>=2.3.0" \
-    "etils[epath]>=1.7.0" \
-    "qwix>=0.0.1" \
-    "jaxtyping>=0.2.20" \
-    "psutil>=5.9" \
-    "google-cloud-storage>=2.14" \
-    "chex>=0.1.85" \
-    "ml-collections>=0.1.1" \
-    "pathwaysutils>=0.1.3,<0.1.5" \
+    "etils[epath]>=1.14.0" \
+    "qwix>=0.1.6" \
+    "jaxtyping>=0.3.9" \
+    "psutil>=7.2.2" \
+    "google-cloud-storage>=3.10.1" \
+    "chex>=0.1.91" \
+    "ml-collections>=1.1.0" \
+    "pathwaysutils>=0.1.8" \
     "aqtp>=0.9.0"
 
 echo "=== Final version check ==="
@@ -222,7 +241,8 @@ echo "=== Final version check ==="
 # the MaxText sub-packages so any further dep-tree gap fails here, not
 # at smoke-time. Repo path is added so `import maxtext...` resolves
 # against the vendored third_party/maxtext.
-python3 -c "
+python3.11 --version
+${PY} -c "
 import sys, pathlib
 repo_root = pathlib.Path.home() / 'bohdi-lora'
 sys.path.insert(0, str(repo_root / 'third_party' / 'maxtext' / 'src'))
@@ -240,6 +260,14 @@ import aqt.jax.v2.aqt_tensor  # noqa: F401  (transitive: maxtext.layers.initiali
 import maxtext.checkpoint_conversion.to_maxtext  # noqa: F401
 import maxtext.configs.pyconfig  # noqa: F401
 import maxtext.utils.max_utils  # noqa: F401
+
+# Confirm flax is at least 0.11 so flax.nnx.Pytree is native (no shim
+# needed). Higher is fine; we only fail on regressions below the floor.
+# Tolerate prerelease suffixes (e.g. '0.11.0rc1') by stripping non-digits.
+import re
+_parts = re.findall(r'\d+', flax.__version__)
+flax_major_minor = tuple(int(x) for x in _parts[:2])
+assert flax_major_minor >= (0, 11), f'flax {flax.__version__} < 0.11'
 
 print('torch:', torch.__version__)
 print('torch_xla:', torch_xla.__version__)
@@ -259,7 +287,7 @@ print('maxtext: importable')
 "
 
 # Pull vLLM-TPU image AFTER the import check so a partial-install (e.g.
-# next time MaxText pulls a new dep that fails on py3.10) doesn't burn
+# next time MaxText pulls a new dep that fails) doesn't burn
 # a 20 GB image pull before the failure surfaces.
 echo "=== Pulling vLLM-TPU Docker image ==="
 # Inference (Stages 1, 2, 4) runs vLLM inside this container rather than via
