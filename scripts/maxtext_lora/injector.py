@@ -1,27 +1,39 @@
 """LoRA injector for Gemma-3 (Flax / MaxText).
 
-Walks a Flax module tree, finds named Linear/Dense children matching
-``target_modules`` (e.g. ``q_proj``, ``v_proj``), and swaps each one for
-a ``LoraDense`` wrapper that holds the original Dense as its frozen base
-plus trainable LoRA-A / LoRA-B factors.
+Two entry points, one per kind of model:
 
-The frozen base weights stay shared (the wrapper points at the same
-``nn.Dense`` instance the injector replaced), so memory cost is just the
-LoRA factors: ``in_features * r + r * out_features`` parameters per
-target. About 13 M for MedGemma-27B with r=8 and 2 targets.
+* ``inject_lora(model, target_modules, ...)``
+  Walks a Linen module tree (``vars(parent)``-visible children), finds
+  every direct attribute or sequence-element whose name matches
+  ``target_modules``, and swaps it for a ``LoraDense`` wrapper. Used by
+  the synthetic Linen tests and any caller whose model is a plain Linen
+  ``nn.Module`` whose children are eagerly assigned (post-bind, or via
+  ``__post_init__``).
 
-Returns ``(injected_model, partition_spec_for_optimizer)``. The partition
-spec is a pytree shaped like the LoRA parameter sub-tree only, so
-optax (or any optimizer that walks it) allocates state exclusively for
-LoRA factors. The frozen base never gets a 2x memory hit from Adam's
-m / v buffers.
+* ``apply_lora(mt_cfg, target_modules, ...)``
+  The high-level helper for MaxText's Gemma-3. Builds the model with a
+  LoRA-aware decoder layer baked in, init's the variables tree (base +
+  LoRA), and returns the optimizer mask plus the device mesh. Necessary
+  because MaxText's decoder layers live behind
+  ``flax.nnx.bridge.ToLinen``, which recreates the underlying NNX module
+  on every forward call from ``nnx_class(*args, **kwargs)`` — there is
+  no persistent NNX instance to mutate. ``apply_lora`` instead
+  monkey-patches ``gemma3.Gemma3DecoderLayerToLinen`` with a fresh
+  ``ToLinen`` over a LoRA-aware ``Gemma3DecoderLayer`` subclass, so the
+  wrapping is baked into every ToLinen rematerialisation. The patch is
+  scoped to the call (``finally:`` restores the original symbol).
 
-The walker handles two Flax submodule patterns:
-  - direct attribute   (``self.q_proj = nn.Dense(...)``)
-  - tuple/list field   (``self.layers = (Block(...), Block(...), ...)``)
+LoRA cost: only ``in_features * r + r * out_features`` parameters per
+target. The base ``DenseGeneral`` kernel is reused (the wrapper holds a
+reference to the same instance the original layer constructed), so
+memory is dominated by the LoRA factors — about 13M for MedGemma-27B at
+r=8 and 2 targets.
 
-Anything more exotic (nn.scan, dynamic dicts) needs a custom path; this
-covers the Gemma-3 setup-style decoder used by the MaxText fork.
+Returns from ``apply_lora`` are shaped to feed the trainer directly:
+``(model, params, lora_filter_mask, mesh)``. The mask is a same-shape
+bool tree, ``True`` only at ``lora_a`` / ``lora_b`` leaves, suitable
+for ``optax.masked(...)`` so the optimizer never allocates Adam moments
+for the frozen base.
 """
 
 from __future__ import annotations
@@ -182,22 +194,26 @@ def _wrap_in_lora(
             "module must be importable before the injector can run."
         )
     if _is_dense_general(base_dense):
-        if not _HAS_LORA_DG:
-            raise ImportError(
-                "scripts.maxtext_lora.layer.LoraDenseGeneral is not "
-                "available — flax NNX likely isn't installed in this env."
-            )
-        if rngs is None:
-            raise ValueError(
-                "inject_lora must pass nnx.Rngs to wrap a DenseGeneral; "
-                "the LoRA factor init needs a params RNG stream."
-            )
-        return LoraDenseGeneral(
-            base=base_dense,
-            rank=rank,
-            alpha=alpha,
-            dropout=dropout,
-            rngs=rngs,
+        # The Linen walker can REACH a DenseGeneral when a synthetic
+        # parent exposes one as a direct child, but inject_lora's path
+        # cannot SAFELY wrap one inside a real MaxText model. Reason:
+        # MaxText's DenseGeneral lives behind a flax.nnx.bridge.ToLinen
+        # wrapper that recreates the underlying NNX module on every
+        # forward call from ``nnx_class(*args, **kwargs)``. Mutating
+        # the NNX instance after the fact does not survive — the next
+        # call rebuilds a fresh, un-wrapped DenseGeneral.
+        #
+        # Use ``apply_lora`` for production: it monkey-patches the
+        # decoder layer's nnx_class with a LoRA-aware subclass before
+        # model creation, so the wrapping is baked into every ToLinen
+        # rematerialisation. Raise loudly here so a future caller that
+        # tries the inject_lora path on a maxtext model gets a clear
+        # signal instead of silent loss-of-LoRA.
+        raise NotImplementedError(
+            "inject_lora cannot wrap a DenseGeneral child via the Linen "
+            "walker — the wrapping won't survive ToLinen recreation. Use "
+            "apply_lora(mt_cfg, ...) which subclasses the decoder layer's "
+            "nnx_class instead."
         )
     return LoraDense(
         features=base_dense.features,
@@ -399,6 +415,154 @@ def _build_lora_filter_mask(params: Any) -> Any:
     return jax.tree_util.tree_map_with_path(_is_lora_leaf, params)
 
 
+def _make_lora_decoder_subclass(
+    base_decoder_cls: Any,
+    target_modules: tuple[str, ...],
+    rank: int,
+    alpha: float,
+    dropout: float,
+    lora_seed: int,
+) -> Any:
+    """Build a LoRA-aware subclass of a MaxText decoder layer NNX class.
+
+    The subclass overrides ``__init__`` to call ``super().__init__()`` first
+    (which constructs the full attention block, including the
+    ``DenseGeneral`` projections at ``self.self_attention.<name>``), then
+    replaces each target projection with a ``LoraDenseGeneral`` that wraps
+    the original DenseGeneral. The wrapped DenseGeneral keeps its kernel,
+    so MaxText's base weights flow through Linen variables untouched; the
+    new ``lora_a`` / ``lora_b`` ``nnx.Param``s show up alongside.
+
+    Why this beats walking ``vars(model)``: MaxText's decoder layer is
+    behind ``flax.nnx.bridge.ToLinen``, which recreates the NNX module on
+    every forward call from ``nnx_class(*args, **kwargs)``. There is no
+    persistent NNX instance to mutate. Subclassing ``nnx_class`` itself
+    bakes the LoRA wrapping into every rematerialisation.
+
+    Args:
+        base_decoder_cls: e.g. ``maxtext.models.gemma3.Gemma3DecoderLayer``.
+        target_modules: tuple of attribute names on
+            ``self.self_attention`` to wrap (typically ``("query", "value")``).
+        rank, alpha, dropout: LoRA hyperparameters forwarded to
+            ``LoraDenseGeneral``.
+        lora_seed: integer seed for the ``nnx.Rngs`` that initialises
+            ``lora_a``. ``lora_b`` is zero-init so its seed doesn't matter,
+            but we keep the API symmetric.
+    """
+
+    class LoraDecoderLayer(base_decoder_cls):
+        """LoRA-wrapped decoder layer.
+
+        Init-time replacement of the targeted DenseGeneral attributes is
+        intentional: the MaxText layer's ``__init__`` does the
+        ``self.self_attention = Attention(...)`` work, which constructs
+        the q/k/v/o projections as DenseGeneral instances. After
+        ``super().__init__()`` returns, those attributes are NNX modules
+        we can swap out in place (NNX is eager, not lazy).
+        """
+
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+
+            # Each fresh layer instance gets its own Rngs derived from
+            # ``lora_seed``. Since ToLinen recreates the NNX module on
+            # every call, this seed must produce the same factors every
+            # time the subclass is instantiated — it does, because the
+            # PRNGKey is deterministic and the LoRA factor shape is
+            # fixed by the base DenseGeneral's in/out features. The Linen
+            # variable tree carries the trained values forward through
+            # ``nnx.update``, so the per-instance init is only used at
+            # ``model.init`` time.
+            inject_rngs = nnx.Rngs(params=jax.random.PRNGKey(lora_seed))
+
+            attn = getattr(self, "self_attention", None)
+            if attn is None:
+                raise AttributeError(
+                    f"{type(self).__name__}: no 'self_attention' attribute "
+                    "found after super().__init__(); cannot inject LoRA."
+                )
+            for name in target_modules:
+                if not hasattr(attn, name):
+                    raise AttributeError(
+                        f"{type(self).__name__}.self_attention has no "
+                        f"attribute {name!r}; check target_modules against "
+                        "the actual MaxText attention class."
+                    )
+                base_dg = getattr(attn, name)
+                wrapped = LoraDenseGeneral(
+                    base=base_dg,
+                    rank=rank,
+                    alpha=float(alpha),
+                    dropout=float(dropout),
+                    rngs=inject_rngs,
+                )
+                # NNX modules are mutable — direct setattr is fine and
+                # registers the new submodule in the graph.
+                setattr(attn, name, wrapped)
+
+    LoraDecoderLayer.__name__ = f"Lora{base_decoder_cls.__name__}"
+    LoraDecoderLayer.__qualname__ = LoraDecoderLayer.__name__
+    return LoraDecoderLayer
+
+
+def _patch_gemma3_to_linen(
+    target_modules: tuple[str, ...],
+    rank: int,
+    alpha: float,
+    dropout: float,
+    lora_seed: int,
+):
+    """Monkey-patch ``gemma3.Gemma3DecoderLayerToLinen`` with a LoRA-aware
+    ToLinen wrapper around a LoRA-aware ``Gemma3DecoderLayer`` subclass.
+
+    Returns a ``(restore_fn, info_dict)`` pair. The caller decides when
+    (or whether) to invoke ``restore_fn()``. ``apply_lora`` keeps the
+    patch in place for the model's lifetime: ``decoders.py:469`` does a
+    runtime ``gemma3.Gemma3DecoderLayerToLinen`` attribute lookup inside
+    ``Decoder.setup()``, and Linen calls ``setup()`` again on every
+    ``model.apply(...)``. Restoring the symbol after init would mean
+    later apply calls re-build the decoder layers WITHOUT LoRA wrappers
+    (variables present in the params tree, but not wired into the
+    forward), which silently zeros the LoRA contribution.
+
+    The patch DOES survive ToLinen recreation because ToLinen stores
+    the class reference directly in ``self.nnx_class`` at
+    instantiation. The dynamic part is the *outer* ``decoder.setup()``
+    re-execution, which re-reads the module attribute. Replace the
+    module-level symbol and every subsequent setup re-fetches the
+    LoRA-aware class.
+    """
+    from maxtext.models import gemma3
+    from maxtext.layers import nnx_wrappers
+    from maxtext.layers import initializers
+
+    base_cls = gemma3.Gemma3DecoderLayer
+    LoraDecoderCls = _make_lora_decoder_subclass(
+        base_decoder_cls=base_cls,
+        target_modules=target_modules,
+        rank=rank,
+        alpha=alpha,
+        dropout=dropout,
+        lora_seed=lora_seed,
+    )
+    LoraToLinen = nnx_wrappers.to_linen_class(
+        LoraDecoderCls,
+        base_metadata_fn=initializers.variable_to_logically_partitioned,
+    )
+
+    original = gemma3.Gemma3DecoderLayerToLinen
+    gemma3.Gemma3DecoderLayerToLinen = LoraToLinen
+
+    def _restore() -> None:
+        gemma3.Gemma3DecoderLayerToLinen = original
+
+    return _restore, {
+        "base_cls": base_cls,
+        "lora_cls": LoraDecoderCls,
+        "lora_to_linen": LoraToLinen,
+    }
+
+
 def apply_lora(
     mt_cfg: Any,
     *,
@@ -409,140 +573,213 @@ def apply_lora(
     variant: str = "standard",  # noqa: ARG001  (placeholder for DoRA / rsLoRA)
     seed: int = 0,
 ) -> tuple[Any, Any, Any, Any]:
-    """High-level helper for the trainer: build the MaxText Gemma-3 model,
-    inject LoRA, init params, and return the boolean mask the optimizer
-    needs, plus the mesh.
+    """Build the MaxText Gemma-3 model with LoRA wrappers baked in,
+    init params (base random + LoRA factors), and return the optimizer
+    mask plus the device mesh.
 
-    Returns ``(model, params, lora_filter_mask, mesh)`` where:
-      - ``model`` is the LoRA-wrapped Linen module
-      - ``params`` is the full nested params pytree
-        (``{"params": {...}}`` shape) including freshly-initialized
-        ``lora_a`` (kaiming-uniform) and ``lora_b`` (zero) factors AND
-        the base weights from MaxText's model init. Replace the base
-        weights with the orbax checkpoint via your training-state setup
-        (see ``train_lora_maxtext.py``), or use the helper here as the
-        first step before orbax restore.
-      - ``lora_filter_mask`` is a same-shape pytree of bool, True at
-        every LoRA factor leaf, suitable for ``optax.masked(...)``.
-      - ``mesh`` is the JAX device mesh derived from ``mt_cfg``;
-        returned explicitly so the trainer doesn't have to access
-        ``model.mesh`` (the Linen wrapper variants don't all expose
-        the attribute consistently).
+    Approach: subclass the gemma3 decoder NNX class with a LoRA-aware
+    version that, at construction time, replaces
+    ``self.self_attention.<target>`` for each target name with a
+    ``LoraDenseGeneral`` wrapping the original ``DenseGeneral``. We then
+    monkey-patch ``gemma3.Gemma3DecoderLayerToLinen`` with a fresh
+    ``ToLinen`` over the subclass before calling
+    ``model_creation_utils.from_config(...)``. The patch is undone in a
+    ``finally:`` so concurrent or later code paths that import gemma3
+    aren't disturbed.
 
-    Why we don't do the orbax restore here: it requires a
-    ``CheckpointManager`` and a ``mesh`` from MaxText's lifecycle
-    helpers (``setup_initial_state``). Keeping the LoRA-specific work
-    in this helper and the orbax-restore step in the trainer keeps
-    each piece testable and matches MaxText's own pre_train factoring.
+    This is the only injection path that survives ToLinen's
+    re-instantiation behaviour: ``ToLinen.__call__`` rebuilds the NNX
+    module from ``self.nnx_class(*args, **kwargs)`` on every forward,
+    so a per-instance mutation is silently lost. The subclass approach
+    bakes the wrapping into the class constructor itself.
+
+    Returns ``(model, params, lora_filter_mask, mesh)``:
+      - ``model``: the Linen ``TransformerLinenPure`` whose decoder
+        layers are now LoRA-aware (via the patched ToLinen wrapper).
+      - ``params``: full variables tree
+        (``{"params": {...}}``) including base weights AND
+        freshly-initialised ``lora_a`` (kaiming) and ``lora_b`` (zero)
+        leaves at ``params/decoder/layers_<i>/self_attention/<target>/``.
+        The base weights will be overwritten by the orbax restore in
+        the trainer.
+      - ``lora_filter_mask``: same-shape bool tree, ``True`` at every
+        ``lora_a`` / ``lora_b`` leaf, suitable for ``optax.masked``.
+      - ``mesh``: the JAX device mesh derived from ``mt_cfg``.
 
     Args:
-        mt_cfg: a ``pyconfig.HyperParameters`` already initialized with
-            the right ``model_name`` / ``per_device_batch_size`` /
-            ``max_target_length`` / ``weight_dtype`` keys.
-        target_modules: list of attribute names to wrap, e.g.
-            ``["q_proj", "v_proj"]``.
+        mt_cfg: a ``pyconfig.HyperParameters`` initialised with the
+            right ``model_name`` / ``per_device_batch_size`` /
+            ``max_target_length`` / ``weight_dtype`` keys. Must select
+            a gemma3 decoder block.
+        target_modules: attribute names on
+            ``Gemma3DecoderLayer.self_attention`` to wrap. The MaxText
+            attention exposes ``query``, ``key``, ``value``, ``out`` —
+            the typical LoRA setup is ``["query", "value"]``. The
+            trainer config currently passes the HuggingFace-style names
+            ``["q_proj", "v_proj"]``; those are auto-translated to
+            ``["query", "value"]`` here so callers don't have to re-map.
         rank: LoRA rank ``r``.
         alpha: LoRA alpha (effective scale = ``alpha / rank``).
-        dropout: applied to the input of the LoRA branch.
-        variant: ``"standard"`` (the only supported value today). DoRA
-            / rsLoRA reserved for a later PR.
-        seed: RNG seed for the model init pass. The same seed should be
-            used for ``mt_cfg.init_weights_seed`` so a re-init reproduces
-            the same LoRA factors.
-
-    UNTESTED: this helper has not yet run end-to-end on a TPU. The
-    pieces (``inject_lora``, ``model_creation_utils.from_config``,
-    ``model.init``) are individually tested, but the composition
-    (init-after-inject) is new code that will need verification on
-    a real v6e VM.
+        dropout: forwarded to ``LoraDenseGeneral`` (currently
+            informational; LoraDenseGeneral's forward is dropout-free
+            until an NNX dropout RNG is plumbed).
+        variant: must be ``"standard"`` for now.
+        seed: RNG seed shared between the model init pass and the LoRA
+            factor init.
     """
     if not _HAS_FLAX:
         raise ImportError("apply_lora requires jax + flax.")
+    if not _HAS_NNX:
+        raise ImportError(
+            "apply_lora requires flax.nnx (the NNX-side LoraDenseGeneral "
+            "wraps MaxText's NNX DenseGeneral). Install a flax version "
+            "that ships nnx, or run on the same py3.11 venv used on TPU."
+        )
+    if not _HAS_LORA_DG:
+        raise ImportError(
+            "scripts.maxtext_lora.layer.LoraDenseGeneral is not "
+            "available — the layer module must be importable here."
+        )
     if variant != "standard":
         raise ValueError(
             f"variant={variant!r} not supported yet. Only 'standard' "
             "(LoRA) ships today; DoRA / rsLoRA tracked separately."
         )
+    if not target_modules:
+        raise ValueError("target_modules is empty; nothing to inject.")
+    if rank <= 0:
+        raise ValueError(f"rank must be positive, got {rank}")
+
+    # We patch ``Gemma3DecoderLayerToLinen`` only. The scannable path
+    # (``Gemma3ScannableBlockToLinen``) wraps a scan-built block whose
+    # NNX class is ``Gemma3ScannableBlock`` — that class instantiates
+    # ``Gemma3DecoderLayer`` inside a loop, NOT through the patched
+    # symbol, so our subclass would be bypassed. Bail loudly so the
+    # caller flips ``scan_layers=False`` (the converter uses unrolled
+    # checkpoints anyway).
+    if bool(getattr(mt_cfg, "scan_layers", False)):
+        raise NotImplementedError(
+            "apply_lora currently requires scan_layers=False. The "
+            "scannable Gemma3ScannableBlock builds decoder layers "
+            "directly from Gemma3DecoderLayer (not through the patched "
+            "ToLinen wrapper), so the LoRA wrapping would be silently "
+            "skipped on the scan path."
+        )
 
     import jax  # noqa: F401  matches deferred-jax pattern
+    import jax.numpy as jnp
+    from flax.linen import partitioning as nn_partitioning
 
     # MaxText is on sys.path (added by the trainer's _train()).
     from maxtext.utils import model_creation_utils
     from maxtext.utils import maxtext_utils
 
-    # Build the base model (Linen, not NNX — rngs=None below).
-    # MaxText derives the mesh from the config + currently-visible
-    # devices, which is what the rest of the SFT loop expects too.
-    mesh = maxtext_utils.get_mesh_from_config(mt_cfg)
-    model = model_creation_utils.from_config(mt_cfg, mesh=mesh)
-
-    # Inject LoRA wrappers into the matched targets (e.g. ``query`` and
-    # ``value`` for MaxText Gemma-3, which are NNX ``DenseGeneral``).
-    # ``inject_lora`` mutates ``model`` in place AND returns it.
-    #
-    # NNX-flavoured ``LoraDenseGeneral`` needs an ``nnx.Rngs`` for its
-    # parameter init at *injection* time (the LoRA factors are eager,
-    # not lazy like Linen). Build one off the same seed the trainer is
-    # using so a re-injection produces identical LoRA factors.
-    if _HAS_NNX:
-        inject_rngs = nnx.Rngs(params=jax.random.PRNGKey(seed + 5000))
-    else:
-        inject_rngs = None
-    inject_lora(
-        model,
-        target_modules=target_modules,
-        rank=rank,
-        alpha=alpha,
-        dropout=dropout,
-        rngs=inject_rngs,
-    )
-
-    # Init the full params pytree (base + LoRA) once. The base weights
-    # will be overwritten by the orbax restore in the trainer; the
-    # LoRA factors stay as initialized (lora_a kaiming, lora_b zeros).
-    #
-    # Three RNG collections like MaxText's init_initial_state (see
-    # third_party/maxtext/src/maxtext/utils/maxtext_utils.py:1247):
-    # ``params`` for weight init, ``dropout`` for dropout layers,
-    # ``aqt`` for AQT (quantization noise) sampling. Missing ``aqt``
-    # raises a ``KeyError`` from inside the Gemma-3 quantization
-    # decorator on the first init pass.
-    params_key, dropout_key, aqt_key = jax.random.split(
-        jax.random.PRNGKey(seed), 3
-    )
-    init_rngs = {
-        "params": params_key,
-        "dropout": dropout_key,
-        "aqt": aqt_key,
+    # Translate HuggingFace-style target names to MaxText attention attrs.
+    # The trainer config historically uses ``q_proj`` / ``v_proj`` /
+    # ``k_proj`` / ``o_proj`` (PEFT convention). MaxText's attention
+    # class exposes ``query`` / ``key`` / ``value`` / ``out``. We map the
+    # common names so existing configs keep working without surgery.
+    _HF_TO_MAXTEXT = {
+        "q_proj": "query",
+        "k_proj": "key",
+        "v_proj": "value",
+        "o_proj": "out",
     }
-    import jax.numpy as jnp
-    from flax.linen import partitioning as nn_partitioning
-    bsz = int(mt_cfg.per_device_batch_size)
-    seqlen = int(mt_cfg.max_target_length)
-    dummy_inputs = jnp.zeros((bsz, seqlen), dtype=jnp.int32)
-    dummy_positions = jnp.broadcast_to(
-        jnp.arange(seqlen, dtype=jnp.int32), (bsz, seqlen)
-    )
-    dummy_segmentation = jnp.ones((bsz, seqlen), dtype=jnp.int32)
+    translated = tuple(_HF_TO_MAXTEXT.get(name, name) for name in target_modules)
 
-    # Init under mesh + logical_axis_rules so the model's
-    # ``with_partitioning`` annotations on its Dense kernels resolve to
-    # real PartitionSpecs (and the resulting params are sharded across
-    # the v6e fsdp axis instead of replicated). This mirrors
-    # ``maxtext_utils.get_abstract_param`` (lines 1280+) which uses the
-    # same context for jax.eval_shape.
-    with mesh, nn_partitioning.axis_rules(mt_cfg.logical_axis_rules):
-        variables = model.init(
-            init_rngs,
-            dummy_inputs,
-            dummy_positions,
-            decoder_segment_ids=dummy_segmentation,
-            encoder_images=None,
-            encoder_image_masks=None,
-            enable_dropout=False,  # init pass; no dropout
-            decoder_target_tokens=dummy_inputs,
-            decoder_target_mask=dummy_segmentation,
+    mesh = maxtext_utils.get_mesh_from_config(mt_cfg)
+
+    # Patch the gemma3 ToLinen symbol BEFORE building the model. The
+    # decoder picks up the LoRA-aware subclass for every layer.
+    #
+    # NOTE: the patch is intentionally LEFT IN PLACE for the lifetime of
+    # the returned ``model``. ``decoders.py:469`` does a *runtime*
+    # attribute lookup (``gemma3.Gemma3DecoderLayerToLinen``) inside
+    # ``Decoder.setup()``, and Linen calls ``setup()`` again on every
+    # ``model.apply(...)``. Restoring the symbol after init would mean
+    # subsequent apply calls re-build decoder layers WITHOUT LoRA
+    # wrappers — variables present, but not wired into the forward.
+    # The trainer process only constructs one model per run, so the
+    # global patch is harmless. If the caller really needs to undo
+    # the patch later (e.g. test isolation), they can call the
+    # returned ``restore_patch`` callback at the end of the model's
+    # life — but DO NOT call it before training is done.
+    restore_patch, _info = _patch_gemma3_to_linen(
+        target_modules=translated,
+        rank=rank,
+        alpha=float(alpha),
+        dropout=float(dropout),
+        # Offset from the model-init seed so the LoRA factors are
+        # decorrelated from the base init RNG stream. Same offset every
+        # time so a re-init reproduces identical LoRA factors.
+        lora_seed=int(seed) + 5000,
+    )
+    try:
+        # Build the base model (Linen, not NNX — rngs=None below).
+        # MaxText derives the mesh from the config + currently-visible
+        # devices, which is what the rest of the SFT loop expects too.
+        model = model_creation_utils.from_config(mt_cfg, mesh=mesh)
+
+        # Init the full params pytree (base + LoRA) once. The base weights
+        # will be overwritten by the orbax restore in the trainer; the
+        # LoRA factors stay as initialized (lora_a kaiming, lora_b zeros).
+        #
+        # Three RNG collections like MaxText's init_initial_state (see
+        # third_party/maxtext/src/maxtext/utils/maxtext_utils.py:1247):
+        # ``params`` for weight init, ``dropout`` for dropout layers,
+        # ``aqt`` for AQT (quantization noise) sampling. Missing ``aqt``
+        # raises a ``KeyError`` from inside the Gemma-3 quantization
+        # decorator on the first init pass.
+        params_key, dropout_key, aqt_key = jax.random.split(
+            jax.random.PRNGKey(seed), 3
         )
+        init_rngs = {
+            "params": params_key,
+            "dropout": dropout_key,
+            "aqt": aqt_key,
+        }
+        bsz = int(mt_cfg.per_device_batch_size)
+        seqlen = int(mt_cfg.max_target_length)
+        dummy_inputs = jnp.zeros((bsz, seqlen), dtype=jnp.int32)
+        dummy_positions = jnp.broadcast_to(
+            jnp.arange(seqlen, dtype=jnp.int32), (bsz, seqlen)
+        )
+        dummy_segmentation = jnp.ones((bsz, seqlen), dtype=jnp.int32)
+
+        # Init under mesh + logical_axis_rules so the model's
+        # ``with_partitioning`` annotations on its Dense kernels resolve to
+        # real PartitionSpecs (and the resulting params are sharded across
+        # the v6e fsdp axis instead of replicated). This mirrors
+        # ``maxtext_utils.get_abstract_param`` (lines 1280+) which uses the
+        # same context for jax.eval_shape.
+        with mesh, nn_partitioning.axis_rules(mt_cfg.logical_axis_rules):
+            variables = model.init(
+                init_rngs,
+                dummy_inputs,
+                dummy_positions,
+                decoder_segment_ids=dummy_segmentation,
+                encoder_images=None,
+                encoder_image_masks=None,
+                enable_dropout=False,  # init pass; no dropout
+                decoder_target_tokens=dummy_inputs,
+                decoder_target_mask=dummy_segmentation,
+            )
+    except Exception:
+        # If init failed, restore the symbol so the next attempt or
+        # subsequent unrelated code path doesn't see a stale LoRA
+        # subclass. On success, leave it patched (see comment above).
+        restore_patch()
+        raise
 
     lora_filter_mask = _build_lora_filter_mask(variables)
+    # Stash the restore callback on the returned model so a caller who
+    # wants to undo the patch (e.g. a unit test that builds another
+    # model after) has a hook. Public, but undocumented in the type
+    # signature; intended for advanced use only.
+    try:
+        object.__setattr__(model, "_lora_restore_patch", restore_patch)
+    except Exception:
+        # Some Linen versions reject setattr on the bare module pre-init;
+        # not fatal — the trainer doesn't need this hook.
+        pass
     return model, variables, lora_filter_mask, mesh
