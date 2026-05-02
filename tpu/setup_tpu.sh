@@ -192,16 +192,31 @@ pip install ${PIP_FLAGS} \
     "chex>=0.1.85" \
     "ml-collections>=0.1.1"
 
-echo "=== Pulling vLLM-TPU Docker image ==="
-# Inference (Stages 1, 2, 4) runs vLLM inside this container rather than via
-# pip install (which installs the CUDA build, not the TPU build).
-# Pull here so the first Stage 1 run doesn't stall waiting for a 20 GB download.
-sudo docker pull vllm/vllm-tpu:latest
-
 echo "=== Final version check ==="
+# v9, v10, v11 each died ~70 min into Stage 3a because this check only
+# imported the JAX 4-pack — missing deps for the MaxText converter
+# weren't surfaced until Stage 3a actually ran. We now import every
+# external module the production stages 3a/3b/4/5 actually use, plus
+# the MaxText sub-packages so any further dep-tree gap fails here, not
+# at smoke-time. Repo path is added so `import maxtext...` resolves
+# against the vendored third_party/maxtext.
 python3 -c "
+import sys, pathlib
+repo_root = pathlib.Path.home() / 'bohdi-lora'
+sys.path.insert(0, str(repo_root / 'third_party' / 'maxtext' / 'src'))
+
 import torch, torch_xla, peft, trl, transformers, accelerate
 import jax, flax, optax, orbax.checkpoint
+import omegaconf, etils.epath, ml_collections, jaxtyping, psutil, chex
+import google.cloud.storage  # noqa: F401  (Stage 3a Orbax ckpt loader)
+
+# Stage 3a / 3b: the MaxText pipeline modules that died on missing deps
+# in v9-v11. Force-import them here so any further missing transitive
+# dep surfaces in setup, not 70 minutes into Stage 3a.
+import maxtext.checkpoint_conversion.to_maxtext  # noqa: F401
+import maxtext.configs.pyconfig  # noqa: F401
+import maxtext.utils.max_utils  # noqa: F401
+
 print('torch:', torch.__version__)
 print('torch_xla:', torch_xla.__version__)
 print('transformers:', transformers.__version__)
@@ -212,6 +227,20 @@ print('jax:', jax.__version__)
 print('flax:', flax.__version__)
 print('optax:', optax.__version__)
 print('orbax-checkpoint:', orbax.checkpoint.__version__)
+print('omegaconf:', omegaconf.__version__)
+print('etils:', etils.__version__)
+print('ml_collections:', ml_collections.__version__)
+print('chex:', chex.__version__)
+print('maxtext: importable')
 "
+
+# Pull vLLM-TPU image AFTER the import check so a partial-install (e.g.
+# next time MaxText pulls a new dep that fails on py3.10) doesn't burn
+# a 20 GB image pull before the failure surfaces.
+echo "=== Pulling vLLM-TPU Docker image ==="
+# Inference (Stages 1, 2, 4) runs vLLM inside this container rather than via
+# pip install (which installs the CUDA build, not the TPU build).
+# Pull here so the first Stage 1 run doesn't stall waiting for a 20 GB download.
+sudo docker pull vllm/vllm-tpu:latest
 
 echo "=== setup_tpu.sh done ==="
