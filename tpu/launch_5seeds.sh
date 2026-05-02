@@ -222,6 +222,8 @@ git -c "url.https://x-access-token:\${GH_TOKEN}@github.com/.insteadOf=https://gi
 git reset --hard origin/main 2>&1 | tail -1 || true
 
 echo "--- 0/4 setup_tpu.sh ---" | tee -a ~/pipeline.log
+# Legacy torch_xla path — train_lora.py imports torch_xla, so request it.
+export BOHDI_INSTALL_TORCH_XLA=1
 bash tpu/setup_tpu.sh > ~/setup.log 2>&1 || { echo "setup FAILED" >> ~/pipeline.log; exit 1; }
 echo SETUP_OK >> ~/pipeline.log
 # /etc/profile.d/bohdi-hf-cache.sh is sourced only by login shells; this
