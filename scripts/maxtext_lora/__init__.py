@@ -3,12 +3,13 @@
 Module aliases re-exported for ``train_lora_maxtext.py``:
 
   - ``lora_inject``    -> ``scripts.maxtext_lora.injector``
-  - ``dataset_loader`` -> ``scripts.convert_traces_to_maxtext``
+  - ``dataset_loader`` -> ``scripts.maxtext_lora.dataset_loader``
   - ``export_peft``    -> ``scripts.export_maxtext_lora_to_peft``
 
-The dataset converter and PEFT exporter live as top-level scripts; only the
-injector lives under this package. Re-binding them here keeps the trainer's
-import block short and lets us move things later without touching callers.
+The PEFT exporter lives as a top-level script; the injector and the
+dataset loader live under this package. Re-binding them here keeps
+the trainer's import block short and lets us move things later
+without touching callers.
 
 Aliases resolve lazily via PEP 562 ``__getattr__`` so importing this package
 doesn't drag in transformers / peft / etc. on a CPU dev box that just wants
@@ -24,7 +25,11 @@ from types import ModuleType
 
 _ALIASES = {
     "lora_inject": "scripts.maxtext_lora.injector",
-    "dataset_loader": "scripts.convert_traces_to_maxtext",
+    # Was scripts.convert_traces_to_maxtext (the offline JSONL writer);
+    # the trainer needs an iterator builder, which lives in its own
+    # module now. Stage 2's offline converter still produces the
+    # *.tokenized.jsonl files this loader reads.
+    "dataset_loader": "scripts.maxtext_lora.dataset_loader",
     "export_peft": "scripts.export_maxtext_lora_to_peft",
 }
 

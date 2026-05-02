@@ -510,6 +510,47 @@ def export(
     )
 
 
+def write_adapter(
+    *,
+    orbax_checkpoint: Any,
+    output_dir: Any,
+    base_model_name: str,
+    target_modules: List[str],
+    rank: int,
+    alpha: int,
+    dropout: float = 0.0,
+    variant: str = "standard",
+    task_type: str = "CAUSAL_LM",
+) -> None:
+    """Trainer-facing wrapper for ``export``.
+
+    Stage 3b's trainer (``scripts/train_lora_maxtext.py``) calls this with
+    the per-run hyperparameters it already has in scope (rank, alpha,
+    target_modules from the YAML's lora section; orbax_checkpoint from
+    the final save; output_dir = checkpoints/seed_<N>/best/). The
+    underlying ``export`` function takes a ``settings`` dict; we build
+    that here so the trainer doesn't have to know about the dict
+    plumbing or the optional DoRA / rsLoRA flags (we leave them off —
+    the trainer has no path to enable either today).
+    """
+    settings: Dict[str, Any] = {
+        "r": int(rank),
+        "lora_alpha": int(alpha),
+        "lora_dropout": float(dropout),
+        "target_modules": list(target_modules) if target_modules else None,
+        "task_type": task_type,
+        "variant": variant,
+        "use_dora": False,
+        "use_rslora": False,
+    }
+    export(
+        orbax_path=Path(orbax_checkpoint),
+        output_dir=Path(output_dir),
+        base_model=base_model_name,
+        settings=settings,
+    )
+
+
 def build_argparser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         description=(

@@ -276,3 +276,144 @@ def inject_lora(
 
     partition_spec = _build_partition_spec(injected_paths)
     return model, partition_spec
+
+
+def _build_lora_filter_mask(params: Any) -> Any:
+    """Walk a params pytree and return a same-shape pytree of bools,
+    True at every leaf whose flat path contains a ``lora_a`` or
+    ``lora_b`` segment.
+
+    This is the mask we hand to ``optax.masked(...)`` so the optimizer
+    only allocates Adam moments + applies updates for the LoRA factors;
+    everything in the frozen base is left untouched (and stays at zero
+    grad-update so the 27B base never moves).
+
+    Implementation note: we use ``jax.tree_util.tree_map_with_path``
+    when available (jax >= 0.4.20) to avoid having to flatten and
+    reconstruct manually. The path comes through as a tuple of
+    ``DictKey``/``GetAttrKey`` etc.; we look at the str() form to
+    decide whether ``lora_a`` / ``lora_b`` appears anywhere along
+    the path. This is robust to NNX vs Linen and to the exact
+    container types Flax uses.
+    """
+    if not _HAS_FLAX:
+        raise ImportError(
+            "_build_lora_filter_mask requires jax + flax."
+        )
+    import jax  # local import: matches the deferred-jax pattern at the top of this module
+
+    def _is_lora_leaf(path: Any, _leaf: Any) -> bool:
+        flat = "/".join(str(p) for p in path)
+        return ("lora_a" in flat) or ("lora_b" in flat)
+
+    return jax.tree_util.tree_map_with_path(_is_lora_leaf, params)
+
+
+def apply_lora(
+    mt_cfg: Any,
+    *,
+    target_modules: list[str],
+    rank: int,
+    alpha: float,
+    dropout: float = 0.0,
+    variant: str = "standard",  # noqa: ARG001  (placeholder for DoRA / rsLoRA)
+    seed: int = 0,
+) -> tuple[Any, Any, Any]:
+    """High-level helper for the trainer: build the MaxText Gemma-3 model,
+    inject LoRA, init params, and return the boolean mask the optimizer
+    needs.
+
+    Returns ``(model, params, lora_filter_mask)`` where:
+      - ``model`` is the LoRA-wrapped Linen module
+      - ``params`` is the full nested params pytree
+        (``{"params": {...}}`` shape) including freshly-initialized
+        ``lora_a`` (kaiming-uniform) and ``lora_b`` (zero) factors AND
+        the base weights from MaxText's model init. Replace the base
+        weights with the orbax checkpoint via your training-state setup
+        (see ``train_lora_maxtext.py``), or use the helper here as the
+        first step before orbax restore.
+      - ``lora_filter_mask`` is a same-shape pytree of bool, True at
+        every LoRA factor leaf, suitable for ``optax.masked(...)``.
+
+    Why we don't do the orbax restore here: it requires a
+    ``CheckpointManager`` and a ``mesh`` from MaxText's lifecycle
+    helpers (``setup_initial_state``). Keeping the LoRA-specific work
+    in this helper and the orbax-restore step in the trainer keeps
+    each piece testable and matches MaxText's own pre_train factoring.
+
+    Args:
+        mt_cfg: a ``pyconfig.HyperParameters`` already initialized with
+            the right ``model_name`` / ``per_device_batch_size`` /
+            ``max_target_length`` / ``weight_dtype`` keys.
+        target_modules: list of attribute names to wrap, e.g.
+            ``["q_proj", "v_proj"]``.
+        rank: LoRA rank ``r``.
+        alpha: LoRA alpha (effective scale = ``alpha / rank``).
+        dropout: applied to the input of the LoRA branch.
+        variant: ``"standard"`` (the only supported value today). DoRA
+            / rsLoRA reserved for a later PR.
+        seed: RNG seed for the model init pass. The same seed should be
+            used for ``mt_cfg.init_weights_seed`` so a re-init reproduces
+            the same LoRA factors.
+
+    UNTESTED: this helper has not yet run end-to-end on a TPU. The
+    pieces (``inject_lora``, ``model_creation_utils.from_config``,
+    ``model.init``) are individually tested, but the composition
+    (init-after-inject) is new code that will need verification on
+    a real v6e VM.
+    """
+    if not _HAS_FLAX:
+        raise ImportError("apply_lora requires jax + flax.")
+    if variant != "standard":
+        raise ValueError(
+            f"variant={variant!r} not supported yet. Only 'standard' "
+            "(LoRA) ships today; DoRA / rsLoRA tracked separately."
+        )
+
+    import jax  # noqa: F401  matches deferred-jax pattern
+
+    # MaxText is on sys.path (added by the trainer's _train()).
+    from maxtext.utils import model_creation_utils
+    from maxtext.utils import maxtext_utils
+
+    # Build the base model (Linen, not NNX — rngs=None below).
+    # MaxText derives the mesh from the config + currently-visible
+    # devices, which is what the rest of the SFT loop expects too.
+    mesh = maxtext_utils.get_mesh_from_config(mt_cfg)
+    model = model_creation_utils.from_config(mt_cfg, mesh=mesh)
+
+    # Inject LoRA wrappers into q_proj / v_proj / etc. inject_lora
+    # mutates ``model`` in place AND returns it. The partition_spec it
+    # also returns is the per-LoRA-factor PartitionSpec covering only
+    # the new params; we keep it for future sharding tweaks but the
+    # filter mask below is what optax.masked() needs.
+    inject_lora(
+        model,
+        target_modules=target_modules,
+        rank=rank,
+        alpha=alpha,
+        dropout=dropout,
+    )
+
+    # Init the full params pytree (base + LoRA) once. The base weights
+    # will be overwritten by the orbax restore in the trainer; the
+    # LoRA factors stay as initialized (lora_a kaiming, lora_b zeros).
+    init_rngs = {
+        "params": jax.random.PRNGKey(seed),
+        "dropout": jax.random.PRNGKey(seed + 1),
+    }
+    # UNTESTED: Gemma-3's model.init signature on the vendored MaxText
+    # may take more than ``input_ids``. The trainer's first compile
+    # will tell us if extra positional args are needed (positions,
+    # segmentation, etc.). When that breaks, look at how
+    # `maxtext.utils.maxtext_utils.init_initial_state` constructs the
+    # input dict — that's the source of truth for the model.apply
+    # signature.
+    dummy_inputs = jax.numpy.zeros(
+        (mt_cfg.per_device_batch_size, mt_cfg.max_target_length),
+        dtype=jax.numpy.int32,
+    )
+    variables = model.init(init_rngs, dummy_inputs)
+
+    lora_filter_mask = _build_lora_filter_mask(variables)
+    return model, variables, lora_filter_mask
