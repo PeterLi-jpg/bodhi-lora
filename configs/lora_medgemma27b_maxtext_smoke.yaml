@@ -36,8 +36,13 @@ training:
   # measure anything.
   num_epochs: 1
   per_device_train_batch_size: 1
-  # 4 instead of 64 — keeps wall-clock short on the smoke train pool.
-  gradient_accumulation_steps: 4
+  # MaxText FSDP requires the step batch (per_device * grad_accum in our
+  # dataloader's wiring) to be divisible by ici_fsdp_parallelism, which
+  # auto-shards to all 8 chips on v6e-8. v23 originally had grad_accum=4
+  # which gave batch=4, hitting AssertionError at attention_op:1172
+  # ("query.shape[0]=1/devices_in_data_fsdp=8"). 8 makes the smoke step
+  # batch divisible by 8 with minimal wall-clock cost (production uses 64).
+  gradient_accumulation_steps: 8
   learning_rate: 1.0e-4
   warmup_ratio: 0.05
   lr_scheduler_type: cosine
