@@ -318,12 +318,12 @@ def apply_lora(
     dropout: float = 0.0,
     variant: str = "standard",  # noqa: ARG001  (placeholder for DoRA / rsLoRA)
     seed: int = 0,
-) -> tuple[Any, Any, Any]:
+) -> tuple[Any, Any, Any, Any]:
     """High-level helper for the trainer: build the MaxText Gemma-3 model,
     inject LoRA, init params, and return the boolean mask the optimizer
-    needs.
+    needs, plus the mesh.
 
-    Returns ``(model, params, lora_filter_mask)`` where:
+    Returns ``(model, params, lora_filter_mask, mesh)`` where:
       - ``model`` is the LoRA-wrapped Linen module
       - ``params`` is the full nested params pytree
         (``{"params": {...}}`` shape) including freshly-initialized
@@ -334,6 +334,10 @@ def apply_lora(
         first step before orbax restore.
       - ``lora_filter_mask`` is a same-shape pytree of bool, True at
         every LoRA factor leaf, suitable for ``optax.masked(...)``.
+      - ``mesh`` is the JAX device mesh derived from ``mt_cfg``;
+        returned explicitly so the trainer doesn't have to access
+        ``model.mesh`` (the Linen wrapper variants don't all expose
+        the attribute consistently).
 
     Why we don't do the orbax restore here: it requires a
     ``CheckpointManager`` and a ``mesh`` from MaxText's lifecycle
@@ -443,4 +447,4 @@ def apply_lora(
         )
 
     lora_filter_mask = _build_lora_filter_mask(variables)
-    return model, variables, lora_filter_mask
+    return model, variables, lora_filter_mask, mesh

@@ -278,7 +278,7 @@ def _train(cfg: dict, seed: int, output_dir: str) -> None:
     # model.init to materialize a full params tree (base random init +
     # LoRA factors at PEFT init: kaiming A, zero B), and returns a
     # boolean filter mask for optax.masked.
-    model, params, lora_filter_mask = lora_inject.apply_lora(
+    model, params, lora_filter_mask, mesh = lora_inject.apply_lora(
         mt_cfg,
         target_modules=lora_cfg["target_modules"],
         rank=lora_cfg["r"],
@@ -317,8 +317,9 @@ def _train(cfg: dict, seed: int, output_dir: str) -> None:
     # nn_partitioning.axis_rules(config.logical_axis_rules):
     # checkpointing.load_params_from_path(...)``). Without the context
     # the restored arrays may end up replicated, blowing memory on
-    # the 27 B base.
-    mesh = model.mesh
+    # the 27 B base. ``mesh`` comes from apply_lora (returned
+    # explicitly so we don't depend on ``model.mesh``, which isn't
+    # exposed on every Linen wrapper variant).
     with mesh, nn_partitioning.axis_rules(mt_cfg.logical_axis_rules):
         try:
             restored_inner = mt_checkpointing.load_params_from_path(
@@ -377,7 +378,7 @@ def _train(cfg: dict, seed: int, output_dir: str) -> None:
     # moments inherit the LoRA params' sharding (LoRA params are tiny
     # so this is cheap, but doing it under context keeps the jit'd
     # train_step's sharding inference consistent).
-    with model.mesh, nn_partitioning.axis_rules(mt_cfg.logical_axis_rules):
+    with mesh, nn_partitioning.axis_rules(mt_cfg.logical_axis_rules):
         opt_state = tx.init(params)
 
     # --- jit'd train_step + eval_step ----------------------------------------
@@ -453,7 +454,6 @@ def _train(cfg: dict, seed: int, output_dir: str) -> None:
     # across all chips (LoRA-sized, so OK) but the model params would
     # also be replicated (27 B × 8 chips = OOM). Keeping the context
     # active for both jit and the loop body ensures consistency.
-    mesh = model.mesh
     with mesh, nn_partitioning.axis_rules(mt_cfg.logical_axis_rules):
         train_step = jax.jit(_train_step)
         eval_step = jax.jit(_eval_step)
