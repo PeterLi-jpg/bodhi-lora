@@ -118,12 +118,15 @@ done
 # ~5h of duplicated trace generation per VM (15h total).
 GCS_DATA_PATH="${GCS_DATA_PATH:-}"
 
-# Optional second-pass grader for the cross-grader bias-control sweep.
-# When set, each VM re-grades the 4 eval configs with this model after
-# Stage 4. Off by default: significant grader compute (~12h H100 per
-# seed). Recommended: Qwen/Qwen2.5-14B-Instruct (different family from
-# the primary Llama grader).
-SECOND_GRADER_MODEL="${SECOND_GRADER_MODEL:-}"
+# Cross-grader bias-control. Each VM re-grades the same 4 generated
+# response sets with this secondary grader IN PROCESS via
+# eval_healthbench.py's --secondary-grader-model flag (see run_eval
+# below). Defaults to Qwen/Qwen2.5-14B-Instruct so workshop / paper runs
+# always have a cross-grader bound on grader-bias by construction. Set
+# to empty string explicitly to skip ("SECOND_GRADER_MODEL='' bash ...").
+# The secondary pass adds ~30-40% to Stage 4 wall on TPU (it's just the
+# grader pass over already-generated responses, not a full regeneration).
+SECOND_GRADER_MODEL="${SECOND_GRADER_MODEL-Qwen/Qwen2.5-14B-Instruct}"
 
 # Smoke knobs (mirrors tpu/launch_multiseed.sh).
 # MAX_EXAMPLES caps Stage 1 trace generation; EVAL_MAX caps Stage 4 eval
@@ -526,10 +529,20 @@ SEED_IDS="data/raw/hard_seed_${SEED}.json"
     --output "\$SEED_IDS" >> ~/pipeline.log 2>&1
 
 # run_eval: write \$1.json under \$2 graded by \$3, with model+wrapper args from \$4.
-# Used both by the primary pass (out_dir=eval/seed_<N>, grader=Qwen) and
-# the optional cross-grader pass below (out_dir=cross_grader/<tag>,
-# grader=\${SECOND_GRADER_MODEL}). Skips if the output already exists so
-# preempt-resume picks up where it left off.
+# Used by the primary pass (out_dir=eval/seed_<N>, grader=Llama). When
+# SECOND_GRADER_MODEL is set on the local launcher (literally baked into
+# this heredoc), passes --secondary-grader-model so a second grader
+# (e.g. Qwen2.5-14B) re-grades the SAME generated responses in-process
+# and appends the result to secondary_grader_runs[] in the output JSON.
+# This replaces the older Stage-4b "re-run run_eval with a different
+# --grader-model" pattern that doubled inference cost by regenerating
+# every response under the secondary grader. With
+# --secondary-grader-model the generation runs once, the primary grader
+# scores, and the secondary grader re-grades the existing in-memory
+# responses (Pass 2b in eval_healthbench.py:469-517). Saves ~50% of
+# Stage 4 wall when the cross-grader pass is enabled.
+# Skips if the output already exists so preempt-resume picks up where
+# it left off.
 run_eval() {
     local name="\$1" out_dir="\$2" grader="\$3" args="\$4"
     local out="\${out_dir}/\${name}.json"
@@ -537,11 +550,19 @@ run_eval() {
         echo "[\$name @ \$grader] already exists, skipping" >> ~/pipeline.log
         return 0
     fi
-    echo "--- eval \$name @ \$grader ---" | tee -a ~/pipeline.log
+    # Build the optional --secondary-grader-model flag once. SECOND_GRADER_MODEL
+    # is local-side \${VAR} expansion: empty -> sec_grader_flag stays empty,
+    # non-empty -> baked literally into the run_eval invocation below.
+    local sec_grader_flag=""
+    if [ -n "${SECOND_GRADER_MODEL}" ]; then
+        sec_grader_flag="--secondary-grader-model ${SECOND_GRADER_MODEL}"
+    fi
+    echo "--- eval \$name @ \$grader\${sec_grader_flag:+ (+ ${SECOND_GRADER_MODEL})} ---" | tee -a ~/pipeline.log
     # shellcheck disable=SC2086
     if \${PY} -u scripts/eval_healthbench.py \$args \\
             --sample-ids "\$SEED_IDS" \\
             --grader-model "\$grader" \\
+            \$sec_grader_flag \\
             --output "\$out" \\
             ${_EVAL_MAX_FLAG} \\
             --seed ${SEED} >> ~/eval.log 2>&1; then
@@ -556,61 +577,62 @@ PRIMARY_GRADER="meta-llama/Llama-3.1-8B-Instruct"
 # Track per-config failures so EVAL_OK is only written when all 4 graded
 # successfully. Capture each call's exit status without letting set -e
 # abort the rest of the pass; partial eval results are still worth saving.
+#
+# cleanup_eval between configs is load-bearing for disk: each LoRA config
+# materialises ~bodhi_merged_<seed>/ (8GB+ for 4B base+LoRA). Without
+# cleanup, after 4 configs the merged dirs accumulate to >32GB on a
+# ~100GB v6e boot disk that already has Docker images, deps, and HF
+# weights staged. Stop the vllm container + delete merged scratch
+# between every config so disk free stays roughly constant.
 eval_fail_count=0
 run_eval "base_no_wrapper"  "\$PRIMARY_DIR" "\$PRIMARY_GRADER" "--model ${MODEL_NAME}" || eval_fail_count=\$((eval_fail_count + 1))
 gcs_rsync "eval/seed_${SEED}/" "eval/"
+cleanup_eval
 run_eval "base_bodhi"       "\$PRIMARY_DIR" "\$PRIMARY_GRADER" "--model ${MODEL_NAME} --use-bodhi" || eval_fail_count=\$((eval_fail_count + 1))
 gcs_rsync "eval/seed_${SEED}/" "eval/"
+cleanup_eval
 run_eval "lora_no_wrapper"  "\$PRIMARY_DIR" "\$PRIMARY_GRADER" "--model ${MODEL_NAME} --lora-path \$LORA_DIR" || eval_fail_count=\$((eval_fail_count + 1))
 gcs_rsync "eval/seed_${SEED}/" "eval/"
+cleanup_eval
 run_eval "lora_bodhi"       "\$PRIMARY_DIR" "\$PRIMARY_GRADER" "--model ${MODEL_NAME} --lora-path \$LORA_DIR --use-bodhi" || eval_fail_count=\$((eval_fail_count + 1))
 gcs_rsync "eval/seed_${SEED}/" "eval/"
+cleanup_eval
 if [ "\$eval_fail_count" -eq 0 ]; then
     echo EVAL_OK >> ~/pipeline.log
 else
     echo "EVAL_FAILED (\$eval_fail_count/4 configs failed)" >> ~/pipeline.log
 fi
 
-# Stage 4b: optional cross-grader pass.
-# SECOND_GRADER_MODEL is baked in from the local launcher (literal value
-# or empty string: local-side \${VAR} expansion, NO backslash). When
-# non-empty we re-grade the same 4 configs over the same prompt IDs but
-# with --grader-model "\${SECOND_GRADER_MODEL}", then run
-# scripts/grader_correlation.py to report Spearman rho vs. the primary
-# Llama eval grader. Same configs, same IDs, only the grader differs,
-# so the correlation is on apples-to-apples scores. Pick a family
-# different from Llama (e.g. Qwen/Qwen2.5-14B-Instruct).
-SECOND_GRADER_MODEL="${SECOND_GRADER_MODEL}"
-if [ -n "\${SECOND_GRADER_MODEL}" ]; then
-    SECOND_GRADER_TAG="\$(printf '%s' "\${SECOND_GRADER_MODEL}" | tr '/:' '__')"
-    SECOND_GRADER_DIR="\${PRIMARY_DIR}/cross_grader/\${SECOND_GRADER_TAG}"
-    mkdir -p "\${SECOND_GRADER_DIR}"
-    echo "--- 4b/5 cross-grader pass: \${SECOND_GRADER_MODEL} ---" | tee -a ~/pipeline.log
-
-    run_eval "base_no_wrapper"  "\$SECOND_GRADER_DIR" "\$SECOND_GRADER_MODEL" "--model ${MODEL_NAME}"
-    gcs_rsync "eval/seed_${SEED}/" "eval/"
-    run_eval "base_bodhi"       "\$SECOND_GRADER_DIR" "\$SECOND_GRADER_MODEL" "--model ${MODEL_NAME} --use-bodhi"
-    gcs_rsync "eval/seed_${SEED}/" "eval/"
-    run_eval "lora_no_wrapper"  "\$SECOND_GRADER_DIR" "\$SECOND_GRADER_MODEL" "--model ${MODEL_NAME} --lora-path \$LORA_DIR"
-    gcs_rsync "eval/seed_${SEED}/" "eval/"
-    run_eval "lora_bodhi"       "\$SECOND_GRADER_DIR" "\$SECOND_GRADER_MODEL" "--model ${MODEL_NAME} --lora-path \$LORA_DIR --use-bodhi"
-    gcs_rsync "eval/seed_${SEED}/" "eval/"
-
-    echo "--- 4b/5 grader correlation ---" | tee -a ~/pipeline.log
-    \${PY} -u scripts/grader_correlation.py \\
-        --reference-jsons \\
-            "\${PRIMARY_DIR}/base_no_wrapper.json" \\
-            "\${PRIMARY_DIR}/base_bodhi.json" \\
-            "\${PRIMARY_DIR}/lora_no_wrapper.json" \\
-            "\${PRIMARY_DIR}/lora_bodhi.json" \\
-        --candidate-jsons \\
-            "\${SECOND_GRADER_DIR}/base_no_wrapper.json" \\
-            "\${SECOND_GRADER_DIR}/base_bodhi.json" \\
-            "\${SECOND_GRADER_DIR}/lora_no_wrapper.json" \\
-            "\${SECOND_GRADER_DIR}/lora_bodhi.json" \\
-        --output "\${SECOND_GRADER_DIR}/correlation.json" \\
-        >> ~/eval.log 2>&1 || echo "grader_correlation FAILED" >> ~/pipeline.log
-    echo XGRADER_OK >> ~/pipeline.log
+# Stage 4b: cross-grader marker (data is already in-place).
+# The secondary grader pass is in-process via run_eval's
+# --secondary-grader-model flag (above). Each per-config JSON in
+# PRIMARY_DIR now has a secondary_grader_runs[0] block holding the
+# secondary grader's per-prompt scores; the per-config primary vs
+# secondary correlation is computed post-hoc by
+# scripts/analysis/cross_grader_post_hoc.py (workshop appendix path —
+# does not need TPU compute, just reads the JSONs). The launcher just
+# emits the marker so the dashboard / parser can confirm the in-place
+# secondary pass actually wrote the runs.
+if [ -n "${SECOND_GRADER_MODEL}" ]; then
+    echo "--- 4b/5 cross-grader scores captured in secondary_grader_runs[] ---" | tee -a ~/pipeline.log
+    # Sanity check: at least one of the 4 configs must have a non-empty
+    # secondary_grader_runs[]. Fail loud if all four are empty (means the
+    # --secondary-grader-model flag silently no-op'd, e.g. missing token).
+    sec_ok=0
+    for cfg in base_no_wrapper base_bodhi lora_no_wrapper lora_bodhi; do
+        if [ -s "\${PRIMARY_DIR}/\${cfg}.json" ] && \\
+           \${PY} -c "import json,sys; d=json.load(open(sys.argv[1])); sys.exit(0 if d.get('secondary_grader_runs') else 1)" \\
+                "\${PRIMARY_DIR}/\${cfg}.json" 2>/dev/null; then
+            sec_ok=\$((sec_ok + 1))
+        fi
+    done
+    if [ "\$sec_ok" -ge 1 ]; then
+        echo "  secondary_grader_runs present on \$sec_ok/4 configs (grader=${SECOND_GRADER_MODEL})" >> ~/pipeline.log
+        echo XGRADER_OK >> ~/pipeline.log
+    else
+        echo "  WARN: 0/4 configs have secondary_grader_runs — second grader may have failed silently" >> ~/pipeline.log
+        echo "XGRADER_FAILED" >> ~/pipeline.log
+    fi
     gcs_rsync "eval/seed_${SEED}/" "eval/"
 fi
 
