@@ -428,6 +428,23 @@ def _train(cfg: dict, seed: int, output_dir: str) -> None:
     trainer = trainer.with_gen_model_input_fn(gen_model_input_fn)
 
     # --- Train ----------------------------------------------------------------
+    # tunix's PeftTrainer runs an INITIAL eval at step 0 whenever
+    # eval_ds is not None (peft_trainer.py:619-620), independent of
+    # eval_every_n_steps. v32 OOMed on the eval JIT compile with 27B
+    # params + qwix LoRA on v6e-8. When the YAML's eval_interval is
+    # greater than max_steps, the user has effectively asked for "no
+    # eval"; respect that by passing eval_ds=None so the initial eval
+    # doesn't fire either.
+    eval_interval = int(train_cfg.get("eval_interval", 1))
+    eval_arg = eval_iter if eval_interval <= int(train_cfg["max_steps"]) else None
+    if eval_arg is None:
+        print(
+            f"[tunix] eval_interval={eval_interval} > max_steps="
+            f"{int(train_cfg['max_steps'])}: skipping eval entirely "
+            "(passing eval_ds=None to trainer.train).",
+            flush=True,
+        )
+
     print(
         f"[tunix] starting training: max_steps={training_config.max_steps} "
         f"global_batch_size={global_batch_size} grad_accum="
@@ -435,7 +452,7 @@ def _train(cfg: dict, seed: int, output_dir: str) -> None:
         flush=True,
     )
     with mesh:
-        trainer.train(train_iter, eval_iter)
+        trainer.train(train_iter, eval_arg)
     print("[tunix] training finished.", flush=True)
 
 
