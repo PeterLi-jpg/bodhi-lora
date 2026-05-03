@@ -223,13 +223,13 @@ def test_too_small_for_batch_raises(tmp_path: Path) -> None:
         )
 
 
-def test_val_too_small_raises(tmp_path: Path) -> None:
-    """Val set smaller than global_batch_size must error. _eval_iter
-    drops partial last batches, so a too-small val split would yield
-    zero batches and the trainer would silently log no eval line.
-    Symmetric with the train-too-small guard."""
-    # Train must clear its own guard (>= global_batch_size rows) so that
-    # the val guard is the one that fires.
+def test_val_too_small_pads_with_ignored_dummy_rows(tmp_path: Path) -> None:
+    """Val set smaller than global_batch_size used to raise; v30 hit this
+    on a smoke run where the resumed GCS_DATA_PATH had only 7 val rows
+    against batch=8. Now the loader pads with all-ignored dummy rows
+    (labels=-100) so eval still produces a single batch with zero loss
+    contribution from the padding."""
+    # Train must clear its own guard so the val path is what we exercise.
     _write_tokenized(
         tmp_path / "train.tokenized.jsonl",
         [
@@ -243,16 +243,25 @@ def test_val_too_small_raises(tmp_path: Path) -> None:
         tmp_path / "val.tokenized.jsonl",
         [{"input_ids": [9, 10], "labels": [-100, 10]}],
     )
-    with pytest.raises(ValueError, match=r"val set .* too small"):
-        dl.build_iterators(
-            dataset_dir=str(tmp_path),
-            train_file=None,
-            val_file=None,
-            per_device_batch_size=2,
-            gradient_accumulation_steps=2,  # global=4, val has 1 row
-            max_seq_length=8,
-            seed=0,
-        )
+    train_iter, eval_iter, _ = dl.build_iterators(
+        dataset_dir=str(tmp_path),
+        train_file=None,
+        val_file=None,
+        per_device_batch_size=2,
+        gradient_accumulation_steps=2,  # global=4, val has 1 row → pad with 3
+        max_seq_length=8,
+        seed=0,
+    )
+    eval_batches = list(eval_iter)
+    assert len(eval_batches) == 1, "padded val should yield exactly one batch"
+    batch = eval_batches[0]
+    assert batch["input_ids"].shape == (4, 8), "shape preserved after padding"
+    # Of the 4 rows in the batch, the 3 padded ones must contribute zero loss
+    # via the labels=-100 → loss_mask=0 path.
+    nonzero_loss_rows = (batch["loss_mask"].sum(axis=1) > 0).sum()
+    assert int(nonzero_loss_rows) == 1, (
+        "exactly one row (the real val row) should have any loss contribution"
+    )
 
 
 def test_input_ids_labels_length_mismatch(tmp_path: Path) -> None:
@@ -320,6 +329,19 @@ def test_build_iterators_tunix_format_yields_TrainingInput(fake_dataset: Path) -
         mod = sys.modules["tqdm"]
         if not getattr(mod, "__file__", None):
             del sys.modules["tqdm"]
+
+    # Also evict any partially-imported tunix subpackages — when the tqdm
+    # mock fired during a PRIOR test's import of tunix, tunix's submodules
+    # land in sys.modules half-initialized. Subsequent re-imports in this
+    # test then trip Python's namespace-package recalculation
+    # (`KeyError: 'tunix'`) because the parent module entry was never
+    # populated. Clearing the broken entries lets the fresh import below
+    # rebuild from a clean slate.
+    for mod_name in list(sys.modules):
+        if mod_name == "tunix" or mod_name.startswith("tunix."):
+            existing = sys.modules.get(mod_name)
+            if existing is not None and not getattr(existing, "__file__", None):
+                del sys.modules[mod_name]
 
     from tunix.sft.peft_trainer import TrainingInput
 

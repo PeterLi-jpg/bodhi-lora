@@ -30,8 +30,9 @@ lora:
   # einsums which are tunix gemma3's equivalent of HF's q_proj/k_proj/v_proj.
   # tunix gemma3 attention uses einsum modules: q_einsum holds the query
   # projection, kv_einsum holds packed k+v. The qwix LoraRule regex U2
-  # builds is r".*\.attn\.(q_einsum|kv_einsum)\.w$"; the entries below are
-  # the leaf names that regex matches.
+  # builds is r".*/attn/(q_einsum|kv_einsum)"; the '/' separator and the
+  # absent .w$ are intentional: qwix's module_path matches against the
+  # MODULE path (joined with '/'), not the param leaf name.
   r: 8
   alpha: 16
   dropout: 0.0
@@ -43,8 +44,11 @@ training:
   # Smoke: 2 train steps then 1 eval step then ckpt save -> exit. Confirms
   # the loop fires; not enough to measure anything.
   per_device_batch_size: 1
-  # Global batch = per_device * grad_accum * num_devices = 1 * 8 * 8 = 64
-  # on v6e-8, matching the production effective batch.
+  # Per-step batch yielded by dataset_loader = per_device * grad_accum = 8
+  # on the smoke (NOT multiplied by num_devices; the dataloader's formula
+  # treats grad_accum as a per-step batch multiplier in its own right).
+  # Production yaml uses grad_accum=64 -> per-step batch=64, divisible by 8
+  # FSDP devices on v6e-8.
   gradient_accumulation_steps: 8
   learning_rate: 1.0e-4
   max_steps: 2
@@ -52,7 +56,6 @@ training:
   # 4x activation cut vs 1024 (smoke memory). 256 is enough to confirm
   # the optimizer + ckpt path; real run uses 2048.
   max_seq_length: 256
-  bf16: true
 
 data:
   # Already produced by Stage 3b dataset converter
@@ -62,7 +65,8 @@ data:
   dataset_dir: data/sft/maxtext
 
 paths:
-  # Defaults are for local CPU testing; production runs override
-  # --output-dir on the CLI and the launcher (U6) substitutes per-seed.
-  checkpoint_root_directory: checkpoints/seed_42/orbax
-  best_dir: checkpoints/seed_42/best
+  # The launcher (U6) passes --output-dir checkpoints/seed_$SEED at invocation
+  # time; the trainer (U2) appends '/orbax' to it when this YAML key isn't
+  # set. Set explicitly here for local CPU testing only. Use <N> as a seed
+  # placeholder (the trainer substitutes it) for multi-seed launches.
+  checkpoint_root_directory: checkpoints/seed_<N>/orbax
