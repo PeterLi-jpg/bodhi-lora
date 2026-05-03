@@ -266,6 +266,7 @@ def _train(cfg: dict, seed: int, output_dir: str) -> None:
     # Lazy heavy imports — keeps `--help` light.
     import jax
     import jax.numpy as jnp
+    import numpy as np
     import optax
     import qwix
     from flax import nnx
@@ -278,14 +279,31 @@ def _train(cfg: dict, seed: int, output_dir: str) -> None:
     train_cfg = cfg["training"]
     paths_cfg = cfg["paths"]
 
-    # --- Mesh: 1-D FSDP over all devices --------------------------------------
+    # --- Mesh: 2-D (fsdp, tp) -------------------------------------------------
+    # tunix's gemma3 model declares its param sharding as P('tp', 'fsdp'), so
+    # the runtime mesh MUST expose both axes by name even when one of them is
+    # size 1. v29 crashed at model load with:
+    #   "Resource axis: tp of P('tp', 'fsdp') is not found in mesh: ('fsdp',)"
+    # because we used a 1-D mesh ('fsdp',). For v6e-8 (8 chips) the simplest
+    # split is fsdp=num_devices, tp=1: full FSDP across all chips, no tensor
+    # parallelism. Configurable via training.tp_size in YAML for hybrid splits.
     devices = jax.devices()
     if not devices:
         raise RuntimeError(
             "jax.devices() returned an empty list. tunix needs at least one "
             "device (TPU, GPU, or CPU)."
         )
-    mesh = jax.sharding.Mesh(devices, ("fsdp",))
+    n_devices = len(devices)
+    tp_size = int(train_cfg.get("tp_size", 1))
+    if n_devices % tp_size != 0:
+        raise ValueError(
+            f"training.tp_size={tp_size} does not divide num_devices={n_devices}; "
+            "pick a tp_size that divides cleanly (e.g. 1, 2, 4, 8 on v6e-8)."
+        )
+    fsdp_size = n_devices // tp_size
+    device_mesh = np.asarray(devices).reshape(fsdp_size, tp_size)
+    mesh = jax.sharding.Mesh(device_mesh, ("fsdp", "tp"))
+    print(f"[tunix] mesh: fsdp={fsdp_size} tp={tp_size} ({n_devices} devices)", flush=True)
 
     # --- dtype mapping --------------------------------------------------------
     dtype_str = str(model_cfg.get("dtype", "bfloat16")).lower()
