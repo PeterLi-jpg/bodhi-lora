@@ -89,7 +89,7 @@ training:
   # At seq=2048 same per-chip batch=1, so attention memory is 4x and
   # MLP activations 2x vs seq=1024. Should still fit on v6e-8 (32GB
   # HBM/chip) with the watchdog as a fallback that auto-halves on OOM.
-  max_seq_length: 1536
+  max_seq_length: 1024
 
 data:
   # Output of Stage 3b dataset converter
