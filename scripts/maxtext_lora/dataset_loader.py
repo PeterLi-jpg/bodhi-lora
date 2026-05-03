@@ -36,7 +36,7 @@ from __future__ import annotations
 import json
 import random
 from pathlib import Path
-from typing import Any, Dict, Iterator, List, Tuple
+from typing import Any, Dict, Iterator, List, Literal, Tuple
 
 import numpy as np
 
@@ -213,7 +213,8 @@ def build_iterators(
     max_seq_length: int,
     seed: int,
     pad_id: int = DEFAULT_PAD_ID,
-) -> Tuple[Iterator[Dict[str, np.ndarray]], Iterator[Dict[str, np.ndarray]], int]:
+    output_format: Literal["maxtext", "tunix"] = "maxtext",
+) -> Tuple[Iterator[Any], Iterator[Any], int]:
     """Build the (train_iter, eval_iter, steps_per_epoch) triple the
     trainer expects.
 
@@ -234,6 +235,13 @@ def build_iterators(
             epoch's shuffle so a multi-epoch run is reproducible.
         pad_id: token id used for right-pad on inputs. Loss is masked
             on pad positions so the value doesn't affect training.
+        output_format: ``"maxtext"`` (default) yields the legacy dict
+            batches ``{"input_ids", "labels", "loss_mask"}`` consumed by
+            ``scripts/train_lora_maxtext.py``. ``"tunix"`` wraps each
+            batch in ``tunix.sft.peft_trainer.TrainingInput`` for the
+            tunix ``PeftTrainer.train(...)`` path. Tunix is imported
+            lazily so test environments without it can still exercise
+            the default code path.
 
     Returns:
         ``(train_iter, eval_iter, steps_per_epoch)``.
@@ -253,7 +261,14 @@ def build_iterators(
         emit no line at all. We fail fast here with a fix-it message
         pointing at per_device_batch_size / gradient_accumulation_steps
         / data.val_ratio.
+        ValueError if ``output_format`` is not one of the supported
+        values.
     """
+    if output_format not in ("maxtext", "tunix"):
+        raise ValueError(
+            f"Unknown output_format={output_format!r}; must be 'maxtext' or 'tunix'"
+        )
+
     train_path = _resolve_path(dataset_dir, train_file, "train")
     val_path = _resolve_path(dataset_dir, val_file, "val")
 
@@ -293,4 +308,26 @@ def build_iterators(
 
     train = _train_iter(train_rows, global_batch_size, max_seq_length, pad_id, seed)
     eval_ = _eval_iter(val_rows, global_batch_size, max_seq_length, pad_id)
+
+    if output_format == "tunix":
+        # Lazy import so dev boxes / CI without tunix installed can still
+        # use the default 'maxtext' path. tunix is heavy (pulls jax/flax)
+        # and we don't want module import to fail for callers that never
+        # ask for the tunix format.
+        from tunix.sft.peft_trainer import TrainingInput
+
+        def _wrap(it: Iterator[Dict[str, np.ndarray]]) -> Iterator[TrainingInput]:
+            for batch in it:
+                # tunix's input_mask is a boolean attention mask: True for
+                # real (loss-bearing) tokens, False for pad/-100. Our
+                # loss_mask already encodes exactly that, but we re-derive
+                # from labels for clarity (the contract is "labels !=
+                # LABEL_IGNORE_ID"; the loss_mask happens to match it).
+                yield TrainingInput(
+                    input_tokens=batch["input_ids"],
+                    input_mask=(batch["labels"] != LABEL_IGNORE_ID),
+                )
+
+        return _wrap(train), _wrap(eval_), steps_per_epoch
+
     return train, eval_, steps_per_epoch
