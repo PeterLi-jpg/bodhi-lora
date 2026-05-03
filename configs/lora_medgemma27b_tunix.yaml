@@ -32,8 +32,8 @@ lora:
   # attention q+kv einsums which are tunix gemma3's equivalent of HF's
   # q_proj/k_proj/v_proj. tunix gemma3 attention uses einsum modules:
   # q_einsum holds the query projection, kv_einsum holds packed k+v. The
-  # qwix LoraRule regex U2 builds is r".*\.attn\.(q_einsum|kv_einsum)\.w$";
-  # the entries below are the leaf names that regex matches.
+  # qwix LoraRule regex U2 builds is r".*/attn/(q_einsum|kv_einsum)" (slash
+  # separator, no leaf suffix).
   r: 8
   alpha: 16
   dropout: 0.05
@@ -42,24 +42,26 @@ lora:
     - kv_einsum
 
 training:
-  # Production runs by epoch, not steps; max_steps stays unset.
-  num_epochs: 5
   per_device_batch_size: 1
-  # Global batch = per_device * grad_accum * num_devices = 1 * 64 * 8 = 512
-  # on v6e-8. Matches the maxtext production effective batch (1 * 64 = 64
-  # per host, with 8 hosts under MaxText's SPMD layout).
+  # Per-step batch yielded by dataset_loader = per_device * grad_accum = 64
+  # on v6e-8 (NOT multiplied by num_devices; the dataloader's formula treats
+  # grad_accum as a per-step batch multiplier). Matches the maxtext
+  # production effective batch.
   gradient_accumulation_steps: 64
   learning_rate: 1.0e-4
-  warmup_ratio: 0.05
-  lr_scheduler_type: cosine
-  # Eval at the end of each epoch (matches maxtext eval_strategy: epoch).
-  eval_interval: epoch
-  # 2048 production seq len; mirrors the maxtext yaml's audit C4 reasoning
-  # (1024 was capping ~22% of responses; 4096 OOMs on v6e-8 with grad_accum
-  # 64 + FSDPv2). Keep at 2048 unless the memory math is re-checked.
+  # max_steps is REQUIRED by the trainer (no num_epochs path). Set this for
+  # the actual production target — typical recipe: ceil(num_train_examples *
+  # epochs / global_batch). For ~30k filtered SFT rows, batch=64, 5 epochs:
+  # ceil(30000 * 5 / 64) ≈ 2350. Override via env or per-run override before
+  # launching production.
+  max_steps: 2350
+  # eval_interval is an int (steps), not a string. Roughly 1 eval per epoch
+  # at this batch: 30000 / 64 ≈ 470 steps per epoch.
+  eval_interval: 470
+  # 2048 production seq len; mirrors the maxtext yaml's reasoning (1024
+  # capped ~22% of responses; 4096 OOMs on v6e-8 with grad_accum 64 +
+  # FSDP). Keep at 2048 unless the memory math is re-checked.
   max_seq_length: 2048
-  logging_steps: 5
-  bf16: true
 
 data:
   # Output of Stage 3b dataset converter
@@ -68,7 +70,8 @@ data:
   dataset_dir: data/sft/maxtext
 
 paths:
-  # Defaults are for local CPU testing; production runs override
-  # --output-dir on the CLI and the launcher (U6) substitutes per-seed.
-  checkpoint_root_directory: checkpoints/seed_42/orbax
-  best_dir: checkpoints/seed_42/best
+  # The launcher (U6) passes --output-dir checkpoints/seed_$SEED at invocation
+  # time; the trainer (U2) appends '/orbax' to it when this YAML key isn't
+  # set. Set explicitly here for local CPU testing only. Use <N> as a seed
+  # placeholder (the trainer substitutes it) for multi-seed launches.
+  checkpoint_root_directory: checkpoints/seed_<N>/orbax
