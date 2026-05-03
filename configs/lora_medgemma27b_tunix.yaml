@@ -43,25 +43,43 @@ lora:
 
 training:
   per_device_batch_size: 1
-  # Per-step batch yielded by dataset_loader = per_device * grad_accum = 64
-  # on v6e-8 (NOT multiplied by num_devices; the dataloader's formula treats
-  # grad_accum as a per-step batch multiplier). Matches the maxtext
-  # production effective batch.
-  gradient_accumulation_steps: 64
+  # gradient_accumulation_steps tunes BOTH the batch shape that the dummy
+  # qwix LoRA trace + train_step JIT see, AND the optax.MultiSteps
+  # accumulation count. With per_device=1, the dataloader yields batches
+  # of size grad_accum per next() call, and tunix's PeftTrainer feeds
+  # each to one train_step call. After grad_accum calls, optax.MultiSteps
+  # fires the optimizer update.
+  #
+  # Effective batch per optimizer step = grad_accum * grad_accum = grad_accum^2.
+  # Set to 8 for the NeurIPS 27B run:
+  #   - effective batch per opt step = 8 * 8 = 64 examples (healthy for
+  #     LoRA on ~30K SFT data; matches HF PEFT defaults)
+  #   - dummy trace shape = (8, max_seq_length); on v6e-8 with FSDP=8
+  #     each chip sees per-chip batch = 1, which fits 27B + LoRA at
+  #     max_seq=1024 in <20 GB/chip activations
+  #
+  # The previous value of 64 implied an effective batch of 4096 (way
+  # over-scoped for a 30K-example SFT, and OOMed at trace time on v6e-8).
+  gradient_accumulation_steps: 8
   learning_rate: 1.0e-4
-  # max_steps is REQUIRED by the trainer (no num_epochs path). Set this for
-  # the actual production target — typical recipe: ceil(num_train_examples *
-  # epochs / global_batch). For ~30k filtered SFT rows, batch=64, 5 epochs:
-  # ceil(30000 * 5 / 64) ≈ 2350. Override via env or per-run override before
-  # launching production.
-  max_steps: 2350
-  # eval_interval is an int (steps), not a string. Roughly 1 eval per epoch
-  # at this batch: 30000 / 64 ≈ 470 steps per epoch.
-  eval_interval: 470
-  # 2048 production seq len; mirrors the maxtext yaml's reasoning (1024
-  # capped ~22% of responses; 4096 OOMs on v6e-8 with grad_accum 64 +
-  # FSDP). Keep at 2048 unless the memory math is re-checked.
-  max_seq_length: 2048
+  # max_steps is the count of OPTIMIZER STEPS (not train_step calls).
+  # 800 steps at effective batch 64 = 51,200 examples processed across
+  # all epochs. With ~30K filtered SFT rows that's ~1.7 epochs of full
+  # data, on the conservative side for LoRA fine-tuning but reasonable
+  # for a NeurIPS-deadline run. The original 2350 (5 epochs) is preserved
+  # in commit history; can bump back to 2350 if the per-step wall time
+  # comes in under ~5 sec/step.
+  max_steps: 800
+  # ~1 eval per ~30000/64 ≈ 470 examples-per-epoch. With max_steps=800
+  # and eval_interval=400 we get one eval mid-run + final.
+  eval_interval: 400
+  # 27B + max_seq=2048 OOMed at JIT compile on v6e-8 (v33: 22.86G needed,
+  # 18.61G free). Cutting to 1024 reduces attention memory ~4x (O(seq^2))
+  # and MLP activations ~2x. Workshop / paper note: 1024 captured ~78%
+  # of HealthBench Hard responses based on the prior run's response
+  # length distribution; longer responses get truncated at the rubric
+  # criteria boundary.
+  max_seq_length: 1024
 
 data:
   # Output of Stage 3b dataset converter
