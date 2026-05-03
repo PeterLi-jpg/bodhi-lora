@@ -52,7 +52,14 @@ training:
   gradient_accumulation_steps: 8
   learning_rate: 1.0e-4
   max_steps: 2
-  eval_interval: 2
+  # Skip eval for the smoke. v31 OOMed at JIT-compiling eval_step_fn:
+  #   RESOURCE_EXHAUSTED: 19.88G alloc, only 18.61G free
+  # The smoke's purpose is "does the pipeline run end-to-end" — train +
+  # ckpt save is enough; eval needs more HBM headroom than v6e-8 has at
+  # FSDP=8 + max_seq=256. Setting eval_interval > max_steps means
+  # eval_step_fn never compiles. Production runs use eval_interval=470
+  # (one per epoch) and have the headroom budget.
+  eval_interval: 999
   # 4x activation cut vs 1024 (smoke memory). 256 is enough to confirm
   # the optimizer + ckpt path; real run uses 2048.
   max_seq_length: 256
