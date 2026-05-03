@@ -96,6 +96,9 @@ fi
 : "\${HF_TOKEN:?HF_TOKEN missing from ~/.bohdi-env}"
 : "\${GH_TOKEN:?GH_TOKEN missing from ~/.bohdi-env}"
 export PJRT_DEVICE=TPU
+# Pin to the py3.11 venv that setup_tpu.sh installs, so PATH ordering
+# can't drop us back onto system python 3.10.
+PY=~/.venv-py311/bin/python
 
 if [ ! -d ~/bohdi-lora ]; then
     git -c "url.https://x-access-token:\${GH_TOKEN}@github.com/.insteadOf=https://github.com/" \\
@@ -116,9 +119,12 @@ mkdir -p data/sft data/raw
 # run from a prior preempted attempt), pull it down so generate_traces.py
 # can resume against it. The generate script self-skips when nothing is
 # left to do, so this path doubles as the "Stage 1 already complete"
-# fast-exit. Eval prompt IDs are fed via --exclude-ids so the eval set
-# (data/raw/hard_200_sample_ids.json, 200 of the 1000 healthbench_hard
-# prompts) never lands in the SFT corpus.
+# fast-exit. --exclude-ids drops *all 1000* HealthBench Hard prompts from
+# the trace pool (not just the 200-sample eval holdout) so the per-seed
+# bootstrap eval (issue #60) is honestly held-out.  HealthBench Hard is a
+# strict subset of HealthBench Full, so passing the .jsonl directly
+# excludes every Hard prompt; we also pass the 200-sample file
+# explicitly as belt-and-suspenders / for documentation.
 if gsutil -q stat "${GCS_BASE}/raw_traces.jsonl" 2>/dev/null; then
     echo "--- pulling resume base from ${GCS_BASE}/raw_traces.jsonl ---" | tee -a ~/pipeline.log
     gsutil -q cp "${GCS_BASE}/raw_traces.jsonl" data/sft/raw_traces.jsonl
@@ -126,21 +132,21 @@ if gsutil -q stat "${GCS_BASE}/raw_traces.jsonl" 2>/dev/null; then
 fi
 
 echo "--- 1/1 generate BODHI traces (with resume + eval-id exclusion) ---" | tee -a ~/pipeline.log
-python -u scripts/download_data.py >> ~/pipeline.log 2>&1
+\${PY} -u scripts/download_data.py >> ~/pipeline.log 2>&1
 # --resume-from points at the same path as --output; if generate_traces
-# finds it, it skips done prompt_ids and appends. --exclude-ids drops
-# the 200 healthbench_hard eval prompts so the SFT corpus has zero
-# overlap with Stage 4 eval (--sample-ids in eval_healthbench.py).
+# finds it, it skips done prompt_ids and appends.  --exclude-ids drops
+# all 1000 HealthBench Hard prompts so the SFT corpus has zero overlap
+# with the per-seed bootstrap eval (issue #60).
 # --force-resume tolerates rescue files that pre-date the
 # ablate_component metadata field (issue #69 added it; older rows
 # omit it, which would otherwise trigger the resume-config-mismatch
 # guard).
-python -u scripts/generate_traces.py \\
+\${PY} -u scripts/generate_traces.py \\
     --model google/medgemma-27b-text-it \\
     --datasets healthbench_hard healthbench \\
     --output data/sft/raw_traces.jsonl \\
     --resume-from data/sft/raw_traces.jsonl \\
-    --exclude-ids data/raw/hard_200_sample_ids.json \\
+    --exclude-ids data/raw/healthbench_hard.jsonl data/raw/hard_200_sample_ids.json \\
     --force-resume \\
     --use-bodhi \\
     > ~/gen.log 2>&1

@@ -1,0 +1,105 @@
+# Production tunix + qwix LoRA fine-tune of MedGemma-27B (Stage 3, Phase 2).
+#
+# Mirrors configs/lora_medgemma27b_maxtext.yaml's training semantics so a
+# side-by-side run on the same data converges to the same answer. The schema
+# matches configs/lora_medgemma27b_tunix_smoke.yaml (the U3 smoke); only the
+# hyperparams differ:
+#   - num_epochs / gradient_accumulation_steps / max_seq_length match the
+#     maxtext production yaml (5 epochs, grad_accum=64, seq_len=2048).
+#   - max_steps is unset; production runs by epoch.
+#
+# Consumed by scripts/train_lora_tunix.py (U2). The launcher (U6) sets
+# HF_HOME=/dev/shm/hf, downloads the model snapshot, then invokes the trainer
+# with --config <this file> --seed <int> --output-dir <path> per-VM
+# (paths.* below get overridden on the CLI).
+
+seed: 42
+
+model:
+  name: google/medgemma-27b-text-it
+  # Path to a local HF safetensors directory. The HF cache layout is:
+  #   ${HF_HOME}/models--<org>--<name>/snapshots/<sha>/
+  # The launcher (U6) sets HF_HOME=/dev/shm/hf and downloads via
+  # huggingface_hub before calling this script. The trainer (U2) resolves
+  # the snapshot dir at runtime via huggingface_hub.snapshot_download(name).
+  # Leaving null here means "let U2 resolve it"; setting an absolute path
+  # short-circuits the resolver (useful for local CPU testing).
+  hf_path: null
+  dtype: bfloat16
+
+lora:
+  # Same shape as the maxtext production yaml: r=8, alpha=16, target the
+  # attention q+kv einsums which are tunix gemma3's equivalent of HF's
+  # q_proj/k_proj/v_proj. tunix gemma3 attention uses einsum modules:
+  # q_einsum holds the query projection, kv_einsum holds packed k+v. The
+  # qwix LoraRule regex U2 builds is r".*/attn/(q_einsum|kv_einsum)" (slash
+  # separator, no leaf suffix).
+  r: 8
+  alpha: 16
+  dropout: 0.05
+  target_modules:
+    - q_einsum
+    - kv_einsum
+
+training:
+  per_device_batch_size: 1
+  # gradient_accumulation_steps tunes BOTH the batch shape that the dummy
+  # qwix LoRA trace + train_step JIT see, AND the optax.MultiSteps
+  # accumulation count. With per_device=1, the dataloader yields batches
+  # of size grad_accum per next() call, and tunix's PeftTrainer feeds
+  # each to one train_step call. After grad_accum calls, optax.MultiSteps
+  # fires the optimizer update.
+  #
+  # Effective batch per optimizer step = grad_accum * grad_accum = grad_accum^2.
+  # Set to 8 for the NeurIPS 27B run:
+  #   - effective batch per opt step = 8 * 8 = 64 examples (healthy for
+  #     LoRA on ~30K SFT data; matches HF PEFT defaults)
+  #   - dummy trace shape = (8, max_seq_length); on v6e-8 with FSDP=8
+  #     each chip sees per-chip batch = 1, which fits 27B + LoRA at
+  #     max_seq=1024 in <20 GB/chip activations
+  #
+  # The previous value of 64 implied an effective batch of 4096 (way
+  # over-scoped for a 30K-example SFT, and OOMed at trace time on v6e-8).
+  gradient_accumulation_steps: 8
+  learning_rate: 1.0e-4
+  # max_steps is the count of OPTIMIZER STEPS (not train_step calls).
+  # 1500 steps at effective batch 64 = 96,000 examples processed across
+  # all epochs. With ~30K filtered SFT rows that's ~3.2 epochs of full
+  # data — the standard SFT recipe range and defensible for a NeurIPS
+  # paper. Was 800 (1.7 epochs) for a workshop-time run; bumped to 1500
+  # for the NeurIPS submission per "high quality" requirement. Total
+  # Stage 3 wall scales linearly: at observed ~5-10 sec/train_step,
+  # 1500 * 8 grad_accum_calls = 12,000 calls = ~16-33 hours per seed
+  # (5 seeds in parallel = same wall).
+  max_steps: 1500
+  # ~1 eval per ~30000/64 ≈ 470 examples-per-epoch. With max_steps=1500
+  # and eval_interval=500 we get 3 evals (one per epoch) + final.
+  eval_interval: 500
+  # max_seq_length set to 2048 to capture ~96.3% of training tokens
+  # without truncation. v39 measured the actual tokenized response
+  # length distribution on real BODHI traces: median 934, mean 1023,
+  # max 3144 tokens. Cap-vs-truncation rate:
+  #   seq=1024: 43.6% truncated   (too lossy)
+  #   seq=1536: 16.1%             (still material)
+  #   seq=2048:  3.7%             (chosen — sweet spot)
+  #   seq=3072:  0.0%             (no truncation but oversized)
+  # v33 OOMed at 27B + seq=256 with the OLD per_device*num_devices=8
+  # dummy formula. v39 with the NEW per_device*grad_accum=8 formula
+  # ran fine at seq=1024 (after FSDP=8 sharding, per-chip batch=1).
+  # At seq=2048 same per-chip batch=1, so attention memory is 4x and
+  # MLP activations 2x vs seq=1024. Should still fit on v6e-8 (32GB
+  # HBM/chip) with the watchdog as a fallback that auto-halves on OOM.
+  max_seq_length: 1536
+
+data:
+  # Output of Stage 3b dataset converter
+  # (scripts/convert_traces_to_maxtext.py). The trainer (U2) reads it via
+  # scripts/maxtext_lora/dataset_loader.build_iterators(output_format='tunix', ...).
+  dataset_dir: data/sft/maxtext
+
+paths:
+  # The launcher (U6) passes --output-dir checkpoints/seed_$SEED at invocation
+  # time; the trainer (U2) appends '/orbax' to it when this YAML key isn't
+  # set. Set explicitly here for local CPU testing only. Use <N> as a seed
+  # placeholder (the trainer substitutes it) for multi-seed launches.
+  checkpoint_root_directory: checkpoints/seed_<N>/orbax

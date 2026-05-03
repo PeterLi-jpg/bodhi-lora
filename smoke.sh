@@ -33,6 +33,10 @@ fi
 GRADER="${SMOKE_GRADER:-Qwen/Qwen2.5-0.5B-Instruct}"
 # override with: N_EXAMPLES=10 bash smoke.sh
 N_EXAMPLES="${N_EXAMPLES:-3}"
+# Per-seed bootstrap eval draw (issue #60): mirror production's
+# run_multi_seed.sh protocol instead of the legacy fixed hard_200 file.
+SMOKE_SEED="${SMOKE_SEED:-42}"
+SEED_IDS="data/raw/hard_seed_${SMOKE_SEED}.json"
 RUNTIME_CONFIG="data/sft/smoke/runtime_train_config.yaml"
 
 case "$MODEL" in
@@ -103,13 +107,17 @@ python scripts/generate_traces.py \
     --use-bodhi \
     --max-examples "$N_EXAMPLES"
 
-echo "--- 3/4: grade and filter (threshold lowered so nothing is dropped) ---"
+echo "--- 3/4: grade and filter (production threshold to exercise the gate) ---"
+# Match run_multi_seed.sh's MIN_SCORE=0.4 so the smoke actually exercises the
+# grade + filter quality gate. With small N_EXAMPLES it's possible 0 traces
+# survive; that's fine as smoke output (train_lora.py errors loudly on empty
+# train.jsonl) and surfaces grader regressions before cluster time burns.
 python scripts/filter_traces.py \
     --input data/sft/smoke/raw_traces.jsonl \
     --healthbench-data data/raw/healthbench_hard.jsonl \
     --grader-model "$GRADER" \
     --output-dir data/sft/smoke \
-    --min-score -999 \
+    --min-score 0.4 \
     --val-ratio 0.34
 
 echo "--- 4a/4: train 1 epoch on the smoke set ---"
@@ -129,11 +137,17 @@ python scripts/train_lora.py \
     --train-file data/sft/smoke/train.jsonl \
     --val-file data/sft/smoke/val.jsonl
 
-echo "--- 4b/4: eval on $N_EXAMPLES examples ---"
+echo "--- 4b/4: eval on $N_EXAMPLES examples (bootstrap draw seed=$SMOKE_SEED) ---"
+# Regenerate per-seed eval IDs (idempotent — skips if cached) so a regression
+# in make_bootstrap_eval_ids.py is caught by the smoke, not mid-cluster-run.
+python scripts/make_bootstrap_eval_ids.py \
+    --healthbench-jsonl data/raw/healthbench_hard.jsonl \
+    --seed "$SMOKE_SEED" \
+    --output "$SEED_IDS"
 python scripts/eval_healthbench.py \
     --model "$MODEL" \
     --lora-path checkpoints/best \
-    --sample-ids data/raw/hard_200_sample_ids.json \
+    --sample-ids "$SEED_IDS" \
     --grader-model "$GRADER" \
     --output eval/smoke/lora.json \
     --max-examples "$N_EXAMPLES"

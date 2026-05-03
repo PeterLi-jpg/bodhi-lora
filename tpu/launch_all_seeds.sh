@@ -83,7 +83,15 @@ set -euo pipefail
 git clone https://github.com/PeterLi-jpg/bohdi-lora.git ~/bohdi-lora
 cd ~/bohdi-lora
 
+# Legacy torch_xla path — train_lora.py imports torch_xla, so request it.
+export BOHDI_INSTALL_TORCH_XLA=1
 bash tpu/setup_tpu.sh
+
+# Use the venv interpreter created by setup_tpu.sh. System python3 on
+# v6e VMs is 3.10; we need 3.11. Backslash-\$ defers expansion to the
+# remote shell (this --command body is double-quoted, so unescaped
+# \${PY} would be expanded locally to an empty string).
+PY=~/.venv-py311/bin/python
 
 mkdir -p data/sft eval checkpoints logs
 
@@ -102,7 +110,7 @@ export PJRT_DEVICE=TPU
 # shards across all chips from one Python process). xmp.spawn would have
 # each child try to load a full 54 GB MedGemma-27B replica and immediately OOM.
 # Same rationale as tpu/launch_multiseed.sh:678-686 and smoke_27b_tpu.sh:115-121.
-python scripts/train_lora.py \
+\${PY} scripts/train_lora.py \
     --config configs/lora_medgemma27b_tpu.yaml \
     --seed ${SEED} \
     --output-dir checkpoints

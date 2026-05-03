@@ -7,14 +7,17 @@ import re
 import statistics
 import sys
 import os
+import traceback
 from collections import defaultdict
 from pathlib import Path
 
 import numpy as np
 from tqdm import tqdm
+from transformers import set_seed
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from _vllm_engine import VLLMEngine
+from generate_traces import load_exclude_ids
 
 # same template as healthbench_eval.py in the upstream repo
 GRADER_TEMPLATE = """
@@ -104,12 +107,53 @@ def parse_json_response(text):
     return {}
 
 
+def _escape_grader_delimiters(text: str) -> str:
+    """Defang grader-template delimiters in untrusted text.
+
+    The grader prompt embeds the conversation between ``<<conversation>>``
+    and uses section headers like ``# Final instruction`` / ``# Example``.
+    A trace whose response contains those literal substrings could trick
+    the grader into treating injected text as instructions (e.g. forcing
+    ``criteria_met: true`` regardless of the real answer).
+
+    We backslash-escape the dangerous markers in the trace so the literal
+    delimiters never appear in the interpolated prompt. This is mitigation,
+    not full prevention (a determined attacker can still find delimiters
+    that work), but it raises the bar significantly without changing the
+    semantics of legitimate text.
+    """
+    if not isinstance(text, str):
+        return text
+    # Escape the template's interpolation markers.
+    text = text.replace("<<", r"\<\<").replace(">>", r"\>\>")
+    # Escape the template's section-header strings so injected content
+    # cannot impersonate "# Final instruction" / "# Example" blocks.
+    text = text.replace("# Final instruction", r"\# Final instruction")
+    text = text.replace("# Example", r"\# Example")
+    return text
+
+
 def grade_trace(grader, prompt_messages, response_text, rubric_items, max_retries=3):
     """Grade a single trace. Returns score + per-criterion results + a
     ``parse_failures`` count so callers can surface grader reliability
     (see issue #5 — previously silent parse failures were folded in as
-    genuine rubric misses)."""
-    convo = prompt_messages + [{"role": "assistant", "content": response_text}]
+    genuine rubric misses).
+
+    Prompt-injection hardening: the grader template uses ``<<conversation>>``
+    / ``<<rubric_item>>`` as interpolation delimiters and ``# Final instruction``
+    / ``# Example`` as section headers. Untrusted trace content (both the
+    prompt messages and the assistant response) is run through
+    :func:`_escape_grader_delimiters` so a malicious trace cannot inject
+    fake template sections that flip the grader's decision.
+    """
+    # Escape delimiters in BOTH the user-side messages and the assistant
+    # response. Either side could contain attacker-controlled text.
+    safe_messages = [
+        {"role": m["role"], "content": _escape_grader_delimiters(m.get("content", ""))}
+        for m in prompt_messages
+    ]
+    safe_response = _escape_grader_delimiters(response_text)
+    convo = safe_messages + [{"role": "assistant", "content": safe_response}]
     convo_str = "\n\n".join(f"{m['role']}: {m['content']}" for m in convo)
 
     results = []
@@ -216,8 +260,12 @@ def main():
     parser.add_argument("--healthbench-data", required=True, nargs="+")
     parser.add_argument(
         "--grader-model",
-        default="Qwen/Qwen2.5-14B-Instruct",  # full bfloat16, works on GPU and TPU
-        # Use Qwen/Qwen2.5-14B-Instruct-AWQ on GPU if VRAM is tight (needs autoawq, CUDA only)
+        # Asymmetric design: filter uses Qwen2.5-14B-Instruct, eval uses
+        # Llama-3.1-8B-Instruct (see scripts/eval_healthbench.py default).
+        # Decoupling the filter grader from the eval grader breaks the
+        # "graded by your own evaluator" critique — training data is
+        # selected under one family, results are reported under another.
+        default="Qwen/Qwen2.5-14B-Instruct",
     )
     parser.add_argument("--output-dir", required=True)
     parser.add_argument("--min-score", type=float, default=0.4)
@@ -232,20 +280,104 @@ def main():
     parser.add_argument("--val-ratio", type=float, default=0.1)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--graded-output", default=None, help="save all graded traces for debugging")
+    parser.add_argument(
+        "--resume-from", default=None,
+        help="Path to a previous graded JSONL (e.g. an earlier --graded-output "
+             "file or graded_partial.jsonl). prompt_ids found there will be "
+             "skipped and their grades carried forward, mirroring the resume "
+             "logic in scripts/generate_traces.py.",
+    )
+    # Belt-and-suspenders: even if a stale raw_traces.jsonl resumed past
+    # the Stage-1 --exclude-ids change, this drops contaminated rows here
+    # so they never reach training (issue #60).
+    parser.add_argument(
+        "--exclude-ids", nargs="+", default=None,
+        help="One or more .json/.jsonl files of prompt_ids to drop from the "
+             "input traces. Same format as scripts/generate_traces.py.",
+    )
     args = parser.parse_args()
 
+    # The grader runs Qwen-14B via vLLM (HF transformers under the hood);
+    # without set_seed(), grader sampling drifts across runs even with the
+    # same --seed. Mirrors train_lora.py's seeding block (audit N4).
     random.seed(args.seed)
     np.random.seed(args.seed)
+    set_seed(args.seed)
     out_dir = Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
     rubrics_by_id = load_rubrics(args.healthbench_data)
 
+    # JSONL guard: mirror scripts/convert_traces_to_maxtext.py:69-83. A
+    # single malformed line silently breaking the run (or worse, producing
+    # a half-graded output) is much harder to debug than failing fast with
+    # file:line context.
     traces = []
     with open(args.input) as f:
-        for line in f:
-            traces.append(json.loads(line))
+        for line_no, raw in enumerate(f, start=1):
+            raw = raw.strip()
+            if not raw:
+                continue
+            try:
+                traces.append(json.loads(raw))
+            except json.JSONDecodeError as e:
+                raise SystemExit(
+                    f"filter_traces: malformed JSON at {args.input}:{line_no}: {e}"
+                ) from e
     print(f"Loaded {len(traces)} raw traces")
+
+    # Empty-file guard: an empty input would silently produce empty
+    # train.jsonl/val.jsonl and Stage 3 would quietly train on nothing.
+    if len(traces) == 0:
+        raise SystemExit("filter_traces: input has 0 rows; check Stage 1 output")
+
+    if args.exclude_ids:
+        exclude = load_exclude_ids(args.exclude_ids)
+        before = len(traces)
+        traces = [t for t in traces if t.get("prompt_id") not in exclude]
+        dropped = before - len(traces)
+        print(f"Excluded {dropped} traces via --exclude-ids ({len(exclude)} ids); "
+              f"{len(traces)} remain")
+
+    # Schema validation: catch missing required fields up-front with a clear
+    # error message rather than letting a KeyError surface from inside a
+    # ThreadPoolExecutor worker (where the prompt_id context is lost).
+    REQUIRED_KEYS = ("prompt_id", "messages", "response")
+    for i, trace in enumerate(traces):
+        for key in REQUIRED_KEYS:
+            if key not in trace:
+                raise KeyError(
+                    f"trace at row {i} missing required key {key!r}: "
+                    f"prompt_id={trace.get('prompt_id', '?')}"
+                )
+
+    # Stage 2 resume (mirrors generate_traces.py:194-241). If a previous
+    # run wrote graded rows, load them and skip those prompt_ids in the
+    # grading loop. Anything we already graded is carried forward into
+    # ``graded`` so train/val splits below see the full corpus.
+    done_ids = set()
+    graded = []
+    if args.resume_from and Path(args.resume_from).exists():
+        with open(args.resume_from) as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    row = json.loads(line)
+                except json.JSONDecodeError:
+                    # Skip corrupt lines from interrupted runs (matches
+                    # generate_traces.py's permissive resume).
+                    continue
+                pid = row.get("prompt_id")
+                if pid is None or "grade" not in row:
+                    continue
+                done_ids.add(pid)
+                graded.append(row)
+        print(
+            f"Resuming from {args.resume_from}: skipping "
+            f"{len(done_ids)} already-graded prompt_ids"
+        )
 
     # Concurrent grading — vLLM batches concurrent requests server-side, so
     # submitting N at once gives ~Nx throughput up to its scheduling limit.
@@ -255,13 +387,27 @@ def main():
     from concurrent.futures import ThreadPoolExecutor, as_completed
     GRADER_CONCURRENCY = int(os.environ.get("GRADER_CONCURRENCY", "16"))
 
-    graded = []
+    # Periodic partial-write: append every N graded rows to a sidecar so a
+    # crash mid-run doesn't lose all progress. Sits next to --graded-output
+    # if set, otherwise under --output-dir. Append mode so resume runs add
+    # to existing rows. No lock needed: only the main thread writes here
+    # (workers return values via as_completed).
+    PARTIAL_FLUSH_EVERY = 50
+    if args.graded_output:
+        partial_path = Path(args.graded_output).with_suffix(".partial.jsonl")
+    else:
+        partial_path = out_dir / "graded_partial.jsonl"
+    partial_path.parent.mkdir(parents=True, exist_ok=True)
+
     failed_traces = []
     with VLLMEngine(args.grader_model) as engine:
         grader = LocalGrader(engine)
         # Filter to traces that have rubrics (preserve original skip-and-print behavior)
+        # and skip anything we've already graded (resume path).
         tasks = []
         for trace in traces:
+            if trace["prompt_id"] in done_ids:
+                continue
             rubrics = rubrics_by_id.get(trace["prompt_id"])
             if rubrics is None:
                 print(f"  no rubrics for {trace['prompt_id']}, skipping")
@@ -274,19 +420,29 @@ def main():
                 result = grade_trace(grader, trace["messages"], trace["response"], rubrics)
                 trace["grade"] = result
                 return trace, None
-            except Exception as e:
+            except Exception:
                 # Don't let one bad trace (e.g. transient vLLM HTTP error,
-                # malformed prompt) take down the whole pipeline. Log and skip.
-                return None, (trace.get("prompt_id", "?"), repr(e))
+                # malformed prompt) take down the whole pipeline. Log and
+                # skip; keep the last 30 lines of the traceback so the
+                # exact failure is visible without overwhelming logs.
+                tb = "\n".join(traceback.format_exc().strip().splitlines()[-30:])
+                return None, (trace.get("prompt_id", "?"), tb)
 
-        with ThreadPoolExecutor(max_workers=GRADER_CONCURRENCY) as ex:
-            futures = [ex.submit(_grade_one, t) for t in tasks]
-            for fut in tqdm(as_completed(futures), total=len(futures), desc="Grading"):
-                trace, err = fut.result()
-                if trace is not None:
-                    graded.append(trace)
-                else:
-                    failed_traces.append(err)
+        with open(partial_path, "a") as partial_f:
+            with ThreadPoolExecutor(max_workers=GRADER_CONCURRENCY) as ex:
+                futures = [ex.submit(_grade_one, t) for t in tasks]
+                new_since_flush = 0
+                for fut in tqdm(as_completed(futures), total=len(futures), desc="Grading"):
+                    trace, err = fut.result()
+                    if trace is not None:
+                        graded.append(trace)
+                        partial_f.write(json.dumps(trace) + "\n")
+                        new_since_flush += 1
+                        if new_since_flush >= PARTIAL_FLUSH_EVERY:
+                            partial_f.flush()
+                            new_since_flush = 0
+                    else:
+                        failed_traces.append(err)
 
     if failed_traces:
         print(f"\nWARNING: {len(failed_traces)} traces failed grading and were skipped:")
@@ -295,14 +451,27 @@ def main():
         if len(failed_traces) > 10:
             print(f"  ... and {len(failed_traces) - 10} more")
 
+    # Aggregate per-trace parse_failures into a single end-of-run summary so
+    # grader instability shows up without grepping stage logs (audit N7).
+    # Each parse failure is otherwise silently folded in as a "criteria not met"
+    # rubric item — under heavy load Qwen-14B can hit 10-30% parse-failure
+    # rates and still produce a plausible-looking score distribution.
     total_parse_failures = sum(t["grade"]["parse_failures"] for t in graded)
     total_rubric_items = sum(len(t["grade"]["criteria_results"]) for t in graded)
     print(f"Graded {len(graded)}/{len(traces)}")
     if total_rubric_items:
         pct = 100.0 * total_parse_failures / total_rubric_items
-        print(f"Grader parse failures: {total_parse_failures}/{total_rubric_items} "
-              f"rubric items ({pct:.2f}%) — high values indicate grader unreliability, "
-              f"not model failure (see issue #5)")
+        print(
+            f"  parse failures: {total_parse_failures}/{total_rubric_items} "
+            f"({pct:.1f}%)",
+            file=sys.stderr,
+        )
+        if total_parse_failures > 0.05 * total_rubric_items:
+            print(
+                f"  WARNING: parse-failure rate {pct:.1f}% > 5% "
+                f"— grader may be unstable",
+                file=sys.stderr,
+            )
 
     if args.graded_output:
         p = Path(args.graded_output)

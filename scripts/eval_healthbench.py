@@ -4,9 +4,11 @@ import argparse
 from datetime import datetime, timezone
 from importlib import metadata
 import json
+import math
 import os
 import random
 import subprocess
+import traceback
 import urllib.request
 
 import sys
@@ -35,9 +37,16 @@ def load_eval_data(sample_ids_path):
         urllib.request.urlretrieve(HEALTHBENCH_HARD_URL, path)
 
     examples = []
+    # Wrap json.loads so a single bad line gives a useful path:lineno error
+    # instead of a bare JSONDecodeError dropped through the rest of eval.
     with open(path) as f:
-        for line in f:
-            examples.append(json.loads(line))
+        for lineno, line in enumerate(f, start=1):
+            try:
+                examples.append(json.loads(line))
+            except json.JSONDecodeError:
+                raise SystemExit(
+                    f"eval_healthbench: malformed JSON at {path}:{lineno}"
+                )
 
     with open(sample_ids_path) as f:
         data = json.load(f)
@@ -46,6 +55,15 @@ def load_eval_data(sample_ids_path):
     eval_ids = set(data)
 
     filtered = [ex for ex in examples if ex["prompt_id"] in eval_ids]
+    # Abort loudly: a missing/malformed IDs file or zero ID overlap would
+    # otherwise produce a near-empty results JSON with exit code 0.
+    if not filtered:
+        raise SystemExit(
+            f"No eval examples loaded from {sample_ids_path}: 0 IDs matched "
+            f"against {len(examples)} HealthBench Hard rows. Check that the "
+            f"file exists, contains a JSON list (or {{'prompt_ids': [...]}}), "
+            f"and that IDs match the dataset."
+        )
     print(f"{len(filtered)} eval examples loaded")
     return filtered
 
@@ -73,11 +91,36 @@ def gen_response(engine: VLLMEngine, messages, use_bodhi, bodhi_wrapper=None, ma
 
 
 def score_response_confidence(token_logprobs):
-    """Derive confidence metrics from per-output-token log-probs.
+    """Derive a token-fluency proxy from per-output-token log-probs.
 
-    token_logprobs is the list returned by VLLMEngine.chat_with_logprobs —
-    piggybacked from the generation call itself, so no extra forward pass needed.
+    token_logprobs is the list returned by VLLMEngine.chat_with_logprobs,
+    piggybacked from the generation call itself (no extra forward pass).
     Returns None fields when logprobs are unavailable (e.g. BODHI path).
+
+    WARNING: this is a FLUENCY metric, not a clinical-calibration metric.
+    The downstream Brier / ECE numbers derived from `geomean_token_prob`
+    (written out as `model_fluency_geomean_prob` per result) should NOT
+    be cited as model-calibration claims without explicitly noting the
+    following limitations:
+
+    1. Measures fluency, not confidence. Common medical phrasing has high
+       per-token probabilities regardless of clinical accuracy, so a
+       confidently wrong answer can score as high as a correct one.
+    2. Response-level metric applied per-criterion. The same scalar is
+       broadcast across every rubric item for a response, so a 2000-token
+       answer with 15 rubric items inflates the effective sample size 15x
+       while contributing zero additional calibration signal.
+    3. Brier expansion bias. `_collect_binary_labels()` emits one
+       (y_true, y_pred) pair per positive-point criterion per example, so
+       the Brier score is dominated by prompts with many rubric items
+       rather than by calibration quality.
+    4. ECE bin pathology. Token-prob geomeans typically sit in 0.3-0.7,
+       so the 0-0.1 and 0.9-1.0 bins are near-empty and the 10-bin ECE
+       estimate is unstable.
+
+    Use the cross-grader path (--secondary-grader-model) for calibration
+    claims. This proxy is retained for backwards-comparable per-response
+    fluency reporting only.
     """
     if not token_logprobs:
         return {
@@ -147,6 +190,36 @@ def compute_ece(results, confidence_key, n_bins=10):
     return float(ece)
 
 
+def _aggregate_scores(scores):
+    """Compute mean/std/median, dropping NaN/Inf values.
+
+    When all inputs are non-finite, returns score_status="all_nan_or_inf".
+    When some are non-finite, adds n_excluded_nan so downstream tools can
+    flag unstable runs. Filtering here also keeps json.dump output free of
+    NaN literals, which non-Python parsers (jq, JS) reject.
+    """
+    if not scores:
+        return {"mean": None, "std": None, "median": None}
+    finite = [s for s in scores if s is not None and math.isfinite(s)]
+    n_excluded = len(scores) - len(finite)
+    if not finite:
+        return {
+            "mean": None,
+            "std": None,
+            "median": None,
+            "n_excluded_nan": n_excluded,
+            "score_status": "all_nan_or_inf",
+        }
+    out = {
+        "mean": float(np.mean(finite)),
+        "std": float(np.std(finite)),
+        "median": float(np.median(finite)),
+    }
+    if n_excluded:
+        out["n_excluded_nan"] = n_excluded
+    return out
+
+
 def _safe_package_version(name):
     try:
         return metadata.version(name)
@@ -179,28 +252,82 @@ def collect_run_metadata(seed, grader_model):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", default="google/medgemma-27b-text-it")
-    parser.add_argument("--lora-path", default=None)
-    parser.add_argument("--use-bodhi", action="store_true")
-    parser.add_argument("--sample-ids", required=True)
-    parser.add_argument("--grader-model", default="Qwen/Qwen2.5-14B-Instruct")
+    parser.add_argument(
+        "--model",
+        default="google/medgemma-27b-text-it",
+        help="HF model name or local path (e.g., google/medgemma-27b-text-it).",
+    )
+    parser.add_argument(
+        "--lora-path",
+        default=None,
+        help="Optional PEFT adapter directory to merge with --model.",
+    )
+    parser.add_argument(
+        "--use-bodhi",
+        action="store_true",
+        help="Wrap inference in the BODHI calibration prompt.",
+    )
+    parser.add_argument(
+        "--sample-ids",
+        required=True,
+        help="Path to JSON list (or {'prompt_ids': [...]}) of HealthBench Hard "
+             "prompt IDs to evaluate.",
+    )
+    parser.add_argument(
+        "--grader-model",
+        default="meta-llama/Llama-3.1-8B-Instruct",
+        help="HF model name for the rubric grader. Default Llama-3.1-8B-Instruct "
+             "(asymmetric design: filter_traces.py uses Qwen2.5-14B-Instruct, "
+             "eval uses Llama-3.1-8B — different families decouple training-data "
+             "selection from reported metrics; see SECOND_GRADER_MODEL in the "
+             "launchers for an extra cross-grader bias-control pass).",
+    )
     # Issue #3: optional second grader pass (can be passed multiple times for
     # 3+ graders). Each entry adds a "secondary_grader_runs[N]" dict to the
     # output JSON with the same shape as the primary run, so downstream
     # tools (scripts/grader_correlation.py) can compare across graders
     # without re-running inference. The primary grader is unchanged so
     # existing eval numbers stay comparable across the 5 seeds.
-    parser.add_argument("--secondary-grader-model", action="append",
-                        default=[],
-                        help="Additional grader model(s) to run as a "
-                             "second pass over the same generated responses. "
-                             "Repeat the flag for multiple graders. "
-                             "Each adds a secondary_grader_runs entry to "
-                             "the output JSON without re-running inference.")
-    parser.add_argument("--output", required=True)
-    parser.add_argument("--max-examples", type=int, default=None)
-    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument(
+        "--secondary-grader-model",
+        action="append",
+        default=[],
+        help="Repeat the flag for additional cross-grader passes (writes "
+             "secondary_grader_runs[N] in output).",
+    )
+    parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write the per-example eval JSON.",
+    )
+    parser.add_argument(
+        "--max-examples",
+        type=int,
+        default=None,
+        help="Optional cap on number of prompts to eval (debugging / smoke).",
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=42,
+        help="RNG seed for grader sampling and inference shuffling (default 42).",
+    )
     args = parser.parse_args()
+
+    # Resolve `~` so callers can pass `~/results/foo.json` without surprise.
+    args.output = str(Path(args.output).expanduser())
+    args.sample_ids = str(Path(args.sample_ids).expanduser())
+
+    # Calibration-honesty notice (audit C2): make it impossible to read
+    # downstream Brier/ECE numbers off the per-item geomean probability
+    # without seeing the limitations. stderr keeps stdout clean for any
+    # tool that pipes JSON through.
+    print(
+        "NOTE: 'geomean_token_prob' measures token fluency, not clinical "
+        "calibration; see RESULTS.md for the limitations and use the "
+        "cross-grader path for calibration claims.",
+        file=sys.stderr,
+    )
 
     # Greedy decoding is deterministic; seed covers BODHI internals + grader sampling.
     random.seed(args.seed)
@@ -259,8 +386,11 @@ def main():
                     "response": resp,
                     "token_logprobs": token_logprobs,
                 }, None
-            except Exception as e:
-                return None, (ex.get("prompt_id", "?"), repr(e))
+            except Exception:
+                # Keep the last 30 lines of the traceback so the dropped
+                # examples report something actionable instead of just repr(e).
+                tb = "\n".join(traceback.format_exc().strip().splitlines()[-30:])
+                return None, (ex.get("prompt_id", "?"), tb)
 
         with ThreadPoolExecutor(max_workers=_eval_concurrency) as ex_pool:
             futures = [ex_pool.submit(_gen_one, ex) for ex in examples]
@@ -303,12 +433,13 @@ def main():
                     "score": grade["overall_score"], "tag_scores": grade["tag_scores"],
                     "criteria_results": grade["criteria_results"],
                     "parse_failures": grade["parse_failures"],
-                    "model_confidence_geomean_prob": confidence["geomean_token_prob"],
+                    "model_fluency_geomean_prob": confidence["geomean_token_prob"],
                     "model_confidence_mean_token_logprob": confidence["mean_token_logprob"],
                     "response_token_count": confidence["response_token_count"],
                 }, None
-            except Exception as e:
-                return None, (item.get("prompt_id", "?"), repr(e))
+            except Exception:
+                tb = "\n".join(traceback.format_exc().strip().splitlines()[-30:])
+                return None, (item.get("prompt_id", "?"), tb)
 
         with ThreadPoolExecutor(max_workers=EVAL_CONCURRENCY) as ex_pool:
             futures = [ex_pool.submit(_grade_one, item) for item in raw_generations]
@@ -317,8 +448,8 @@ def main():
                 if result is not None:
                     all_results.append(result)
                     scores.append(result["score"])
-                    if result["model_confidence_geomean_prob"] is not None:
-                        model_confidences.append(result["model_confidence_geomean_prob"])
+                    if result["model_fluency_geomean_prob"] is not None:
+                        model_confidences.append(result["model_fluency_geomean_prob"])
                     total_parse_failures += result["parse_failures"]
                     total_rubric_items += len(result["criteria_results"])
                 else:
@@ -329,8 +460,8 @@ def main():
         for pid, err in failed_grading[:5]:
             print(f"  {pid}: {err}")
 
-    model_brier = compute_brier_score(all_results, "model_confidence_geomean_prob")
-    model_ece = compute_ece(all_results, "model_confidence_geomean_prob")
+    model_brier = compute_brier_score(all_results, "model_fluency_geomean_prob")
+    model_ece = compute_ece(all_results, "model_fluency_geomean_prob")
     grader_brier = compute_brier_score(all_results, "score")
     grader_ece = compute_ece(all_results, "score")
     parse_fail_rate = (total_parse_failures / total_rubric_items) if total_rubric_items else None
@@ -364,8 +495,9 @@ def main():
                         "criteria_results": grade["criteria_results"],
                         "parse_failures": grade["parse_failures"],
                     }, None
-                except Exception as e:
-                    return None, (item.get("prompt_id", "?"), repr(e))
+                except Exception:
+                    tb = "\n".join(traceback.format_exc().strip().splitlines()[-30:])
+                    return None, (item.get("prompt_id", "?"), tb)
 
             with ThreadPoolExecutor(max_workers=EVAL_CONCURRENCY) as ex_pool:
                 futures = [ex_pool.submit(_grade_one_sec, item) for item in raw_generations]
@@ -380,11 +512,10 @@ def main():
         sec_parse_fail_rate = (
             sec_parse_failures / sec_rubric_items if sec_rubric_items else None
         )
+        sec_agg = _aggregate_scores(sec_scores)
         secondary_grader_runs.append({
             "grader_model": sec_model,
-            "mean": float(np.mean(sec_scores)) if sec_scores else None,
-            "std": float(np.std(sec_scores)) if sec_scores else None,
-            "median": float(np.median(sec_scores)) if sec_scores else None,
+            **sec_agg,
             "brier_grader_consistency": compute_brier_score(sec_results, "score"),
             "ece_grader_consistency": compute_ece(sec_results, "score"),
             "grader_parse_failure_rate": sec_parse_fail_rate,
@@ -393,14 +524,13 @@ def main():
             "results": sec_results,
         })
 
+    primary_agg = _aggregate_scores(scores)
     summary = {
         "config": tag, "model": args.model,
         "lora_path": args.lora_path, "use_bodhi": args.use_bodhi,
         "n_examples": len(examples),
         "run_metadata": collect_run_metadata(args.seed, args.grader_model),
-        "mean": float(np.mean(scores)) if scores else None,
-        "std": float(np.std(scores)) if scores else None,
-        "median": float(np.median(scores)) if scores else None,
+        **primary_agg,
         "score_metric": "normalized_score",
         "model_confidence_method": (
             "geometric_mean_token_probability over the emitted response, "

@@ -40,6 +40,18 @@ if [ "${PJRT_DEVICE:-}" != "TPU" ] && [ ! -d /dev/vfio ]; then
     exit 1
 fi
 
+# Use the venv interpreter provisioned by tpu/setup_tpu.sh. System python3
+# on v6e VMs is 3.10; we need 3.11. Unlike the tpu/launch_*.sh launchers,
+# this script doesn't invoke setup_tpu.sh itself (the user runs it once on
+# the VM before any smoke), so verify the venv exists and bail clearly if
+# it doesn't — otherwise we'd hit a confusing python3.10 import error.
+PY="$HOME/.venv-py311/bin/python"
+if [ ! -x "$PY" ]; then
+    echo "ERROR: $PY not found. Run 'bash tpu/setup_tpu.sh' first to provision"
+    echo "the python3.11 venv that this smoke depends on."
+    exit 1
+fi
+
 MODEL="google/medgemma-27b-text-it"
 # Small ungated grader so the smoke doesn't need a second gated access.
 GRADER="Qwen/Qwen2.5-0.5B-Instruct"
@@ -68,7 +80,8 @@ mkdir -p data/sft/smoke_27b logs
 # epoch, short seq, no grad accum, log every step, no checkpoint saves, no eval.
 # Everything else (LoRA r/targets, batch sizing, sharding) we keep identical
 # to production so 27B-specific bugs still surface here.
-python - <<PY
+# Heredoc delimiter is PYEOF (not PY) to avoid colliding with the $PY var.
+"$PY" - <<PYEOF
 from pathlib import Path
 
 import yaml
@@ -87,30 +100,35 @@ cfg["training"]["eval_strategy"] = "no"
 out_path.parent.mkdir(parents=True, exist_ok=True)
 out_path.write_text(yaml.safe_dump(cfg, sort_keys=False))
 print(f"wrote runtime config -> {out_path}")
-PY
+PYEOF
 
 echo "--- 0/3: preflight ---"
-python scripts/preflight.py --models "$MODEL" "$GRADER"
+"$PY" scripts/preflight.py --models "$MODEL" "$GRADER"
 
 echo "--- 1/3: download data ---"
-python scripts/download_data.py
+"$PY" scripts/download_data.py
 
 echo "--- 2/3: generate $N_EXAMPLES BOHDI traces ---"
-python scripts/generate_traces.py \
+"$PY" scripts/generate_traces.py \
     --model "$MODEL" \
     --datasets healthbench_hard \
     --output data/sft/smoke_27b/raw_traces.jsonl \
     --use-bodhi \
     --max-examples "$N_EXAMPLES"
 
-echo "--- 3a/3: grade and filter (threshold lowered so nothing is dropped) ---"
-python scripts/filter_traces.py \
+echo "--- 3a/3: grade and filter (production threshold to exercise the gate) ---"
+# Match run_multi_seed.sh's MIN_SCORE=0.4 and VAL_RATIO=0.1 so the smoke
+# actually exercises the same gate + split as production. With small
+# N_EXAMPLES it's possible 0 traces survive; that's fine as smoke output
+# (train_lora.py errors loudly on empty train.jsonl) and surfaces grader
+# regressions before cluster time burns.
+"$PY" scripts/filter_traces.py \
     --input data/sft/smoke_27b/raw_traces.jsonl \
     --healthbench-data data/raw/healthbench_hard.jsonl \
     --grader-model "$GRADER" \
     --output-dir data/sft/smoke_27b \
-    --min-score -999 \
-    --val-ratio 0.34
+    --min-score 0.4 \
+    --val-ratio 0.1
 
 echo "--- 3b/3: train a few steps on the smoke set ---"
 # Same rationale as smoke.sh: do NOT use `accelerate launch`. accelerate's
@@ -126,7 +144,7 @@ echo "--- 3b/3: train a few steps on the smoke set ---"
 # stale full-pipeline data happens to be on disk — observed on
 # bohdi-lora-v4 where 838 leftover examples were used instead of the
 # 4-example smoke set.
-python scripts/train_lora.py \
+"$PY" scripts/train_lora.py \
     --config "$RUNTIME_CONFIG" \
     --train-file data/sft/smoke_27b/train.jsonl \
     --val-file data/sft/smoke_27b/val.jsonl

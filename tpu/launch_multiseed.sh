@@ -229,6 +229,9 @@ run_long_remote() {
 export PATH=\"\$HOME/.local/bin:\$PATH\"
 cd ~/bohdi-lora
 export HF_TOKEN='${HF_TOKEN}'
+# Export so the inner 'bash -c' inherits PY; \${PY} in \${_remote_cmd}
+# resolves on the TPU VM, not the local launcher.
+export PY=\$HOME/.venv-py311/bin/python
 rm -f ${_log}
 nohup bash -c '${_remote_cmd}' > ${_log} 2>&1 &
 echo \$! > ${_pid_file}
@@ -362,15 +365,20 @@ tpu_ssh "$TPU_NAME" \
 set -euo pipefail
 git clone https://github.com/PeterLi-jpg/bohdi-lora.git ~/bohdi-lora 2>/dev/null || (cd ~/bohdi-lora && git pull)
 cd ~/bohdi-lora
+# Legacy torch_xla path — train_lora.py imports torch_xla, so request it.
+export BOHDI_INSTALL_TORCH_XLA=1
 bash tpu/setup_tpu.sh
 # Ensure jinja2 meets apply_chat_template requirement (>=3.1.0).
 # setup_tpu.sh pins it, but transitive deps can downgrade it; re-pin here.
 export PATH=\"\$HOME/.local/bin:\$PATH\"
+# Pin to the py3.11 venv that setup_tpu.sh installs, so PATH ordering
+# can't drop us back onto system python 3.10.
+PY=\$HOME/.venv-py311/bin/python
 pip install -q \"jinja2>=3.1.0\"
 mkdir -p data/raw data/sft eval logs
 # Pre-download HealthBench datasets so filter_traces.py and eval_healthbench.py
 # can look up rubrics on the first run without hitting a FileNotFoundError.
-python3 -c \"
+\${PY} -c \"
 import urllib.request, pathlib
 files = {
     'data/raw/healthbench_hard.jsonl': 'https://openaipublic.blob.core.windows.net/simple-evals/healthbench/hard_2025-05-08-21-00-10.jsonl',
@@ -419,10 +427,10 @@ fi
 # --xla_gpu_force_compilation_parallelism=8 in the env; appending any
 # unrecognised flag (like --xla_persistent_cache_dir) causes a FATAL
 # "Unknown flags in XLA_FLAGS" crash before the first forward pass.
-# Hard-only training set. HealthBench Hard has 1000 prompts; we hold out 200
-# for evaluation (data/raw/hard_200_sample_ids.json), leaving 800 unique
-# prompts for trace generation. --exclude-ids prevents the 200 eval prompts
-# from leaking into training. Default cap of 800 = "all available trainable".
+# Full-only training set. We exclude all 1000 HealthBench Hard prompts so the
+# per-seed bootstrap eval (drawn from Hard, issue #60) is honestly held-out.
+# Training pool is then HealthBench Full minus Hard ≈ 4000 unique prompts,
+# so MAX_EXAMPLES=800 caps to a fraction of available; bump if you want more.
 _MAX=${MAX_EXAMPLES:-800}
 tpu_ssh "$TPU_NAME" \
     --zone="$ZONE" --project="$PROJECT" \
@@ -435,7 +443,7 @@ rm -f /tmp/gen_stage1.log
 nohup python scripts/generate_traces.py \
     --model ${MODEL_NAME} \
     --datasets healthbench_hard healthbench \
-    --exclude-ids data/raw/hard_200_sample_ids.json \
+    --exclude-ids data/raw/healthbench_hard.jsonl data/raw/hard_200_sample_ids.json \
     --output data/sft/raw_traces.jsonl \
     --resume-from data/sft/raw_traces.jsonl \
     --use-bodhi \
@@ -591,7 +599,7 @@ else
     run_long_remote \
         "stage2_grade" \
         "[f]ilter_traces.py" \
-        "python scripts/filter_traces.py --input data/sft/raw_traces.jsonl --healthbench-data data/raw/healthbench_hard.jsonl data/raw/healthbench.jsonl --output-dir data/sft --min-score ${MIN_SCORE} && touch /tmp/stage2_done" \
+        "python scripts/filter_traces.py --input data/sft/raw_traces.jsonl --healthbench-data data/raw/healthbench_hard.jsonl data/raw/healthbench.jsonl --exclude-ids data/raw/healthbench_hard.jsonl data/raw/hard_200_sample_ids.json --output-dir data/sft --min-score ${MIN_SCORE} && touch /tmp/stage2_done" \
         "/tmp/stage2_done"
     # Save SFT data to the runner immediately — survives TPU preemption.
     echo "Saving Stage 2 SFT data to local results/_rescue/sft/..."
@@ -696,7 +704,7 @@ for SEED in $SEEDS; do
     run_long_remote \
         "stage3_train_seed${SEED}" \
         "[t]rain_lora.py" \
-        "mkdir -p checkpoints/seed_${SEED} && PJRT_DEVICE=TPU python -u scripts/train_lora.py --config ${TRAIN_CONFIG} --seed ${SEED} --output-dir checkpoints/seed_${SEED} ${TRAIN_EXTRA_FLAGS}" \
+        "mkdir -p checkpoints/seed_${SEED} && PJRT_DEVICE=TPU \${PY} -u scripts/train_lora.py --config ${TRAIN_CONFIG} --seed ${SEED} --output-dir checkpoints/seed_${SEED} ${TRAIN_EXTRA_FLAGS}" \
         "checkpoints/seed_${SEED}/best/adapter_model.safetensors"
     unset RUN_LONG_RESCUE_CMD
 

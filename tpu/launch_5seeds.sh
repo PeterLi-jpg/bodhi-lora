@@ -41,7 +41,14 @@
 #   export HF_TOKEN=...                              # required (in .env is fine)
 #   GCS_DATA_PATH=gs://bucket/path                   # optional, skips Stage 1+2
 #   SEEDS="42 7 13 99 101"                           # optional override (default 42 7 13 99 101)
+#   SECOND_GRADER_MODEL=Qwen/Qwen2.5-14B-Instruct  # optional cross-grader pass
 #   bash tpu/launch_5seeds.sh
+#
+# Cross-grader pass: when SECOND_GRADER_MODEL is set, each VM re-grades
+# the same 4 eval configs with that model and reports Spearman ρ
+# between the two graders. Off by default (adds ~12h H100 of grader
+# compute per seed). Recommended secondary: a different family from
+# the primary Llama grader, e.g. Qwen/Qwen2.5-14B-Instruct.
 #
 # Cancel everything (clean up all 5 VMs):
 #   kill $(cat /tmp/bohdi_5seeds_pids.txt)
@@ -98,8 +105,19 @@ fi
 # eur4a, SEEDS="42 7 13 99" gets three eur4a + one use1d, and the full
 # default gets the canonical 3 + 2 split. Across-seed CIs from
 # scripts/aggregate_seeds.py still need n_seeds>=5 in the final paper run.
-ZONE_SLOTS=("europe-west4-a" "europe-west4-a" "europe-west4-a" "us-east1-d" "us-east1-d")
-ZONES=("${ZONE_SLOTS[@]:0:$N_SEEDS}")
+if [ -n "${ZONES_OVERRIDE:-}" ]; then
+    # Explicit per-seed zone list, e.g. when launching followers around an
+    # already-running VM in another zone. Must list one zone per seed,
+    # space-separated. Example: ZONES_OVERRIDE="europe-west4-a europe-west4-a us-east1-d us-east1-d"
+    read -r -a ZONES <<< "$ZONES_OVERRIDE"
+    if [ "${#ZONES[@]}" -ne "$N_SEEDS" ]; then
+        echo "ERROR: ZONES_OVERRIDE has ${#ZONES[@]} entries, need $N_SEEDS" >&2
+        exit 1
+    fi
+else
+    ZONE_SLOTS=("europe-west4-a" "europe-west4-a" "europe-west4-a" "us-east1-d" "us-east1-d")
+    ZONES=("${ZONE_SLOTS[@]:0:$N_SEEDS}")
+fi
 VM_NAMES=()
 for s in "${SEED_ARR[@]}"; do
     VM_NAMES+=("bohdi-seed${s}")
@@ -109,6 +127,13 @@ done
 # downloads ${GCS_DATA_PATH}/train.jsonl + val.jsonl. Recommended — saves
 # ~5h of duplicated trace generation per VM (15h total).
 GCS_DATA_PATH="${GCS_DATA_PATH:-}"
+
+# Optional second-pass grader for the cross-grader bias-control sweep.
+# When set, each VM re-grades the 4 eval configs with this model after
+# Stage 4. Off by default — significant grader compute (~12h H100 per
+# seed). Recommended: Qwen/Qwen2.5-14B-Instruct (different family from
+# the primary Llama grader).
+SECOND_GRADER_MODEL="${SECOND_GRADER_MODEL:-}"
 
 # How many times to retry spot-create on TRC capacity errors before
 # giving up on a particular VM. Each retry waits 60s. Default of 200 *
@@ -125,8 +150,9 @@ MAX_PREEMPT_RETRIES="${MAX_PREEMPT_RETRIES:-10}"
 
 echo "=== launch_5seeds: 5 v6e-8 spot VMs in parallel (3 eur4a + 2 use1d) ==="
 echo "  seeds: ${SEEDS}"
-echo "  GCS_DATA_PATH:   ${GCS_DATA_PATH:-(not set — each VM will run Stage 1+2)}"
-echo "  GCS_OUTPUT_PATH: ${GCS_OUTPUT_PATH:-(not set — preempts will lose progress)}"
+echo "  GCS_DATA_PATH:        ${GCS_DATA_PATH:-(not set — each VM will run Stage 1+2)}"
+echo "  GCS_OUTPUT_PATH:      ${GCS_OUTPUT_PATH:-(not set — preempts will lose progress)}"
+echo "  SECOND_GRADER_MODEL:  ${SECOND_GRADER_MODEL:-(not set — cross-grader pass disabled)}"
 echo "  results -> $RESULTS_DIR/seed_<N>/"
 echo
 
@@ -178,6 +204,9 @@ fi
 : "\${HF_TOKEN:?HF_TOKEN missing from ~/.bohdi-env}"
 : "\${GH_TOKEN:?GH_TOKEN missing from ~/.bohdi-env}"
 export PJRT_DEVICE=TPU
+# Pin to the py3.11 venv that setup_tpu.sh installs, so PATH ordering
+# can't drop us back onto system python 3.10.
+PY=~/.venv-py311/bin/python
 
 # Private-repo clone via in-memory token-injected URL. The
 # ``url.<...>.insteadOf`` config rewrites the github.com origin only for
@@ -193,8 +222,15 @@ git -c "url.https://x-access-token:\${GH_TOKEN}@github.com/.insteadOf=https://gi
 git reset --hard origin/main 2>&1 | tail -1 || true
 
 echo "--- 0/4 setup_tpu.sh ---" | tee -a ~/pipeline.log
+# Legacy torch_xla path — train_lora.py imports torch_xla, so request it.
+export BOHDI_INSTALL_TORCH_XLA=1
 bash tpu/setup_tpu.sh > ~/setup.log 2>&1 || { echo "setup FAILED" >> ~/pipeline.log; exit 1; }
 echo SETUP_OK >> ~/pipeline.log
+# /etc/profile.d/bohdi-hf-cache.sh is sourced only by login shells; this
+# daemon is non-login. Source it explicitly so HF_HOME + TRANSFORMERS_CACHE
+# point at /dev/shm (or /mnt/cache) instead of the default ~/.cache.
+[ -f /etc/profile.d/bohdi-hf-cache.sh ] && source /etc/profile.d/bohdi-hf-cache.sh
+echo "  HF_HOME=\${HF_HOME:-(unset)}" >> ~/pipeline.log
 
 mkdir -p data/sft eval checkpoints logs "checkpoints/seed_${SEED}"
 
@@ -293,13 +329,16 @@ else
     # when we skip Stage 1 (resume from a pre-generated raw_traces.jsonl).
     # download_data.py is idempotent (checks before downloading), so it's
     # safe to run unconditionally.
-    python -u scripts/download_data.py >> ~/pipeline.log 2>&1
+    \${PY} -u scripts/download_data.py >> ~/pipeline.log 2>&1
 
     if [ ! -s data/sft/raw_traces.jsonl ]; then
         echo "--- 1/4 generate BODHI traces (leader=${IS_LEADER}) ---" | tee -a ~/pipeline.log
-        python -u scripts/generate_traces.py \\
+        # Exclude all 1000 HealthBench Hard prompts so per-seed bootstrap
+        # eval is honestly held-out (issue #60).
+        \${PY} -u scripts/generate_traces.py \\
             --model google/medgemma-27b-text-it \\
             --datasets healthbench_hard healthbench \\
+            --exclude-ids data/raw/healthbench_hard.jsonl data/raw/hard_200_sample_ids.json \\
             --output data/sft/raw_traces.jsonl \\
             --use-bodhi \\
             > ~/gen.log 2>&1
@@ -318,9 +357,12 @@ else
     fi
 
     echo "--- 2/4 filter+grade with seed ${SEED} ---" | tee -a ~/pipeline.log
-    python -u scripts/filter_traces.py \\
+    # Defensive --exclude-ids drops any HealthBench Hard rows that may have
+    # survived in a legacy raw_traces.jsonl (issue #60).
+    \${PY} -u scripts/filter_traces.py \\
         --input data/sft/raw_traces.jsonl \\
         --healthbench-data data/raw/healthbench_hard.jsonl data/raw/healthbench.jsonl \\
+        --exclude-ids data/raw/healthbench_hard.jsonl data/raw/hard_200_sample_ids.json \\
         --grader-model Qwen/Qwen2.5-14B-Instruct \\
         --output-dir data/sft \\
         --min-score 0.4 \\
@@ -331,6 +373,34 @@ else
     gcs_upload data/sft/train.jsonl train.jsonl
     gcs_upload data/sft/val.jsonl val.jsonl
 fi
+
+# Preflight leakage gate (issue #60). Aborts the run before training if any
+# HealthBench Hard prompt ended up in train.jsonl. Cheap to run; invaluable
+# when something upstream regresses (e.g., a stale GCS resume base).
+echo "--- 2.5/4 preflight leakage gate ---" | tee -a ~/pipeline.log
+# Idempotent fetch — preflight gate reads the raw HealthBench JSONLs
+# which Stage 1 normally downloads, but a resumed run skipped Stage 1.
+\${PY} -u scripts/download_data.py >> ~/pipeline.log 2>&1 || true
+# SKIP_OVERLAP_CHECK=1 escape hatch for audit/replay runs (per #124).
+if [ "\${SKIP_OVERLAP_CHECK:-0}" = "1" ]; then
+    echo "WARNING: SKIP_OVERLAP_CHECK=1 — skipping leakage gate" | tee -a ~/pipeline.log
+else
+    \${PY} -u scripts/check_dataset_overlap.py \\
+        --train-jsonl data/sft/train.jsonl \\
+        --tag-overlap >> ~/pipeline.log 2>&1
+fi
+echo PREFLIGHT_OK >> ~/pipeline.log
+
+# The Stage-2 grader (and any Stage-1 generation if it ran) used a
+# vllm-tpu Docker container with --privileged, started via 'sudo docker
+# run', so the bind-mounted ~/.cache/huggingface fills up with
+# root-owned files. train_lora.py runs as the regular user and would
+# hit "PermissionError: [Errno 13] Permission denied" on the first
+# AutoTokenizer.from_pretrained() download attempt. Chown the cache
+# back to the user before Stage 3 so HF Hub downloads can proceed.
+# Also covers ~/.xla_cache for the XLA persistent compile cache, which
+# may not exist yet on a fresh VM (hence the 2>/dev/null silencing).
+sudo chown -R "$USER:$USER" ~/.cache/huggingface ~/.xla_cache 2>/dev/null || true
 
 echo "--- 3/4 train LoRA seed=${SEED} ---" | tee -a ~/pipeline.log
 # Sidecar: rsync checkpoints/seed_<SEED>/ to GCS every 5 min while
@@ -349,7 +419,7 @@ if [ -n "\${GCS_SEED_DIR:-}" ]; then
     echo "  GCS rsync sidecar pid=\${SIDECAR_PID} (every 300s)" >> ~/pipeline.log
 fi
 trap '[ -n "'"\${SIDECAR_PID}"'" ] && kill '"\${SIDECAR_PID}"' 2>/dev/null || true' EXIT
-python -u scripts/train_lora.py \\
+\${PY} -u scripts/train_lora.py \\
     --config configs/lora_medgemma27b_tpu.yaml \\
     --seed ${SEED} \\
     --output-dir "checkpoints/seed_${SEED}" \\
@@ -358,45 +428,126 @@ echo TRAIN_OK >> ~/pipeline.log
 [ -n "\${SIDECAR_PID}" ] && kill \${SIDECAR_PID} 2>/dev/null || true
 gcs_rsync "checkpoints/seed_${SEED}/" "checkpoints/"
 
+# Stage 4/5 cleanup: each eval_healthbench.py call spins up a vLLM-TPU
+# Docker container (inference + grader) and may write merged base+LoRA
+# scratch checkpoints under ~/bodhi_merged_*. Without cleanup, leftover
+# containers hold the TPU and the merged dirs can fill the boot disk.
+# Called explicitly after Stages 4 and 5, and on EXIT so partial
+# failures (preempt, OOM, killed shell) still clean up.
+cleanup_eval() {
+    sudo docker ps --filter ancestor=vllm/vllm-tpu -q \\
+        | xargs -r sudo docker stop 2>/dev/null || true
+    rm -rf ~/bodhi_merged_* 2>/dev/null || true
+    # Belt-and-suspenders: the Stage-3 sidecar trap also kills SIDECAR_PID,
+    # but if we replace that trap (below) we still want this guarantee.
+    [ -n "\${SIDECAR_PID:-}" ] && kill \${SIDECAR_PID} 2>/dev/null || true
+}
+trap cleanup_eval EXIT
+
 echo "--- 4/4 eval 4 configs (base/lora x wrapper/no-wrapper) ---" | tee -a ~/pipeline.log
 mkdir -p "eval/seed_${SEED}"
 LORA_DIR="checkpoints/seed_${SEED}/best"
 
+# Per-seed bootstrap eval draw (issue #60): each seed gets its own random
+# 200-prompt subset of the 1000 HealthBench Hard prompts. Generated once
+# per VM since SEED is fixed per VM in this fan-out.
+SEED_IDS="data/raw/hard_seed_${SEED}.json"
+\${PY} -u scripts/make_bootstrap_eval_ids.py \\
+    --healthbench-jsonl data/raw/healthbench_hard.jsonl \\
+    --seed ${SEED} \\
+    --output "\$SEED_IDS" >> ~/pipeline.log 2>&1
+
+# run_eval: write \$1.json under \$2 graded by \$3, with model+wrapper args from \$4.
+# Used both by the primary pass (out_dir=eval/seed_<N>, grader=Qwen) and
+# the optional cross-grader pass below (out_dir=cross_grader/<tag>,
+# grader=\${SECOND_GRADER_MODEL}). Skips if the output already exists so
+# preempt-resume picks up where it left off.
 run_eval() {
-    local name="\$1" args="\$2"
-    local out="eval/seed_${SEED}/\${name}.json"
+    local name="\$1" out_dir="\$2" grader="\$3" args="\$4"
+    local out="\${out_dir}/\${name}.json"
     if [ -s "\$out" ]; then
-        echo "[\$name] already exists, skipping" >> ~/pipeline.log
+        echo "[\$name @ \$grader] already exists, skipping" >> ~/pipeline.log
         return
     fi
-    echo "--- 4.\$name ---" | tee -a ~/pipeline.log
+    echo "--- eval \$name @ \$grader ---" | tee -a ~/pipeline.log
     # shellcheck disable=SC2086
-    python -u scripts/eval_healthbench.py \$args \\
-        --sample-ids data/raw/hard_200_sample_ids.json \\
-        --grader-model Qwen/Qwen2.5-14B-Instruct \\
+    \${PY} -u scripts/eval_healthbench.py \$args \\
+        --sample-ids "\$SEED_IDS" \\
+        --grader-model "\$grader" \\
         --output "\$out" \\
         --seed ${SEED} >> ~/eval.log 2>&1 || echo "eval \$name FAILED" >> ~/pipeline.log
 }
 
-run_eval "base_no_wrapper"  "--model google/medgemma-27b-text-it"
+PRIMARY_DIR="eval/seed_${SEED}"
+PRIMARY_GRADER="meta-llama/Llama-3.1-8B-Instruct"
+run_eval "base_no_wrapper"  "\$PRIMARY_DIR" "\$PRIMARY_GRADER" "--model google/medgemma-27b-text-it"
 gcs_rsync "eval/seed_${SEED}/" "eval/"
-run_eval "base_bodhi"       "--model google/medgemma-27b-text-it --use-bodhi"
+run_eval "base_bodhi"       "\$PRIMARY_DIR" "\$PRIMARY_GRADER" "--model google/medgemma-27b-text-it --use-bodhi"
 gcs_rsync "eval/seed_${SEED}/" "eval/"
-run_eval "lora_no_wrapper"  "--model google/medgemma-27b-text-it --lora-path \$LORA_DIR"
+run_eval "lora_no_wrapper"  "\$PRIMARY_DIR" "\$PRIMARY_GRADER" "--model google/medgemma-27b-text-it --lora-path \$LORA_DIR"
 gcs_rsync "eval/seed_${SEED}/" "eval/"
-run_eval "lora_bodhi"       "--model google/medgemma-27b-text-it --lora-path \$LORA_DIR --use-bodhi"
+run_eval "lora_bodhi"       "\$PRIMARY_DIR" "\$PRIMARY_GRADER" "--model google/medgemma-27b-text-it --lora-path \$LORA_DIR --use-bodhi"
 gcs_rsync "eval/seed_${SEED}/" "eval/"
 echo EVAL_OK >> ~/pipeline.log
+
+# ── Stage 4b: optional cross-grader pass ──────────────────────────────────
+# SECOND_GRADER_MODEL is baked in from the local launcher (literal value
+# or empty string — local-side \${VAR} expansion, NO backslash). When
+# non-empty we re-grade the same 4 configs over the same prompt IDs but
+# with --grader-model "\${SECOND_GRADER_MODEL}", then run
+# scripts/grader_correlation.py to report Spearman ρ vs. the primary
+# Llama eval grader. Same configs, same IDs — only the grader differs —
+# so the correlation is on apples-to-apples scores. Pick a family
+# different from Llama (e.g. Qwen/Qwen2.5-14B-Instruct).
+SECOND_GRADER_MODEL="${SECOND_GRADER_MODEL}"
+if [ -n "\${SECOND_GRADER_MODEL}" ]; then
+    SECOND_GRADER_TAG="\$(printf '%s' "\${SECOND_GRADER_MODEL}" | tr '/:' '__')"
+    SECOND_GRADER_DIR="\${PRIMARY_DIR}/cross_grader/\${SECOND_GRADER_TAG}"
+    mkdir -p "\${SECOND_GRADER_DIR}"
+    echo "--- 4b/5 cross-grader pass: \${SECOND_GRADER_MODEL} ---" | tee -a ~/pipeline.log
+
+    run_eval "base_no_wrapper"  "\$SECOND_GRADER_DIR" "\$SECOND_GRADER_MODEL" "--model google/medgemma-27b-text-it"
+    gcs_rsync "eval/seed_${SEED}/" "eval/"
+    run_eval "base_bodhi"       "\$SECOND_GRADER_DIR" "\$SECOND_GRADER_MODEL" "--model google/medgemma-27b-text-it --use-bodhi"
+    gcs_rsync "eval/seed_${SEED}/" "eval/"
+    run_eval "lora_no_wrapper"  "\$SECOND_GRADER_DIR" "\$SECOND_GRADER_MODEL" "--model google/medgemma-27b-text-it --lora-path \$LORA_DIR"
+    gcs_rsync "eval/seed_${SEED}/" "eval/"
+    run_eval "lora_bodhi"       "\$SECOND_GRADER_DIR" "\$SECOND_GRADER_MODEL" "--model google/medgemma-27b-text-it --lora-path \$LORA_DIR --use-bodhi"
+    gcs_rsync "eval/seed_${SEED}/" "eval/"
+
+    echo "--- 4b/5 grader correlation ---" | tee -a ~/pipeline.log
+    \${PY} -u scripts/grader_correlation.py \\
+        --reference-jsons \\
+            "\${PRIMARY_DIR}/base_no_wrapper.json" \\
+            "\${PRIMARY_DIR}/base_bodhi.json" \\
+            "\${PRIMARY_DIR}/lora_no_wrapper.json" \\
+            "\${PRIMARY_DIR}/lora_bodhi.json" \\
+        --candidate-jsons \\
+            "\${SECOND_GRADER_DIR}/base_no_wrapper.json" \\
+            "\${SECOND_GRADER_DIR}/base_bodhi.json" \\
+            "\${SECOND_GRADER_DIR}/lora_no_wrapper.json" \\
+            "\${SECOND_GRADER_DIR}/lora_bodhi.json" \\
+        --output "\${SECOND_GRADER_DIR}/correlation.json" \\
+        >> ~/eval.log 2>&1 || echo "grader_correlation FAILED" >> ~/pipeline.log
+    echo XGRADER_OK >> ~/pipeline.log
+    gcs_rsync "eval/seed_${SEED}/" "eval/"
+fi
 
 # ── Stage 5: epistemic-virtue grading ─────────────────────────────────────
 # eval_epistemic.py grades the same 4 response files on BODHI epistemic
 # virtues (uncertainty acknowledgment, active inquiry, abstention, etc.)
 # independent of HealthBench rubric correctness — answering the
 # "do humility-trained outputs actually exhibit humility?" question that
-# rubric scores can't. Same Qwen grader as Stage 4 to keep methodology
-# consistent. Skipped if any of the 4 input JSONs is missing (i.e. a
-# Stage 4 config failed earlier — the eval_epistemic CLI requires real
-# response files, not empty ones).
+# rubric scores can't. Same Llama-3.1-8B-Instruct grader as Stage 4 to
+# keep methodology consistent. Skipped if any of the 4 input JSONs is
+# missing (i.e. a Stage 4 config failed earlier — the eval_epistemic
+# CLI requires real response files, not empty ones).
+#
+# Cleanup before Stage 5: free the TPU/Docker state + merged-LoRA scratch
+# from Stage 4 (and Stage 4b if it ran) so eval_epistemic spins up a
+# clean vLLM container instead of contending with the previous one.
+cleanup_eval
+
 echo "--- 5/5 epistemic virtue eval ---" | tee -a ~/pipeline.log
 EPISTEMIC_INPUTS=()
 for cfg in base_no_wrapper base_bodhi lora_no_wrapper lora_bodhi; do
@@ -409,15 +560,22 @@ if [ \${#EPISTEMIC_INPUTS[@]} -eq 0 ]; then
 elif [ -s "eval/seed_${SEED}/epistemic_scores.json" ]; then
     echo "epistemic_scores.json already exists, skipping" >> ~/pipeline.log
 else
-    python -u scripts/eval_epistemic.py \\
+    \${PY} -u scripts/eval_epistemic.py \\
         --response-files "\${EPISTEMIC_INPUTS[@]}" \\
-        --grader-model Qwen/Qwen2.5-14B-Instruct \\
+        --grader-model meta-llama/Llama-3.1-8B-Instruct \\
         --output "eval/seed_${SEED}/epistemic_scores.json" \\
         --seed ${SEED} >> ~/eval.log 2>&1 \\
     || echo "eval_epistemic FAILED" >> ~/pipeline.log
 fi
 echo EPISTEMIC_OK >> ~/pipeline.log
 gcs_rsync "eval/seed_${SEED}/" "eval/"
+
+# End-of-Stage-5 cleanup: stop any lingering vLLM-TPU container and
+# wipe merged-base+LoRA scratch dirs. The EXIT trap also fires
+# cleanup_eval, but calling it explicitly here means cleanup happens
+# before the "pipeline complete" line prints (success-path ordering).
+# cleanup_eval is idempotent so the second EXIT-trap call is a no-op.
+cleanup_eval
 
 echo "=== seed ${SEED} pipeline complete ===" >> ~/pipeline.log
 REMOTE
@@ -446,6 +604,9 @@ for ((i=0; i<N_SEEDS; i++)); do
         try_create() {
             # Acquire one v6e-8 spot in $ZONE with capacity-error retries.
             # Returns 0 on success, 1 if we burn through all retries.
+            # No data disk: setup_tpu.sh redirects HF cache to /dev/shm
+            # (tmpfs, ~700 GB on v6e-8 hosts) so the 100 GB boot disk doesn't
+            # ENOSPC when medgemma+qwen+orbax all sit in cache simultaneously.
             local attempt=0
             until gcloud compute tpus tpu-vm create "$VM_NAME" \
                 --zone="$ZONE" \
@@ -469,31 +630,136 @@ for ((i=0; i<N_SEEDS; i++)); do
             # Stash GH_TOKEN + HF_TOKEN to ~/.bohdi-env on the VM via
             # stdin, mode 600. The tokens never appear in process listings
             # or the gcloud --command argv.
+            #
+            # `|| log "..."` is load-bearing under `set -e`: a transient
+            # IAP failure here would tear down the parent subshell before
+            # the daemon-launch + retry path can run. The daemon won't
+            # start if the tokens didn't push (the heredoc fails with
+            # "HF_TOKEN missing from ~/.bohdi-env"), but wait_for_completion
+            # will see that as DIED and route to the correct preempt /
+            # non-preempt classification.
             printf '%s\n%s\n' "$GH_TOKEN" "$HF_TOKEN" \
                 | gcloud alpha compute tpus tpu-vm ssh "$VM_NAME" \
                     --zone="$ZONE" --project="$PROJECT" --tunnel-through-iap \
                     --command='read -r G; read -r H; umask 077; { echo "GH_TOKEN=$G"; echo "HF_TOKEN=$H"; } > ~/.bohdi-env; chmod 600 ~/.bohdi-env' \
-                    >>"$LOG" 2>&1
+                    >>"$LOG" 2>&1 || log "push_tokens ssh failed (transient IAP, daemon may fail to start)"
         }
 
-        run_pipeline() {
-            # Run the heredoc-built pipeline. Returns SSH's exit code:
-            #   0   pipeline ran, EVAL_OK marker present
-            #   non-zero  SSH died (preempt, network, or pipeline error)
+        launch_pipeline_detached() {
+            # Stage the heredoc as a local temp file, scp it to the VM,
+            # then ssh to start it as a fully-detached background daemon.
+            # nohup + setsid + < /dev/null + & + disown together make the
+            # process immune to the SIGHUP that fires when the IAP tunnel
+            # between this launcher and the VM drops (which happens
+            # routinely on multi-hour TPU jobs - long SSH sessions over
+            # IAP are not a supported pattern). Stdout + stderr land in
+            # ~/run_pipeline.log on the VM. Returns when the launch SSH
+            # returns (typically <10s); the pipeline keeps running on
+            # the VM independently from there on.
+            #
+            # We use scp + ssh rather than piping the heredoc body into
+            # ssh's stdin because gcloud-ssh through IAP does not
+            # reliably forward stdin to the remote --command (the
+            # short-lived push_tokens path uses 'read' which appears to
+            # work, but a longer 'cat > file' path observed empty input
+            # in the live run, leaving run_pipeline.sh as a 0-byte file).
             local remote_cmd
             remote_cmd="$(build_remote_cmd "$SEED" "$IS_LEADER")"
+            local local_script="${SEED_DIR}/run_pipeline.sh"
+            printf '%s' "$remote_cmd" > "$local_script"
+            chmod +x "$local_script"
+            # The `|| log "..."` guards are load-bearing under `set -e`:
+            # a transient IAP failure (4003 'failed to connect to backend')
+            # in either gcloud call would otherwise tear down the parent
+            # subshell BEFORE wait_for_completion could see whether the
+            # daemon actually started. We log the failure and fall through
+            # to wait_for_completion, which will probe via short SSH and
+            # detect DIED/UNREACHABLE/PREEMPTED on its own.
+            gcloud alpha compute tpus tpu-vm scp \
+                --zone="$ZONE" --project="$PROJECT" --tunnel-through-iap \
+                "$local_script" "${VM_NAME}:~/run_pipeline.sh" \
+                >>"$LOG" 2>&1 || log "scp run_pipeline.sh failed (will retry via wait/probe)"
             gcloud alpha compute tpus tpu-vm ssh "$VM_NAME" \
                 --zone="$ZONE" --project="$PROJECT" --tunnel-through-iap \
-                --command="$remote_cmd" >>"$LOG" 2>&1
+                --command='chmod +x ~/run_pipeline.sh && nohup setsid bash ~/run_pipeline.sh > ~/run_pipeline.log 2>&1 < /dev/null & disown; echo "daemon launched, pid=$!"' \
+                >>"$LOG" 2>&1 || log "daemon launch ssh failed (will retry via wait/probe)"
         }
 
-        eval_marker_present() {
-            # Probe for the EVAL_OK marker in ~/pipeline.log. Returns 0 if
-            # the pipeline ran to completion (or 1 otherwise / on any
-            # SSH failure).
-            gcloud alpha compute tpus tpu-vm ssh "$VM_NAME" \
+        probe_status() {
+            # Short SSH probe (~5-10s). Echoes one of:
+            #   DONE         - EPISTEMIC_OK in pipeline.log (Stage 5 finished)
+            #   RUNNING      - daemon process still alive
+            #   DIED         - daemon gone but no terminal marker (real failure)
+            #   UNREACHABLE  - SSH itself failed (return code via stdout)
+            # Looks for EPISTEMIC_OK rather than EVAL_OK because Stage 5
+            # is the last stage; an EVAL_OK without EPISTEMIC_OK means
+            # we are partway through but not done.
+            local out
+            out=$(gcloud alpha compute tpus tpu-vm ssh "$VM_NAME" \
                 --zone="$ZONE" --project="$PROJECT" --tunnel-through-iap \
-                --command='grep -q ^EVAL_OK ~/pipeline.log' >/dev/null 2>&1
+                --command='if grep -q "^EPISTEMIC_OK" ~/pipeline.log 2>/dev/null; then
+                    echo DONE
+                elif pgrep -f "run_pipeline.sh" > /dev/null 2>&1; then
+                    echo RUNNING
+                else
+                    echo DIED
+                fi' 2>/dev/null) || { echo UNREACHABLE; return; }
+            echo "$out" | tr -d "[:space:]"
+        }
+
+        wait_for_completion() {
+            # Poll probe_status every $POLL_INTERVAL_S seconds until DONE,
+            # DIED, or PREEMPTED. Tolerates a few consecutive UNREACHABLE
+            # probes (transient IAP glitches) before checking VM state.
+            #   returns 0 -> DONE (EPISTEMIC_OK)
+            #   returns 1 -> PREEMPTED (need to reacquire)
+            #   returns 2 -> DIED (non-preempt failure - daemon exited
+            #                without writing EPISTEMIC_OK)
+            local POLL_INTERVAL_S="${POLL_INTERVAL_S:-90}"
+            local probe_fail_count=0
+            local probe_fail_max=5
+            local last_status="?"
+            while :; do
+                sleep "$POLL_INTERVAL_S"
+                local s
+                s=$(probe_status)
+                if [ "$s" != "$last_status" ]; then
+                    log "probe: $s"
+                    last_status="$s"
+                fi
+                case "$s" in
+                    DONE) return 0 ;;
+                    DIED)
+                        # Could be a real Python failure OR a preempt that
+                        # wiped the boot disk + the daemon. Check VM state
+                        # to disambiguate before declaring non-preempt.
+                        local state
+                        state=$(vm_state)
+                        if [ "$state" = "PREEMPTED" ] || [ "$state" = "MISSING" ]; then
+                            return 1
+                        fi
+                        return 2
+                        ;;
+                    UNREACHABLE)
+                        probe_fail_count=$((probe_fail_count + 1))
+                        if [ "$probe_fail_count" -ge "$probe_fail_max" ]; then
+                            local state
+                            state=$(vm_state)
+                            log "$probe_fail_max consecutive UNREACHABLE probes; vm state=$state"
+                            if [ "$state" = "PREEMPTED" ] || [ "$state" = "MISSING" ]; then
+                                return 1
+                            fi
+                            # VM is READY but we can't talk to it; treat
+                            # as a transient and keep polling. Reset count
+                            # so a brief outage does not give up.
+                            probe_fail_count=0
+                        fi
+                        ;;
+                    RUNNING)
+                        probe_fail_count=0
+                        ;;
+                esac
+            done
         }
 
         vm_state() {
@@ -538,10 +804,15 @@ for ((i=0; i<N_SEEDS; i++)); do
         trap cleanup EXIT
 
         # ── outer retry loop ──────────────────────────────────────────────
-        # If the pipeline finishes cleanly (EVAL_OK), we exit successfully.
-        # If the VM gets preempted before EVAL_OK, we delete + reacquire in
-        # the SAME zone (per the user's spec — staying in zone keeps the
-        # persistent disk attachment + zone-affinity behavior consistent).
+        # The pipeline runs as a detached daemon on the VM (started by
+        # launch_pipeline_detached + nohup + setsid). The local launcher
+        # holds NO long-running SSH session; instead it polls the daemon
+        # every POLL_INTERVAL_S seconds via short SSH connections that
+        # are insulated from IAP tunnel drops. This is the structural fix
+        # for the failure mode where multi-hour heredoc-over-IAP sessions
+        # would routinely drop, kill the heredoc on the remote, and the
+        # launcher would mis-classify the drop as a "non-preempt failure"
+        # and delete the VM.
         preempt_attempt=0
         while :; do
             if ! try_create; then
@@ -549,43 +820,37 @@ for ((i=0; i<N_SEEDS; i++)); do
                 exit 0
             fi
             push_tokens
-            # `|| true` is load-bearing: under `set -e` (top of this file)
-            # a non-zero return from this function — which happens any
-            # time the SSH session dies, including a normal preempt —
-            # would kill the parent subshell BEFORE the eval_marker_present
-            # / vm_state checks below could fire. We observed all 4
-            # preempted seeds bypass the retry loop and exit during the
-            # first live multi-seed run; this guard wires the retry path
-            # back up.
-            run_pipeline || true   # exit code is checked via eval_marker_present below
-            if eval_marker_present; then
-                log "pipeline complete (EVAL_OK)"
-                break
-            fi
-
-            # Pipeline didn't finish. Inspect VM state to decide what to do.
-            state=$(vm_state)
-            log "SSH ended without EVAL_OK; vm state=$state"
-
-            if [ "$state" = "PREEMPTED" ] || [ "$state" = "MISSING" ]; then
-                preempt_attempt=$((preempt_attempt + 1))
-                if [ "$preempt_attempt" -ge "$MAX_PREEMPT_RETRIES" ]; then
-                    log "hit MAX_PREEMPT_RETRIES=$MAX_PREEMPT_RETRIES, giving up"
+            launch_pipeline_detached
+            wait_for_completion
+            rc=$?
+            case $rc in
+                0)
+                    log "pipeline complete (EPISTEMIC_OK)"
                     break
-                fi
-                log "preempted — deleting + reacquiring in same zone (attempt $preempt_attempt/$MAX_PREEMPT_RETRIES)"
-                # Best-effort grab whatever results survived on the VM
-                # before we delete it (most work is wiped with the boot
-                # disk, but eval/seed_N JSONs may be there).
-                scp_back
-                delete_vm
-                sleep 30
-                continue
-            fi
-
-            # Something else (pipeline error not preempt). Stop retrying.
-            log "non-preempt failure — not retrying"
-            break
+                    ;;
+                1)
+                    # PREEMPTED or MISSING - reacquire in same zone.
+                    preempt_attempt=$((preempt_attempt + 1))
+                    if [ "$preempt_attempt" -ge "$MAX_PREEMPT_RETRIES" ]; then
+                        log "hit MAX_PREEMPT_RETRIES=$MAX_PREEMPT_RETRIES, giving up"
+                        break
+                    fi
+                    log "preempted — reacquiring (attempt $preempt_attempt/$MAX_PREEMPT_RETRIES)"
+                    # Most work is in GCS already (sidecar uploads); SCP
+                    # is best-effort for anything not yet rsync'd.
+                    scp_back
+                    delete_vm
+                    sleep 30
+                    continue
+                    ;;
+                2)
+                    # Daemon exited without EPISTEMIC_OK and the VM is
+                    # still READY - a real Python/pipeline failure (not
+                    # a tunnel drop, which the daemon survives now).
+                    log "daemon exited without completion marker — non-preempt failure, not retrying"
+                    break
+                    ;;
+            esac
         done
     ) &
 

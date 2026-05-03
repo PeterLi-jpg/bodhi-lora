@@ -26,7 +26,7 @@
 #   TRAIN_CONFIG=configs/lora_medgemma27b_tpu.yaml
 #   MODEL=google/medgemma-27b-text-it
 #   IDS=data/raw/hard_200_sample_ids.json
-#   GRADER=Qwen/Qwen2.5-14B-Instruct-AWQ
+#   GRADER=Qwen/Qwen2.5-14B-Instruct       # filter-side grader (eval is Llama-3.1-8B)
 #   MIN_SCORE=0.4
 #   VAL_RATIO=0.1
 #
@@ -44,7 +44,7 @@ N_EXAMPLES="${N_EXAMPLES:-300}"
 TRAIN_CONFIG="${TRAIN_CONFIG:-configs/lora_medgemma27b_tpu.yaml}"
 MODEL="${MODEL:-google/medgemma-27b-text-it}"
 IDS="${IDS:-data/raw/hard_200_sample_ids.json}"
-GRADER="${GRADER:-Qwen/Qwen2.5-14B-Instruct-AWQ}"
+GRADER="${GRADER:-Qwen/Qwen2.5-14B-Instruct}"
 MIN_SCORE="${MIN_SCORE:-0.4}"
 VAL_RATIO="${VAL_RATIO:-0.1}"
 
@@ -79,9 +79,12 @@ for COMP in "${COMPONENTS[@]}"; do
         --seed "$SEED"
 
     echo "--- filter ($COMP) ---"
+    # Defensive --exclude-ids drops any HealthBench Hard rows that may have
+    # survived in a legacy raw_traces.jsonl (issue #60).
     python scripts/filter_traces.py \
         --input "$RAW_TRACES" \
         --healthbench-data data/raw/healthbench_hard.jsonl data/raw/healthbench.jsonl \
+        --exclude-ids data/raw/healthbench_hard.jsonl data/raw/hard_200_sample_ids.json \
         --grader-model "$GRADER" \
         --output-dir "$SFT_DIR" \
         --min-score "$MIN_SCORE" \

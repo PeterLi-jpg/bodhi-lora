@@ -21,7 +21,8 @@ Two fully-supported paths — pick one:
 - See section 4b (GPU) for setup
 
 ### Software
-- Python 3.10 or 3.11 (tested on 3.11; 3.12 works but CUDA wheel coverage lags)
+- Python 3.10 or 3.11 on the dev box / GPU side (tested on 3.11; 3.12 works but CUDA wheel coverage lags)
+- On TPU, Python 3.11 is required. `tpu/setup_tpu.sh` provisions it automatically via apt and a venv at `~/.venv-py311`, so the launcher scripts just work. Pinning 3.11 lets us pick up MaxText's natural dependency floors and drop the cascade of py3.10 compat shims we previously needed.
 - CUDA 12.1+ for the GPU run
 - Linux for the full run (slurm + autoawq). macOS is fine for smoke/dev (autoawq is skipped via platform marker).
 
@@ -33,10 +34,11 @@ Accept the terms on each model page while logged into HF, then set `HF_TOKEN`:
 | `google/medgemma-27b-text-it` | base model (paper target) | https://huggingface.co/google/medgemma-27b-text-it |
 | `google/gemma-3n-E4B-it` | smoke / local iteration | https://huggingface.co/google/gemma-3n-E4B-it |
 | `google/gemma-3n-E2B-it` | fallback if E4B OOMs | https://huggingface.co/google/gemma-3n-E2B-it |
-| `Qwen/Qwen2.5-14B-Instruct` | grader — full pipeline (GPU + TPU) | https://huggingface.co/Qwen/Qwen2.5-14B-Instruct |
+| `Qwen/Qwen2.5-14B-Instruct` | filter-side grader — Stage 2 training-data selection | https://huggingface.co/Qwen/Qwen2.5-14B-Instruct |
+| `meta-llama/Llama-3.1-8B-Instruct` | eval-side grader — Stage 4/5 reported metrics | https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct |
 | `Qwen/Qwen2.5-0.5B-Instruct` | grader (smoke) | ungated |
 
-Note: the grader is `Qwen2.5-14B-Instruct` (bfloat16, not AWQ) so it runs on both GPU and TPU. AWQ requires CUDA and cannot run on TPU.
+Note: the pipeline uses an **asymmetric grader default** — filter is `Qwen2.5-14B-Instruct`, eval is `Llama-3.1-8B-Instruct` (bfloat16, GPU + TPU). Different families, so training-data selection is decoupled from the evaluator used for claimed gains. For an additional bias-control sweep, set `SECOND_GRADER_MODEL=...` to a family different from the eval primary (e.g. `SECOND_GRADER_MODEL=Qwen/Qwen2.5-14B-Instruct`).
 
 ```bash
 export HF_TOKEN=hf_...
@@ -68,6 +70,20 @@ If `pip check` fails after install, the active environment already contains unre
 ## 4a. Full pipeline — TPU (Google TRC)
 
 Requires a [TRC grant](https://sites.research.google/trc/about/) with Cloud TPU quota. The script handles VM creation, dependency setup, all 5 pipeline stages, and VM deletion automatically.
+
+> **Note (recommended path: tunix).** Stage 3 LoRA SFT now runs on
+> [tunix](https://github.com/google-deepmind/tunix) on TPU. The MaxText path below is
+> kept as a legacy / fallback during the migration window. New runs should use:
+>
+> ```bash
+> export GCS_OUTPUT_PATH=gs://...
+> export GCS_DATA_PATH=gs://.../seed_42
+> export TRAIN_CONFIG=configs/lora_medgemma27b_tunix_smoke.yaml
+> bash tpu/launch_5seeds_tunix.sh
+> ```
+>
+> See [`contributions/tunix-migration.md`](tunix-migration.md) for the rationale,
+> the config schema, and known gotchas.
 
 ```bash
 # store your HF token in .env (gitignored)

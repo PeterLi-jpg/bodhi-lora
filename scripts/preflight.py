@@ -41,10 +41,14 @@ _ON_TPU = _on_tpu()
 
 
 # Deps that must import for the main scripts to even start.
+# vllm is required on every host that runs inference (CUDA build on GPU,
+# vLLM-TPU Docker on TPU); without it generate_traces / eval_healthbench
+# crash 5+ minutes in. Keep it unconditional so preflight catches the
+# missing wheel up-front.
 REQUIRED_IMPORTS = [
     "torch", "transformers", "peft", "trl", "datasets",
     "bodhi", "timm", "PIL", "rich", "yaml", "numpy", "tqdm",
-    "accelerate", "huggingface_hub",
+    "accelerate", "huggingface_hub", "vllm",
 ]
 
 # autoawq is CUDA-built and platform-gated in requirements.txt to
@@ -53,6 +57,12 @@ REQUIRED_IMPORTS = [
 # (pip name is autoawq).
 if sys.platform == "linux" and not _ON_TPU:
     REQUIRED_IMPORTS.append("awq")
+
+# tunix + qwix are the JAX/TPU LoRA stack used by Stage 3 SFT on TPU hosts.
+# They're TPU-only (the host running the trainer); GPU pipeline doesn't import
+# them. Catch missing wheels here rather than minutes into trainer startup.
+if _ON_TPU:
+    REQUIRED_IMPORTS.extend(["tunix", "qwix"])
 
 
 def check_imports() -> List[str]:
@@ -155,6 +165,15 @@ def print_env_summary():
         print(f"  peft         {peft.__version__}")
         print(f"  trl          {trl.__version__}")
         print(f"  accelerate   {accelerate.__version__}")
+        if _ON_TPU:
+            # tunix/qwix don't always ship __version__; fall back to "ok"
+            # so the line still confirms the import succeeded.
+            for name in ("tunix", "qwix"):
+                try:
+                    mod = importlib.import_module(name)
+                    print(f"  {name:12} {getattr(mod, '__version__', 'ok')}")
+                except ImportError as e:
+                    print(f"  {name:12} (import failed: {e})")
     except Exception as e:
         print(f"  (could not print env summary: {e})")
 
@@ -163,8 +182,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__.strip())
     parser.add_argument(
         "--models", nargs="+",
-        default=["google/medgemma-27b-text-it", "Qwen/Qwen2.5-14B-Instruct-AWQ"],
-        help="HF model ids to verify access to. Default: production targets.",
+        default=[
+            "google/medgemma-27b-text-it",         # base model
+            "Qwen/Qwen2.5-14B-Instruct",           # filter-side grader
+            "meta-llama/Llama-3.1-8B-Instruct",    # eval-side grader
+        ],
+        help="HF model ids to verify access to. Default: production targets "
+             "(asymmetric grader: filter=Qwen-14B, eval=Llama-3.1-8B).",
     )
     parser.add_argument(
         "--skip-hf-access", action="store_true",

@@ -4,6 +4,19 @@ Triage of issues raised against this repo, with status for each.
 
 Issue numbers below match GitHub issues on `PeterLi-jpg/bohdi-lora`.
 
+## (resolved) Custom MaxText LoRA glue replaced with tunix + qwix
+
+History: Stage 3 LoRA SFT was implemented as ~1500 lines of custom JAX/Optax
+glue (`scripts/train_lora_maxtext.py`, `scripts/maxtext_lora/*`) on top of
+MaxText. Every TPU bug between v18-v27 was at an integration seam we authored
+ourselves: injector ToLinen wrapping, FSDP assertion mismatches, init batch
+shape, HBM OOM. PR #169 had bypassed tunix because v6e TPU VMs ship Python 3.10
+and tunix requires 3.11; the py3.11 upgrade in PRs #181-188 made tunix usable.
+
+Current path (since PR #196-#203, the 8-unit migration batch): the MaxText
+trainer + custom LoRA injector are replaced by `tunix.sft.peft_trainer.PeftTrainer`
++ `qwix.apply_lora_to_model`. See `contributions/tunix-migration.md`.
+
 ## Fixed
 
 ### [#2] `format_example` batching bug — FIXED
@@ -18,20 +31,46 @@ TRL probes `formatting_func` on a single example first to decide whether it retu
 ### [#23] Mid-epoch checkpoint resume — FIXED
 Training now checkpoints on aligned step intervals instead of epoch boundaries. The default config uses matching `save_strategy: steps` and `eval_strategy: steps` values so `load_best_model_at_end=True` remains valid, and `scripts/train_lora.py` auto-resumes from the latest `checkpoint-*` directory under `--output-dir` when one is present.
 
+## Open / blocked
+
+### Stage 3b (MaxText LoRA training) — STRUCTURALLY BROKEN
+
+`scripts/train_lora_maxtext.py` was committed as the Stage 3 training entry but has **never run end-to-end on a TPU VM**. Smoke runs v9–v11 each died in `setup_tpu.sh` before the trainer was reached, masking the issues below until the v167 setup hardening let setup pass. Confirmed against the vendored `third_party/maxtext` source.
+
+**Bugs in `scripts/train_lora_maxtext.py`:**
+
+| Line | Issue | Reality |
+|---|---|---|
+| 102 | `sys.path.insert(0, third_party/maxtext)` | should be `third_party/maxtext/src` (matches `scripts/convert_medgemma_to_maxtext.py:73`) |
+| 107 | `from MaxText import pyconfig` | package is lowercase `maxtext`; pyconfig lives at `maxtext.configs.pyconfig` |
+| 108 | `from MaxText.experimental.sft import sft_trainer` | no such module; SFT lives at `maxtext.trainers.post_train.sft.train_sft` |
+| 219 | `dataset_loader.build_iterators(...)` | function does not exist anywhere — the `dataset_loader` alias in `scripts/maxtext_lora/__init__.py` resolves to `scripts/convert_traces_to_maxtext.py`, which is the offline JSONL writer, not an iterator builder |
+| 252 | `sft_trainer.train(config=, model=, params=, train_iter=, eval_iter=, trainable_param_filter=, on_first_step=, ...)` | the actual upstream API is `train_sft.train(mt_config, goodput_recorder=None)` — takes one config object and constructs everything internally; none of these kwargs exist |
+| 282 | `export_peft.write_adapter(orbax_checkpoint=, base_model_name=, rank=, alpha=, dropout=, variant=)` | function is `write_peft_adapter` with a different signature (takes pre-extracted `weights` dict). There is an `export(orbax_path, output_dir, base_model, settings)` end-to-end helper — call site must use either |
+
+**Underlying architectural blocker — Python version mismatch — RESOLVED by PR #182:**
+
+History: MaxText's SFT path delegates to **Tunix** (`from tunix.sft import peft_trainer` inside `train_sft.py`). `google-tunix` on PyPI requires **Python 3.11+**, while TPU v6e VMs ship **Python 3.10** by default. So with the stock image, the import `from maxtext.trainers.post_train.sft import train_sft` failed at module load with a missing-Tunix error.
+
+Resolution: `tpu/setup_tpu.sh` (PR #182) now installs `python3.11` via apt on the v6e VM and creates a project venv at `~/.venv-py311` containing the full bohdi-llm + MaxText + Tunix stack. PR #185 routed every TPU launcher's `python` / `python -u` invocation through that venv, so launchers no longer pick up the system py3.10. The py3.11 wall is closed.
+
+**Why we can't fall back to torch_xla (kept for historical context):**
+
+Per `docs/maxtext_migration.md` and commit `2460ac9`, Stage 3 on torch_xla 2.7 + FSDPv2 + Gemma-3-27B hangs on the first `xm.mark_step()` for 30+ min on v6e with no progress and no useful stderr. That's the whole reason MaxText was forked. Switching the launcher back to `tpu/launch_5seeds.sh` would replace "fast AttributeError" with "30+ min silent hang then nothing."
+
 ## Documented, deferred to discussion
 
 ### [#1] Brier / ECE do not measure model calibration — PARTIALLY ADDRESSED
 The old implementation used the evaluator's rubric score as "confidence" and compared it against rubric outcomes from the same grading pass. That was grader-internal consistency, not model calibration. **Action taken**: eval output now includes `brier_model_calibration` / `ece_model_calibration`, using the geometric mean next-token probability of the emitted response as a model-derived confidence proxy, while keeping the legacy `brier_grader_consistency` / `ece_grader_consistency` fields for backward comparison. **Still open for discussion**: whether the response-level logprob proxy is strong enough for the paper, or whether the final claim should move to a richer confidence protocol (verbalized confidence, abstention head, or similar).
 
-### [#3] Same grader for filtering and final evaluation — OPEN
-`filter_traces.py` and `eval_healthbench.py` default to the same grader family (`Qwen/Qwen2.5-14B-Instruct-AWQ`). This couples training-data selection to the evaluator used for claimed gains. **Mitigation paths**:
-- Use a distinct grader for final eval (simplest — change `--grader-model` in `slurm/eval_lora.sh`)
-- Report final results under a second independent grader and compare
-- Keep filter grader ≠ eval grader as policy
+### [#3] Same grader for filtering and final evaluation — ADDRESSED (asymmetric default)
+The pipeline now ships an **asymmetric grader default**: `filter_traces.py` uses `Qwen/Qwen2.5-14B-Instruct` and `eval_healthbench.py` / `eval_epistemic.py` use `meta-llama/Llama-3.1-8B-Instruct`. Training-data selection and reported metrics are graded by **different model families**, so the "graded by your own evaluator" critique no longer applies to the headline numbers.
 
-Infrastructure now exists for an optional second grader pass via `SECOND_GRADER_MODEL=... sbatch slurm/eval_lora.sh`, plus `scripts/grader_correlation.py` to report Spearman correlation and large per-example disagreements. The paper claim remains open until a second grader is actually chosen and run.
+For an additional bias-control sweep, set `SECOND_GRADER_MODEL=...` (any family different from Llama, e.g. `Qwen/Qwen2.5-14B-Instruct`) — the launcher re-grades the four eval configs with the second grader and runs `scripts/grader_correlation.py` to report Spearman ρ vs. the primary Llama grader.
 
-Needs team agreement before any ablation is blessed as final.
+Both gated models need HF access:
+- https://huggingface.co/Qwen/Qwen2.5-14B-Instruct (filter)
+- https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct (eval)
 
 ### [#4] Inconsistent filtering-score normalization — FIXED
 Filtering and eval now use a normalized rubric score that accounts for both the positive ceiling and the negative penalty floor:

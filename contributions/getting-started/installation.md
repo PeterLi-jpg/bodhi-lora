@@ -4,7 +4,8 @@ Environment setup for Mac, Linux, and Windows.
 
 ## Requirements
 
-- Python 3.10, 3.11, or 3.12 (3.11 recommended)
+- Dev box / GPU: Python 3.10, 3.11, or 3.12 (3.11 recommended).
+- TPU (v6e): Python 3.11 required, provisioned automatically by `tpu/setup_tpu.sh` via apt + venv at `~/.venv-py311`. The TPU dep tree includes `qwix` (LoRA on JAX/Flax) and `google-tunix` (Google's new SFT trainer that replaces our Stage 3 trl pipeline; see [`contributions/tunix-migration.md`](../tunix-migration.md)).
 - [Conda](https://docs.conda.io/en/latest/miniconda.html) or `pip` + `venv`
 - CUDA 12.1+ for GPU runs (Linux only)
 - A HuggingFace account with access to gated models (see below)
@@ -69,7 +70,8 @@ Required model access:
 |---|---|
 | [google/medgemma-27b-text-it](https://huggingface.co/google/medgemma-27b-text-it) | Base model (full run) |
 | [google/gemma-3n-E4B-it](https://huggingface.co/google/gemma-3n-E4B-it) | Smoke test |
-| [Qwen/Qwen2.5-14B-Instruct-AWQ](https://huggingface.co/Qwen/Qwen2.5-14B-Instruct-AWQ) | Grader (full run) |
+| [Qwen/Qwen2.5-14B-Instruct](https://huggingface.co/Qwen/Qwen2.5-14B-Instruct) | Filter-side grader (Stage 2) |
+| [meta-llama/Llama-3.1-8B-Instruct](https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct) | Eval-side grader (Stage 4/5) |
 
 ## Windows
 

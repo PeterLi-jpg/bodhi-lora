@@ -1,18 +1,23 @@
 bodhi-llm[all]==0.1.4
-torch>=2.1.0,<3.0.0
-transformers>=4.50.0,<5.0.0
+# ML libraries are pinned to EXACT versions to match tpu/setup_tpu.sh.  This
+# codebase has worked around shape bugs in transformers DynamicLayer, API drift
+# in trl SFTTrainer, and accelerate's TPU-mode model placement; an upstream
+# patch release between runs can break any of those.  Keep these in lock-step
+# with tpu/setup_tpu.sh: if you bump one, bump both.
+torch==2.7.0
+transformers==4.57.6
+peft==0.19.1
+trl==0.11.4
+accelerate==1.13.0
 # gemma-3n-* are multimodal and transformers initializes a vision tower even
 # when we only use the text path; timm + Pillow are required to load the model.
 timm>=1.0.0,<2.0.0
 pillow>=10.0,<12.0
 pyyaml>=6.0,<7.0
-peft>=0.10.0,<1.0.0
-trl>=0.9.0,<0.12.0
 # trl pulls rich via a runtime import but doesn't declare it in its setup deps
 # at the versions we pin; without this, trl.SFTTrainer import fails on a clean env.
 rich>=13.0,<15.0
 datasets>=2.18.0,<4.0.0
-accelerate>=0.28.0,<2.0.0
 autoawq>=0.2.0,<0.3.0; sys_platform == "linux"
 # bitsandbytes is only needed when model.quantization is "4bit" or "8bit" (QLoRA).
 # CUDA-only, so gate by platform the same way autoawq is gated.
@@ -21,3 +26,12 @@ numpy>=1.24,<3.0
 pandas>=2.0,<3.0
 tqdm>=4.65
 matplotlib>=3.7,<4.0
+# JAX stack for the vendored MaxText baseline (third_party/maxtext).  Dev boxes
+# install the CPU build so `import maxtext` works for unit tests; the [tpu]
+# extra is grabbed by tpu/setup_tpu.sh on the actual Cloud TPU VM.  Floors
+# mirror MaxText's own pin (see third_party/maxtext/VENDOR.md); ceilings keep
+# us inside the major series we've actually validated against.
+jax>=0.4.30,<0.7
+flax>=0.10,<0.12
+orbax-checkpoint>=0.11,<0.13
+optax>=0.2.4,<0.3

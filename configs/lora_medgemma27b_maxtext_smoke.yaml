@@ -1,0 +1,84 @@
+# Smoke variant of configs/lora_medgemma27b_maxtext.yaml — only goal is to
+# verify the MaxText path runs end-to-end on a v6e-8 (HF -> orbax conversion,
+# dataset prep, LoRA injection, first mark_step, optimizer step, checkpoint
+# save, PEFT export). NOT a research config.
+#
+# Combined with launcher env vars MAX_EXAMPLES=100 EVAL_MAX=10 and a single
+# seed, total wall clock is roughly: ~10-20 min Stage 1 (gen) + ~10-20 min
+# Stage 3a (HF -> orbax), + ~30-60 min Stage 3b (compile + a few train
+# steps) + ~5-10 min Stage 4 (eval). Use only for pipeline validation.
+
+seed: 42
+
+model:
+  name: google/medgemma-27b-text-it
+  torch_dtype: bfloat16
+  quantization: null
+
+lora:
+  # Same shape as production so the codepath being tested matches.
+  # MaxText's Gemma-3 attention attributes are `query`/`key`/`value`/`out`
+  # (separate, fused_qkv defaults to False); the exporter aliases these
+  # back to HF's q_proj/v_proj names when writing the PEFT adapter.
+  r: 8
+  lora_alpha: 16
+  lora_dropout: 0.05
+  target_modules:
+    - query
+    - value
+  task_type: CAUSAL_LM
+  variant: standard
+
+training:
+  # Smoke: 1 epoch. With ~30-60 train rows after Stage 2 filter and
+  # gradient_accumulation_steps=4, that's ~7-15 effective steps — enough
+  # to confirm the optimizer fires + checkpoint persists, not enough to
+  # measure anything.
+  num_epochs: 1
+  per_device_train_batch_size: 1
+  # MaxText FSDP requires the step batch (per_device * grad_accum in our
+  # dataloader's wiring) to be divisible by ici_fsdp_parallelism, which
+  # auto-shards to all 8 chips on v6e-8. v23 originally had grad_accum=4
+  # which gave batch=4, hitting AssertionError at attention_op:1172
+  # ("query.shape[0]=1/devices_in_data_fsdp=8"). 8 makes the smoke step
+  # batch divisible by 8 with minimal wall-clock cost (production uses 64).
+  gradient_accumulation_steps: 8
+  learning_rate: 1.0e-4
+  warmup_ratio: 0.05
+  lr_scheduler_type: cosine
+  # 256 for the smoke — ~4x cut to activation memory vs 1024. v26 OOMed at
+  # model.init under TP=8 (FSDP=1) at seq_len=1024 with the 27B model:
+  #   "Attempting to allocate 220.50M. That was not possible. There are
+  #    139.62M free.; (0x0x0_HBM0)"
+  # Smoke just needs to verify the pipeline runs end-to-end; sequence
+  # length doesn't matter for that. Real run keeps 2048.
+  max_seq_length: 256
+  logging_steps: 1
+  save_strategy: epoch
+  eval_strategy: epoch
+  bf16: true
+
+data:
+  train_file: data/sft/train.jsonl
+  val_file: data/sft/val.jsonl
+  eval_sample_ids: data/raw/hard_200_sample_ids.json
+
+paths:
+  maxtext_orbax_checkpoint: ~/.cache/maxtext/medgemma-27b
+  # Must match the launcher's --output-dir
+  # (tpu/launch_5seeds_maxtext.sh writes data/sft/maxtext).
+  maxtext_dataset_dir: data/sft/maxtext
+
+# pyconfig_overrides: passed verbatim to MaxText pyconfig.initialize() as
+# key=value flags. v24 hit AssertionError in tpu_flash_attention because
+# per_device_batch_size=1 + ici_fsdp_parallelism=-1 (auto-shards to 8) gives
+# devices_in_data_fsdp=8 but query.shape[0]=1, failing the
+# (query.shape[0]/devices_in_data_fsdp).is_integer() check. Disable FSDP for
+# the smoke and route parallelism through tensor parallelism instead — the
+# 27B model fits comfortably across 8 chips on TP, and the assertion
+# trivially passes (anything/1 is integer). Production runs with grad_accum=64
+# don't hit this assertion (their per-device batch divides cleanly), so this
+# override is smoke-only.
+pyconfig_overrides:
+  ici_fsdp_parallelism: 1
+  ici_tensor_parallelism: -1
