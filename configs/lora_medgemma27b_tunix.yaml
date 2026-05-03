@@ -83,13 +83,16 @@ training:
   #   seq=1536: 16.1%             (still material)
   #   seq=2048:  3.7%             (chosen — sweet spot)
   #   seq=3072:  0.0%             (no truncation but oversized)
-  # v33 OOMed at 27B + seq=256 with the OLD per_device*num_devices=8
-  # dummy formula. v39 with the NEW per_device*grad_accum=8 formula
-  # ran fine at seq=1024 (after FSDP=8 sharding, per-chip batch=1).
-  # At seq=2048 same per-chip batch=1, so attention memory is 4x and
-  # MLP activations 2x vs seq=1024. Should still fit on v6e-8 (32GB
-  # HBM/chip) with the watchdog as a fallback that auto-halves on OOM.
-  max_seq_length: 1024
+  # The earlier seq=2048 attempts OOMed because tunix-gemma3 ships with
+  # RematConfig.NONE (no activation checkpointing) — every one of 62
+  # decoder blocks kept its intermediate activations live, busting the
+  # 32 GB/chip HBM budget. U2 (scripts/train_lora_tunix.py) now sets
+  # ``cfg.remat_config = RematConfig.BLOCK`` unconditionally, which
+  # rematerializes the attention block in backward. ~33% per-step
+  # compute hit, multi-GB activation savings — enough to fit seq=2048
+  # at FSDP=8 + tp=1 + per-chip batch=1 (re-tested under the watchdog,
+  # which auto-halves on OOM as a safety net).
+  max_seq_length: 2048
 
 data:
   # Output of Stage 3b dataset converter
