@@ -121,12 +121,19 @@ GCS_DATA_PATH="${GCS_DATA_PATH:-}"
 # Cross-grader bias-control. Each VM re-grades the same 4 generated
 # response sets with this secondary grader IN PROCESS via
 # eval_healthbench.py's --secondary-grader-model flag (see run_eval
-# below). Defaults to Qwen/Qwen2.5-14B-Instruct so workshop / paper runs
-# always have a cross-grader bound on grader-bias by construction. Set
-# to empty string explicitly to skip ("SECOND_GRADER_MODEL='' bash ...").
-# The secondary pass adds ~30-40% to Stage 4 wall on TPU (it's just the
-# grader pass over already-generated responses, not a full regeneration).
-SECOND_GRADER_MODEL="${SECOND_GRADER_MODEL-Qwen/Qwen2.5-14B-Instruct}"
+# below). Set to empty string explicitly to skip
+# ("SECOND_GRADER_MODEL='' bash ..."). The secondary pass adds ~30-40%
+# to Stage 4 wall on TPU (it's just the grader pass over
+# already-generated responses, not a full regeneration).
+#
+# Default: Mistral-7B-Instruct-v0.3 — picked specifically because it is
+# a THIRD family from both:
+#   - the filter (Stage 2) grader, which is Qwen/Qwen2.5-14B-Instruct
+#   - the primary eval (Stage 4) grader, which is meta-llama/Llama-3.1-8B-Instruct
+# Using a same-family cross-grader (e.g. Qwen for both filter + secondary)
+# would let a Qwen-flavored bias propagate from training-data selection
+# into the bias-control check itself; Mistral cleanly separates them.
+SECOND_GRADER_MODEL="${SECOND_GRADER_MODEL-mistralai/Mistral-7B-Instruct-v0.3}"
 
 # Smoke knobs (mirrors tpu/launch_multiseed.sh).
 # MAX_EXAMPLES caps Stage 1 trace generation; EVAL_MAX caps Stage 4 eval
