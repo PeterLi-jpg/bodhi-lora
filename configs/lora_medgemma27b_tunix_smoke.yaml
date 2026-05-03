@@ -14,7 +14,25 @@
 seed: 42
 
 model:
-  name: google/medgemma-27b-text-it
+  # Gemma3-270m is the smallest Gemma3 variant (~270M params, ~540MB bf16)
+  # and uses the same SentencePiece tokenizer as MedGemma-27B (256128 vocab),
+  # so the pre-tokenized SFT JSONL produced by Stage 3b on MedGemma's
+  # tokenizer feeds in cleanly. The smoke purpose is "does the tunix +
+  # qwix path fire end-to-end on a real v6e-8" — using a small Gemma3
+  # variant keeps that intent honest while sidestepping the 27B HBM
+  # budget. v33 hit RuntimeProgramAllocationFailure at train_step JIT:
+  #   "Attempting to reserve 22.86G ... 18.61G free"
+  # i.e. the v6e-8 (32GB HBM/chip) couldn't compile train_step for 27B
+  # at FSDP=8 + max_seq=256, even with LoRA-only grads. The production
+  # run (configs/lora_medgemma27b_tunix.yaml) keeps MedGemma-27B; it's
+  # a separate question whether prod fits there too (likely needs
+  # remat / longer seq adjustment / a v6e-16 instead).
+  #
+  # Stages 4/5 (vLLM eval) also need to use this model so the trained
+  # LoRA adapter shapes match. The launcher's MODEL_NAME env var has to
+  # be set to the same id when invoking the smoke; tpu/launch_5seeds_tunix.sh
+  # exports it through to Stages 1, 3-export, and 4.
+  name: google/gemma-3-270m-it
   # Path to a local HF safetensors directory. The HF cache layout is:
   #   ${HF_HOME}/models--<org>--<name>/snapshots/<sha>/
   # The launcher (U6) sets HF_HOME=/dev/shm/hf and downloads via

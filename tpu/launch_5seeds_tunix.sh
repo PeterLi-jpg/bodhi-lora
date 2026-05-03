@@ -134,6 +134,18 @@ SECOND_GRADER_MODEL="${SECOND_GRADER_MODEL:-}"
 MAX_EXAMPLES="${MAX_EXAMPLES:-}"
 EVAL_MAX="${EVAL_MAX:-}"
 TRAIN_CONFIG="${TRAIN_CONFIG:-configs/lora_medgemma27b_tunix_smoke.yaml}"
+# Model id used by Stage 1 trace gen, Stage 3b tokenizer, Stage 3 PEFT
+# export, and the four Stage 4 eval invocations. Defaults to MedGemma-27B
+# for production. The smoke configs override to a small Gemma3 variant
+# (e.g. google/gemma-3-270m-it) so the JIT compile fits in v6e-8 HBM
+# without 22+GB activations; v33 hit train_step OOM at 27B with
+# max_seq=256, freeing 18.61G but needing 22.86G. Keeping the two
+# (this env var + the YAML's model.name) in sync is required: the
+# trainer reads model.name from the YAML, the rest of the pipeline
+# reads MODEL_NAME from env. The launch wrapper for the smoke
+# (e.g. tpu/launch_5seeds_tunix.sh invocations under SMOKE_*) sets
+# both to the same value.
+MODEL_NAME="${MODEL_NAME:-google/medgemma-27b-text-it}"
 _GEN_MAX_FLAG=""
 [ -n "$MAX_EXAMPLES" ] && _GEN_MAX_FLAG="--max-examples ${MAX_EXAMPLES}"
 _EVAL_MAX_FLAG=""
@@ -157,6 +169,8 @@ echo "  seeds: ${SEEDS}"
 echo "  GCS_DATA_PATH:        ${GCS_DATA_PATH:-(not set, each VM will run Stage 1+2)}"
 echo "  GCS_OUTPUT_PATH:      ${GCS_OUTPUT_PATH:-(not set, preempts will lose progress)}"
 echo "  SECOND_GRADER_MODEL:  ${SECOND_GRADER_MODEL:-(not set, cross-grader pass disabled)}"
+echo "  TRAIN_CONFIG:         ${TRAIN_CONFIG}"
+echo "  MODEL_NAME:           ${MODEL_NAME}"
 echo "  results -> $RESULTS_DIR/seed_<N>/"
 echo
 
@@ -355,7 +369,7 @@ else
         # Exclude all 1000 HealthBench Hard prompts so per-seed bootstrap
         # eval is honestly held-out (issue #60).
         \${PY} -u scripts/generate_traces.py \\
-            --model google/medgemma-27b-text-it \\
+            --model ${MODEL_NAME} \\
             --datasets healthbench_hard healthbench \\
             --exclude-ids data/raw/healthbench_hard.jsonl data/raw/hard_200_sample_ids.json \\
             --output data/sft/raw_traces.jsonl \\
@@ -435,7 +449,7 @@ if [ ! -d data/sft/maxtext ] || [ -z "\$(ls -A data/sft/maxtext 2>/dev/null)" ];
     \${PY} -u scripts/convert_traces_to_maxtext.py \\
         --train data/sft/train.jsonl \\
         --val data/sft/val.jsonl \\
-        --tokenizer google/medgemma-27b-text-it \\
+        --tokenizer ${MODEL_NAME} \\
         --output-dir data/sft/maxtext \\
         > ~/convert_data.log 2>&1
     echo CONVERT_DATA_OK >> ~/pipeline.log
@@ -474,7 +488,7 @@ echo "--- 3/4 export LoRA -> PEFT (tunix) ---" | tee -a ~/pipeline.log
 \${PY} -u scripts/export_tunix_lora_to_peft.py \\
     --orbax-dir "checkpoints/seed_${SEED}/orbax" \\
     --output-dir "checkpoints/seed_${SEED}/best" \\
-    --base-model-name google/medgemma-27b-text-it \\
+    --base-model-name ${MODEL_NAME} \\
     --r 8 --alpha 16 --dropout 0.0 \\
     > ~/export_lora.log 2>&1
 echo EXPORT_LORA_OK >> ~/pipeline.log
@@ -543,13 +557,13 @@ PRIMARY_GRADER="meta-llama/Llama-3.1-8B-Instruct"
 # successfully. Capture each call's exit status without letting set -e
 # abort the rest of the pass; partial eval results are still worth saving.
 eval_fail_count=0
-run_eval "base_no_wrapper"  "\$PRIMARY_DIR" "\$PRIMARY_GRADER" "--model google/medgemma-27b-text-it" || eval_fail_count=\$((eval_fail_count + 1))
+run_eval "base_no_wrapper"  "\$PRIMARY_DIR" "\$PRIMARY_GRADER" "--model ${MODEL_NAME}" || eval_fail_count=\$((eval_fail_count + 1))
 gcs_rsync "eval/seed_${SEED}/" "eval/"
-run_eval "base_bodhi"       "\$PRIMARY_DIR" "\$PRIMARY_GRADER" "--model google/medgemma-27b-text-it --use-bodhi" || eval_fail_count=\$((eval_fail_count + 1))
+run_eval "base_bodhi"       "\$PRIMARY_DIR" "\$PRIMARY_GRADER" "--model ${MODEL_NAME} --use-bodhi" || eval_fail_count=\$((eval_fail_count + 1))
 gcs_rsync "eval/seed_${SEED}/" "eval/"
-run_eval "lora_no_wrapper"  "\$PRIMARY_DIR" "\$PRIMARY_GRADER" "--model google/medgemma-27b-text-it --lora-path \$LORA_DIR" || eval_fail_count=\$((eval_fail_count + 1))
+run_eval "lora_no_wrapper"  "\$PRIMARY_DIR" "\$PRIMARY_GRADER" "--model ${MODEL_NAME} --lora-path \$LORA_DIR" || eval_fail_count=\$((eval_fail_count + 1))
 gcs_rsync "eval/seed_${SEED}/" "eval/"
-run_eval "lora_bodhi"       "\$PRIMARY_DIR" "\$PRIMARY_GRADER" "--model google/medgemma-27b-text-it --lora-path \$LORA_DIR --use-bodhi" || eval_fail_count=\$((eval_fail_count + 1))
+run_eval "lora_bodhi"       "\$PRIMARY_DIR" "\$PRIMARY_GRADER" "--model ${MODEL_NAME} --lora-path \$LORA_DIR --use-bodhi" || eval_fail_count=\$((eval_fail_count + 1))
 gcs_rsync "eval/seed_${SEED}/" "eval/"
 if [ "\$eval_fail_count" -eq 0 ]; then
     echo EVAL_OK >> ~/pipeline.log
@@ -573,13 +587,13 @@ if [ -n "\${SECOND_GRADER_MODEL}" ]; then
     mkdir -p "\${SECOND_GRADER_DIR}"
     echo "--- 4b/5 cross-grader pass: \${SECOND_GRADER_MODEL} ---" | tee -a ~/pipeline.log
 
-    run_eval "base_no_wrapper"  "\$SECOND_GRADER_DIR" "\$SECOND_GRADER_MODEL" "--model google/medgemma-27b-text-it"
+    run_eval "base_no_wrapper"  "\$SECOND_GRADER_DIR" "\$SECOND_GRADER_MODEL" "--model ${MODEL_NAME}"
     gcs_rsync "eval/seed_${SEED}/" "eval/"
-    run_eval "base_bodhi"       "\$SECOND_GRADER_DIR" "\$SECOND_GRADER_MODEL" "--model google/medgemma-27b-text-it --use-bodhi"
+    run_eval "base_bodhi"       "\$SECOND_GRADER_DIR" "\$SECOND_GRADER_MODEL" "--model ${MODEL_NAME} --use-bodhi"
     gcs_rsync "eval/seed_${SEED}/" "eval/"
-    run_eval "lora_no_wrapper"  "\$SECOND_GRADER_DIR" "\$SECOND_GRADER_MODEL" "--model google/medgemma-27b-text-it --lora-path \$LORA_DIR"
+    run_eval "lora_no_wrapper"  "\$SECOND_GRADER_DIR" "\$SECOND_GRADER_MODEL" "--model ${MODEL_NAME} --lora-path \$LORA_DIR"
     gcs_rsync "eval/seed_${SEED}/" "eval/"
-    run_eval "lora_bodhi"       "\$SECOND_GRADER_DIR" "\$SECOND_GRADER_MODEL" "--model google/medgemma-27b-text-it --lora-path \$LORA_DIR --use-bodhi"
+    run_eval "lora_bodhi"       "\$SECOND_GRADER_DIR" "\$SECOND_GRADER_MODEL" "--model ${MODEL_NAME} --lora-path \$LORA_DIR --use-bodhi"
     gcs_rsync "eval/seed_${SEED}/" "eval/"
 
     echo "--- 4b/5 grader correlation ---" | tee -a ~/pipeline.log
