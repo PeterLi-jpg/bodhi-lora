@@ -295,16 +295,27 @@ def build_iterators(
             "per_device_batch_size or gradient_accumulation_steps."
         )
 
-    # Mirror of the train guard. _eval_iter drops partial batches, so a
-    # val split smaller than global_batch_size would yield zero batches
-    # and the trainer's eval_losses list would stay empty — no eval line
-    # logged, silent. Fail loudly instead.
+    # _eval_iter drops partial batches, so a val split smaller than
+    # global_batch_size would yield zero batches. v30 hit this on a smoke run
+    # where the resumed GCS_DATA_PATH had only 7 val rows post-tokenization
+    # against batch=8. Pad with all-ignored dummy rows (labels=-100) so the
+    # batch shape stays constant for jit; the dummy positions contribute zero
+    # to the SFT loss because input_mask = (labels != -100) is False there.
+    # This trades a tiny eval-rows-per-batch dilution for never-blocking
+    # eval, which matters most for smoke runs and GCS_DATA_PATH resumes.
     if len(val_rows) < global_batch_size:
-        raise ValueError(
-            f"val set ({len(val_rows)} rows) too small for global_batch_size={global_batch_size}; "
-            "eval would yield zero batches. Either reduce per_device_batch_size * gradient_accumulation_steps "
-            "or use a larger val set (consider lowering data.val_ratio in the YAML)."
+        pad_n = global_batch_size - len(val_rows)
+        print(
+            f"[dataset_loader] val set ({len(val_rows)} rows) < global_batch_size "
+            f"({global_batch_size}); padding with {pad_n} dummy rows "
+            f"(labels=-100, contribute 0 to loss).",
+            flush=True,
         )
+        dummy_row = {
+            "input_ids": [DEFAULT_PAD_ID] * max_seq_length,
+            "labels": [LABEL_IGNORE_ID] * max_seq_length,
+        }
+        val_rows = list(val_rows) + [dict(dummy_row) for _ in range(pad_n)]
 
     train = _train_iter(train_rows, global_batch_size, max_seq_length, pad_id, seed)
     eval_ = _eval_iter(val_rows, global_batch_size, max_seq_length, pad_id)
