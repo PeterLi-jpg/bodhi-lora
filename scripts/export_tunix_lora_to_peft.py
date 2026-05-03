@@ -318,18 +318,66 @@ def collect_lora_weights(
     return weights, sorted(seen_projections)
 
 
+def _resolve_step_dir(path: Path) -> Path:
+    """Accept either a leaf step directory or a CheckpointManager root.
+
+    tunix's PeftTrainer uses ``orbax.CheckpointManager`` under the hood,
+    which writes ``<root>/<step>/`` subdirectories (one per saved step,
+    integer-named). The exporter's underlying ``PyTreeCheckpointer.restore``
+    needs the leaf step dir, not the parent root. Earlier versions of
+    the launcher passed the root (``checkpoints/seed_<N>/orbax``) which
+    produced an opaque restore failure. We resolve here so the launcher
+    contract stays simple: pass the orbax dir from the trainer config and
+    let the exporter find the latest step.
+
+    Heuristic: if ``path`` directly contains files (a real checkpoint
+    payload), treat it as a leaf. If instead it contains integer-named
+    subdirectories (the CheckpointManager layout), pick the highest one.
+    Anything else raises with a fix-it message.
+    """
+    abspath = Path(path).resolve()
+    if not abspath.is_dir():
+        raise FileNotFoundError(
+            f"--orbax-dir {abspath} does not exist or is not a directory."
+        )
+
+    # Check for integer-named subdirectories — the CheckpointManager
+    # signature. Non-integer names (e.g. orbax internal state files like
+    # 'metadata') are tolerated as long as at least one int-named child
+    # exists; we just pick the highest.
+    int_steps: List[int] = []
+    for child in abspath.iterdir():
+        if child.is_dir():
+            try:
+                int_steps.append(int(child.name))
+            except ValueError:
+                continue
+
+    if int_steps:
+        latest = max(int_steps)
+        leaf = abspath / str(latest)
+        return leaf
+
+    # No integer-named children — assume ``path`` is already the leaf.
+    return abspath
+
+
 def load_orbax_checkpoint(path: Path) -> Any:
     """Restore a tunix orbax checkpoint into a nested dict.
 
     ``PyTreeCheckpointer`` is used because tunix saves a plain pytree of
     params with no Composite / metadata handlers, so the simplest restore
     path round-trips cleanly.
+
+    Accepts either a leaf step directory or the CheckpointManager root;
+    see ``_resolve_step_dir`` for the resolution rules.
     """
     import orbax.checkpoint as ocp
 
-    abspath = str(Path(path).resolve())
+    leaf = _resolve_step_dir(path)
+    print(f"[exporter] loading orbax checkpoint from {leaf}", flush=True)
     restorer = ocp.PyTreeCheckpointer()
-    return restorer.restore(abspath)
+    return restorer.restore(str(leaf))
 
 
 def build_adapter_config(
@@ -446,8 +494,11 @@ def build_argparser() -> argparse.ArgumentParser:
         "--orbax-dir",
         required=True,
         type=Path,
-        help="path to the tunix orbax checkpoint directory (the leaf step "
-             "directory, not the parent CheckpointManager root).",
+        help="path to the tunix orbax checkpoint. Accepts either the leaf "
+             "step directory (e.g. checkpoints/seed_42/orbax/2) or the "
+             "parent CheckpointManager root (e.g. checkpoints/seed_42/orbax); "
+             "if the root is given the exporter picks the highest-numbered "
+             "step subdirectory automatically.",
     )
     p.add_argument(
         "--output-dir",
