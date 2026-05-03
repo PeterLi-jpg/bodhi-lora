@@ -399,15 +399,24 @@ def _train(cfg: dict, seed: int, output_dir: str) -> None:
     dummy_tokens, dummy_positions, dummy_attn = _make_dummy_inputs(
         global_batch_size, max_seq_length
     )
-    model = qwix.apply_lora_to_model(
-        model,
-        lora_provider,
-        dummy_tokens,
-        dummy_positions,
-        None,  # cache (no kv cache during training)
-        dummy_attn,
-        rngs=nnx.Rngs(seed),
-    )
+    # Wrap qwix.apply_lora_to_model in `with mesh:` so the dummy trace runs
+    # under the active mesh context. With tp_size>1 this is load-bearing —
+    # tunix's gemma3 model declares param sharding as P('tp', 'fsdp') and
+    # the trace needs the mesh in scope to honor it. Without `with mesh:`,
+    # JAX may fall back to default sharding during tracing and produce
+    # un-sharded compute, materializing full hidden_dim activations on
+    # every chip and OOMing even when the trained-time `with mesh:`
+    # block at trainer.train() would have sharded them.
+    with mesh:
+        model = qwix.apply_lora_to_model(
+            model,
+            lora_provider,
+            dummy_tokens,
+            dummy_positions,
+            None,  # cache (no kv cache during training)
+            dummy_attn,
+            rngs=nnx.Rngs(seed),
+        )
     # Newer qwix versions (the LoRA dropout path in
     # qwix._src.providers.lora.einsum) call ``flax_util.make_rng('dropout')``
     # at runtime, which requires the wrapped model to carry its own rngs
