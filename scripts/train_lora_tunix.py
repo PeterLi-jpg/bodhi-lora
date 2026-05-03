@@ -401,7 +401,15 @@ def _train(cfg: dict, seed: int, output_dir: str) -> None:
     # contains "<N>" treat that as a placeholder. Otherwise nest under
     # output_dir for the launcher's per-seed layout.
     ckpt_root_raw = paths_cfg.get("checkpoint_root_directory") or str(out_dir / "orbax")
-    ckpt_root = _expand(ckpt_root_raw).replace("<N>", str(seed))
+    ckpt_root_substituted = _expand(ckpt_root_raw).replace("<N>", str(seed))
+    # Orbax's tensorstore kvstore rejects relative paths with
+    #   ValueError: Checkpoint path should be absolute. Got <relative>
+    # at first save (we hit this on v34 — training succeeded, ckpt save
+    # crashed). Resolve to an absolute path here regardless of how the
+    # YAML / launcher passed it. We use `Path.resolve(strict=False)`
+    # because the directory does not yet exist on first save.
+    ckpt_root = str(Path(ckpt_root_substituted).resolve())
+    print(f"[tunix] checkpoint root: {ckpt_root}", flush=True)
 
     training_config = peft_trainer.TrainingConfig(
         eval_every_n_steps=int(train_cfg.get("eval_interval", 1)),
