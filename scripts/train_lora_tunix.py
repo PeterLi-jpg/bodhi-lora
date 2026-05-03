@@ -368,12 +368,34 @@ def _train(cfg: dict, seed: int, output_dir: str) -> None:
             )
         ]
     )
-    # Dummy inputs MUST match the global batch shape used during training,
-    # otherwise qwix's traced LoRA shapes diverge from runtime — see v23-v27
-    # bugs called out in the unit brief.
+    # Dummy inputs MUST match the global batch shape the trainer feeds into
+    # train_step at runtime, otherwise qwix's traced LoRA shapes diverge from
+    # runtime — see v23-v27 bugs called out in the unit brief.
+    #
+    # The dataset_loader emits each batch at shape
+    #   (per_device * gradient_accumulation_steps, max_seq_length)
+    # because tunix's PeftTrainer wraps the optimizer with optax.MultiSteps
+    # to accumulate over `gradient_accumulation_steps` next() calls AND
+    # also slices each call's batch across the FSDP mesh. So the
+    # train_step sees the global per-yield batch (per_device * grad_accum),
+    # not just per_device * num_devices.
+    #
+    # Earlier versions of this trainer used (per_device * len(devices)) for
+    # the dummy. That coincidentally matched on the smoke (per_device=1,
+    # devices=8, grad_accum=8 -> both formulas = 8) but skewed on the
+    # production yaml (grad_accum=64, devices=8 -> 64 vs 8). Codex
+    # adversarial review flagged this; fix here so smoke and production
+    # both trace the LoRA against the runtime shape.
     per_device = int(train_cfg["per_device_batch_size"])
-    global_batch_size = per_device * len(devices)
+    grad_accum = int(train_cfg["gradient_accumulation_steps"])
+    global_batch_size = per_device * grad_accum
     max_seq_length = int(train_cfg["max_seq_length"])
+    print(
+        f"[tunix] tracing LoRA at dummy shape ({global_batch_size}, "
+        f"{max_seq_length}) = per_device={per_device} * grad_accum="
+        f"{grad_accum}",
+        flush=True,
+    )
     dummy_tokens, dummy_positions, dummy_attn = _make_dummy_inputs(
         global_batch_size, max_seq_length
     )
