@@ -1,5 +1,10 @@
 # MaxText migration for Stage 3 (LoRA fine-tune)
 
+> **Note (2026-05):** The MaxText path described here is being migrated to tunix.
+> See [contributions/tunix-migration.md](../contributions/tunix-migration.md) for
+> the current path. Content below remains as historical context for the
+> PyTorch+torch_xla → MaxText migration that preceded the tunix migration.
+
 This doc records why Stage 3 of the BOHDI-LoRA pipeline gained a JAX-native
 training path on top of a forked MaxText, and what every other stage needs
 to keep doing for that path to slot in cleanly.
