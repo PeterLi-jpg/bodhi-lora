@@ -156,11 +156,13 @@ def _build_lora_module_path_regex(target_modules) -> str:
     """Build the qwix ``module_path`` regex from the YAML's
     ``lora.target_modules`` list.
 
-    Tunix's Gemma3 attention exposes its weight params as
-    ``layers.<i>.attn.q_einsum.w`` and ``layers.<i>.attn.kv_einsum.w``
-    (see params_safetensors.py). The module_path is matched against the
-    full nested module path of the weight, so we anchor on the parent
-    Einsum module name (``q_einsum`` / ``kv_einsum``) and end at ``.w``.
+    qwix's ``module_path`` uses '/' as the nesting separator (not '.'),
+    matching ``flax_util.get_current_module_path()`` which joins NNX
+    module names with '/'. Tunix's Gemma3 attention exposes the targets
+    as ``layers/<i>/attn/q_einsum`` and ``layers/<i>/attn/kv_einsum``;
+    the U7 CPU smoke confirmed this is the canonical path format. We
+    anchor on the ``attn`` parent + the einsum module name to avoid
+    accidentally matching unrelated submodules.
     """
     if not target_modules:
         raise ValueError(
@@ -170,7 +172,7 @@ def _build_lora_module_path_regex(target_modules) -> str:
     # re.escape each module name so a future name with special chars
     # (e.g. dots) doesn't blow up the regex.
     alts = "|".join(re.escape(m) for m in target_modules)
-    return rf".*\.attn\.({alts})$"
+    return rf".*/attn/({alts})"
 
 
 def _make_dummy_inputs(global_batch_size: int, max_seq_length: int):
