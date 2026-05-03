@@ -484,3 +484,56 @@ def test_path_detection_tolerates_terminal_value_wrapper(tmp_path, monkeypatch):
     assert (
         "base_model.model.model.layers.0.self_attn.q_proj.lora_A.weight" in weights
     )
+
+
+# ---------------------------------------------------------------------------
+# Step-dir resolution: --orbax-dir accepts manager root OR leaf step.
+# ---------------------------------------------------------------------------
+
+
+def test_resolve_step_dir_passthrough_for_leaf(tmp_path):
+    """A path with no integer-named subdirs is returned unchanged.
+
+    This covers the pre-fix contract (caller passes a leaf step dir
+    directly) so nothing regresses for users / tests that already
+    construct the leaf path themselves.
+    """
+    from scripts.export_tunix_lora_to_peft import _resolve_step_dir
+
+    leaf = tmp_path / "step_2_payload"
+    leaf.mkdir()
+    # Drop a non-int-named child so the function explicitly chooses the
+    # "no int subdirs -> treat as leaf" branch rather than trivially
+    # passing because the dir is empty.
+    (leaf / "metadata.json").write_text("{}")
+    assert _resolve_step_dir(leaf) == leaf.resolve()
+
+
+def test_resolve_step_dir_picks_latest_int_subdir(tmp_path):
+    """Manager root with int-named subdirs resolves to the highest one.
+
+    This is the bug Codex H2 flagged: tunix's CheckpointManager writes
+    ``<root>/<step>/`` and the launcher passes ``<root>``; without this
+    resolution the underlying PyTreeCheckpointer.restore fails on the
+    parent dir.
+    """
+    from scripts.export_tunix_lora_to_peft import _resolve_step_dir
+
+    root = tmp_path / "orbax"
+    root.mkdir()
+    for step in (0, 1, 7, 2):
+        (root / str(step)).mkdir()
+    # Plus an orbax-internal non-int child that should be ignored, not
+    # crash the int parse.
+    (root / "metadata").mkdir()
+    assert _resolve_step_dir(root) == (root / "7").resolve()
+
+
+def test_resolve_step_dir_missing_path_raises(tmp_path):
+    """A non-existent --orbax-dir should fail loudly, not as an opaque
+    Orbax restore error 30 lines deep into PyTree machinery.
+    """
+    from scripts.export_tunix_lora_to_peft import _resolve_step_dir
+
+    with pytest.raises(FileNotFoundError, match="does not exist"):
+        _resolve_step_dir(tmp_path / "no_such_dir")

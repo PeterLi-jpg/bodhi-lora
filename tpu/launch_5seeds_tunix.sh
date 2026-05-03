@@ -616,21 +616,34 @@ fi
 cleanup_eval
 
 echo "--- 5/5 epistemic virtue eval ---" | tee -a ~/pipeline.log
+# Require ALL 4 Stage-4 outputs (base/lora x wrapper/no-wrapper) before
+# Stage 5 runs. Earlier code was "run eval_epistemic on whatever subset
+# exists, emit EPISTEMIC_OK on success" — which let a partial Stage-4
+# failure produce a terminal success marker for the seed. The 4
+# conditions are not redundant: the analysis compares them pairwise to
+# isolate the LoRA adapter's vs the BODHI wrapper's contribution. A 1-,
+# 2-, or 3-condition seed silently corrupts that comparison even though
+# the dashboard sees EPISTEMIC_OK.
 EPISTEMIC_INPUTS=()
+EPISTEMIC_MISSING=()
 for cfg in base_no_wrapper base_bodhi lora_no_wrapper lora_bodhi; do
     if [ -s "eval/seed_${SEED}/\${cfg}.json" ]; then
         EPISTEMIC_INPUTS+=("eval/seed_${SEED}/\${cfg}.json")
+    else
+        EPISTEMIC_MISSING+=("\${cfg}")
     fi
 done
-if [ \${#EPISTEMIC_INPUTS[@]} -eq 0 ]; then
-    # Stage 4 produced nothing usable. Don't write EPISTEMIC_OK; the
+if [ \${#EPISTEMIC_MISSING[@]} -gt 0 ]; then
+    # Some Stage-4 condition didn't land. Don't write EPISTEMIC_OK; the
     # dashboard parser treats a missing marker as "in progress / failed",
-    # which is the honest state here.
-    echo "no Stage 4 outputs to feed eval_epistemic.py, skipping" >> ~/pipeline.log
+    # which is the honest state here. List the missing configs so the
+    # post-mortem can find which Stage-4 invocation needs fixing.
+    echo "Stage 4 incomplete: missing \${EPISTEMIC_MISSING[*]}; refusing to run eval_epistemic.py (would produce a partial result reported as success)" >> ~/pipeline.log
 elif [ -s "eval/seed_${SEED}/epistemic_scores.json" ]; then
     # Resume path: a prior incarnation of this seed already produced the
-    # output (pulled back from GCS). The work succeeded; mark done.
-    echo "epistemic_scores.json already exists, skipping" >> ~/pipeline.log
+    # output (pulled back from GCS) AND we just verified all 4 Stage-4
+    # outputs are present. The work succeeded; mark done.
+    echo "epistemic_scores.json already exists (all 4 Stage-4 inputs present), skipping" >> ~/pipeline.log
     echo EPISTEMIC_OK >> ~/pipeline.log
 else
     # The only path that genuinely runs eval_epistemic.py. Write the marker
