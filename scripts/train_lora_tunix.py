@@ -117,10 +117,11 @@ def _load_config(path: str) -> dict:
                 "See the U3 tunix config (configs/lora_medgemma27b_tunix*.yaml) "
                 "for the expected shape."
             )
-    if "name" not in cfg["model"] or "hf_path" not in cfg["model"]:
+    if "name" not in cfg["model"]:
         raise ValueError(
-            f"config {path!r}: model.name and model.hf_path are required."
+            f"config {path!r}: model.name is required."
         )
+    # hf_path is OPTIONAL; null/missing means resolve via snapshot_download at runtime.
     return cfg
 
 
@@ -297,12 +298,30 @@ def _train(cfg: dict, seed: int, output_dir: str) -> None:
 
     # --- Base model from HF safetensors ---------------------------------------
     model_config = _resolve_model_config(model_cfg["name"], dtype)
-    hf_path = _expand(model_cfg["hf_path"])
-    if not Path(hf_path).is_dir():
-        raise FileNotFoundError(
-            f"model.hf_path {hf_path!r} does not exist. Download the safetensors "
-            "with `huggingface-cli download` (or have U3's prep script do it)."
+    # hf_path: explicit local dir > $HF_HOME snapshot > snapshot_download (last
+    # resort, downloads from HF). The smoke YAML sets hf_path: null deliberately
+    # to mean "resolve at runtime via the HF cache or snapshot_download." v28
+    # crashed here because the prior code unconditionally _expand()'d a None.
+    raw_hf_path = model_cfg.get("hf_path")
+    if raw_hf_path is None or raw_hf_path == "":
+        from huggingface_hub import snapshot_download
+        print(
+            f"[tunix] hf_path is null; resolving {model_cfg['name']!r} via "
+            f"huggingface_hub.snapshot_download (HF cache at {os.environ.get('HF_HOME', '~/.cache/huggingface')!r})",
+            flush=True,
         )
+        hf_path = snapshot_download(
+            repo_id=model_cfg["name"],
+            allow_patterns=["*.safetensors", "*.json", "*.model"],
+        )
+    else:
+        hf_path = _expand(raw_hf_path)
+        if not Path(hf_path).is_dir():
+            raise FileNotFoundError(
+                f"model.hf_path {hf_path!r} does not exist. Set hf_path: null "
+                "in the YAML to auto-resolve via snapshot_download, or download "
+                "with `huggingface-cli download` first."
+            )
     print(f"[tunix] loading {model_cfg['name']} from {hf_path}", flush=True)
     model = gemma3_params.create_model_from_safe_tensors(
         file_dir=hf_path,
