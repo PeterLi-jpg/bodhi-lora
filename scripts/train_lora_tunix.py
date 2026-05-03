@@ -433,11 +433,33 @@ def _train(cfg: dict, seed: int, output_dir: str) -> None:
     ckpt_root = str(Path(ckpt_root_substituted).resolve())
     print(f"[tunix] checkpoint root: {ckpt_root}", flush=True)
 
+    # Orbax CheckpointManager defaults to save_interval_steps=1 and
+    # max_to_keep=None, i.e. save EVERY train_step and never delete old
+    # ones. With LoRA-only saves (~30 MB each) at max_steps=2350 that's
+    # ~70 GB on the v6e VM boot disk, which overflows. The GCS sidecar
+    # rsyncs to GCS but doesn't delete local copies. Set a sane local
+    # retention: save every save_interval_steps train_steps, keep
+    # max_to_keep latest. Defaults trade ~3 min of preempt-loss for
+    # bounded disk use; override via training.checkpoint_save_every and
+    # training.checkpoint_max_to_keep in the YAML.
+    import orbax.checkpoint as ocp
+
+    ckpt_save_every = int(train_cfg.get("checkpoint_save_every", 50))
+    ckpt_max_to_keep = int(train_cfg.get("checkpoint_max_to_keep", 3))
+    print(
+        f"[tunix] checkpointing: save_interval_steps={ckpt_save_every} "
+        f"max_to_keep={ckpt_max_to_keep}",
+        flush=True,
+    )
     training_config = peft_trainer.TrainingConfig(
         eval_every_n_steps=int(train_cfg.get("eval_interval", 1)),
         max_steps=int(train_cfg["max_steps"]),
         gradient_accumulation_steps=int(train_cfg["gradient_accumulation_steps"]),
         checkpoint_root_directory=ckpt_root,
+        checkpointing_options=ocp.CheckpointManagerOptions(
+            save_interval_steps=ckpt_save_every,
+            max_to_keep=ckpt_max_to_keep,
+        ),
     )
 
     trainer = peft_trainer.PeftTrainer(model, optimizer, training_config)
