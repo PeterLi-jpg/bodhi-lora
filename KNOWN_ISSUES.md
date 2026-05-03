@@ -4,6 +4,19 @@ Triage of issues raised against this repo, with status for each.
 
 Issue numbers below match GitHub issues on `PeterLi-jpg/bohdi-lora`.
 
+## (resolved) Custom MaxText LoRA glue replaced with tunix + qwix
+
+History: Stage 3 LoRA SFT was implemented as ~1500 lines of custom JAX/Optax
+glue (`scripts/train_lora_maxtext.py`, `scripts/maxtext_lora/*`) on top of
+MaxText. Every TPU bug between v18-v27 was at an integration seam we authored
+ourselves: injector ToLinen wrapping, FSDP assertion mismatches, init batch
+shape, HBM OOM. PR #169 had bypassed tunix because v6e TPU VMs ship Python 3.10
+and tunix requires 3.11; the py3.11 upgrade in PRs #181-188 made tunix usable.
+
+Current path (since PR #196-#203, the 8-unit migration batch): the MaxText
+trainer + custom LoRA injector are replaced by `tunix.sft.peft_trainer.PeftTrainer`
++ `qwix.apply_lora_to_model`. See `contributions/tunix-migration.md`.
+
 ## Fixed
 
 ### [#2] `format_example` batching bug — FIXED
