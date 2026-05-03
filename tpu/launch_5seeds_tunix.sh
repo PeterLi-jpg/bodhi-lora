@@ -439,14 +439,24 @@ echo PREFLIGHT_OK >> ~/pipeline.log
 
 # The Stage-2 grader (and any Stage-1 generation if it ran) used a
 # vllm-tpu Docker container with --privileged, started via 'sudo docker
-# run', so the bind-mounted ~/.cache/huggingface fills up with
-# root-owned files. train_lora_tunix.py runs as the regular user and
-# would hit "PermissionError: [Errno 13] Permission denied" on the first
-# AutoTokenizer.from_pretrained() download attempt. Chown the cache back
-# to the user before Stage 3 so HF Hub downloads can proceed. Also
-# covers ~/.xla_cache (XLA persistent compile cache); neither directory
-# may exist yet on a fresh VM (hence the 2>/dev/null silencing).
-sudo chown -R "$USER:$USER" ~/.cache/huggingface ~/.xla_cache 2>/dev/null || true
+# run', so the bind-mounted HF caches fill up with root-owned files.
+# train_lora_tunix.py runs as the regular user and would hit
+# "PermissionError: [Errno 13] Permission denied" on the first
+# AutoTokenizer.from_pretrained() download attempt. Chown the caches
+# back to the user before Stage 3 so HF Hub downloads can proceed.
+#
+# Three locations to chown:
+#   * ~/.cache/huggingface  — default HF cache when HF_HOME is unset
+#   * ~/.xla_cache          — XLA persistent compile cache, also bind-mounted
+#   * /dev/shm/hf           — HF_HOME on this VM (set by
+#       /etc/profile.d/bohdi-hf-cache.sh; the vllm-tpu container's
+#       --privileged mount makes this root-owned in /dev/shm too).
+#       v38 hit this exact failure: train_lora_tunix's snapshot_download
+#       got "PermissionError: '/dev/shm/hf/hub/models--google--gemma-3-4b-it'"
+#       on the first run after Stage 2 finished.
+# Each path may or may not exist on a fresh VM; silence "no such file"
+# warnings with 2>/dev/null and || true.
+sudo chown -R "$USER:$USER" ~/.cache/huggingface ~/.xla_cache /dev/shm/hf 2>/dev/null || true
 
 # Convert train/val JSONL -> MaxText input format (Unit 5).
 # Retained for parity with the maxtext launcher; tunix does not consume
