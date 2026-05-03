@@ -63,18 +63,24 @@ training:
   gradient_accumulation_steps: 8
   learning_rate: 1.0e-4
   # max_steps is the count of OPTIMIZER STEPS (not train_step calls).
-  # 1500 steps at effective batch 64 = 96,000 examples processed across
-  # all epochs. With ~30K filtered SFT rows that's ~3.2 epochs of full
-  # data — the standard SFT recipe range and defensible for a NeurIPS
-  # paper. Was 800 (1.7 epochs) for a workshop-time run; bumped to 1500
-  # for the NeurIPS submission per "high quality" requirement. Total
-  # Stage 3 wall scales linearly: at observed ~5-10 sec/train_step,
-  # 1500 * 8 grad_accum_calls = 12,000 calls = ~16-33 hours per seed
+  # 500 steps at effective batch 64 = 32,000 examples processed across
+  # all epochs. The 30K-filtered-rows comment in the prior version was
+  # stale: per-seed Qwen-graded data is ~3,100 rows (Stage 2 keeps
+  # ~3,100 of 4,000 BODHI traces per seed). 500 steps / (3100 / 64) =
+  # ~10.3 effective epochs — solidly in the standard LoRA SFT range
+  # (HF PEFT recipes typically do 3-10 epochs). 1500 was 31 epochs,
+  # high overfit risk; 500 is conservative-but-defensible.
+  #
+  # Wall: at observed ~7-13 sec/train_step (with remat=BLOCK), 500 *
+  # 8 grad_accum = 4,000 train_step calls = ~8-15 hours per seed
   # (5 seeds in parallel = same wall).
-  max_steps: 1500
-  # ~1 eval per ~30000/64 ≈ 470 examples-per-epoch. With max_steps=1500
-  # and eval_interval=500 we get 3 evals (one per epoch) + final.
-  eval_interval: 500
+  max_steps: 500
+  # eval_interval=100 -> 5 evals during the run (steps 100,200,300,400,
+  # 500). At ~2 evals per epoch this gives enough resolution to detect
+  # overfit (eval-loss U-shape) and pick the best checkpoint if needed.
+  # Was 500 which only fired once at the end -- too coarse to detect
+  # overfit in the middle of training.
+  eval_interval: 100
   # max_seq_length set to 2048 to capture ~96.3% of training tokens
   # without truncation. v39 measured the actual tokenized response
   # length distribution on real BODHI traces: median 934, mean 1023,
