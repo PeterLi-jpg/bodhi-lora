@@ -5,7 +5,7 @@ Environment setup for Mac, Linux, and Windows.
 ## Requirements
 
 - Dev box / GPU: Python 3.10, 3.11, or 3.12 (3.11 recommended).
-- TPU (v6e): Python 3.11 required, provisioned automatically by `tpu/setup_tpu.sh` via apt + venv at `~/.venv-py311`.
+- TPU (v6e): Python 3.11 required, provisioned automatically by `tpu/setup_tpu.sh` via apt + venv at `~/.venv-py311`. The TPU dep tree includes `qwix` (LoRA on JAX/Flax) and `google-tunix` (Google's new SFT trainer that replaces our Stage 3 trl pipeline; see [`contributions/tunix-migration.md`](../tunix-migration.md)).
 - [Conda](https://docs.conda.io/en/latest/miniconda.html) or `pip` + `venv`
 - CUDA 12.1+ for GPU runs (Linux only)
 - A HuggingFace account with access to gated models (see below)
