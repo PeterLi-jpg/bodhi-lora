@@ -150,6 +150,17 @@ def _resolve_model_config(model_name: str, dtype):
     # Honor the YAML-requested dtype rather than the ModelConfig default,
     # so configs that ask for float32 (debugging) actually get it.
     cfg.param_dtype = dtype
+    # Turn on block-level activation checkpointing. Tunix gemma3 ships
+    # with ``remat_config=RematConfig.NONE`` by default which keeps every
+    # decoder block's intermediate activations resident in HBM; on the
+    # 27B model (62 blocks) that overflows v6e-8's 32 GB/chip even at
+    # seq=1024 + tp=1 + per-chip batch=1 (24.39 G program alloc vs 18.6 G
+    # free observed in seed42's train.log). ``RematConfig.BLOCK`` rematerializes
+    # the entire attention block during the backward pass — ~33% per-step
+    # compute overhead, multi-GB activation savings. The remat path is
+    # already wired by tunix at model.py:681-688 / 791-796 / 892-893
+    # via ``nnx.remat(self.block.__func__)``; we just need to opt in.
+    cfg.remat_config = gemma3_model.RematConfig.BLOCK
     return cfg
 
 
