@@ -75,13 +75,21 @@ training:
   # ~1 eval per ~30000/64 ≈ 470 examples-per-epoch. With max_steps=1500
   # and eval_interval=500 we get 3 evals (one per epoch) + final.
   eval_interval: 500
-  # 27B + max_seq=2048 OOMed at JIT compile on v6e-8 (v33: 22.86G needed,
-  # 18.61G free). Cutting to 1024 reduces attention memory ~4x (O(seq^2))
-  # and MLP activations ~2x. Workshop / paper note: 1024 captured ~78%
-  # of HealthBench Hard responses based on the prior run's response
-  # length distribution; longer responses get truncated at the rubric
-  # criteria boundary.
-  max_seq_length: 1024
+  # max_seq_length set to 2048 to capture ~96.3% of training tokens
+  # without truncation. v39 measured the actual tokenized response
+  # length distribution on real BODHI traces: median 934, mean 1023,
+  # max 3144 tokens. Cap-vs-truncation rate:
+  #   seq=1024: 43.6% truncated   (too lossy)
+  #   seq=1536: 16.1%             (still material)
+  #   seq=2048:  3.7%             (chosen — sweet spot)
+  #   seq=3072:  0.0%             (no truncation but oversized)
+  # v33 OOMed at 27B + seq=256 with the OLD per_device*num_devices=8
+  # dummy formula. v39 with the NEW per_device*grad_accum=8 formula
+  # ran fine at seq=1024 (after FSDP=8 sharding, per-chip batch=1).
+  # At seq=2048 same per-chip batch=1, so attention memory is 4x and
+  # MLP activations 2x vs seq=1024. Should still fit on v6e-8 (32GB
+  # HBM/chip) with the watchdog as a fallback that auto-halves on OOM.
+  max_seq_length: 2048
 
 data:
   # Output of Stage 3b dataset converter
