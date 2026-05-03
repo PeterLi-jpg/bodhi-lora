@@ -58,6 +58,12 @@ REQUIRED_IMPORTS = [
 if sys.platform == "linux" and not _ON_TPU:
     REQUIRED_IMPORTS.append("awq")
 
+# tunix + qwix are the JAX/TPU LoRA stack used by Stage 3 SFT on TPU hosts.
+# They're TPU-only (the host running the trainer); GPU pipeline doesn't import
+# them. Catch missing wheels here rather than minutes into trainer startup.
+if _ON_TPU:
+    REQUIRED_IMPORTS.extend(["tunix", "qwix"])
+
 
 def check_imports() -> List[str]:
     failed = []
@@ -159,6 +165,15 @@ def print_env_summary():
         print(f"  peft         {peft.__version__}")
         print(f"  trl          {trl.__version__}")
         print(f"  accelerate   {accelerate.__version__}")
+        if _ON_TPU:
+            # tunix/qwix don't always ship __version__; fall back to "ok"
+            # so the line still confirms the import succeeded.
+            for name in ("tunix", "qwix"):
+                try:
+                    mod = importlib.import_module(name)
+                    print(f"  {name:12} {getattr(mod, '__version__', 'ok')}")
+                except ImportError as e:
+                    print(f"  {name:12} (import failed: {e})")
     except Exception as e:
         print(f"  (could not print env summary: {e})")
 
