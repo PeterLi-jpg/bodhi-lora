@@ -387,15 +387,27 @@ def load_orbax_checkpoint(path: Path) -> Any:
     restorer = ocp.PyTreeCheckpointer()
     last_error: Optional[Exception] = None
     for leaf in candidates:
+        # tunix's PeftTrainer saves a COMPOSITE checkpoint:
+        #   <leaf>/
+        #     _CHECKPOINT_METADATA
+        #     model_params/  <- has manifest.ocdbt, the actual pytree
+        #     optimizer_state/  (we don't need this for inference export)
+        # PyTreeCheckpointer.restore wants the inner pytree dir (model_params),
+        # not the composite root. Earlier code passed the composite root and
+        # hit "No structure could be identified" because the loader couldn't
+        # find manifest.ocdbt at the top level. If model_params subdir exists,
+        # use it; otherwise fall back to the leaf (legacy flat layout).
+        params_dir = leaf / "model_params"
+        target = params_dir if params_dir.is_dir() else leaf
         try:
-            print(f"[exporter] loading orbax checkpoint from {leaf}", flush=True)
-            return restorer.restore(str(leaf))
+            print(f"[exporter] loading orbax checkpoint from {target}", flush=True)
+            return restorer.restore(str(target))
         except FileNotFoundError as exc:
             # Common tunix failure: highest step's manifest never finalized
             # because the trainer exited at end-of-training right after
             # save_checkpoint() was queued. Earlier saves are complete.
             print(
-                f"[exporter] {leaf} is not a complete checkpoint "
+                f"[exporter] {target} is not a complete checkpoint "
                 f"({type(exc).__name__}: {exc}); trying earlier step...",
                 flush=True,
             )
