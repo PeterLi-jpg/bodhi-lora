@@ -63,16 +63,18 @@ training:
   gradient_accumulation_steps: 8
   learning_rate: 1.0e-4
   # max_steps is the count of OPTIMIZER STEPS (not train_step calls).
-  # 800 steps at effective batch 64 = 51,200 examples processed across
-  # all epochs. With ~30K filtered SFT rows that's ~1.7 epochs of full
-  # data, on the conservative side for LoRA fine-tuning but reasonable
-  # for a NeurIPS-deadline run. The original 2350 (5 epochs) is preserved
-  # in commit history; can bump back to 2350 if the per-step wall time
-  # comes in under ~5 sec/step.
-  max_steps: 800
-  # ~1 eval per ~30000/64 ≈ 470 examples-per-epoch. With max_steps=800
-  # and eval_interval=400 we get one eval mid-run + final.
-  eval_interval: 400
+  # 1500 steps at effective batch 64 = 96,000 examples processed across
+  # all epochs. With ~30K filtered SFT rows that's ~3.2 epochs of full
+  # data — the standard SFT recipe range and defensible for a NeurIPS
+  # paper. Was 800 (1.7 epochs) for a workshop-time run; bumped to 1500
+  # for the NeurIPS submission per "high quality" requirement. Total
+  # Stage 3 wall scales linearly: at observed ~5-10 sec/train_step,
+  # 1500 * 8 grad_accum_calls = 12,000 calls = ~16-33 hours per seed
+  # (5 seeds in parallel = same wall).
+  max_steps: 1500
+  # ~1 eval per ~30000/64 ≈ 470 examples-per-epoch. With max_steps=1500
+  # and eval_interval=500 we get 3 evals (one per epoch) + final.
+  eval_interval: 500
   # 27B + max_seq=2048 OOMed at JIT compile on v6e-8 (v33: 22.86G needed,
   # 18.61G free). Cutting to 1024 reduces attention memory ~4x (O(seq^2))
   # and MLP activations ~2x. Workshop / paper note: 1024 captured ~78%
