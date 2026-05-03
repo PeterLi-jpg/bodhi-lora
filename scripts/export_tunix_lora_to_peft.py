@@ -125,6 +125,12 @@ def _identify_einsum_lora_leaf(
     layer_idx: Optional[int] = None
     einsum_tag: Optional[str] = None
     ab: Optional[str] = None
+    # Set after seeing a bare "layers" / "layer" segment; tunix's orbax
+    # save writes the layer index as a SEPARATE segment after that, e.g.
+    # ``("layers", "0", "attn", "q_einsum", "w_lora_a", "value")``. The
+    # original ``_LAYER_RE`` only matched compound segments like
+    # ``"layer_0"`` / ``"layer.0"`` and missed this layout.
+    expect_bare_index = False
 
     for seg in path:
         # Skip terminal wrappers (NNX 'value', Flax 'kernel', etc.).  None
@@ -133,7 +139,20 @@ def _identify_einsum_lora_leaf(
         if seg.lower() in _TERMINAL_WRAPPERS:
             continue
 
-        # Layer index?
+        # tunix layout: bare "layers" segment followed by a digit segment.
+        if seg.lower() in ("layers", "layer") and layer_idx is None:
+            expect_bare_index = True
+            continue
+        if expect_bare_index and layer_idx is None:
+            try:
+                layer_idx = int(seg)
+                expect_bare_index = False
+                continue
+            except ValueError:
+                expect_bare_index = False
+                # fall through to other checks for this seg
+
+        # Compound layer segment (legacy / other layouts: "layer_0", "layers.0").
         m = _LAYER_RE.match(seg)
         if m and layer_idx is None:
             layer_idx = int(m.group(1))
