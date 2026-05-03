@@ -250,6 +250,7 @@ ${PIP} install ${PIP_FLAGS} \
     "optax>=0.2.6" \
     "chex>=0.1.91" \
     "qwix>=0.1.6" \
+    "google-tunix" \
     "pathwaysutils>=0.1.8" \
     "aqtp>=0.9.0" \
     "tokamax>=0.0.12" \
@@ -308,6 +309,9 @@ import google.cloud.storage  # noqa: F401  (Stage 3a Orbax ckpt loader)
 import pathwaysutils  # noqa: F401  (transitive: maxtext.utils.elastic_utils)
 import aqt.jax.v2.aqt_tensor  # noqa: F401  (transitive: maxtext.layers.initializers)
 import qwix  # noqa: F401  (transitive: maxtext.layers.quantizations)
+import tunix  # noqa: F401  (Stage 3 LoRA SFT trainer)
+from tunix.sft import peft_trainer  # noqa: F401
+from tunix.models import gemma3  # noqa: F401
 import tokamax  # noqa: F401  (transitive: maxtext.layers.attention_op splash kernel)
 import tensorstore  # noqa: F401  (transitive: orbax storage backend)
 import grain  # noqa: F401  (transitive: maxtext.input_pipeline)
@@ -353,6 +357,7 @@ print('optax:', optax.__version__)
 print('orbax-checkpoint:', orbax.checkpoint.__version__)
 print('chex:', chex.__version__)
 print('qwix:', getattr(qwix, '__version__', '?'))
+print('tunix:', tunix.__version__)
 print('tokamax:', getattr(tokamax, '__version__', '?'))
 print('omegaconf:', omegaconf.__version__)
 print('etils:', etils.__version__)
