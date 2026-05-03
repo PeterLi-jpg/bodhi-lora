@@ -408,6 +408,21 @@ def _train(cfg: dict, seed: int, output_dir: str) -> None:
         dummy_attn,
         rngs=nnx.Rngs(seed),
     )
+    # Newer qwix versions (the LoRA dropout path in
+    # qwix._src.providers.lora.einsum) call ``flax_util.make_rng('dropout')``
+    # at runtime, which requires the wrapped model to carry its own rngs
+    # context as a module attribute (qwix.flax_util.make_rng searches the
+    # module's set_attributes). Without this, every Stage-3 train_step
+    # call fails with:
+    #   ValueError: Cannot find rngs in the current module.
+    #     Please set rngs via model.set_attributes(qwix_rngs=nnx.Rngs(...)).
+    # v39 hit this on all 5 seeds. The rngs passed to apply_lora_to_model
+    # above are used to INITIALIZE the LoRA params; the qwix_rngs attribute
+    # is what the model uses at every train_step for dropout sampling.
+    # Use a derived seed so trace-time and runtime randomness aren't
+    # identical (avoid systematic correlation between init and dropout
+    # masks).
+    model.set_attributes(qwix_rngs=nnx.Rngs(seed + 1))
 
     # --- Optimizer ------------------------------------------------------------
     learning_rate = float(train_cfg["learning_rate"])
