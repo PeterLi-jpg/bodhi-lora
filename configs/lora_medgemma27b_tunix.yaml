@@ -61,6 +61,12 @@ training:
   # The previous value of 64 implied an effective batch of 4096 (way
   # over-scoped for a 30K-example SFT, and OOMed at trace time on v6e-8).
   gradient_accumulation_steps: 8
+  # Tensor parallelism: tp_size=8 means all 8 chips along TP, no FSDP.
+  # Each chip holds 1/8 of model + 1/8 of activations along the TP dim.
+  # Theoretically tp=8 gives the most per-chip activation memory savings,
+  # IF tunix-gemma3 properly shards activations along TP. tp=2 didn't
+  # (added cross-shard buffers); tp=8 may behave differently with no FSDP.
+  tp_size: 8
   learning_rate: 1.0e-4
   # max_steps is the count of OPTIMIZER STEPS (not train_step calls).
   # 1500 steps at effective batch 64 = 96,000 examples processed across
@@ -89,7 +95,7 @@ training:
   # At seq=2048 same per-chip batch=1, so attention memory is 4x and
   # MLP activations 2x vs seq=1024. Should still fit on v6e-8 (32GB
   # HBM/chip) with the watchdog as a fallback that auto-halves on OOM.
-  max_seq_length: 1024
+  max_seq_length: 2048
 
 data:
   # Output of Stage 3b dataset converter
