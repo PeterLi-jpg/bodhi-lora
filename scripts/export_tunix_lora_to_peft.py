@@ -318,22 +318,24 @@ def collect_lora_weights(
     return weights, sorted(seen_projections)
 
 
-def _resolve_step_dir(path: Path) -> Path:
-    """Accept either a leaf step directory or a CheckpointManager root.
+def _resolve_step_candidates(path: Path) -> List[Path]:
+    """Return candidate leaf step dirs in newest-first order.
 
-    tunix's PeftTrainer uses ``orbax.CheckpointManager`` under the hood,
-    which writes ``<root>/<step>/`` subdirectories (one per saved step,
-    integer-named). The exporter's underlying ``PyTreeCheckpointer.restore``
-    needs the leaf step dir, not the parent root. Earlier versions of
-    the launcher passed the root (``checkpoints/seed_<N>/orbax``) which
-    produced an opaque restore failure. We resolve here so the launcher
-    contract stays simple: pass the orbax dir from the trainer config and
-    let the exporter find the latest step.
+    tunix's PeftTrainer uses ``orbax.CheckpointManager``, which writes
+    ``<root>/<step>/`` subdirectories (one per saved step, integer-named).
+    The exporter's underlying ``PyTreeCheckpointer.restore`` needs the
+    leaf step dir, not the parent root.
 
-    Heuristic: if ``path`` directly contains files (a real checkpoint
-    payload), treat it as a leaf. If instead it contains integer-named
-    subdirectories (the CheckpointManager layout), pick the highest one.
-    Anything else raises with a fix-it message.
+    Returns:
+      - If ``path`` is itself a leaf (no int-named children), a single-element
+        list ``[path]``.
+      - If ``path`` contains int-named subdirs (the CheckpointManager layout),
+        the list of those leaves in DECREASING step order. Caller can try
+        them one by one if loading the highest fails -- this is the
+        "incomplete final save" defence: when training ends right at a save
+        boundary, the trainer may exit before orbax finalizes the manifest,
+        leaving the highest-numbered checkpoint structurally invalid even
+        though all earlier saves are complete.
     """
     abspath = Path(path).resolve()
     if not abspath.is_dir():
@@ -341,10 +343,6 @@ def _resolve_step_dir(path: Path) -> Path:
             f"--orbax-dir {abspath} does not exist or is not a directory."
         )
 
-    # Check for integer-named subdirectories — the CheckpointManager
-    # signature. Non-integer names (e.g. orbax internal state files like
-    # 'metadata') are tolerated as long as at least one int-named child
-    # exists; we just pick the highest.
     int_steps: List[int] = []
     for child in abspath.iterdir():
         if child.is_dir():
@@ -354,12 +352,21 @@ def _resolve_step_dir(path: Path) -> Path:
                 continue
 
     if int_steps:
-        latest = max(int_steps)
-        leaf = abspath / str(latest)
-        return leaf
+        # Newest first; caller falls back to older steps if newest is broken.
+        int_steps.sort(reverse=True)
+        return [abspath / str(s) for s in int_steps]
 
-    # No integer-named children — assume ``path`` is already the leaf.
-    return abspath
+    # No integer-named children -- assume ``path`` is already the leaf.
+    return [abspath]
+
+
+def _resolve_step_dir(path: Path) -> Path:
+    """Pick the highest int-named step (or the leaf if there's only one).
+
+    Backward-compat wrapper around ``_resolve_step_candidates`` for callers
+    that want a single Path rather than a list.
+    """
+    return _resolve_step_candidates(path)[0]
 
 
 def load_orbax_checkpoint(path: Path) -> Any:
@@ -369,15 +376,35 @@ def load_orbax_checkpoint(path: Path) -> Any:
     params with no Composite / metadata handlers, so the simplest restore
     path round-trips cleanly.
 
-    Accepts either a leaf step directory or the CheckpointManager root;
-    see ``_resolve_step_dir`` for the resolution rules.
+    If the highest-numbered step is broken (tunix's "incomplete final
+    save" -- trainer exits before orbax finalizes the manifest), fall back
+    to the next-highest step. Earlier saves were taken DURING training and
+    have had time to fully flush, so they're structurally sound.
     """
     import orbax.checkpoint as ocp
 
-    leaf = _resolve_step_dir(path)
-    print(f"[exporter] loading orbax checkpoint from {leaf}", flush=True)
+    candidates = _resolve_step_candidates(path)
     restorer = ocp.PyTreeCheckpointer()
-    return restorer.restore(str(leaf))
+    last_error: Optional[Exception] = None
+    for leaf in candidates:
+        try:
+            print(f"[exporter] loading orbax checkpoint from {leaf}", flush=True)
+            return restorer.restore(str(leaf))
+        except FileNotFoundError as exc:
+            # Common tunix failure: highest step's manifest never finalized
+            # because the trainer exited at end-of-training right after
+            # save_checkpoint() was queued. Earlier saves are complete.
+            print(
+                f"[exporter] {leaf} is not a complete checkpoint "
+                f"({type(exc).__name__}: {exc}); trying earlier step...",
+                flush=True,
+            )
+            last_error = exc
+            continue
+    raise FileNotFoundError(
+        f"No loadable orbax checkpoint at {path}. Tried {len(candidates)} "
+        f"candidate step dirs (newest first); all failed. Last error: {last_error}"
+    )
 
 
 def build_adapter_config(
