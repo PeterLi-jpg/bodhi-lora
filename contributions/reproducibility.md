@@ -71,6 +71,20 @@ If `pip check` fails after install, the active environment already contains unre
 
 Requires a [TRC grant](https://sites.research.google/trc/about/) with Cloud TPU quota. The script handles VM creation, dependency setup, all 5 pipeline stages, and VM deletion automatically.
 
+> **Note (recommended path: tunix).** Stage 3 LoRA SFT now runs on
+> [tunix](https://github.com/google-deepmind/tunix) on TPU. The MaxText path below is
+> kept as a legacy / fallback during the migration window. New runs should use:
+>
+> ```bash
+> export GCS_OUTPUT_PATH=gs://...
+> export GCS_DATA_PATH=gs://.../seed_42
+> export TRAIN_CONFIG=configs/lora_medgemma27b_tunix_smoke.yaml
+> bash tpu/launch_5seeds_tunix.sh
+> ```
+>
+> See [`contributions/tunix-migration.md`](tunix-migration.md) for the rationale,
+> the config schema, and known gotchas.
+
 ```bash
 # store your HF token in .env (gitignored)
 echo "HF_TOKEN=hf_..." > .env
