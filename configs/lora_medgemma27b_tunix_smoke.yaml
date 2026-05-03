@@ -1,0 +1,68 @@
+# Smoke variant of the tunix + qwix LoRA path for MedGemma-27B (Stage 3,
+# Phase 2 migration). Goal: confirm the whole pipeline fires end-to-end on a
+# v6e-8 (HF safetensors load via snapshot_download, qwix LoRA injection,
+# first JIT, optimizer step, eval, ckpt save, exit). NOT a research config.
+#
+# Consumed by scripts/train_lora_tunix.py (U2). Coexists with
+# configs/lora_medgemma27b_maxtext_smoke.yaml during the migration; the two
+# can run side-by-side because they target separate train entry points.
+#
+# The launcher (U6) sets HF_HOME=/dev/shm/hf, downloads the model snapshot,
+# then invokes the trainer with --config <this file> --seed <int>
+# --output-dir <path> per-VM (paths.* below get overridden on the CLI).
+
+seed: 42
+
+model:
+  name: google/medgemma-27b-text-it
+  # Path to a local HF safetensors directory. The HF cache layout is:
+  #   ${HF_HOME}/models--<org>--<name>/snapshots/<sha>/
+  # The launcher (U6) sets HF_HOME=/dev/shm/hf and downloads via
+  # huggingface_hub before calling this script. The trainer (U2) resolves
+  # the snapshot dir at runtime via huggingface_hub.snapshot_download(name).
+  # Leaving null here means "let U2 resolve it"; setting an absolute path
+  # short-circuits the resolver (useful for local CPU testing).
+  hf_path: null
+  dtype: bfloat16
+
+lora:
+  # Same shape as production: r=8, alpha=16, target the attention q+kv
+  # einsums which are tunix gemma3's equivalent of HF's q_proj/k_proj/v_proj.
+  # tunix gemma3 attention uses einsum modules: q_einsum holds the query
+  # projection, kv_einsum holds packed k+v. The qwix LoraRule regex U2
+  # builds is r".*\.attn\.(q_einsum|kv_einsum)\.w$"; the entries below are
+  # the leaf names that regex matches.
+  r: 8
+  alpha: 16
+  dropout: 0.0
+  target_modules:
+    - q_einsum
+    - kv_einsum
+
+training:
+  # Smoke: 2 train steps then 1 eval step then ckpt save -> exit. Confirms
+  # the loop fires; not enough to measure anything.
+  per_device_batch_size: 1
+  # Global batch = per_device * grad_accum * num_devices = 1 * 8 * 8 = 64
+  # on v6e-8, matching the production effective batch.
+  gradient_accumulation_steps: 8
+  learning_rate: 1.0e-4
+  max_steps: 2
+  eval_interval: 2
+  # 4x activation cut vs 1024 (smoke memory). 256 is enough to confirm
+  # the optimizer + ckpt path; real run uses 2048.
+  max_seq_length: 256
+  bf16: true
+
+data:
+  # Already produced by Stage 3b dataset converter
+  # (scripts/convert_traces_to_maxtext.py). The launcher (U6) creates this
+  # dir; the trainer (U2) reads it via
+  # scripts/maxtext_lora/dataset_loader.build_iterators(output_format='tunix', ...).
+  dataset_dir: data/sft/maxtext
+
+paths:
+  # Defaults are for local CPU testing; production runs override
+  # --output-dir on the CLI and the launcher (U6) substitutes per-seed.
+  checkpoint_root_directory: checkpoints/seed_42/orbax
+  best_dir: checkpoints/seed_42/best
