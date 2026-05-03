@@ -1,0 +1,71 @@
+# ICML workshop run: LoRA SFT on Gemma3-4B via tunix + qwix.
+#
+# Created when MedGemma-27B's train_step JIT compile OOMed on v6e-8
+# (RuntimeProgramAllocationFailure: 22.86G needed / 18.61G free) at
+# max_seq=2048 + FSDP=8, with no obvious activation rematerialization
+# knob in tunix-gemma3 reachable in time. Pivoted to Gemma3-4B for the
+# workshop submission: ~7x smaller params, fits comfortably on v6e-8
+# (4B * 2B = 8GB total / 8 chips = ~1GB/chip; activations at seq=2048
+# batch=8 add ~6-8GB/chip; total well under 32GB v6e HBM budget).
+#
+# Tokenizer is identical to MedGemma's (SentencePiece, 256128 vocab),
+# so the pre-tokenized SFT JSONL produced by Stage 3b on MedGemma's
+# tokenizer feeds in cleanly. Stages 4-5 must use this same model, so
+# the launcher's MODEL_NAME env var has to be set to
+# google/gemma-3-4b-it for any run that uses this config.
+#
+# Hyperparams mirror configs/lora_medgemma27b_tunix.yaml so the methodology
+# section reads "we kept everything except the base model" — the only
+# adjustment is grad_accum / max_steps / max_seq_length, all kept at the
+# 27B production values for direct comparability.
+
+seed: 42
+
+model:
+  name: google/gemma-3-4b-it
+  # Resolved at runtime via huggingface_hub.snapshot_download (HF cache
+  # at /dev/shm/hf, set up by setup_tpu.sh + /etc/profile.d/bohdi-hf-cache.sh).
+  # ~8GB safetensors download — completes in ~30s on the TPU VM.
+  hf_path: null
+  dtype: bfloat16
+
+lora:
+  # Same shape as the MedGemma-27B production yaml: r=8, alpha=16,
+  # target the attention q+kv einsums. Gemma3-4B uses the same attention
+  # module names (q_einsum / kv_einsum) as Gemma3-27B, so the qwix regex
+  # ".*/attn/(q_einsum|kv_einsum)" matches identically.
+  r: 8
+  alpha: 16
+  dropout: 0.05
+  target_modules:
+    - q_einsum
+    - kv_einsum
+
+training:
+  per_device_batch_size: 1
+  # Per-step batch yielded by dataset_loader = per_device * grad_accum = 64.
+  # Same effective batch as the 27B production yaml. The trainer feeds
+  # each yield through optax.MultiSteps which accumulates over grad_accum
+  # next() calls before applying the optimizer.
+  gradient_accumulation_steps: 64
+  learning_rate: 1.0e-4
+  # ~30k filtered SFT rows / batch=64 * 5 epochs = 2350. Same recipe as
+  # the 27B yaml.
+  max_steps: 2350
+  # ~1 eval per epoch.
+  eval_interval: 470
+  # Production seq len, matches the 27B yaml. Gemma3-4B at seq=2048 +
+  # FSDP=8 fits comfortably (~6-8GB activations/chip).
+  max_seq_length: 2048
+
+data:
+  # Output of Stage 3b dataset converter (scripts/convert_traces_to_maxtext.py).
+  # Read by the trainer via scripts/maxtext_lora/dataset_loader.build_iterators(
+  # output_format='tunix', ...).
+  dataset_dir: data/sft/maxtext
+
+paths:
+  # The launcher passes --output-dir checkpoints/seed_$SEED at invocation
+  # time; the trainer (U2) appends '/orbax' to it when this YAML key isn't
+  # set. <N> is a seed placeholder substituted by the trainer.
+  checkpoint_root_directory: checkpoints/seed_<N>/orbax
