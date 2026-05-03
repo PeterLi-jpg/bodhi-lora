@@ -1,5 +1,15 @@
 """Convert filtered BOHDI SFT JSONL into MaxText's HF SFT input format.
 
+The tokenized sidecar this script writes (``*.tokenized.jsonl``, with
+``input_ids`` + ``labels`` per row, prompt tokens masked to -100) is
+also consumed by the tunix LoRA path via
+``scripts.maxtext_lora.dataset_loader.build_iterators(...)``. Tunix's
+gemma3 ships the same SentencePiece tokenizer that HF's
+``google/medgemma-27b-text-it`` wraps (see tunix.models.gemma3.params
+``GEMMA3_TOKENIZER`` and ``PROMPT_TEMPLATE``), so the token ids written
+here match what tunix would produce at training time. No tunix-specific
+output flag is needed; the same sidecar serves both trainers.
+
 Stage 3 (LoRA fine-tune of MedGemma-27B) is migrating from
 PyTorch+torch_xla (``train_lora.py``) to a forked MaxText. MaxText's HF
 input pipeline (``dataset_type=hf``, ``train_data_columns=['messages']``)
