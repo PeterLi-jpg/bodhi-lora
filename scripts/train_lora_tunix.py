@@ -542,6 +542,48 @@ def _train(cfg: dict, seed: int, output_dir: str) -> None:
         trainer.train(train_iter, eval_arg)
     print("[tunix] training finished.", flush=True)
 
+    # Bug fix: orbax CheckpointManager.save() is async. The last step's save
+    # can still be in flight when this Python process exits, leaving the
+    # highest-numbered checkpoint dir (e.g. orbax/300/) with data files but
+    # no manifest/metadata. Downstream loaders then reject it with
+    #   FileNotFoundError: No structure could be identified for the
+    #   checkpoint at .../orbax/300
+    # Witnessed on seed7/seed99/seed101 step-300 checkpoints. The exporter
+    # has a step-fallback (PR #242), but the proper fix is to block on
+    # pending saves before the trainer process exits. tunix's own close()
+    # (called from train()) already flushes via orbax close(), but we add
+    # this explicit wait as belt-and-suspenders so the contract is visible
+    # at the call site. tunix.sft.checkpoint_manager.CheckpointManager does
+    # not re-export wait_until_finished(); reach through to the underlying
+    # orbax manager at ._checkpoint_manager.
+    try:
+        tunix_ckpt_mgr = getattr(trainer, "checkpoint_manager", None)
+        orbax_ckpt_mgr = getattr(tunix_ckpt_mgr, "_checkpoint_manager", None)
+        if orbax_ckpt_mgr is None:
+            print(
+                "[tunix] no orbax CheckpointManager attached; "
+                "skipping flush wait.",
+                flush=True,
+            )
+        else:
+            print(
+                "[tunix] waiting for orbax CheckpointManager to flush...",
+                flush=True,
+            )
+            orbax_ckpt_mgr.wait_until_finished()
+            print(
+                f"[tunix] CheckpointManager flushed "
+                f"(latest committed step={tunix_ckpt_mgr.latest_step()}).",
+                flush=True,
+            )
+    except Exception as exc:
+        # Never let a flush-wait failure mask a successful training run.
+        print(
+            f"[tunix] CheckpointManager flush wait raised "
+            f"{type(exc).__name__}: {exc} (continuing).",
+            flush=True,
+        )
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(
