@@ -318,6 +318,22 @@ def main():
     args.output = str(Path(args.output).expanduser())
     args.sample_ids = str(Path(args.sample_ids).expanduser())
 
+    # Idempotency: if --output already exists with content, skip this eval.
+    # Stage 4 of the pipeline runs 4 configs in sequence; on resume after preempt
+    # or restart, we don't want to re-run configs whose JSONs already landed.
+    # The pipeline's run_eval() wrapper (in tpu/run_pipeline.sh) also has this
+    # check, but baking it into the script makes the script idempotent on its
+    # own and protects direct invocations. Empty (size 0) files are treated as
+    # partial writes from a crashed run and are allowed to be overwritten.
+    out_path = Path(args.output)
+    if out_path.is_file() and out_path.stat().st_size > 0:
+        print(
+            f"[eval_healthbench] {out_path} already exists "
+            f"({out_path.stat().st_size} bytes), skipping.",
+            file=sys.stderr,
+        )
+        sys.exit(0)
+
     # Calibration-honesty notice (audit C2): make it impossible to read
     # downstream Brier/ECE numbers off the per-item geomean probability
     # without seeing the limitations. stderr keeps stdout clean for any
