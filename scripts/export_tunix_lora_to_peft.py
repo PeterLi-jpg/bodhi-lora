@@ -59,6 +59,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import shutil
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
@@ -472,6 +473,121 @@ def build_adapter_config(
     }
 
 
+# Files we copy from the base model's HF snapshot into every adapter dir.
+# Order is intentional (config first, then tokenizer set, then optional chat
+# template) so the export log reads top-down from "model" to "tokenizer".
+_BASE_FILES_TO_COPY: Tuple[str, ...] = (
+    "config.json",
+    "generation_config.json",
+    "tokenizer.json",
+    "tokenizer.model",
+    "tokenizer_config.json",
+    "special_tokens_map.json",
+    "added_tokens.json",
+    "chat_template.jinja",
+)
+
+
+def copy_base_model_files(
+    *,
+    output_dir: Path,
+    base_model: str,
+) -> None:
+    """Copy base-model config + tokenizer files into the adapter dir.
+
+    Why this exists
+    ---------------
+    Stage 4 (vLLM-TPU eval) loads the exported adapter via
+    ``AutoTokenizer.from_pretrained(self.lora_path)`` in
+    ``scripts/_xla_lora_inference.py``. That call needs:
+
+      * ``config.json``  -- HF inspects ``model_type`` to pick the right
+        tokenizer/architecture; without it transformers raises
+        ``ValueError: Unrecognized model in <path>. Should have a
+        'model_type' key in its config.json``.
+      * the full tokenizer set (``tokenizer.json`` / ``tokenizer.model`` /
+        ``tokenizer_config.json`` / ``special_tokens_map.json`` / ...).
+        Sentencepiece's ``tokenizer.model`` in particular fails with
+        ``TypeError: not a string`` if it's missing or zero-length.
+
+    tunix's PeftTrainer drops *some* tokenizer files into the adapter dir
+    incidentally, but never the base ``config.json`` and not always a
+    complete tokenizer set. Tonight's run failed at Stage 4 for exactly
+    this reason; the live workaround was a manual ``cp`` from the base
+    model's HF cache into each ``checkpoints/seed_X/best/`` dir. This
+    function makes that automatic at export time so future VM recreates
+    don't re-hit the bug.
+
+    Behaviour
+    ---------
+    Resolves the base model's HF snapshot via
+    ``huggingface_hub.snapshot_download`` (a no-op once cached locally),
+    then copies each entry of ``_BASE_FILES_TO_COPY`` into ``output_dir``,
+    OVERWRITING any existing copies (the trainer-exported ones may be
+    stale or incomplete). Files absent from the snapshot are skipped --
+    not every model ships ``chat_template.jinja`` or ``added_tokens.json``.
+
+    Symlinks in the HF cache (``snapshots/<rev>/<file>`` -> ``../../blobs/<sha>``)
+    are dereferenced so the adapter dir is self-contained: deleting the HF
+    cache later must not break the exported adapter.
+    """
+    try:
+        from huggingface_hub import snapshot_download
+    except ImportError as exc:
+        # ``huggingface_hub`` should be present anywhere this exporter
+        # runs in prod (it's a tunix dep), but on bare CI runners it can
+        # be missing. Don't fail the export; the adapter blobs are
+        # already on disk and the downstream loader will still emit a
+        # clear error if the base files are absent.
+        print(
+            f"[exporter] huggingface_hub not importable ({exc}); "
+            f"skipping base-model file copy. Adapter dir will lack "
+            f"config.json + tokenizer files; downstream loaders that "
+            f"call AutoTokenizer.from_pretrained(adapter_dir) will fail.",
+            flush=True,
+        )
+        return
+
+    # ``snapshot_download`` returns the local path to the resolved
+    # snapshot. ``allow_patterns`` keeps the download cheap when the cache
+    # is cold: we only need a handful of small text/sentencepiece files,
+    # NOT the multi-GB safetensors shards.
+    try:
+        snapshot_dir = Path(
+            snapshot_download(
+                repo_id=base_model,
+                allow_patterns=list(_BASE_FILES_TO_COPY),
+            )
+        )
+    except Exception as exc:
+        # Network down, gated repo, missing auth, etc. Same rationale as
+        # the ImportError branch above: don't crash the export. Log
+        # loudly so an operator looking at export logs sees the cause.
+        print(
+            f"[exporter] snapshot_download({base_model!r}) failed "
+            f"({type(exc).__name__}: {exc}); skipping base-model file "
+            f"copy. Adapter dir will lack config.json + tokenizer "
+            f"files; downstream loaders that call "
+            f"AutoTokenizer.from_pretrained(adapter_dir) will fail.",
+            flush=True,
+        )
+        return
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    for fname in _BASE_FILES_TO_COPY:
+        src = snapshot_dir / fname
+        if not src.exists():
+            print(f"[exporter] (no {fname} in base, skipping)", flush=True)
+            continue
+        dst = output_dir / fname
+        # ``follow_symlinks=True`` resolves the cache symlink to the real
+        # blob so the destination is a regular file. ``shutil.copy`` also
+        # overwrites an existing dst, which is what we want: trainer-saved
+        # copies may be stale.
+        shutil.copy(src, dst, follow_symlinks=True)
+        print(f"[exporter] copied {fname}", flush=True)
+
+
 def write_peft_adapter(
     *,
     output_dir: Path,
@@ -482,7 +598,14 @@ def write_peft_adapter(
     lora_alpha: int,
     lora_dropout: float,
 ) -> None:
-    """Write ``adapter_config.json`` + ``adapter_model.safetensors``."""
+    """Write ``adapter_config.json`` + ``adapter_model.safetensors``.
+
+    Also copies the base model's ``config.json`` + tokenizer files into
+    ``output_dir`` so downstream ``AutoTokenizer.from_pretrained(adapter_dir)``
+    consumers (notably ``scripts/_xla_lora_inference.py``) can load the
+    adapter without reaching back into the HF cache. See
+    ``copy_base_model_files`` for the rationale.
+    """
     from safetensors.numpy import save_file
 
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -501,6 +624,8 @@ def write_peft_adapter(
     # safetensors requires contiguous arrays; ``collect_lora_weights``
     # already enforces that via ``np.ascontiguousarray``.
     save_file(weights, str(output_dir / "adapter_model.safetensors"))
+
+    copy_base_model_files(output_dir=output_dir, base_model=base_model)
 
 
 def export(
