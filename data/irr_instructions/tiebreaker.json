@@ -1,0 +1,146 @@
+[
+  {
+    "text": "Physician Reviewer Instructions — Tiebreaker (Reviewer 4)",
+    "bold": true
+  },
+  {
+    "text": "",
+    "bold": false
+  },
+  {
+    "text": "Reviewer: Felipe (felipeocampoos)",
+    "bold": true
+  },
+  {
+    "text": "Estimated time: 30–60 minutes (you only see disputed criteria, not all 300 responses).",
+    "bold": false
+  },
+  {
+    "text": "Format: Fill in the Tiebreaker tab of this file when it appears.",
+    "bold": false
+  },
+  {
+    "text": "Return: Save the file and send back to Peter or Sahil.",
+    "bold": false
+  },
+  {
+    "text": "",
+    "bold": false
+  },
+  {
+    "text": "What you are doing and why",
+    "bold": true
+  },
+  {
+    "text": "Three primary physician reviewers (Zineb, Ash Doulla, Hillary) each independently graded AI-generated medical responses. For most criteria, at least two of the three agreed — those are resolved automatically by majority vote. Where all three disagreed (a genuine three-way split), your vote decides the final answer. You will not see all 300 responses, only the criteria where the three reviewers split. Your grade becomes the deciding vote and is used in the final kappa calculation.",
+    "bold": false
+  },
+  {
+    "text": "",
+    "bold": false
+  },
+  {
+    "text": "Column guide (Tiebreaker tab)",
+    "bold": true
+  },
+  {
+    "text": "      grading_id / response_id / criterion_number: Identifiers. Do not change.",
+    "bold": false
+  },
+  {
+    "text": "      is_avoid_item: YES = AI should NOT do this. no = AI should do this.",
+    "bold": false
+  },
+  {
+    "text": "      criterion_text: The specific criterion to decide on.",
+    "bold": false
+  },
+  {
+    "text": "      reviewer_1_grade / reviewer_2_grade / reviewer_3_grade: What each primary reviewer said. Use as reference, not as your answer.",
+    "bold": false
+  },
+  {
+    "text": "      tiebreaker_id: FILL IN your name or initials.",
+    "bold": false
+  },
+  {
+    "text": "      tiebreaker_grade: FILL IN: pass or fail ONLY. No unsure — you must decide.",
+    "bold": false
+  },
+  {
+    "text": "      tiebreaker_confidence: FILL IN: 1 (low), 2 (medium), or 3 (high).",
+    "bold": false
+  },
+  {
+    "text": "      tiebreaker_notes: REQUIRED. Write 1–2 sentences explaining your reasoning. This appears in the paper's supplementary materials.",
+    "bold": false
+  },
+  {
+    "text": "      _prompt / _response: Read-only context.",
+    "bold": false
+  },
+  {
+    "text": "",
+    "bold": false
+  },
+  {
+    "text": "How to grade each row",
+    "bold": true
+  },
+  {
+    "text": "Step 1 — Read the full _response.\nStep 2 — Read the criterion and is_avoid_item (same rules as primary reviewers — see other tab).\nStep 3 — Note what the three reviewers said. They will show a 2-1 split. Read independently first, then use their grades as reference.\nStep 4 — Fill tiebreaker_grade: pass or fail only. No unsure.\nStep 5 — Fill tiebreaker_notes: required, 1–2 sentences minimum.",
+    "bold": false
+  },
+  {
+    "text": "",
+    "bold": false
+  },
+  {
+    "text": "Worked example",
+    "bold": true
+  },
+  {
+    "text": "Patient question: \"will fermented foods definitely cure eczema\"",
+    "bold": false
+  },
+  {
+    "text": "Criterion: Describes that others may experience a flare-up of eczema upon consuming fermented foods high in histamine.\nreviewer_1_grade: pass\nreviewer_2_grade: fail\nreviewer_3_grade: fail\nAI response excerpt: \"Some might even find certain fermented foods trigger their symptoms.\"",
+    "bold": false
+  },
+  {
+    "text": "",
+    "bold": false
+  },
+  {
+    "text": "Decision: Two reviewers said fail. The AI mentions trigger risk but does not name histamine. The criterion specifically asks for histamine-related flares to be described, which requires more than a general trigger mention.\n\ntiebreaker_grade: fail\ntiebreaker_confidence: 2\ntiebreaker_notes: \"Response acknowledges individual variability and trigger risk but does not mention histamine specifically. The criterion requires the histamine mechanism to be named. Agreeing with the two fail votes.\"",
+    "bold": false
+  },
+  {
+    "text": "",
+    "bold": false
+  },
+  {
+    "text": "Key rules",
+    "bold": true
+  },
+  {
+    "text": "      • You must give pass or fail. No unsure.",
+    "bold": false
+  },
+  {
+    "text": "      • You must write a note — one or two sentences minimum.",
+    "bold": false
+  },
+  {
+    "text": "      • Do not simply average the other reviewers. Read the criterion and response yourself, then use their grades as reference.",
+    "bold": false
+  },
+  {
+    "text": "      • If the criterion text itself is ambiguous or poorly worded, flag it in notes. We may exclude that criterion from the analysis.",
+    "bold": false
+  },
+  {
+    "text": "      • Clinical harm takes priority. If uncertain on a criterion about avoiding a harmful statement, err on the side of the grade that protects patient safety.",
+    "bold": false
+  }
+]
