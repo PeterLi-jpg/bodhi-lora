@@ -2,8 +2,8 @@
 
 Reads ``results_modal/irr/Grading-*.xlsx`` (NOT Grading-template, NOT
 Grading-tiebreaker), joins by ``grading_id``, and emits ONE Excel containing
-only the rows where the 3 primary reviewers split. The adjudicator (Felipe /
-or whoever you assign) fills in the Tiebreaker tab.
+only the rows where the 3 primary reviewers split. The adjudicator (Martha)
+fills in the Tiebreaker tab.
 
 Dispute logic
 -------------
@@ -249,7 +249,7 @@ def main() -> None:
     out_path = IRR_DIR / "Grading-tiebreaker.xlsx"
     write_tiebreaker_workbook(disputes, out_path)
     print(f"\nwrote {out_path}")
-    print(f"  send to adjudicator (Felipe per issue #73, or whoever you assign)")
+    print(f"  send to adjudicator (Martha)")
 
 
 if __name__ == "__main__":
