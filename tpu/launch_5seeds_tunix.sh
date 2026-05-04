@@ -236,7 +236,21 @@ export PJRT_DEVICE=TPU
 # Private-repo clone via in-memory token-injected URL. The
 # ``url.<...>.insteadOf`` config rewrites the github.com origin only for
 # THIS git invocation, so the token never lands in ~/.git/config.
-if [ ! -d ~/bohdi-lora ]; then
+#
+# FIX (a): check ~/bohdi-lora/.git, not just ~/bohdi-lora. If the directory
+# exists as a non-git tree (e.g. a caller manually mkdir'd
+# ~/bohdi-lora/checkpoints/... before letting the script run), the old
+# `[ ! -d ~/bohdi-lora ]` check skipped the clone and the next
+# `git fetch origin main` failed with "fatal: not a git repository".
+# Callers MUST NOT pre-populate ~/bohdi-lora before this script runs;
+# if it exists without a .git/ subdir we abort instead of silently
+# clobbering whatever is there (a `git clone` into a non-empty target
+# would also fail, so this just gives a clearer error).
+if [ -d ~/bohdi-lora ] && [ ! -d ~/bohdi-lora/.git ]; then
+    echo "~/bohdi-lora exists but is not a git repo (no .git/); refusing to clone over it" >> ~/pipeline.log
+    exit 1
+fi
+if [ ! -d ~/bohdi-lora/.git ]; then
     git -c "url.https://x-access-token:\${GH_TOKEN}@github.com/.insteadOf=https://github.com/" \\
         clone https://github.com/PeterLi-jpg/bohdi-lora.git ~/bohdi-lora
 fi
@@ -495,11 +509,25 @@ if [ -n "\${GCS_SEED_DIR:-}" ]; then
     echo "  GCS rsync sidecar pid=\${SIDECAR_PID} (every 300s)" >> ~/pipeline.log
 fi
 trap '[ -n "'"\${SIDECAR_PID}"'" ] && kill '"\${SIDECAR_PID}"' 2>/dev/null || true' EXIT
-\${PY} -u scripts/train_lora_tunix.py \\
-    --config "${TRAIN_CONFIG}" \\
-    --seed "${SEED}" \\
-    --output-dir checkpoints/seed_${SEED} \\
-    > ~/train.log 2>&1
+# FIX (d): skip Stage 3 if a complete orbax checkpoint at step 250 is
+# already present locally (resumed from GCS by the Stage-0b rsync above).
+# Step 250 is the last reliably-complete save; step 300 has been observed
+# structurally invalid because the final save was interrupted (worked
+# around in PR #242). The _CHECKPOINT_METADATA file is orbax's own
+# completion marker, so its presence is the canonical "this step finished
+# writing" signal. Without this guard, every preempt-retry rebuilds the
+# same adapter from scratch (~3-4h on v6e-8), even though the GCS rsync
+# already pulled the checkpoint back to disk.
+if [ -f "checkpoints/seed_${SEED}/orbax/250/_CHECKPOINT_METADATA" ]; then
+    echo "[stage 3] checkpoints/seed_${SEED}/orbax/250 already exists locally, skipping training" | tee -a ~/pipeline.log
+    echo "[stage 3] checkpoints/seed_${SEED}/orbax/250 already exists locally, skipping training" > ~/train.log
+else
+    \${PY} -u scripts/train_lora_tunix.py \\
+        --config "${TRAIN_CONFIG}" \\
+        --seed "${SEED}" \\
+        --output-dir checkpoints/seed_${SEED} \\
+        > ~/train.log 2>&1
+fi
 echo TRAIN_OK >> ~/pipeline.log
 [ -n "\${SIDECAR_PID}" ] && kill \${SIDECAR_PID} 2>/dev/null || true
 gcs_rsync "checkpoints/seed_${SEED}/" "checkpoints/"
@@ -527,6 +555,16 @@ cleanup_eval() {
     # Belt-and-suspenders: the Stage-3 sidecar trap also kills SIDECAR_PID,
     # but if we replace that trap (below) we still want this guarantee.
     [ -n "\${SIDECAR_PID:-}" ] && kill \${SIDECAR_PID} 2>/dev/null || true
+    # FIX (c): reset the TPU runtime container between Stage-4 configs.
+    # Stopping the vllm-tpu container alone leaves leftover device state
+    # on the v6e chips; the next config's vllm-tpu init then fails with
+    # "TPU initialization failed" or hangs on chip handshake. Restarting
+    # tpu-runtime returns the chips to a clean state so each of the 4
+    # configs starts from the same baseline. The 6s sleep gives the
+    # runtime its bring-up window (libtpu reports ready in ~3-4s; we round
+    # up to be safe). Tail of the docker output is logged for postmortem.
+    sudo docker restart tpu-runtime 2>&1 | tail -1 >> ~/pipeline.log || true
+    sleep 6
 }
 trap cleanup_eval EXIT
 
@@ -560,6 +598,73 @@ SEED_IDS="data/raw/hard_seed_${SEED}.json"
 # Stage 4 wall when the cross-grader pass is enabled.
 # Skips if the output already exists so preempt-resume picks up where
 # it left off.
+# FIX (b): hard timeout + container-state watchdog around each eval.
+# Tonight's failure: vLLM-TPU containers crashed with engine-init exit-1
+# silently and the in-process /health poller (scripts/_vllm_engine.py) sat
+# in its own 2700s loop with no awareness that the docker container was
+# already gone. The eval invocation appeared "stuck" for 24+ min until the
+# Python timeout fired, multiplying the loss across all 4 configs. The
+# shell-side watchdog below runs alongside eval_healthbench.py and:
+#   - kills the eval with rc=124 if VLLM_WAIT_TIMEOUT seconds elapse
+#     before any vllm-tpu container is observed Running=true (hard timeout
+#     is 600s by default; v6e-8 27B vLLM startup is 65-300s in steady state
+#     so this is generous but still bounded).
+#   - kills the eval with rc=1 the moment a vllm-tpu container is observed
+#     in State.Running=false; logs State.ExitCode for postmortem.
+# Once a container is seen Running=true the watchdog stops applying the
+# hard timeout (steady-state inference can legitimately take much longer
+# than the startup window) but still watches for unexpected container
+# exits. run_eval propagates the watchdog's exit code so the per-config
+# ``|| eval_fail_count=...`` accounting in the Stage-4 loop fires
+# correctly and we move on to the next config instead of waiting forever.
+VLLM_WAIT_TIMEOUT="\${VLLM_WAIT_TIMEOUT:-600}"
+
+vllm_watchdog() {
+    # \$1 = pid of the eval invocation to kill on failure.
+    # \$2 = path to a file we write the override exit code to (124 for
+    #      hard-timeout, 1 for container-died). run_eval reads it and
+    #      reports the right rc instead of the SIGTERM/SIGKILL signal
+    #      exit (137/143) the killed eval would otherwise produce.
+    local target_pid="\$1"
+    local rc_file="\$2"
+    local start_ts=\$SECONDS
+    local healthy_seen=0
+    while kill -0 "\$target_pid" 2>/dev/null; do
+        # Pick the most-recent vllm-tpu container (running OR exited) so we
+        # observe the one this eval just spun up rather than a stale one.
+        local cid
+        cid=\$(sudo docker ps -aq --filter ancestor=vllm/vllm-tpu 2>/dev/null | head -n1)
+        if [ -n "\$cid" ]; then
+            local running
+            running=\$(sudo docker inspect "\$cid" --format '{{.State.Running}}' 2>/dev/null || echo "")
+            if [ "\$running" = "true" ]; then
+                healthy_seen=1
+            elif [ "\$running" = "false" ]; then
+                local ec
+                ec=\$(sudo docker inspect "\$cid" --format '{{.State.ExitCode}}' 2>/dev/null || echo "?")
+                echo "vllm watchdog: container \$cid exited (ExitCode=\$ec); killing eval pid=\$target_pid" >> ~/pipeline.log
+                echo 1 > "\$rc_file"
+                kill -TERM "\$target_pid" 2>/dev/null || true
+                sleep 5
+                kill -KILL "\$target_pid" 2>/dev/null || true
+                return 0
+            fi
+        fi
+        # Hard timeout only applies during the startup window (before any
+        # healthy container has been observed). Once vLLM is healthy the
+        # eval's own runtime is bounded by the prompt count, not by this.
+        if [ "\$healthy_seen" -eq 0 ] && [ \$((SECONDS - start_ts)) -ge "\$VLLM_WAIT_TIMEOUT" ]; then
+            echo "vllm watchdog: hard timeout \${VLLM_WAIT_TIMEOUT}s without a Running vllm-tpu container; killing eval pid=\$target_pid (rc=124)" >> ~/pipeline.log
+            echo 124 > "\$rc_file"
+            kill -TERM "\$target_pid" 2>/dev/null || true
+            sleep 5
+            kill -KILL "\$target_pid" 2>/dev/null || true
+            return 0
+        fi
+        sleep 10
+    done
+}
+
 run_eval() {
     local name="\$1" out_dir="\$2" grader="\$3" args="\$4"
     local out="\${out_dir}/\${name}.json"
@@ -575,18 +680,40 @@ run_eval() {
         sec_grader_flag="--secondary-grader-model ${SECOND_GRADER_MODEL}"
     fi
     echo "--- eval \$name @ \$grader\${sec_grader_flag:+ (+ ${SECOND_GRADER_MODEL})} ---" | tee -a ~/pipeline.log
+    # Spawn eval as a background child so the watchdog can monitor + kill it.
+    # If the watchdog kills the eval, the killed process's exit code is a
+    # signal-mapped value (137/143), which is unhelpful for postmortem;
+    # the watchdog writes its intended rc to \$rc_override_file instead so
+    # we can surface 124 (hard timeout) or 1 (container died) to callers.
+    local rc_override_file
+    rc_override_file=\$(mktemp)
     # shellcheck disable=SC2086
-    if \${PY} -u scripts/eval_healthbench.py \$args \\
+    \${PY} -u scripts/eval_healthbench.py \$args \\
             --sample-ids "\$SEED_IDS" \\
             --grader-model "\$grader" \\
             \$sec_grader_flag \\
             --output "\$out" \\
             ${_EVAL_MAX_FLAG} \\
-            --seed ${SEED} >> ~/eval.log 2>&1; then
+            --seed ${SEED} >> ~/eval.log 2>&1 &
+    local eval_pid=\$!
+    vllm_watchdog "\$eval_pid" "\$rc_override_file" &
+    local watchdog_pid=\$!
+    local eval_rc=0
+    wait "\$eval_pid" || eval_rc=\$?
+    # Tear down the watchdog if it is still polling (the eval finished
+    # cleanly before any failure trigger). If the watchdog already fired,
+    # \$rc_override_file holds the override and the kill is a no-op.
+    kill "\$watchdog_pid" 2>/dev/null || true
+    wait "\$watchdog_pid" 2>/dev/null || true
+    if [ -s "\$rc_override_file" ]; then
+        eval_rc=\$(cat "\$rc_override_file")
+    fi
+    rm -f "\$rc_override_file"
+    if [ "\$eval_rc" -eq 0 ]; then
         return 0
     fi
-    echo "eval \$name FAILED" >> ~/pipeline.log
-    return 1
+    echo "eval \$name FAILED (rc=\$eval_rc)" >> ~/pipeline.log
+    return "\$eval_rc"
 }
 
 PRIMARY_DIR="eval/seed_${SEED}"
@@ -950,11 +1077,23 @@ for ((i=0; i<N_SEEDS; i++)); do
 
         # Trap on EXIT: runs after the outer retry loop ends, no matter
         # how (success / preempt-give-up / SIGINT). Always tries to copy
-        # whatever lives on the current VM and delete it.
+        # whatever lives on the current VM.
+        # FIX (e): gate delete_vm behind LAUNCHER_DELETE_VM_ON_EXIT.
+        # Tonight's failure: even successful pipeline completions called
+        # cleanup -> delete_vm, destroying spot slots that we then could
+        # not get back due to TRC v6e-8 capacity contention. Default OFF
+        # so the VM survives a successful run and the operator can SSH in
+        # to inspect / re-run. The PREEMPTED retry path (below) still
+        # deletes the VM explicitly because preempted is terminal anyway.
         cleanup() {
-            log "cleanup: copy results + delete VM"
+            log "cleanup: copy results"
             scp_back
-            delete_vm
+            if [ "${LAUNCHER_DELETE_VM_ON_EXIT:-0}" = "1" ]; then
+                log "cleanup: deleting VM (LAUNCHER_DELETE_VM_ON_EXIT=1)"
+                delete_vm
+            else
+                log "cleanup: keeping VM (set LAUNCHER_DELETE_VM_ON_EXIT=1 to enable auto-delete)"
+            fi
             log "cleaned up"
         }
         trap cleanup EXIT
