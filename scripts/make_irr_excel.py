@@ -60,6 +60,9 @@ EVAL_PROMPTS_PER_CONFIG = 10    # 10 prompts × 4 configs = 40 eval responses
 FILTER_RESPONSES = 10           # 10 Qwen-graded BODHI traces
 SHUFFLE_SEED = 42
 
+# Issue #73 clinical leads. Update if the reviewer roster changes.
+REVIEWER_NAMES = ("zineb", "ash", "hillary")
+
 # Style constants pulled byte-exact from clinician_1-processed.xlsx.
 HEADER_FILL = PatternFill("solid", fgColor="1F3864")
 HEADER_FONT = Font(color="FFFFFF", bold=True)
@@ -358,9 +361,9 @@ itself.
 
 ```
 Grading-template.xlsx     master template, do not edit
-Grading-1.xlsx            ⎫
-Grading-2.xlsx            ⎬ 3 identical reviewer copies. Rename to
-Grading-3.xlsx            ⎭ Grading-<your-name>.xlsx before sending.
+Grading-zineb.xlsx        → email to Zineb
+Grading-ash.xlsx          → email to Ash (Doulla)
+Grading-hillary.xlsx      → email to Hillary
 answer_key.xlsx           DO NOT SEND. Maps grading_id → source/config/llm_score
                           for downstream κ analysis.
 ```
@@ -445,9 +448,12 @@ def main() -> None:
     print(f"writing grading template -> {template_path}")
     write_grading_template(grading_rows, template_path)
 
-    # 3 identical reviewer copies.
-    for n in (1, 2, 3):
-        copy_path = OUT_DIR / f"Grading-{n}.xlsx"
+    # 3 identical reviewer copies, named for the issue #73 clinical leads.
+    # If reviewer roster changes, edit REVIEWER_NAMES below or rename the
+    # files manually before sending — find_reviewer_files() in the
+    # tiebreaker/kappa scripts globs Grading-*.xlsx so any naming works.
+    for name in REVIEWER_NAMES:
+        copy_path = OUT_DIR / f"Grading-{name}.xlsx"
         copy_path.write_bytes(template_path.read_bytes())
         print(f"  wrote reviewer copy -> {copy_path}")
 

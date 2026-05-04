@@ -10,9 +10,9 @@ itself.
 
 ```
 Grading-template.xlsx     master template, do not edit
-Grading-1.xlsx            ⎫
-Grading-2.xlsx            ⎬ 3 identical reviewer copies. Rename to
-Grading-3.xlsx            ⎭ Grading-<your-name>.xlsx before sending.
+Grading-zineb.xlsx        → email to Zineb
+Grading-ash.xlsx          → email to Ash (Doulla)
+Grading-hillary.xlsx      → email to Hillary
 answer_key.xlsx           DO NOT SEND. Maps grading_id → source/config/llm_score
                           for downstream κ analysis.
 ```
