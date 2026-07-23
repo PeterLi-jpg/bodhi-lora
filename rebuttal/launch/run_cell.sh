@@ -120,7 +120,10 @@ run_seed() {   # $1=seed  $2=gpu
         > "logs/train_${BENCH}_${TAG}_s${SEED}.log" 2>&1
     for spec in "base_no_wrapper::" "base_bodhi:--use-bodhi:" \
                 "lora_no_wrapper::--lora-path ${LORA}" "lora_bodhi:--use-bodhi:--lora-path ${LORA}"; do
-        local name="${spec%%:*}" rest="${spec#*:}" wrap="${rest%%:*}" lora="${rest#*:}"
+        local name="${spec%%:*}"
+        local rest="${spec#*:}"
+        local wrap="${rest%%:*}"
+        local lora="${rest#*:}"
         CUDA_VISIBLE_DEVICES="$GPU" BODHI_VLLM_PORT="$((8000 + GPU))" "$INFER_PY" scripts/eval_healthbench.py \
             --model "$MODEL" ${wrap} ${lora} "${EVAL_BENCH[@]}" \
             --sample-ids "$SAMPLE_IDS" --seed "$SEED" \
