@@ -110,10 +110,18 @@ def _detect_run_mode() -> str:
 def _auto_tp(model_name: str) -> int:
     """Heuristic: small models (≤8B) run fine on one chip; use all 8 for bigger ones.
 
+    Override with BODHI_VLLM_TP (e.g. =1 when pinning a single GPU via
+    CUDA_VISIBLE_DEVICES; =N to tensor-parallel across N idle GPUs). Needed on
+    shared boxes: nvidia-smi -L lists ALL GPUs regardless of CUDA_VISIBLE_DEVICES,
+    so a 24B model would otherwise pick TP=8 and fail against a 1-GPU pin.
+
     Uses a negative lookbehind so that multi-digit sizes like "14b" or "70b"
     don't accidentally match single-digit tags ("4b" inside "14b" would give
     a wrong TP=1 for a 14B model).
     """
+    override = os.environ.get("BODHI_VLLM_TP")
+    if override:
+        return max(1, int(override))
     name = model_name.lower()
     # Match a standalone single-digit size tag, e.g. "4b" in "gemma-3-4b-it"
     # but NOT "4b" embedded in "14b" or "24b".
