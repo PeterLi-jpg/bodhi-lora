@@ -48,18 +48,23 @@ User chose bigger general + small clinical (2026-07-23):
    (If a more current clinical model is wanted: Meditron3-8B / Med42-v2, but both are Llama-3 based
    -> family-adjacent to the evaluator; would need the clinical-judge re-grade + evaluator swap.)
 
-### Benchmarks (HealthBench-Hard stays; add 2)
-1. **MedQA-USMLE, open-ended reframe** — clinician-facing board vignettes with options stripped.
-   Directly answers FzpA Q3 ("how does calibration work when clinicians pose the questions").
-   Complete-info vignettes also stress-test appropriate NON-over-asking (rebuts mimicry).
-2. **MedQuAD** (NIH consumer-health QA) — patient-facing, different source than HealthBench ->
-   source-generality of the patient-facing result.
+### Benchmarks — LOCKED after vetting (HealthBench-Hard stays; add 2 training + 1 probe)
+Two new TRAINING benchmarks, chosen source-diverse (different origins from HealthBench and each other):
+1. **MedQA-USMLE, open-ended reframe** (`bigbio/med_qa`, ~12.7k English board-exam Qs, options stripped)
+   — clinician-facing (answers FzpA Q3). Complete-info vignettes stress-test appropriate NON-over-asking
+   (anti-mimicry) + quality preservation. Filter signal: consistency with the known-correct option.
+2. **MedQuAD** (NIH consumer-health QA; 47k pairs, ~16k with answers after the MedlinePlus-copyright
+   removals) — patient-facing, different source than HealthBench. Filter signal: NIH reference alignment.
 
-Optional / stretch: **MediQ** (missing-info clarifying-question benchmark, tailor-made for the
-mimicry rebuttal); **MIMIC/eICU-derived clinician questions** (what FzpA literally suggested) —
-NOTE: the MIMIC on the cluster is `mimic-iv-echo` (echocardiogram VIDEOS), not text notes, so this
-needs credentialed PhysioNet access to MIMIC-IV notes / eICU tables. Not available from what's
-installed. Build the loader, gate on the user's PhysioNet data.
+One new EVAL-ONLY calibration probe (no training cell):
+3. **MediQ** (Li et al., NeurIPS 2024, CC BY 4.0, github stellalisy/MediQ) — gives PAIRED complete vs.
+   incomplete versions of the same clinical cases. Run each trained adapter + base on it and grade
+   active-inquiry on the complete-vs-incomplete split: the cleanest exhibit that the adapter asks when
+   info is missing and restrains when it isn't (meta-review W4). NOTE MediQ is derived FROM MedQA, so it
+   is NOT source-independent — use it as a paired discrimination probe, not a generality data point.
+
+Dropped: **MIMIC/eICU-derived clinician questions** — the cluster's MIMIC is `mimic-iv-echo` (videos),
+not text notes; would need credentialed PhysioNet access to MIMIC-IV notes / eICU. Cite as future work.
 
 ### Judges (grading robustness — W3, HomM Q4, LxMF Q3)
 Keep asymmetric Qwen-14B / Llama-8B unchanged for comparability. ADD one clinical judge
@@ -78,10 +83,31 @@ Suggested order (front-load highest rebuttal value):
 3. BioMistral-7B x HealthBench    (second clinical model — HomM/LxMF)
 4. Mistral-7B x MedQuAD, BioMistral x MedQA/MedQuAD as time allows
 
-**Feasibility note:** 8x H100 makes 20 full 24B/7B runs very doable IF we can claim the GPUs, but
-the node is shared and was mostly busy on 2026-07-23 (only GPU 6 idle). Coordinate GPU access
-before launch; with N free GPUs we can run N seeds/cells in parallel. If access stays limited,
-keep 5 seeds on cell 1 (Mistral-Small-24B x HealthBench) and 3 on expansion cells; name what's cut.
+**Compute constraint (user, 2026-07-23):** ONE GPU at a time, QUEUED (shared box). It's a big
+H100 80GB, so pack it hard (QLoRA-24B leaves headroom; high-throughput vLLM) and parallelize
+WITHIN the card, but the cells run serially.
+
+## Wall-clock estimate (one queued H100)
+
+Per model x benchmark cell (rough, grounded estimates):
+
+| Stage | 24B/27B cell | 7B cell |
+|---|---|---|
+| Generate BODHI traces (once/cell, ~4k prompts, 2-pass) | ~1-1.5h | ~0.5h |
+| Filter/grade w/ Qwen-14B (once/cell) | ~0.5h | ~0.5h |
+| LoRA train x 5 seeds | ~4-8h | ~2-3h |
+| Eval 2x2 + epistemic grade | ~2-3h | ~2h |
+| **Cell total** | **~8-13h** | **~5-6h** |
+
+Matrix (pure compute, before shared-queue wait):
+- Both axes isolated (4 cells: Mi x HB, B x HB, M x MedQA, M x MedQuAD) ~= **1.5-2 days**
+- Full 3x3 grid (8 new cells) ~= **3-4 days**
+- MediQ eval-only probe: +a few hours.
+
+Calendar time is longer (shared queue). Speed levers: drop the TPU-only pad-to-4096 on the GPU
+path (2-3x faster training — a train_lora.py tweak); generate 2k not 4k prompts; fewer seeds on
+corner cells. Compute already minimized: generate + filter ONCE per cell; Base / Base+CoT eval
+ONCE per cell (they don't depend on the LoRA seed).
 
 ## Cluster setup prerequisites (before any run)
 
@@ -123,14 +149,19 @@ keep 5 seeds on cell 1 (Mistral-Small-24B x HealthBench) and 3 on expansion cell
 
 ## No-H100 analyses (run locally against `results_modal/`)
 
-- [x] `rebuttal/analyses/mimicry_split.py` — W4. Result: Base does NOT reliably discriminate
+- [x] `rebuttal/analyses/mimicry_split.py` — B1/W4. Result: Base does NOT reliably discriminate
       (CI includes 0); Wrapper AND LoRA both DO (theme-only: LoRA +13.2pp, CI [+4.1,+21.7]).
       Adapter reproduces the wrapper's targeting; inconsistent with template mimicry.
-- [ ] `rebuttal/analyses/interference_mechanism.py` — LxMF W4. Show the LoRA+BODHI red-flag drop
-      is Pass-1-analysis-format leakage, not context truncation (correlate drop with output
-      length / format-header regex / parse_failure; show non-leaked responses still regress).
-- [ ] `rebuttal/analyses/prior_work_baseline.py` — W6. Inference-time verbalized-confidence /
+- [x] `rebuttal/analyses/interference_mechanism.py` — C1/LxMF W4. Result: red-flag drop is 54.6%
+      Pass-1-format leakage; non-leaked responses hold at 1.73 (>LoRA 1.67); within non-leaked,
+      red-flag RISES with length -> refutes the truncation/attention-dilution alternative.
+- [ ] `rebuttal/analyses/prior_work_baseline.py` — E2/W6. Inference-time verbalized-confidence /
       clarifying-question prompt on the existing eval set; compare to BODHI-LoRA.
+
+**The definitive concern-by-concern checklist is `rebuttal/COVERAGE.md`** — every reviewer point
+mapped to a response + status. Newly surfaced workstreams beyond the generality runs:
+clinical-judge re-grade (D1), physician IRR write-up (D2), compute/latency table (G1 via
+`latency_benchmark.py`), prior-work baselines (E2), and the clarity/figure/text fixes (F1-F8).
 
 ## Rebuttal text deliverables
 
