@@ -95,15 +95,31 @@ keep 5 seeds on cell 1 (Mistral-Small-24B x HealthBench) and 3 on expansion cell
 
 ## Engineering task list (code on this branch)
 
-- [ ] `scripts/generate_traces.py`: add benchmark loaders (MedQA-open, MedQuAD) + DATASET_URLS.
-      The BODHI wrapper is already model-agnostic (`chat_fn`), so `--model` swap is free.
-- [ ] Benchmarks without HealthBench rubrics: rely on the benchmark-agnostic epistemic grader
-      (`scripts/eval_epistemic.py`) for the 7 dimensions; use an ideal-answer / reference rubric
-      or LLM-rubric for an aggregate-quality proxy where no native rubric exists.
-- [ ] `configs/`: `lora_mistral7b_gpu.yaml`, `lora_biomistral7b_gpu.yaml` (PEFT target_modules for
-      Mistral: q/k/v/o/gate/up/down proj — same 7 as MedGemma, different names).
-- [ ] `rebuttal/launch/run_cell.sh`: single-H100 driver (generate->filter->train 5 seeds->eval->grade).
-- [ ] clinical-judge re-grade path (second `--grader-model`).
+- [x] `scripts/train_lora.py`: two surgical fixes so non-Gemma models train on GPU —
+      (1) gate the `Gemma3DecoderLayer` FSDP wrap-class check behind `_ON_TPU` (it hard-crashed
+      at model load on GPU for Mistral); (2) support a `data.response_template` config override
+      for completion-only masking (Mistral's `[INST]...[/INST]` defeats the auto-detector).
+      Both backward-compatible (TPU/Gemma runs unchanged).
+- [x] `rebuttal/configs/lora_mistral_small_24b_qlora.yaml` + `lora_biomistral7b.yaml` — written,
+      paper hyperparameters (eff batch 16, 3 epochs, lr 1e-4 cosine), `response_template: "[/INST]"`.
+      TODO verify the `[/INST]` masking + BioMistral chat_template on first run (loud-fail nets exist).
+- [ ] `scripts/generate_traces.py`: add benchmark loaders (MedQA-open, MedQuAD). Convert each to
+      the pipeline's `{prompt_id, prompt:[messages], ...}` shape. BODHI wrapper is model-agnostic
+      (`chat_fn`), so `--model` swap is free.
+- [ ] **Filtering new benchmarks (key design):** the filter step needs a quality signal, and it
+      must stay a DIFFERENT family from the Llama evaluator (preserve the asymmetric-grading claim).
+      HealthBench uses its rubrics + Qwen-14B. New benchmarks have natural per-item signals graded
+      by Qwen-14B: MedQA-open = consistency with the known-correct option; MedQuAD = alignment with
+      the NIH reference answer. Implement a `filter_traces.py` benchmark mode that grades against
+      these instead of HealthBench rubrics.
+- [ ] Benchmark-agnostic EVAL: for MedQA/MedQuAD there is no HealthBench rubric, so the 2x2 eval =
+      generate 4-config responses + `scripts/eval_epistemic.py` (the 7 dims, already model/benchmark
+      agnostic) + a quality proxy (MedQA answer-accuracy; MedQuAD reference-alignment). `eval_healthbench.py`
+      stays only for the HealthBench cell.
+- [ ] `rebuttal/launch/run_cell.sh`: one-GPU queued driver, args MODEL + BENCHMARK + SEEDS. Structure
+      it to generate + filter ONCE per (model,benchmark), reuse traces across seeds, and run Base /
+      Base+CoT eval ONCE per (model,benchmark) (they don't depend on the LoRA seed) — big compute save.
+- [ ] clinical-judge re-grade path (second `--grader-model`, e.g. Med42-v2) for W3 robustness.
 
 ## No-H100 analyses (run locally against `results_modal/`)
 

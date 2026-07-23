@@ -1,0 +1,58 @@
+# Rebuttal branch — clinical base model #2 (BioMistral-7B).
+# Answers meta-review W2 / HomM / LxMF: a SECOND, different clinical model shows
+# the recipe isn't MedGemma-specific. BioMistral is Mistral-family (continued
+# pretraining of Mistral-7B-Instruct on PubMed Central), so it is CLEAN vs both
+# graders (not Qwen filter, not Llama evaluator) and pairs with the Mistral-Small
+# general model as a controlled clinical-vs-general comparison within one family.
+#
+# 7B in bf16 is ~15 GB -> full-precision LoRA fits comfortably on one H100 80GB
+# (no quantization needed), so this cell trains fast.
+#
+# VERIFY before running: confirm BioMistral-7B ships a chat_template in its
+# tokenizer_config. It is continued-pretrained from Mistral-7B-Instruct-v0.1, so
+# it should inherit the [INST]...[/INST] template; if apply_chat_template errors
+# (no template), set the tokenizer's chat_template from Mistral-7B-Instruct-v0.1.
+
+seed: 42
+
+model:
+  name: BioMistral/BioMistral-7B
+  torch_dtype: bfloat16
+  quantization: null          # 7B fits full-precision LoRA on 80GB
+
+lora:
+  r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  target_modules:
+    - q_proj
+    - k_proj
+    - v_proj
+    - o_proj
+    - gate_proj
+    - up_proj
+    - down_proj
+  task_type: CAUSAL_LM
+  variant: standard
+
+training:
+  num_epochs: 3
+  per_device_train_batch_size: 4
+  gradient_accumulation_steps: 4    # effective batch = 16 (matches the paper)
+  learning_rate: 1.0e-4
+  warmup_ratio: 0.05
+  lr_scheduler_type: cosine
+  max_seq_length: 4096
+  logging_steps: 10
+  save_strategy: epoch
+  eval_strategy: epoch
+  bf16: true
+  gradient_checkpointing: true
+  gradient_checkpointing_kwargs:
+    use_reentrant: false
+
+data:
+  response_template: "[/INST]"      # Mistral-family; verify on first run
+  train_file: data/sft/train.jsonl
+  val_file: data/sft/val.jsonl
+  eval_sample_ids: data/raw/hard_200_sample_ids.json
