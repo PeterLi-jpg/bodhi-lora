@@ -65,6 +65,32 @@ def load_multiple_datasets(names):
     return all_ex
 
 
+def load_local_jsonl(paths):
+    """Load prompts from local HealthBench-format JSONL files (rebuttal benchmarks).
+
+    Same output shape as load_healthbench: each row carries prompt_id + prompt, and
+    (for filtering) rubrics. Dedups by prompt_id across files.
+    """
+    all_ex, seen = [], set()
+    for path in paths:
+        n = 0
+        with open(path) as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                ex = json.loads(line)
+                if ex["prompt_id"] in seen:
+                    continue
+                seen.add(ex["prompt_id"])
+                ex.setdefault("_source", Path(path).stem)
+                all_ex.append(ex)
+                n += 1
+        print(f"  {path}: {n} examples")
+    print(f"Total local: {len(all_ex)}")
+    return all_ex
+
+
 def load_exclude_ids(paths):
     """Collect prompt_ids to exclude, from one or more files.
 
@@ -116,7 +142,7 @@ def generate_response(engine, messages, use_bodhi, bodhi_wrapper=None,
     """Return {content, analysis, metadata}. analysis/metadata are None for
     non-BODHI runs so callers get a stable schema.
 
-    Per Sebastian: saving analysis + metadata lets us audit *why* the model
+    Per AnonAuthor2: saving analysis + metadata lets us audit *why* the model
     decided what it did, not just what it said — critical for finding where
     the humility wrapper went wrong on specific examples.
 
@@ -149,10 +175,20 @@ def main():
     parser.add_argument(
         "--datasets",
         nargs="+",
-        default=["healthbench_hard", "healthbench"],
+        default=None,
         choices=list(DATASET_URLS.keys()),
-        help="Names of HealthBench datasets to draw prompts from "
+        help="Named HealthBench datasets to draw prompts from "
              "(e.g., healthbench_hard healthbench)",
+    )
+    parser.add_argument(
+        "--dataset-files",
+        nargs="+",
+        default=None,
+        help="Local HealthBench-format JSONL files to draw prompts from directly "
+             "(each line an example with prompt_id/prompt/rubrics). Use for the "
+             "rebuttal benchmarks built by scripts/build_benchmark_jsonl.py "
+             "(data/raw/medqa_open.jsonl, data/raw/medquad.jsonl). Combines with "
+             "--datasets if both are passed.",
     )
     parser.add_argument(
         "--exclude-ids",
@@ -223,6 +259,8 @@ def main():
         args.resume_from = str(Path(args.resume_from).expanduser())
     if args.exclude_ids:
         args.exclude_ids = [str(Path(p).expanduser()) for p in args.exclude_ids]
+    if args.dataset_files:
+        args.dataset_files = [str(Path(p).expanduser()) for p in args.dataset_files]
 
     # Greedy decoding is deterministic without a seed, but the BODHI wrapper
     # may use sampling internally (prompt shuffling, tie-breaking) — seed so
@@ -232,7 +270,11 @@ def main():
     torch.manual_seed(args.seed)
     set_seed(args.seed)
 
-    examples = load_multiple_datasets(args.datasets)
+    if not args.datasets and not args.dataset_files:
+        raise SystemExit("provide --datasets and/or --dataset-files")
+    examples = load_multiple_datasets(args.datasets) if args.datasets else []
+    if args.dataset_files:
+        examples += load_local_jsonl(args.dataset_files)
 
     if args.exclude_ids:
         exclude = load_exclude_ids(args.exclude_ids)
