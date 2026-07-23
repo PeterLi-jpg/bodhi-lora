@@ -14,6 +14,11 @@ model:
   name: mistralai/Mistral-Small-24B-Instruct-2501
   torch_dtype: bfloat16
   quantization: 4bit          # NF4 weights, bf16 compute, double-quant (QLoRA)
+  # Mistral-Small's tekken tokenizer needs this flag or it warns of (and applies)
+  # incorrect tokenization. vLLM inference uses its own tokenizer default; the
+  # regex edge case is minor for clinical text but we fix the TRAINING side here.
+  tokenizer_kwargs:
+    fix_mistral_regex: true
 
 lora:
   r: 16
