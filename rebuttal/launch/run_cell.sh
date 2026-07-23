@@ -27,6 +27,9 @@ BENCH="${BENCH:?set BENCH (healthbench|medqa|medquad)}"
 SEEDS="${SEEDS:-42 7 13 99 101}"
 EVAL_HOLDOUT_N="${EVAL_HOLDOUT_N:-200}"       # eval prompts held out of training
 GEN_MAX="${GEN_MAX:-4200}"                    # prompts to generate traces over
+# Eval grader = Llama-3.1-8B (paper). meta-llama/* is gated; default to the
+# non-gated NousResearch mirror (identical weights) so eval works without Meta access.
+GRADER_MODEL="${GRADER_MODEL:-NousResearch/Meta-Llama-3.1-8B-Instruct}"
 TAG="$(echo "${MODEL}" | tr '/:.' '___')"
 WORK="results_rebuttal/${BENCH}__${TAG}"
 SFT="${WORK}/sft"
@@ -126,13 +129,14 @@ run_seed() {   # $1=seed  $2=gpu
         local lora="${rest#*:}"
         CUDA_VISIBLE_DEVICES="$GPU" BODHI_VLLM_PORT="$((8000 + GPU))" "$INFER_PY" scripts/eval_healthbench.py \
             --model "$MODEL" ${wrap} ${lora} "${EVAL_BENCH[@]}" \
-            --sample-ids "$SAMPLE_IDS" --seed "$SEED" \
+            --grader-model "$GRADER_MODEL" --sample-ids "$SAMPLE_IDS" --seed "$SEED" \
             --output "${EV}/${name}.json" >> "logs/eval_${BENCH}_${TAG}_s${SEED}.log" 2>&1
     done
     # epistemic 7-dim grade (benchmark-agnostic)
     CUDA_VISIBLE_DEVICES="$GPU" BODHI_VLLM_PORT="$((8000 + GPU))" "$INFER_PY" scripts/eval_epistemic.py \
         --response-files "${EV}/base_no_wrapper.json" "${EV}/base_bodhi.json" \
                          "${EV}/lora_no_wrapper.json" "${EV}/lora_bodhi.json" \
+        --grader-model "$GRADER_MODEL" \
         --output "${EV}/epistemic_scores.json" >> "logs/eval_${BENCH}_${TAG}_s${SEED}.log" 2>&1
     echo "[seed $SEED] done"
 }
