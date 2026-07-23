@@ -1,9 +1,8 @@
 bodhi-llm[all]==0.1.4
-# ML libraries are pinned to EXACT versions to match tpu/setup_tpu.sh.  This
-# codebase has worked around shape bugs in transformers DynamicLayer, API drift
-# in trl SFTTrainer, and accelerate's TPU-mode model placement; an upstream
-# patch release between runs can break any of those.  Keep these in lock-step
-# with tpu/setup_tpu.sh: if you bump one, bump both.
+# ML libraries pinned to EXACT versions (rebuttal branch: GPU-only). This codebase
+# works around shape bugs in transformers DynamicLayer and API drift in trl
+# SFTTrainer; a patch release between runs can break either. Keep in lock-step with
+# gpu/setup_gpu.sh.
 torch==2.7.0
 transformers==4.57.6
 peft==0.19.1
@@ -26,12 +25,8 @@ numpy>=1.24,<3.0
 pandas>=2.0,<3.0
 tqdm>=4.65
 matplotlib>=3.7,<4.0
-# JAX stack for the vendored MaxText baseline (third_party/maxtext).  Dev boxes
-# install the CPU build so `import maxtext` works for unit tests; the [tpu]
-# extra is grabbed by tpu/setup_tpu.sh on the actual Cloud TPU VM.  Floors
-# mirror MaxText's own pin (see third_party/maxtext/VENDOR.md); ceilings keep
-# us inside the major series we've actually validated against.
-jax>=0.4.30,<0.7
-flax>=0.10,<0.12
-orbax-checkpoint>=0.11,<0.13
-optax>=0.2.4,<0.3
+# vLLM for trace generation + eval inference (scripts/_vllm_engine.py). 0.9.x pins
+# torch 2.7.0 (matches the torch pin above); enforce_eager=True is the default in
+# _vllm_engine to dodge the CUDA-graph capture hang on LoRA. If pip can't resolve a
+# build for the box's CUDA, pin the exact vllm at setup (gpu/setup_gpu.sh).
+vllm>=0.9.0,<0.10
