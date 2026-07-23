@@ -1,8 +1,8 @@
 # BOHDI-LoRA
 
-[![CI](https://github.com/PeterLi-jpg/bohdi-lora/actions/workflows/ci.yml/badge.svg)](https://github.com/PeterLi-jpg/bohdi-lora/actions/workflows/ci.yml)
+[![CI](https://github.com/REDACTED-FOR-ANONYMOUS-REVIEW/bohdi-lora/actions/workflows/ci.yml/badge.svg)](https://github.com/REDACTED-FOR-ANONYMOUS-REVIEW/bohdi-lora/actions/workflows/ci.yml)
 
-LoRA fine-tuning to internalize [BOHDI](https://github.com/sebasmos/bodhi-llms) epistemic virtues (humility, calibration, abstention) into model weights, replacing the prompt wrapper with weight-level alignment.
+LoRA fine-tuning to internalize [BOHDI](https://github.com/REDACTED/bodhi-llms) epistemic virtues (humility, calibration, abstention) into model weights, replacing the prompt wrapper with weight-level alignment.
 
 ## Motivation
 
@@ -33,20 +33,14 @@ See [contributions/reproducibility.md](contributions/reproducibility.md) for ste
 
 `setup.sh` now prints a loud warning if you run it outside an isolated env, or from Conda `base`, because shared/base Python environments are the main source of confusing dependency conflicts.
 
-## Stage 3: PyTorch and MaxText paths
+## GPU-only pipeline (rebuttal branch)
 
-> **Note:** Stage 3 (TPU LoRA SFT) recently migrated from custom MaxText glue
-> to Google's tunix + qwix path. The new launcher is `tpu/launch_5seeds_tunix.sh`.
-> See [contributions/tunix-migration.md](contributions/tunix-migration.md) for
-> details. The old MaxText path (`tpu/launch_5seeds_maxtext.sh`) remains
-> available until the tunix path is verified end-to-end on TPU.
+This branch is a single, clean, GPU-only pipeline. All TPU / MaxText / tunix / Modal
+code from `main` has been removed here. Stage 3 LoRA SFT is `scripts/train_lora.py`
+(QLoRA for 24-27B, full-precision LoRA for 7-8B; FlashAttention-2/SDPA, TF32, fused AdamW).
 
-Stage 3 (LoRA fine-tune of MedGemma-27B) has two backends:
-
-- **PyTorch** (default, in tree): `scripts/train_lora.py` driven by `tpu/launch_5seeds.sh`. Used on GPU and as the TPU fallback.
-- **MaxText** (JAX-native, forked): `scripts/train_lora_maxtext.py`. Added because PyTorch + `torch_xla` 2.7 + FSDPv2 + Gemma-3-27B hangs on the first `mark_step` for over an hour on TPU. See [docs/maxtext_migration.md](docs/maxtext_migration.md) for why we forked, what changed, the Phase 2 run plan, and the HF-PEFT-adapter contract that keeps Stage 4 unchanged.
-
-Stages 1, 2, 4, and 5 are unchanged regardless of which Stage 3 path runs.
+To reproduce the rebuttal generality experiments (extra base models + benchmarks), see
+[REPRODUCIBILITY.md](REPRODUCIBILITY.md) and `rebuttal/launch/run_cell.sh`.
 
 ## Hygiene
 
@@ -65,9 +59,8 @@ Stage 2 (filter_traces.py)           -> data/sft/seed_<N>/{train,val}.jsonl
 
     [preflight: check_dataset_overlap.py - aborts on Hard leakage]
 
-Stage 3 (train_lora.py OR
-         train_lora_maxtext.py)      -> checkpoints/seed_<N>/best/
-                                        (LoRA r=8, q_proj+v_proj, MedGemma-27B base)
+Stage 3 (train_lora.py)              -> checkpoints/seed_<N>/best/
+                                        (LoRA; GPU: QLoRA for 24-27B, full-precision for 7-8B)
 
 Stage 4 (eval_healthbench.py)        -> eval/seed_<N>/{base,base_bodhi,lora,lora_bodhi}.json
                                         (per-seed bootstrap; 200 of 1K Hard, deterministic per seed)
@@ -195,7 +188,7 @@ bohdi-lora/
 
 ## References
 
-- [sebasmos/humbleai-healthbench](https://github.com/sebasmos/humbleai-healthbench) — BOHDI evaluation framework on HealthBench
-- [sebasmos/bodhi-llms](https://github.com/sebasmos/bodhi-llms) — BOHDI wrapper package (`pip install bodhi-llm`)
+- [REDACTED/humbleai-healthbench](https://github.com/REDACTED/humbleai-healthbench) — BOHDI evaluation framework on HealthBench
+- [REDACTED/bodhi-llms](https://github.com/REDACTED/bodhi-llms) — BOHDI wrapper package (`pip install bodhi-llm`)
 - [HealthBench Hard](https://openaipublic.blob.core.windows.net/simple-evals/healthbench/hard_2025-05-08-21-00-10.jsonl) — 1000 examples
 - [HealthBench Full](https://openaipublic.blob.core.windows.net/simple-evals/healthbench/2025-05-07-06-14-12_oss_eval.jsonl) — 5000 examples

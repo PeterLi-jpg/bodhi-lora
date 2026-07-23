@@ -29,12 +29,20 @@ HEALTHBENCH_HARD_URL = "https://openaipublic.blob.core.windows.net/simple-evals/
 DATA_DIR = Path("data/raw")
 
 
-def load_eval_data(sample_ids_path):
-    path = DATA_DIR / "healthbench_hard.jsonl"
-    if not path.exists():
-        print("Downloading HealthBench Hard...")
-        DATA_DIR.mkdir(parents=True, exist_ok=True)
-        urllib.request.urlretrieve(HEALTHBENCH_HARD_URL, path)
+def load_eval_data(sample_ids_path, benchmark_jsonl=None):
+    # Rebuttal: eval on an arbitrary benchmark by passing --benchmark-jsonl (a
+    # HealthBench-format JSONL with prompt_id/prompt/rubrics, e.g. the MedQA /
+    # MedQuAD files from build_benchmark_jsonl.py). Default: HealthBench Hard.
+    if benchmark_jsonl:
+        path = Path(benchmark_jsonl).expanduser()
+        if not path.exists():
+            raise SystemExit(f"--benchmark-jsonl not found: {path}")
+    else:
+        path = DATA_DIR / "healthbench_hard.jsonl"
+        if not path.exists():
+            print("Downloading HealthBench Hard...")
+            DATA_DIR.mkdir(parents=True, exist_ok=True)
+            urllib.request.urlretrieve(HEALTHBENCH_HARD_URL, path)
 
     examples = []
     # Wrap json.loads so a single bad line gives a useful path:lineno error
@@ -60,9 +68,9 @@ def load_eval_data(sample_ids_path):
     if not filtered:
         raise SystemExit(
             f"No eval examples loaded from {sample_ids_path}: 0 IDs matched "
-            f"against {len(examples)} HealthBench Hard rows. Check that the "
-            f"file exists, contains a JSON list (or {{'prompt_ids': [...]}}), "
-            f"and that IDs match the dataset."
+            f"against {len(examples)} rows in {path}. Check that the file exists, "
+            f"contains a JSON list (or {{'prompt_ids': [...]}}), and that IDs "
+            f"match the dataset."
         )
     print(f"{len(filtered)} eval examples loaded")
     return filtered
@@ -274,6 +282,13 @@ def main():
              "prompt IDs to evaluate.",
     )
     parser.add_argument(
+        "--benchmark-jsonl",
+        default=None,
+        help="Rebuttal: HealthBench-format JSONL to eval on instead of downloading "
+             "HealthBench Hard (e.g. data/raw/medqa_open.jsonl). --sample-ids then "
+             "selects the eval holdout prompt_ids from this file.",
+    )
+    parser.add_argument(
         "--grader-model",
         default="meta-llama/Llama-3.1-8B-Instruct",
         help="HF model name for the rubric grader. Default Llama-3.1-8B-Instruct "
@@ -350,7 +365,7 @@ def main():
     np.random.seed(args.seed)
     set_seed(args.seed)
 
-    examples = load_eval_data(args.sample_ids)
+    examples = load_eval_data(args.sample_ids, args.benchmark_jsonl)
     if args.max_examples:
         examples = examples[:args.max_examples]
 
