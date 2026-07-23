@@ -175,7 +175,9 @@ class VLLMEngine:
         self.model = model
         self.tp_size = tp_size if tp_size is not None else _auto_tp(model)
         self.max_model_len = max_model_len
-        self.port = port
+        # BODHI_VLLM_PORT lets the launcher give each concurrently-running GPU a
+        # distinct serve port (e.g. 8000+gpu_index) so parallel seeds don't collide.
+        self.port = int(os.environ.get("BODHI_VLLM_PORT", port))
         self.hf_token = hf_token or os.environ.get("HF_TOKEN", "")
         self._enforce_eager = enforce_eager
         # Honor the host's HF_HOME redirect (set by tpu/setup_tpu.sh to
