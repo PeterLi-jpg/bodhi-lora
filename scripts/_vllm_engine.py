@@ -300,8 +300,15 @@ class VLLMEngine:
                 "--enable-lora",
                 "--lora-modules", f"{self._lora_name}={self._lora_path_host}",
             ]
+        # Use the vllm binary next to the running interpreter (e.g. the
+        # .venv-infer python) so subprocess mode works even when that env is not
+        # on PATH; fall back to a bare "vllm" lookup if it isn't there.
+        import sys as _sys
+        _vllm = os.path.join(os.path.dirname(_sys.executable), "vllm")
+        if not os.path.exists(_vllm):
+            _vllm = "vllm"
         return [
-            "vllm", "serve", self.model,
+            _vllm, "serve", self.model,
             "--tensor-parallel-size", str(self.tp_size),
             "--max-model-len", str(self.max_model_len),
             "--dtype", "bfloat16",
