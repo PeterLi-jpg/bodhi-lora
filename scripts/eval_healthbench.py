@@ -22,7 +22,7 @@ from transformers import set_seed
 import os as _os
 sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from _vllm_engine import VLLMEngine, _detect_accelerator
+from _vllm_engine import VLLMEngine
 from scripts.filter_traces import GRADER_TEMPLATE, LocalGrader, parse_json_response, grade_trace
 
 HEALTHBENCH_HARD_URL = "https://openaipublic.blob.core.windows.net/simple-evals/healthbench/hard_2025-05-08-21-00-10.jsonl"
@@ -367,24 +367,8 @@ def main():
     raw_generations = []  # list of {prompt_id, messages, rubrics, response, token_logprobs}
     failed_inference = []
 
-    # On TPU + LoRA, vllm/vllm-tpu's add_lora is unimplemented (see
-    # scripts/_vllm_engine.py guard). XLALoRAEngine merges the adapter
-    # into the base on CPU and then serves the merged checkpoint via
-    # a regular VLLMEngine (no lora_path → add_lora is never called).
-    # Inference speed matches base-model serving, so the regular
-    # EVAL_CONCURRENCY applies — vllm batches under the hood.
-    _use_xla_lora = (
-        args.lora_path is not None and _detect_accelerator() == "tpu"
-    )
-    if _use_xla_lora:
-        from _xla_lora_inference import XLALoRAEngine
-        engine_ctx = XLALoRAEngine(args.model, lora_path=args.lora_path)
-        print(
-            "TPU+LoRA detected — using merge-then-serve backend "
-            "(vllm-tpu lacks add_lora, XLALoRAEngine merges on CPU first)."
-        )
-    else:
-        engine_ctx = VLLMEngine(args.model, lora_path=args.lora_path)
+    # GPU: vLLM serves the base model and applies the LoRA adapter directly.
+    engine_ctx = VLLMEngine(args.model, lora_path=args.lora_path)
     _eval_concurrency = EVAL_CONCURRENCY
 
     with engine_ctx as engine:
