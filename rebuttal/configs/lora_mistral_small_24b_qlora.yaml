@@ -1,0 +1,62 @@
+# Rebuttal branch — general-domain base model #1 (Mistral-Small-24B-Instruct).
+# Answers meta-review W1/W2 and FzpA W2 (a widely-used GENERAL model, not a
+# clinical one, matching HealthBench's patient-facing use). Clean family vs the
+# Qwen filter / Llama evaluator, so the paper's asymmetric-grading claim holds.
+#
+# Runs on ONE H100 80GB via the GPU/PEFT path (scripts/train_lora.py), queued.
+# 24B in 4-bit NF4 (QLoRA) is ~13-15 GB weights -> tons of headroom on 80GB, so
+# we can push batch to keep utilization high while matching the paper's effective
+# batch of 16 for comparability.
+
+seed: 42
+
+model:
+  name: mistralai/Mistral-Small-24B-Instruct-2501
+  torch_dtype: bfloat16
+  quantization: 4bit          # NF4 weights, bf16 compute, double-quant (QLoRA)
+
+lora:
+  r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  # Mistral uses the same 7 projection module names as MedGemma/Llama, so the
+  # paper's "all 7 linear projections per layer" target set transfers verbatim.
+  target_modules:
+    - q_proj
+    - k_proj
+    - v_proj
+    - o_proj
+    - gate_proj
+    - up_proj
+    - down_proj
+  task_type: CAUSAL_LM
+  variant: standard           # DoRA is incompatible with 4bit; keep standard
+
+training:
+  num_epochs: 3
+  per_device_train_batch_size: 2
+  gradient_accumulation_steps: 8    # effective batch = 16 (matches the paper)
+  learning_rate: 1.0e-4
+  warmup_ratio: 0.05
+  lr_scheduler_type: cosine
+  max_seq_length: 4096
+  logging_steps: 10
+  save_strategy: epoch
+  eval_strategy: epoch
+  bf16: true
+  gradient_checkpointing: true
+  gradient_checkpointing_kwargs:
+    use_reentrant: false
+
+data:
+  # Mistral's [INST]...[/INST] template exposes no assistant-turn header to
+  # add_generation_prompt, so completion-only masking can't auto-detect one.
+  # "[/INST]" is the standard Mistral response template. VERIFY on the first
+  # run: train_lora.py prints the template and DataCollatorForCompletionOnlyLM
+  # warns if it isn't found in a tokenized example (that would mean masking
+  # failed -> loss on prompt tokens). Confirm before trusting a full run.
+  response_template: "[/INST]"
+  # Overridden per (benchmark, seed) by the run driver via --train-file/--val-file.
+  train_file: data/sft/train.jsonl
+  val_file: data/sft/val.jsonl
+  eval_sample_ids: data/raw/hard_200_sample_ids.json

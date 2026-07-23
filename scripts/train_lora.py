@@ -447,7 +447,13 @@ def main():
         quantization_config=quant_config,
     )
 
-    _verify_wrap_class_present(model, WRAP_CLASS_NAMES)
+    # The FSDP transformer-layer wrap-class check is only meaningful on
+    # TPU/FSDPv2 (GPU uses device_map="auto", not layer-class wrapping).
+    # Gating it on _ON_TPU lets non-Gemma base models (e.g. Mistral, whose
+    # decoder layer is MistralDecoderLayer, not Gemma3DecoderLayer) train on
+    # GPU without tripping the Gemma3DecoderLayer assertion at model load.
+    if _ON_TPU:
+        _verify_wrap_class_present(model, WRAP_CLASS_NAMES)
 
     # Disable KV cache for training.  With use_cache=True (the model default),
     # Gemma-3's HybridCache.update() tries to slice the last (sliding_window - 1)
@@ -556,8 +562,12 @@ def main():
         load_best_model_at_end = False
         metric_for_best_model = None
 
-    # only compute loss on the assistant response, not on the prompt tokens
-    response_template = find_response_template(_tokenizer)
+    # only compute loss on the assistant response, not on the prompt tokens.
+    # Some templates (e.g. Mistral [INST]...[/INST]) expose no clean
+    # assistant-turn header to add_generation_prompt, so find_response_template
+    # can't auto-detect one. Allow an explicit data.response_template override
+    # (e.g. "[/INST]" for Mistral); fall back to auto-detection when unset.
+    response_template = data_cfg.get("response_template") or find_response_template(_tokenizer)
     print(f"Response template for masking: {response_template!r}")
     # pad_to_multiple_of=max_seq_length forces every batch to be padded to
     # exactly max_seq_length (since SFTTrainer truncates to max_seq_length
