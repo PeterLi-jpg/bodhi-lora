@@ -161,7 +161,11 @@ def main():
     seed = args.seed if args.seed is not None else int(cfg.get("seed", train_cfg.get("seed", 42)))
     random.seed(seed); np.random.seed(seed); torch.manual_seed(seed); set_seed(seed)
 
-    _tokenizer = AutoTokenizer.from_pretrained(model_cfg["name"])
+    # model.tokenizer_kwargs lets a config pass loader flags, e.g. Mistral-Small's
+    # fix_mistral_regex=True (its tekken tokenizer otherwise warns of incorrect
+    # tokenization). Default {} preserves prior behavior for every other model.
+    _tokenizer = AutoTokenizer.from_pretrained(
+        model_cfg["name"], **model_cfg.get("tokenizer_kwargs", {}))
     if _tokenizer.pad_token is None:
         _tokenizer.pad_token = _tokenizer.eos_token
     # Half-precision SFT overflows with left padding; force right.
