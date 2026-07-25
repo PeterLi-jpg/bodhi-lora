@@ -52,6 +52,23 @@ ship torch).  Tensors are written via ``safetensors.numpy.save_file``;
 the on-disk container is identical to ``safetensors.torch.save_file``,
 so PEFT loads it the same way.  bf16 round-trips intact via
 ``ml_dtypes.bfloat16`` arrays, which safetensors recognises natively.
+
+Base-model file mirroring
+-------------------------
+After writing ``adapter_config.json`` + ``adapter_model.safetensors`` we
+also copy the base model's ``config.json``, ``generation_config.json``,
+and the full tokenizer set (``tokenizer.json`` / ``tokenizer.model`` /
+``tokenizer_config.json`` / ``special_tokens_map.json`` /
+``added_tokens.json`` / ``chat_template.jinja``) from its HF snapshot
+into the adapter dir.  Downstream eval (``scripts/_xla_lora_inference.py``)
+calls ``AutoTokenizer.from_pretrained(self.lora_path)``: without those
+files HF transformers raises ``ValueError: Unrecognized model in <path>.
+Should have a 'model_type' key in its config.json`` (missing
+``config.json``) or sentencepiece raises ``TypeError: not a string``
+(missing ``tokenizer.model``).  See ``copy_base_model_files`` for the
+implementation; safetensors + adapter_config are still the source of
+truth for "did the export succeed" -- a base-file copy failure logs a
+warning and does not fail the export.
 """
 
 from __future__ import annotations
