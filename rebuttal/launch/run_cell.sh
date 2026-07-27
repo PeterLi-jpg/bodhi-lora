@@ -146,8 +146,13 @@ CUDA_VISIBLE_DEVICES="$GPU" BODHI_VLLM_PORT="$((8000 + GPU))" "$INFER_PY" script
 if [ ! -s "${SFT}/train.jsonl" ] || [ ! -s "${SFT}/val.jsonl" ]; then
     GPU="$(idle_gpus | head -1)"; : "${GPU:?no idle GPU for filtering}"
     echo "[filter] GPU $GPU"
+    # Reuse cached grades when re-filtering (rubric unchanged): grading 4k traces costs
+    # ~50 min, and --resume-from carries existing grades forward so only the threshold
+    # is re-applied. Delete graded.jsonl if the RUBRIC changed and you need a re-grade.
+    FILTER_RESUME=()
+    [ -s "${SFT}/graded.jsonl" ] && FILTER_RESUME=(--resume-from "${SFT}/graded.jsonl")
     CUDA_VISIBLE_DEVICES="$GPU" BODHI_VLLM_PORT="$((8000 + GPU))" "$INFER_PY" scripts/filter_traces.py \
-        --input "$RAW" "${FILTER_DATA[@]}" \
+        --input "$RAW" "${FILTER_DATA[@]}" "${FILTER_RESUME[@]}" \
         --output-dir "$SFT" --min-score "$MIN_SCORE" \
         --graded-output "${SFT}/graded.jsonl" 2>&1 | tee "logs/filter_${BENCH}_${TAG}.log"
 
