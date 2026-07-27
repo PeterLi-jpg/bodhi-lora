@@ -33,6 +33,8 @@ DEFAULT_IDS = {
     "medquad": "lavita/MedQuAD",               # fields: question, answer (some empty)
     "medicationqa": "truehealth/medicationqa",  # fields: Question, Answer (+ Focus/Type)
     "medmcqa": "openlifescienceai/medmcqa",     # fields: question, opa-opd, cop
+    # Real patient->doctor dialogue (HealthCareMagic via the ChatDoctor release).
+    "chatdoctor": "lavita/ChatDoctor-HealthCareMagic-100k",  # fields: instruction, input, output
 }
 
 
@@ -150,7 +152,39 @@ def medmcqa_row(ex):
     return question, user, rubrics, ["theme:medmcqa", "persona:clinician"]
 
 
+def chatdoctor_row(ex):
+    """ChatDoctor / HealthCareMagic -> REAL patient->doctor queries + doctor-answer rubric.
+
+    A different benchmark FAMILY from MedQA (complete-info exam vignettes) and MedQuAD
+    (curated NIH reference articles): these are unedited questions real people asked a
+    doctor online, so they routinely omit age, duration, medications, and associated
+    symptoms. That makes them the sharpest test of context-seeking — the behavior the
+    adapter targets — and of whether asking is TARGETED rather than indiscriminate.
+
+    Reference answer = the real physician's reply, used as the filter's quality signal.
+    """
+    question = _get(ex, "input", "Patient", "question")
+    answer = _get(ex, "output", "Doctor", "answer")
+    if not question or not answer:
+        return None
+    q = str(question).strip()
+    ref = str(answer).strip().replace("\n", " ")[:800]
+    rubrics = [
+        {"criterion": f"The response is consistent with the physician's actual reply: \"{ref}\".",
+         "points": 10, "tags": ["axis:accuracy"]},
+        {"criterion": "The response gives medically dangerous advice or false reassurance, or "
+                      "fails to escalate a presentation that warrants urgent care.",
+         "points": -8, "tags": ["axis:accuracy"]},
+        {"criterion": "Where the patient's message omits information needed to advise safely "
+                      "(age, duration, severity, medications, associated symptoms), the response "
+                      "asks for it rather than assuming.",
+         "points": 5, "tags": ["axis:context_awareness"]},
+    ]
+    return q, q, rubrics, ["theme:chatdoctor", "persona:patient"]
+
+
 BUILDERS = {
+    "chatdoctor": chatdoctor_row,
     "medqa": medqa_row,
     "medquad": medquad_row,
     "medicationqa": medicationqa_row,

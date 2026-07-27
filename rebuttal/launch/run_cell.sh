@@ -92,6 +92,7 @@ else
         medquad)      BENCH_JSONL="data/raw/medquad.jsonl" ;;
         medicationqa) BENCH_JSONL="data/raw/medicationqa.jsonl" ;;
         medmcqa)      BENCH_JSONL="data/raw/medmcqa_open.jsonl" ;;
+        chatdoctor)   BENCH_JSONL="data/raw/chatdoctor.jsonl" ;;
         *) echo "unknown BENCH: $BENCH"; exit 1 ;;
     esac
     if [ ! -s "$BENCH_JSONL" ]; then
