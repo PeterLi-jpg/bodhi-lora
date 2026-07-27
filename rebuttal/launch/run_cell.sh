@@ -115,14 +115,18 @@ PY
 fi
 
 # ---- Stage 1: generate BODHI traces (ONCE per cell) -----------------------------
+# Idempotent + resumable: if a partial raw_traces.jsonl exists (interrupted run),
+# --resume-from continues from the prompt_ids already done instead of discarding
+# them. generate_traces short-circuits without booting vLLM when it is already
+# complete, so re-running this stage on a finished cell is free.
 RAW="${SFT}/raw_traces.jsonl"
-if [ ! -s "$RAW" ]; then
-    GPU="$(idle_gpus | head -1)"; : "${GPU:?no idle GPU for generation}"
-    echo "[gen] GPU $GPU"
-    CUDA_VISIBLE_DEVICES="$GPU" BODHI_VLLM_PORT="$((8000 + GPU))" "$INFER_PY" scripts/generate_traces.py \
-        --model "$MODEL" "${GEN_SRC[@]}" --use-bodhi \
-        --output "$RAW" --max-examples "$GEN_MAX" 2>&1 | tee "logs/gen_${BENCH}_${TAG}.log"
-fi
+GEN_RESUME=()
+[ -s "$RAW" ] && GEN_RESUME=(--resume-from "$RAW")
+GPU="$(idle_gpus | head -1)"; : "${GPU:?no idle GPU for generation}"
+echo "[gen] GPU $GPU$([ -s "$RAW" ] && echo " (resuming $(wc -l < "$RAW") traces)")"
+CUDA_VISIBLE_DEVICES="$GPU" BODHI_VLLM_PORT="$((8000 + GPU))" "$INFER_PY" scripts/generate_traces.py \
+    --model "$MODEL" "${GEN_SRC[@]}" --use-bodhi "${GEN_RESUME[@]}" \
+    --output "$RAW" --max-examples "$GEN_MAX" 2>&1 | tee -a "logs/gen_${BENCH}_${TAG}.log"
 
 # ---- Stage 2: grade + filter (ONCE per cell) ------------------------------------
 if [ ! -s "${SFT}/train.jsonl" ] || [ ! -s "${SFT}/val.jsonl" ]; then
