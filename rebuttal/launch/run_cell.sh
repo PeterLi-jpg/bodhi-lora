@@ -66,6 +66,20 @@ export BODHI_VLLM_TP="${VLLM_TP:-1}"
 # Without PIN_GPU we fall back to auto-detect (fine for a single cell at a time):
 # idle = 0% util AND <2GB used, re-snapshotted per wave so we never grab a card
 # another job has started using.
+# Cooperative lease on the shared node (scripts/gpu_lease.sh + /data/GPUS.txt).
+# Claim up front so another agent can't take the same card during the ~2 min
+# before vLLM allocates and the GPU still reads 0 MiB in nvidia-smi. Released
+# automatically on exit; a SIGKILLed run is cleaned up by `gpu_lease.sh reconcile`.
+LEASE="$REPO/scripts/gpu_lease.sh"
+LEASE_OWNER="${LEASE_OWNER:-bohdi}"
+if [ -x "$LEASE" ] && [ -n "${PIN_GPU:-}" ]; then
+    for g in $PIN_GPU; do
+        CLAIM_PID=$$ bash "$LEASE" claim "$g" "$LEASE_OWNER" "rebuttal $BENCH" \
+            || { echo "GPU $g is leased by someone else — aborting"; exit 1; }
+    done
+    trap 'for g in $PIN_GPU; do bash "$LEASE" release "$g" >/dev/null 2>&1; done' EXIT
+fi
+
 idle_gpus() {
     if [ -n "${PIN_GPU:-}" ]; then
         printf '%s\n' $PIN_GPU
