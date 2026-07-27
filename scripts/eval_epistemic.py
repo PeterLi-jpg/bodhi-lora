@@ -147,17 +147,32 @@ def ensure_healthbench_hard(path: Path) -> Path:
 
 
 def load_prompts_by_id(healthbench_path: Path) -> dict:
-    """Return {prompt_id: messages} from HealthBench Hard.
+    """Return {prompt_id: messages} for every benchmark we might be grading.
 
-    Eval output JSONs only carry prompt_id + response, so we have to
-    rejoin the original prompt content here for the grader to judge
-    whether uncertainty / scope are appropriate to the case.
+    Eval output JSONs only carry prompt_id + response, so we have to rejoin the
+    original prompt content here for the grader to judge whether uncertainty /
+    scope are appropriate to the case.
+
+    Besides HealthBench, we also merge any rebuttal benchmark JSONL present in
+    data/raw (MedQA, MedQuAD, ChatDoctor, ...). Those use prompt_ids like
+    "chatdoctor-<hash>" which do not exist in HealthBench, and without this the
+    lookup fails for every prompt and the run yields an empty score file.
     """
     by_id = {}
-    with open(healthbench_path) as f:
-        for line in f:
-            ex = json.loads(line)
-            by_id[ex["prompt_id"]] = ex["prompt"]
+    paths = [Path(healthbench_path)]
+    for name in ("medqa_open.jsonl", "medquad.jsonl", "chatdoctor.jsonl",
+                 "medicationqa.jsonl", "medmcqa_open.jsonl"):
+        p = DATA_DIR / name
+        if p.exists():
+            paths.append(p)
+    for path in paths:
+        with open(path) as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                ex = json.loads(line)
+                by_id[ex["prompt_id"]] = ex["prompt"]
     return by_id
 
 
@@ -402,7 +417,17 @@ def main():
 
             if failed_lookups:
                 print(f"  WARNING: {len(failed_lookups)} prompt_ids in "
-                      f"{cfg['name']} not found in HealthBench data — skipped.")
+                      f"{cfg['name']} not found in the benchmark data — skipped.")
+                # If EVERY prompt failed to resolve we produce a scores file full of
+                # nulls that looks like a completed run. That silent-success mode
+                # already cost us a full cell, so fail loudly instead.
+                if not graded:
+                    raise SystemExit(
+                        f"eval_epistemic: 0/{len(failed_lookups)} prompt_ids in "
+                        f"{cfg['name']} resolved to a prompt. The benchmark JSONL for "
+                        f"these ids is missing from {DATA_DIR}/ (ids look like "
+                        f"'{failed_lookups[0]}'). Refusing to write an empty score file."
+                    )
             if grade_errors:
                 print(f"  WARNING: {len(grade_errors)} grader errors in "
                       f"{cfg['name']}; first few:")
