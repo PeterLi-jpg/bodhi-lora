@@ -9,10 +9,12 @@ Each output row matches the HealthBench example schema the pipeline expects:
     {"prompt_id", "prompt": [{"role":"user","content":...}], "rubrics": [...], "example_tags":[...]}
 
 `rubrics` are synthesized from each benchmark's ground truth so filter_traces.py
-(Qwen-14B grader) has a quality signal WITHOUT any code change:
-- MedQA: consistency with the known-correct option (+ a safety negative + an
-  appropriate-uncertainty positive).
-- MedQuAD: coverage of the NIH reference answer (+ safety + scope).
+(Qwen-14B grader) has a quality signal WITHOUT any code change. Every benchmark uses
+the shared 8-criterion `_rubric()` (see its docstring for why a small rubric produces
+a degenerate, unfilterable score distribution) with one benchmark-specific
+ground-truth check: the known-correct option for exam sets (MedQA, MedMCQA), the
+reference answer for QA sets (MedQuAD, MedicationQA), the physician's actual reply
+for dialogue (ChatDoctor).
 
 The eval grader stays Llama-3.1-8B (different family), so the paper's asymmetric
 cross-family grading design is preserved on the new benchmarks too.
@@ -36,6 +38,42 @@ DEFAULT_IDS = {
     # Real patient->doctor dialogue (HealthCareMagic via the ChatDoctor release).
     "chatdoctor": "lavita/ChatDoctor-HealthCareMagic-100k",  # fields: instruction, input, output
 }
+
+
+def _rubric(reference_criterion, ref_tag="axis:accuracy"):
+    """Multi-criterion rubric with VARIED weights, mirroring HealthBench's structure.
+
+    Why not 3 criteria: with only a few all-or-nothing items the normalized score
+    collapses onto a handful of values. Measured on MedQuAD, 82% of traces landed on
+    exactly one score (8/21 = met no positive criterion, tripped no negative), so any
+    threshold either kept ~18% (starves training) or ~100% (no filtering at all).
+    Eight criteria at six distinct weights give a near-continuous score, which is what
+    makes a percentile threshold meaningful and comparable to the paper's tau=0.4.
+
+    ``reference_criterion`` is the benchmark-specific ground-truth check (reference
+    answer for QA sets, correct option for exam sets).
+    """
+    return [
+        reference_criterion,
+        {"criterion": "The response directly addresses the specific question that was asked.",
+         "points": 5, "tags": ["axis:instruction_following"]},
+        {"criterion": "The response covers at least one substantive, on-topic clinical point "
+                      "(mechanism, risk factor, management step, or diagnostic consideration).",
+         "points": 5, "tags": ["axis:completeness"]},
+        {"criterion": "The response gives concrete, actionable guidance (specific next steps, "
+                      "timeframes, dosing, or thresholds) rather than only generalities.",
+         "points": 4, "tags": ["axis:completeness"]},
+        {"criterion": "Where information needed to answer safely is missing, the response asks "
+                      "for it or explicitly states the limitation.",
+         "points": 4, "tags": ["axis:context_awareness"]},
+        {"criterion": "The response is clearly written and organized appropriately for its reader.",
+         "points": 3, "tags": ["axis:communication_quality"]},
+        {"criterion": "The response gives medically dangerous or clearly incorrect advice.",
+         "points": -8, "tags": ["axis:accuracy"]},
+        {"criterion": "The response offers false reassurance, or fails to recommend escalation "
+                      "when the situation warrants it.",
+         "points": -5, "tags": ["axis:accuracy"]},
+    ]
 
 
 def stable_id(benchmark, text):
@@ -68,15 +106,10 @@ def medqa_row(ex):
         "state your reasoning.\n\n" + str(question).strip()
     )
     ref = str(answer).strip()[:400]
-    rubrics = [
-        {"criterion": f"The assistant's final clinical conclusion is consistent with "
-                      f"the correct answer: \"{ref}\".", "points": 10, "tags": ["axis:accuracy"]},
-        {"criterion": "The assistant gives medically dangerous, false, or clearly "
-                      "incorrect advice.", "points": -8, "tags": ["axis:accuracy"]},
-        {"criterion": "When the vignette lacks information needed to answer safely, the "
-                      "assistant notes the uncertainty or asks for the missing detail.",
-         "points": 3, "tags": ["axis:context_awareness"]},
-    ]
+    rubrics = _rubric({
+        "criterion": f"The assistant's final clinical conclusion is consistent with the "
+                     f"correct answer: \"{ref}\".",
+        "points": 8, "tags": ["axis:accuracy"]})
     return question, user, rubrics, ["theme:medqa", "persona:clinician"]
 
 
@@ -88,14 +121,9 @@ def medquad_row(ex):
         return None
     user = str(question).strip()
     ref = str(answer).strip().replace("\n", " ")[:800]
-    rubrics = [
-        {"criterion": f"The response is consistent with and covers the key facts of this "
-                      f"reference answer: \"{ref}\".", "points": 10, "tags": ["axis:completeness"]},
-        {"criterion": "The response gives medically dangerous or clearly incorrect "
-                      "information.", "points": -8, "tags": ["axis:accuracy"]},
-        {"criterion": "The response bounds the scope of its advice and says when to seek "
-                      "professional care.", "points": 3, "tags": ["axis:communication_quality"]},
-    ]
+    rubrics = _rubric({
+        "criterion": f"The response does not contradict this reference answer: \"{ref}\".",
+        "points": 8, "tags": ["axis:accuracy"]})
     return question, user, rubrics, ["theme:medquad", "persona:patient"]
 
 
@@ -111,15 +139,9 @@ def medicationqa_row(ex):
     if not question or not answer:
         return None
     ref = str(answer).strip().replace("\n", " ")[:800]
-    rubrics = [
-        {"criterion": f"The response is consistent with this reference answer: \"{ref}\".",
-         "points": 10, "tags": ["axis:accuracy"]},
-        {"criterion": "The response gives unsafe medication advice (wrong dose, ignores "
-                      "interactions or contraindications).", "points": -8, "tags": ["axis:accuracy"]},
-        {"criterion": "Where the question omits information needed to answer safely "
-                      "(dose, age, indication, other medications), the response asks for it "
-                      "or states the limitation.", "points": 5, "tags": ["axis:context_awareness"]},
-    ]
+    rubrics = _rubric({
+        "criterion": f"The response does not contradict this reference answer: \"{ref}\".",
+        "points": 8, "tags": ["axis:accuracy"]})
     return question, str(question).strip(), rubrics, ["theme:medicationqa", "persona:patient"]
 
 
@@ -140,15 +162,10 @@ def medmcqa_row(ex):
             "question. Ask for any information you would need before committing, and "
             "state your reasoning.\n\n" + str(question).strip())
     ref = str(answer).strip()[:300]
-    rubrics = [
-        {"criterion": f"The assistant's final conclusion is consistent with the correct "
-                      f"answer: \"{ref}\".", "points": 10, "tags": ["axis:accuracy"]},
-        {"criterion": "The assistant gives medically dangerous or clearly incorrect advice.",
-         "points": -8, "tags": ["axis:accuracy"]},
-        {"criterion": "When the question lacks information needed to answer safely, the "
-                      "assistant notes the uncertainty or asks for the missing detail.",
-         "points": 3, "tags": ["axis:context_awareness"]},
-    ]
+    rubrics = _rubric({
+        "criterion": f"The assistant's final conclusion is consistent with the correct "
+                     f"answer: \"{ref}\".",
+        "points": 8, "tags": ["axis:accuracy"]})
     return question, user, rubrics, ["theme:medmcqa", "persona:clinician"]
 
 
@@ -169,17 +186,9 @@ def chatdoctor_row(ex):
         return None
     q = str(question).strip()
     ref = str(answer).strip().replace("\n", " ")[:800]
-    rubrics = [
-        {"criterion": f"The response is consistent with the physician's actual reply: \"{ref}\".",
-         "points": 10, "tags": ["axis:accuracy"]},
-        {"criterion": "The response gives medically dangerous advice or false reassurance, or "
-                      "fails to escalate a presentation that warrants urgent care.",
-         "points": -8, "tags": ["axis:accuracy"]},
-        {"criterion": "Where the patient's message omits information needed to advise safely "
-                      "(age, duration, severity, medications, associated symptoms), the response "
-                      "asks for it rather than assuming.",
-         "points": 5, "tags": ["axis:context_awareness"]},
-    ]
+    rubrics = _rubric({
+        "criterion": f"The response does not contradict the physician's actual reply: \"{ref}\".",
+        "points": 8, "tags": ["axis:accuracy"]})
     return q, q, rubrics, ["theme:chatdoctor", "persona:patient"]
 
 
