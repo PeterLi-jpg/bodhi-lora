@@ -22,7 +22,10 @@
 # win the same GPU. State lives in one human-readable table (LEASE_FILE).
 set -uo pipefail
 
-LEASE_FILE="${GPU_LEASE_FILE:-/data/GPUS.txt}"
+# Canonical shared path agreed with the group (Sebastian, 2026-07-27).
+# Do NOT create a second copy elsewhere — two files would reintroduce exactly the
+# inconsistency this protocol exists to prevent.
+LEASE_FILE="${GPU_LEASE_FILE:-/home/nvidia/GPUS.txt}"
 LOCK_FILE="${LEASE_FILE}.lock"
 NGPU="${NGPU:-8}"
 
