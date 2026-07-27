@@ -1,0 +1,62 @@
+# Rebuttal branch — 2nd new base model: Med42-8B (clinical, Llama-3 family).
+#
+# Why this model:
+#  - CLINICAL (answers reviewer HomM's "second clinical model" ask).
+#  - DIFFERENT FAMILY from MedGemma-27B (Llama-3 vs Gemma), so it is real
+#    cross-family evidence — unlike Gemma-2-9B, which shares MedGemma's lineage.
+#  - COMPETENT instruction-follower, unlike BioMistral-7B (whose null result came
+#    from the CoT wrapper being unable to elicit the behavior at all).
+#  - Non-gated. Meditron3-8B was the first choice but both its repos are gated for
+#    this HF token; swap `model.name` to OpenMeditron/Meditron3-8B once access is
+#    granted (also Llama-3.1-8B based, so this config transfers unchanged).
+#
+# Caveat to handle in the writeup: Llama-3 is the eval grader's family. The planned
+# clinical-judge re-grade (COVERAGE.md D1) neutralizes the same-family optic.
+#
+# 8B bf16 (~16 GB) -> full-precision LoRA fits easily on one H100 80GB.
+# Llama-3 chat template exposes a clean assistant header
+# (<|start_header_id|>assistant<|end_header_id|>), so masking auto-detects it.
+
+seed: 42
+
+model:
+  name: m42-health/Llama3-Med42-8B
+  torch_dtype: bfloat16
+  quantization: null
+
+lora:
+  r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  target_modules:
+    - q_proj
+    - k_proj
+    - v_proj
+    - o_proj
+    - gate_proj
+    - up_proj
+    - down_proj
+  task_type: CAUSAL_LM
+  variant: standard
+
+training:
+  num_epochs: 3
+  per_device_train_batch_size: 4
+  gradient_accumulation_steps: 4    # effective batch = 16 (matches the paper)
+  learning_rate: 1.0e-4
+  warmup_ratio: 0.05
+  lr_scheduler_type: cosine
+  max_seq_length: 4096
+  logging_steps: 10
+  save_strategy: epoch
+  eval_strategy: epoch
+  bf16: true
+  gradient_checkpointing: true
+  gradient_checkpointing_kwargs:
+    use_reentrant: false
+
+data:
+  # Llama-3 template auto-detects the response template; no override needed.
+  train_file: data/sft/train.jsonl
+  val_file: data/sft/val.jsonl
+  eval_sample_ids: data/raw/hard_200_sample_ids.json
