@@ -158,12 +158,16 @@ if [ ! -s "${SFT}/train.jsonl" ] || [ ! -s "${SFT}/val.jsonl" ]; then
     RAWN=$(wc -l < "$RAW" 2>/dev/null || echo 1)
     if [ "$BENCH" != "healthbench" ] && [ "$RAWN" -gt 0 ] && [ "$((KEPT * 100 / RAWN))" -lt 40 ]; then
         TAU=$("$INFER_PY" - "${SFT}/graded.jsonl" <<'PY'
-import json, sys, statistics
+import json, sys
 rows = [json.loads(l) for l in open(sys.argv[1]) if l.strip()]
 sc = sorted(s for s in (r.get("grade", {}).get("normalized_score") for r in rows)
             if isinstance(s, (int, float)))
 # 22nd percentile — the percentile the paper's tau=0.4 corresponded to.
-print(f"{sc[max(0, int(0.22 * len(sc)) - 1)]:.4f}" if sc else "0.0")
+# Print FULL precision and subtract an epsilon: these score distributions have a
+# large mass point at a repeating value (e.g. 0.380952...), and rounding tau to a
+# few decimals can land just ABOVE it, so the `>= tau` filter excludes the whole
+# spike and retention does not move at all. Nudging down is always safe.
+print(f"{sc[max(0, int(0.22 * len(sc)) - 1)] - 1e-9:.12f}" if sc else "0.0")
 PY
 )
         echo "[filter] retention $KEPT/$RAWN too low at tau=$MIN_SCORE; re-filtering at 22nd-pct tau=$TAU"
