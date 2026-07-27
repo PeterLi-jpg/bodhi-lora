@@ -27,6 +27,12 @@ BENCH="${BENCH:?set BENCH (healthbench|medqa|medquad)}"
 SEEDS="${SEEDS:-42 7 13 99 101}"
 EVAL_HOLDOUT_N="${EVAL_HOLDOUT_N:-200}"       # eval prompts held out of training
 GEN_MAX="${GEN_MAX:-4200}"                    # prompts to generate traces over
+# Filter threshold. HealthBench keeps the paper's tau=0.4 (its many-criterion rubrics
+# spread scores out; retention ~78%). MedQA/MedQuAD use SYNTHESIZED 3-criterion rubrics
+# whose normalized scores bunch near 0.4, so a fixed 0.4 cuts ~92% of traces and starves
+# training. For those we set tau from the score distribution's 22nd percentile — the same
+# rule that produced the paper's 0.4 — keeping retention comparable across benchmarks.
+MIN_SCORE="${MIN_SCORE:-0.4}"
 # Eval grader = Llama-3.1-8B (paper). meta-llama/* is gated; default to the
 # non-gated NousResearch mirror (identical weights) so eval works without Meta access.
 GRADER_MODEL="${GRADER_MODEL:-NousResearch/Meta-Llama-3.1-8B-Instruct}"
@@ -69,8 +75,10 @@ if [ "$BENCH" = "healthbench" ]; then
     AGG_DATA=(--healthbench data/raw/healthbench_hard.jsonl data/raw/healthbench.jsonl)
 else
     case "$BENCH" in
-        medqa)   BENCH_JSONL="data/raw/medqa_open.jsonl" ;;
-        medquad) BENCH_JSONL="data/raw/medquad.jsonl" ;;
+        medqa)        BENCH_JSONL="data/raw/medqa_open.jsonl" ;;
+        medquad)      BENCH_JSONL="data/raw/medquad.jsonl" ;;
+        medicationqa) BENCH_JSONL="data/raw/medicationqa.jsonl" ;;
+        medmcqa)      BENCH_JSONL="data/raw/medmcqa_open.jsonl" ;;
         *) echo "unknown BENCH: $BENCH"; exit 1 ;;
     esac
     if [ ! -s "$BENCH_JSONL" ]; then
@@ -108,7 +116,34 @@ if [ ! -s "${SFT}/train.jsonl" ] || [ ! -s "${SFT}/val.jsonl" ]; then
     echo "[filter] GPU $GPU"
     CUDA_VISIBLE_DEVICES="$GPU" BODHI_VLLM_PORT="$((8000 + GPU))" "$INFER_PY" scripts/filter_traces.py \
         --input "$RAW" "${FILTER_DATA[@]}" \
-        --output-dir "$SFT" --min-score 0.4 2>&1 | tee "logs/filter_${BENCH}_${TAG}.log"
+        --output-dir "$SFT" --min-score "$MIN_SCORE" \
+        --graded-output "${SFT}/graded.jsonl" 2>&1 | tee "logs/filter_${BENCH}_${TAG}.log"
+
+    # Synthesized-rubric benchmarks: if the fixed threshold retained too little,
+    # re-derive tau as the 22nd percentile of the observed scores (the paper's rule)
+    # and re-filter from the ALREADY-GRADED file (no re-grading, no GPU).
+    KEPT=$(wc -l < "${SFT}/train.jsonl" 2>/dev/null || echo 0)
+    RAWN=$(wc -l < "$RAW" 2>/dev/null || echo 1)
+    if [ "$BENCH" != "healthbench" ] && [ "$RAWN" -gt 0 ] && [ "$((KEPT * 100 / RAWN))" -lt 40 ]; then
+        TAU=$("$INFER_PY" - "${SFT}/graded.jsonl" <<'PY'
+import json, sys, statistics
+rows = [json.loads(l) for l in open(sys.argv[1]) if l.strip()]
+sc = sorted(s for s in (r.get("grade", {}).get("normalized_score") for r in rows)
+            if isinstance(s, (int, float)))
+# 22nd percentile — the percentile the paper's tau=0.4 corresponded to.
+print(f"{sc[max(0, int(0.22 * len(sc)) - 1)]:.4f}" if sc else "0.0")
+PY
+)
+        echo "[filter] retention $KEPT/$RAWN too low at tau=$MIN_SCORE; re-filtering at 22nd-pct tau=$TAU"
+        # --resume-from carries the existing grades forward, so nothing is re-graded
+        # (no GPU, no grader model load) — it only re-applies the threshold.
+        "$INFER_PY" scripts/filter_traces.py \
+            --input "$RAW" "${FILTER_DATA[@]}" \
+            --resume-from "${SFT}/graded.jsonl" \
+            --output-dir "$SFT" --min-score "$TAU" \
+            --graded-output "${SFT}/graded.jsonl" \
+            2>&1 | tail -6 | tee -a "logs/filter_${BENCH}_${TAG}.log"
+    fi
 fi
 echo "train: $(wc -l < "${SFT}/train.jsonl")  val: $(wc -l < "${SFT}/val.jsonl")"
 
