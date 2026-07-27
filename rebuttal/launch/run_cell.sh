@@ -149,8 +149,12 @@ print(f"{sc[max(0, int(0.22 * len(sc)) - 1)]:.4f}" if sc else "0.0")
 PY
 )
         echo "[filter] retention $KEPT/$RAWN too low at tau=$MIN_SCORE; re-filtering at 22nd-pct tau=$TAU"
-        # --resume-from carries the existing grades forward, so nothing is re-graded
-        # (no GPU, no grader model load) — it only re-applies the threshold.
+        # --resume-from carries the existing grades forward, so no trace is re-graded;
+        # this pass only re-applies the threshold. It still boots the grader engine
+        # (filter_traces always opens one), so it MUST stay pinned to this cell's GPU
+        # and port — unpinned, vLLM would default to GPU 0, which belongs to another
+        # user's job.
+        CUDA_VISIBLE_DEVICES="$GPU" BODHI_VLLM_PORT="$((8000 + GPU))" \
         "$INFER_PY" scripts/filter_traces.py \
             --input "$RAW" "${FILTER_DATA[@]}" \
             --resume-from "${SFT}/graded.jsonl" \
