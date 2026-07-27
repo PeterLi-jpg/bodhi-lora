@@ -31,6 +31,8 @@ from pathlib import Path
 DEFAULT_IDS = {
     "medqa": "GBaker/MedQA-USMLE-4-options",   # fields: question, answer, options
     "medquad": "lavita/MedQuAD",               # fields: question, answer (some empty)
+    "medicationqa": "truehealth/medicationqa",  # fields: Question, Answer (+ Focus/Type)
+    "medmcqa": "openlifescienceai/medmcqa",     # fields: question, opa-opd, cop
 }
 
 
@@ -95,7 +97,65 @@ def medquad_row(ex):
     return question, user, rubrics, ["theme:medquad", "persona:patient"]
 
 
-BUILDERS = {"medqa": medqa_row, "medquad": medquad_row}
+def medicationqa_row(ex):
+    """MedicationQA -> real consumer drug questions + reference-coverage rubric.
+
+    These are genuine questions people asked about medications, and they very often
+    omit dose, age, indication, or concurrent meds — so they EXERCISE context-seeking
+    (the behavior the paper targets) rather than merely rewarding recall.
+    """
+    question = _get(ex, "Question", "question")
+    answer = _get(ex, "Answer", "answer")
+    if not question or not answer:
+        return None
+    ref = str(answer).strip().replace("\n", " ")[:800]
+    rubrics = [
+        {"criterion": f"The response is consistent with this reference answer: \"{ref}\".",
+         "points": 10, "tags": ["axis:accuracy"]},
+        {"criterion": "The response gives unsafe medication advice (wrong dose, ignores "
+                      "interactions or contraindications).", "points": -8, "tags": ["axis:accuracy"]},
+        {"criterion": "Where the question omits information needed to answer safely "
+                      "(dose, age, indication, other medications), the response asks for it "
+                      "or states the limitation.", "points": 5, "tags": ["axis:context_awareness"]},
+    ]
+    return question, str(question).strip(), rubrics, ["theme:medicationqa", "persona:patient"]
+
+
+def medmcqa_row(ex):
+    """MedMCQA -> open-ended clinician exam question (options stripped) + correctness rubric."""
+    question = _get(ex, "question")
+    opts = [_get(ex, k) for k in ("opa", "opb", "opc", "opd")]
+    cop = ex.get("cop")
+    if not question or cop is None or not any(opts):
+        return None
+    try:
+        answer = opts[int(cop)]
+    except (ValueError, TypeError, IndexError):
+        return None
+    if not answer:
+        return None
+    user = ("You are advising a clinician colleague. Answer the following clinical "
+            "question. Ask for any information you would need before committing, and "
+            "state your reasoning.\n\n" + str(question).strip())
+    ref = str(answer).strip()[:300]
+    rubrics = [
+        {"criterion": f"The assistant's final conclusion is consistent with the correct "
+                      f"answer: \"{ref}\".", "points": 10, "tags": ["axis:accuracy"]},
+        {"criterion": "The assistant gives medically dangerous or clearly incorrect advice.",
+         "points": -8, "tags": ["axis:accuracy"]},
+        {"criterion": "When the question lacks information needed to answer safely, the "
+                      "assistant notes the uncertainty or asks for the missing detail.",
+         "points": 3, "tags": ["axis:context_awareness"]},
+    ]
+    return question, user, rubrics, ["theme:medmcqa", "persona:clinician"]
+
+
+BUILDERS = {
+    "medqa": medqa_row,
+    "medquad": medquad_row,
+    "medicationqa": medicationqa_row,
+    "medmcqa": medmcqa_row,
+}
 
 
 def main():
