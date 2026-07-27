@@ -55,9 +55,22 @@ export BODHI_VLLM_MODE="${BODHI_VLLM_MODE:-subprocess}"
 export BODHI_VLLM_ACCEL="${BODHI_VLLM_ACCEL:-gpu}"
 export BODHI_VLLM_TP="${VLLM_TP:-1}"
 
-# Idle GPUs = 0% util AND <2GB used. Snapshotted per wave so we never grab a card
-# another job started using between waves.
+# GPU selection.
+#
+# PIN_GPU (recommended when launching several cells at once): a space-separated list
+# of GPU indices this cell owns, e.g. PIN_GPU="3 4". Auto-detection is RACY across
+# concurrently-starting cells — vLLM takes ~2 min to allocate, so every cell launched
+# in that window sees the same card as "idle" and they all pile onto it. Pinning
+# removes the race; the caller is responsible for handing out disjoint sets.
+#
+# Without PIN_GPU we fall back to auto-detect (fine for a single cell at a time):
+# idle = 0% util AND <2GB used, re-snapshotted per wave so we never grab a card
+# another job has started using.
 idle_gpus() {
+    if [ -n "${PIN_GPU:-}" ]; then
+        printf '%s\n' $PIN_GPU
+        return
+    fi
     nvidia-smi --query-gpu=index,utilization.gpu,memory.used \
         --format=csv,noheader,nounits | awk -F', ' '$2==0 && $3<2000 {print $1}'
 }
