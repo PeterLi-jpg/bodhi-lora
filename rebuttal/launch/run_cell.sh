@@ -157,6 +157,16 @@ if [ ! -s "${SFT}/train.jsonl" ] || [ ! -s "${SFT}/val.jsonl" ]; then
     KEPT=$(wc -l < "${SFT}/train.jsonl" 2>/dev/null || echo 0)
     RAWN=$(wc -l < "$RAW" 2>/dev/null || echo 1)
     if [ "$BENCH" != "healthbench" ] && [ "$RAWN" -gt 0 ] && [ "$((KEPT * 100 / RAWN))" -lt 40 ]; then
+        # Guard: if the first pass graded nothing (transient grader/vLLM failure), the
+        # percentile below would be computed from an empty file, yield tau=0, and the
+        # re-filter would silently keep 100% of traces — i.e. no quality filter at all.
+        # Treat that as a hard error instead of quietly producing an unfiltered cell.
+        NGRADED=$(wc -l < "${SFT}/graded.jsonl" 2>/dev/null || echo 0)
+        if [ "$NGRADED" -lt 100 ]; then
+            echo "[filter] ABORT: only ${NGRADED} graded traces — grading failed, refusing to"
+            echo "         derive a threshold (would keep everything). Fix grading and re-run."
+            exit 1
+        fi
         TAU=$("$INFER_PY" - "${SFT}/graded.jsonl" <<'PY'
 import json, sys
 rows = [json.loads(l) for l in open(sys.argv[1]) if l.strip()]
