@@ -66,6 +66,7 @@ if [ "$BENCH" = "healthbench" ]; then
              --exclude-ids data/raw/healthbench_hard.jsonl data/raw/hard_200_sample_ids.json)
     FILTER_DATA=(--healthbench-data data/raw/healthbench_hard.jsonl data/raw/healthbench.jsonl)
     EVAL_BENCH=()
+    AGG_DATA=(--healthbench data/raw/healthbench_hard.jsonl data/raw/healthbench.jsonl)
 else
     case "$BENCH" in
         medqa)   BENCH_JSONL="data/raw/medqa_open.jsonl" ;;
@@ -88,6 +89,7 @@ PY
     GEN_SRC=(--dataset-files "$BENCH_JSONL" --exclude-ids "$SAMPLE_IDS")
     FILTER_DATA=(--healthbench-data "$BENCH_JSONL")
     EVAL_BENCH=(--benchmark-jsonl "$BENCH_JSONL")
+    AGG_DATA=(--healthbench "$BENCH_JSONL")
 fi
 
 # ---- Stage 1: generate BODHI traces (ONCE per cell) -----------------------------
@@ -156,8 +158,8 @@ done
 # ---- Stage 5: aggregate across seeds --------------------------------------------
 SEED_EVAL_DIRS=(); for s in $SEEDS; do SEED_EVAL_DIRS+=("${WORK}/seed_${s}/eval"); done
 "$INFER_PY" scripts/aggregate_seeds.py --seed-dirs "${SEED_EVAL_DIRS[@]}" \
-    ${BENCH_JSONL:+--healthbench "$BENCH_JSONL"} \
+    "${AGG_DATA[@]}" \
     --output "${WORK}/multi_seed_summary.json" || \
-    echo "NOTE: aggregate_seeds may need a benchmark flag for non-HealthBench; see logs."
+    echo "NOTE: aggregate_seeds failed; per-seed eval json are intact (peek_results.py works)."
 
 echo "=== cell done: ${WORK} ==="
