@@ -6,15 +6,16 @@ waiting. Below are the results, with the parts of your critique they do not answ
 
 **W1, Q1 and Q2. The evaluation is too narrow**
 
-The honest answer is that we traded breadth for depth, and for a paper claiming generality that was the
-wrong trade. Training the 27B adapters on TPU v6e-8 was the dominant cost, so we spent the budget on
-depth in one setting, 5 seeds with bootstrap intervals, an integrity-checked holdout and a contamination
-probe, rather than on coverage across settings.
+The constraint was compute access rather than a judgment about what mattered. Training one 27B adapter on
+TPU v6e-8 consumed most of what we had, so we spent it on depth in one setting: 5 seeds with bootstrap
+intervals, an integrity-checked holdout and a contamination probe. The paper says as much, listing
+component ablations as requiring compute beyond the budget. Further compute became available only after
+the paper was finished, which is why the runs below exist and why the remaining items are commitments we
+can keep rather than aspirations.
 
-We are closing that gap from both ends rather than only adding runs. On the claim side, the contribution
+What was ours to fix is the mismatch between that evidence and the language around it. The contribution
 will be described as a recipe plus an evaluation decomposition for open-ended, information-seeking
-clinical Q&A, not as a validated general framework, and we will state what it does not cover. On the
-evidence side, the runs below widen what has been tested.
+clinical Q&A, not as a validated general framework, and we will state what it does not cover.
 
 *Results on additional base models and evaluation sets.* You asked for one or two additional base
 models, or one additional clinical evaluation set. We re-ran the
@@ -50,8 +51,8 @@ teacher fails there too (14.5% active inquiry, 20% of traces clearing the filter
 Mistral-24B).
 
 *One part of W1 we have not addressed.* Your weakness named three things: a single model, a single
-benchmark, and a single CoT protocol. We have varied the first two. We have not varied the protocol, so
-the claim that the recipe is protocol-agnostic remains untested, and we do not assert it.
+benchmark, and a single CoT protocol. We have varied the first two, not the protocol, so the claim that
+the recipe is protocol-agnostic remains untested and we do not assert it.
 
 *What the behavior gains cost in aggregate quality.* We report this including where it is unfavourable.
 On HealthBench the aggregate rubric score is
@@ -106,19 +107,17 @@ filter-then-finetune logic we apply to behavioral rather than factual demonstrat
 AI (Bai et al., 2022), which uses self-critique where we use a CoT protocol as a behavioral teacher, with
 a table comparing inference cost, teacher requirement, behavioral versus factual focus, and generality.
 
-We should be clear about what that does and does not give you: it is a positioning argument, not a
-measurement. A direct head-to-head against an inference-time calibration baseline is the single most
-valuable experiment we have not run, and we name it as the immediate next step rather than folding it
-into a claim.
+That is a positioning argument, not a measurement. A direct head-to-head against an inference-time
+calibration baseline is the single most valuable experiment we have not run, and we name it as the
+immediate next step rather than folding it into a claim.
 
 **On workshop versus conference scope**
 
-We understand the assessment and think it was a fair reading of the submitted version. The gap you
-identified has narrowed for two of its three parts: there is now 5-seed evidence across three model
-families and three benchmarks, with a scope condition showing where the recipe fails and why. Two
-mechanistic analyses requested by another reviewer were also completed, distinguishing calibration from
-surface mimicry and identifying output-format leakage rather than capacity exhaustion as the cause of the
-CoT/LoRA interference we reported.
+We understand the assessment and think it was a fair reading of the submitted version. The gap has
+narrowed for two of its three parts: 5-seed evidence across three model families and three benchmarks,
+with a scope condition showing where the recipe fails and why. Two mechanistic analyses requested by
+another reviewer were also completed, distinguishing calibration from surface mimicry and identifying
+output-format leakage rather than capacity exhaustion as the cause of the interference we reported.
 
 We would also argue the evidence changed in kind, not only in quantity: a single positive instantiation
 cannot separate "the recipe works" from "this pairing happens to work," whereas several cells, a
