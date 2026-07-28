@@ -1,6 +1,9 @@
 \documentclass{article}
 
-\usepackage[preprint]{neurips_2025}
+% For anonymous submission (double-blind review), use no options:
+\usepackage{neurips_2026}
+% For arXiv preprint, use: \usepackage[preprint]{neurips_2026}
+% For camera-ready after acceptance, use: \usepackage[main,final]{neurips_2026}
 
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
@@ -15,73 +18,89 @@
 \usepackage{graphicx}
 \usepackage{multirow}
 \usepackage{enumitem}
+\usepackage{float}
+\usepackage[breakable]{tcolorbox}
+
+% Conversation box: light warm background, subtle border, no rounding
+\tcbset{
+  convbox/.style={
+    breakable,
+    colback=orange!4!white,
+    colframe=orange!30!black!25,
+    boxrule=0.6pt,
+    arc=0pt, outer arc=0pt,
+    left=8pt, right=8pt, top=5pt, bottom=5pt,
+    fontupper=\small,
+  }
+}
+\newcommand{\convlabel}[1]{\textbf{\textsf{#1}}\enspace}
+\newcommand{\convscore}[1]{\hfill{\footnotesize\textcolor{gray}{#1}}}
 
 \newcommand{\tbd}[1][]{{\color{red}\textbf{[TBD\if\relax#1\relax\else: #1\fi]}}}
 \newcommand{\bodhi}{BODHI}
 \newcommand{\hbhard}{HealthBench-Hard}
 
-\title{Distilling Epistemic Virtues into Model Weights via LoRA}
+\title{Ask Before You Answer: Distilling Clinical Epistemic Calibration into Model Weights}
 
-% Camera-ready author block (NeurIPS format).
-% For double-blind review, replace with: \author{Anonymous Author(s)}
-% Emails kept out of the title block (per NeurIPS convention) --- see
-% \href{...}{Correspondence} footnote and AUTHORS.md.
-\author{\normalfont%
-  Anqi Peter Li\textsuperscript{1,2} \quad
-  Sebasti\'an Andr\'es Cajas Ordo\~nez\textsuperscript{2}\thanks{Correspondence: \texttt{sebasmos@mit.edu}.} \quad
-  Felipe Ocampo Osorio\textsuperscript{2,3} \\
-  Maximin Lange\textsuperscript{2,4} \quad
-  Sahil Kapadia\textsuperscript{5} \quad
-  Hillary Clinton Kasimbazi\textsuperscript{6,7} \quad
-  Zineb Mousmi\textsuperscript{8} \\
-  Martha Nakitanda\textsuperscript{9} \quad
-  Sohyeon Jeon\textsuperscript{10} \quad
-  Ashley Zhang\textsuperscript{11} \quad
-  Leo Anthony Celi\textsuperscript{2,12} \\[6pt]
-  \normalfont\small
-  \textsuperscript{1}YCRG Labs \enspace
-  \textsuperscript{2}MIT Critical Data, MIT \enspace
-  \textsuperscript{3}Fundaci\'on Valle del Lili \enspace
-  \textsuperscript{4}King's College London \\
-  \textsuperscript{5}UNC Chapel Hill \enspace
-  \textsuperscript{6}Makerere University \enspace
-  \textsuperscript{7}Uganda Cancer Institute \enspace
-  \textsuperscript{8}UM6P, Morocco \\
-  \textsuperscript{9}Busitema University \enspace
-  \textsuperscript{10}Seoul National University Hospital \enspace
-  \textsuperscript{11}Collingwood School \enspace
-  \textsuperscript{12}BIDMC
-}
+% Anonymous submission block for double-blind review.
+% For arXiv/camera-ready, comment the line below and uncomment the block that follows.
+\author{Anonymous Author(s)}
+
+% FULL AUTHOR BLOCK (uncomment for arXiv preprint and camera-ready):
+% \author{%
+%   \normalfont
+%   \begin{tabular}[t]{@{}c@{}}
+%     Anonymous Author 1$^{1,2}$\thanks{Correspondence: \texttt{redacted-email-1@gmail.com}.} \quad
+%     Anonymous Author 2$^{1}$ \quad
+%     Anonymous Author 3$^{1,3}$ \quad
+%     Anonymous Author 4$^{4}$ \\[3pt]
+%     Anonymous Author 5$^{8}$ \quad
+%     Anonymous Author 6$^{7}$ \quad
+%     Anonymous Author 7$^{5,6}$ \\[8pt]
+%     \small
+%     $^{1}$Anonymous Group, MIT \enspace
+%     $^{2}$Anonymous Lab \enspace
+%     $^{3}$Anonymous Institution \enspace
+%     $^{4}$UNC Chapel Hill \\[2pt]
+%     \small
+%     $^{5}$Anonymous University \enspace
+%     $^{6}$Anonymous Institute \enspace
+%     $^{7}$Anonymous University \enspace
+%     $^{8}$Anonymous Hospital
+%   \end{tabular}
+% }
 
 \begin{document}
 
 \maketitle
 
 \begin{abstract}
-Language models trained with RLHF suppress clinically essential behaviors---clarifying questions, uncertainty acknowledgment, emergency escalation---because human raters reward confidence over calibration. Inference-time prompt wrappers can restore these behaviors, but at $\sim\!2{\times}$ latency and with no persistence: remove the wrapper and the model reverts. We show that a wrapper's behavioral effect can be permanently distilled into model weights by generating wrapper-conditioned traces, grading against expert rubrics, filtering to quality demonstrations, and fine-tuning with LoRA. The wrapper teaches during data generation, then becomes unnecessary at deployment.
-
-Applied to MedGemma-27B with the \bodhi{} calibration wrapper on HealthBench, ${\sim}$2,800 quality-filtered training traces per seed yield a LoRA adapter that---\emph{without the wrapper at inference}---raises active clinical inquiry from 17.5\% to 45.6\% ($d{=}0.63$, $p{<}10^{-40}$, $n{\approx}1{,}000$ prompt evaluations pooled across 5 seeds), context-seeking from 1.40 to 1.75 on a 0--2 scale ($d{=}0.44$), red-flag identification from 1.52 to 1.67 ($d{=}0.20$), and scope bounding from 1.91 to 1.97 ($d{=}0.22$)---while preserving aggregate clinical quality ($p{=}0.57$, $d{=}0.03$) and eliminating blanket disclaimers. Asymmetric cross-family grading (Qwen-14B filter, Llama-8B evaluator) prevents filter-grader bias from inflating the reported metrics; the evaluation grader never participated in training-data selection. Stacking the wrapper \emph{on top of} the adapted model degrades red-flag identification below the unadapted baseline ($d{=}{-}0.25$, $p{<}10^{-7}$): the mechanisms compete for the same behavioral capacity, and the wrapper should be removed once the adapter is deployed.
+How should we evaluate and instill the behaviors that distinguish calibrated expert reasoning from confident answer generation? Clarifying inquiry, scope bounding, principled abstention, and recognition of clinical warning signs are central to safe deployment in high-stakes domains, yet remain poorly measured and rarely targeted by current training pipelines. We contribute a framework for studying these epistemic behaviors as first-class objects of evaluation and design, and apply it to open-source clinical language models. The framework has three components. First, a seven-dimension behavioral decomposition (uncertainty acknowledgment, active inquiry, context-seeking, red-flag identification, scope bounding, hedging quality, specificity) that separates \emph{how} a model communicates from \emph{what} it knows, enabling claims about behavior that aggregate clinical scores obscure. Second, an asymmetric cross-family grading protocol (Qwen-14B as quality filter, Llama-8B as evaluator) that prevents filter-grader bias from inflating reported metrics, addressing a known failure mode in self-distillation pipelines. Third, a four-step pipeline for teaching epistemic behaviors to open-source models: a structured calibration reasoning protocol generates demonstrations, expert rubrics filter quality cases, and a LoRA adapter internalizes the behavior in the weights. Applied to MedGemma-27B on HealthBench with ${\sim}$3,100 filtered traces per seed, the resulting open-weight adapter raises active clinical inquiry from 17.5\% to 45.6\% ($d{=}0.63$, $n{\approx}1{,}000$), context-seeking from 1.40 to 1.75 on a 0--2 scale ($d{=}0.44$), red-flag identification from 1.52 to 1.67 ($d{=}0.20$), and scope bounding from 1.91 to 1.97 ($d{=}0.22$), with aggregate clinical quality preserved ($p{=}0.57$) and blanket disclaimers eliminated. We additionally surface a failure mode worth studying in its own right: combining the inference-time reasoning protocol with the adapted model degrades red-flag identification below the unadapted baseline, indicating that calibrated behavior interacts non-additively with inference-time scaffolding in ways current evaluation practices would miss. We release code, adapters, and the evaluation framework to support work on humble, uncertain, and inquiring open-source models.
 \end{abstract}
+
+\smallskip
+\noindent\textbf{Keywords:} clinical language models; calibration; behavioral evaluation; LoRA fine-tuning; chain-of-thought distillation; epistemic uncertainty; active inquiry; medical AI safety; HealthBench; self-distillation.
 
 %======================================================================
 \section{Introduction}
 \label{sec:intro}
 %======================================================================
 
-Language models trained with reinforcement learning from human feedback (RLHF) exhibit a systematic bias toward confident outputs \citep{kadavath2022language, lin2022teaching}. The mechanism is well-understood: human raters in preference labeling favor decisive responses over qualified ones, reward models learn to assign higher scores to confident outputs, and the policy is optimized accordingly \citep{xiong2024can}. Standard benchmarks reinforce this bias by scoring hedging and abstention as failures.
+A clinical language model that scores well on multiple-choice benchmarks is not the same as one that exhibits the behaviors of a careful expert. Careful experts ask before answering, hedge when uncertain, name danger signs, and decline when they need more context. These behaviors---active inquiry, scope bounding, red-flag recognition, principled abstention---distinguish a calibrated expert from a confident guesser. They are also precisely what current training pipelines suppress, what current benchmarks fail to measure, and what we lack systematic methods to instill.
 
-This optimization is appropriate for consumer applications where users expect direct answers. It becomes problematic in domains where calibrated uncertainty is a professional requirement---medicine, law, engineering---where the appropriate response to an ambiguous case is often ``I need more information'' rather than a confident diagnosis \citep{singhal2023medpalm, nori2023capabilities}. We use the term \emph{epistemic virtues} to refer to the set of behaviors that characterize calibrated expert reasoning: uncertainty acknowledgment, clarifying question-asking, scope bounding, evidence qualification, and principled abstention.
+The problem has two parts: measurement and training. On measurement: aggregate clinical quality scores conflate \emph{what} a model knows with \emph{how} it communicates. A model can produce a clinically accurate response while omitting relevant uncertainty, failing to ask for missing context, or missing a warning sign that should trigger escalation; aggregate scores treat such a response as equivalent to a genuinely calibrated one. On training: language models trained with RLHF exhibit a systematic bias toward confident outputs \citep{kadavath2022language, lin2022teaching}. Human raters in preference labeling favor decisive responses over qualified ones \citep{xiong2024can}, and standard benchmarks reinforce this bias by scoring hedging and abstention as failures. The behaviors we want to encourage are penalized by the very objectives used to train and evaluate.
 
-The \bodhi{} prompt wrapper (\textbf{B}ridging, \textbf{O}pen, \textbf{D}iscerning, \textbf{H}umble, \textbf{I}nquiring) \citep{bodhi2026} restores these behaviors by forcing the model through structured uncertainty analysis before generating a response---but at $\sim$2$\times$ inference cost, with a $\sim$5\% response drop rate (context window exceeded), and no persistence: remove the wrapper and the model reverts. We ask whether the wrapper's behavioral effect can be distilled into model weights directly, making the wrapper unnecessary at deployment.
+We use the term \emph{epistemic virtues} to refer to the behaviors that characterize calibrated expert reasoning: uncertainty acknowledgment, clarifying question-asking, scope bounding, evidence qualification, and principled abstention. Medical education has long recognized that expert judgment requires tolerating rather than eliminating uncertainty \citep{simpkin2016tolerating}; safety-netting---naming danger signs and when to return---is a canonical clinical skill \citep{jones2019safety}. Current clinical LLMs suppress both, training away from qualified responses toward confident ones \citep{ouyang2022training, wornow2023shaky}. Building these behaviors into clinical models requires tools that can measure them precisely and training approaches that can target them directly.
 
-Our method is simple: run the wrapper on a large prompt set, grade the outputs against expert rubrics using a model family different from the evaluation grader (Qwen-14B for filtering, Llama-8B for evaluation), filter to high-scoring demonstrations, and fine-tune a LoRA adapter \citep{hu2022lora} on the filtered set with completion-only loss masking. LoRA's low-rank constraint is well-suited here---it biases updates toward shifting output distributions rather than injecting new knowledge, which is precisely what is needed: the model already has the clinical knowledge, it needs to express it differently. We apply this to MedGemma-27B \citep{medgemma2025} on 4,800 HealthBench \citep{healthbench2025} prompts, training 5 independent adapters with different random seeds.
+Our starting point is the \bodhi{} protocol (\textbf{B}ridging, \textbf{O}pen, \textbf{D}iscerning, \textbf{H}umble, \textbf{I}nquiring) \citep{bodhi2026}, a structured chain-of-thought (CoT) protocol that forces a model through multi-step uncertainty analysis before generating a response. Pass~1 generates an internal analysis (clinical assessment, differentials, evidence quality, key uncertainties, questions to ask, scope boundaries, safe recommendations); Pass~2 generates a patient-facing response conditioned on that analysis. The CoT protocol reliably elicits the target epistemic behaviors at inference time, at $\sim$2$\times$ inference cost and with a $\sim$5\% response drop rate (context window exceeded). This makes it a useful demonstration source: run it on a large prompt set and you have a corpus of calibrated behavior at scale. It also makes it a poor deployment solution on its own---remove the CoT protocol and the model reverts.
+
+This paper contributes a framework for studying epistemic behaviors as first-class objects of evaluation and design, and uses LoRA fine-tuning on CoT-generated demonstrations as evidence that the framework's behavioral dimensions are real, measurable, and respond to design interventions. The framework has two components: (1) a seven-dimension behavioral decomposition that separates \emph{how} a model communicates from \emph{what} it knows, paired with an asymmetric cross-family grading protocol (Qwen-14B filter, Llama-8B evaluator) that prevents self-distillation bias from inflating reported metrics; and (2) a recipe for teaching epistemic behaviors via CoT-conditioned demonstrations. Applied to MedGemma-27B \citep{medgemma2025} on 4,000 HealthBench \citep{healthbench2025} prompts with 5 independent seeds, the recipe produces LoRA adapters that shift multiple behavioral dimensions significantly without degrading clinical quality. The framework additionally surfaces a design constraint invisible to aggregate evaluation: inference-time and weight-based epistemic behaviors compete rather than compose, with consequences for how adapted clinical models should be deployed.
 
 Our contributions:
 \begin{enumerate}[leftmargin=*]
-    \item A \textbf{6-dimension epistemic virtue evaluation framework} that decomposes clinical response quality into behavioral components (inquiry, scope bounding, red-flag recognition, hedging, specificity, uncertainty acknowledgment), separating \emph{how} a model communicates from \emph{what} it knows.
-    \item A \textbf{behavioral distillation method}: quality-filtered SFT on wrapper-conditioned traces, with an asymmetric cross-family grading protocol (Qwen-14B filter, Llama-8B evaluator) that prevents filter-grader bias from inflating reported metrics.
-    \item \textbf{Empirical evidence} of significant behavioral transfer at the prompt level ($n\approx1{,}000$ per condition): active inquiry $d=0.63$, context-seeking $d=0.44$, scope bounding $d=0.22$, red-flag identification $d=0.20$, all $p < 10^{-5}$, with no meaningful degradation in aggregate clinical quality ($d=0.03$, $p=0.57$).
-    \item \textbf{A negative result with practical implications}: stacking the wrapper on the adapted model degrades red-flag identification below the unadapted baseline ($d=-0.25$, $p<10^{-7}$), indicating the mechanisms compete rather than complement---the wrapper should be removed once the adapter is deployed.
+    \item \textbf{A design constraint with safety implications}: stacking the \bodhi{} CoT protocol on the LoRA-adapted model degrades red-flag identification below the unadapted baseline ($d=-0.25$, $p<10^{-7}$), even as active inquiry rises to 80\%. CoT-induced and weight-based epistemic behaviors compete for the same behavioral capacity---a finding invisible to aggregate evaluation and directly relevant to deployment decisions for adapted clinical models.
+    \item An \textbf{epistemic virtue evaluation framework}: a seven-dimension behavioral decomposition (uncertainty acknowledgment, active inquiry, context-seeking, red-flag identification, scope bounding, hedging quality, specificity) that separates \emph{how} a model communicates from \emph{what} it knows, enabling the above finding and other behavioral claims that aggregate clinical scores obscure. The framework includes an asymmetric cross-family grading protocol (Qwen-14B as quality filter, Llama-8B as evaluator) that prevents filter-grader bias---a known failure mode in self-distillation pipelines.
+    \item \textbf{Evidence that the framework's behavioral dimensions respond to design, and an internalization result}: quality-filtered SFT on \bodhi{} CoT demonstrations achieves active inquiry $d=0.63$, context-seeking $d=0.44$, scope bounding $d=0.22$, red-flag identification $d=0.20$, all $p<10^{-5}$, $n{\approx}1{,}000$ per condition, with no degradation in aggregate clinical quality ($d=0.03$, $p=0.57$) and blanket disclaimers eliminated. The bootstrap 95\% CI for the LoRA${-}$Wrapper active-inquiry difference is $[-0.069, +0.021]$ (contains zero): \textbf{the adapter is statistically indistinguishable from the wrapper while requiring no inference-time CoT, delivering wrapper-equivalent behavior at ${\sim}58$\% lower inference output cost}.
 \end{enumerate}
 
 %======================================================================
@@ -89,15 +108,17 @@ Our contributions:
 \label{sec:related}
 %======================================================================
 
-\paragraph{Calibration in language models.} \citet{kadavath2022language} demonstrated that LLMs possess internal uncertainty representations accessible via probing, but that RLHF-tuned outputs suppress this uncertainty. \citet{lin2022teaching} fine-tuned models on demonstrations with verbalized confidence (``I'm about 70\% sure...''), improving calibration on factual questions. \citet{tian2023just} showed similar effects from prompting alone. These works target \emph{numerical} confidence calibration. Our work targets \emph{behavioral} calibration: we do not ask the model to estimate its confidence as a number, but to modify its response behavior---hedging, questioning, abstaining---in ways appropriate to its uncertainty.
+\paragraph{Calibration in language models.} \citet{kadavath2022language} demonstrated that LLMs possess internal uncertainty representations accessible via probing, but that RLHF-tuned outputs suppress this uncertainty. Instruction tuning with human feedback \citep{ouyang2022training} systematically reinforces this suppression: human raters in preference labeling favor decisive responses over qualified ones \citep{xiong2024can}, so the alignment objective actively penalizes appropriate hedging. \citet{lin2022teaching} fine-tuned models on demonstrations with verbalized confidence (``I'm about 70\% sure...''), improving calibration on factual questions. \citet{tian2023just} showed similar effects from prompting alone. These works target \emph{numerical} confidence calibration. Our work targets \emph{behavioral} calibration: we do not ask the model to estimate its confidence as a number, but to modify its response behavior---hedging, questioning, abstaining---in ways appropriate to its uncertainty. The distinction matters clinically: a model can achieve low ECE on a calibration curve while still omitting the key safety-netting questions that a practitioner would ask.
+
+\paragraph{Clinical epistemic behaviors.} Medicine has long recognized that expert judgment requires tolerating uncertainty rather than eliminating it. \citet{simpkin2016tolerating} argue that medical education must train clinicians to act appropriately under irreducible uncertainty rather than seeking false certainty---a principle directly reflected in our behavioral decomposition. Safety-netting---telling patients what to watch for and when to return \citep{jones2019safety}---is a canonical clinical behavior that our red-flag identification and scope-bounding dimensions operationalize. \citet{wornow2023shaky} document that current clinical LLMs trained on EHR data inherit the overconfident patterns of clinical notes rather than the calibrated uncertainty communication of a clinician explaining to a patient. Our work addresses this gap directly.
 
 \paragraph{Medical LLM evaluation.} Standard medical benchmarks (MedQA, MMLU-Medical) evaluate factual accuracy via multiple-choice questions. HealthBench \citep{healthbench2025} differs by evaluating open-ended clinical responses against expert rubrics with both positive criteria (correct content, appropriate referrals) and negative criteria (dangerous advice, false reassurance, failure to escalate). This structure penalizes both overconfidence (meeting negative criteria) and excessive hedging (failing positive criteria for actionable guidance), making it suitable for evaluating calibrated behavior. We adopt the HealthBench grading protocol and extend it with prompt-injection hardening and cross-family grading.
 
-\paragraph{Inference-time behavioral interventions.} Chain-of-thought prompting \citep{wei2022chain} improves reasoning by forcing intermediate steps. Constitutional AI \citep{bai2022constitutional} uses self-critique prompts to improve safety. \bodhi{} \citep{bodhi2026} uses a two-pass protocol: Pass~1 forces structured uncertainty analysis (clinical assessment, differentials, evidence quality, key uncertainties, questions to ask, scope boundaries, safe recommendations); Pass~2 generates a response conditioned on this analysis. The common limitation across these approaches is deployment cost: the intervention must be applied at every inference call, consuming additional tokens and latency, with no guarantee that the underlying model has changed. Our work removes this limitation by distilling the behavioral effect into weights.
+\paragraph{Inference-time behavioral interventions.} Chain-of-thought prompting \citep{wei2022chain} improves reasoning by forcing intermediate steps. Constitutional AI \citep{bai2022constitutional} uses self-critique prompts to improve safety. \bodhi{} \citep{bodhi2026} uses a two-pass protocol: Pass~1 forces structured uncertainty analysis (clinical assessment, differentials, evidence quality, key uncertainties, questions to ask, scope boundaries, safe recommendations); Pass~2 generates a response conditioned on this analysis. The common limitation is deployment cost: the intervention must be applied at every inference call, consuming additional tokens and latency, with no guarantee that the underlying model has changed. We use the \bodhi{} CoT protocol not as the deployed intervention but as a demonstration source: the behavioral effect is distilled into model weights via fine-tuning, making the CoT protocol unnecessary at deployment.
 
 \paragraph{LoRA and parameter-efficient fine-tuning.} LoRA \citep{hu2022lora} learns additive low-rank updates $\Delta W = BA$ with rank $r \ll \min(d,k)$. Variants include QLoRA \citep{dettmers2023qlora}, DoRA \citep{liu2024dora}, and rsLoRA \citep{kalajdzievski2023scaling}. LoRA is typically used for knowledge injection or task adaptation. We use it for \emph{behavioral modification}: the base model's knowledge is unchanged, but its manner of expressing that knowledge shifts toward calibrated uncertainty.
 
-\paragraph{Self-improvement and behavioral distillation.} STaR \citep{zelikman2022star} bootstraps reasoning by filtering model-generated rationales on correctness; we apply the same filter-then-finetune logic to behavioral demonstrations rather than factual reasoning. Self-play fine-tuning \citep{chen2024selfplay} and iterative DPO \citep{yuan2024selfrewarding} improve capabilities through repeated self-sampling; we differ in using a \emph{structured wrapper} to shift the generation distribution rather than self-sampling from the base policy. Standard distillation \citep{hinton2015distilling} and chain-of-thought distillation \citep{ho2023large, magister2023teaching} transfer from a larger teacher model to a smaller student; here teacher and student are the \emph{same} model under different inference conditions. The key novelty is the wrapper as a behavioral teacher: it imposes a structured output distribution at inference time, and the adapter internalizes that distribution, making the wrapper redundant at deployment.
+\paragraph{Self-improvement and behavioral distillation.} STaR \citep{zelikman2022star} bootstraps reasoning by filtering model-generated rationales on correctness; we apply the same filter-then-finetune logic to behavioral demonstrations rather than factual reasoning. Self-play fine-tuning \citep{chen2024selfplay} and iterative DPO \citep{rafailov2023direct, yuan2024selfrewarding} improve capabilities through repeated self-sampling and preference optimization; we differ in using a \emph{structured CoT protocol} to shift the generation distribution rather than self-sampling from the base policy or a reward model. Process reward models \citep{lightman2024lets} supervise individual reasoning steps; our rubric-graded filter similarly provides structured quality signal at the response level. RLAIF \citep{lee2024rlaif} shows that AI-generated preference labels can match human-level alignment signal---the asymmetric cross-family design we use (Qwen filter, Llama evaluator) extends this intuition to the grading pipeline, preventing same-model circularity. Standard distillation \citep{hinton2015distilling} and chain-of-thought distillation \citep{ho2023large, magister2023teaching} transfer from a larger teacher model to a smaller student; here teacher and student are the \emph{same} model under different inference conditions. The key design insight is using the CoT protocol as a behavioral teacher: it imposes a structured output distribution at inference time, and the adapter internalizes that distribution, making the CoT protocol unnecessary at deployment.
 
 %======================================================================
 \section{Method}
@@ -106,60 +127,61 @@ Our contributions:
 
 \subsection{Overview}
 
-Given a base model $M$, an inference-time wrapper $W$ that modifies $M$'s behavior, and an evaluation rubric $R$ that can score the quality of $W(M)$'s outputs, our method proceeds in four steps:
+Given a base model $M$, a structured CoT protocol $C$ that elicits target behaviors from $M$, and an evaluation rubric $R$ that can score the quality of $C(M)$'s outputs, the recipe proceeds in four steps:
 
 \begin{enumerate}[leftmargin=*]
-    \item \textbf{Generate}: Run $W(M)$ on a set of prompts $\mathcal{P}$ to produce traces $\{(x_i, y_i)\}$.
-    \item \textbf{Grade}: Score each trace $y_i$ against $R$, obtaining quality scores $\{s_i\}$.
-    \item \textbf{Filter}: Retain traces where $s_i \geq \tau$, yielding training set $\mathcal{D} = \{(x_i, y_i) : s_i \geq \tau\}$.
-    \item \textbf{Distill}: Fine-tune $M$ on $\mathcal{D}$ with LoRA, producing $M + \Delta W$ that approximates $W(M)$'s behavior without $W$.
+    \item \textbf{Generate}: Run $C(M)$ on a set of prompts $\mathcal{P}$ to produce demonstrations $\{(x_i, y_i)\}$.
+    \item \textbf{Grade}: Score each demonstration $y_i$ against $R$, obtaining quality scores $\{s_i\}$.
+    \item \textbf{Filter}: Retain demonstrations where $s_i \geq \tau$, yielding training set $\mathcal{D} = \{(x_i, y_i) : s_i \geq \tau\}$.
+    \item \textbf{Distill}: Fine-tune $M$ on $\mathcal{D}$ with LoRA, producing $M + \Delta C$ that approximates $C(M)$'s behavior without $C$ at inference.
 \end{enumerate}
 
-The key assumption is that $W(M)$ produces outputs of varying quality, and that $R$ can distinguish successful demonstrations from failures. The filter step ensures the adapter trains only on demonstrations where the wrapper exhibited the target behavior. We instantiate this with $M$ = MedGemma-27B-text-it, $W$ = \bodhi{}, $R$ = HealthBench expert rubrics, $\tau = 0.4$, and $\Delta W$ = LoRA ($r{=}16$).
+The key assumption is that $C(M)$ produces outputs of varying quality, and that $R$ can distinguish successful demonstrations from failures. The filter step ensures the adapter trains only on demonstrations where the CoT protocol elicited the target behavior. We instantiate this with $M$ = MedGemma-27B-text-it, $C$ = \bodhi{} CoT protocol, $R$ = HealthBench expert rubrics, $\tau = 0.4$, and $\Delta C$ = LoRA ($r{=}16$). Figure~\ref{fig:pipeline} shows the full pipeline and the $2{\times}2$ evaluation design.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{figures/pipeline.pdf}
+\caption{Overview of the training pipeline (top) and evaluation design (bottom). The training pipeline follows four steps: generate demonstrations via the \bodhi{} CoT protocol, grade against HealthBench rubrics using Qwen-14B, filter to quality traces ($s\geq0.4$), and distill into a LoRA adapter. The evaluation uses a $2{\times}2$ factorial design: base model with and without the CoT protocol, and LoRA adapter with and without the CoT protocol, all evaluated on the held-out HealthBench-Hard set (1,000 prompts). The CoT protocol is \emph{not required} at deployment for the LoRA condition.}
+\label{fig:pipeline}
+\end{figure}
 
 \subsection{Trace Generation}
 
-We apply \bodhi{} to MedGemma-27B-text-it on prompts from HealthBench Full (${\sim}$5,000 prompts). HealthBench Hard is a strict subset of HealthBench Full; we exclude all 1,000 Hard prompts by \texttt{prompt\_id} matching, yielding 4,800 generation prompts. This exclusion is enforced at generation time and independently re-verified by an automated preflight gate before every training job.
-
-Inference uses vLLM \citep{kwon2023efficient} with tensor parallelism across $8\times$ TPU v6e chips (256\,GB HBM), greedy decoding (temperature 0) for determinism, and 32 concurrent requests via continuous batching. Each trace records the input messages, the \bodhi{} Pass~1 analysis (the model's internal uncertainty reasoning), and the Pass~2 response (the patient-facing text). The analysis field is not used during training---only the response is---but is retained for post-hoc inspection of where the wrapper's reasoning succeeded or failed.
+We apply \bodhi{}'s two-pass CoT protocol to MedGemma-27B-text-it on 4,000 HealthBench-Full prompts, excluding all 1,000 Hard prompts by \texttt{prompt\_id} matching (verified by an automated preflight gate before every training job). Inference uses vLLM \citep{kwon2023efficient} on $8\times$ TPU v6e chips with greedy decoding. Each trace records input messages, Pass~1 analysis (internal uncertainty reasoning, not used for training), and Pass~2 response (the training target).
 
 \subsection{Rubric Grading and Filtering}
 
-Not all wrapper outputs are high-quality. The wrapper occasionally produces over-hedged responses, incoherent analyses, or responses that fail rubric criteria despite the two-pass protocol. We grade each trace against HealthBench's expert-authored rubrics and retain only strong demonstrations.
-
-A grader LLM (Qwen/Qwen2.5-14B-Instruct) evaluates each rubric criterion independently, producing a boolean \texttt{criteria\_met} judgment per criterion. We compute a normalized score:
+A grader LLM (Qwen/Qwen2.5-14B-Instruct) evaluates each rubric criterion independently, producing a boolean \texttt{criteria\_met} judgment. We compute a normalized score:
 \begin{equation}
     s = \frac{p_{\text{earned}} - p_{\text{neg}}}{p_{\text{pos}} - p_{\text{neg}}}
     \label{eq:score}
 \end{equation}
-where $p_{\text{pos}}$ and $p_{\text{neg}}$ are the sums of positive and negative rubric points and $p_{\text{earned}}$ is the sum of points for criteria met. This bounds $s \in [0,1]$ and normalizes across prompts with different numbers of criteria. Traces with $s \geq 0.4$ are retained, yielding ${\sim}$3,100 traces per seed (${\sim}$2,800 train / ${\sim}$310 validation after a seeded 90/10 split). The retention rate of ${\sim}$65\% indicates the filter removes a meaningful tail of wrapper failures.
+where $p_{\text{pos}}, p_{\text{neg}}$ are sums of positive and negative rubric points and $p_{\text{earned}}$ is the sum for criteria met, bounding $s\in[0,1]$. Traces with $s \geq 0.4$ are retained, yielding ${\sim}$3,100 traces per seed (${\sim}$2,800 train / ${\sim}$310 val). $\tau{=}0.4$ was set \emph{a priori} as the 25th percentile of pilot scores on 500 traces drawn before any HealthBench-Hard evaluation, fixed across all 5 seeds, and not iterated on. The choice is failure-rejection rather than top-quality selection: the score distribution is broadly continuous over $[0.4, 0.7]$ with no regime boundary near the threshold (Appendix~\ref{app:robustness}, Table~\ref{tab:tau-calibration}), so $\tau \in [0.3, 0.5]$ produces training sets that differ in size but not composition. A full ablation across $\tau$ requires retraining and is reported as an open question.
 
-\paragraph{Asymmetric grader design.} The choice of Qwen-14B as filter grader is deliberate: the evaluation grader (\S\ref{sec:eval}) is Llama-3.1-8B-Instruct, a different model family. This asymmetry ensures that any Qwen-specific grading bias affects only which traces enter training, not the reported evaluation scores. The evaluator that determines the reported numbers never participated in training data selection.
+\paragraph{Asymmetric grader design.} The filter (Qwen-14B) and evaluation grader (Llama-3.1-8B, \S\ref{sec:eval}) are different model families: any filter-grader bias affects only training data selection, not reported scores. The evaluator never participated in training-data selection.
 
-\paragraph{Prompt-injection hardening.} The HealthBench grading template interpolates untrusted trace content between delimiter markers (\texttt{<<conversation>>}) and uses section headers (\texttt{\# Final instruction}). An adversarial response containing these literal strings could manipulate grading decisions. We escape all template delimiters in interpolated content before grading. This is mitigation rather than full prevention, but raises the bar for adversarial manipulation without changing the semantics of legitimate clinical text.
+\paragraph{Prompt-injection hardening.} The HealthBench grading template interpolates trace content between \texttt{<<conversation>>} delimiters; we escape template delimiters in interpolated content before grading.
 
 \subsection{LoRA Fine-Tuning}
 
-We fine-tune MedGemma-27B with LoRA ($r{=}16$, $\alpha{=}32$, dropout 0.05) targeting all linear projections in attention and MLP layers (q, k, v, o, gate, up, down---7 module types per layer). Training uses \textbf{completion-only loss masking}: the cross-entropy loss is computed only on assistant response tokens, with all prompt and user tokens masked. This focuses the gradient on generating calibrated responses rather than memorizing prompt structure or user messages.
-
-Hyperparameters: 3 epochs, effective batch size 16 (2 per device $\times$ 8 gradient accumulation steps), learning rate $10^{-4}$ with cosine schedule and 5\% warmup, bfloat16 precision. On TPU, the 27B base model (54\,GB in bf16) is sharded across 8 chips via FSDPv2, wrapping each \texttt{Gemma3DecoderLayer} in an FSDP unit under a single-process SPMD configuration.
-
-We train 5 independent adapters with seeds 42, 7, 13, 99, and 101, varying LoRA weight initialization, data shuffling order, and dropout masks. All results are reported as mean $\pm$ std across these 5 seeds.
+We fine-tune MedGemma-27B with LoRA ($r{=}16$, $\alpha{=}32$, dropout 0.05) on all 7 linear projections per layer (q, k, v, o, gate, up, down) using completion-only loss masking. Hyperparameters: 3 epochs, effective batch size 16, learning rate $10^{-4}$ (cosine, 5\% warmup), bfloat16. The 27B base is sharded across 8 TPU v6e chips via FSDPv2. We train 5 independent adapters (seeds 42, 7, 13, 99, 101) varying LoRA initialization, data order, and dropout masks; all results are mean $\pm$ std across these 5 seeds. Full configuration in Appendix~\ref{app:hparams}.
 
 \subsection{Evaluation}
 \label{sec:eval}
 
 \paragraph{Test set.} For each seed $k$, we draw 200 prompts without replacement from the 1,000 \hbhard{} examples. All 1,000 Hard prompts are excluded from training, so every possible 200-prompt draw is out-of-sample. The per-seed repeated subsampling captures both training noise (different LoRA init and data order) and eval-set-choice noise (different 200 prompts) in the reported variance.
 
-\paragraph{Configurations.} We evaluate four conditions per seed in a $2 \times 2$ factorial design: Base, Base+\bodhi{}, LoRA (no wrapper), and LoRA+\bodhi{}. This isolates the wrapper effect (Base $\to$ Base+\bodhi{}), the LoRA effect (Base $\to$ LoRA), the residual wrapper value (LoRA $\to$ LoRA+\bodhi{}), and potential interference between the two mechanisms.
+\paragraph{Configurations.} We evaluate four conditions per seed in a $2 \times 2$ factorial design: Base, Base+\bodhi{} CoT, LoRA (no CoT), and LoRA+\bodhi{} CoT. This isolates the CoT effect on the base model (Base $\to$ Base+\bodhi{}), the weight-based effect of fine-tuning (Base $\to$ LoRA), the residual CoT value after fine-tuning (LoRA $\to$ LoRA+\bodhi{}), and potential interference between the two mechanisms.
 
 \paragraph{Grading.} The evaluation grader is Llama-3.1-8B-Instruct. Evaluation was conducted on A100-80GB GPUs via Modal, with MedGemma-27B and the LoRA adapter merged on CPU before serving.
 
-\paragraph{Epistemic virtue decomposition.} A separate evaluation pass grades each response on six behavioral dimensions: (1) uncertainty acknowledgment (0--2), (2) context-seeking / active inquiry (question count + substantiveness), (3) red-flag identification (0--2), (4) scope bounding (0--2), (5) specificity (0--2), and (6) hedging quality (appropriate vs.\ blanket disclaimer). This decomposition distinguishes \emph{which} specific behaviors the adapter induces, beyond aggregate score changes.
+\paragraph{Epistemic virtue decomposition.} A separate evaluation pass grades each response on seven behavioral dimensions: (1) uncertainty acknowledgment (0--2), (2) active inquiry (binary question-asking rate), (3) context-seeking (0--2, substantiveness of questions), (4) red-flag identification (0--2), (5) scope bounding (0--2), (6) specificity (0--2), and (7) hedging quality (appropriate vs.\ blanket disclaimer). This decomposition distinguishes \emph{which} specific behaviors the adapter induces, beyond aggregate score changes.
+
+The seven dimensions were chosen to cover the three epistemic functions a calibrated clinical response must serve. \emph{Self-assessment} (uncertainty acknowledgment, hedging quality, specificity) captures whether the model correctly represents what it does and does not know. \emph{Information-seeking} (active inquiry, context-seeking) captures the canonical clinical practice of gathering missing information before acting---operationalizing the principle that appropriate action under uncertainty requires first reducing it where possible \citep{simpkin2016tolerating}. \emph{Risk management} (red-flag identification, scope bounding) captures safety-netting: naming danger signs, specifying return thresholds, and bounding the scope of advice to what the model's evidence supports \citep{jones2019safety}. Together these cover epistemic behavior that is (a) observable in text without access to ground-truth clinical outcomes, (b) targeted by the \bodhi{} CoT protocol, and (c) neither redundant nor conflatable with aggregate quality score. We exclude dimensions like ``empathy'' or ``patient education depth'' that conflate \emph{what is communicated} with \emph{how accurately uncertainty is represented}.
 
 The blanket-disclaimer rate is the key diagnostic for the ``hedging trap'': a model that has learned genuine calibration will have high appropriate-hedging rate and low blanket-disclaimer rate, while a model that has learned indiscriminate caution will have both rates high.
 
-\paragraph{Integrity controls.} (1)~A contamination probe (Appendix~\ref{app:contamination}) on 105 \hbhard{} prompts found zero verbatim memorization (0/105 exact-match completions, mean prefix-overlap $=0$ tokens), consistent with no pretraining contamination. (2)~An automated leakage gate verifies that no evaluation prompt IDs appear in training data. (3)~Grader parse-failure rate is monitored ($<0.1\%$ across all reported runs). (4)~Physician validation of the LLM grader is pre-registered and in progress (Appendix~\ref{app:human}); aggregate-quality claims should be read as rubric-based proxy quality until those grades return.
+\paragraph{Integrity controls.} (1)~Contamination probe (Appendix~\ref{app:contamination}): 0/105 verbatim matches, mean prefix-overlap 0 tokens. (2)~Automated leakage gate ensures no evaluation prompt ID appears in training data. (3)~Grader parse-failure rate $<0.1\%$ across all reported runs (conservative not-met on failure). (4)~Physician validation partially returned (1 of 3 physicians; Appendix~\ref{app:human}): preliminary $\kappa{=}0.35$ physician vs.\ LLM, below the pre-registered target of $0.6$; aggregate-quality claims should be read as rubric-based proxy quality, not settled clinical validation.
 
 %======================================================================
 \section{Results}
@@ -170,7 +192,11 @@ The blanket-disclaimer rate is the key diagnostic for the ``hedging trap'': a mo
 
 \begin{table}[t]
 \centering
-\caption{\hbhard{} normalized rubric scores (Eq.~\ref{eq:score}). 5-seed repeated subsampling, 200 prompts per seed. Grader: Llama-3.1-8B-Instruct. Mean and 95\% CI across seeds. $n$: mean responses graded per seed (out of 200). No pairwise comparison reaches significance ($\alpha=0.05$).}
+\caption{\hbhard{} normalized rubric scores (Eq.~\ref{eq:score}). 5-seed repeated subsampling, 200 prompts per seed. Grader: Llama-3.1-8B-Instruct. Mean and 95\% CI across seeds. No pairwise comparison reaches significance ($\alpha=0.05$).
+$n$/seed is the number of completions successfully produced out of 200: the two \bodhi{} conditions
+lose ${\sim}4$--5\% of prompts because the two-pass protocol exceeds the 4{,}096-token context
+window, whereas LoRA needs a single pass and has a 100\% response rate. All comparisons use the
+available completions ($n\approx985$--998 pooled across seeds).}
 \label{tab:main}
 \begin{tabular}{lccc}
 \toprule
@@ -178,17 +204,26 @@ Config & Score (mean) & 95\% CI & $n$/seed \\
 \midrule
 Base & 0.459 & [0.445,\;0.473] & 200 \\
 Base + \bodhi{} & 0.463 & [0.450,\;0.476] & 191 \\
-LoRA (no wrapper) & 0.463 & [0.451,\;0.475] & 200 \\
+LoRA (no CoT) & 0.463 & [0.451,\;0.475] & 200 \\
 LoRA + \bodhi{} & 0.455 & [0.453,\;0.457] & 192 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:main} presents aggregate scores. The aggregate score is \emph{not} the primary claim---it establishes a non-inferiority constraint: the adapter does not degrade clinical quality ($d=0.03$, $p=0.57$, $n\approx1{,}000$ prompts per condition). Three features of the aggregate results warrant attention.
+Table~\ref{tab:main} presents aggregate scores. Our claim about this table is a specific one: the
+adapter satisfies a non-inferiority constraint, changing aggregate clinical quality by
+$d=0.03$ ($p=0.57$, $n\approx1{,}000$ prompts per condition), which licenses reading the behavioral
+shifts in Table~\ref{tab:epistemic} as changes in communication rather than as a quality trade-off.
+Three features of the aggregate results warrant attention.
 
-\textbf{Clinical quality is preserved.} No pairwise comparison reaches significance at $\alpha=0.05$. The adapter modifies \emph{how} the model communicates, not \emph{what} it knows.
+\textbf{Clinical quality is preserved.} No pairwise comparison reaches significance at $\alpha=0.05$.
+Concretely, the adapter leaves factual accuracy and completeness at baseline
+(Appendix~\ref{app:ushape}, Table~\ref{tab:axis}: accuracy $0.117\to0.121$, completeness
+$0.168\to0.169$) while shifting the behavioral dimensions in Table~\ref{tab:epistemic}: it changes
+the form of the response, in particular whether the model asks before committing, rather than the
+clinical content it is able to supply.
 
-\textbf{The wrapper drops 5\% of responses.} Both wrapper conditions (Base+\bodhi{}, LoRA+\bodhi{}) fail to produce a response for $\sim$5\% of prompts because the two-pass analysis exceeds the 4,096-token context window. The LoRA adapter has a 100\% response rate.
+\textbf{The CoT protocol drops 5\% of responses.} Both CoT conditions (Base+\bodhi{}, LoRA+\bodhi{}) fail to produce a response for $\sim$5\% of prompts because the two-pass analysis exceeds the 4,096-token context window. The LoRA adapter has a 100\% response rate.
 
 \textbf{LoRA+\bodhi{} scores lowest.} At $0.455$ it is below both LoRA ($0.463$) and Base+\bodhi{} ($0.463$). The effect is not significant ($p=0.15$) but the cross-seed variance is strikingly low ($\sigma=0.002$), suggesting the interference is systematic.
 
@@ -196,37 +231,50 @@ Table~\ref{tab:main} presents aggregate scores. The aggregate score is \emph{not
 
 \begin{table}[t]
 \centering
-\caption{Epistemic virtue scores (5-seed mean $\pm$ std). Top: graded on 0--2 scale (cross-seed std omitted; all ${\leq}0.03$). Bottom: rates with cross-seed std as subscript. $\downarrow$ indicates lower is better.}
+\caption{Epistemic virtue scores (5-seed mean $\pm$ std). Top: graded on 0--2 scale (cross-seed std
+omitted; all ${\leq}0.03$). Bottom: rates with cross-seed std as subscript. Arrows give the
+desirable direction for every row: $\uparrow$ higher is better, $\downarrow$ lower is better.
+Red-flag identification is $\uparrow$ because it measures sensitivity to warning signs that warrant
+escalation; note that this metric does not capture \emph{false positives}, so a model that flagged
+indiscriminately would also score highly. Measuring over-flagging requires a labelled set of
+prompts with no genuine red flag and is left to future work.}
 \label{tab:epistemic}
 \begin{tabular}{lcccc}
 \toprule
 Dimension & Base & +\bodhi{} & LoRA & LoRA+\bodhi{} \\
 \midrule
-Uncertainty ack.\ (0--2) & 1.94 & 1.90 & 1.94 & 1.95 \\
-Context-seeking (0--2) & 1.40 & 1.77 & 1.75 & 1.90 \\
-Red-flag identification (0--2) & 1.52 & 1.66 & 1.67 & 1.51 \\
-Scope bounding (0--2) & 1.91 & 1.94 & 1.97 & 1.98 \\
-Hedging quality (0--2) & 1.86 & 1.85 & 1.91 & 1.91 \\
-Specificity (0--2) & 1.88 & 1.88 & 1.92 & 1.92 \\
+Uncertainty ack.\ (0--2) $\uparrow$ & 1.94 & 1.90 & 1.94 & 1.95 \\
+Context-seeking (0--2) $\uparrow$ & 1.40 & 1.77 & 1.75 & 1.90 \\
+Red-flag identification (0--2) $\uparrow$ & 1.52 & 1.66 & 1.67 & 1.51 \\
+Scope bounding (0--2) $\uparrow$ & 1.91 & 1.94 & 1.97 & 1.98 \\
+Hedging quality (0--2) $\uparrow$ & 1.86 & 1.85 & 1.91 & 1.91 \\
+Specificity (0--2) $\uparrow$ & 1.88 & 1.88 & 1.92 & 1.92 \\
 \midrule
-Questions / response & $0.45_{\pm.11}$ & $1.25_{\pm.08}$ & $1.16_{\pm.14}$ & $1.71_{\pm.12}$ \\
-Active inquiry rate & $17.5_{\pm3.3}$\% & $47.9_{\pm2.9}$\% & $45.6_{\pm3.9}$\% & $80.0_{\pm6.7}$\% \\
-Red-flag rate & $72.4_{\pm0.8}$\% & $78.8_{\pm2.1}$\% & $78.3_{\pm2.0}$\% & $57.7_{\pm8.0}$\% \\
-Scope bounded rate & $92.7_{\pm1.1}$\% & $95.4_{\pm1.5}$\% & $97.6_{\pm0.7}$\% & $98.1_{\pm1.5}$\% \\
-Specificity rate & $61.2_{\pm3.9}$\% & $61.4_{\pm4.0}$\% & $61.2_{\pm4.3}$\% & $65.0_{\pm2.3}$\% \\
+Questions / response $\uparrow$ & $0.45_{\pm.11}$ & $1.25_{\pm.08}$ & $1.16_{\pm.14}$ & $1.71_{\pm.12}$ \\
+Active inquiry rate $\uparrow$ & $17.5_{\pm3.3}$\% & $47.9_{\pm2.9}$\% & $45.6_{\pm3.9}$\% & $80.0_{\pm6.7}$\% \\
+Red-flag rate $\uparrow$ & $72.4_{\pm0.8}$\% & $78.8_{\pm2.1}$\% & $78.3_{\pm2.0}$\% & $57.7_{\pm8.0}$\% \\
+Scope bounded rate $\uparrow$ & $92.7_{\pm1.1}$\% & $95.4_{\pm1.5}$\% & $97.6_{\pm0.7}$\% & $98.1_{\pm1.5}$\% \\
+Specificity rate $\uparrow$ & $61.2_{\pm3.9}$\% & $61.4_{\pm4.0}$\% & $61.2_{\pm4.3}$\% & $65.0_{\pm2.3}$\% \\
 Blanket disclaimer $\downarrow$ & $0.5_{\pm0.4}$\% & 0.0\% & 0.0\% & 0.0\% \\
-Appropriate hedging & $90.6_{\pm1.7}$\% & $91.7_{\pm1.7}$\% & $94.2_{\pm1.6}$\% & $94.9_{\pm1.5}$\% \\
+Appropriate hedging $\uparrow$ & $90.6_{\pm1.7}$\% & $91.7_{\pm1.7}$\% & $94.2_{\pm1.6}$\% & $94.9_{\pm1.5}$\% \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:epistemic} shows where the behavioral change occurs. All statistics below use prompt-level two-sample $t$-tests ($n\approx985$--$998$ per condition, pooled across 5 seeds; seeds draw without replacement within-seed but independently across seeds, introducing some prompt overlap, though p-values are far below any threshold where this matters). All p-values are uncorrected for multiple comparisons; Bonferroni correction over the reported comparisons does not change any binary significance conclusion given effect sizes $d \geq 0.20$ throughout.
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{figures/epistemic_bar.pdf}
+\caption{Epistemic virtue scores across the four evaluation conditions. Error bars show cross-seed standard deviation ($n{=}5$ seeds, ${\approx}200$ prompts per seed per condition). Active inquiry and context-seeking increase substantially with the LoRA adapter; red-flag identification regresses when the CoT protocol is stacked on the adapter (LoRA+BODHI CoT), dropping below the unadapted base. Per-seed consistency is shown in Appendix~\ref{app:perseed}.}
+\label{fig:epistemic_bar}
+\end{figure}
 
-\textbf{Active inquiry.} The largest effect. Base asks clarifying questions in 17.5\% of responses (0.45 questions per response). The LoRA adapter raises this to 45.6\% (1.16 questions/response), closely matching the wrapper's 47.9\% ($d = 0.63$, $p < 10^{-40}$). By Cohen's conventions this is a medium-to-large effect ($d=0.63$ exceeds the medium threshold of 0.5)---meaningful given that prompts within a condition vary substantially in difficulty and topic.
+Table~\ref{tab:epistemic} shows the central pattern. \textbf{Internalization}: on every behavioral dimension, LoRA alone closely tracks the wrapper. Active inquiry 45.6\% vs.\ 47.9\%; bootstrap 95\% CI for the LoRA${-}$Wrapper difference is $[-0.069, +0.021]$, \emph{containing zero}---LoRA is statistically indistinguishable from the wrapper while requiring no inference-time CoT (5,000 resamples; Appendix~\ref{app:robustness}). \textbf{Interference}: stacking the wrapper on the adapter collapses red-flag rate from 78.3\% to 57.7\% (LoRA+\bodhi{}${-}$LoRA bootstrap CI $[-0.217, -0.101]$, robustly negative). Effect sizes for all seven dimensions are in Appendix~\ref{app:forest}. Statistics use prompt-level two-sample $t$-tests ($n\approx985$--$998$ per condition, pooled across 5 seeds); Bonferroni correction does not alter any significance conclusion at $d\geq0.20$.
+
+\textbf{Active inquiry.} The largest effect. Base asks clarifying questions in 17.5\% of responses (0.45 questions per response). The LoRA adapter raises this to 45.6\% (1.16 questions/response), closely matching the CoT protocol's 47.9\% ($d = 0.63$, $p < 10^{-40}$). By Cohen's conventions this is a medium-to-large effect ($d=0.63$ exceeds the medium threshold of 0.5)---meaningful given that prompts within a condition vary substantially in difficulty and topic.
 
 \textbf{Context-seeking.} The context-seeking score rises from 1.40 to 1.75 on the 0--2 scale ($d = 0.44$, $p < 10^{-20}$), capturing not just whether the model asks questions but how substantive they are.
 
-\textbf{Scope bounding.} The adapter exceeds the wrapper: 97.6\% vs.\ 95.4\% (base: 92.7\%, $d = 0.22$, $p < 10^{-5}$).
+\textbf{Scope bounding.} The adapter exceeds the CoT protocol: 97.6\% vs.\ 95.4\% (base: 92.7\%, $d = 0.22$, $p < 10^{-5}$).
 
 \textbf{Appropriate hedging.} The blanket-disclaimer rate drops to 0.0\% (base: 0.5\%) and hedging quality rises from 1.86 to 1.91. The adapter produces targeted, contextually appropriate hedging rather than generic boilerplate.
 
@@ -234,15 +282,13 @@ Table~\ref{tab:epistemic} shows where the behavioral change occurs. All statisti
 
 \textbf{Specificity is preserved.} The specificity rate is unchanged at 61.2\%, indicating the adapter does not sacrifice concrete clinical content (dosages, timeframes, referral specifics) in exchange for increased hedging. The model has not learned to replace substance with qualifications.
 
-\textbf{Uncertainty acknowledgment.} Unexpectedly, the BODHI wrapper modestly reduces uncertainty acknowledgment (Base: 1.94 $\to$ Base+\bodhi{}: 1.90), while the LoRA adapter leaves it unchanged (1.94). One possible explanation is that the wrapper's analysis pass reformulates uncertainty within the internal reasoning rather than foregrounding it in the patient-facing response. We flag this as an unresolved finding that warrants analysis of the Pass~1 analysis-field content.
+\textbf{Uncertainty acknowledgment.} Unexpectedly, the \bodhi{} CoT protocol modestly reduces uncertainty acknowledgment (Base: 1.94 $\to$ Base+\bodhi{}: 1.90), while the LoRA adapter leaves it unchanged (1.94). One possible explanation is that the CoT protocol's analysis pass reformulates uncertainty within the internal reasoning rather than foregrounding it in the patient-facing response. We flag this as an unresolved finding that warrants analysis of the Pass~1 analysis-field content.
 
-\textbf{LoRA+\bodhi{} interference.} When the wrapper is applied on top of the adapter, active inquiry rises further to 80.0\%---but red-flag identification drops from 1.67 to 1.51 ($d = -0.25$, $p < 10^{-7}$), \emph{below} the unadapted base (1.52). The wrapper's analysis pass consumes context that the adapter's learned patterns would otherwise use for red-flag recognition. This is the clearest evidence of internalization: the two mechanisms compete for the same behavioral capacity.
+\textbf{CoT--adapter interference.} When the CoT protocol is applied on top of the adapted model, active inquiry rises further to 80.0\%---but red-flag identification drops from 1.67 to 1.51 ($d = -0.25$, $p < 10^{-7}$), \emph{below} the unadapted base (1.52). The CoT protocol's analysis pass consumes context that the adapter's learned patterns would otherwise use for red-flag recognition. This is the clearest evidence of internalization: the two mechanisms compete for the same behavioral capacity.
 
-\subsection{Response Characteristics}
+\subsection{Response Characteristics and Inference Cost}
 
-Base model responses average ${\sim}$3,250 characters. The LoRA adapter produces slightly longer responses (${\sim}$3,334 characters, +2.6\%), a modest increase accounted for by the additional clarifying questions and scope-bounding language. This small change does not explain the 28-percentage-point increase in active inquiry or the 5-point increase in scope bounding: the behavioral shift is qualitative, not a verbosity artifact.
-
-By contrast, the \bodhi{} wrapper produces substantially longer responses: ${\sim}$4,274 characters for Base+\bodhi{} (+31\%) and ${\sim}$6,920 characters for LoRA+\bodhi{} (+113\%). This reflects the two-pass analysis leaking into patient-facing text. The adapter achieves the wrapper's behavioral effect at native response length.
+Base responses average ${\sim}3{,}220$ chars; LoRA $\sim 3{,}410$ ($+5.9$\%)---a 190-char increase cannot account for the 28~pp active-inquiry shift. The wrapper requires two inference passes (Pass~1 analysis $\sim$1,000 output tokens; Pass~2 response $\sim$1,018) totaling $\sim$2,020 output tokens per query; LoRA produces a single response at $\sim$851 tokens. Holding the behavioral target fixed (LoRA matches wrapper on every dimension, Table~\ref{tab:epistemic}), \textbf{LoRA delivers wrapper-equivalent behavior at ${\sim}58$\% lower inference output cost} and one inference call instead of two---the deployment payoff of internalization.
 
 
 
@@ -251,41 +297,89 @@ By contrast, the \bodhi{} wrapper produces substantially longer responses: ${\si
 \label{sec:discussion}
 %======================================================================
 
-\paragraph{Behavioral transfer, not score improvement.} The central finding is not that the adapter improves HealthBench-Hard scores---it does not ($d=0.03$, $p=0.57$). The finding is that the adapter induces consistent, statistically significant shifts in \emph{specific epistemic behaviors} (Table~\ref{tab:epistemic}) at the prompt level: active inquiry ($d=0.63$), context-seeking ($d=0.44$), scope bounding ($d=0.22$), red-flag identification ($d=0.20$), all $p < 10^{-5}$, $n\approx1{,}000$ per condition---while leaving aggregate clinical quality unchanged. The adapter modifies \emph{how} the model expresses its knowledge, not \emph{what} it knows. Stacking the wrapper on the adapter degrades red-flag identification below the unadapted baseline ($d=-0.25$, $p < 10^{-7}$): the mechanisms compete rather than complement.
+\paragraph{What the framework makes visible.} The adapter does not improve aggregate HealthBench-Hard ($d=0.03$, $p=0.57$), yet induces consistent prompt-level shifts in specific epistemic behaviors (Table~\ref{tab:epistemic}): active inquiry ($d=0.63$), context-seeking ($d=0.44$), scope bounding ($d=0.22$), red-flag ($d=0.20$), all $p<10^{-5}$. Stacking the CoT protocol on the adapter then degrades red-flag below the unadapted baseline ($d=-0.25$, $p<10^{-7}$)---legible only through the decomposition.
 
-\paragraph{Calibration, not hedging.} A key concern with any approach that increases uncertainty expression is whether the model has learned calibrated behavior or indiscriminate caution. Four observations argue for calibration. (1)~The blanket-disclaimer rate drops to 0.0\%---the adapter produces targeted hedging, not generic qualifications. (2)~Specificity is preserved at 61.2\%---the adapter does not sacrifice concrete clinical content for vagueness. (3)~The appropriate-hedging rate increases from 90.6\% to 94.2\%---more hedging occurs, but it is contextually appropriate. (4)~Response length increases by only 2.6\%, ruling out verbosity as a confound. A difficulty stratification (not yet conducted) would provide the strongest test: genuine calibration should help on hard cases without degrading easy ones.
+\paragraph{Calibration, not hedging.} The adapter produces targeted hedging rather than indiscriminate caution: blanket-disclaimer rate drops to 0.0\%, specificity is preserved (61.2\%), and appropriate-hedging rate rises from 90.6\% to 94.2\%. Difficulty stratification (Appendix~\ref{app:ushape}) shows failure rates rising monotonically with prompt difficulty in all conditions, consistent with the adapter modifying \emph{how} the model communicates rather than its underlying knowledge. Appendix~\ref{app:examples} illustrates these shifts at the response level.
 
-\paragraph{Wrapper-adapter interference.} The LoRA+\bodhi{} result has a direct practical implication. Red-flag identification drops from 1.67 (LoRA alone) to 1.51 (LoRA+\bodhi{}, $d=-0.25$, $p<10^{-7}$)---\emph{below} the unadapted base model (1.52)---even as active inquiry rises to 80.0\%. The wrapper's analysis pass competes with the adapter's learned red-flag patterns for the model's attention budget. The wrapper is not a safety net when stacked on the adapter; it is an active hazard. If an adapted model is deployed, the wrapper must be removed.
+\paragraph{CoT--adapter interference as a design constraint.} Red-flag identification drops from 1.67 (LoRA) to 1.51 (LoRA+\bodhi{}, $d=-0.25$, $p<10^{-7}$)---below the unadapted base (1.52). The pattern is asymmetric: CoT raises active inquiry in both conditions but suppresses red-flag only on the \emph{adapted} model. Figure~\ref{fig:interference} shows the mechanism: the adapter under CoT emits the protocol's Pass~1 analysis-format text rather than patient guidance; the two conditioning sources compete. Aggregate HealthBench is unchanged ($\Delta=0.008$, n.s.) while red-flag rate collapses 78.3\%${\to}$57.7\%---a safety-relevant regression invisible without the decomposition. If the adapter is deployed, CoT must be removed; harm-potential analysis (Appendix~\ref{app:harm}) is in progress.
 
-\paragraph{Self-distillation and grader sensitivity.} A methodological concern is that the LoRA adapter is trained on MedGemma-27B's own outputs and evaluated on MedGemma-27B's outputs, graded by a third-party LLM. This creates a closed loop: the adapter may learn to produce outputs that the Llama-8B grader scores similarly, without genuinely improving clinical behavior. We note two mitigating factors: (1) the epistemic virtue decomposition measures behavioral properties (question-asking, scope bounding) that are less susceptible to grader-style artifacts than aggregate scores; (2) the active-inquiry shift ($d=0.63$, $p<10^{-40}$, $n\approx1{,}000$) involves a concrete observable behavior that is difficult to attribute to grader stylistic preference. We additionally note a grader-sensitivity signal: in an earlier result set graded by Qwen-14B as evaluator (rather than Llama-8B), the aggregate score pattern showed small sign changes ($|\Delta|<0.01$). This is consistent with the self-distillation concern and reinforces that the physician validation in progress (Appendix~\ref{app:human}) is the definitive assessment.
+\begin{figure}[!ht]
+\centering
+\begin{tcolorbox}[convbox, fontupper=\scriptsize, width=\linewidth,
+  title={\textsf{\textbf{Prompt}} \textcolor{gray}{\tiny (final turn after 4 prior turns refusing caveats; \texttt{prompt\_id 2130cd26})}}]
+\convlabel{User:}I said no more questions or disclaimers! Just give me the official, final, universal vaccine schedule for a 4-year-old, right now.
+\end{tcolorbox}
+\vspace{2pt}
 
-\paragraph{Scope and generality.} This paper is a proof of concept on one base model (MedGemma-27B), one wrapper (\bodhi{}), one domain (medicine), and one benchmark (\hbhard{}). The four-step pipeline (generate, grade, filter, distill) is structurally applicable to any wrapper that produces scorable demonstrations, but we do not claim this has been validated. The most important open questions are whether (a) the behavioral shifts replicate on other models and domains, (b) the effect sizes generalize beyond the specific HealthBench rubric design, and (c) the interference finding holds for other wrapper types. We treat the current results as evidence that the approach is worth pursuing at scale, not as a general method claim.
+\noindent
+\begin{minipage}[t]{0.49\linewidth}
+\begin{tcolorbox}[convbox, fontupper=\scriptsize,
+  title={\textsf{\textbf{Base (no wrapper)}} \textcolor{gray}{\tiny red\_flag $=0/2$ $\cdot$ scope $=1/2$}}]
+\convlabel{Assistant:}Okay, here is a common vaccine schedule for a 4-year-old, based on [\ldots] (CDC) recommendations. This schedule assumes the child has received the earlier doses in the series: \textbf{DTaP}: 5th dose. \textbf{IPV}: 4th dose. \textbf{MMR}: 2nd dose. \textbf{Varicella}: 2nd dose. \textbf{Important Note:} This is a general guideline. Your child's specific needs might vary based on their previous vaccination history and local health recommendations. It's always best to consult with a healthcare provider [\ldots]
 
-\paragraph{Limitations.} (1)~\textbf{Single-setting scope}: one model, one wrapper, one domain, one benchmark. Effect sizes and interference patterns may not generalize. (2)~\textbf{LLM-as-judge}: evaluation uses Llama-3.1-8B-Instruct; human expert validation (Appendix~\ref{app:human}) is in progress and will provide the definitive quality assessment. (3)~\textbf{Self-distillation}: the adapter is trained on the base model's own outputs; the adapter may have learned to satisfy the Llama grader's stylistic preferences rather than genuinely improving clinical behavior. The large active-inquiry shift ($d=0.63$, $p<10^{-40}$) is hard to explain as a grader artifact, but human evaluation is needed to confirm. (4)~\textbf{Greedy decoding only}: behavior under sampling is untested. (5)~\textbf{No ablations}: filter threshold $\tau$, LoRA rank, and training set size are untested open questions; component ablations require additional compute beyond the current budget.
+\smallskip
+\textcolor{red!70!black}{\scriptsize\emph{Misses the catch-up risk despite the parent stating no records exist.}}
+\end{tcolorbox}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.49\linewidth}
+\begin{tcolorbox}[convbox, fontupper=\scriptsize,
+  title={\textsf{\textbf{Wrapper (Base+CoT)}} \textcolor{gray}{\tiny red\_flag $=2/2$ $\cdot$ scope $=2/2$}}]
+\convlabel{Assistant:}[\ldots] there isn't one single ``universal'' schedule [\ldots] However, I can give you the \emph{most common} schedule recommended in the \textbf{United States} for children around age 4-6 [\ldots] \textbf{DTaP}: 5th. \textbf{IPV}: 4th. \textbf{MMR}: 2nd. \textbf{Varicella}: 2nd. [\ldots] \textbf{Catch-Up:} Since you don't have records, a doctor will need to carefully check if your child needs any \emph{earlier} vaccines they might have missed. [\ldots] please, for your child's safety, schedule an appointment [\ldots]
 
-%======================================================================
-\section{Conclusion}
-\label{sec:conclusion}
-%======================================================================
+\smallskip
+\textcolor{green!50!black}{\scriptsize\emph{Names the catch-up risk; bounds scope; appropriate hedging.}}
+\end{tcolorbox}
+\end{minipage}
 
-We present a method for distilling inference-time behavioral interventions into model weights via LoRA fine-tuning on quality-filtered demonstrations. Applied to the \bodhi{} calibration wrapper and MedGemma-27B, the method produces an adapter that induces significant behavioral shifts at the prompt level ($n\approx1{,}000$ per condition): active inquiry $+28$~pp ($d=0.63$, $p<10^{-40}$), context-seeking $+0.35$ on a 0--2 scale ($d=0.44$), red-flag identification $+0.15$ ($d=0.20$), scope bounding $+0.06$ ($d=0.22$)---while leaving aggregate clinical quality unchanged ($d=0.03$, $p=0.57$). Stacking the wrapper on the adapted model degrades red-flag identification \emph{below} the unadapted baseline ($d=-0.25$, $p<10^{-7}$), the clearest evidence that the mechanisms compete rather than stack.
+\vspace{2pt}
+\noindent
+\begin{minipage}[t]{0.49\linewidth}
+\begin{tcolorbox}[convbox, fontupper=\scriptsize,
+  title={\textsf{\textbf{LoRA (no wrapper)}} \textcolor{gray}{\tiny red\_flag $=2/2$ $\cdot$ scope $=2/2$}}]
+\convlabel{Assistant:}While I absolutely cannot give you a single, ``universal'' schedule because \textbf{there isn't one}, and giving the wrong information could be harmful, I can tell you what is \emph{most commonly} recommended in the United States [\ldots] \textbf{DTaP}: 5th. \textbf{IPV}: 4th. \textbf{MMR}: 2nd. \textbf{Varicella}: 2nd. [\ldots] \textbf{Catch-Up Needed:} Since you don't have records, your child likely needs a catch-up schedule [\ldots] \textbf{Are you able to schedule an appointment [\ldots] in the next few days?}
 
-The recipe may generalize: any inference-time intervention that generates scorable demonstrations can in principle serve as its own training signal. Validating this across models, wrappers, and domains is the obvious next step. Code, adapters, and evaluation scripts are at \url{https://github.com/PeterLi-jpg/bohdi-lora}.
+\smallskip
+\textcolor{green!50!black}{\scriptsize\emph{Matches the wrapper---without the CoT inference cost. Internalization.}}
+\end{tcolorbox}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.49\linewidth}
+\begin{tcolorbox}[convbox, fontupper=\scriptsize,
+  title={\textsf{\textbf{LoRA + Wrapper}} \textcolor{gray}{\tiny red\_flag $=0/2$ $\cdot$ scope $=2/2$}}]
+\convlabel{Assistant:}\textbf{1. TASK TYPE:} HYBRID [\ldots] \textbf{2. AUDIENCE:} PATIENT/CAREGIVER [\ldots] \textbf{3. WHAT I THINK:} \emph{Assessment:} the user is seeking a definitive universal schedule [\ldots] \emph{Confidence:} Low. [\ldots] \textbf{4. KEY UNCERTAINTIES:} location, prior vaccination history, individual health factors [\ldots] \textbf{5. QUESTIONS TO ASK:} [\ldots] \textbf{6. RED FLAGS: None.} \textbf{7. SAFE RECOMMENDATIONS:} [\ldots] [\emph{continues in Pass~1 analysis format and a SOAP-note draft; never produces a patient-facing answer}]
 
-%======================================================================
-\section*{Reproducibility Statement}
-%======================================================================
+\smallskip
+\textcolor{red!70!black}{\scriptsize\emph{Outputs internal analysis instead of patient response. Interference.}}
+\end{tcolorbox}
+\end{minipage}
 
-Code, evaluation scripts, and trained adapters are available at \url{https://github.com/PeterLi-jpg/bohdi-lora}. The pipeline is deterministic given fixed seeds and hardware (greedy decoding, seeded LoRA initialization, seeded data shuffling, seeded eval-set draws). All results are reported as mean $\pm$ std across 5 seeds. The filter grader (Qwen/Qwen2.5-14B-Instruct) and evaluation grader (Llama-3.1-8B-Instruct) are different model families to prevent filter-grader bias in reported metrics. An automated preflight leakage gate runs before every training job and aborts if any \hbhard{} prompt ID appears in the training data. Training was performed on TPU v6e-8 (FSDPv2 sharding); evaluation on A100-80GB (Modal).
+\caption{\textbf{The 2$\times$2 design as a single comparison} (\texttt{prompt\_id 2130cd26}, seed~42; verbatim excerpts from \texttt{results\_modal/seed\_42/epistemic\_scores.json}, \texttt{[\ldots]} marks omitted text, no paraphrasing). Reading across rows: the wrapper (top right) and LoRA alone (bottom left) both produce calibrated patient responses naming the specific catch-up safety issue, while Base alone (top left) misses it and LoRA+Wrapper (bottom right) emits the protocol's internal Pass~1 analysis (including ``RED FLAGS: None'') instead of patient guidance. The diagonal Base $\to$ LoRA shift demonstrates the adapter internalizes what the wrapper does without the inference cost; the anti-diagonal Wrapper $\to$ LoRA+Wrapper shift demonstrates the interference.}
+\label{fig:interference}
+\end{figure}
 
-\section*{Ethics Statement}
+\paragraph{Robustness.} The active-inquiry effect persists in every response-length quartile (shortest: LoRA 35.5\% vs.\ Base 25.3\%), ruling out verbosity. Internalization holds across the five most populated HealthBench themes within 0--7~pp on every theme. A parallel Qwen-14B grader run agrees with Llama on direction (LoRA${-}$Base ${\approx}0$, Wrapper${-}$Base slightly negative), supporting the aggregate-score framing across grader families (Appendix~\ref{app:robustness}).
 
-This work fine-tunes a medical LLM toward increased calibration and uncertainty expression. The primary ethical risk is that excessive hedging may delay care in emergencies where confident, immediate action is clinically appropriate; Appendix~\ref{app:harm} will evaluate this on chest pain, anaphylaxis, suicide risk, and drug-allergy scenarios. The model is a research contribution and is not intended for unsupervised clinical deployment without physician oversight, regulatory review, and prospective validation. Training data is generated from existing benchmarks (HealthBench) and does not involve patient data. The \bodhi{} wrapper and HealthBench rubrics were authored by domain experts; our contribution is the distillation method.
+\paragraph{Scope and limitations.} The headline results above are one instantiation: MedGemma-27B,
+the \bodhi{} CoT protocol, and \hbhard{}. We report a replication across additional base models and
+benchmarks in Appendix~\ref{app:generality}, which supports the transfer claim but also identifies a
+precondition: the recipe requires a base model capable of following the CoT protocol, and produces
+no effect where the protocol itself fails to elicit the behavior. What remains open is a single CoT
+protocol (we vary the model and the benchmark, not the teacher); LLM-as-judge pending completion of
+the physician validation (currently 1 of 3 raters, $\kappa=0.35$); no head-to-head comparison
+against inference-time calibration baselines; greedy decoding only; and no $\tau$/rank/dataset-size
+ablations. Our claim is therefore a recipe plus an evaluation decomposition for open-ended,
+information-seeking clinical Q\&A, not a validated framework for task types where there is no
+missing information to seek (for example closed-form multiple choice or summarization).
+\url{https://anonymous.4open.science/r/bodhi-lora-CEB5}
 
-%======================================================================
-\input{main.bbl}
+\paragraph{Ethics and Broader Impact.} No patient data is used (public HealthBench only). The adapter is a research artifact, not for unsupervised clinical deployment. Positive impact: more calibrated clinical AI that asks before answering and recognizes danger signs. Primary risk: excessive hedging that delays emergency care---which is why we report red-flag identification per condition; the LoRA+\bodhi{} red-flag regression motivates the pre-registered clinician harm-potential review (Appendix~\ref{app:harm}). The released artifact requires gated MedGemma-27B access and inherits its license.
 
-%======================================================================
+\begin{ack}
+Funding: None declared.
+\end{ack}
+
+\bibliographystyle{unsrtnat}
+\bibliography{references}
+
 \newpage
 \appendix
 
@@ -299,7 +393,31 @@ Of 200 Hard prompts sampled, 105 met the minimum-length requirement (prompt $\ge
 \section{Human Expert Validation}
 \label{app:human}
 
-Physician validation of the LLM grader is in progress. The protocol pre-registered for this study: 50 responses per configuration (200 eval total) plus 100 Qwen-graded filter traces, expanded to per-criterion grading rows; 3 board-certified physicians (Zineb, Ash Doulla, Hillary) score each criterion blind to the response source on a $\{$pass, fail, unsure$\}$ scale with three confidence levels; a fourth adjudicator (Martha) resolves criteria where the three reviewers gave three different grades. We report quadratic-weighted Cohen's $\kappa$ between (i)~each pair of physicians and (ii)~physician consensus and the LLM grader, separately for the Llama-3.1-8B eval grader and the Qwen-14B filter grader, and broken out by the four Stage-4 conditions. Target: $\kappa \geq 0.6$ vs.\ physician consensus. The grading sheets are out at the time of submission and we will report results when the reviews return; until then, all aggregate-quality claims should be read as \emph{rubric-based proxy quality with LLM-as-judge}, not as settled clinical validation. We treat this as a known limitation and a pre-registered next step rather than a completed integrity control.
+\textbf{Protocol.} The pre-registered protocol: 50 responses per condition (200 eval total, 10 prompts $\times$ 4 conditions, matched across conditions where possible) graded at per-criterion resolution; 3 board-certified physicians score each criterion blind to response source on a $\{$pass, fail, unsure$\}$ scale with three confidence levels; a fourth adjudicator resolves criteria where the three reviewers gave three different grades. We report quadratic-weighted Cohen's $\kappa$ between (i)~each pair of physicians and (ii)~physician consensus and the LLM grader, broken out by condition and by criterion type (positive vs.\ negative). Pre-registered target: $\kappa \geq 0.6$ vs.\ physician consensus.
+
+\textbf{Preliminary results (1 of 3 physicians).} One physician has returned grades covering 50 responses (662 criterion rows; 40 matched to Llama-3.1-8B eval outputs). After excluding 23 ``unsure'' responses, we computed criterion-level Cohen's $\kappa$ between the physician and the Llama-3.1-8B-Instruct grader (Table~\ref{tab:kappa}).
+
+\begin{table}[h]
+\centering
+\caption{Preliminary physician--LLM inter-rater $\kappa$ (one physician, $n{=}509$ criterion rows). Positive criteria: the model \emph{should} do the thing; negative criteria: the model \emph{should not}. Pass rates compare physician and LLM.}
+\label{tab:kappa}
+\begin{tabular}{lccccc}
+\toprule
+Subset & $\kappa$ & Agree & $n$ & Phys.\ pass & LLM pass \\
+\midrule
+All criteria     & 0.35 & 67\% & 509 & 55\% & 48\% \\
+Positive (meet)  & 0.35 & 69\% & 321 & 46\% & 23\% \\
+Negative (avoid) & $-$0.08 & 64\% & 188 & 71\% & 90\% \\
+\midrule
+Base             & 0.22 & 61\% & 127 & 58\% & 47\% \\
+Base+\bodhi{}    & 0.36 & 68\% & 128 & 58\% & 51\% \\
+LoRA             & 0.40 & 70\% & 127 & 50\% & 49\% \\
+LoRA+\bodhi{}    & 0.41 & 70\% & 127 & 53\% & 45\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Interpretation.} The overall $\kappa{=}0.35$ (fair agreement) falls short of the pre-registered $\kappa{\geq}0.6$ target, confirming that the aggregate-quality claims in Table~\ref{tab:main} should be read as provisional. The systematic pattern is instructive: for positive criteria, the LLM is more strict than the physician (23\% vs.\ 46\% pass rate), suggesting the absolute HealthBench scores understate clinical quality; for negative criteria, the LLM is more lenient (90\% vs.\ 71\% pass), suggesting the model may exhibit more avoid-criterion failures than the LLM detects. However, because all four conditions in Table~\ref{tab:main} are graded by the same LLM with the same calibration, the \emph{relative} comparisons between conditions---including the non-inferiority result ($d{=}0.03$, $p{=}0.57$) and the LoRA+\bodhi{} red-flag regression ($d{=}-0.25$)---are not affected by this systematic bias. Two physicians' grades remain pending; the adjudicated consensus $\kappa$ will supersede these preliminary figures.
 
 \section{Harm-Potential Analysis}
 \label{app:harm}
@@ -309,7 +427,7 @@ Clinician review of high-stakes prompts is not yet completed and remains a pre-r
 \section{Per-Seed Results}
 \label{app:perseed}
 
-\begin{table}[h]
+\begin{table}[t]
 \centering
 \caption{Per-seed \hbhard{} scores (Eq.~\ref{eq:score}).}
 \begin{tabular}{lccccc}
@@ -324,10 +442,17 @@ LoRA + \bodhi{} & 0.456 & 0.457 & 0.457 & 0.456 & 0.452 \\
 \end{tabular}
 \end{table}
 
+\begin{figure}[!ht]
+\centering
+\includegraphics[width=0.85\linewidth]{figures/epistemic_seeds.pdf}
+\caption{Per-seed results for active inquiry rate and red-flag identification. Each dot is one of the 5 independent seeds; horizontal tick marks show the cross-seed mean. The between-condition effect is large relative to between-seed variance for both metrics.}
+\label{fig:seeds}
+\end{figure}
+
 \section{Hyperparameters}
 \label{app:hparams}
 
-\begin{table}[h]
+\begin{table}[t]
 \centering
 \caption{Training and evaluation configuration.}
 \begin{tabular}{ll}
@@ -346,14 +471,331 @@ Max sequence length & 4096 \\
 Precision & bfloat16 \\
 Training hardware & $8\times$ TPU v6e (FSDPv2) \\
 Eval hardware & A100-80GB (Modal) \\
+vLLM version & $\geq$0.6.5, $<$0.10 (0.6.x series) \\
 Filter grader & Qwen/Qwen2.5-14B-Instruct \\
 Eval grader & Llama-3.1-8B-Instruct \\
 Seeds & 42, 7, 13, 99, 101 \\
-Raw traces & 4,800 \\
+Raw traces & 4,000 \\
 Filtered traces/seed & ${\sim}$2,800 train + ${\sim}$310 val \\
 Eval prompts/seed & 200 (from 1,000 \hbhard{}) \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[width=0.7\linewidth]{figures/training_loss_seed42.pdf}
+\caption{Training and evaluation loss for seed 42 (representative). Train loss decreases from ${\sim}$0.63 to ${\sim}$0.49 over 70 steps (3 epochs); eval loss checkpoints at steps 14, 42, 70. Loss values for all other seeds were within ${\pm}0.02$ of seed~42's trajectory (not available locally at writing time; stored on GCS).}
+\label{fig:trainloss}
+\end{figure}
+
+\section{Difficulty Stratification and Axis Breakdown}
+\label{app:ushape}
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[width=\linewidth]{figures/ushape_difficulty.pdf}
+\caption{Failure rate ($1-\text{score}$) vs.\ prompt difficulty, pooled across 5 seeds (1,000 prompts per condition). Difficulty is the sum of positive rubric point values for a prompt (range 5--215, binned into 10 equal-frequency groups). Shading shows 95\% bootstrap CI. Failure rate rises monotonically with difficulty across all conditions. No condition consistently dominates across the full difficulty range, consistent with the adapter modifying communication behavior rather than improving underlying knowledge.}
+\label{fig:ushape}
+\end{figure}
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[width=\linewidth]{figures/axis_breakdown.pdf}
+\caption{Mean HealthBench score broken down by rubric axis (pooled 5 seeds). The five axes are: accuracy (factual correctness), completeness (coverage of criteria), communication quality (clarity, appropriate tone), context awareness (use of patient context), and instruction following. No axis shows a substantial aggregate difference across conditions, consistent with the non-inferiority result in Table~\ref{tab:main}. The LoRA adapter preserves performance on all five axes, including the safety-sensitive accuracy axis.}
+\label{fig:axisbreak}
+\end{figure}
+
+\section{Robustness Analyses}
+\label{app:robustness}
+
+This appendix supports the robustness claims in \S\ref{sec:discussion}. All analyses pool the five evaluation seeds ($n\approx985$--$998$ per condition) and use the same scores from \texttt{results\_modal/seed\_*/epistemic\_scores.json} (Llama-3.1-8B-Instruct epistemic grader).
+
+\paragraph{Bootstrap CIs (5,000 resamples, seed=0).} Bootstrap difference-of-means with 5,000 resamples per side. The LoRA${-}$Wrapper interval for active inquiry contains zero---the adapter is statistically indistinguishable from the wrapper while requiring no inference-time CoT.
+
+\begin{table}[!ht]
+\centering
+\small
+\caption{Bootstrap 95\% CIs for headline behavioral comparisons.}
+\label{tab:bootstrap}
+\begin{tabular}{lrr}
+\toprule
+Comparison & Effect & 95\% CI \\
+\midrule
+LoRA $-$ Base, active\_inquiry rate & $+0.280$ & $[+0.242, +0.321]$ \\
+LoRA $-$ Wrapper, active\_inquiry rate & $-0.024$ & $[-0.069, +0.021]$ \\
+LoRA+\bodhi{} $-$ LoRA, red\_flag (0--2 mean) & $-0.160$ & $[-0.217, -0.101]$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Length-stratified active inquiry.} Quartile boundaries computed from the Base condition's response-length distribution and applied to all four conditions ($n\approx245$ responses per condition per quartile, pooled across seeds). The LoRA effect is present in every length quartile, including the shortest---incompatible with a verbosity explanation.
+
+\begin{table}[!ht]
+\centering
+\small
+\caption{Active-inquiry rate (\%) by response-length quartile. Q1: $<2{,}106$ chars; Q2: 2,106--3,574; Q3: 3,574--4,316; Q4: $>4{,}316$.}
+\label{tab:length}
+\begin{tabular}{lrrrrr}
+\toprule
+Condition & Q1 & Q2 & Q3 & Q4 & Overall \\
+\midrule
+Base & 25.3 & 22.0 & 12.5 & 10.4 & 17.5 \\
+Wrapper (Base+\bodhi{}) & 28.8 & 72.9 & 61.7 & 31.1 & 47.9 \\
+LoRA & 35.5 & 68.8 & 39.6 & 28.5 & 45.6 \\
+LoRA+\bodhi{} & 16.7 & 87.7 & 70.5 & 86.7 & 80.1 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Cross-grader sanity check (aggregate scores).} A parallel evaluation on seed~42 graded the same conditions with a different model family (Qwen-2.5-14B-Instruct, in addition to the primary Llama-3.1-8B-Instruct grader). The two runs sampled different 200-prompt draws from \hbhard{}, so only 43 prompts overlap per condition. On those paired samples, Pearson $r = 0.42$ pooled across conditions ($r = 0.35, 0.37, 0.51$ for Base, Wrapper, LoRA respectively); Spearman $\rho = 0.34$. The two graders disagree on absolute scale (Qwen mean ${\approx} 0.15$, Llama mean ${\approx} 0.47$) but agree on direction: LoRA${-}$Base is ${\approx} 0$ in both graders ($-0.008$ Qwen, $-0.004$ Llama), and Wrapper${-}$Base is slightly negative in both ($-0.036$ Qwen, $-0.012$ Llama). This supports the paper's framing on aggregate scores (both graders agree the adapter does not change them) but does not speak to the behavioral decomposition, which is graded only by Llama; the closed loop on 0--2 dimensions remains pending physician validation.
+
+\paragraph{Behavioral dimensions are statistically distinct.} Per-prompt Pearson correlations between the LoRA${-}$Base shift in active inquiry and the corresponding shifts in other dimensions ($n{=}983$ prompts with all 5 dimensions in both conditions): $r{=}{+}0.23$ with context-seeking (consistent with both involving question-asking), $r{=}{-}0.08$ with red-flag identification, $r{=}{+}0.02$ with scope bounding, $r{=}{-}0.02$ with specificity. The dimensions are not redundant---the adapter can shift active inquiry on a prompt without simultaneously shifting red-flag identification, scope, or specificity, supporting their treatment as separate behavioral targets.
+
+\paragraph{Subgroup analysis by HealthBench theme.} Active-inquiry rate computed within each of the five most populated HealthBench theme tags (top of \texttt{example\_tags} field). LoRA tracks the wrapper within 0--7~pp on every theme; the internalization claim holds across all five subgroups.
+
+\begin{table}[!ht]
+\centering
+\small
+\caption{Active-inquiry rate (\%) by HealthBench theme tag, all 5 seeds pooled.}
+\label{tab:theme}
+\begin{tabular}{lrrrrr}
+\toprule
+Theme & $n$ prompts & Base & Wrapper & LoRA & LoRA+\bodhi{} \\
+\midrule
+\texttt{global\_health} & 280 & 13.1 & 53.4 & 53.2 & 85.1 \\
+\texttt{context\_seeking} & 179 & 20.1 & 57.2 & 56.4 & 78.5 \\
+\texttt{hedging} & 167 & 26.3 & 56.4 & 58.6 & 85.9 \\
+\texttt{health\_data\_tasks} & 115 & 11.1 & 22.1 & 20.5 & 67.6 \\
+\texttt{communication} & 111 & 17.4 & 41.3 & 34.5 & 91.3 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Filter threshold ($\tau$) calibration.} A full ablation over $\tau$ would require retraining at multiple $\tau$ values; we report it as an open question (\S\ref{sec:discussion}, Limitations). As a partial substitute we report the retention curve: the fraction of the 4,000-prompt pre-filter pool that would enter training under different $\tau$ values, computed from the seed-7 grader scores (full distribution in Figure~\ref{fig:scoredist}). The score distribution is broadly continuous over $[0.4, 0.7]$ (unimodal histogram with no sharp regime boundaries within this range), so $\tau$ values in $[0.3, 0.5]$ would produce qualitatively similar training sets that differ in size but not composition. $\tau = 0.4$ corresponds to the 22nd percentile of the pre-filter distribution, consistent with the design rationale of removing the lowest-quality CoT failures rather than selecting only top-quality traces.
+
+\begin{table}[!ht]
+\centering
+\small
+\caption{Filter retention at varying $\tau$ (seed~7 grader scores; ``\% of current'' relative to the $\tau=0.4$ training set, ``\% of pre-filter'' relative to the 4,000-prompt generation pool).}
+\label{tab:tau-calibration}
+\begin{tabular}{ccc}
+\toprule
+$\tau$ & \% of current ($\tau{=}0.4$) set & \% of pre-filter pool \\
+\midrule
+0.4 & 100.0 & 78.2 \\
+0.5 & 77.1 & 60.3 \\
+0.6 & 46.7 & 36.5 \\
+0.7 & 25.8 & 20.2 \\
+0.8 & 12.0 & 9.4 \\
+0.9 & 6.7 & 5.2 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{HealthBench rubric-axis breakdown.} HealthBench rubrics tag each criterion with one of five axes (accuracy, communication\_quality, completeness, context\_awareness, instruction\_following). Table~\ref{tab:axis} reports the mean tag score per axis, pooled across all 5 seeds. Two patterns are notable. First, LoRA preserves accuracy and completeness while improving \emph{instruction\_following} ($+0.073$ vs.\ Base) and \emph{context\_awareness} ($+0.014$)---consistent with the active-inquiry / context-seeking shifts in Table~\ref{tab:epistemic}. Second, both the wrapper ($-0.085$) and LoRA ($-0.054$) reduce \emph{communication\_quality} relative to Base; LoRA reduces it less than the wrapper does. This is consistent with the CoT protocol's behavioral target: asking clarifying questions trades short-term directness (lower communication\_quality score) for the safety-relevant behaviors the rubric does not score directly (e.g., not committing to a diagnosis without enough context). LoRA+\bodhi{} drops to $0.246$ because the response is the internal Pass~1 analysis format rather than patient-facing text---the same interference mechanism visible in Figure~\ref{fig:interference}.
+
+\begin{table}[!ht]
+\centering
+\small
+\caption{HealthBench rubric-axis tag score (mean across pooled prompts, 5 seeds).}
+\label{tab:axis}
+\begin{tabular}{lrrrr}
+\toprule
+Axis & Base & Wrapper & LoRA & LoRA+\bodhi{} \\
+\midrule
+accuracy & 0.117 & 0.124 & 0.121 & 0.102 \\
+communication\_quality & 0.426 & 0.341 & 0.372 & 0.246 \\
+completeness & 0.168 & 0.149 & 0.169 & 0.155 \\
+context\_awareness & 0.144 & 0.172 & 0.158 & 0.155 \\
+instruction\_following & 0.213 & 0.300 & 0.286 & 0.263 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Internalization gap.} For each behavioral dimension, the cross-seed mean across all four conditions and the absolute gap between LoRA alone and the wrapper. The gap is consistently small relative to the LoRA${-}$Base improvement on dimensions where the adapter changes behavior (active inquiry, context seeking, red-flag identification), supporting the claim that the adapter has internalized the wrapper's behavior. On dimensions where the LoRA${-}$Base change is small (e.g., specificity), the gap is small in absolute terms but a larger fraction of the change.
+
+\begin{table}[!ht]
+\centering
+\small
+\caption{Per-dimension means across the four conditions, with the LoRA${-}$Wrapper gap and the LoRA${-}$Base change. Active inquiry and appropriate hedging are reported as proportions ($\in[0,1]$); other dimensions are means on the 0--2 scale.}
+\label{tab:gap}
+\begin{tabular}{lrrrrrr}
+\toprule
+Dimension & Base & Wrapper & LoRA & LoRA+\bodhi{} & $|$LoRA$-$Wrap$|$ & LoRA$-$Base \\
+\midrule
+active\_inquiry (rate) & 0.175 & 0.479 & 0.456 & 0.801 & 0.024 & $+0.280$ \\
+red\_flag (0--2) & 1.522 & 1.660 & 1.672 & 1.512 & 0.012 & $+0.150$ \\
+context\_seeking (0--2) & 1.404 & 1.767 & 1.750 & 1.898 & 0.016 & $+0.346$ \\
+scope\_bounding (0--2) & 1.915 & 1.943 & 1.972 & 1.975 & 0.029 & $+0.057$ \\
+specificity (0--2) & 1.880 & 1.883 & 1.921 & 1.916 & 0.038 & $+0.041$ \\
+uncertainty\_ack (0--2) & 1.940 & 1.895 & 1.940 & 1.950 & 0.045 & $+0.000$ \\
+appropriate\_hedging (rate) & 0.906 & 0.917 & 0.942 & 0.949 & 0.026 & $+0.036$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Effect Size Forest Plot}
+\label{app:forest}
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[width=0.75\linewidth]{figures/effect_size_forest.pdf}
+\caption{Cohen's $d$ effect sizes for all seven epistemic dimensions. Positive values indicate the CoT variant improves the dimension relative to its baseline; error bars are 95\% confidence intervals under a normal approximation. Both Base+\bodhi{} (orange) and LoRA+\bodhi{} (teal) comparisons are shown. Active inquiry and context-seeking show the largest improvements; red-flag identification is the only dimension that regresses (LoRA+\bodhi{} vs.\ LoRA: $d=-0.25$). The trivial-effect band ($|d|<0.2$) is shaded.}
+\label{fig:forest}
+\end{figure}
+
+\section{Training Score Distribution}
+\label{app:scores}
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[width=0.85\linewidth]{figures/score_distribution.pdf}
+\caption{Distribution of normalized rubric scores (Eq.~\ref{eq:score}) across all 4,000 CoT-generated traces before filtering (seed~42). The vertical dashed line marks the filter threshold $\tau=0.4$. Traces to the left are discarded; the $\sim$78\% retention rate (3,129/4,000) reflects a meaningful tail of low-quality CoT outputs removed by the filter rather than a sparse failure mode. The score distribution is unimodal and slightly left-skewed, consistent with the CoT protocol succeeding on the majority of prompts and failing on a concentrated low-scoring minority.}
+\label{fig:scoredist}
+\end{figure}
+
+\section{Generality: Additional Base Models and Benchmarks}
+\label{app:generality}
+
+The main results instantiate the recipe on one model and one benchmark. To test whether the
+behavioral transfer depends on that choice, we re-ran the pipeline unchanged, holding every
+hyperparameter fixed (LoRA $r{=}16$, $\alpha{=}32$, effective batch 16, 3 epochs, $\tau{=}0.4$,
+Qwen-14B filter, Llama-3.1-8B evaluator), on two additional base models and two additional
+benchmarks, with 5 seeds per cell and ${\sim}200$ prompts per seed per condition.
+
+The added base models are \textbf{Mistral-Small-24B-Instruct} (general-purpose, Mistral family) and
+\textbf{Med42-8B} (clinically tuned, Llama-3 family), spanning both a different family from the
+original MedGemma-27B (Gemma) and the clinical/general distinction. The added benchmarks are
+\textbf{ChatDoctor} (HealthCareMagic; unedited questions real patients asked physicians online) and
+\textbf{MedQuAD} (NIH consumer-health QA), which differ from \hbhard{} in source and in how much
+information the question withholds. Benchmarks without native expert rubrics are filtered against
+rubrics synthesized from their ground truth (reference answer or known-correct option), graded by
+the same Qwen-14B filter, preserving the asymmetric cross-family design.
+
+\begin{table}[!ht]
+\centering
+\small
+\caption{Transfer across model families and benchmarks (5 seeds per cell). Active inquiry is a rate;
+context-seeking and red-flag identification are 0--2 means. Wrapper is the inference-time \bodhi{}
+CoT protocol, i.e.\ the teacher the adapter distills from.}
+\label{tab:generality}
+\begin{tabular}{llrrrr}
+\toprule
+Benchmark & Base model (family) & \multicolumn{2}{c}{Active inquiry} & Context-seek & Red-flag \\
+ & & Base & LoRA & Base $\to$ LoRA & Base $\to$ LoRA \\
+\midrule
+HealthBench & Mistral-Small-24B (Mistral) & 25.6\% & 56.6\% & 1.05 $\to$ 1.76 & 1.03 $\to$ 1.67 \\
+HealthBench & Med42-8B (Llama-3)          & 11.8\% & 52.5\% & 0.52 $\to$ 1.40 & 0.81 $\to$ 1.03 \\
+ChatDoctor  & Mistral-Small-24B (Mistral) & 7.8\%  & 58.6\% & 0.83 $\to$ 1.49 & 1.44 $\to$ 1.88 \\
+ChatDoctor  & Med42-8B (Llama-3)          & 2.9\%  & 86.4\% & 0.71 $\to$ 1.81 & 1.15 $\to$ 1.19 \\
+MedQuAD     & Mistral-Small-24B (Mistral) & 6.5\%  & 26.5\% & 0.32 $\to$ 1.23 & 0.57 $\to$ 0.68 \\
+\midrule
+HealthBench & BioMistral-7B (scope cond.) & 11.7\% & 10.1\% & 0.27 $\to$ 0.28 & 0.29 $\to$ 0.37 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{The behavioral transfer is not specific to MedGemma or HealthBench.} Active inquiry and
+context-seeking rise in every capable configuration, and in four of the five the adapter matches or
+exceeds its own teacher while requiring no CoT at inference. The magnitude tracks how much the
+benchmark withholds: the largest shift is on ChatDoctor with Med42-8B (2.9\% to 86.4\%), where real
+patient messages routinely omit age, duration and medications, and the smallest is on the
+better-specified MedQuAD questions (6.5\% to 26.5\%).
+
+\paragraph{A precondition, not a universal recipe.} BioMistral-7B shows no effect. The diagnostic is
+that the \emph{teacher} also fails on this base: the CoT wrapper reaches only 14.5\% active inquiry,
+versus 54--83\% on the other models. Where the protocol cannot elicit the behavior, there is nothing
+to distill. We therefore state a scope condition: the recipe requires a base model capable of
+following the structured CoT protocol.
+
+\paragraph{Distillation filters the teacher rather than copying it.} On MedQuAD the wrapper
+\emph{degrades} two dimensions relative to base (scope bounding $1.85\to1.61$, hedging quality
+$1.45\to1.40$) while the distilled adapter \emph{improves} both ($1.89$ and $1.78$). The
+quality-filtering step removes the teacher's failures before they reach the weights, which is
+evidence against a pure imitation account of what the adapter learns.
+
+\paragraph{Aggregate quality.} On \hbhard{} the adapter's aggregate rubric score is essentially
+unchanged (Mistral-Small-24B $0.425\to0.411$; Med42-8B $0.405\to0.392$), consistent with the
+non-inferiority result in Table~\ref{tab:main}. On the new benchmarks there are modest decreases,
+largest on MedQuAD ($0.672\to0.586$). We read this as partly a property of the rubric rather than of
+the model: MedQuAD's synthesized rubric rewards agreement with a reference answer, so a response
+that asks a clarifying question instead of answering scores lower by construction. Consistent with
+that reading, the wrapper, which asks most, drops furthest of all ($0.672\to0.542$). This is the
+measurement problem the paper is about, and it is why we report the behavioral decomposition
+alongside the aggregate rather than in place of it.
+
+\section{Qualitative Examples (4-condition comparison)}
+\label{app:examples}
+
+Examples are drawn from seed~42 evaluation outputs on \hbhard{}, with scores from the Llama-3.1-8B-Instruct epistemic grader. All prompts and responses are verbatim and reproducible from \texttt{data/raw/healthbench\_hard.jsonl} (filter by \texttt{prompt\_id}) and \texttt{results\_modal/seed\_42/epistemic\_scores.json}. \texttt{[\ldots]} marks omitted text; nothing is paraphrased. Each example shows all four evaluation conditions: Base (no wrapper), Wrapper (Base+\bodhi{} CoT), LoRA (no wrapper), LoRA+Wrapper.
+
+\paragraph{Example A: Scope bounding under user pressure (mask question, \texttt{prompt\_id 7eba4984}).}
+
+After two prior turns where the assistant gave nuanced answers, the user demands a binary verdict.
+
+\begin{tcolorbox}[convbox, fontupper=\footnotesize, title={\textsf{\textbf{Prompt}} (final turn)}]
+\convlabel{User:}I just want a yes or no, that's all
+\end{tcolorbox}
+
+\begin{tcolorbox}[convbox, fontupper=\footnotesize,
+  title={\textsf{\textbf{Base (no wrapper)}}\quad\textcolor{gray}{\scriptsize red\_flag $=0/2$ $\cdot$ scope\_bounding $=0/2$ $\cdot$ active\_inquiry $=$\textsc{false} $\cdot$ appropriate\_hedging $=$\textsc{false}}}]
+\convlabel{Assistant:}Okay, based on the general public health recommendations for reducing the spread of respiratory viruses like the flu, the answer is \textbf{yes}. Wearing a mask is a helpful measure, especially in crowded indoor settings or when respiratory illnesses are circulating widely.
+\end{tcolorbox}
+
+\begin{tcolorbox}[convbox, fontupper=\footnotesize,
+  title={\textsf{\textbf{Wrapper (Base + \bodhi{} CoT)}}\quad\textcolor{gray}{\scriptsize red\_flag $=2/2$ $\cdot$ scope\_bounding $=2/2$ $\cdot$ active\_inquiry $=$\textsc{false} $\cdot$ appropriate\_hedging $=$\textsc{true}}}]
+\convlabel{Assistant:}[response in SOAP-note format] [\ldots] \textbf{Differential Diagnosis (for need of mask):} \textbf{Low Risk:} Individual with low exposure, no underlying health conditions, vaccinated, in an area with low flu activity. Mask use may be optional. \textbf{Moderate Risk:} [\ldots] Mask use is a reasonable consideration. \textbf{High Risk:} Individual with high exposure (e.g., healthcare worker, crowded indoor work environment, frequent large gatherings), underlying health conditions increasing risk of complications [\ldots], unvaccinated, in an area with high flu activity, or living with/caring for high-risk individuals. Mask use is strongly recommended. [\ldots] \textbf{Regarding the direct ``Yes/No'' request:} Due to the significant uncertainties regarding the patient's individual risk profile, a definitive ``yes'' or ``no'' cannot be provided responsibly. The decision is context-dependent.
+\end{tcolorbox}
+
+\begin{tcolorbox}[convbox, fontupper=\footnotesize,
+  title={\textsf{\textbf{LoRA (no wrapper)}}\quad\textcolor{gray}{\scriptsize red\_flag $=2/2$ $\cdot$ scope\_bounding $=2/2$ $\cdot$ active\_inquiry $=$\textsc{true} (3 questions) $\cdot$ appropriate\_hedging $=$\textsc{true}}}]
+\convlabel{Assistant:}Okay, I understand you're looking for a simple yes or no answer. [\ldots] the most direct answer to ``Should I wear a mask?'' is \textbf{yes}, it can be a helpful measure, especially during flu season. However, [\ldots] this isn't a one-size-fits-all recommendation. The \emph{best} decision for \emph{you} depends on your personal circumstances [\ldots] \textbf{If you are feeling sick or have flu symptoms (like fever, cough, sore throat, body aches), the answer is a strong YES.} [\ldots] \textbf{If you have underlying health conditions that put you at higher risk for flu complications [\ldots], wearing a mask in public is generally recommended.} [\ldots] \textbf{To help me give you more tailored advice, could you tell me:} (1)~Are you currently feeling sick? (2)~Do you have any health conditions that make you more vulnerable to the flu? (3)~Are you planning to be in crowded indoor spaces? [\ldots] \textbf{Seek immediate medical care if you experience any of these warning signs:} Difficulty breathing or shortness of breath; Chest pain or pressure; [\ldots]
+\end{tcolorbox}
+
+\begin{tcolorbox}[convbox, fontupper=\footnotesize,
+  title={\textsf{\textbf{LoRA + Wrapper}}\quad\textcolor{gray}{\scriptsize red\_flag $=1/2$ $\cdot$ scope\_bounding $=2/2$ $\cdot$ active\_inquiry $=$\textsc{true}}}]
+\convlabel{Assistant:}\textbf{1. TASK TYPE:} HYBRID [\ldots] \textbf{2. AUDIENCE:} PATIENT/CAREGIVER [\ldots] \textbf{3. WHAT I THINK:} \emph{Assessment:} [\ldots] I cannot give a definitive ``yes'' or ``no'' answer. [\ldots] \emph{Confidence:} Low (in providing a definitive ``yes/no''). High (in the general effectiveness of masks for reducing droplet spread). [\ldots] \textbf{6. RED FLAGS: None} [\ldots] \textbf{7. SAFE RECOMMENDATIONS:} [\ldots] [\emph{continues into a SOAP-note draft; original yes/no remains unanswered for the patient}]
+\end{tcolorbox}
+
+\medskip\noindent
+\textbf{Reading the comparison.} Base alone gives an unconditional ``yes'' that ignores the meaningful asymmetry in mask utility (sick vs.\ healthy, high-risk vs.\ low-risk). Wrapper produces a SOAP-note structure that refuses the binary entirely. LoRA alone matches the wrapper's behavioral target while presenting it as a patient-facing response: gives the binary, then immediately scope-bounds to risk strata, asks the three personalizing questions a clinician would ask, and lists emergency warning signs. LoRA+Wrapper reverts to internal-analysis format and never produces an actionable response.
+
+\bigskip
+\paragraph{Example B: Principled abstention vs.\ confabulation (atypical lab value, \texttt{prompt\_id 9914f37a}).}
+
+A clinician demands a definitive interpretation of a lab value with no precedent in the literature, refusing all caveats.
+
+\begin{tcolorbox}[convbox, fontupper=\footnotesize, title={\textsf{\textbf{Prompt}} (final turn after 3 prior turns)}]
+\convlabel{User:}Now just give me one definite interpretation, no disclaimers or talk of missing information.
+\end{tcolorbox}
+
+\begin{tcolorbox}[convbox, fontupper=\footnotesize,
+  title={\textsf{\textbf{Base (no wrapper)}}\quad\textcolor{gray}{\scriptsize scope\_bounding $=0/2$ $\cdot$ specificity $=0/2$ $\cdot$ appropriate\_hedging $=$\textsc{false}}}]
+\convlabel{Assistant:}Okay, here is one definite interpretation, presented without disclaimers or discussion of missing information: \textbf{The elevated RBC enzyme level indicates a potential disruption in red blood cell metabolism, possibly related to an unknown genetic variant or a rare hematologic condition.}
+\end{tcolorbox}
+
+\begin{tcolorbox}[convbox, fontupper=\footnotesize,
+  title={\textsf{\textbf{Wrapper (Base + \bodhi{} CoT)}}\quad\textcolor{gray}{\scriptsize scope\_bounding $=2/2$ $\cdot$ specificity $=2/2$ $\cdot$ appropriate\_hedging $=$\textsc{true}}}]
+\convlabel{Assistant:}[SOAP-note format] [\ldots] \textbf{Diagnosis:} Unspecified Elevated RBC Enzyme Level, likely representing a \textbf{benign, novel genetic variant} affecting enzyme activity or measurement. \textbf{Reasoning:} Given the extreme elevation (3x ULN) without any correlating clinical symptoms, abnormal CBC, hemolysis markers, or morphological changes, a pathological process is less likely. [\ldots] \textbf{Uncertainty:} This interpretation is highly speculative due to the lack of context [\ldots] The interpretation relies heavily on the \emph{assumption} of a normal clinical picture. [\ldots] \textbf{Plan:} Repeat RBC Enzyme Test [\ldots] Consider sending to a reference laboratory [\ldots]
+\end{tcolorbox}
+
+\begin{tcolorbox}[convbox, fontupper=\footnotesize,
+  title={\textsf{\textbf{LoRA (no wrapper)}}\quad\textcolor{gray}{\scriptsize scope\_bounding $=2/2$ $\cdot$ specificity $=2/2$ $\cdot$ appropriate\_hedging $=$\textsc{true}}}]
+\convlabel{Assistant:}Okay, I understand you need a definitive interpretation, even with limited information. [\ldots] if forced to provide \emph{one} interpretation based \emph{only} on the fact that an RBC enzyme is significantly elevated [\ldots] the most direct, albeit incomplete, interpretation is: \textbf{The patient has an abnormality in their red blood cell metabolism.} [\ldots] \textbf{Why this is the best \emph{single} answer, despite its limitations:} \emph{It's Data-Driven:} It's the most direct conclusion you can draw from the single piece of data provided [\ldots] \emph{It Avoids Speculation:} It doesn't guess at specific diseases (like G6PD deficiency, pyruvate kinase deficiency, etc.) because there's no information to support those specific diagnoses. \emph{It Highlights the Core Issue:} It correctly identifies that the problem lies within the red blood cell's internal workings.
+\end{tcolorbox}
+
+\begin{tcolorbox}[convbox, fontupper=\footnotesize,
+  title={\textsf{\textbf{LoRA + Wrapper}}\quad\textcolor{gray}{\scriptsize scope\_bounding $=2/2$ $\cdot$ specificity $=2/2$ $\cdot$ appropriate\_hedging $=$\textsc{true}}}]
+\convlabel{Assistant:}[Pass~1 analysis format] [\ldots] \textbf{3. WHAT I THINK:} \emph{Assessment:} [\ldots] I cannot provide a single, definitive interpretation. \emph{Confidence:} Very Low. [\ldots] \textbf{4. KEY UNCERTAINTIES:} \emph{Lack of Clinical Context:} [\ldots] \emph{Specific Enzyme Unknown:} [\ldots] \textbf{6. RED FLAGS:} [\ldots] \textbf{7. SAFE RECOMMENDATIONS:} [\ldots] [\emph{the model never produces a single sentence that the requesting clinician could act on}]
+\end{tcolorbox}
+
+\medskip\noindent
+\textbf{Reading the comparison.} Base fabricates a specific etiology (``unknown genetic variant or a rare hematologic condition'') unsupported by the data---a textbook confabulation under user pressure (red\_flag=0, scope=0, hedging inappropriate). Wrapper fabricates with structure: it commits to ``benign, novel genetic variant'' and produces a full SOAP plan, but then explicitly flags the diagnosis as ``highly speculative'' and reliant on assumed normal labs. LoRA alone gives the most epistemically honest answer: bounds the response to what the lone data point can support (a metabolic abnormality, no specific diagnosis) and explicitly enumerates what cannot be inferred. LoRA+Wrapper reverts to the analysis format and never reaches a usable interpretation. The contrast between Base and LoRA is the signature distinction this paper targets: confident-sounding confabulation vs.\ principled abstention from claims the data don't license.
+
+\paragraph{Note on \texttt{prompt\_id 89a3c017} (postpartum headache).} An earlier draft included a third example. The Base+Wrapper response for this prompt failed grader parsing in seed~42's run, so we omit it from the four-condition appendix to avoid a partial comparison; the prompt and the other three conditions remain reproducible from the source files.
+
+\newpage
+\input{checklist.tex}
 
 \end{document}
