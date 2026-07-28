@@ -70,9 +70,8 @@ On the choice of graders the reason is structural. The evaluator must sit in a d
 Qwen-14B filter, because that separation is what prevents filter-grader circularity: if one family both
 selects training traces and scores the result, the metric partly measures agreement with the selector.
 Meditron-3, Med42-v2 and the Aloe family are all Llama-derived, so promoting one to evaluator would put
-filter and grader in adjacent families and weaken that property. If accepted we will state this and add
-a clinical judge as an additional robustness panel alongside the primary grader rather than replacing
-it.
+filter and grader in adjacent families and weaken that property. If accepted we will state this and add a
+clinical judge as an additional robustness panel alongside the primary grader rather than replacing it.
 
 On the strength of the evidence, the physician validation remains partial: one of three raters has
 returned grades, giving $\kappa = 0.35$ against the Llama-3.1-8B grader, below our pre-registered target
