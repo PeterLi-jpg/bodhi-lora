@@ -144,4 +144,4 @@ returned, kappa = 0.35), and a second CoT protocol. We will incorporate all feed
 
 [1] Lin, Hilton, Evans. "Teaching Models to Express Their Uncertainty in Words." TMLR 2022.
 [2] Tian et al. "Just Ask for Calibration: Strategies for Eliciting Calibrated Confidence Scores from
-Fine-Tuned Language Models with Human Feedback." EMNLP 2023.
+Language Models Fine-Tuned with Human Feedback." EMNLP 2023.
