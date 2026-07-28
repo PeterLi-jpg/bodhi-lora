@@ -11,7 +11,7 @@ model does not.
 To avoid circularity we labelled prompts using signals independent of the grader's own
 context-seeking score: HealthBench's `context_seeking` theme tag, and separately whether a prompt's
 expert rubric rewards asking for clarification. For each condition we computed a discrimination
-index, defined as P(ask | information missing) − P(ask | self-contained).
+index, defined as $P(\text{ask} \mid \text{info missing}) - P(\text{ask} \mid \text{self-contained})$.
 
 **Table R1.** Discrimination index by condition, pooled over 5 seeds, bootstrap 95% CIs (5,000
 resamples).
@@ -58,7 +58,7 @@ early in the protocol, before the extended reasoning, so safety-critical content
 
 The two-pass CoT generation exceeds the 4,096-token context window on ~4–5% of prompts, so those
 conditions produce fewer completions; LoRA uses a single forward pass and has a 100% response rate.
-All comparisons use available completions (n ≈ 985–998 pooled across 5 seeds). We add this to the
+All comparisons use available completions ($n \approx 985$–$998$ pooled across 5 seeds). We add this to the
 Table 1 caption rather than leaving it in the body text where it is easy to miss.
 
 **Why Llama-3.1 rather than a medical judge**
