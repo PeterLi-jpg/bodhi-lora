@@ -110,14 +110,14 @@ We agree on all four points, and Clarity was your lowest score. If accepted, we 
   what actually support the communication-not-knowledge reading.
 - **Add a direction arrow to every row of Table 2,** with the caption note below.
 - **Add a clinical implications paragraph:** active inquiry is history-taking before recommending,
-  red-flag identification is recognizing presentations that warrant escalation, and scope bounding
+  red-flag identification is recognizing presentations that warrant escalation, and scope bounding is
   declining to advise beyond the available evidence.
 - **Split Figure 2 into two panels,** the 0–2 dimensions in one and the percentage rates in the other,
   each with its own labelled axis. This is the one change that requires regenerating the figure.
 
 **Is red-flag rate missing a down arrow?**
 
-Higher is better, and the ambiguity is our fault for not labelling it: the dimension measures
+Higher is better, and the ambiguity is our fault for not labelling it: it measures
 sensitivity to warning signs that warrant escalation. In Table 2, blanket disclaimer rate is the only
 row where lower is better, and it will be the only one carrying a down arrow. We will add a caption note
 that it does not capture false positives, so a model that flagged indiscriminately
@@ -132,7 +132,6 @@ configurations less; our timings came off a shared node, so we will quote per-st
 in isolation rather than numbers confounded by queueing. This sits alongside the existing
 one-pass-versus-two comparison, where the adapter is wrapper-equivalent at roughly 58% lower output
 cost.
-
 
 **Significance** was your other low score, and your objection was that we described one instantiation
 as a framework. You were right. We have narrowed the claim to what we actually demonstrated, and it is
