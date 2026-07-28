@@ -42,10 +42,10 @@ not simply ask more often, it acquires targeting the base model lacks, which is 
 surface mimicry predicts: mimicry would either carry the base model's non-discrimination forward or
 raise both groups uniformly.
 
-Two honest qualifications. The rubric-based and theme-only labellings disagree substantially about
+Two qualifications are in order. The rubric-based and theme-only labellings disagree substantially about
 which prompts withhold information (508 versus 127 prompts in that group), yet both give the same
 ordering, and the adapter reaches +13.2pp, CI [+4.1, +21.7], under the theme-only split; that agreement
-across near-disjoint labellings is the robustness we can offer at this sample size. Separately, the
+across near-disjoint labellings is the strongest robustness check available at this sample size. Separately, the
 LoRA${-}$Base difference is +8.4pp with CI [−1.2, +17.9], which includes zero, so the *difference
 between conditions* is suggestive rather than established. The within-condition results carry the
 weight.
@@ -66,8 +66,8 @@ grader rather than replacing it.
 Your suggestion did shape the new runs: Med42-8B, from the Med42-v2 family you named, is now one of the
 base models we adapt (Table R2), which puts a clinically tuned Llama-family model inside the study.
 
-We should also report where the human check stands, since it bears on the same concern. The physician
-validation is partial: one of three raters has returned grades, giving $\kappa = 0.35$ against the
+We should also report the current state of the physician validation, since it bears on the same
+concern. It remains partial: one of three raters has returned grades, giving $\kappa = 0.35$ against the
 Llama-3.1-8B grader, below our pre-registered target of 0.6. We report that as a limitation on the
 aggregate-quality claims rather than presenting LLM grading as settled.
 
@@ -88,9 +88,9 @@ Truncation does not explain it either: prompts whose two-pass generation exceeds
 response at all, so they are absent from the sample rather than present and scored low, which is the
 ~5% attrition noted above. Leaked responses are longer (median 8,564 versus 3,457 characters), but their
 low score is attributable to emitting "RED FLAGS: None" in analysis format rather than to length, since
-length correlates positively with the score once leakage is excluded. We should flag that the non-leaked
-subset is identified after the fact by a format property rather than by its score, so we cannot fully
-exclude leakage correlating with prompt difficulty.
+length correlates positively with the score once leakage is excluded. We note that the non-leaked subset is
+identified after the fact by a format property rather than by its score, so we cannot fully exclude
+leakage correlating with prompt difficulty.
 
 We therefore keep the competition reading but state it precisely: the two conditioning sources compete
 for control of the output *format*, and the failure is format leakage, not capacity exhaustion or
@@ -122,7 +122,7 @@ families and two further benchmarks, 5 seeds per cell.
 | MedQuAD | Mistral-Small-24B | 6.5 → 26.5% |
 | HealthBench | BioMistral-7B | 11.7 → 10.1% (null) |
 
-Two results speak to your concern rather than repeating the original one.
+Two of these results bear on your concern directly rather than restating the original finding.
 
 First, the effect scales with how much a benchmark withholds. Holding the base model at
 Mistral-Small-24B, active inquiry rises 7.8% to 58.6% on ChatDoctor, where real patient messages
@@ -134,19 +134,19 @@ scope bounding (1.85 → 1.61) and hedging quality (1.45 → 1.40) while the dis
 both (1.89 and 1.78). The quality-filtering step removes the teacher's failures before they reach the
 weights, which is hard to reconcile with pure imitation.
 
-We also found a precondition: on BioMistral-7B there is no effect and the teacher fails there too
+We also identified a precondition: on BioMistral-7B there is no effect, and the teacher fails there too
 (wrapper 14.5%; only 20% of traces cleared the filter against 62% for Mistral-24B), so teacher
 incapacity and the smaller surviving training set are not fully separable.
 
-Reporting the unfavourable side too: aggregate rubric quality decreases modestly on the new benchmarks,
-largest on MedQuAD (0.672 → 0.586). We read that partly as a rubric property, since it rewards
+For completeness, including the results that do not favour the method: aggregate rubric quality
+decreases modestly on the new benchmarks, most on MedQuAD (0.672 → 0.586). We read that partly as a rubric property, since it rewards
 agreement with a reference answer and a response that asks a question instead of answering scores lower
 by construction. Consistent with that, the inference-time wrapper drops further than the adapter (0.542
 against 0.586) despite changing no weights, and the two stacked drop furthest (0.505). That is the
 measurement problem the paper is about, and why we report the decomposition alongside the aggregate.
 
-Still outstanding, and we do not claim otherwise: a head-to-head against inference-time calibration
-methods, and the completed three-physician validation.
+Remaining open, and we do not claim otherwise: a head-to-head comparison against inference-time
+calibration methods, and completion of the three-physician validation.
 
 Thank you again for proposing two concrete tests; one of them made us restate a claim we had
 overreached on. Please do let us know if any questions remain; we would be
