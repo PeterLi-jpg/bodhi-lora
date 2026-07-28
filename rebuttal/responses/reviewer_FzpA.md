@@ -55,8 +55,8 @@ Higher is better, and the ambiguity is our fault for not labelling it: it measur
 warning signs that warrant escalation. In Table 2, blanket disclaimer rate is the only row where lower
 is better, and will be the only one with a down arrow. We will add a caption note that it does
 not capture false positives, so a model flagging indiscriminately would also score highly; measuring
-over-flagging requires a labelled set of prompts with no genuine red flag, which we leave to
-future work.
+over-flagging requires a labelled set of prompts with no genuine red flag, which we will build if
+accepted.
 
 **Q1. Where the seven dimensions came from, and whether clinicians were involved**
 
