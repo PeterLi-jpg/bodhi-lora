@@ -42,7 +42,7 @@ It is worth separating which claims this touches. Trace filtering and the aggreg
 
 **W4 and Q3. Comparison with prior work**
 
-This is a fair criticism and the one our additional runs do not address. We would gently push back on one word, though. Section 2 does position the method against STaR, Constitutional AI and chain-of-thought prompting, and states how our filter-then-finetune step differs from each, so the comparison is not wholly absent. What is absent is an *empirical* one, which is a narrower gap than the sentence implies, and a real one we do not dispute.
+This is a fair criticism and the one our additional runs do not address. One clarification, with the criticism accepted: Section 2 does position the method against STaR, Constitutional AI and chain-of-thought prompting, and states how our filter-then-finetune step differs from each. What is missing is an *empirical* comparison, and that gap is real.
 
 If accepted we will expand that into a Discussion subsection, "Comparison to Prior Calibration Approaches," covering uncertainty prompting (Lin et al., 2022; Tian et al., 2023), which calibrates at inference time whereas we internalize into weights; STaR (Zelikman et al., 2022), whose filter-then-finetune logic we apply to behavioral rather than factual demonstrations; and Constitutional AI (Bai et al., 2022), which uses self-critique where we use a CoT protocol as a behavioral teacher, with a table comparing inference cost, teacher requirement, behavioral versus factual focus, and generality.
 
@@ -54,7 +54,7 @@ We understand how the submitted version invited that reading: a single setting l
 
 The evidence also changed in kind, not only in quantity: a single positive instantiation cannot separate "the recipe works" from "this pairing happens to work," whereas several cells, a documented null with a diagnosis, and a mechanistic account of the interference can.
 
-One thing worth putting on the record, since it bears on how much weight the added cells can carry: the rigour of what was already run was not the problem. The submitted version carries 5 independent seeds, bootstrap intervals, a contamination probe on the held-out set, specified hardware, and released code and adapters. What was narrow was the number of settings, and that is precisely the gap the new runs close.
+For context on how much weight the added cells can carry: the rigour of what was already run was not the difficulty. The submitted version carries 5 independent seeds, bootstrap intervals, a contamination probe on the held-out set, specified hardware, and released code and adapters. What was narrow was the number of settings, and that is precisely the gap the new runs close.
 
 Three things remain outstanding, and if accepted we commit to all three: the empirical prior-work comparison, completion of the physician validation, and a second CoT protocol.
 
