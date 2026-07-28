@@ -10,10 +10,11 @@ confined to responses that leak the protocol's internal format rather than to lo
 
 **1. Why the sample sizes differ (200 vs 191 vs 192)**
 
-The two-pass CoT generation exceeds the 4,096-token context window on ~4–5% of prompts, so those
+The two-pass CoT generation exceeds the 4,096-token context window on ~5% of prompts, so those
 conditions return fewer completions. LoRA uses a single forward pass and has a 100% response rate. All
-comparisons use the available completions, $n \approx 985$–$998$ per condition pooled across 5 seeds. If
-accepted we will state this in the Table 1 caption.
+comparisons use the available completions, $n \approx 985$–$998$ per condition pooled across 5 seeds. In Table 1
+the LoRA row is itself 200: only the CoT conditions lose prompts. If accepted we will say so in the
+caption.
 
 **2. Is the model learning calibration, or surface template behavior?**
 
@@ -113,8 +114,8 @@ scope-bounded, blanket disclaimer), each with its own labelled axis.
 
 **Additional runs, and one result bearing on mimicry**
 
-Because generality was raised across reviews, we re-ran the pipeline unchanged on two more model
-families and benchmarks (5 seeds per cell).
+Because generality was raised across reviews, we re-ran the pipeline unchanged on two more model families
+and benchmarks (5 seeds per cell).
 
 **Table R2.** Active inquiry, Base → LoRA. Row 1 is the submitted result.
 
