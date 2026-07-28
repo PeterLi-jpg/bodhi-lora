@@ -1,9 +1,8 @@
-Thank you for this careful and generous review. We are grateful that you find the application relevant,
-the framing compelling, the recipe simple and scalable, the paper clearly organized, and the limitations
-candidly stated. You also suspected we were already pursuing the obvious extensions across more models,
-benchmarks and human evaluation. That was correct on all three counts; the first two completed during the
-discussion period, and the human evaluation is partial, so we report its current state rather than
-waiting. Below are the results, with the parts of your critique they do not answer.
+Thank you for this careful and generous review. You suspected we were already pursuing the obvious
+extensions across more models, benchmarks and human evaluation. That was correct on all three counts:
+the first two completed during the discussion period, and the human evaluation is partial, so we report
+its current state rather than waiting. Below are the results, with the parts of your critique they do
+not answer.
 
 **W1 and Q1. Why the evaluation protocol was limited**
 
@@ -44,13 +43,12 @@ wrapper's 57.1%. Base rates vary by more than a factor of two across models (11.
 converge into a narrow band after adaptation (45.6%, 52.5%, 56.6%), which is what one would expect if
 the endpoint is a property of the training signal rather than of the starting model.
 
-Two findings are not merely confirmatory. First, the student does not copy the teacher indiscriminately:
-on MedQuAD the wrapper *degrades* scope bounding (1.85 → 1.61) and hedging quality (1.45 → 1.40) while
-the adapter *improves* both (1.89 and 1.78), because the quality filter removes the teacher's failures
-before they reach the weights. Second, there is a precondition we can now state rather than leave a
-reader to discover: on BioMistral-7B the recipe produces no effect and the teacher fails there too,
-reaching 14.5% active inquiry, with 20% of its traces clearing the filter against 62% for
-Mistral-Small-24B. Teacher incapacity and the smaller training set are not fully separable there.
+Two findings are not merely confirmatory. The student does not copy the teacher indiscriminately: on
+MedQuAD the wrapper *degrades* scope bounding (1.85 → 1.61) and hedging quality (1.45 → 1.40) while the
+adapter *improves* both (1.89 and 1.78), because the filter removes the teacher's failures before they
+reach the weights. And there is a precondition: on BioMistral-7B the recipe produces no effect and the
+teacher fails there too (14.5% active inquiry, 20% of traces clearing the filter against 62% for
+Mistral-24B).
 
 **One part of W1 we have not addressed.** Your weakness named three things: a single model, a single
 benchmark, and a single CoT protocol. We have varied the first two. We have not varied the protocol, so
@@ -58,29 +56,24 @@ the claim that the recipe is protocol-agnostic remains untested, and we do not a
 
 **What the behavior gains cost in aggregate quality**
 
-Since this bears on whether the trade is worth making, we report it including where it is unfavourable.
-On HealthBench the aggregate rubric score is essentially unchanged (Mistral-Small-24B 0.425 → 0.411;
-Med42-8B 0.405 → 0.392), consistent with the submitted non-inferiority result. On the new benchmarks
-there are modest decreases, largest on MedQuAD (0.672 → 0.586).
-
-We read the MedQuAD case partly as a rubric property rather than a model one: it rewards agreement with
-a reference answer, so asking instead of answering scores lower by construction. Consistent with that,
-the inference-time wrapper drops further than the adapter (0.542 against 0.586) despite changing no
-weights. This is the measurement problem the paper is about, and why we report the decomposition
-alongside the aggregate rather than in place of it.
+We report this including where it is unfavourable. On HealthBench the aggregate rubric score is
+essentially unchanged (Mistral-Small-24B 0.425 → 0.411; Med42-8B 0.405 → 0.392), consistent with the
+submitted non-inferiority result. On the new benchmarks there are modest decreases, largest on MedQuAD
+(0.672 → 0.586). We read that partly as a rubric property: it rewards agreement with a reference answer,
+so asking instead of answering scores lower by construction, and consistent with this the wrapper drops
+further than the adapter (0.542 against 0.586) despite changing no weights.
 
 **W3 and Q4. Automatic grading, and why the graders are not clinically fine-tuned**
 
 We share this concern and have not resolved it.
 
-On the choice of graders the reason is structural rather than incidental. The evaluator must sit in a
-different family from the Qwen-14B filter, because that separation is what prevents filter-grader
-circularity in a self-distillation pipeline: if one family both selects training traces and scores the
-result, the metric partly measures agreement with the selector. Meditron-3, Med42-v2 and the Aloe family
-are all Llama-derived, so promoting one to evaluator would place filter and grader in adjacent families
-and weaken exactly that property. If accepted we will state this rationale and add a clinical judge as an
-additional robustness panel alongside the primary grader rather than replacing it, so both the
-cross-family guarantee and the clinical-specificity check are available to the reader.
+On the choice of graders the reason is structural. The evaluator must sit in a different family from the
+Qwen-14B filter, because that separation is what prevents filter-grader circularity: if one family both
+selects training traces and scores the result, the metric partly measures agreement with the selector.
+Meditron-3, Med42-v2 and the Aloe family are all Llama-derived, so promoting one to evaluator would put
+filter and grader in adjacent families and weaken that property. If accepted we will state this and add
+a clinical judge as an additional robustness panel alongside the primary grader rather than replacing
+it.
 
 On the strength of the evidence, the physician validation remains partial: one of three raters has
 returned grades, giving $\kappa = 0.35$ against the Llama-3.1-8B grader, below our pre-registered target
@@ -95,23 +88,25 @@ prompts from self-contained ones (+10.5pp, bootstrap CI excluding zero) while th
 Hedging quality and red-flag identification are not, and we do not claim otherwise; those two rest on
 the automatic grader until the physician panel is complete.
 
-One consequence of adding Med42-8B bears on your question directly. It is Llama-derived and our grader is
-Llama-3.1-8B, which raises the possibility of self-preference. The data do not show it: the Llama-family
-base model scores lower on the aggregate rubric than the Mistral one (0.405 against 0.425), and a family
-preference would in any case shift base and adapted levels together rather than the within-model change
-we report.
+It is worth separating which claims this touches. Trace filtering and the aggregate-quality comparison
+use HealthBench's expert-authored rubrics, so the quality-preservation result rests on clinician-written
+criteria applied automatically. It is the seven epistemic dimensions that use our own anchors, so your
+criticism lands squarely on the behavioral claims and not on the non-inferiority one.
 
 **W4 and Q3. Comparison with prior work**
 
-This is a fair criticism, it is the one our additional runs do not address, and we will not pretend
-otherwise. If accepted we will add a Discussion subsection, "Comparison to Prior Calibration
-Approaches," positioning the method against uncertainty prompting (Lin et al., 2022; Tian et al., 2023),
-which calibrates at inference time whereas we internalize the behavior into weights; STaR-style
-self-improvement (Zelikman et al., 2022), whose filter-then-finetune logic we apply to behavioral rather
-than factual demonstrations; and Constitutional AI (Bai et al., 2022), which uses self-critique where we
-use a structured CoT protocol as a behavioral teacher. It will include a summary table comparing
-inference-time cost, need for a teacher model, behavioral versus factual focus, and demonstrated
-generality.
+This is a fair criticism and the one our additional runs do not address. One point of fact, offered
+without wanting to argue past you: prior work is not absent from the paper. Section 2 positions the
+method against STaR, Constitutional AI and chain-of-thought prompting, and states how our
+filter-then-finetune step differs from each. What is absent is an *empirical* comparison, which is a
+narrower gap than the sentence suggests, but a real one that we do not dispute.
+
+If accepted we will expand that into a Discussion subsection, "Comparison to Prior Calibration
+Approaches," covering uncertainty prompting (Lin et al., 2022; Tian et al., 2023), which calibrates at
+inference time whereas we internalize into weights; STaR (Zelikman et al., 2022), whose
+filter-then-finetune logic we apply to behavioral rather than factual demonstrations; and Constitutional
+AI (Bai et al., 2022), which uses self-critique where we use a CoT protocol as a behavioral teacher, with
+a table comparing inference cost, teacher requirement, behavioral versus factual focus, and generality.
 
 We should be clear about what that does and does not give you: it is a positioning argument, not a
 measurement. A direct head-to-head against an inference-time calibration baseline is the single most
@@ -127,14 +122,21 @@ mechanistic analyses requested by another reviewer were also completed, distingu
 surface mimicry and identifying output-format leakage rather than capacity exhaustion as the cause of the
 CoT/LoRA interference we reported.
 
-We would argue the evidence also changed in kind and not only in quantity. A single positive
-instantiation cannot separate "the recipe works" from "this pairing happens to work." Several cells, a
-documented null with a diagnosis for why it is null, and a mechanistic account of the interference effect
-can, and that is a different class of claim from the one the submitted version supported.
+We would also argue the evidence changed in kind, not only in quantity: a single positive instantiation
+cannot separate "the recipe works" from "this pairing happens to work," whereas several cells, a
+documented null with a diagnosis, and a mechanistic account of the interference effect can.
 
-Three things remain outstanding, and we would rather name them than have them found: the empirical
-prior-work comparison, the completed physician validation, and a second CoT protocol.
+On the rating itself, respectfully. Reject is described as covering technical flaws, weak evaluation,
+inadequate reproducibility and incompletely addressed ethical considerations. Three of those four do not
+appear in your review: you rated clarity 4, recorded no ethical concerns, and identified no technical
+flaw, calling the method conceptually clean. On reproducibility the submitted version already carries
+5 independent seeds, bootstrap intervals, a contamination probe, specified hardware, and released code
+and adapters. The objection is evaluation breadth, which is the one ground we have been able to act on,
+and the one where the evidence has now moved.
+
+Three things remain outstanding, and we would rather name them: the empirical prior-work comparison, the
+completed physician validation, and a second CoT protocol.
 
 We would be grateful if you would reconsider the rating in light of the added evidence, with those gaps
 visible. Thank you again for a review specific enough to act on. Please let us know if questions remain;
-we would be glad to run further analyses while the discussion period is open.
+we would gladly run further analyses while the discussion period is open.
