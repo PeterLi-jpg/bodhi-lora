@@ -85,9 +85,10 @@ dimension.
 The seven instead cover the three epistemic functions a calibrated clinical response must serve:
 *self-assessment* (uncertainty acknowledgment, hedging quality, specificity), *information-seeking*
 (active inquiry, context-seeking), and *risk management* (red-flag identification, scope bounding).
-The selection was shaped by the practising physician co-authors on this paper, who work in the US,
-Uganda, Colombia and the UK, and who identified these as the safety-critical behaviors. We excluded candidates such as empathy and patient-education depth because they
-conflate what is communicated with how accurately uncertainty is represented. We will state this
+The selection was shaped by the practising physician co-authors on this paper, who identified these as
+the behaviors that most affect safety in clinical decision support. We excluded candidates such as
+empathy and patient-education depth because they conflate what is communicated with how accurately
+uncertainty is represented. We will state this
 origin, and the exclusions, explicitly.
 
 **Q2. How each value is operationalized in text**
