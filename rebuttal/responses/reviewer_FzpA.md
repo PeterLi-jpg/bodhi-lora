@@ -1,6 +1,6 @@
 Thank you for your thorough and constructive review. We are pleased you find epistemic calibration an
 important area of study, our asymmetric cross-family grading protocol a real safeguard against using
-one model across pipeline steps, and the experiment carefully constructed.
+one model across pipeline steps, and the experiment carefully built.
 
 **W1. The "framework" claim is overly broad**
 
@@ -100,9 +100,8 @@ We will give a verbatim example per dimension so the reader sees what is scored:
 acknowledgment* ("without a chest X-ray I cannot confirm pneumonia"); *active inquiry* ("when did the
 symptoms start?"); *context-seeking* ("I would need the patient's age and medication history");
 *red-flag identification* ("shortness of breath with chest pain warrants immediate evaluation"); *scope
-bounding* ("I can give general information, but diagnosis requires an examination"); *hedging quality*
-(a specific qualified statement, not a generic "I am not a doctor"); *specificity* (a concrete dose or
-timeframe rather than "consider medication").
+bounding* ("diagnosis requires an examination"); *hedging quality* (a specific qualified statement, not
+a generic "I am not a doctor"); *specificity* (a concrete dose rather than "consider medication").
 
 **W3. Results and discussion lack clarity**
 
@@ -122,11 +121,11 @@ than optional. If accepted we will:
 **Is red-flag rate missing a down arrow?**
 
 Higher is better, and the ambiguity is our fault for not labelling it: the dimension measures
-sensitivity to warning signs that warrant escalation. Of the rows in Table 2, blanket disclaimer rate
-is the only one where lower is better, and it will be the only row with a down arrow. We will add a
-caption note that red-flag identification does not capture false positives, so a model that flagged
-indiscriminately would also score highly; measuring over-flagging needs a labelled set of prompts
-containing no genuine red flag, which we leave to future work.
+sensitivity to warning signs that warrant escalation. In Table 2, blanket disclaimer rate is the only
+row where lower is better, and it will be the only one with a down arrow. We will add a caption note
+that red-flag identification does not capture false positives, so a model that flagged indiscriminately
+would also score highly; measuring over-flagging needs a labelled set of prompts containing no genuine
+red flag, which we leave to future work.
 
 **A more explicit compute comparison**
 
@@ -134,8 +133,8 @@ We will report training and inference cost per configuration, as you suggested. 
 seed of a 24B configuration end to end takes about 2 hours on a single H100, and the 8B ones are
 cheaper; our timings came off a shared node, so we will quote per-stage figures measured in isolation
 rather than numbers confounded by queueing. This
-sits alongside the existing comparison of one forward pass versus two, where the adapter is
-wrapper-equivalent at ~58% lower inference output cost.
+sits alongside the existing one-pass-versus-two comparison, where the adapter is wrapper-equivalent at
+~58% lower output cost.
 
 Nothing above is claimed as done that is not, and if accepted we commit to adding each of the
 following: the clinician-posed benchmark, a head-to-head against inference-time calibration methods,
