@@ -3,10 +3,6 @@ meaningful for high-stakes clinical AI, consider a system for evaluating epistem
 and judge the significance and originality of the work highly. Two of your concerns specified
 concrete tests; we ran both on the submitted evaluation data and report them below.
 
-To be exact about what follows: the **experiments** were run during the discussion period and their
-results are final. Every **paper edit** is a change we will make if accepted, not something already in
-the PDF you reviewed, which remains the point of comparison.
-
 **Is the model learning calibration, or surface template behavior?**
 
 Short answer: we ran exactly the test you proposed, and the adapter discriminates while the base

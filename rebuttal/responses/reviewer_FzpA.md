@@ -2,13 +2,10 @@ Thank you for your thorough and constructive review. We are pleased you find epi
 important area of study, our asymmetric cross-family grading protocol a real safeguard against using
 one model across pipeline steps, and the experiment carefully constructed.
 
-To be exact about what follows: the **experiments** were run during the discussion period and their
-results are final. Every **paper edit** is a change we will make if accepted, not something already in
-the PDF you reviewed, which remains the point of comparison.
+**W1. The "framework" claim is overly broad**
 
-**W1. The "framework" claim is overly broad** (paper edit)
-
-You are right that our two statements are in tension, and the fault is ours. We will narrow the claim
+You are right that our two statements are in tension, and the fault is ours. If accepted we will
+narrow the claim
 to a recipe plus an evaluation decomposition, demonstrated on open-ended, information-seeking clinical
 Q&A, and will state what is *not* covered: task types with no missing information to seek, such as
 closed-form multiple choice, extraction, or summarization. The sentence beginning "Any structured CoT
@@ -23,7 +20,7 @@ travel further, since they concern what a response commits to rather than what i
 runs bear this out: with the base model fixed at Mistral-Small-24B, active inquiry rises 7.8% to 58.6% on
 ChatDoctor but only 6.5% to 26.5% on the better-specified MedQuAD.
 
-**W2. MedGemma is not aligned with HealthBench's use case** (new runs)
+**W2. MedGemma is not aligned with HealthBench's use case**
 
 Your characterization of HealthBench is right and the mismatch is real. One part of our reasoning
 still holds: ChatGPT, Claude and Gemini cannot be LoRA-adapted, and weight-level adaptation is the
@@ -40,7 +37,7 @@ behavior were an idiosyncrasy of one model's alignment. After adaptation all thr
 narrow band (45.6%, 52.5%, 56.6%). The endpoint is a property of the training signal rather than of the
 starting model, which is what your critique put in doubt.
 
-**Q3. One benchmark is not sufficient; consider clinician-posed questions** (new runs)
+**Q3. One benchmark is not sufficient; consider clinician-posed questions**
 
 We added two benchmarks, and want to be straight that they do not fully answer your ask.
 
@@ -96,7 +93,7 @@ support. We excluded candidates such as empathy and patient-education depth beca
 is communicated with how accurately uncertainty is represented. We will state this origin, and the
 exclusions, explicitly.
 
-**Q2. How each value is operationalized in text** (paper edit)
+**Q2. How each value is operationalized in text**
 
 We will give a verbatim example per dimension so the reader sees what is scored: *uncertainty
 acknowledgment* ("without a chest X-ray I cannot confirm pneumonia"); *active inquiry* ("when did the
@@ -106,22 +103,22 @@ bounding* ("I can give general information, but diagnosis requires an examinatio
 (a specific qualified statement, not a generic "I am not a doctor"); *specificity* (a concrete dose or
 timeframe rather than "consider medication").
 
-**W3. Results and discussion lack clarity** (paper edits)
+**W3. Results and discussion lack clarity**
 
 We agree on all four points, and Clarity was your lowest score, so we treat these as required rather
-than optional.
+than optional. If accepted we will:
 
-- **Remove the vague "not statements".** The two you quoted are gone, replaced by positive claims
-  stating the per-dimension numbers, including accuracy 0.117 → 0.121 and completeness 0.168 → 0.169,
-  which are what actually support the communication-not-knowledge reading.
+- **Remove the vague "not statements"** you quoted, replacing them with positive claims stating the
+  per-dimension numbers, including accuracy 0.117 → 0.121 and completeness 0.168 → 0.169, which are
+  what actually support the communication-not-knowledge reading.
 - **Add a direction arrow to every row of Table 2,** with the caption note below.
 - **Add clinical implications:** active inquiry is history-taking before recommending, red-flag
   identification is recognizing presentations that warrant escalation, scope bounding is declining to
   advise beyond the available evidence.
 - **Split Figure 2 into two panels,** 0–2 dimensions in one and percentage rates in the other, each
-  with its own labelled axis. This is the one change that requires regenerating the figure.
+  with its own labelled axis. This is the one that requires regenerating the figure.
 
-**Is red-flag rate missing a down arrow?** (paper edit)
+**Is red-flag rate missing a down arrow?**
 
 Higher is better, and the ambiguity is our fault for not labelling it: the dimension measures
 sensitivity to warning signs that warrant escalation. Of the rows in Table 2, blanket disclaimer rate
@@ -130,7 +127,7 @@ caption note that red-flag identification does not capture false positives, so a
 indiscriminately would also score highly; measuring over-flagging needs a labelled set of prompts
 containing no genuine red flag, which we leave to future work.
 
-**A more explicit compute comparison** (paper edit)
+**A more explicit compute comparison**
 
 We will report training and inference cost per configuration, as you suggested. From these runs one
 seed of a 24B configuration end to end takes about 2 hours on a single H100, and the 8B ones are
