@@ -30,10 +30,16 @@ Short answer: we added two benchmarks and are running a third; we could not use 
 We first checked your premise and it holds: in HealthBench-Hard only ~0.6% of evaluated prompts
 explicitly identify the speaker as a clinician. Per your suggestion we added **ChatDoctor** (unedited
 questions real patients asked physicians online) and **MedQuAD** (NIH consumer-health QA); the effect
-reproduces on both (Table R1). A clinician-facing set, MedQA-USMLE reframed open-ended, is in
-progress. MIMIC and eICU require credentialed PhysioNet access under a data use agreement we could
-not complete within the discussion period, so we list this as a next step rather than claiming
-coverage.
+reproduces on both (Table R1). MIMIC and eICU require credentialed PhysioNet access under a data use
+agreement we could not complete within the discussion period, so we list this as a next step rather
+than claiming coverage.
+
+We also attempted the clinician-facing set you asked for, by reframing MedQA-USMLE as open-ended
+questions, and we exclude it for a reason worth stating: our reframing preamble instructed the model
+to ask for information it needed, which drove base-model active inquiry to 99% and left the cell
+measuring instruction-following rather than calibration. We report this rather than omit it. The
+prompt needs to establish the clinician setting without cueing the behavior being scored, and we
+will rebuild it that way for the camera-ready.
 
 **Table R1.** Transfer across model families and benchmarks. 5 seeds per cell, all hyperparameters
 fixed; every cell reads Base → LoRA. Families: Mistral-Small-24B and BioMistral-7B (Mistral),

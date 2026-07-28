@@ -721,6 +721,15 @@ information the question withholds. Benchmarks without native expert rubrics are
 rubrics synthesized from their ground truth (reference answer or known-correct option), graded by
 the same Qwen-14B filter, preserving the asymmetric cross-family design.
 
+We attempted a sixth cell on MedQA-USMLE, reframed from multiple choice into open-ended
+clinician-facing questions, and exclude it here. The reframing required a preamble, and ours
+instructed the model to ask for any information it needed before committing. That cued the behavior
+under measurement: base-model active inquiry reached 99\%, leaving no headroom and making the cell a
+test of instruction-following rather than of calibration. We report the exclusion because it
+illustrates a general hazard in this kind of evaluation: when a benchmark must be reformatted to
+admit open-ended answers, the reformatting instruction can silently encode the dependent variable. A
+neutral preamble establishes the clinical setting without naming the behavior to be scored.
+
 \begin{table}[!ht]
 \centering
 \small
