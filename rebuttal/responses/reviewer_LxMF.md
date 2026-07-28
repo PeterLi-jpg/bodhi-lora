@@ -140,15 +140,14 @@ bounding (1.85 → 1.61) and hedging quality (1.45 → 1.40) while the adapter *
 reconcile with pure imitation.
 
 We also identified a precondition: on BioMistral-7B there is no effect and the teacher fails there too
-(wrapper 14.5%; 20% of traces cleared the filter against 62% for Mistral-24B), so teacher incapacity
-and the smaller training set are not fully separable.
+(wrapper 14.5%; 20% of traces cleared the filter against 62% for Mistral-24B).
 
-For completeness: aggregate rubric quality
-decreases modestly on the new benchmarks, most on MedQuAD (0.672 → 0.586). We read that partly as a rubric property, since it rewards
-agreement with a reference answer, so a response that asks instead of answering scores lower by
-construction. Consistent with that, the wrapper drops further than the adapter (0.542 against 0.586)
-despite changing no weights, and the two stacked drop furthest (0.505). That is the measurement problem
-the paper is about, and why we report the decomposition alongside the aggregate.
+For completeness: aggregate rubric quality decreases
+modestly on the new benchmarks, most on MedQuAD (0.672 → 0.586). We read that partly as a rubric
+property, since it rewards agreement with a reference answer, so asking instead of answering scores
+lower by construction. Consistent with that, the wrapper drops further than the adapter (0.542 against
+0.586) despite changing no weights, and the two stacked drop furthest (0.505). That is the measurement
+problem the paper is about.
 
 Remaining open, and we do not claim otherwise: a head-to-head comparison against inference-time
 calibration methods, and completion of the three-physician validation.
