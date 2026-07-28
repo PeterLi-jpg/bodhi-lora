@@ -46,11 +46,15 @@ CoT at inference. We also report a precondition: on BioMistral-7B there is no ef
 diagnostic is that the teacher fails there too (the CoT wrapper reaches only 14.5%), so there is
 nothing to distill. This is visible before training, in that only 20% of its traces cleared the
 quality filter against 62% for Mistral-Small-24B, which also means teacher incapacity and the smaller
-surviving training set (733 rows) are not fully separable. One further cell, MedQA-USMLE reframed as open-ended questions, is excluded and we
-say so plainly: our reframing preamble cued the behavior being scored, driving base-model inquiry to
-99%, so it measured instruction-following rather than calibration. We will rebuild that prompt
-neutrally for the camera-ready. One element of this weakness also remains unaddressed: we vary the
-model and the benchmark, not the CoT protocol.
+surviving training set (733 rows) are not fully separable.
+
+One further cell, MedQA-USMLE reframed as open-ended questions, is excluded, and we say so plainly:
+our reframing preamble cued the behavior being scored, driving base-model inquiry to 99%, so it
+measured instruction-following rather than calibration. We will rebuild that prompt neutrally for the
+camera-ready.
+
+One element of this weakness also remains unaddressed: we vary the model and the benchmark, not the
+CoT protocol.
 
 ---
 
