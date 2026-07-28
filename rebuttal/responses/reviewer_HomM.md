@@ -1,8 +1,8 @@
-Thank you for this careful and generous review. On W2, you suspected we were already pursuing the
-obvious extensions across more models, benchmarks and human evaluation. That was correct on all three counts:
-the first two completed during the discussion period, and the human evaluation is partial, so we report
-its current state rather than waiting. Below are the results, with the parts of your critique they do
-not answer.
+Thank you for this careful and generous review, and for setting out what does work: the separation of
+clinical generation from communication behavior, and the simplicity of the recipe. On W2, you suspected we were already pursuing the obvious extensions across more models,
+benchmarks and human evaluation. That was correct on all three counts: the first two completed during
+the discussion period, and the human evaluation is partial, so we report its current state rather than
+waiting. Below are the results, with the parts of your critique they do not answer.
 
 **W1, Q1 and Q2. The evaluation is too narrow**
 
@@ -16,7 +16,8 @@ will be described as a recipe plus an evaluation decomposition for open-ended, i
 clinical Q&A, not as a validated general framework, and we will state what it does not cover. On the
 evidence side, the runs below widen what has been tested.
 
-*Results on additional base models and evaluation sets.* You asked for one or two additional base models, or one additional clinical evaluation set. We re-ran the
+*Results on additional base models and evaluation sets.* You asked for one or two additional base
+models, or one additional clinical evaluation set. We re-ran the
 pipeline unchanged, every hyperparameter fixed (LoRA $r=16$, $\alpha=32$, effective batch 16, 3 epochs,
 $\tau=0.4$, Qwen-14B filter, Llama-3.1-8B evaluator), on two further model families and two further
 benchmarks, 5 seeds per cell and ~200 prompts per seed per condition.
@@ -52,7 +53,8 @@ Mistral-24B).
 benchmark, and a single CoT protocol. We have varied the first two. We have not varied the protocol, so
 the claim that the recipe is protocol-agnostic remains untested, and we do not assert it.
 
-*What the behavior gains cost in aggregate quality.* We report this including where it is unfavourable. On HealthBench the aggregate rubric score is
+*What the behavior gains cost in aggregate quality.* We report this including where it is unfavourable.
+On HealthBench the aggregate rubric score is
 essentially unchanged (Mistral-Small-24B 0.425 → 0.411; Med42-8B 0.405 → 0.392), consistent with the
 submitted non-inferiority result. On the new benchmarks there are modest decreases, largest on MedQuAD
 (0.672 → 0.586). We read that partly as a rubric property: it rewards agreement with a reference answer,
@@ -127,7 +129,7 @@ evaluation, inadequate reproducibility and incompletely addressed ethics. Your r
 second of these; on the others it records clarity 4, no ethical concerns, and no technical flaw, and the
 submitted version already carries 5 independent seeds, bootstrap intervals, a contamination probe,
 specified hardware and released code and adapters. If evaluation breadth is the operative concern, that
-is the ground we have been able to move, and we would ask you to weigh the rating against it.
+is the ground we have been able to move.
 
 Three things remain outstanding, and if accepted we commit to all three: the empirical prior-work
 comparison, completion of the physician validation, and a second CoT protocol.
