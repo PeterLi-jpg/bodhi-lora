@@ -25,7 +25,8 @@ with consumer-style questions.
 
 **One benchmark is not sufficient; consider clinician-posed questions**
 
-Short answer: we added two benchmarks and are running a third; we could not use MIMIC or eICU.
+Short answer: we added two benchmarks, attempted a third and excluded it for a reason we give below,
+and could not use MIMIC or eICU.
 
 We first checked your premise and it holds: in HealthBench-Hard only ~0.6% of evaluated prompts
 explicitly identify the speaker as a clinician. Per your suggestion we added **ChatDoctor** (unedited
@@ -101,8 +102,10 @@ future work.
 
 **A more explicit compute comparison**
 
-We will report training and inference cost per configuration, including measured wall-clock from
-these runs: on a single H100, ~128 min/seed for a 24B configuration and ~39 min/seed for an 8B one.
+We will report training and inference cost per configuration. From these runs, one seed of a 24B
+configuration end to end (generation, filtering, LoRA training, evaluation) takes about 2 hours on a
+single H100; the 8B configurations are cheaper, but our timings came off a shared node and we will
+quote per-stage figures measured in isolation rather than publish numbers confounded by queueing.
 This sits alongside the existing inference comparison of one forward pass versus two.
 
 Remaining open, and we do not claim otherwise: a head-to-head against prior calibration methods
