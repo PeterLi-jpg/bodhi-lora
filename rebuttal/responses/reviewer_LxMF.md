@@ -13,18 +13,17 @@ confined to responses that leak the protocol's internal format rather than to lo
 The two-pass CoT generation exceeds the 4,096-token context window on ~4–5% of prompts, so those
 conditions return fewer completions. LoRA uses a single forward pass and has a 100% response rate. All
 comparisons use the available completions, $n \approx 985$–$998$ per condition pooled across 5 seeds. If
-accepted we will state this in the Table 1 caption rather than leave it in the body text, where it is
-easy to miss.
+accepted we will state this in the Table 1 caption.
 
 **2. Is the model learning calibration, or surface template behavior?**
 
 We ran the test you proposed: separate prompts that genuinely withhold information from those
 answerable as posed, and check whether inquiry rises more in the former.
 
-The labels come from signals the grader never receives. The epistemic grader is shown only the prompt
-and the response, and the asking outcome is its active-inquiry judgment; the split instead comes from
-HealthBench's `context_seeking` theme tag and, separately, from whether a prompt's expert rubric
-rewards asking for clarification. Label and outcome therefore have different sources. The index is
+The labels come from signals the grader never receives. It is shown only the prompt and the response,
+and the asking outcome is its active-inquiry judgment; the split instead comes from HealthBench's
+`context_seeking` theme tag and, separately, from whether a prompt's expert rubric rewards asking for
+clarification. Label and outcome therefore have different sources. The index is
 $P(\text{ask} \mid \text{withholding}) - P(\text{ask} \mid \text{self-contained})$ over 667 distinct
 prompts (508 withholding, 158 self-contained), bootstrap 95% CIs, 5,000 resamples.
 
@@ -42,7 +41,13 @@ not simply ask more often, it acquires targeting the base model lacks, which is 
 surface mimicry predicts: mimicry would either carry the base model's non-discrimination forward or
 raise both groups uniformly.
 
-Two qualifications are in order. The rubric-based and theme-only labellings disagree substantially about
+Asking does rise on both groups: on self-contained prompts the adapter asks 37.5% of the time against
+the base model's 15.9%. Because a difference of proportions is compressed at low base rates, we also
+checked a scale-free measure. The between-group odds ratio of asking is 1.16 for the base model, 1.54
+for the adapter and 1.56 for the wrapper, so the ordering does not depend on the scale, though it does
+make the underlying change smaller than the raw difference suggests.
+
+Two further qualifications. The rubric-based and theme-only labellings disagree substantially about
 which prompts withhold information (508 versus 127 prompts in that group), yet both give the same
 ordering, and the adapter reaches +13.2pp, CI [+4.1, +21.7], under the theme-only split; that agreement
 across near-disjoint labellings is the strongest robustness check available at this sample size. Separately, the
@@ -64,7 +69,7 @@ accepted we will add a clinical judge as an additional robustness panel reported
 grader rather than replacing it.
 
 Your suggestion did shape the new runs: Med42-8B, from the Med42-v2 family you named, is now one of the
-base models we adapt (Table R2), which puts a clinically tuned Llama-family model inside the study.
+base models we adapt (Table R2).
 
 We should also report the current state of the physician validation, since it bears on the same
 concern. It remains partial: one of three raters has returned grades, giving $\kappa = 0.35$ against the
@@ -84,17 +89,17 @@ alternative, truncation or attention dilution from long outputs, directly agains
   identification *rises* across length quartiles, from 1.44 (median 1,508 chars) to 1.87 (median
   5,395 chars).
 
-Truncation does not explain it either: prompts whose two-pass generation exceeds the window return no
-response at all, so they are absent from the sample rather than present and scored low, which is the
-~5% attrition noted above. Leaked responses are longer (median 8,564 versus 3,457 characters), but their
-low score is attributable to emitting "RED FLAGS: None" in analysis format rather than to length, since
-length correlates positively with the score once leakage is excluded. We note that the non-leaked subset is
-identified after the fact by a format property rather than by its score, so we cannot fully exclude
-leakage correlating with prompt difficulty.
+Truncation does not explain it either: prompts exceeding the window return no response at all, so they
+are absent from the sample rather than scored low, which is the ~5% attrition noted above. Leaked
+responses are longer (median 8,564 versus 3,457 characters), but their low score is attributable to
+emitting "RED FLAGS: None" in analysis format rather than to length, since length correlates positively
+with the score once leakage is excluded. We note that the non-leaked subset is identified after the fact
+by a format property rather than by its score, so we cannot fully exclude leakage correlating with
+prompt difficulty.
 
 We therefore keep the competition reading but state it precisely: the two conditioning sources compete
 for control of the output *format*, and the failure is format leakage, not capacity exhaustion or
-attention dilution. Where leakage does not occur, stacking the protocol on the adapter is not harmful.
+dilution. Where leakage does not occur, stacking the protocol on the adapter is not harmful.
 If accepted we will also adopt your suggestion to surface red flags early in the protocol, before the
 extended reasoning. The leakage diagnosis predicts that this should recover most of the gap, which makes
 your suggestion a test of the mechanism as well as a fix.
@@ -107,8 +112,8 @@ scope-bounded, blanket disclaimer), each with its own labelled axis.
 
 **Additional runs, and one result bearing on mimicry**
 
-Because generality was raised across reviews, we re-ran the pipeline unchanged on two further model
-families and two further benchmarks, 5 seeds per cell.
+Because generality was raised across reviews, we re-ran the pipeline unchanged on two more model
+families and two more benchmarks (5 seeds per cell).
 
 **Table R2.** Active inquiry, Base → LoRA. Row 1 is the submitted result.
 
@@ -124,26 +129,26 @@ families and two further benchmarks, 5 seeds per cell.
 
 Two of these results bear on your concern directly rather than restating the original finding.
 
-First, the effect scales with how much a benchmark withholds. Holding the base model at
-Mistral-Small-24B, active inquiry rises 7.8% to 58.6% on ChatDoctor, where real patient messages
-routinely omit age, duration and medications, but only 6.5% to 26.5% on the better-specified MedQuAD.
-The gap is between benchmarks, not between models.
+First, the effect scales with how much a benchmark withholds. With the base model held at
+Mistral-Small-24B, active inquiry rises 7.8% to 58.6% on ChatDoctor, whose patient messages routinely
+omit age, duration and medications, but only 6.5% to 26.5% on the better-specified MedQuAD. The gap is
+between benchmarks, not models.
 
-Second, the student does not copy the teacher indiscriminately. On MedQuAD the CoT wrapper *degrades*
-scope bounding (1.85 → 1.61) and hedging quality (1.45 → 1.40) while the distilled adapter *improves*
-both (1.89 and 1.78). The quality-filtering step removes the teacher's failures before they reach the
-weights, which is hard to reconcile with pure imitation.
+Second, the student does not copy the teacher indiscriminately. On MedQuAD the wrapper *degrades* scope
+bounding (1.85 → 1.61) and hedging quality (1.45 → 1.40) while the adapter *improves* both (1.89 and
+1.78); the quality filter removes the teacher's failures before they reach the weights, which is hard to
+reconcile with pure imitation.
 
-We also identified a precondition: on BioMistral-7B there is no effect, and the teacher fails there too
-(wrapper 14.5%; only 20% of traces cleared the filter against 62% for Mistral-24B), so teacher
-incapacity and the smaller surviving training set are not fully separable.
+We also identified a precondition: on BioMistral-7B there is no effect and the teacher fails there too
+(wrapper 14.5%; 20% of traces cleared the filter against 62% for Mistral-24B), so teacher incapacity
+and the smaller training set are not fully separable.
 
-For completeness, including the results that do not favour the method: aggregate rubric quality
+For completeness: aggregate rubric quality
 decreases modestly on the new benchmarks, most on MedQuAD (0.672 → 0.586). We read that partly as a rubric property, since it rewards
-agreement with a reference answer and a response that asks a question instead of answering scores lower
-by construction. Consistent with that, the inference-time wrapper drops further than the adapter (0.542
-against 0.586) despite changing no weights, and the two stacked drop furthest (0.505). That is the
-measurement problem the paper is about, and why we report the decomposition alongside the aggregate.
+agreement with a reference answer, so a response that asks instead of answering scores lower by
+construction. Consistent with that, the wrapper drops further than the adapter (0.542 against 0.586)
+despite changing no weights, and the two stacked drop furthest (0.505). That is the measurement problem
+the paper is about, and why we report the decomposition alongside the aggregate.
 
 Remaining open, and we do not claim otherwise: a head-to-head comparison against inference-time
 calibration methods, and completion of the three-physician validation.
