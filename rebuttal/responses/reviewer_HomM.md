@@ -90,16 +90,16 @@ the automatic grader until the physician panel is complete.
 
 It is worth separating which claims this touches. Trace filtering and the aggregate-quality comparison
 use HealthBench's expert-authored rubrics, so the quality-preservation result rests on clinician-written
-criteria applied automatically. It is the seven epistemic dimensions that use our own anchors, so your
-criticism lands squarely on the behavioral claims and not on the non-inferiority one.
+criteria applied automatically. It is the seven epistemic dimensions that use our own anchors, so the
+concern applies to the behavioral claims rather than to the non-inferiority one.
 
 **W4 and Q3. Comparison with prior work**
 
-This is a fair criticism and the one our additional runs do not address. One point of fact, offered
-without wanting to argue past you: prior work is not absent from the paper. Section 2 positions the
-method against STaR, Constitutional AI and chain-of-thought prompting, and states how our
-filter-then-finetune step differs from each. What is absent is an *empirical* comparison, which is a
-narrower gap than the sentence suggests, but a real one that we do not dispute.
+This is a fair criticism and the one our additional runs do not address. We would gently push back on
+one word, though. Section 2 does position the method against STaR, Constitutional AI and
+chain-of-thought prompting, and states how our filter-then-finetune step differs from each, so the
+comparison is not wholly absent. What is absent is an *empirical* one, which is a narrower gap than the
+sentence implies, and a real one we do not dispute.
 
 If accepted we will expand that into a Discussion subsection, "Comparison to Prior Calibration
 Approaches," covering uncertainty prompting (Lin et al., 2022; Tian et al., 2023), which calibrates at
@@ -126,16 +126,15 @@ We would also argue the evidence changed in kind, not only in quantity: a single
 cannot separate "the recipe works" from "this pairing happens to work," whereas several cells, a
 documented null with a diagnosis, and a mechanistic account of the interference effect can.
 
-On the rating itself, respectfully. Reject is described as covering technical flaws, weak evaluation,
-inadequate reproducibility and incompletely addressed ethical considerations. Three of those four do not
-appear in your review: you rated clarity 4, recorded no ethical concerns, and identified no technical
-flaw, calling the method conceptually clean. On reproducibility the submitted version already carries
-5 independent seeds, bootstrap intervals, a contamination probe, specified hardware, and released code
-and adapters. The objection is evaluation breadth, which is the one ground we have been able to act on,
-and the one where the evidence has now moved.
+On the rating, which we raise only because the category is broad. Reject covers technical flaws, weak
+evaluation, inadequate reproducibility and incompletely addressed ethics. Your review identifies the
+second of these; on the others it records clarity 4, no ethical concerns, and no technical flaw, and the
+submitted version already carries 5 independent seeds, bootstrap intervals, a contamination probe,
+specified hardware and released code and adapters. If evaluation breadth is the operative concern, that
+is the ground we have been able to move, and we would ask you to weigh the rating against it.
 
-Three things remain outstanding, and we would rather name them: the empirical prior-work comparison, the
-completed physician validation, and a second CoT protocol.
+Three things remain outstanding, and if accepted we commit to all three: the empirical prior-work
+comparison, completion of the physician validation, and a second CoT protocol.
 
 We would be grateful if you would reconsider the rating in light of the added evidence, with those gaps
 visible. Thank you again for a review specific enough to act on. Please let us know if questions remain;
