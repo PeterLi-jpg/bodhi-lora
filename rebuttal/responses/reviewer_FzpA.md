@@ -1,12 +1,12 @@
 Thank you for this careful and constructive review. We are glad you find epistemic calibration
-important, our asymmetric cross-family grading protocol a safeguard against
-using one model across several pipeline steps, and the experiment carefully constructed.
+important, our asymmetric cross-family grading a safeguard against using one model across several
+pipeline steps, and the experiment carefully constructed.
 
 **W1. The "framework" claim is overly broad**
 
-You are right that our two statements are in tension, and the fault is ours. If accepted, we will
+You are right that our two statements are in tension, and the fault is ours. If accepted we will
 narrow the claim to a recipe plus an evaluation decomposition, demonstrated on open-ended,
-information-seeking clinical Q&A, and will state what is *not* covered: task types with no missing
+information-seeking clinical Q&A, and state what is *not* covered: task types with no missing
 information to seek, such as closed-form multiple choice, extraction, or summarization. The sentence
 beginning "Any structured CoT protocol..." will be replaced with a scoped version separating what we
 demonstrated from what we conjecture, and positioning the recipe against inference-time calibration
@@ -33,32 +33,33 @@ You suggested a more widely used model or a smaller variant. **Mistral-Small-24B
 that: general-purpose, non-clinical, widely used and open-weight. We re-ran the pipeline unchanged on
 it, and on **Med42-8B**, clinically tuned from a third model family (Table R1).
 
-The pattern across the three is the substantive answer, not the reproduction. Base active
-inquiry varies by more than a factor of two (11.8%, 17.5%, 25.6%), as one would expect if it were an
-idiosyncrasy of one model's alignment. After adaptation, all three converge into a
-narrow band (45.6%, 52.5%, 56.6%). The endpoint is a property of the training signal rather than of
-the starting model, which is what your critique put in doubt.
+The pattern across the three is the substantive answer, not the reproduction. Base active inquiry
+varies by more than a factor of two (11.8%, 17.5%, 25.6%), as one would expect if it were an
+idiosyncrasy of one model's alignment. After adaptation all three converge into a narrow band (45.6%,
+52.5%, 56.6%). The endpoint is a property of the training signal rather than of
+the starting model.
 
 **Q3. One benchmark is not sufficient; consider clinician-posed questions**
 
-We have added two benchmarks, though they do not fully answer what you asked.
+We have added two benchmarks, though they do not fully answer your ask.
 
 Your premise holds. Auditing HealthBench-Hard for explicit clinician self-identification ("my
-patient", "as a physician"), 14 of 1,000 prompts (1.4%) identify the speaker as a clinician. The
-keyword audit is a lower bound, but the benchmark is overwhelmingly patient-facing.
+patient", "as a physician"), 14 of 1,000 prompts (1.4%) identify the speaker as a clinician. That
+audit is a lower bound, but the benchmark is overwhelmingly patient-facing.
 
 We added **ChatDoctor** (unedited questions real patients asked physicians online) and **MedQuAD**
 (NIH consumer-health QA), and the effect reproduces on both, broadening the source and the degree of
-underspecification. **Both remain patient-facing, however, so they do not deliver the
+underspecification. **Both remain patient-facing, so they do not deliver the
 clinician-perspective comparison you proposed.** The cell that would have was MedQA-USMLE reframed as
-open-ended clinician questions, which we excluded: our reframing preamble instructed the model to ask
-for information it needed, which drove base-model active inquiry to 99% and left the cell measuring
+open-ended clinician questions, which we excluded: our reframing preamble told the model to ask for
+information it needed, which drove base-model active inquiry to 99% and left the cell measuring
 instruction-following rather than calibration. We report this rather than omit it. MIMIC and eICU
-require credentialed PhysioNet access under a data use agreement we could not complete in time. We have therefore added benchmark diversity but not yet the clinician-posed
-setting, which we will add if the paper is accepted.
+require credentialed PhysioNet access under a data use agreement we could not complete in time. We
+have therefore added benchmark diversity but not yet the clinician-posed setting, which we will add if
+the paper is accepted.
 
-**Table R1.** New runs, 5 seeds per cell, all hyperparameters fixed; each cell reads Base → LoRA.
-Mistral-Small-24B and BioMistral-7B are Mistral-family, Med42-8B is Llama-3; row 1 repeats the submitted result.
+**Table R1.** New runs, 5 seeds per cell, hyperparameters fixed; each cell reads Base → LoRA.
+Mistral-Small-24B and BioMistral-7B are Mistral-family, Med42-8B is Llama-3; row 1 is the submitted result.
 
 | Benchmark | Base model | Active inquiry | Context-seek |
 |---|---|---|---|
@@ -75,14 +76,14 @@ Mistral-Small-24B and BioMistral-7B are Mistral-family, Med42-8B is Llama-3; row
 They are deliberately not BODHI's five letters renamed, and yes, clinicians shaped them.
 
 BODHI (**B**ridging, **O**pen, **D**iscerning, **H**umble, **I**nquiring) is the *generation*
-protocol; the seven dimensions are the *evaluation* decomposition. We kept them separate deliberately,
-since scoring the student on the teacher's own five categories would grade the pipeline against the
+protocol; the seven dimensions are the *evaluation* decomposition. We kept them separate since
+scoring the student on the teacher's own five categories would grade the pipeline against the
 rubric it was built to satisfy. The correspondence is therefore partial: Inquiring maps onto active
 inquiry and context-seeking; Humble onto hedging quality and uncertainty acknowledgment; Discerning
 onto red-flag identification and specificity; Open and Bridging bear on scope bounding without owning a
 dimension.
 
-The seven instead cover the three epistemic functions a calibrated clinical response must serve:
+The seven cover the three epistemic functions a calibrated clinical response must serve:
 *self-assessment* (uncertainty acknowledgment, hedging quality, specificity), *information-seeking*
 (active inquiry, context-seeking), and *risk management* (red-flag identification, scope bounding).
 The selection was shaped by the practising physician co-authors on this paper, who identified these as
@@ -97,10 +98,10 @@ We will give a verbatim example per dimension so the reader sees what is scored:
 acknowledgment* ("without a chest X-ray I cannot confirm pneumonia"); *active inquiry* ("when did the
 symptoms start?"); *context-seeking* ("I would need the patient's age and medication history");
 *red-flag identification* ("shortness of breath with chest pain warrants immediate evaluation");
-*scope bounding* ("diagnosis requires an examination"); *hedging quality* (a specific qualified
-statement, not a generic "I am not a doctor"); *specificity* (a concrete dose rather than
-"consider medication"). These anchors are scored by the Llama-3.1-8B evaluator, with a
-three-physician validation of its judgments underway.
+*scope bounding* ("diagnosis requires an examination"); *hedging quality* (a qualified statement, not
+a generic "I am not a doctor"); *specificity* (a concrete dose rather than "consider medication").
+These anchors are scored by the Llama-3.1-8B evaluator, with a three-physician validation of its
+judgments underway.
 
 **W3. Results and discussion lack clarity**
 
@@ -118,21 +119,21 @@ We agree on all four points, and Clarity was your lowest score. If accepted, we 
 
 **Is red-flag rate missing a down arrow?**
 
-Higher is better, and the ambiguity is our fault for not labelling it: it measures
-sensitivity to warning signs that warrant escalation. In Table 2, blanket disclaimer rate is the only
-row where lower is better, and it will be the only one carrying a down arrow. We will add a caption note
-that it does not capture false positives, so a model that flagged indiscriminately
-would also score highly; measuring over-flagging requires a labelled set of prompts containing no
-genuine red flag, which we leave to future work.
+Higher is better, and the ambiguity is our fault for not labelling it: it measures sensitivity to
+warning signs that warrant escalation. In Table 2, blanket disclaimer rate is the only row where lower
+is better, and it will be the only one carrying a down arrow. We will add a caption note that it does
+not capture false positives, so a model flagging indiscriminately would also score highly; measuring
+over-flagging requires a labelled set of prompts containing no genuine red flag, which we leave to
+future work.
 
 **A more explicit compute comparison**
 
 We will report training and inference cost per configuration, as you suggested. From these runs, one
-seed of a 24B configuration end to end takes about two hours on a single H100, and the 8B
-configurations less; our timings came off a shared node, so we will quote per-stage figures measured
-in isolation rather than numbers confounded by queueing. This sits alongside the existing
-one-pass-versus-two comparison, where the adapter is wrapper-equivalent at roughly 58% lower output
-cost.
+seed of a 24B configuration end to end takes about two hours on a single H100, and the 8B ones less;
+our timings came off a shared node, so we will quote per-stage figures measured in isolation rather
+than numbers confounded by queueing. This sits alongside the comparison already in the paper: the CoT
+protocol costs roughly 2x inference and drops ~5% of responses, whereas the adapter uses one forward
+pass and reaches the protocol's behavioral effect at under a quarter of the length overhead.
 
 **Significance** was your other low score, and your objection was that we described one instantiation
 as a framework. You were right. We have narrowed the claim to what we actually demonstrated, and it is
