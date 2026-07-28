@@ -1,6 +1,6 @@
 Thank you for this careful and generous review, and for setting out what does work: the separation of
-clinical generation from communication behavior, and the simplicity of the recipe. On W2, you suspected we were already pursuing the obvious extensions across more models,
-benchmarks and human evaluation. That was correct on all three counts: the first two completed during
+clinical generation from communication behavior, and the simplicity of the recipe. On W2, you suspected
+we were already pursuing the obvious extensions across models, benchmarks and human evaluation. That was correct on all three counts: the first two completed during
 the discussion period, and the human evaluation is partial, so we report its current state rather than
 waiting. Below are the results, with the parts of your critique they do not answer.
 
@@ -79,16 +79,16 @@ of 0.6. We report that as a limitation on the aggregate-quality claims and do no
 settled clinical validation.
 
 One piece of evidence does not depend on the grader's own scores, and it covers one of the three
-dimensions you singled out. Using labels the grader never sees, HealthBench's `context_seeking` theme
-tag and whether a prompt's rubric rewards asking, the adapter distinguishes information-withholding
-prompts from self-contained ones (+10.5pp, bootstrap CI excluding zero) while the base model does not
-(+2.1pp, CI including zero). Context-seeking is therefore supported by a signal external to the grader.
+dimensions you named. Using labels the grader never sees, HealthBench's `context_seeking` theme tag and
+whether a prompt's rubric rewards asking, the adapter distinguishes information-withholding prompts from
+self-contained ones (+10.5pp, bootstrap CI excluding zero) while the base model does not (+2.1pp, CI
+including zero). Context-seeking is therefore supported by a signal external to the grader.
 Hedging quality and red-flag identification are not, and we do not claim otherwise; those two rest on
 the automatic grader until the physician panel is complete.
 
 It is worth separating which claims this touches. Trace filtering and the aggregate-quality comparison
-use HealthBench's expert-authored rubrics, so the quality-preservation result rests on clinician-written
-criteria applied automatically. It is the seven epistemic dimensions that use our own anchors, so the
+use HealthBench's expert-authored rubrics, so that result rests on clinician-written criteria applied
+automatically. It is the seven epistemic dimensions that use our own anchors, so the
 concern applies to the behavioral claims rather than to the non-inferiority one.
 
 **W4 and Q3. Comparison with prior work**
@@ -112,15 +112,15 @@ immediate next step rather than folding it into a claim.
 
 **On workshop versus conference scope**
 
-We understand the assessment and think it was a fair reading of the submitted version. The gap has
-narrowed for two of its three parts: 5-seed evidence across three model families and three benchmarks,
-with a scope condition showing where the recipe fails and why. Two mechanistic analyses requested by
-another reviewer were also completed, distinguishing calibration from surface mimicry and identifying
-output-format leakage rather than capacity exhaustion as the cause of the interference we reported.
+We understand how the submitted version invited that reading: a single setting leaves open whether the
+finding is about the recipe or about one pairing. The gap has narrowed for two of its three parts: 5-seed evidence across three model families and three benchmarks,
+with a scope condition showing where the recipe fails and why. Two mechanistic analyses requested by another
+reviewer were also completed, distinguishing calibration from surface mimicry and identifying
+output-format leakage rather than capacity exhaustion as the cause of the interference.
 
-We would also argue the evidence changed in kind, not only in quantity: a single positive instantiation
-cannot separate "the recipe works" from "this pairing happens to work," whereas several cells, a
-documented null with a diagnosis, and a mechanistic account of the interference effect can.
+The evidence also changed in kind, not only in quantity: a single positive instantiation cannot separate
+"the recipe works" from "this pairing happens to work," whereas several cells, a documented null with a
+diagnosis, and a mechanistic account of the interference can.
 
 On the rating, which we raise only because the category is broad. Reject covers technical flaws, weak
 evaluation, inadequate reproducibility and incompletely addressed ethics. Your review identifies the
