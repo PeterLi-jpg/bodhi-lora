@@ -112,6 +112,6 @@ incorporate all feedback into the paper.
 
 [1] Lin, Hilton, Evans. "Teaching Models to Express Their Uncertainty in Words." TMLR 2022.
 [2] Tian et al. "Just Ask for Calibration: Strategies for Eliciting Calibrated Confidence Scores from
-Fine-Tuned Language Models with Human Feedback." EMNLP 2023.
+Language Models Fine-Tuned with Human Feedback." EMNLP 2023.
 [3] Zelikman et al. "STaR: Bootstrapping Reasoning With Reasoning." NeurIPS 2022.
 [4] Bai et al. "Constitutional AI: Harmlessness from AI Feedback." arXiv:2212.08073, 2022.
