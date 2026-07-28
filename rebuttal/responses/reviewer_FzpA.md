@@ -46,15 +46,14 @@ Your premise holds: auditing HealthBench-Hard for explicit clinician self-identi
 a lower bound, but the benchmark is overwhelmingly patient-facing, as you suspected.
 
 We added **ChatDoctor** (unedited questions real patients asked physicians online) and **MedQuAD** (NIH
-consumer-health QA); the effect reproduces on both, broadening source and degree of underspecification.
+consumer-health QA); the effect reproduces on both, broadening source and underspecification.
 **Both are still patient-facing, so they do not deliver the clinician-perspective comparison you
 proposed.** The cell that would have was MedQA-USMLE reframed as open-ended clinician questions, and we
-excluded it: our reframing preamble instructed the model to ask for information it needed, which drove
+excluded it: our reframing preamble told the model to ask for information it needed, which drove
 base-model active inquiry to 99% and left the cell measuring instruction-following rather than
 calibration. We report it rather than quietly drop it. MIMIC and eICU need credentialed PhysioNet
 access under a data use agreement we could not complete in time. So we have added benchmark diversity
-but not yet the clinician-posed setting, and if accepted we will add it: the same cell with a neutral
-preamble, on the same 5-seed protocol, reported whichever way it comes out.
+but not yet the clinician-posed setting.
 
 **Table R1.** New runs, 5 seeds per cell, hyperparameters fixed; each cell reads Base → LoRA.
 Mistral-Small-24B and BioMistral-7B are Mistral-family, Med42-8B Llama-3. Row 1 is the submitted
@@ -70,9 +69,8 @@ result.
 | MedQuAD | Mistral-Small-24B | 6.5 → 26.5% | 0.32 → 1.23 |
 | HealthBench | BioMistral-7B | 11.7 → 10.1% (null) | 0.27 → 0.28 |
 
-We also report a precondition: BioMistral-7B shows no effect, and the teacher fails there too (wrapper
-14.5%; only 20% of traces cleared the filter against 62% for Mistral-24B). The recipe needs a base
-model already capable of following the protocol.
+The BioMistral-7B row is a scope condition we report rather than hide: the teacher fails there too
+(wrapper 14.5%), so the recipe needs a base model already capable of following the protocol.
 
 **Q1. Where the seven dimensions came from, and whether clinicians were involved**
 
@@ -136,12 +134,13 @@ rather than numbers confounded by queueing. This
 sits alongside the existing one-pass-versus-two comparison, where the adapter is wrapper-equivalent at
 ~58% lower output cost.
 
-Nothing above is claimed as done that is not. If accepted we commit to adding: the
-clinician-posed benchmark, a head-to-head against inference-time calibration methods,
-a clinical-judge panel alongside the primary grader, the completed three-physician validation
-(1 of 3 raters so far, kappa = 0.35), the compute table, and a second CoT protocol.
+Nothing above is claimed as done that is not. Of what you asked for, three things are not yet in hand,
+and if accepted we commit to all three: the clinician-posed benchmark rebuilt with a neutral preamble,
+the training and inference cost table, and the regenerated two-panel Figure 2.
 
-Your two substantive objections were that the base model was misaligned with the benchmark and that
-one benchmark cannot carry a generality claim. Both now have 5-seed evidence across three model
-families and three benchmarks, and we have narrowed the claim to what that evidence supports. We hope you
-will reconsider the rating in that light.
+On your two lowest scores. **Clarity**: the four fixes above are the ones you specified, and we treat
+them as required rather than discretionary. **Significance**: your objection was that we called one
+instantiation a framework, and you were right. We have narrowed the claim to what we actually
+demonstrated, and that demonstration is now 5 seeds across three model families and three benchmarks
+rather than one of each, failures reported alongside successes. We hope you will reconsider the rating
+in that light.
