@@ -44,8 +44,11 @@ tuned, BioMistral-7B is the scope condition; the submitted result used MedGemma-
 In four of the five working cells the adapter matches or exceeds its own teacher while requiring no
 CoT at inference. We also report a precondition: on BioMistral-7B there is no effect, and the
 diagnostic is that the teacher fails there too (the CoT wrapper reaches only 14.5%), so there is
-nothing to distill. A clinician-facing benchmark (MedQA-USMLE, open-ended) is in progress. One element
-of this weakness remains unaddressed: we vary the model and the benchmark, not the CoT protocol.
+nothing to distill. One further cell, MedQA-USMLE reframed as open-ended questions, is excluded and we
+say so plainly: our reframing preamble cued the behavior being scored, driving base-model inquiry to
+99%, so it measured instruction-following rather than calibration. We will rebuild that prompt
+neutrally for the camera-ready. One element of this weakness also remains unaddressed: we vary the
+model and the benchmark, not the CoT protocol.
 
 ---
 

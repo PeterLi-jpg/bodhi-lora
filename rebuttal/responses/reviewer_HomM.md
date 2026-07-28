@@ -35,7 +35,10 @@ the scope condition; the submitted result used MedGemma-27B (Gemma).
 | HealthBench | BioMistral-7B | 11.7 → 10.1% (null) | 0.27 → 0.28 |
 
 In four of the five working cells the adapter matches or exceeds its own teacher while requiring no
-CoT at inference. A clinician-facing benchmark (MedQA-USMLE, open-ended) is in progress.
+CoT at inference. A sixth cell, MedQA-USMLE reframed as open-ended questions, is excluded: our
+reframing preamble cued the behavior being scored, driving base-model inquiry to 99%, so it measured
+instruction-following rather than calibration. We will rebuild that prompt neutrally for the
+camera-ready.
 
 Two results are not merely confirmatory:
 
