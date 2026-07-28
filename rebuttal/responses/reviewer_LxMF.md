@@ -1,14 +1,12 @@
 Thank you for this thorough review and for the specific suggestions. We are glad you find the use case
 meaningful for high-stakes clinical AI, consider a system for evaluating epistemic virtues valuable,
 and judge the significance and originality highly. Two of your concerns named concrete tests, and we
-ran both on the submitted evaluation data rather than argue about them; the results are below, and one
-of them changed our interpretation.
+ran both on the submitted evaluation data rather than argue about them.
 
 In brief: on the discrimination test you proposed, the adapter distinguishes information-withholding
 prompts from self-contained ones (+10.5pp, CI excluding zero) while the base model does not (+2.1pp, CI
-including zero); and the interference test refutes our own original wording, since the red-flag drop
-turns out to be confined to responses that leak the protocol's internal format rather than to long
-responses.
+including zero); and the interference test refutes our own original wording, since the red-flag drop is
+confined to responses that leak the protocol's internal format rather than to long responses.
 
 **1. Why the sample sizes differ (200 vs 191 vs 192)**
 
@@ -20,16 +18,15 @@ easy to miss.
 
 **2. Is the model learning calibration, or surface template behavior?**
 
-We ran the test you proposed: isolate prompts that genuinely withhold information from those answerable
-as posed, and check whether inquiry rises more in the former.
+We ran the test you proposed: separate prompts that genuinely withhold information from those
+answerable as posed, and check whether inquiry rises more in the former.
 
-To keep the split independent of the grader we labelled prompts from signals it never receives: the
-epistemic grader is shown only the prompt and the response, so we labelled from HealthBench's
-`context_seeking` theme tag and, separately, from whether a prompt's expert rubric rewards asking for
-clarification. Neither signal reaches the grader, so the label and the measured outcome come from
-different sources. For each condition we computed a discrimination index, defined as
-$P(\text{ask} \mid \text{info missing}) - P(\text{ask} \mid \text{answerable})$, over 667 evaluated
-distinct prompts (508 information-withholding, 158 self-contained), bootstrap 95% CIs, 5,000 resamples.
+The labels come from signals the grader never receives. The epistemic grader is shown only the prompt
+and the response, and the asking outcome is its active-inquiry judgment; the split instead comes from
+HealthBench's `context_seeking` theme tag and, separately, from whether a prompt's expert rubric
+rewards asking for clarification. Label and outcome therefore have different sources. The index is
+$P(\text{ask} \mid \text{withholding}) - P(\text{ask} \mid \text{self-contained})$ over 667 distinct
+prompts (508 withholding, 158 self-contained), bootstrap 95% CIs, 5,000 resamples.
 
 **Table R1.** Discrimination index by condition.
 
@@ -40,13 +37,18 @@ distinct prompts (508 information-withholding, 158 self-contained), bootstrap 95
 | LoRA | +10.5pp | [+1.7, +18.9] |
 | LoRA+CoT | −3.5pp | [−10.1, +3.2] |
 
-The base model does not reliably discriminate; the wrapper and the adapter both do. On the theme-only
-labelling the adapter reaches +13.2pp, CI [+4.1, +21.7]. So the adapter does not simply ask more often,
-it acquires targeting the base model lacks, which is the opposite of what surface mimicry predicts:
-mimicry would either carry the base model's non-discrimination forward or raise both groups uniformly.
-We should be straight about one limit: the LoRA${-}$Base difference in discrimination is +8.4pp with CI
-[−1.2, +17.9], which includes zero, so the *difference between conditions* is suggestive rather than
-established. The within-condition result is what carries weight.
+The base model does not reliably discriminate; the wrapper and the adapter both do. So the adapter does
+not simply ask more often, it acquires targeting the base model lacks, which is the opposite of what
+surface mimicry predicts: mimicry would either carry the base model's non-discrimination forward or
+raise both groups uniformly.
+
+Two honest qualifications. The rubric-based and theme-only labellings disagree substantially about
+which prompts withhold information (508 versus 127 prompts in that group), yet both give the same
+ordering, and the adapter reaches +13.2pp, CI [+4.1, +21.7], under the theme-only split; that agreement
+across near-disjoint labellings is the robustness we can offer at this sample size. Separately, the
+LoRA${-}$Base difference is +8.4pp with CI [−1.2, +17.9], which includes zero, so the *difference
+between conditions* is suggestive rather than established. The within-condition results carry the
+weight.
 
 Under LoRA+CoT the discrimination is no longer detectable, which is consistent with the interference
 finding below.
@@ -59,23 +61,20 @@ because that separation is what prevents filter-grader circularity in a self-dis
 Meditron-3, Med42-v2 and the Aloe family are all Llama-derived, so promoting one to evaluator would put
 filter and grader in adjacent families and weaken exactly the property the asymmetric design buys. If
 accepted we will add a clinical judge as an additional robustness panel reported alongside the primary
-grader rather than replacing it, so both the cross-family guarantee and the clinical-specificity check
-are visible to the reader.
+grader rather than replacing it.
 
-Your suggestion did shape the new runs in a related way: Med42-8B, one of the models you named, is now
-one of the base models we adapt (Table R2), which at least puts a clinically tuned Llama-family model
-inside the study.
+Your suggestion did shape the new runs: Med42-8B, from the Med42-v2 family you named, is now one of the
+base models we adapt (Table R2), which puts a clinically tuned Llama-family model inside the study.
 
-We should also report where our human check currently stands, since it bears on the same concern. The
-physician validation is partial: one of three raters has returned grades, giving $\kappa = 0.35$ against
-the Llama-3.1-8B grader, below our pre-registered target of 0.6. We report that as a limitation on the
+We should also report where the human check stands, since it bears on the same concern. The physician
+validation is partial: one of three raters has returned grades, giving $\kappa = 0.35$ against the
+Llama-3.1-8B grader, below our pre-registered target of 0.6. We report that as a limitation on the
 aggregate-quality claims rather than presenting LLM grading as settled.
 
 **4. The CoT/LoRA competition claim is speculative**
 
 You are right, and our wording asserted a mechanism we had not demonstrated. We tested your
-alternative, truncation or attention dilution from long outputs, directly against ours on the submitted
-evaluation outputs.
+alternative, truncation or attention dilution from long outputs, directly against ours.
 
 - **Format leakage is pervasive under LoRA+CoT:** 54.6% of responses leak the protocol's internal
   Pass-1 analysis format into the patient-facing answer, against 0.2–3.0% in every other condition.
@@ -86,17 +85,19 @@ evaluation outputs.
   5,395 chars).
 
 Truncation does not explain it either: prompts whose two-pass generation exceeds the window return no
-response at all, so they are absent from the sample rather than present and scored low; that is the same
-~5% attrition noted above. Leaked responses are indeed longer (median 8,564 versus 3,457
-characters), but their low score is attributable to emitting "RED FLAGS: None" in analysis format
-rather than to length, since length correlates positively with the score once leakage is excluded. We therefore keep the competition
-reading but state it precisely: the two conditioning sources compete for control of the output
-*format*, and the failure is format leakage, not capacity exhaustion or attention dilution. Put plainly,
-where leakage does not occur, stacking the protocol on the adapter is not harmful at all. We are
-grateful for the push, because the original claim exceeded our evidence. If accepted we will also adopt
-your suggestion to surface red flags early in the protocol, before the extended reasoning, so
-safety-critical content cannot be displaced. The leakage diagnosis predicts that this should recover
-most of the gap, which makes your suggestion a test of the mechanism as well as a fix.
+response at all, so they are absent from the sample rather than present and scored low, which is the
+~5% attrition noted above. Leaked responses are longer (median 8,564 versus 3,457 characters), but their
+low score is attributable to emitting "RED FLAGS: None" in analysis format rather than to length, since
+length correlates positively with the score once leakage is excluded. We should flag that the non-leaked
+subset is identified after the fact by a format property rather than by its score, so we cannot fully
+exclude leakage correlating with prompt difficulty.
+
+We therefore keep the competition reading but state it precisely: the two conditioning sources compete
+for control of the output *format*, and the failure is format leakage, not capacity exhaustion or
+attention dilution. Where leakage does not occur, stacking the protocol on the adapter is not harmful.
+If accepted we will also adopt your suggestion to surface red flags early in the protocol, before the
+extended reasoning. The leakage diagnosis predicts that this should recover most of the gap, which makes
+your suggestion a test of the mechanism as well as a fix.
 
 **Clarity. The dual-axis figure is misleading**
 
@@ -121,7 +122,7 @@ families and two further benchmarks, 5 seeds per cell.
 | MedQuAD | Mistral-Small-24B | 6.5 → 26.5% |
 | HealthBench | BioMistral-7B | 11.7 → 10.1% (null) |
 
-Two results speak to your concern rather than merely repeating the original one.
+Two results speak to your concern rather than repeating the original one.
 
 First, the effect scales with how much a benchmark withholds. Holding the base model at
 Mistral-Small-24B, active inquiry rises 7.8% to 58.6% on ChatDoctor, where real patient messages
@@ -137,7 +138,7 @@ We also found a precondition: on BioMistral-7B there is no effect and the teache
 (wrapper 14.5%; only 20% of traces cleared the filter against 62% for Mistral-24B), so teacher
 incapacity and the smaller surviving training set are not fully separable.
 
-Reporting the unfavourable side too: on the new benchmarks aggregate rubric quality decreases modestly,
+Reporting the unfavourable side too: aggregate rubric quality decreases modestly on the new benchmarks,
 largest on MedQuAD (0.672 → 0.586). We read that partly as a rubric property, since it rewards
 agreement with a reference answer and a response that asks a question instead of answering scores lower
 by construction. Consistent with that, the inference-time wrapper drops further than the adapter (0.542
@@ -145,8 +146,8 @@ against 0.586) despite changing no weights, and the two stacked drop furthest (0
 measurement problem the paper is about, and why we report the decomposition alongside the aggregate.
 
 Still outstanding, and we do not claim otherwise: a head-to-head against inference-time calibration
-methods, the completed three-physician validation, and a second CoT protocol.
+methods, and the completed three-physician validation.
 
-Thank you again for proposing two concrete tests rather than only raising the concerns; one of them
-made us restate a claim we had overreached on. Please do let us know if any questions remain; we would
-be glad to run further analyses while the discussion period is open.
+Thank you again for proposing two concrete tests rather than only raising the concerns; one of them made
+us restate a claim we had overreached on. Please do let us know if any questions remain; we would be
+glad to run further analyses while the discussion period is open.
