@@ -54,7 +54,7 @@ We understand how the submitted version invited that reading: a single setting l
 
 The evidence also changed in kind, not only in quantity: a single positive instantiation cannot separate "the recipe works" from "this pairing happens to work," whereas several cells, a documented null with a diagnosis, and a mechanistic account of the interference can.
 
-On the rating, which we raise only because the category is broad. Reject covers technical flaws, weak evaluation, inadequate reproducibility and incompletely addressed ethics. Your review identifies the second of these; on the others it records clarity 4, no ethical concerns, and no technical flaw, and the submitted version already carries 5 independent seeds, bootstrap intervals, a contamination probe, specified hardware and released code and adapters. If evaluation breadth is the operative concern, that is the ground we have been able to move.
+One thing worth putting on the record, since it bears on how much weight the added cells can carry: the rigour of what was already run was not the problem. The submitted version carries 5 independent seeds, bootstrap intervals, a contamination probe on the held-out set, specified hardware, and released code and adapters. What was narrow was the number of settings, and that is precisely the gap the new runs close.
 
 Three things remain outstanding, and if accepted we commit to all three: the empirical prior-work comparison, completion of the physician validation, and a second CoT protocol.
 
