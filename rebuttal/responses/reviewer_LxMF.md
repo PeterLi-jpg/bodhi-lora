@@ -36,16 +36,17 @@ prompts (508 withholding, 158 self-contained), bootstrap 95% CIs, 5,000 resample
 | LoRA | +10.5pp | [+1.7, +18.9] |
 | LoRA+CoT | −3.5pp | [−10.1, +3.2] |
 
-The base model does not reliably discriminate; the wrapper and the adapter both do. So the adapter does
-not simply ask more often, it acquires targeting the base model lacks, which is the opposite of what
-surface mimicry predicts: mimicry would either carry the base model's non-discrimination forward or
-raise both groups uniformly.
+The base model does not reliably discriminate; the wrapper and the adapter both do. The adapter does not
+simply ask more often, it acquires targeting the base model lacks, which is the opposite of what surface
+mimicry predicts: mimicry would carry the base model's non-discrimination forward, or raise both groups
+uniformly.
 
 Asking does rise on both groups: on self-contained prompts the adapter asks 37.5% of the time against
 the base model's 15.9%. Because a difference of proportions is compressed at low base rates, we also
 checked a scale-free measure. The between-group odds ratio of asking is 1.16 for the base model, 1.54
-for the adapter and 1.56 for the wrapper, so the ordering does not depend on the scale, though it does
-make the underlying change smaller than the raw difference suggests.
+for the adapter and 1.56 for the wrapper. The ordering does not depend on the scale, though it makes the
+underlying change smaller than the raw difference suggests. Note also that the adapter's ratio nearly
+matches the wrapper's: what transfers from teacher to student is the targeting, not only the rate.
 
 Two further qualifications. The rubric-based and theme-only labellings disagree substantially about
 which prompts withhold information (508 versus 127 prompts in that group), yet both give the same
@@ -64,9 +65,9 @@ We agree this is a limitation and have not yet run the alternative. The original
 rather than incidental: the evaluator must sit in a different model family from the Qwen-14B filter,
 because that separation is what prevents filter-grader circularity in a self-distillation pipeline.
 Meditron-3, Med42-v2 and the Aloe family are all Llama-derived, so promoting one to evaluator would put
-filter and grader in adjacent families and weaken exactly the property the asymmetric design buys. If
-accepted we will add a clinical judge as an additional robustness panel reported alongside the primary
-grader rather than replacing it.
+filter and grader in adjacent families and weaken the property the asymmetric design buys. If accepted
+we will add a clinical judge as an additional robustness panel alongside the primary grader rather than
+replacing it.
 
 Your suggestion did shape the new runs: Med42-8B, from the Med42-v2 family you named, is now one of the
 base models we adapt (Table R2).
@@ -113,7 +114,7 @@ scope-bounded, blanket disclaimer), each with its own labelled axis.
 **Additional runs, and one result bearing on mimicry**
 
 Because generality was raised across reviews, we re-ran the pipeline unchanged on two more model
-families and two more benchmarks (5 seeds per cell).
+families and benchmarks (5 seeds per cell).
 
 **Table R2.** Active inquiry, Base → LoRA. Row 1 is the submitted result.
 
@@ -127,12 +128,11 @@ families and two more benchmarks (5 seeds per cell).
 | MedQuAD | Mistral-Small-24B | 6.5 → 26.5% |
 | HealthBench | BioMistral-7B | 11.7 → 10.1% (null) |
 
-Two of these results bear on your concern directly rather than restating the original finding.
+Two of these bear on your concern directly rather than restating the original finding.
 
-First, the effect scales with how much a benchmark withholds. With the base model held at
-Mistral-Small-24B, active inquiry rises 7.8% to 58.6% on ChatDoctor, whose patient messages routinely
-omit age, duration and medications, but only 6.5% to 26.5% on the better-specified MedQuAD. The gap is
-between benchmarks, not models.
+First, the effect scales with how much a benchmark withholds: with the base held at Mistral-Small-24B,
+active inquiry rises 7.8% to 58.6% on ChatDoctor, whose patient messages routinely omit age and
+medications, but only 6.5% to 26.5% on the better-specified MedQuAD.
 
 Second, the student does not copy the teacher indiscriminately. On MedQuAD the wrapper *degrades* scope
 bounding (1.85 → 1.61) and hedging quality (1.45 → 1.40) while the adapter *improves* both (1.89 and
