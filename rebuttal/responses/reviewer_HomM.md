@@ -4,6 +4,10 @@ simple and practical, the paper clearly organized and conceptually clean, and th
 stated. You suspected we were already pursuing the obvious extensions across more models and
 benchmarks; that was correct, and several completed during the discussion period.
 
+To be exact about what follows: the **experiments** were run during the discussion period and their
+results are final. Every **paper edit** is a change we will make if accepted, not something already in
+the PDF you reviewed, which remains the point of comparison.
+
 **Why the evaluation protocol was limited**
 
 Short answer: we traded breadth for depth, and for a paper claiming generality that was the wrong
@@ -37,8 +41,7 @@ the scope condition; the submitted result used MedGemma-27B (Gemma).
 In four of the five working cells the adapter matches or exceeds its own teacher while requiring no
 CoT at inference. A sixth cell, MedQA-USMLE reframed as open-ended questions, is excluded: our
 reframing preamble cued the behavior being scored, driving base-model inquiry to 99%, so it measured
-instruction-following rather than calibration. We will rebuild that prompt neutrally for the
-camera-ready.
+instruction-following rather than calibration. We will rebuild that prompt neutrally.
 
 Two results are not merely confirmatory:
 
@@ -50,7 +53,7 @@ Two results are not merely confirmatory:
   traces cleared the quality filter, versus 62% for Mistral-Small-24B, leaving 733 training rows. We
   therefore cannot fully separate teacher incapacity from the smaller surviving training set, though
   both follow from the same cause. The recipe requires a base model capable of following the protocol,
-  which we now state as a precondition rather than leaving a reader to discover it.
+  which we will state as a precondition rather than leave a reader to discover it.
 
 We note the third element of this weakness, a single CoT protocol, remains unaddressed; we vary the
 model and the benchmark, not the teacher.
@@ -83,18 +86,19 @@ from the Qwen-14B filter, because that separation is what prevents filter-grader
 self-distillation pipeline. Meditron-3, Med42-v2 and Aloe are Llama-derived, so promoting one to
 evaluator would place filter and grader in adjacent families and weaken that property. We plan to add
 a clinical judge as an additional robustness panel alongside the primary grader rather than replacing
-it, and will state this rationale explicitly in the revision.
+it, and will state this rationale explicitly if the paper is accepted.
 
 **Comparison to prior work is absent**
 
 This is a fair criticism that our additional runs do not address, and we will not pretend otherwise.
-The revision adds a Discussion subsection, "Comparison to Prior Calibration Approaches," positioning
+If accepted we will add a Discussion subsection, "Comparison to Prior Calibration Approaches,"
+positioning
 the method against uncertainty prompting (Lin et al., 2022;
 Tian et al., 2023), which calibrates at inference time whereas we
 internalize the behavior into weights; STaR-style self-improvement (Zelikman et al., 2022), whose filter-then-finetune
 logic we apply to behavioral rather than factual demonstrations; and Constitutional AI (Bai et al., 2022), which uses
-self-critique where we use a structured CoT protocol as a behavioral teacher. We include a summary
-table comparing inference-time cost, need for a teacher model, behavioral versus factual focus, and
+self-critique where we use a structured CoT protocol as a behavioral teacher, plus a summary table
+comparing inference-time cost, need for a teacher model, behavioral versus factual focus, and
 demonstrated generality. A direct empirical head-to-head against an inference-time calibration
 baseline is the single most valuable experiment we have not run, and we name it as the immediate next
 step.

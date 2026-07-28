@@ -3,7 +3,7 @@ important area of study, our asymmetric cross-family grading protocol a real saf
 one model across pipeline steps, and the experiment carefully constructed.
 
 To be exact about what follows: the **experiments** were run during the discussion period and their
-results are final. Every **paper edit** is a commitment for the camera-ready, not something already in
+results are final. Every **paper edit** is a change we will make if accepted, not something already in
 the PDF you reviewed, which remains the point of comparison.
 
 **W1. The "framework" claim is overly broad** (paper edit)

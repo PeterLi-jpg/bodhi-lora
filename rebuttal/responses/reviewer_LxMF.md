@@ -3,6 +3,10 @@ meaningful for high-stakes clinical AI, consider a system for evaluating epistem
 and judge the significance and originality of the work highly. Two of your concerns specified
 concrete tests; we ran both on the submitted evaluation data and report them below.
 
+To be exact about what follows: the **experiments** were run during the discussion period and their
+results are final. Every **paper edit** is a change we will make if accepted, not something already in
+the PDF you reviewed, which remains the point of comparison.
+
 **Is the model learning calibration, or surface template behavior?**
 
 Short answer: we ran exactly the test you proposed, and the adapter discriminates while the base
@@ -52,15 +56,15 @@ Leaked responses are indeed longer, but their low score is attributable to emitt
 in analysis format rather than to length. We therefore retain the competition interpretation but state
 it precisely: the two conditioning sources compete for control of the output *format*, and the failure
 is format leakage rather than capacity exhaustion or attention dilution. We are grateful for the push,
-since the original claim exceeded our evidence. We also adopt your suggestion to surface red flags
+since the original claim exceeded our evidence. We will also adopt your suggestion to surface red flags
 early in the protocol, before the extended reasoning, so safety-critical content cannot be displaced.
 
 **Why the sample sizes differ (200 vs 191 vs 192)**
 
 The two-pass CoT generation exceeds the 4,096-token context window on ~4–5% of prompts, so those
 conditions produce fewer completions; LoRA uses a single forward pass and has a 100% response rate.
-All comparisons use available completions ($n \approx 985$–$998$ pooled across 5 seeds). We add this to the
-Table 1 caption rather than leaving it in the body text where it is easy to miss.
+All comparisons use available completions ($n \approx 985$–$998$ pooled across 5 seeds). We will add this to
+the Table 1 caption rather than leave it in the body text where it is easy to miss.
 
 **Why Llama-3.1 rather than a medical judge**
 
@@ -78,7 +82,7 @@ clinical-specificity check are available to the reader.
 We agree, and will split Figure 2 into Panel A (0–2 dimensions: uncertainty, context-seeking,
 red-flag, scope, hedging, specificity) and Panel B (percentage rates: active inquiry, red-flag,
 scope-bounded, blanket disclaimer), each with its own labelled axis. This requires regenerating the
-figure, so it will appear in the camera-ready rather than in the current revision.
+figure, so it is a change we will make if the paper is accepted rather than one already made.
 
 **Additional runs, and one result bearing directly on mimicry**
 
