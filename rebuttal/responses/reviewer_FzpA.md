@@ -103,7 +103,7 @@ consumer-health QA); the effect reproduces on both, broadening source and unders
 clinician-perspective comparison you proposed.** The cell that would have was MedQA-USMLE reframed as
 open-ended clinician questions, which we excluded: our preamble told the model to ask for information
 it needed, which drove base-model active inquiry to 99% and left the cell measuring
-instruction-following rather than calibration. We report this rather than omit it, It also shows that
+instruction-following rather than calibration. We report this rather than omit it. It also shows that
 instruction raises the asking rate without the targeting: base discrimination between prompts that
 withhold information and those that do not is +2.1pp (CI contains zero) against +10.5pp for the adapter
 (CI excludes zero). A rate obtained by instruction is indiscriminate; the adapter's is selective. MIMIC and eICU require
