@@ -4,8 +4,9 @@ and judge the significance and originality highly. Two of your concerns named co
 ran both on the submitted evaluation data rather than argue about them; the results are below, and one
 of them changed our interpretation.
 
-In brief: the discrimination test you proposed separates the adapter from the base model (+10.5pp
-against +2.1pp), and the interference test refutes our own original wording, since the red-flag drop
+In brief: on the discrimination test you proposed, the adapter distinguishes information-withholding
+prompts from self-contained ones (+10.5pp, CI excluding zero) while the base model does not (+2.1pp, CI
+including zero); and the interference test refutes our own original wording, since the red-flag drop
 turns out to be confined to responses that leak the protocol's internal format rather than to long
 responses.
 
@@ -28,7 +29,7 @@ epistemic grader is shown only the prompt and the response, so we labelled from 
 clarification. Neither signal reaches the grader, so the label and the measured outcome come from
 different sources. For each condition we computed a discrimination index, defined as
 $P(\text{ask} \mid \text{info missing}) - P(\text{ask} \mid \text{answerable})$, over 667 evaluated
-prompts (508 information-withholding, 158 self-contained), with bootstrap 95% CIs from 5,000 resamples.
+distinct prompts (508 information-withholding, 158 self-contained), bootstrap 95% CIs, 5,000 resamples.
 
 **Table R1.** Discrimination index by condition.
 
@@ -85,8 +86,8 @@ evaluation outputs.
   5,395 chars).
 
 Truncation does not explain it either: prompts whose two-pass generation exceeds the window return no
-response at all and are therefore absent from the sample (928 completions against 998 for the base),
-rather than being present and scored low. Leaked responses are indeed longer (median 8,564 versus 3,457
+response at all, so they are absent from the sample rather than present and scored low; that is the same
+~5% attrition noted above. Leaked responses are indeed longer (median 8,564 versus 3,457
 characters), but their low score is attributable to emitting "RED FLAGS: None" in analysis format
 rather than to length, since length correlates positively with the score once leakage is excluded. We therefore keep the competition
 reading but state it precisely: the two conditioning sources compete for control of the output
