@@ -35,17 +35,18 @@ progress. MIMIC and eICU require credentialed PhysioNet access under a data use 
 not complete within the discussion period, so we list this as a next step rather than claiming
 coverage.
 
-**Table R1.** Transfer across model families and benchmarks, 5 seeds per cell, all hyperparameters
-fixed. Wrapper is the inference-time CoT protocol, i.e. the teacher the adapter distills from.
+**Table R1.** Transfer across model families and benchmarks. 5 seeds per cell, all hyperparameters
+fixed; every cell reads Base → LoRA. Families: Mistral-Small-24B and BioMistral-7B (Mistral),
+Med42-8B (Llama-3); the submitted result used MedGemma-27B (Gemma).
 
-| Benchmark | Base model (family) | Active inquiry, Base → LoRA | Context-seek, Base → LoRA |
+| Benchmark | Base model | Active inquiry | Context-seek |
 |---|---|---|---|
-| HealthBench | Mistral-Small-24B (Mistral) | 25.6% → 56.6% | 1.05 → 1.76 |
-| HealthBench | Med42-8B (Llama-3) | 11.8% → 52.5% | 0.52 → 1.40 |
-| ChatDoctor | Mistral-Small-24B (Mistral) | 7.8% → 58.6% | 0.83 → 1.49 |
-| ChatDoctor | Med42-8B (Llama-3) | 2.9% → 86.4% | 0.71 → 1.81 |
-| MedQuAD | Mistral-Small-24B (Mistral) | 6.5% → 26.5% | 0.32 → 1.23 |
-| HealthBench | BioMistral-7B (scope cond.) | 11.7% → 10.1% (null) | 0.27 → 0.28 |
+| HealthBench | Mistral-Small-24B | 25.6 → 56.6% | 1.05 → 1.76 |
+| HealthBench | Med42-8B | 11.8 → 52.5% | 0.52 → 1.40 |
+| ChatDoctor | Mistral-Small-24B | 7.8 → 58.6% | 0.83 → 1.49 |
+| ChatDoctor | Med42-8B | 2.9 → 86.4% | 0.71 → 1.81 |
+| MedQuAD | Mistral-Small-24B | 6.5 → 26.5% | 0.32 → 1.23 |
+| HealthBench | BioMistral-7B | 11.7 → 10.1% (null) | 0.27 → 0.28 |
 
 **Where the seven dimensions came from, and whether clinicians were involved**
 
