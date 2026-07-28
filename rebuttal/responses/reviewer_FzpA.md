@@ -71,16 +71,19 @@ statement rather than a generic disclaimer); *specificity* (a concrete dose or t
 
 **Results and discussion lack clarity**
 
-We agree, and all four changes are made:
+We agree. Three of the four changes are already in the revised manuscript, and the fourth is a figure
+regeneration we will include in the camera-ready:
 
-- **Vague "not statements" removed.** They are replaced with positive claims stating the
+- **Vague "not statements" removed** (done). They are replaced with positive claims stating the
   per-dimension numbers, including the accuracy (0.117 → 0.121) and completeness (0.168 → 0.169)
   figures that support the communication-not-knowledge reading.
-- **Figure 2 split into two panels** so 0–2 scores and percentage rates no longer share an axis.
-- **Table 2 carries a direction arrow on every row.**
-- **Clinical implications paragraph added:** active inquiry is history-taking before recommending,
-  red-flag identification is recognizing presentations warranting escalation, scope bounding is
-  declining to advise beyond the available evidence.
+- **Table 2 now carries a direction arrow on every row** (done), with the caption note on false
+  positives described below.
+- **Clinical implications paragraph added** (done): active inquiry is history-taking before
+  recommending, red-flag identification is recognizing presentations warranting escalation, scope
+  bounding is declining to advise beyond the available evidence.
+- **Figure 2 will be split into two panels** so that 0–2 scores and percentage rates no longer share
+  an axis; this requires regenerating the figure and will appear in the camera-ready.
 
 **Is red-flag rate missing a down arrow?**
 
