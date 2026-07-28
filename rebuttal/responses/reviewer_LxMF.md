@@ -49,8 +49,8 @@ make the underlying change smaller than the raw difference suggests.
 
 Two further qualifications. The rubric-based and theme-only labellings disagree substantially about
 which prompts withhold information (508 versus 127 prompts in that group), yet both give the same
-ordering, and the adapter reaches +13.2pp, CI [+4.1, +21.7], under the theme-only split; that agreement
-across near-disjoint labellings is the strongest robustness check available at this sample size. Separately, the
+ordering, and the adapter reaches +13.2pp, CI [+4.1, +21.7], under the theme-only split; that agreement across
+near-disjoint labellings is the strongest robustness check available at this n. Separately, the
 LoRA${-}$Base difference is +8.4pp with CI [−1.2, +17.9], which includes zero, so the *difference
 between conditions* is suggestive rather than established. The within-condition results carry the
 weight.
@@ -73,8 +73,8 @@ base models we adapt (Table R2).
 
 We should also report the current state of the physician validation, since it bears on the same
 concern. It remains partial: one of three raters has returned grades, giving $\kappa = 0.35$ against the
-Llama-3.1-8B grader, below our pre-registered target of 0.6. We report that as a limitation on the
-aggregate-quality claims rather than presenting LLM grading as settled.
+Llama-3.1-8B grader, below our pre-registered target of 0.6. We report that as a limitation rather than
+presenting LLM grading as settled.
 
 **4. The CoT/LoRA competition claim is speculative**
 
