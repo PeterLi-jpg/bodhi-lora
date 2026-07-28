@@ -33,6 +33,7 @@ tuned, BioMistral-7B is the scope condition; the submitted result used MedGemma-
 
 | Benchmark | Base model | Active inquiry | Context-seek |
 |---|---|---|---|
+| HealthBench | **MedGemma-27B (submitted)** | **17.5 → 45.6%** | **1.40 → 1.75** |
 | HealthBench | Mistral-Small-24B | 25.6 → 56.6% | 1.05 → 1.76 |
 | HealthBench | Med42-8B | 11.8 → 52.5% | 0.52 → 1.40 |
 | ChatDoctor | Mistral-Small-24B | 7.8 → 58.6% | 0.83 → 1.49 |
@@ -93,7 +94,7 @@ before they reach the weights.
 
 ## W5. Discussion and contextualization lack clarity
 
-We accept this. The following are already in the revised manuscript:
+We accept this. We have made the following changes for the revision:
 
 - **Vague "not statements" removed,** replaced with positive claims stating the per-dimension numbers,
   including the accuracy (0.117 → 0.121) and completeness (0.168 → 0.169) figures that support the

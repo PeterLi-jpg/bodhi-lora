@@ -100,10 +100,14 @@ def medqa_row(ex):
         answer = options[answer]
     if not question or not answer:
         return None
+    # The preamble must not cue the behaviors we score. An earlier version said
+    # "Ask for any information you would need before committing, and state your
+    # reasoning", which drove base-model active inquiry to 99% and made the cell
+    # measure instruction-following instead of calibration. Keep only the
+    # clinician framing and the open-ended instruction.
     user = (
         "You are advising a clinician colleague. Answer the following clinical "
-        "question. Ask for any information you would need before committing, and "
-        "state your reasoning.\n\n" + str(question).strip()
+        "question.\n\n" + str(question).strip()
     )
     ref = str(answer).strip()[:400]
     rubrics = _rubric({
@@ -158,9 +162,9 @@ def medmcqa_row(ex):
         return None
     if not answer:
         return None
+    # See medqa_row: no clause here may cue asking or reasoning aloud.
     user = ("You are advising a clinician colleague. Answer the following clinical "
-            "question. Ask for any information you would need before committing, and "
-            "state your reasoning.\n\n" + str(question).strip())
+            "question.\n\n" + str(question).strip())
     ref = str(answer).strip()[:300]
     rubrics = _rubric({
         "criterion": f"The assistant's final conclusion is consistent with the correct "
