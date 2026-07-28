@@ -127,9 +127,9 @@ Mistral-Small-24B and BioMistral-7B are Mistral-family, Med42-8B is Llama-3; row
 **A more explicit compute comparison**
 
 We will report training and inference cost per configuration. One seed of a 24B
-configuration end to end takes about two hours on a single H100, and the 8B ones less;
-our timings came off a shared node, so we will quote per-stage figures measured in isolation rather
-than numbers confounded by queueing. This sits alongside the comparison already in the paper: the CoT
+configuration end to end takes about two hours on a single H100. Those timings came off a
+shared node and are confounded by queueing, so we will quote per-stage figures measured in isolation
+rather than these. This sits alongside the comparison already in the paper: the CoT
 protocol costs roughly 2x inference and drops ~5% of responses, whereas the adapter uses one forward
 pass and reaches the same behavioral effect at under a quarter of the length overhead.
 
