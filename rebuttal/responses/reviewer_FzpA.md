@@ -1,5 +1,6 @@
-Thank you for your thorough review. We are pleased you find epistemic calibration important, our asymmetric cross-family grading a real safeguard against using
-one model across pipeline steps, and the experiment carefully built.
+Thank you for your review. We are pleased you find epistemic calibration important, our
+asymmetric cross-family grading a safeguard against using one model across pipeline steps, and the
+experiment carefully built.
 
 **W1. The "framework" claim is overly broad**
 
@@ -13,8 +14,8 @@ conjecture, and positioned against inference-time calibration methods, which act
 
 We will also address how the decomposition changes across contexts, which you asked for. The
 dimensions are not equally meaningful everywhere: active inquiry and context-seeking presuppose
-information that is missing and recoverable from the user, so they are informative on patient-facing
-Q&A and near-vacuous on self-contained exam items, whereas scope bounding and red-flag identification
+information that is missing and recoverable from the user, so they are informative on patient-facing Q&A
+and near-vacuous on self-contained exam items, whereas scope bounding and red-flag identification
 travel further, since they concern what a response commits to rather than what it asks for. The new
 runs bear this out: with the base model fixed at Mistral-Small-24B, active inquiry rises 7.8% to 58.6% on
 ChatDoctor but only 6.5% to 26.5% on the better-specified MedQuAD. It tracks whether asking is
@@ -23,25 +24,25 @@ warranted rather than rising uniformly, which separates calibration from a templ
 **W2. MedGemma is not aligned with HealthBench's use case**
 
 Your characterization of HealthBench is right and the mismatch is real. One part of our reasoning holds: ChatGPT, Claude and Gemini cannot be LoRA-adapted, and weight-level adaptation is the
-object of study, so a closed model could not be the base. But that never required a *clinical* base model, which is where our choice was weak.
+object of study, so a closed model could not be the base. But that never required a *clinical* base model, which is where we were weak.
 
 You suggested a more widely used model or a smaller variant. **Mistral-Small-24B-Instruct** is exactly
 that: general-purpose, non-clinical, widely used, open-weight. We re-ran the pipeline unchanged on it,
 and on **Med42-8B**, clinically tuned from a third family (Table R1).
 
-The pattern across the three is the substantive answer, not just the reproduction. Base active inquiry
-varies by more than a factor of two (11.8%, 17.5%, 25.6%), as one would expect if the
-behavior were an idiosyncrasy of one model's alignment. After adaptation all three converge into a
+The pattern across the three is the substantive answer, not the reproduction. Base active inquiry
+varies by more than a factor of two (11.8%, 17.5%, 25.6%), as one would expect if it were
+an idiosyncrasy of one model's alignment. After adaptation all three converge into a
 narrow band (45.6%, 52.5%, 56.6%). The endpoint is a property of the training signal rather than of the
 starting model, which is what your critique put in doubt.
 
 **Q3. One benchmark is not sufficient; consider clinician-posed questions**
 
-We added two benchmarks, and want to be straight that they do not fully answer it.
+We added two benchmarks, but want to be straight that they do not fully answer it.
 
 Your premise holds: auditing HealthBench-Hard for explicit clinician self-identification ("my patient",
-"as a physician"), 14 of 1,000 prompts (1.4%) identify the speaker as a clinician. The keyword audit is a
-lower bound, but the benchmark is overwhelmingly patient-facing, as you suspected.
+"as a physician"), 14 of 1,000 prompts (1.4%) identify the speaker as a clinician. That keyword audit is a lower
+bound, but the benchmark is overwhelmingly patient-facing.
 
 We added **ChatDoctor** (unedited questions real patients asked physicians online) and **MedQuAD** (NIH
 consumer-health QA); the effect reproduces on both, broadening source and underspecification.
@@ -49,9 +50,9 @@ consumer-health QA); the effect reproduces on both, broadening source and unders
 proposed.** The cell that would have was MedQA-USMLE reframed as open-ended clinician questions, which we
 excluded: our reframing preamble told the model to ask for information it needed, which drove
 base-model active inquiry to 99% and left the cell measuring instruction-following rather than
-calibration. We report it rather than quietly drop it. MIMIC and eICU need credentialed PhysioNet
-access under a data use agreement we could not complete in time. So we added benchmark diversity but not yet
-the clinician-posed setting.
+calibration. We report it rather than drop it quietly. MIMIC and eICU need credentialed PhysioNet access under a
+data use agreement we could not complete in time, so we added benchmark diversity but not yet the
+clinician-posed setting.
 
 **Table R1.** New runs, 5 seeds per cell, hyperparameters fixed; each cell reads Base → LoRA.
 Mistral-Small-24B and BioMistral-7B are Mistral-family, Med42-8B Llama-3; row 1 is the submitted result.
@@ -66,8 +67,8 @@ Mistral-Small-24B and BioMistral-7B are Mistral-family, Med42-8B Llama-3; row 1 
 | MedQuAD | Mistral-Small-24B | 6.5 → 26.5% | 0.32 → 1.23 |
 | HealthBench | BioMistral-7B | 11.7 → 10.1% (null) | 0.27 → 0.28 |
 
-The BioMistral-7B row is a scope condition we report rather than hide: the teacher fails there too
-(wrapper 14.5%), so the recipe needs a base capable of following the protocol.
+The BioMistral-7B row is a scope condition: the teacher fails there too (wrapper 14.5%), so the recipe
+needs a base capable of following the protocol.
 
 **Q1. Where the seven dimensions came from, and whether clinicians were involved**
 
@@ -99,8 +100,7 @@ These anchors are scored by the Llama-3.1-8B evaluator, with a three-physician v
 
 **W3. Results and discussion lack clarity**
 
-We agree on all four points, and Clarity was your lowest score, so we treat these as required rather
-than optional. If accepted we will:
+We agree on all four points, and Clarity was your lowest score. If accepted we will:
 
 - **Remove the vague "not statements"** you quoted, replacing them with positive claims stating the
   per-dimension numbers, including accuracy 0.117 → 0.121 and completeness 0.168 → 0.169, which actually support the communication-not-knowledge reading.
@@ -113,7 +113,7 @@ than optional. If accepted we will:
 
 **Is red-flag rate missing a down arrow?**
 
-Higher is better, and the ambiguity is our fault for not labelling it: the dimension measures
+Higher is better, and the ambiguity is our fault for not labelling it: it measures
 sensitivity to warning signs that warrant escalation. In Table 2, blanket disclaimer rate is the only
 row where lower is better, and it will be the only one with a down arrow. We will add a caption note
 that it does not capture false positives, so a model that flagged indiscriminately
@@ -128,13 +128,16 @@ rather than numbers confounded by queueing. This
 sits alongside the existing one-pass-versus-two comparison, where the adapter is wrapper-equivalent at
 ~58% lower output cost.
 
-Nothing above is claimed as done that is not. Of what you asked for, three things are not yet in hand,
-and if accepted we commit to all three: the clinician-posed benchmark rebuilt with a neutral preamble,
-the training and inference cost table, and the regenerated two-panel Figure 2.
+Nothing above is claimed as done that is not. Three things you asked for are not yet in hand, and if accepted
+we commit to all three: the clinician-posed benchmark rebuilt with a neutral preamble, the
+cost table, and the regenerated two-panel Figure 2.
 
-On your two lowest scores. **Clarity**: the four fixes above are the ones you specified, and we treat
-them as required. **Significance**: your objection was that we called one
-instantiation a framework, and you were right. We have narrowed the claim to what we actually
-demonstrated, and it is now 5 seeds across three model families and three benchmarks rather
-than one of each, failures reported alongside successes. We hope you will reconsider the rating
-in that light.
+**Significance** was your other low score, and your objection was that we called one instantiation a
+framework. You were right. We have narrowed the claim to what we demonstrated, and that is now 5 seeds
+across three model families and three benchmarks rather than one of each, failures reported alongside
+successes.
+
+Thank you again for your thoughtful comments, which have made the paper better. We hope the added
+evidence and the changes above address your concerns, and would be grateful if you would consider
+updating your score. Please do let us know if any questions remain; we are glad to run further
+analyses while the discussion period is open.
