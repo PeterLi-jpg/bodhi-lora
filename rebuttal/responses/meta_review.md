@@ -93,7 +93,7 @@ before they reach the weights.
 
 ## W5. Discussion and contextualization lack clarity
 
-We accept this and have made the changes rather than describing them:
+We accept this. The following are already in the revised manuscript:
 
 - **Vague "not statements" removed,** replaced with positive claims stating the per-dimension numbers,
   including the accuracy (0.117 → 0.121) and completeness (0.168 → 0.169) figures that support the
@@ -103,8 +103,11 @@ We accept this and have made the changes rather than describing them:
 - **Table 1's caption** now explains the differing sample sizes at the point of confusion: the
   two-pass CoT protocol exceeds the context window on ~4–5% of prompts, while LoRA has a 100% response
   rate.
-- **Figure 2 split into two panels** so 0–2 scores and percentage rates no longer share an axis.
-- **A clinical implications paragraph added,** stating what each behavior means in practice.
+- **A clinical implications paragraph** stating what each behavior means in practice, and a
+  subsection giving the origin of the seven dimensions with a verbatim text example for each.
+
+One further change requires regenerating a figure and will appear in the camera-ready: **splitting
+Figure 2 into two panels** so 0–2 scores and percentage rates no longer share an axis.
 
 ---
 

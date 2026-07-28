@@ -179,6 +179,28 @@ We fine-tune MedGemma-27B with LoRA ($r{=}16$, $\alpha{=}32$, dropout 0.05) on a
 
 The seven dimensions were chosen to cover the three epistemic functions a calibrated clinical response must serve. \emph{Self-assessment} (uncertainty acknowledgment, hedging quality, specificity) captures whether the model correctly represents what it does and does not know. \emph{Information-seeking} (active inquiry, context-seeking) captures the canonical clinical practice of gathering missing information before acting---operationalizing the principle that appropriate action under uncertainty requires first reducing it where possible \citep{simpkin2016tolerating}. \emph{Risk management} (red-flag identification, scope bounding) captures safety-netting: naming danger signs, specifying return thresholds, and bounding the scope of advice to what the model's evidence supports \citep{jones2019safety}. Together these cover epistemic behavior that is (a) observable in text without access to ground-truth clinical outcomes, (b) targeted by the \bodhi{} CoT protocol, and (c) neither redundant nor conflatable with aggregate quality score. We exclude dimensions like ``empathy'' or ``patient education depth'' that conflate \emph{what is communicated} with \emph{how accurately uncertainty is represented}.
 
+\paragraph{Origin of the decomposition, and what each dimension looks like in text.} The seven
+dimensions are not a renaming of \bodhi{}'s five components: \bodhi{} supplies the generation
+protocol, while the decomposition is an evaluation instrument. The grouping above into
+self-assessment, information-seeking and risk management was shaped by the practising physician
+co-authors of this paper, who work in four health systems (US, Uganda, Colombia, UK) and who
+identified these as the behaviors that most affect safety in clinical decision support. Because the
+dimensions are graded from text, we state what each one looks like concretely:
+
+\begin{itemize}[leftmargin=*,itemsep=1pt]
+    \item \emph{Uncertainty acknowledgment}: ``without a chest X-ray I cannot confirm pneumonia.''
+    \item \emph{Active inquiry}: ``when did the symptoms start?''
+    \item \emph{Context-seeking}: ``I would need the patient's age and medication history.''
+    \item \emph{Red-flag identification}: ``shortness of breath with chest pain warrants immediate
+          evaluation.''
+    \item \emph{Scope bounding}: ``I can give general information, but diagnosis requires an
+          examination.''
+    \item \emph{Hedging quality}: a specific qualified statement (``this could be either anxiety or a
+          cardiac cause'') rather than a generic ``consult a doctor'' disclaimer.
+    \item \emph{Specificity}: a concrete dose or timeframe (``325\,mg aspirin if no allergy'') rather
+          than ``consider medication.''
+\end{itemize}
+
 The blanket-disclaimer rate is the key diagnostic for the ``hedging trap'': a model that has learned genuine calibration will have high appropriate-hedging rate and low blanket-disclaimer rate, while a model that has learned indiscriminate caution will have both rates high.
 
 \paragraph{Integrity controls.} (1)~Contamination probe (Appendix~\ref{app:contamination}): 0/105 verbatim matches, mean prefix-overlap 0 tokens. (2)~Automated leakage gate ensures no evaluation prompt ID appears in training data. (3)~Grader parse-failure rate $<0.1\%$ across all reported runs (conservative not-met on failure). (4)~Physician validation partially returned (1 of 3 physicians; Appendix~\ref{app:human}): preliminary $\kappa{=}0.35$ physician vs.\ LLM, below the pre-registered target of $0.6$; aggregate-quality claims should be read as rubric-based proxy quality, not settled clinical validation.
@@ -355,6 +377,32 @@ Base responses average ${\sim}3{,}220$ chars; LoRA $\sim 3{,}410$ ($+5.9$\%)---a
 \caption{\textbf{The 2$\times$2 design as a single comparison} (\texttt{prompt\_id 2130cd26}, seed~42; verbatim excerpts from \texttt{results\_modal/seed\_42/epistemic\_scores.json}, \texttt{[\ldots]} marks omitted text, no paraphrasing). Reading across rows: the wrapper (top right) and LoRA alone (bottom left) both produce calibrated patient responses naming the specific catch-up safety issue, while Base alone (top left) misses it and LoRA+Wrapper (bottom right) emits the protocol's internal Pass~1 analysis (including ``RED FLAGS: None'') instead of patient guidance. The diagonal Base $\to$ LoRA shift demonstrates the adapter internalizes what the wrapper does without the inference cost; the anti-diagonal Wrapper $\to$ LoRA+Wrapper shift demonstrates the interference.}
 \label{fig:interference}
 \end{figure}
+
+\paragraph{What these behaviors mean clinically.} The dimensions are not abstract virtues; each
+corresponds to a recognised clinical practice, which is what makes the shifts consequential.
+\emph{Active inquiry} is history-taking: gathering the information that determines the answer before
+committing to one, so a rise from 17.5\% to 45.6\% means the model more often behaves like a
+clinician who asks before advising. \emph{Red-flag identification} is the recognition of
+presentations that warrant escalation rather than reassurance, the behavior whose absence is most
+directly linked to delayed care. \emph{Scope bounding} is declining to advise past what the
+available evidence supports, which prevents a confident answer from substituting for an examination.
+\emph{Hedging quality} separates a qualification that carries information (naming the specific
+alternative under consideration) from a blanket disclaimer that carries none; the latter is what
+makes a model feel cautious while remaining unhelpful.
+
+\paragraph{Comparison to prior calibration approaches.} Prior work on calibration in language models
+largely operates at inference time or on numerical confidence. \emph{Uncertainty prompting}
+\citep{lin2022teaching, tian2023just} elicits verbalized confidence through the prompt, so the
+behavior must be re-elicited at every call; we instead internalize it into weights, which removes the
+per-call cost but also removes the ability to toggle it. \emph{STaR-style self-improvement}
+\citep{zelikman2022star} shares our filter-then-finetune structure but filters on answer correctness,
+whereas we filter behavioral demonstrations on rubric quality, which is why our filter can retain a
+trace that is behaviorally exemplary but factually imperfect. \emph{Constitutional AI}
+\citep{bai2022constitutional} also distills a prompted behavior into weights, but via self-critique
+against written principles rather than a structured CoT protocol acting as a behavioral teacher. The
+comparison we cannot yet make is empirical: we report no head-to-head against an inference-time
+calibration baseline on the same benchmark and grader, and we regard that as the most important
+missing experiment rather than a settled point in our favour.
 
 \paragraph{Robustness.} The active-inquiry effect persists in every response-length quartile (shortest: LoRA 35.5\% vs.\ Base 25.3\%), ruling out verbosity. Internalization holds across the five most populated HealthBench themes within 0--7~pp on every theme. A parallel Qwen-14B grader run agrees with Llama on direction (LoRA${-}$Base ${\approx}0$, Wrapper${-}$Base slightly negative), supporting the aggregate-score framing across grader families (Appendix~\ref{app:robustness}).
 

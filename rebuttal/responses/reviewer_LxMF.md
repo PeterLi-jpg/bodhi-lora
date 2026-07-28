@@ -74,9 +74,10 @@ clinical-specificity check are available to the reader.
 
 **The dual-axis figure is misleading**
 
-We agree. Figure 2 is split into Panel A (0–2 dimensions: uncertainty, context-seeking, red-flag,
-scope, hedging, specificity) and Panel B (percentage rates: active inquiry, red-flag, scope-bounded,
-blanket disclaimer), each with its own labelled axis.
+We agree, and will split Figure 2 into Panel A (0–2 dimensions: uncertainty, context-seeking,
+red-flag, scope, hedging, specificity) and Panel B (percentage rates: active inquiry, red-flag,
+scope-bounded, blanket disclaimer), each with its own labelled axis. This requires regenerating the
+figure, so it will appear in the camera-ready rather than in the current revision.
 
 **Additional runs, and one result bearing directly on mimicry**
 
