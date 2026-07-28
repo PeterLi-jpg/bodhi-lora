@@ -4,6 +4,11 @@ and judge the significance and originality highly. Two of your concerns named co
 ran both on the submitted evaluation data rather than argue about them; the results are below, and one
 of them changed our interpretation.
 
+In brief: the discrimination test you proposed separates the adapter from the base model (+10.5pp
+against +2.1pp), and the interference test refutes our own original wording, since the red-flag drop
+turns out to be confined to responses that leak the protocol's internal format rather than to long
+responses.
+
 **1. Why the sample sizes differ (200 vs 191 vs 192)**
 
 The two-pass CoT generation exceeds the 4,096-token context window on ~4–5% of prompts, so those
@@ -85,10 +90,12 @@ rather than being present and scored low. Leaked responses are indeed longer (me
 characters), but their low score is attributable to emitting "RED FLAGS: None" in analysis format
 rather than to length, since length correlates positively with the score once leakage is excluded. We therefore keep the competition
 reading but state it precisely: the two conditioning sources compete for control of the output
-*format*, and the failure is format leakage, not capacity exhaustion or attention dilution. We are
+*format*, and the failure is format leakage, not capacity exhaustion or attention dilution. Put plainly,
+where leakage does not occur, stacking the protocol on the adapter is not harmful at all. We are
 grateful for the push, because the original claim exceeded our evidence. If accepted we will also adopt
 your suggestion to surface red flags early in the protocol, before the extended reasoning, so
-safety-critical content cannot be displaced.
+safety-critical content cannot be displaced. The leakage diagnosis predicts that this should recover
+most of the gap, which makes your suggestion a test of the mechanism as well as a fix.
 
 **Clarity. The dual-axis figure is misleading**
 
@@ -125,18 +132,16 @@ scope bounding (1.85 → 1.61) and hedging quality (1.45 → 1.40) while the dis
 both (1.89 and 1.78). The quality-filtering step removes the teacher's failures before they reach the
 weights, which is hard to reconcile with pure imitation.
 
-We also found a precondition. On BioMistral-7B there is no effect, and the teacher fails there too:
-the wrapper reaches only 14.5% active inquiry, and only 20% of its traces cleared the quality filter
-against 62% for Mistral-Small-24B, leaving 733 training rows. Teacher incapacity and the smaller
-surviving training set are therefore not fully separable, though both follow from the same cause.
+We also found a precondition: on BioMistral-7B there is no effect and the teacher fails there too
+(wrapper 14.5%; only 20% of traces cleared the filter against 62% for Mistral-24B), so teacher
+incapacity and the smaller surviving training set are not fully separable.
 
-Reporting the unfavourable side as well: on the new benchmarks aggregate rubric quality decreases
-modestly, largest on MedQuAD (0.672 → 0.586). We read that partly as a property of a rubric that
-rewards agreement with a reference answer, since a response that asks a question instead of answering
-scores lower by construction. Consistent with that, the inference-time wrapper drops further than the
-adapter does (0.542 against 0.586) despite no weight change at all, and the two stacked drop furthest
-(0.505). That is the measurement problem the paper is about, which is why we report the decomposition
-alongside the aggregate rather than in place of it.
+Reporting the unfavourable side too: on the new benchmarks aggregate rubric quality decreases modestly,
+largest on MedQuAD (0.672 → 0.586). We read that partly as a rubric property, since it rewards
+agreement with a reference answer and a response that asks a question instead of answering scores lower
+by construction. Consistent with that, the inference-time wrapper drops further than the adapter (0.542
+against 0.586) despite changing no weights, and the two stacked drop furthest (0.505). That is the
+measurement problem the paper is about, and why we report the decomposition alongside the aggregate.
 
 Still outstanding, and we do not claim otherwise: a head-to-head against inference-time calibration
 methods, the completed three-physician validation, and a second CoT protocol.
