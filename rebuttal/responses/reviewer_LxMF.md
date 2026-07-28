@@ -4,7 +4,7 @@ and judge the significance and originality highly. Two of your concerns named co
 ran both on the submitted evaluation data rather than argue about them; the results are below, and one
 of them changed our interpretation.
 
-**Why the sample sizes differ (200 vs 191 vs 192)**
+**1. Why the sample sizes differ (200 vs 191 vs 192)**
 
 The two-pass CoT generation exceeds the 4,096-token context window on ~4–5% of prompts, so those
 conditions return fewer completions. LoRA uses a single forward pass and has a 100% response rate. All
@@ -12,14 +12,16 @@ comparisons use the available completions, $n \approx 985$–$998$ per condition
 accepted we will state this in the Table 1 caption rather than leave it in the body text, where it is
 easy to miss.
 
-**Is the model learning calibration, or surface template behavior?**
+**2. Is the model learning calibration, or surface template behavior?**
 
 We ran the test you proposed: isolate prompts that genuinely withhold information from those answerable
 as posed, and check whether inquiry rises more in the former.
 
-To keep the split independent of the grader we labelled prompts from signals it does not see:
-HealthBench's `context_seeking` theme tag, and separately whether a prompt's expert rubric rewards
-asking for clarification. For each condition we computed a discrimination index, defined as
+To keep the split independent of the grader we labelled prompts from signals it never receives: the
+epistemic grader is shown only the prompt and the response, so we labelled from HealthBench's
+`context_seeking` theme tag and, separately, from whether a prompt's expert rubric rewards asking for
+clarification. Neither signal reaches the grader, so the label and the measured outcome come from
+different sources. For each condition we computed a discrimination index, defined as
 $P(\text{ask} \mid \text{info missing}) - P(\text{ask} \mid \text{answerable})$, over 667 evaluated
 prompts (508 information-withholding, 158 self-contained), with bootstrap 95% CIs from 5,000 resamples.
 
@@ -43,7 +45,7 @@ established. The within-condition result is what carries weight.
 Under LoRA+CoT the discrimination is no longer detectable, which is consistent with the interference
 finding below.
 
-**Why Llama-3.1 rather than a medical judge**
+**3. Why Llama-3.1 rather than a medical judge**
 
 We agree this is a limitation and have not yet run the alternative. The original choice was structural
 rather than incidental: the evaluator must sit in a different model family from the Qwen-14B filter,
@@ -63,7 +65,7 @@ physician validation is partial: one of three raters has returned grades, giving
 the Llama-3.1-8B grader, below our pre-registered target of 0.6. We report that as a limitation on the
 aggregate-quality claims rather than presenting LLM grading as settled.
 
-**The CoT/LoRA competition claim is speculative**
+**4. The CoT/LoRA competition claim is speculative**
 
 You are right, and our wording asserted a mechanism we had not demonstrated. We tested your
 alternative, truncation or attention dilution from long outputs, directly against ours on the submitted
@@ -88,7 +90,7 @@ grateful for the push, because the original claim exceeded our evidence. If acce
 your suggestion to surface red flags early in the protocol, before the extended reasoning, so
 safety-critical content cannot be displaced.
 
-**The dual-axis figure is misleading**
+**Clarity. The dual-axis figure is misleading**
 
 Agreed. If accepted we will split Figure 2 into Panel A (0–2 dimensions: uncertainty, context-seeking,
 red-flag, scope, hedging, specificity) and Panel B (percentage rates: active inquiry, red-flag,
