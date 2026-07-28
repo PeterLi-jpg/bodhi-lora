@@ -51,9 +51,10 @@ consumer-health QA); the effect reproduces on both, broadening source and degree
 proposed.** The cell that would have was MedQA-USMLE reframed as open-ended clinician questions, and we
 excluded it: our reframing preamble instructed the model to ask for information it needed, which drove
 base-model active inquiry to 99% and left the cell measuring instruction-following rather than
-calibration. We report it rather than quietly drop it, and will rebuild the prompt without naming the
-scored behavior. MIMIC and eICU need credentialed PhysioNet access under a data use agreement we
-could not complete in time. So we have added benchmark diversity but not the clinician-posed setting.
+calibration. We report it rather than quietly drop it. MIMIC and eICU need credentialed PhysioNet
+access under a data use agreement we could not complete in time. So we have added benchmark diversity
+but not yet the clinician-posed setting, and if accepted we will add it: the same cell with a neutral
+preamble, on the same 5-seed protocol, reported whichever way it comes out.
 
 **Table R1.** New runs, 5 seeds per cell, hyperparameters fixed; each cell reads Base → LoRA.
 Mistral-Small-24B and BioMistral-7B are Mistral-family, Med42-8B Llama-3. Row 1 is the submitted
@@ -136,7 +137,12 @@ rather than numbers confounded by queueing. This
 sits alongside the existing comparison of one forward pass versus two, where the adapter is
 wrapper-equivalent at ~58% lower inference output cost.
 
-Still open, and we do not claim otherwise: the clinician-posed benchmark above, a head-to-head against
-inference-time calibration methods, a clinical-judge robustness panel, completion of the
-three-physician validation (1 of 3 raters returned, kappa = 0.35), and a second CoT protocol. We will
-incorporate all of your feedback into the paper.
+Nothing above is claimed as done that is not, and if accepted we commit to adding each of the
+following: the clinician-posed benchmark, a head-to-head against inference-time calibration methods,
+a clinical-judge panel reported alongside the primary grader, the completed three-physician validation
+(1 of 3 raters so far, kappa = 0.35), the compute table, and a second CoT protocol.
+
+Your two substantive objections were that the base model was misaligned with the benchmark and that
+one benchmark cannot carry a generality claim. Both now have 5-seed evidence across three model
+families and three benchmarks, and we have narrowed the claim to what that evidence supports. We
+would be grateful if you would reconsider the rating in that light.
