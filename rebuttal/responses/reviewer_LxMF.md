@@ -1,7 +1,7 @@
 Thank you for this thorough review and for the specific suggestions. We are glad you find the use case
 meaningful for high-stakes clinical AI, consider a system for evaluating epistemic virtues valuable,
-and judge the significance and originality highly. Two of your concerns named concrete tests, and we
-ran both on the submitted evaluation data rather than argue about them.
+and judge the significance and originality highly. Two of your concerns named concrete tests, and we ran
+both on the submitted evaluation data.
 
 In brief: on the discrimination test you proposed, the adapter distinguishes information-withholding
 prompts from self-contained ones (+10.5pp, CI excluding zero) while the base model does not (+2.1pp, CI
@@ -148,6 +148,6 @@ measurement problem the paper is about, and why we report the decomposition alon
 Still outstanding, and we do not claim otherwise: a head-to-head against inference-time calibration
 methods, and the completed three-physician validation.
 
-Thank you again for proposing two concrete tests rather than only raising the concerns; one of them made
-us restate a claim we had overreached on. Please do let us know if any questions remain; we would be
+Thank you again for proposing two concrete tests; one of them made us restate a claim we had
+overreached on. Please do let us know if any questions remain; we would be
 glad to run further analyses while the discussion period is open.
