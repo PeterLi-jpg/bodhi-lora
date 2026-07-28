@@ -136,12 +136,12 @@ rather than numbers confounded by queueing. This
 sits alongside the existing one-pass-versus-two comparison, where the adapter is wrapper-equivalent at
 ~58% lower output cost.
 
-Nothing above is claimed as done that is not, and if accepted we commit to adding each of the
-following: the clinician-posed benchmark, a head-to-head against inference-time calibration methods,
-a clinical-judge panel reported alongside the primary grader, the completed three-physician validation
+Nothing above is claimed as done that is not. If accepted we commit to adding: the
+clinician-posed benchmark, a head-to-head against inference-time calibration methods,
+a clinical-judge panel alongside the primary grader, the completed three-physician validation
 (1 of 3 raters so far, kappa = 0.35), the compute table, and a second CoT protocol.
 
 Your two substantive objections were that the base model was misaligned with the benchmark and that
 one benchmark cannot carry a generality claim. Both now have 5-seed evidence across three model
-families and three benchmarks, and we have narrowed the claim to what that evidence supports. We
-would be grateful if you would reconsider the rating in that light.
+families and three benchmarks, and we have narrowed the claim to what that evidence supports. We hope you
+will reconsider the rating in that light.
