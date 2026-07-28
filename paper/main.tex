@@ -724,7 +724,8 @@ the same Qwen-14B filter, preserving the asymmetric cross-family design.
 \begin{table}[!ht]
 \centering
 \small
-\caption{Transfer across model families and benchmarks (5 seeds per cell). Active inquiry is a rate;
+\caption{Transfer across model families and benchmarks (5 seeds per cell). The first row repeats the
+main-paper result so the additional cells can be read against it. Active inquiry is a rate;
 context-seeking and red-flag identification are 0--2 means. Wrapper is the inference-time \bodhi{}
 CoT protocol, i.e.\ the teacher the adapter distills from.}
 \label{tab:generality}
@@ -733,6 +734,10 @@ CoT protocol, i.e.\ the teacher the adapter distills from.}
 Benchmark & Base model (family) & \multicolumn{2}{c}{Active inquiry} & Context-seek & Red-flag \\
  & & Base & LoRA & Base $\to$ LoRA & Base $\to$ LoRA \\
 \midrule
+\multicolumn{6}{l}{\emph{Main-paper result, for reference}} \\
+HealthBench & MedGemma-27B (Gemma)        & 17.5\% & 45.6\% & 1.40 $\to$ 1.75 & 1.52 $\to$ 1.67 \\
+\midrule
+\multicolumn{6}{l}{\emph{Additional models and benchmarks}} \\
 HealthBench & Mistral-Small-24B (Mistral) & 25.6\% & 56.6\% & 1.05 $\to$ 1.76 & 1.03 $\to$ 1.67 \\
 HealthBench & Med42-8B (Llama-3)          & 11.8\% & 52.5\% & 0.52 $\to$ 1.40 & 0.81 $\to$ 1.03 \\
 ChatDoctor  & Mistral-Small-24B (Mistral) & 7.8\%  & 58.6\% & 0.83 $\to$ 1.49 & 1.44 $\to$ 1.88 \\

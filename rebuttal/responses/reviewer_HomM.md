@@ -26,6 +26,7 @@ the scope condition; the submitted result used MedGemma-27B (Gemma).
 
 | Benchmark | Base model | Active inquiry | Context-seek |
 |---|---|---|---|
+| HealthBench | **MedGemma-27B (submitted)** | **17.5 → 45.6%** | **1.40 → 1.75** |
 | HealthBench | Mistral-Small-24B | 25.6 → 56.6% | 1.05 → 1.76 |
 | HealthBench | Med42-8B | 11.8 → 52.5% | 0.52 → 1.40 |
 | ChatDoctor | Mistral-Small-24B | 7.8 → 58.6% | 0.83 → 1.49 |
