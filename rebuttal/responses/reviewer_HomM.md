@@ -89,9 +89,10 @@ it, and will state this rationale explicitly in the revision.
 
 This is a fair criticism that our additional runs do not address, and we will not pretend otherwise.
 The revision adds a Discussion subsection, "Comparison to Prior Calibration Approaches," positioning
-the method against uncertainty prompting [1,2], which calibrates at inference time whereas we
-internalize the behavior into weights; STaR-style self-improvement [3], whose filter-then-finetune
-logic we apply to behavioral rather than factual demonstrations; and Constitutional AI [4], which uses
+the method against uncertainty prompting (Lin et al., 2022;
+Tian et al., 2023), which calibrates at inference time whereas we
+internalize the behavior into weights; STaR-style self-improvement (Zelikman et al., 2022), whose filter-then-finetune
+logic we apply to behavioral rather than factual demonstrations; and Constitutional AI (Bai et al., 2022), which uses
 self-critique where we use a structured CoT protocol as a behavioral teacher. We include a summary
 table comparing inference-time cost, need for a teacher model, behavioral versus factual focus, and
 demonstrated generality. A direct empirical head-to-head against an inference-time calibration
@@ -110,8 +111,3 @@ outstanding: the prior-work comparison, the completed physician validation, and 
 We would ask you to reconsider in light of the added evidence, with those gaps visible, and we will
 incorporate all feedback into the paper.
 
-[1] Lin, Hilton, Evans. "Teaching Models to Express Their Uncertainty in Words." TMLR 2022.
-[2] Tian et al. "Just Ask for Calibration: Strategies for Eliciting Calibrated Confidence Scores from
-Language Models Fine-Tuned with Human Feedback." EMNLP 2023.
-[3] Zelikman et al. "STaR: Bootstrapping Reasoning With Reasoning." NeurIPS 2022.
-[4] Bai et al. "Constitutional AI: Harmlessness from AI Feedback." arXiv:2212.08073, 2022.
