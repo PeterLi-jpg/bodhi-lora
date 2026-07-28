@@ -35,14 +35,14 @@ that: general-purpose, non-clinical, widely used, open-weight. We re-ran the pip
 and on **Med42-8B**, clinically tuned from a third family (Table R1).
 
 The pattern across the three is the substantive answer, not just the reproduction. Base active inquiry
-varies by more than a factor of two (11.8%, 17.5%, 25.6%), which is what one would expect if the
+varies by more than a factor of two (11.8%, 17.5%, 25.6%), as one would expect if the
 behavior were an idiosyncrasy of one model's alignment. After adaptation all three converge into a
 narrow band (45.6%, 52.5%, 56.6%). The endpoint is a property of the training signal rather than of the
 starting model, which is what your critique put in doubt.
 
 **Q3. One benchmark is not sufficient; consider clinician-posed questions** (new runs)
 
-We added two benchmarks, and want to be straight that they do not fully answer what you asked.
+We added two benchmarks, and want to be straight that they do not fully answer your ask.
 
 Your premise holds: auditing HealthBench-Hard for explicit clinician self-identification ("my patient",
 "as a physician"), 14 of 1,000 prompts (1.4%) identify the speaker as a clinician. The keyword audit is
@@ -55,9 +55,8 @@ proposed.** The cell that would have was MedQA-USMLE reframed as open-ended clin
 excluded it: our reframing preamble instructed the model to ask for information it needed, which drove
 base-model active inquiry to 99% and left the cell measuring instruction-following rather than
 calibration. We report it rather than quietly drop it, and will rebuild the prompt without naming the
-behavior being scored. MIMIC and eICU need credentialed PhysioNet access under a data use agreement we
-could not complete in time. So we have added benchmark diversity but not yet the clinician-posed
-setting.
+scored behavior. MIMIC and eICU need credentialed PhysioNet access under a data use agreement we
+could not complete in time. So we have added benchmark diversity but not the clinician-posed setting.
 
 **Table R1.** New runs, 5 seeds per cell, hyperparameters fixed; each cell reads Base → LoRA.
 Mistral-Small-24B and BioMistral-7B are Mistral-family, Med42-8B Llama-3. Row 1 is the submitted
@@ -99,7 +98,7 @@ exclusions, explicitly.
 
 **Q2. How each value is operationalized in text** (paper edit)
 
-We will give a verbatim example per dimension so the reader can see what is scored: *uncertainty
+We will give a verbatim example per dimension so the reader sees what is scored: *uncertainty
 acknowledgment* ("without a chest X-ray I cannot confirm pneumonia"); *active inquiry* ("when did the
 symptoms start?"); *context-seeking* ("I would need the patient's age and medication history");
 *red-flag identification* ("shortness of breath with chest pain warrants immediate evaluation"); *scope
