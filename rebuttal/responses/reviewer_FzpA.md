@@ -28,12 +28,67 @@ so a closed model could not be the base. But that never required a *clinical* ba
 
 You suggested a more widely used model or a smaller variant. **Mistral-Small-24B-Instruct** is exactly
 that: general-purpose, non-clinical, widely used and open-weight. We re-ran the pipeline unchanged on
-it, and on **Med42-8B**, clinically tuned from a third model family (Table R1).
+it, and on **Med42-8B**, clinically tuned from a third family (Table R1 below).
 
 The pattern across the three is the substantive answer, not the reproduction. Base active inquiry
 varies by more than a factor of two (11.8%, 17.5%, 25.6%), as one would expect if it were an
 idiosyncrasy of one model's alignment. After adaptation all three converge into a narrow band (45.6%,
 52.5%, 56.6%): the endpoint is a property of the training signal, not of the starting model.
+
+**W3. Results and discussion lack clarity**
+
+We agree on all four points, and Clarity was your lowest score. If accepted, we will:
+
+- **Remove the vague "not statements"** you quoted, replacing them with positive claims that state the
+  per-dimension numbers, including accuracy 0.117 → 0.121 and completeness 0.168 → 0.169, which support the
+  communication-not-knowledge reading.
+- **Add a direction arrow to every row of Table 2,** with the caption note below.
+- **Add a clinical implications paragraph:** active inquiry is history-taking before recommending,
+  red-flag identification is recognizing presentations that warrant escalation, and scope bounding is
+  declining to advise beyond the available evidence.
+- **Split Figure 2 into two panels,** the 0–2 dimensions in one and the percentage rates in the other,
+  each with its own labelled axis. This is the one change that requires regenerating the figure.
+
+*On your question of whether red-flag rate is missing a down arrow:*
+
+Higher is better, and the ambiguity is our fault for not labelling it: it measures sensitivity to
+warning signs that warrant escalation. In Table 2, blanket disclaimer rate is the only row where lower
+is better, and will be the only one with a down arrow. We will add a caption note that it does
+not capture false positives, so a model flagging indiscriminately would also score highly; measuring
+over-flagging requires a labelled set of prompts with no genuine red flag, which we leave to
+future work.
+
+**Q1. Where the seven dimensions came from, and whether clinicians were involved**
+
+They are deliberately not BODHI's five letters renamed, and yes, clinicians shaped them.
+
+BODHI (**B**ridging, **O**pen, **D**iscerning, **H**umble, **I**nquiring) is the *generation*
+protocol; the seven dimensions are the *evaluation* decomposition. We kept them separate since
+scoring the student on the teacher's own five categories would grade the pipeline against the
+rubric it was built to satisfy. The correspondence is therefore partial: Inquiring maps onto active
+inquiry and context-seeking; Humble onto hedging quality and uncertainty acknowledgment; Discerning
+onto red-flag identification and specificity; Open and Bridging bear on scope bounding without owning a
+dimension.
+
+The seven cover the three epistemic functions a calibrated clinical response must serve:
+*self-assessment* (uncertainty acknowledgment, hedging quality, specificity), *information-seeking*
+(active inquiry, context-seeking), and *risk management* (red-flag identification, scope bounding).
+The selection was shaped by the international practising physician co-authors on this paper, who identified these as
+the behaviors that most affect safety in clinical decision support. We excluded candidates such as
+empathy and patient-education depth because they conflate what is communicated with how accurately
+uncertainty is represented. We will state the origin and exclusions explicitly.
+
+**Q2. How each value is operationalized in text**
+
+We will give a verbatim example per dimension so the reader sees what is scored: *uncertainty
+acknowledgment* ("without a chest X-ray I cannot confirm pneumonia"); *active inquiry* ("when did the
+symptoms start?"); *context-seeking* ("I would need the patient's age and medication history");
+*red-flag identification* ("shortness of breath with chest pain warrants immediate evaluation");
+*scope bounding* ("diagnosis requires an examination"); *hedging quality* (a qualified statement, not
+a generic "I am not a doctor"); *specificity* (a concrete dose rather than "consider medication").
+These anchors are scored by the Llama-3.1-8B evaluator, with a three-physician validation underway;
+one of three raters has returned, giving kappa = 0.35 against the grader, below our pre-registered
+target of 0.6.
 
 **Q3. One benchmark is not sufficient; consider clinician-posed questions**
 
@@ -68,60 +123,6 @@ Mistral-Small-24B and BioMistral-7B are Mistral-family, Med42-8B is Llama-3; row
 | ChatDoctor | Med42-8B | 2.9 → 86.4% | 0.71 → 1.81 |
 | MedQuAD | Mistral-Small-24B | 6.5 → 26.5% | 0.32 → 1.23 |
 | HealthBench | BioMistral-7B | 11.7 → 10.1% (null) | 0.27 → 0.28 |
-
-**Q1. Where the seven dimensions came from, and whether clinicians were involved**
-
-They are deliberately not BODHI's five letters renamed, and yes, clinicians shaped them.
-
-BODHI (**B**ridging, **O**pen, **D**iscerning, **H**umble, **I**nquiring) is the *generation*
-protocol; the seven dimensions are the *evaluation* decomposition. We kept them separate since
-scoring the student on the teacher's own five categories would grade the pipeline against the
-rubric it was built to satisfy. The correspondence is therefore partial: Inquiring maps onto active
-inquiry and context-seeking; Humble onto hedging quality and uncertainty acknowledgment; Discerning
-onto red-flag identification and specificity; Open and Bridging bear on scope bounding without owning a
-dimension.
-
-The seven cover the three epistemic functions a calibrated clinical response must serve:
-*self-assessment* (uncertainty acknowledgment, hedging quality, specificity), *information-seeking*
-(active inquiry, context-seeking), and *risk management* (red-flag identification, scope bounding).
-The selection was shaped by the international practising physician co-authors on this paper, who identified these as
-the behaviors that most affect safety in clinical decision support. We excluded candidates such as
-empathy and patient-education depth because they conflate what is communicated with how accurately
-uncertainty is represented. We will state the origin and exclusions explicitly.
-
-**Q2. How each value is operationalized in text**
-
-We will give a verbatim example per dimension so the reader sees what is scored: *uncertainty
-acknowledgment* ("without a chest X-ray I cannot confirm pneumonia"); *active inquiry* ("when did the
-symptoms start?"); *context-seeking* ("I would need the patient's age and medication history");
-*red-flag identification* ("shortness of breath with chest pain warrants immediate evaluation");
-*scope bounding* ("diagnosis requires an examination"); *hedging quality* (a qualified statement, not
-a generic "I am not a doctor"); *specificity* (a concrete dose rather than "consider medication").
-These anchors are scored by the Llama-3.1-8B evaluator, with a three-physician validation underway;
-one of three raters has returned, giving kappa = 0.35 against the grader, below our pre-registered
-target of 0.6.
-
-**W3. Results and discussion lack clarity**
-
-We agree on all four points, and Clarity was your lowest score. If accepted, we will:
-
-- **Remove the vague "not statements"** you quoted, replacing them with positive claims that state the
-  per-dimension numbers, including accuracy 0.117 → 0.121 and completeness 0.168 → 0.169, which actually support the communication-not-knowledge reading.
-- **Add a direction arrow to every row of Table 2,** with the caption note below.
-- **Add a clinical implications paragraph:** active inquiry is history-taking before recommending,
-  red-flag identification is recognizing presentations that warrant escalation, and scope bounding is
-  declining to advise beyond the available evidence.
-- **Split Figure 2 into two panels,** the 0–2 dimensions in one and the percentage rates in the other,
-  each with its own labelled axis. This is the one change that requires regenerating the figure.
-
-**Is red-flag rate missing a down arrow?**
-
-Higher is better, and the ambiguity is our fault for not labelling it: it measures sensitivity to
-warning signs that warrant escalation. In Table 2, blanket disclaimer rate is the only row where lower
-is better, and will be the only one with a down arrow. We will add a caption note that it does
-not capture false positives, so a model flagging indiscriminately would also score highly; measuring
-over-flagging requires a labelled set of prompts with no genuine red flag, which we leave to
-future work.
 
 **A more explicit compute comparison**
 
