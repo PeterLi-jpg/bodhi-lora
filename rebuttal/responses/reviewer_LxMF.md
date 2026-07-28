@@ -30,9 +30,10 @@ mimicry predicts (either the base model's non-discrimination carrying forward, o
 uniformly). The collapse under LoRA+CoT is consistent with the interference finding below.
 
 **Corroborating evidence across benchmarks:** the effect scales with how much a benchmark withholds.
-On ChatDoctor, where real patient messages routinely omit age, duration and medications, active
-inquiry rises from 2.9% to 86.4% (Med42-8B); on the better-specified MedQuAD questions the same recipe
-yields 6.5% to 26.5%. The behavior tracks whether asking is warranted.
+Holding the base model fixed at Mistral-Small-24B, on ChatDoctor, where real patient messages
+routinely omit age, duration and medications, active inquiry rises from 7.8% to 58.6%; on the
+better-specified MedQuAD questions the same recipe yields only 6.5% to 26.5%. The gap is between
+benchmarks rather than between models, and the behavior tracks whether asking is warranted.
 
 **The CoT/LoRA competition claim is speculative**
 
