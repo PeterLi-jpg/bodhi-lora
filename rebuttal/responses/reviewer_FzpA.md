@@ -138,10 +138,6 @@ per-stage figures measured in isolation rather than numbers confounded by queuei
 existing one-pass-versus-two comparison, where the adapter is wrapper-equivalent at ~58% lower output
 cost.
 
-Remaining open, and we do not claim otherwise: a head-to-head against prior calibration methods
-[1,2], a clinical-judge robustness panel, completion of the three-physician validation (1 of 3 raters
+Remaining open, and we do not claim otherwise: a head-to-head against inference-time calibration methods, a clinical-judge robustness panel, completion of the three-physician validation (1 of 3 raters
 returned, kappa = 0.35), and a second CoT protocol. We will incorporate all feedback into the paper.
 
-[1] Lin, Hilton, Evans. "Teaching Models to Express Their Uncertainty in Words." TMLR 2022.
-[2] Tian et al. "Just Ask for Calibration: Strategies for Eliciting Calibrated Confidence Scores from
-Language Models Fine-Tuned with Human Feedback." EMNLP 2023.
