@@ -50,7 +50,7 @@ of this weakness remains unaddressed: we vary the model and the benchmark, not t
 
 We share this concern and have not fully resolved it.
 
-**Physician validation remains partial:** one of three raters has returned grades, giving κ = 0.35
+**Physician validation remains partial:** one of three raters has returned grades, giving $\kappa = 0.35$
 against the Llama-3.1-8B grader, below our pre-registered target of 0.6. We report this as a
 limitation on the aggregate-quality claims and do not present LLM grading as settled clinical
 validation.
@@ -69,7 +69,7 @@ reported alongside the primary grader rather than replacing it.
 Reviewer LxMF proposed a specific test for this, and we ran it on the submitted evaluation data. Using
 labels independent of the grader's own scores (HealthBench's `context_seeking` theme tag, and whether
 a prompt's rubric rewards asking for clarification), we computed a discrimination index per condition,
-defined as P(ask | information missing) − P(ask | self-contained).
+defined as $P(\text{ask} \mid \text{info missing}) - P(\text{ask} \mid \text{self-contained})$.
 
 | Condition | Discrimination | Bootstrap 95% CI |
 |---|---|---|
@@ -143,7 +143,7 @@ alongside the responses above, they would contradict them:
   lists testing other models and domains as next steps. Two of three are now done, so it concedes more
   than warranted, to the reviewer who rated Reject.
 - **HomM W3 draft** describes physician validation as a plan; it should state the current partial
-  result (1 of 3 raters, κ = 0.35).
+  result (1 of 3 raters, $\kappa = 0.35$).
 
 Still accurate and can stand: the prior-work draft (meta W6) and the Table 1 sample-size draft
 (LxMF Q1).

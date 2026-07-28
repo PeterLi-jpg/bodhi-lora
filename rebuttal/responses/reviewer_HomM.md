@@ -16,8 +16,8 @@ have begun correcting it, as below.
 **Results on additional base models and evaluation sets**
 
 As you requested at least one or two additional base models or one additional clinical evaluation set,
-we re-ran the pipeline unchanged, with all hyperparameters fixed (LoRA r=16, α=32, effective batch 16,
-3 epochs, τ=0.4, Qwen-14B filter, Llama-3.1-8B evaluator), on two further model families and two
+we re-ran the pipeline unchanged, with all hyperparameters fixed (LoRA $r=16$, $\alpha=32$, effective batch 16,
+3 epochs, $\tau=0.4$, Qwen-14B filter, Llama-3.1-8B evaluator), on two further model families and two
 further benchmarks, 5 seeds per cell and ~200 prompts per seed per condition.
 
 **Table R1.** Transfer across model families and benchmarks. Wrapper is the inference-time CoT
@@ -64,7 +64,7 @@ place of it.
 **Claims depend heavily on automatic grading**
 
 We share this concern and have not resolved it. The physician validation remains partial: one of three
-raters has returned grades, giving κ = 0.35 against the Llama-3.1-8B grader, below our pre-registered
+raters has returned grades, giving $\kappa = 0.35$ against the Llama-3.1-8B grader, below our pre-registered
 target of 0.6. We report this as a limitation on the aggregate-quality claims and do not present LLM
 grading as settled clinical validation.
 
