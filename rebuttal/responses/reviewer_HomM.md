@@ -46,8 +46,11 @@ Two results are not merely confirmatory:
   bounding (1.85 → 1.61) and hedging quality (1.45 → 1.40) while the adapter *improves* both (1.89 and
   1.78). The quality-filtering step removes the teacher's failures before they reach the weights.
 - **A scope condition.** BioMistral-7B shows no effect, and the diagnostic is that the teacher fails
-  there too (wrapper reaches only 14.5%). The recipe requires a base model capable of following the
-  protocol, which we now state as a precondition rather than leaving a reader to discover it.
+  there too (wrapper reaches only 14.5%). The failure is visible upstream of training: only 20% of its
+  traces cleared the quality filter, versus 62% for Mistral-Small-24B, leaving 733 training rows. We
+  therefore cannot fully separate teacher incapacity from the smaller surviving training set, though
+  both follow from the same cause. The recipe requires a base model capable of following the protocol,
+  which we now state as a precondition rather than leaving a reader to discover it.
 
 We note the third element of this weakness, a single CoT protocol, remains unaddressed; we vary the
 model and the benchmark, not the teacher.

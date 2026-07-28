@@ -88,6 +88,8 @@ specifically: on MedQuAD the CoT wrapper *degrades* scope bounding (1.85 → 1.6
 the teacher indiscriminately; the quality-filtering step removes the teacher's failures before they
 reach the weights. We also identified a scope condition: on BioMistral-7B the recipe produces no
 effect, and the diagnostic is that the teacher fails there too (wrapper reaches only 14.5% active
-inquiry), so there is nothing to distill.
+inquiry), so there is nothing to distill. Only 20% of its traces cleared the quality filter, against
+62% for Mistral-Small-24B, so teacher incapacity and the smaller surviving training set are not fully
+separable.
 
 We will incorporate all feedback into the paper.
