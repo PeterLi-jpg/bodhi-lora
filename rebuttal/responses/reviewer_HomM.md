@@ -4,10 +4,6 @@ simple and practical, the paper clearly organized and conceptually clean, and th
 stated. You suspected we were already pursuing the obvious extensions across more models and
 benchmarks; that was correct, and several completed during the discussion period.
 
-To be exact about what follows: the **experiments** were run during the discussion period and their
-results are final. Every **paper edit** is a change we will make if accepted, not something already in
-the PDF you reviewed, which remains the point of comparison.
-
 **Why the evaluation protocol was limited**
 
 Short answer: we traded breadth for depth, and for a paper claiming generality that was the wrong
