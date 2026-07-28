@@ -40,7 +40,8 @@ We should be straight about one limit: the LoRA${-}$Base difference in discrimin
 [−1.2, +17.9], which includes zero, so the *difference between conditions* is suggestive rather than
 established. The within-condition result is what carries weight.
 
-The collapse under LoRA+CoT is consistent with the interference finding below.
+Under LoRA+CoT the discrimination is no longer detectable, which is consistent with the interference
+finding below.
 
 **Why Llama-3.1 rather than a medical judge**
 
@@ -76,9 +77,11 @@ evaluation outputs.
   identification *rises* across length quartiles, from 1.44 (median 1,508 chars) to 1.87 (median
   5,395 chars).
 
-Leaked responses are indeed longer (median 8,564 versus 3,457 characters), but their low score is
-attributable to emitting "RED FLAGS: None" in analysis format rather than to length, since length
-correlates positively with the score once leakage is excluded. We therefore keep the competition
+Truncation does not explain it either: prompts whose two-pass generation exceeds the window return no
+response at all and are therefore absent from the sample (928 completions against 998 for the base),
+rather than being present and scored low. Leaked responses are indeed longer (median 8,564 versus 3,457
+characters), but their low score is attributable to emitting "RED FLAGS: None" in analysis format
+rather than to length, since length correlates positively with the score once leakage is excluded. We therefore keep the competition
 reading but state it precisely: the two conditioning sources compete for control of the output
 *format*, and the failure is format leakage, not capacity exhaustion or attention dilution. We are
 grateful for the push, because the original claim exceeded our evidence. If accepted we will also adopt
@@ -128,13 +131,14 @@ surviving training set are therefore not fully separable, though both follow fro
 Reporting the unfavourable side as well: on the new benchmarks aggregate rubric quality decreases
 modestly, largest on MedQuAD (0.672 → 0.586). We read that partly as a property of a rubric that
 rewards agreement with a reference answer, since a response that asks a question instead of answering
-scores lower by construction, and the wrapper, which asks most, drops furthest of all (to 0.542). That
-is the measurement problem the paper is about, which is why we report the decomposition alongside the
-aggregate rather than in place of it.
+scores lower by construction. Consistent with that, the inference-time wrapper drops further than the
+adapter does (0.542 against 0.586) despite no weight change at all, and the two stacked drop furthest
+(0.505). That is the measurement problem the paper is about, which is why we report the decomposition
+alongside the aggregate rather than in place of it.
 
 Still outstanding, and we do not claim otherwise: a head-to-head against inference-time calibration
 methods, the completed three-physician validation, and a second CoT protocol.
 
-Thank you again for the two concrete tests. They are the most useful thing we received in this cycle,
-and one of them made us restate a claim we had overreached on. Please do let us know if any questions
-remain; we would be glad to run further analyses while the discussion period is open.
+Thank you again for proposing two concrete tests rather than only raising the concerns; one of them
+made us restate a claim we had overreached on. Please do let us know if any questions remain; we would
+be glad to run further analyses while the discussion period is open.
