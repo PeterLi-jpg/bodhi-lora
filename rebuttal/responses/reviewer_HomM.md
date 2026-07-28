@@ -20,17 +20,18 @@ we re-ran the pipeline unchanged, with all hyperparameters fixed (LoRA $r=16$, $
 3 epochs, $\tau=0.4$, Qwen-14B filter, Llama-3.1-8B evaluator), on two further model families and two
 further benchmarks, 5 seeds per cell and ~200 prompts per seed per condition.
 
-**Table R1.** Transfer across model families and benchmarks. Wrapper is the inference-time CoT
-protocol, i.e. the teacher the adapter distills from.
+**Table R1.** Transfer across model families and benchmarks. Every cell reads Base → LoRA.
+Mistral-Small-24B is general-purpose, Med42-8B is clinically tuned (Llama-3 family), BioMistral-7B is
+the scope condition; the submitted result used MedGemma-27B (Gemma).
 
-| Benchmark | Base model (family) | Active inquiry, Base → LoRA | Context-seek, Base → LoRA |
+| Benchmark | Base model | Active inquiry | Context-seek |
 |---|---|---|---|
-| HealthBench | Mistral-Small-24B (Mistral, general) | 25.6% → 56.6% | 1.05 → 1.76 |
-| HealthBench | Med42-8B (Llama-3, clinical) | 11.8% → 52.5% | 0.52 → 1.40 |
-| ChatDoctor | Mistral-Small-24B (Mistral, general) | 7.8% → 58.6% | 0.83 → 1.49 |
-| ChatDoctor | Med42-8B (Llama-3, clinical) | 2.9% → 86.4% | 0.71 → 1.81 |
-| MedQuAD | Mistral-Small-24B (Mistral, general) | 6.5% → 26.5% | 0.32 → 1.23 |
-| HealthBench | BioMistral-7B (scope condition) | 11.7% → 10.1% (null) | 0.27 → 0.28 |
+| HealthBench | Mistral-Small-24B | 25.6 → 56.6% | 1.05 → 1.76 |
+| HealthBench | Med42-8B | 11.8 → 52.5% | 0.52 → 1.40 |
+| ChatDoctor | Mistral-Small-24B | 7.8 → 58.6% | 0.83 → 1.49 |
+| ChatDoctor | Med42-8B | 2.9 → 86.4% | 0.71 → 1.81 |
+| MedQuAD | Mistral-Small-24B | 6.5 → 26.5% | 0.32 → 1.23 |
+| HealthBench | BioMistral-7B | 11.7 → 10.1% (null) | 0.27 → 0.28 |
 
 In four of the five working cells the adapter matches or exceeds its own teacher while requiring no
 CoT at inference. A clinician-facing benchmark (MedQA-USMLE, open-ended) is in progress.

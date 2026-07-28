@@ -27,16 +27,18 @@ types with no missing information to seek, such as closed-form multiple choice o
 **On the evidence:** per Reviewer HomM's Q2, we re-ran the pipeline unchanged across three model
 families and three benchmarks, 5 seeds per cell.
 
-**Table R1.** Transfer across model families and benchmarks, all hyperparameters fixed.
+**Table R1.** Transfer across model families and benchmarks, all hyperparameters fixed. Every cell
+reads Base → LoRA. Mistral-Small-24B (Mistral) is general-purpose, Med42-8B (Llama-3) is clinically
+tuned, BioMistral-7B is the scope condition; the submitted result used MedGemma-27B (Gemma).
 
-| Benchmark | Base model (family) | Active inquiry, Base → LoRA | Context-seek, Base → LoRA |
+| Benchmark | Base model | Active inquiry | Context-seek |
 |---|---|---|---|
-| HealthBench | Mistral-Small-24B (Mistral) | 25.6% → 56.6% | 1.05 → 1.76 |
-| HealthBench | Med42-8B (Llama-3) | 11.8% → 52.5% | 0.52 → 1.40 |
-| ChatDoctor | Mistral-Small-24B (Mistral) | 7.8% → 58.6% | 0.83 → 1.49 |
-| ChatDoctor | Med42-8B (Llama-3) | 2.9% → 86.4% | 0.71 → 1.81 |
-| MedQuAD | Mistral-Small-24B (Mistral) | 6.5% → 26.5% | 0.32 → 1.23 |
-| HealthBench | BioMistral-7B (scope cond.) | 11.7% → 10.1% (null) | 0.27 → 0.28 |
+| HealthBench | Mistral-Small-24B | 25.6 → 56.6% | 1.05 → 1.76 |
+| HealthBench | Med42-8B | 11.8 → 52.5% | 0.52 → 1.40 |
+| ChatDoctor | Mistral-Small-24B | 7.8 → 58.6% | 0.83 → 1.49 |
+| ChatDoctor | Med42-8B | 2.9 → 86.4% | 0.71 → 1.81 |
+| MedQuAD | Mistral-Small-24B | 6.5 → 26.5% | 0.32 → 1.23 |
+| HealthBench | BioMistral-7B | 11.7 → 10.1% (null) | 0.27 → 0.28 |
 
 In four of the five working cells the adapter matches or exceeds its own teacher while requiring no
 CoT at inference. We also report a precondition: on BioMistral-7B there is no effect, and the
