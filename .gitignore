@@ -9,14 +9,32 @@ data/raw/*.jsonl
 data/sft/*.jsonl
 data/sft/smoke/
 data/sft/figures/
+# Filtered training traces (49 MB per seed). Regenerable from Stages 1-2.
+data/sft_qwen_graded/
 eval/smoke/
 eval/*.json
 eval/figures/
 
+# Model weights, optimizer state and tokenizer copies never go in git.
 checkpoints/
 *.bin
 *.safetensors
+optimizer*.pt
 results/
+# rebuttal/results/ holds small analysis JSON that the paper cites. The
+# results/ rule above would hide it, so allow it back in.
+!rebuttal/results/
+
+# Rebuttal cells synced from the GPU box. Commit the per-seed summaries and
+# eval JSON; keep raw generations and adapter binaries out. Only the adapter
+# config and trainer state from each checkpoint are kept.
+results_rebuttal/**/*.jsonl
+results_rebuttal/**/ckpt/**
+!results_rebuttal/**/ckpt/**/
+!results_rebuttal/**/ckpt/**/adapter_config.json
+!results_rebuttal/**/ckpt/**/trainer_state.json
+
+paper/build/
 paper/figures/*.pdf
 paper/figures/*.png
 paper/*.aux
@@ -37,6 +55,7 @@ wandb/
 .env
 .env.local
 .venv/
+.venv-*/
 env/
 .DS_Store
 .vscode/
@@ -46,6 +65,8 @@ temporal/
 
 data/grading/
 REBUTTAL_NOTES.md
+# Word exports of reviewer replies. The markdown in rebuttal/responses/ is the source.
+*.docx
 
 # --- submission build artifacts (regenerable, never commit) ---
 *.zip
@@ -54,11 +75,6 @@ paper/arxiv/
 paper/arxiv_upload/
 paper/neurips_submission/
 paper/preprint/
-paper/*.aux
-paper/*.log
-paper/*.out
-paper/*.bbl
-paper/*.blg
 
 # --- kept out while the paper is under double-blind review ---
 # (these carry real names; re-enable after acceptance)
@@ -66,5 +82,5 @@ IRR-clinicians/
 paper/AUTHORS.md
 CONTRIBUTORS.md
 
-# --- AI-generated review simulations and scratch output ---
+# --- scratch output and local notes ---
 outputs/
