@@ -6,7 +6,7 @@ Each Excel has 3 sheets:
     yellow columns: ``physician_id``, ``physician_grade`` (pass/fail/unsure),
     ``physician_confidence`` (1/2/3), plus optional ``notes``.
   - **Instructions - Primary**: workflow + grading rules (verbatim from
-    the AnonAuthor2-processed template at data/irr_instructions/primary.json).
+    the processed clinician_1 template at data/irr_instructions/primary.json).
   - **Instructions - Tiebreaker**: instructions for the adjudicator (used
     only after Stage-1 reviewers return; verbatim from
     data/irr_instructions/tiebreaker.json).
@@ -25,8 +25,8 @@ rubric items) — orange-highlighted in the Excel.
 
 Output files (in results_modal/irr/):
   Grading-template.xlsx              master copy, do not edit
-  Grading-1.xlsx, Grading-2.xlsx,    3 identical reviewer copies, rename to
-  Grading-3.xlsx                     Grading-<reviewer-name>.xlsx before sending
+  Grading-reviewer1.xlsx ..         3 identical reviewer copies. Keep these
+  Grading-reviewer3.xlsx             names; never put a rater's name in a file
   answer_key.xlsx                    KEEP LOCAL — row→source/config/llm_score
   README.md                          short workflow summary
 
@@ -60,8 +60,10 @@ EVAL_PROMPTS_PER_CONFIG = 10    # 10 prompts × 4 configs = 40 eval responses
 FILTER_RESPONSES = 10           # 10 Qwen-graded BODHI traces
 SHUFFLE_SEED = 42
 
-# Issue #73 clinical leads. Update if the reviewer roster changes.
-REVIEWER_NAMES = ("anonclinician1", "anonclinician2", "anonauthor7")
+# One copy per primary rater. The file names carry a number, never a name:
+# Grading-reviewerK.xlsx goes to AnonClinicianK, and only the coordinator holds
+# the key from K to a person.
+REVIEWER_NAMES = ("reviewer1", "reviewer2", "reviewer3")
 
 # Style constants pulled byte-exact from clinician_1-processed.xlsx.
 HEADER_FILL = PatternFill("solid", fgColor="1F3864")
@@ -351,8 +353,8 @@ def write_readme(out_path: Path, n_responses: int, n_grading_rows: int,
                  n_eval: int, n_filter: int) -> None:
     out_path.write_text(f"""# Inter-rater reliability (issue #73 + dual-grader validation)
 
-Format mirrors the AnonAuthor2-processed template at
-`/Users/REDACTED-USER/Downloads/clinician_1-processed.xlsx`. Each Excel has
+Format mirrors the processed clinician_1 template
+(`clinician_1-processed.xlsx`, kept outside the repo). Each Excel has
 three sheets — Grading, Instructions - Primary, Instructions - Tiebreaker —
 with the full grading instructions and a worked example baked into the file
 itself.
@@ -361,9 +363,9 @@ itself.
 
 ```
 Grading-template.xlsx     master template, do not edit
-Grading-anonclinician1.xlsx        → email to AnonClinician1
-Grading-anonclinician2.xlsx          → email to AnonClinician2
-Grading-anonauthor7.xlsx      → email to AnonAuthor7
+Grading-reviewer1.xlsx    → AnonClinician1
+Grading-reviewer2.xlsx    → AnonClinician2
+Grading-reviewer3.xlsx    → AnonClinician3
 answer_key.xlsx           DO NOT SEND. Maps grading_id → source/config/llm_score
                           for downstream κ analysis.
 ```
@@ -448,10 +450,9 @@ def main() -> None:
     print(f"writing grading template -> {template_path}")
     write_grading_template(grading_rows, template_path)
 
-    # 3 identical reviewer copies, named for the issue #73 clinical leads.
-    # If reviewer roster changes, edit REVIEWER_NAMES below or rename the
-    # files manually before sending — find_reviewer_files() in the
-    # tiebreaker/kappa scripts globs Grading-*.xlsx so any naming works.
+    # 3 identical reviewer copies, numbered (see REVIEWER_NAMES).
+    # find_reviewer_files() in the tiebreaker/kappa scripts globs
+    # Grading-*.xlsx, so the numbered names work downstream.
     for name in REVIEWER_NAMES:
         copy_path = OUT_DIR / f"Grading-{name}.xlsx"
         copy_path.write_bytes(template_path.read_bytes())

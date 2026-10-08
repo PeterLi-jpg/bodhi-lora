@@ -19,6 +19,9 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v4
+        with:
+          # check_doc_paths.py verifies <commit>:<path> references in history notes.
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -54,7 +57,12 @@ jobs:
             "bodhi-llm[all]==0.1.4"
 
       - name: Compile Python sources
-        run: python -m py_compile scripts/*.py
+        run: python -m py_compile scripts/*.py scripts/maintenance/*.py
+
+      - name: Check repo hygiene
+        run: |
+          bash scripts/check_no_secrets.sh
+          python scripts/check_doc_paths.py
 
       - name: Validate YAML configs
         run: |

@@ -1,86 +1,59 @@
 # Installation
 
-Environment setup for Mac, Linux, and Windows.
+Linux with CUDA 12.1 or later for real runs. macOS works for the smoke test with a small
+model and for the CPU-only tests. On Windows, use WSL2 with Ubuntu.
 
-## Requirements
-
-- Dev box / GPU: Python 3.10, 3.11, or 3.12 (3.11 recommended).
-- TPU (v6e): Python 3.11 required, provisioned automatically by `tpu/setup_tpu.sh` via apt + venv at `~/.venv-py311`. The TPU dep tree includes `qwix` (LoRA on JAX/Flax) and `google-tunix` (Google's new SFT trainer that replaces our Stage 3 trl pipeline; see [`contributions/tunix-migration.md`](../tunix-migration.md)).
-- [Conda](https://docs.conda.io/en/latest/miniconda.html) or `pip` + `venv`
-- CUDA 12.1+ for GPU runs (Linux only)
-- A HuggingFace account with access to gated models (see below)
-
-## Step 1 — Clone the repo
+## 1. Clone
 
 ```bash
-git clone https://github.com/REDACTED-FOR-ANONYMOUS-REVIEW/bohdi-lora.git
+git clone https://github.com/PeterLi-jpg/bohdi-lora.git
 cd bohdi-lora
+git config core.hooksPath hooks     # activates the repo hooks, see contributing.md
 ```
 
-## Step 2 — Create a virtual environment
+## 2. Training env
 
-### Conda (recommended)
-
-```bash
-conda create -n bohdi python=3.11 -y
-conda activate bohdi
-```
-
-### pip + venv (alternative)
+Python 3.10, 3.11 or 3.12 (3.11 is tested). Use a fresh env for this repo only:
 
 ```bash
 python3 -m venv .venv
-source .venv/bin/activate        # Mac / Linux
-.venv\Scripts\activate           # Windows (Command Prompt)
-```
-
-## Step 3 — Install dependencies
-
-```bash
+source .venv/bin/activate
 bash setup.sh
 ```
 
-`setup.sh` now:
-- checks that a virtualenv or conda env is active
-- prints the active Python interpreter
-- runs `python -m pip install -r requirements.txt`
-- runs `python -m pip check`
-- creates the working directories (`logs/`, `data/`, `eval/`, `checkpoints/`)
-- downloads the HealthBench files into `data/raw/`
+`setup.sh` warns if you install into a shared or base Python, installs
+`requirements.txt`, runs `python -m pip check`, makes the working folders and downloads
+HealthBench into `data/raw/`. On macOS, pip prints `Ignoring autoawq` and
+`Ignoring bitsandbytes`; both are Linux-only, so this is expected.
 
-If you run `setup.sh` in system Python or Conda `base`, it will print a loud warning first and continue. That path can still work, but it is the most common reason for unclear dependency conflicts. The recommended path is still a fresh env created just for this repo. Expected macOS message: `Ignoring autoawq` and `Ignoring bitsandbytes` because both are Linux/CUDA-only.
+## 3. Inference env
 
-## Step 4 — Set your HuggingFace token
+`rebuttal/launch/run_cell.sh` runs generation, grading and eval with
+`.venv-infer/bin/python`, a second env for vLLM 0.9, which needs an older transformers
+than training does. Its exact pins are not written down yet (KNOWN_ISSUES). Point
+`INFER_PY` and `TRAIN_PY` at other interpreters if your envs live elsewhere.
 
-All base models are gated. Accept the terms on each model card while logged in to HuggingFace, then:
+## 4. Hugging Face access
 
-```bash
-export HF_TOKEN=hf_...
-```
+Accept the terms on each model card, then `export HF_TOKEN=...`, or keep a token in
+`~/.cache/huggingface/token`. Never write the token into a tracked file.
 
-Or add it to a local `.env` file (gitignored):
-
-```
-HF_TOKEN=hf_...
-```
-
-Required model access:
-
-| Model | Purpose |
+| Model | Role |
 |---|---|
-| [google/medgemma-27b-text-it](https://huggingface.co/google/medgemma-27b-text-it) | Base model (full run) |
-| [google/gemma-3n-E4B-it](https://huggingface.co/google/gemma-3n-E4B-it) | Smoke test |
-| [Qwen/Qwen2.5-14B-Instruct](https://huggingface.co/Qwen/Qwen2.5-14B-Instruct) | Filter-side grader (Stage 2) |
-| [meta-llama/Llama-3.1-8B-Instruct](https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct) | Eval-side grader (Stage 4/5) |
+| `google/medgemma-27b-text-it` | base model, submitted cell |
+| `mistralai/Mistral-Small-24B-Instruct-2501` | base model, added cells |
+| `m42-health/Llama3-Med42-8B` | base model, added cells |
+| `BioMistral/BioMistral-7B` | base model, added cell |
+| `Qwen/Qwen2.5-14B-Instruct` | filter grader, stage 2 |
+| `meta-llama/Llama-3.1-8B-Instruct` | evaluator, stages 4 and 5 (the added cells use the `NousResearch/Meta-Llama-3.1-8B-Instruct` mirror) |
+| `google/gemma-3n-E4B-it` | smoke test |
 
-## Windows
-
-Use [WSL2](https://learn.microsoft.com/en-us/windows/wsl/install) with Ubuntu and follow the Linux steps above. Native Windows is not tested.
-
-## Verify installation
+## 5. Check the install
 
 ```bash
 python scripts/preflight.py
+pytest tests/
 ```
 
-This checks HF token validity, model access, GPU availability, and all required packages in under 30 seconds.
+`preflight.py` checks the token, model access, the GPU and the required packages in
+under a minute.

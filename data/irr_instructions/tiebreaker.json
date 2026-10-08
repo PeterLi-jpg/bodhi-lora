@@ -8,7 +8,7 @@
     "bold": false
   },
   {
-    "text": "Reviewer: AnonAuthor6",
+    "text": "Reviewer: AnonClinician4",
     "bold": true
   },
   {
@@ -20,7 +20,7 @@
     "bold": false
   },
   {
-    "text": "Return: Save the file and send back to Peter or AnonAuthor4.",
+    "text": "Return: Keep the file name you received and send the file back to the study coordinator.",
     "bold": false
   },
   {
@@ -32,7 +32,7 @@
     "bold": true
   },
   {
-    "text": "Three primary physician reviewers (AnonClinician1, AnonClinician2, AnonAuthor7) each independently graded AI-generated medical responses. For most criteria, at least two of the three agreed — those are resolved automatically by majority vote. Where all three disagreed (a genuine three-way split), your vote decides the final answer. You will not see all 300 responses, only the criteria where the three reviewers split. Your grade becomes the deciding vote and is used in the final kappa calculation.",
+    "text": "Three primary physician reviewers (AnonClinician1, AnonClinician2, AnonClinician3) each independently graded AI-generated medical responses. For most criteria, at least two of the three agreed — those are resolved automatically by majority vote. Where all three disagreed (a genuine three-way split), your vote decides the final answer. You will not see all 300 responses, only the criteria where the three reviewers split. Your grade becomes the deciding vote and is used in the final kappa calculation.",
     "bold": false
   },
   {
@@ -60,7 +60,7 @@
     "bold": false
   },
   {
-    "text": "      tiebreaker_id: FILL IN your name or initials.",
+    "text": "      tiebreaker_id: FILL IN your reviewer ID (AnonClinician4), not your name.",
     "bold": false
   },
   {

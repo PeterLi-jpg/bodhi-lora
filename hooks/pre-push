@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+# Block pushes of scratch branches and of commits with AI traces.
+#
+# Activate once per clone:
+#   git config core.hooksPath hooks
+#
+# Rejects:
+#   - pushing a branch named claude/* or worktree-agent* (local or remote name)
+#   - any pushed commit whose message fails hooks/commit-msg
+#   - any pushed commit whose author or committer email is a machine hostname
+#     (*.local, *.localdomain), which means git identity was never set
+# Deleting such a branch on the remote is allowed, so the prune script works.
+#
+# git calls this with <remote-name> <remote-url> and one line per ref on stdin:
+#   <local-ref> <local-sha> <remote-ref> <remote-sha>
+set -euo pipefail
+
+remote="${1:-origin}"
+hook_dir="$(cd "$(dirname "$0")" && pwd)"
+zero="0000000000000000000000000000000000000000"
+fail=0
+tmp="$(mktemp)"
+trap 'rm -f "$tmp"' EXIT
+
+is_scratch() {
+    case "${1#refs/heads/}" in
+        claude/*|worktree-agent*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+    # A delete sends an all-zero local sha. Removing scratch branches is fine.
+    if [ "$local_sha" = "$zero" ]; then
+        continue
+    fi
+    if is_scratch "$local_ref" || is_scratch "$remote_ref"; then
+        echo "pre-push: refusing to push scratch branch ${local_ref} -> ${remote_ref}" >&2
+        fail=1
+        continue
+    fi
+
+    # Only check commits the remote does not have yet.
+    if [ "$remote_sha" = "$zero" ]; then
+        range=("$local_sha" --not --remotes="$remote")
+    else
+        range=("${remote_sha}..${local_sha}")
+    fi
+    for sha in $(git rev-list "${range[@]}"); do
+        git log -1 --format=%B "$sha" > "$tmp"
+        if ! "$hook_dir/commit-msg" "$tmp" 2>/dev/null; then
+            echo "pre-push: commit ${sha:0:9} has an AI-tool trace in its message" >&2
+            fail=1
+        fi
+        emails="$(git log -1 --format='%ae %ce' "$sha")"
+        if printf '%s\n' "$emails" | grep -q -E '@[^ ]*\.(local|localdomain)( |$)'; then
+            echo "pre-push: commit ${sha:0:9} has a machine-hostname identity: $emails" >&2
+            fail=1
+        fi
+    done
+done
+
+if [ "$fail" -ne 0 ]; then
+    echo "Push blocked. See docs/CONVENTIONS.md (branch policy, no AI traces)." >&2
+    exit 1
+fi
