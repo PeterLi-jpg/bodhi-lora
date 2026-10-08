@@ -80,6 +80,11 @@ per-cell configs and the differences between the two pipelines.
 The rule is that every number in the paper comes from a script and none is typed by
 hand (docs/CONVENTIONS.md, rule 2).
 
+`make numbers` needs one file that is not in git: `data/raw/healthbench_hard.jsonl`,
+the public HealthBench-Hard set. `bash setup.sh` downloads it. Every other input is
+committed, including small copies of the filter scores and the second-grader scores
+in `data/derived/` (paper/generated/README.md).
+
 ```bash
 make test       # pytest suite
 make numbers    # all tables and inline numbers, from results_modal/ and the rebuttal data

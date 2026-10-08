@@ -25,12 +25,20 @@ Then replace the body of a table with `\input{generated/tab_<name>}`.
 | `rebuttal/results/*.json` | yes | leakage, discrimination, odds ratio and second-person macros |
 | `data/rebuttal_cells/posted_values.json` | yes | `tab_generality`, `tab_generality_aggregate`, `\statCell*` |
 | `data/rebuttal_cells/generated_values.json` | after `make cells` | replaces the posted values of each synced cell |
-| `data/raw/healthbench_hard.jsonl` | no | `tab_theme`, `\statDifficulty*`, `\statHardPrompts` |
-| `data/sft_qwen_graded/seed_7_train.jsonl` | no | `tab_tau_calibration`, `\statFilter*`, `\statTrainHardOverlapSeedSeven` |
-| `results/seed_42/eval/<condition>.json` | no | `\statCrossGrader*` (the seed-42 run graded by Qwen2.5-14B) |
+| `data/derived/seed_7_filter_scores.json` | yes | `tab_tau_calibration`, `\statFilter*`, `\statTrainHardOverlapSeedSeven` |
+| `data/derived/seed_42_qwen_grader_scores.json` | yes | `\statCrossGrader*` (the seed-42 run graded by Qwen2.5-14B) |
+| `data/raw/healthbench_hard.jsonl` | no (public; `setup.sh` downloads it) | `tab_theme`, `\statDifficulty*`, `\statHardPrompts` |
 
-If an untracked input is missing, the script prints `SKIP` and leaves out that table.
-Pass other paths with `make numbers HB_HARD=... FILTER_TRAIN=...`.
+The two `data/derived/` files copy the scores, with prompt ids and no response text,
+from two large ignored files: `data/sft_qwen_graded/seed_7_train.jsonl` (49 MB) and
+`results/seed_42/eval/<condition>.json`. `make derived` writes them again from those
+files, and each records the sha256 of its source.
+
+`make numbers` stops with a message when HealthBench-Hard is missing. Run
+`bash setup.sh` first, or pass `make numbers HB_HARD=<path>`. If you call the script
+directly without an input, it prints `SKIP` and leaves out that table and its macros.
+`make paper` then runs `scripts/check_paper_macros.py`, which names every macro the
+paper uses that `numbers.tex` lacks.
 
 ## Statistical unit
 

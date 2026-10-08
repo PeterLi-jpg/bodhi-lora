@@ -75,6 +75,16 @@ jobs:
                   yaml.safe_load(handle)
           EOF
 
+      # A clean checkout must rebuild every committed paper number (audit REPRO-6).
+      # HealthBench is the one input not in git; download_data.py fetches it from
+      # OpenAI's public bucket, as setup.sh does.
+      - name: Rebuild the paper numbers from the checkout
+        run: |
+          python scripts/download_data.py
+          make numbers
+          git diff --exit-code paper/generated
+          python scripts/check_paper_macros.py
+
       - name: Run tests
         run: |
           if [ -d tests ]; then

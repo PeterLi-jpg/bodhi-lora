@@ -1115,19 +1115,19 @@
 \newcommand{\statDifficultyMin}{5} % data/raw/healthbench_hard.jsonl: lowest positive-point sum, evaluated prompts
 \newcommand{\statDifficultyMax}{215} % data/raw/healthbench_hard.jsonl: highest positive-point sum, evaluated prompts
 \newcommand{\statHardPrompts}{1{,}000} % data/raw/healthbench_hard.jsonl: prompts in the Hard set
-\newcommand{\statFilterTrainNSeedSeven}{2{,}816} % data/sft_qwen_graded/seed_7_train.jsonl: rows in the seed-7 training split
+\newcommand{\statFilterTrainNSeedSeven}{2{,}816} % data/derived/seed_7_filter_scores.json: rows in the seed-7 training split
 \newcommand{\statFilterMinScoreSeedSeven}{\ensuremath{0.40}} % lowest filter score in the seed-7 training split
 \newcommand{\statFilterKeptReported}{3{,}129} % constant FILTER_KEPT in scripts/paper_stats.py, from the original filter log (not in the repo)
 \newcommand{\statFilterPool}{4{,}000} % constant FILTER_POOL: traces generated per filter run
 \newcommand{\statTrainHardOverlapSeedSeven}{0} % prompt ids shared by the seed-7 training split and the 1,000 HealthBench-Hard prompts
 \newcommand{\statCrossGraderRBase}{\ensuremath{0.35}} % Pearson r, Qwen vs Llama aggregate score, shared seed-42 prompts
-\newcommand{\statCrossGraderMeanQwenBase}{\ensuremath{0.151}} % results/seed_42/eval (Qwen grader): mean score
+\newcommand{\statCrossGraderMeanQwenBase}{\ensuremath{0.151}} % data/derived/seed_42_qwen_grader_scores.json (Qwen grader): mean score
 \newcommand{\statCrossGraderMeanLlamaBase}{\ensuremath{0.472}} % results_modal/seed_42 (Llama grader): mean score
 \newcommand{\statCrossGraderRBaseCoT}{\ensuremath{0.37}} % Pearson r, Qwen vs Llama aggregate score, shared seed-42 prompts
-\newcommand{\statCrossGraderMeanQwenBaseCoT}{\ensuremath{0.115}} % results/seed_42/eval (Qwen grader): mean score
+\newcommand{\statCrossGraderMeanQwenBaseCoT}{\ensuremath{0.115}} % data/derived/seed_42_qwen_grader_scores.json (Qwen grader): mean score
 \newcommand{\statCrossGraderMeanLlamaBaseCoT}{\ensuremath{0.460}} % results_modal/seed_42 (Llama grader): mean score
 \newcommand{\statCrossGraderRLoRA}{\ensuremath{0.51}} % Pearson r, Qwen vs Llama aggregate score, shared seed-42 prompts
-\newcommand{\statCrossGraderMeanQwenLoRA}{\ensuremath{0.143}} % results/seed_42/eval (Qwen grader): mean score
+\newcommand{\statCrossGraderMeanQwenLoRA}{\ensuremath{0.143}} % data/derived/seed_42_qwen_grader_scores.json (Qwen grader): mean score
 \newcommand{\statCrossGraderMeanLlamaLoRA}{\ensuremath{0.468}} % results_modal/seed_42 (Llama grader): mean score
 \newcommand{\statCrossGraderShared}{43} % seed-42 prompts graded by both Qwen and Llama, per condition
 \newcommand{\statCrossGraderRPooled}{\ensuremath{0.42}} % Pearson r pooled over conditions

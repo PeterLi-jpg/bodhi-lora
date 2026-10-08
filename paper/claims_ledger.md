@@ -11,8 +11,9 @@ replies, is `docs/CLAIMS.md`. This file is the number-level map for the current 
 Kinds:
 
 - **computed**: the macro comes from committed data in this repository.
-- **computed, untracked input**: the macro comes from a file that git ignores. `make numbers`
-  skips it with a message when the file is absent.
+- **computed, untracked input**: the macro comes from a file that git ignores. The only
+  such input left is `data/raw/healthbench_hard.jsonl`, a public download (`setup.sh`).
+  `make numbers` stops with a message when it is absent.
 - **posted**: the macro comes from `data/rebuttal_cells/posted_values.json`, a transcription
   of the OpenReview replies. The raw outputs are on the shared GPU host (audit PROV-1). Once
   `make cells` writes `data/rebuttal_cells/generated_values.json`, the same macros come from
@@ -55,7 +56,7 @@ Inputs: `RM` is `results_modal/seed_*/` (the four `<condition>.json` files and
 | Claim | Macro(s) | Function | Source | Kind |
 |---|---|---|---|---|
 | 4,000 HealthBench prompts outside the Hard set | `\statFilterPool` | `tau_calibration` | constant `FILTER_POOL` (5,000 HealthBench minus 1,000 Hard; legacy launcher) | design |
-| Seed-7 training split: 2,816 traces, 0 in the Hard set | `\statFilterTrainNSeedSeven`, `\statTrainHardOverlapSeedSeven` | `tau_calibration` | `data/sft_qwen_graded/seed_7_train.jsonl`, `data/raw/healthbench_hard.jsonl` | computed, untracked input |
+| Seed-7 training split: 2,816 traces, 0 in the Hard set | `\statFilterTrainNSeedSeven`, `\statTrainHardOverlapSeedSeven` | `tau_calibration` | `data/derived/seed_7_filter_scores.json` (scores copied from the ignored `data/sft_qwen_graded/seed_7_train.jsonl`), `data/raw/healthbench_hard.jsonl` | computed; HealthBench is a public download |
 | tau = 0.4, r = 8, alpha = 16, 300 steps, 64 examples per step, 2,048 tokens | none | | `legacy/configs/lora_medgemma27b_tunix.yaml`, `legacy/tpu/launch_5seeds_tunix.sh` (Table hparams comments) | design, pending the GCS adapter_config.json check (D1) |
 | 1,000 draws per condition cover 667 unique prompts; 271 repeat | `\statPromptEvaluations`, `\statUniquePrompts`, `\statRepeatedPrompts` | `counts_and_failures` | RM | computed |
 | Epistemic parse failures 0.20% to 1.49% per condition | `\statEpistemicParseFailPctBase`, `\statEpistemicParseFailPctMax` | `counts_and_failures` | RM | computed |
@@ -131,5 +132,5 @@ Inputs: `RM` is `results_modal/seed_*/` (the four `<condition>.json` files and
 |---|---|---|---|
 | Contamination probe: 200 sampled, 105 long enough, 0 exact matches, 0 overlap | Appendix A | unverified | Re-run `scripts/contamination_probe.py` on the base model (GPU) and commit the output |
 | Filter kept 3,129 of 4,000 traces (tau table pool column) | Table tau-calibration | unverified (constant `FILTER_KEPT`) | The filter logs of the submitted run (PROV-11) |
-| Second grader on seed 42 (r = 0.42, rho = 0.35, 43 shared prompts) | Appendix H | computed, untracked input (`results/seed_42/eval/`) | Commit the Qwen-graded files, or keep them as an untracked input |
+| Second grader on seed 42 (r = 0.42, rho = 0.35, 43 shared prompts) | Appendix H | computed (`data/derived/seed_42_qwen_grader_scores.json`, scores copied from the ignored `results/seed_42/eval/`) | Settled: `make derived` rebuilds the copy from the source files |
 | Pre-registration date 2026-04-29, grader switch 2026-05-01 | Appendix B | design | commits aa7eec4 and 1376aec |

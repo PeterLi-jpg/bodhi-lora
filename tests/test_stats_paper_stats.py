@@ -314,11 +314,13 @@ def test_completion_drop_and_filter_macros(generated):
     assert _macro(out_dir, "CompletionDropPctLoRACoT") == "4.1"   # 959 of 1,000
 
 
+DERIVED = ROOT / "data" / "derived"
+
+
 def test_cross_grader_side_run(tmp_path):
-    qdir = ROOT / "results" / "seed_42" / "eval"
-    if not (qdir / "base_no_wrapper.json").is_file():
-        pytest.skip("gitignored Qwen-graded side run not present")
-    out = ps.run(ROOT / "results_modal", tmp_path, None, None, None, None, None, None, qdir)
+    # Reads the tracked score copy, so it runs in a clean checkout (audit REPRO-6).
+    out = ps.run(ROOT / "results_modal", tmp_path, None, None, None, None, None, None,
+                 DERIVED / "seed_42_qwen_grader_scores.json")
     cg = out["cross_grader"]
     assert {c["n_shared"] for c in cg["conditions"].values()} == {43}
     assert all(c["grader"] == "Qwen/Qwen2.5-14B-Instruct" for c in cg["conditions"].values())
@@ -326,6 +328,34 @@ def test_cross_grader_side_run(tmp_path):
     assert cg["pooled"]["pearson_r"] == pytest.approx(0.4237, abs=1e-3)
     assert cg["pooled"]["spearman_rho"] == pytest.approx(0.3542, abs=1e-3)
     assert cg["conditions"]["lora_no_wrapper"]["minus_base_qwen"] == pytest.approx(-0.008, abs=5e-4)
+
+
+def test_tau_table_from_tracked_scores(tmp_path):
+    out = ps.run(ROOT / "results_modal", tmp_path, None, DERIVED / "seed_7_filter_scores.json",
+                 None, None, None)
+    tc = out["tau_calibration"]
+    assert tc["n_train_split"] == 2816
+    assert tc["rows"][0] == {"tau": 0.4, "share_of_train_split": 1.0,
+                             "share_of_pool_estimate": pytest.approx(3129 / 4000)}
+    assert round(100 * tc["rows"][1]["share_of_train_split"], 1) == 77.1   # tau 0.5
+    assert (tmp_path / "tab_tau_calibration.tex").is_file()
+
+
+@pytest.mark.parametrize("name", ["seed_7_filter_scores.json", "seed_42_qwen_grader_scores.json"])
+def test_derived_inputs_match_their_sources(tmp_path, monkeypatch, name):
+    """The tracked score copies equal a fresh export from the ignored source files."""
+    from scripts import export_derived_inputs as ex
+    src = {"seed_7_filter_scores.json": ROOT / "data" / "sft_qwen_graded" / "seed_7_train.jsonl",
+           "seed_42_qwen_grader_scores.json": ROOT / "results" / "seed_42" / "eval" / "base_no_wrapper.json"}
+    if not src[name].is_file():
+        pytest.skip("ignored source file not present")
+    monkeypatch.setattr(ex, "OUT_DIR", tmp_path)
+    monkeypatch.setattr(ex, "ROOT", tmp_path)
+    if name.startswith("seed_7"):
+        ex._write(tmp_path / name, ex.export_filter_scores(src[name]))
+    else:
+        ex._write(tmp_path / name, ex.export_qwen_scores(src[name].parent))
+    assert (tmp_path / name).read_bytes() == (DERIVED / name).read_bytes()
 
 
 def test_missing_posted_values_prints_skip(tmp_path, capsys):
@@ -380,3 +410,19 @@ def test_macro_names_must_be_letters():
     m.add("Ok", "1", "x")
     with pytest.raises(ValueError):
         m.add("Ok", "2", "x")
+
+
+def test_check_paper_macros_names_missing(tmp_path, monkeypatch, capsys):
+    from scripts import check_paper_macros as cm
+    full = (ROOT / "paper" / "generated" / "numbers.tex").read_text()
+    assert cm.main() == 0
+    # Drop one macro the paper uses: the check must fail and name it.
+    cut = "\n".join(line for line in full.splitlines()
+                    if not line.startswith("\\newcommand{\\statFilterTrainNSeedSeven}"))
+    (tmp_path / "numbers.tex").write_text(cut)
+    monkeypatch.setattr(cm, "NUMBERS", tmp_path / "numbers.tex")
+    monkeypatch.setattr(cm, "ROOT", ROOT)
+    capsys.readouterr()
+    assert cm.main() == 1
+    assert "statFilterTrainNSeedSeven" in capsys.readouterr().out
+

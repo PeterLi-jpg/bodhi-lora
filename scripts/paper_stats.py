@@ -18,16 +18,23 @@ Required (tracked in git):
       Epistemic grader output, one row per graded completion.
 
 Optional (each table that needs one is skipped with a message if it is absent):
-  data/raw/healthbench_hard.jsonl          theme tags (theme table)
-  data/sft_qwen_graded/seed_7_train.jsonl  filter scores (tau table)
+  data/raw/healthbench_hard.jsonl          theme tags, difficulty, speaker tags (not in
+                                           git; setup.sh downloads it; make numbers
+                                           stops without it)
+  data/derived/seed_7_filter_scores.json   filter scores of the seed-7 training split
+                                           (tau table)
   results_modal/irr/kappa_results.json     physician kappa (kappa table)
   rebuttal/results/*.json                  rebuttal analyses (leakage, odds ratios)
   data/rebuttal_cells/posted_values.json   rebuttal cells (generality tables)
   data/rebuttal_cells/generated_values.json  synced rebuttal cells (make cells); a cell
                                            found here replaces its posted values and
                                            gets a paired t interval on the aggregate
-  results/seed_42/eval/<condition>.json    seed-42 side run graded by Qwen2.5-14B
+  data/derived/seed_42_qwen_grader_scores.json  seed-42 side run graded by Qwen2.5-14B
                                            (cross-grader check)
+
+The two data/derived/ files are tracked. scripts/export_derived_inputs.py writes them
+from the large ignored files they come from (the seed-7 training traces and
+results/seed_42/eval/), so a clean checkout rebuilds every number.
 
 Statistical units
 -----------------
@@ -142,8 +149,8 @@ BOOTSTRAP_SEED = 0
 TAU_GRID = (0.4, 0.5, 0.6, 0.7, 0.8, 0.9)
 # The tau table's pool column needs the share of the 4,000 generated traces that
 # passed the filter. That count is not in the repo (PROV-11). The filter grades
-# greedily, so every seed keeps the same traces; the paper's score-distribution
-# caption gives 3,129 of 4,000 for seed 42. Used only for that one column.
+# greedily, so every seed keeps the same traces; the submitted paper's score-distribution
+# caption gave 3,129 of 4,000 for seed 42. Used only for that one column.
 FILTER_KEPT, FILTER_POOL = 3129, 4000
 
 
@@ -894,22 +901,21 @@ def theme_rates(df, themes, out, macros):
 
 
 def tau_calibration(path: Path, out, macros, hard_ids: set[str] | None = None):
-    """Share of the seed-7 training split at or above each tau, and its overlap with the eval pool."""
-    scores, ids = [], []
+    """Share of the seed-7 training split at or above each tau, and its overlap with the eval pool.
+
+    Reads data/derived/seed_7_filter_scores.json (scripts/export_derived_inputs.py).
+    """
     with open(path) as f:
-        for line in f:
-            if line.strip():
-                row = json.loads(line)
-                scores.append(row["grade"]["normalized_score"])
-                ids.append(row.get("prompt_id"))
-    s = np.asarray(scores, dtype=float)
+        rows = json.load(f)["rows"]
+    ids = [pid for pid, _ in rows]
+    s = np.asarray([score for _, score in rows], dtype=float)
     res = {"n_train_split": int(len(s)), "rows": []}
     for tau in TAU_GRID:
         share = float((s >= tau - 1e-12).mean())
         res["rows"].append({"tau": tau, "share_of_train_split": share,
                             "share_of_pool_estimate": share * FILTER_KEPT / FILTER_POOL})
     macros.add("FilterTrainNSeedSeven", fmt_int(len(s)),
-               "data/sft_qwen_graded/seed_7_train.jsonl: rows in the seed-7 training split")
+               "data/derived/seed_7_filter_scores.json: rows in the seed-7 training split")
     macros.add("FilterMinScoreSeedSeven", fmt(float(s.min()), 2),
                "lowest filter score in the seed-7 training split")
     # Not data: the count comes from the original filter log, which is not in the repo
@@ -942,23 +948,24 @@ def difficulty_range(df, path: Path, out, macros):
     return set(points)
 
 
-def cross_grader(qdir: Path, results_dir: Path, out, macros):
+def cross_grader(path: Path, results_dir: Path, out, macros):
     """Seed-42 aggregate scores from the Qwen-graded side run against the Llama-graded main run.
 
-    The side run (results/seed_42/eval/, gitignored) drew its own 200 prompts, so the
+    The side run (results/seed_42/eval/, gitignored; its scores are in
+    data/derived/seed_42_qwen_grader_scores.json) drew its own 200 prompts, so the
     two runs share only part of their draws. Pearson and Spearman r are over the
     shared prompts; the mean scores and differences are over each run's own draw.
     """
-    cfgs = [c for c in CONDITIONS if (qdir / f"{c}.json").is_file()]
+    with open(path) as f:
+        q = json.load(f)
+    cfgs = [c for c in CONDITIONS if c in q["conditions"]]
     res = {"conditions": {}, "pooled": {}}
     q_all, l_all = [], []
     means = {}
     for cfg in cfgs:
-        with open(qdir / f"{cfg}.json") as f:
-            q = json.load(f)
         with open(results_dir / "seed_42" / f"{cfg}.json") as f:
             ll = json.load(f)
-        qs = {r["prompt_id"]: float(r["score"]) for r in q["results"]}
+        qs = {pid: float(score) for pid, score in q["conditions"][cfg]}
         ls = {r["prompt_id"]: float(r["score"]) for r in ll["results"]}
         shared = sorted(set(qs) & set(ls))
         a = np.array([qs[p] for p in shared])
@@ -967,13 +974,13 @@ def cross_grader(qdir: Path, results_dir: Path, out, macros):
             r = float(stats.pearsonr(a, b).statistic)
         means[cfg] = (float(np.mean(list(qs.values()))), float(np.mean(list(ls.values()))))
         res["conditions"][cfg] = {"n_shared": len(shared), "pearson_r": r,
-                                  "grader": q.get("run_metadata", {}).get("grader_model"),
+                                  "grader": q["grader_model"],
                                   "mean_qwen": means[cfg][0], "mean_llama": means[cfg][1]}
         q_all += a.tolist()
         l_all += b.tolist()
         t = COND_TOKEN[cfg]
         macros.add(f"CrossGraderR{t}", fmt(r, 2), "Pearson r, Qwen vs Llama aggregate score, shared seed-42 prompts")
-        macros.add(f"CrossGraderMeanQwen{t}", fmt(means[cfg][0], 3), "results/seed_42/eval (Qwen grader): mean score")
+        macros.add(f"CrossGraderMeanQwen{t}", fmt(means[cfg][0], 3), "data/derived/seed_42_qwen_grader_scores.json (Qwen grader): mean score")
         macros.add(f"CrossGraderMeanLlama{t}", fmt(means[cfg][1], 3), "results_modal/seed_42 (Llama grader): mean score")
     ns = {res["conditions"][c]["n_shared"] for c in cfgs}
     if len(ns) != 1:
@@ -1518,7 +1525,7 @@ def build_tables(out, seeds) -> dict[str, str]:
                 for r in out["tau_calibration"]["rows"]]
         t["tab_tau_calibration"] = tabular(
             "ccc", ["$\\tau$", "\\% of seed-7 train split", "\\% of pool (est.)"], [rows],
-            f"data/sft_qwen_graded/seed_7_train.jsonl (pool column assumes {FILTER_KEPT}/{FILTER_POOL} kept, PROV-11)")
+            f"data/derived/seed_7_filter_scores.json (pool column assumes {FILTER_KEPT}/{FILTER_POOL} kept, PROV-11)")
 
     if "kappa" in out:
         ev = out["kappa"]["llm_vs_physician"]["eval_llama"]
@@ -1676,9 +1683,9 @@ def _rel(path: Path) -> str:
         return path.name
 
 
-def run(results_dir: Path, out_dir: Path, healthbench: Path | None, filter_train: Path | None,
+def run(results_dir: Path, out_dir: Path, healthbench: Path | None, filter_scores: Path | None,
         kappa: Path | None, rebuttal_results: Path | None, posted_values: Path | None,
-        generated_values: Path | None = None, qwen_grader_dir: Path | None = None) -> dict:
+        generated_values: Path | None = None, qwen_grader_scores: Path | None = None) -> dict:
     seeds = discover_seeds(results_dir)
     df = load_responses(results_dir, seeds)
     out: dict = {"meta": {"seeds": seeds, "conditions": list(CONDITIONS),
@@ -1715,15 +1722,10 @@ def run(results_dir: Path, out_dir: Path, healthbench: Path | None, filter_train
     if optional(healthbench, "theme table", "data/raw/healthbench_hard.jsonl"):
         theme_rates(df, load_themes(healthbench), out, macros)
         hard_ids = difficulty_range(df, healthbench, out, macros)
-    if optional(filter_train, "tau table", "data/sft_qwen_graded/seed_7_train.jsonl"):
-        tau_calibration(filter_train, out, macros, hard_ids)
-    if qwen_grader_dir is not None and (qwen_grader_dir / "base_no_wrapper.json").is_file():
-        for p in sorted(qwen_grader_dir.glob("*.json")):
-            if p.stem in CONDITIONS:
-                out["meta"]["inputs"][f"results/seed_42/eval/{p.name}"] = _sha256(p)
-        cross_grader(qwen_grader_dir, results_dir, out, macros)
-    else:
-        print(f"SKIP cross-grader check: {qwen_grader_dir} not found")
+    if optional(filter_scores, "tau table", "data/derived/seed_7_filter_scores.json"):
+        tau_calibration(filter_scores, out, macros, hard_ids)
+    if optional(qwen_grader_scores, "cross-grader check", "data/derived/seed_42_qwen_grader_scores.json"):
+        cross_grader(qwen_grader_scores, results_dir, out, macros)
     if optional(kappa, "kappa table", "results_modal/irr/kappa_results.json"):
         kappa_section(kappa, out, macros)
     if rebuttal_results is not None and rebuttal_results.is_dir():
@@ -1765,8 +1767,10 @@ def main() -> None:
     ap.add_argument("--results-dir", type=Path, default=ROOT / "results_modal")
     ap.add_argument("--out-dir", type=Path, default=ROOT / "paper" / "generated")
     ap.add_argument("--healthbench", type=Path, default=ROOT / "data" / "raw" / "healthbench_hard.jsonl")
-    ap.add_argument("--filter-train", type=Path,
-                    default=ROOT / "data" / "sft_qwen_graded" / "seed_7_train.jsonl")
+    # Small tracked copies of the scores in two large ignored files
+    # (scripts/export_derived_inputs.py writes them).
+    ap.add_argument("--filter-scores", type=Path,
+                    default=ROOT / "data" / "derived" / "seed_7_filter_scores.json")
     ap.add_argument("--kappa", type=Path, default=ROOT / "results_modal" / "irr" / "kappa_results.json")
     ap.add_argument("--rebuttal-results", type=Path, default=ROOT / "rebuttal" / "results")
     ap.add_argument("--posted-values", type=Path,
@@ -1774,11 +1778,11 @@ def main() -> None:
     # Written by `make cells` once results_rebuttal/ is synced; replaces posted values cell by cell.
     ap.add_argument("--generated-values", type=Path,
                     default=ROOT / "data" / "rebuttal_cells" / "generated_values.json")
-    # Seed-42 side run graded by Qwen2.5-14B (gitignored results/); optional.
-    ap.add_argument("--qwen-grader-dir", type=Path, default=ROOT / "results" / "seed_42" / "eval")
+    ap.add_argument("--qwen-grader-scores", type=Path,
+                    default=ROOT / "data" / "derived" / "seed_42_qwen_grader_scores.json")
     a = ap.parse_args()
-    run(a.results_dir, a.out_dir, a.healthbench, a.filter_train, a.kappa, a.rebuttal_results,
-        a.posted_values, a.generated_values, a.qwen_grader_dir)
+    run(a.results_dir, a.out_dir, a.healthbench, a.filter_scores, a.kappa, a.rebuttal_results,
+        a.posted_values, a.generated_values, a.qwen_grader_scores)
 
 
 if __name__ == "__main__":
