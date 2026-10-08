@@ -1,5 +1,5 @@
 {
-  "_provenance": "test fixture in the data/rebuttal_cells/posted_values.json schema; means transcribed from rebuttal/responses/reviewer_HomM_tables_companion.md and rebuttal/analyses/FINDINGS_quality_drop.md; SDs were not posted",
+  "_provenance": "test fixture in the data/rebuttal_cells/posted_values.json schema; means transcribed from rebuttal/responses/drafts/reviewer_HomM_tables_companion.md and rebuttal/analyses/FINDINGS_quality_drop.md; SDs were not posted",
   "cells": [
     {
       "id": "healthbench__mistral-small-24b",
@@ -20,7 +20,7 @@
                  "red_flag": {"mean": 1.68, "sd": null}, "aggregate": {"mean": 0.4111, "sd": null}},
         "lora_cot": {"active_inquiry_pct": {"mean": 72.4, "sd": null}}
       },
-      "sources": ["rebuttal/responses/reviewer_HomM_tables_companion.md:9", "rebuttal/analyses/FINDINGS_quality_drop.md:12"]
+      "sources": ["rebuttal/responses/drafts/reviewer_HomM_tables_companion.md:9", "rebuttal/analyses/FINDINGS_quality_drop.md:12"]
     },
     {
       "id": "healthbench__med42-8b",
@@ -41,7 +41,7 @@
                  "red_flag": {"mean": 1.03, "sd": null}, "aggregate": {"mean": 0.3920, "sd": null}},
         "lora_cot": {}
       },
-      "sources": ["rebuttal/responses/reviewer_HomM_tables_companion.md:10", "rebuttal/analyses/FINDINGS_quality_drop.md:13"]
+      "sources": ["rebuttal/responses/drafts/reviewer_HomM_tables_companion.md:10", "rebuttal/analyses/FINDINGS_quality_drop.md:13"]
     },
     {
       "id": "medqa__mistral-small-24b",

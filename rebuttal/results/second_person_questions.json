@@ -53,7 +53,7 @@
   "posted": {
     "base_no_wrapper": 0.184,
     "lora_no_wrapper": 0.396,
-    "source": "rebuttal/responses/reviewer_FzpA_followup.md:13; meta_review_part1.md:27"
+    "source": "rebuttal/responses/posted/FzpA_2_followup.md:13; rebuttal/responses/drafts/meta_review_part1.md:27"
   },
   "lora_minus_base": {
     "diff": 0.188,

@@ -1,6 +1,6 @@
 """Rebuttal analysis: is the Base -> LoRA drop in aggregate rubric score real? (HomM, PROV-2)
 
-The posted replies (meta_review_part2.md:7, reviewer_HomM_followup_part2.md:14) say
+The replies (posted/HomM_3_followup_part2.md:14, drafts/meta_review_part2.md:7) say
 the aggregate score falls in all six rebuttal cells, with paired t-tests over five
 seeds putting all six below p = 0.02 and all six surviving Holm correction. The
 numbers sit in rebuttal/analyses/FINDINGS_quality_drop.md, but the code was run

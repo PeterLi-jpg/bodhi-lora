@@ -69,7 +69,7 @@ def test_paired_t_and_holm_match_hand_computation(tmp_path, monkeypatch):
 
 def test_posted_t_values_pass_holm():
     """The six t values in FINDINGS_quality_drop.md (df=4) all give p < 0.02, and
-    all six survive Holm at 0.05, as posted in meta_review_part2.md:7."""
+    all six survive Holm at 0.05, as posted in posted/HomM_3_followup_part2.md:14."""
     from scipy import stats
     from statsmodels.stats.multitest import multipletests
     ts = [-5.47, -6.20, -4.01, -5.34, -10.51, -9.02]

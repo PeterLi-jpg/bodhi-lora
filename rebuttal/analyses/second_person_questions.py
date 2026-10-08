@@ -1,7 +1,7 @@
 """Rebuttal analysis: how often does a response ask the reader a question? (FzpA, MR-W3)
 
 A grader-free check on the active-inquiry shift. The posted replies
-(reviewer_FzpA_followup.md:13, meta_review_part1.md:27) say the base model asks a
+(posted/FzpA_2_followup.md:13, drafts/meta_review_part1.md:27) say the base model asks a
 second-person question in 18.4% of responses and the adapter in 39.6%. No script or
 output behind those two numbers was saved (PROV-7). This is the scripted count.
 
@@ -42,7 +42,7 @@ CONFIG_DISPLAY = {
 }
 # Transcribed from the posted replies, kept only for the comparison in the output.
 POSTED = {"base_no_wrapper": 0.184, "lora_no_wrapper": 0.396,
-          "source": "rebuttal/responses/reviewer_FzpA_followup.md:13; meta_review_part1.md:27"}
+          "source": "rebuttal/responses/posted/FzpA_2_followup.md:13; rebuttal/responses/drafts/meta_review_part1.md:27"}
 
 MARKDOWN = re.compile(r"[*_`#>]+")
 SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+|\n+")

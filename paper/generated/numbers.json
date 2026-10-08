@@ -59,7 +59,7 @@
       "results_modal/irr/kappa_results.json": "194b39fe7522dcffdce270bcf59bd9f2d094e57c08b570c3c5fcd08cb86d8535",
       "rebuttal/results/interference_mechanism.json": "ec5eea5d9a56df86e04ab3427feb6df315fe1e599b4a8b4d753a7c83df5f194f",
       "rebuttal/results/mimicry_split.json": "0d62757fb6ca4409fb1797004daf13170d1939700a7f9f3ed59374521ab6e769",
-      "rebuttal/results/second_person_questions.json": "54b3310af333de0f3ad85c64e4cf5535b6a04114414554438af739d55ea96ed4",
+      "rebuttal/results/second_person_questions.json": "d84862d8bddef8119f084722629b24336155a40a431d2da7af0fb3bcd539060a",
       "data/rebuttal_cells/posted_values.json": "860fad299d02fd1200efaaf6bbe66deec7800c28df40a3895b2ab97929dcbfc0"
     }
   },
@@ -6082,7 +6082,7 @@
       "posted": {
         "base_no_wrapper": 0.184,
         "lora_no_wrapper": 0.396,
-        "source": "rebuttal/responses/reviewer_FzpA_followup.md:13; meta_review_part1.md:27"
+        "source": "rebuttal/responses/posted/FzpA_2_followup.md:13; rebuttal/responses/drafts/meta_review_part1.md:27"
       },
       "lora_minus_base": {
         "diff": 0.188,

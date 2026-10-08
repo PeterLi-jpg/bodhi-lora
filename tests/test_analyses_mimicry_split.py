@@ -82,12 +82,12 @@ def test_golden_values_on_committed_results(tmp_path, monkeypatch):
     prim = d["primary_theme_or_rubric"]
     assert prim["groups"] == {"context_dependent": 508, "self_contained": 158, "null": 1}
     assert d["robustness_theme_only"]["groups"]["context_dependent"] == 127
-    # Posted to LxMF (reviewer_LxMF.md:26): ORs 1.16 / 1.54 / 1.56.
+    # Posted to LxMF (posted/LxMF_1_rebuttal.md:26): ORs 1.16 / 1.54 / 1.56.
     ors = {c: round(prim["configs"][c]["odds_ratio"], 2) for c in ms.CONFIG_ORDER}
     assert ors["base_no_wrapper"] == 1.16
     assert ors["lora_no_wrapper"] == 1.54
     assert ors["base_bodhi"] == 1.56
-    # Posted at reviewer_LxMF.md:28: LoRA - Base discrimination +8.4pp [-1.2, 17.9].
+    # Posted at posted/LxMF_1_rebuttal.md:28: LoRA - Base discrimination +8.4pp [-1.2, 17.9].
     assert round(100 * prim["lora_minus_base_disc"], 1) == 8.4
     assert [round(100 * x, 1) for x in prim["lora_minus_base_disc_ci95"]] == [-1.2, 17.9]
     assert round(100 * d["robustness_theme_only"]["lora_minus_base_disc"], 1) == 10.0
