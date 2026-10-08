@@ -1236,6 +1236,9 @@ def generality_section(posted: dict, generated: dict | None, out, macros):
         "cells_compared": len(full),
         "ai_rose": sum(round(r["ai_lora"], 1) > round(r["ai_base"], 1) for r in full),
         "adapter_at_or_above_teacher": sum(round(r["ai_lora"], 1) >= round(r["ai_teacher"], 1) for r in full),
+        "added_cells_compared": sum(r["id"] != MAIN_CELL_ID for r in full),
+        "added_ai_rose": sum(r["id"] != MAIN_CELL_ID and round(r["ai_lora"], 1) > round(r["ai_base"], 1)
+                             for r in full),
         "added_cells_with_aggregate": len(added),
         "added_cells_aggregate_fell": sum(r["agg_diff"] < 0 for r in added),
         "added_cells_drop_min": min((-r["agg_diff"] for r in added), default=None),
@@ -1248,6 +1251,10 @@ def generality_section(posted: dict, generated: dict | None, out, macros):
     macros.add("CellsAIRose", fmt_int(counts["ai_rose"]), f"{what}: active inquiry LoRA above Base")
     macros.add("CellsAtOrAboveTeacher", fmt_int(counts["adapter_at_or_above_teacher"]),
                f"{what}: active inquiry LoRA at or above Base+CoT (the teacher)")
+    macros.add("CellsAddedCompared", fmt_int(counts["added_cells_compared"]),
+               "added cells outside the evaluator's family, not set aside, with active inquiry posted")
+    macros.add("CellsAddedAIRose", fmt_int(counts["added_ai_rose"]),
+               "of those, cells where active inquiry is higher under LoRA than Base")
     macros.add("CellsAddedWithAggregate", fmt_int(counts["added_cells_with_aggregate"]),
                "added cells outside the evaluator's family with both aggregate means")
     macros.add("CellsAddedAggregateFell", fmt_int(counts["added_cells_aggregate_fell"]),

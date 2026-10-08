@@ -6659,6 +6659,8 @@
       "cells_compared": 5,
       "ai_rose": 4,
       "adapter_at_or_above_teacher": 3,
+      "added_cells_compared": 4,
+      "added_ai_rose": 3,
       "added_cells_with_aggregate": 4,
       "added_cells_aggregate_fell": 4,
       "added_cells_drop_min": 0.014,
