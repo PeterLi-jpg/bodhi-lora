@@ -157,3 +157,18 @@ def test_qlora_cell_can_be_evaluated_on_the_matching_4bit_base(env):
         md = json.loads((ev / f"{name}.dryrun.json").read_text())["run_metadata"]
         assert md["base_quantization"] == "bitsandbytes"
 
+
+def test_baselines_dry_run_lands_next_to_the_cell(env):
+    tmp, e = env
+    res = _run("run_baselines.sh", e, MISTRAL, "--dry-run")
+    assert res.returncode == 0, res.stdout[-3000:] + res.stderr[-3000:]
+    work = _work(tmp, MISTRAL)
+    ev = work / "seed_42" / "eval"
+    for b in ("clarify", "verbalized_confidence"):
+        out = json.loads((ev / f"base_{b}.dryrun.json").read_text())
+        assert out["config"] == f"base_{b}" and out["baseline"] == b
+        assert out["run_metadata"]["grader_model"] == "meta-llama/Llama-3.1-8B-Instruct"
+    epi = json.loads((ev / "epistemic_scores_baselines.dryrun.json").read_text())
+    assert sorted(c["name"] for c in epi["configs"]) == ["base_clarify", "base_verbalized_confidence"]
+    m = json.loads((work / "baselines_manifest.json").read_text())
+    assert m["settings"]["BASELINES"] == "clarify verbalized_confidence"
