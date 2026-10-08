@@ -22,7 +22,7 @@ Optional (each table that needs one is skipped with a message if it is absent):
   data/sft_qwen_graded/seed_7_train.jsonl  filter scores (tau table)
   results_modal/irr/kappa_results.json     physician kappa (kappa table)
   rebuttal/results/*.json                  rebuttal analyses (leakage, odds ratios)
-  data/rebuttal_cells/posted_values.json   rebuttal cells (generality table)
+  data/rebuttal_cells/posted_values.json   rebuttal cells (generality tables)
 
 Statistical units
 -----------------
@@ -961,12 +961,58 @@ def posted_aggregate_diff(cell: dict) -> dict:
             "note": "point estimate only; inference is the posted paired t over seeds"}
 
 
+# The submitted cell. Its raw outputs are in results_modal/, so its table rows come
+# from those. posted_values.json repeats it as posted; check_main_cell compares the two.
+MAIN_CELL_ID = "healthbench__medgemma-27b"
+MAIN_CELL_LABEL = ("HealthBench-Hard", "MedGemma-27B (Gemma)")
+# posted_values.json condition names -> this script's.
+POSTED_COND = {"base": "base_no_wrapper", "base_cot": "base_bodhi",
+               "lora": "lora_no_wrapper", "lora_cot": "lora_bodhi"}
+# posted metric -> (metric key here, multiplier, decimals the posts use).
+POSTED_METRIC = {
+    "active_inquiry_pct": ("active_inquiry", 100.0, 1),
+    "uncertainty_ack": ("uncertainty_ack", 1.0, 2),
+    "context_seeking": ("context_seeking", 1.0, 2),
+    "red_flag": ("red_flag", 1.0, 2),
+    "scope_bounding": ("scope_bounding", 1.0, 2),
+    "hedging_quality": ("hedging_quality", 1.0, 2),
+    "specificity": ("specificity", 1.0, 2),
+    "aggregate": ("healthbench", 1.0, 3),
+}
+
+
+def check_main_cell(cell: dict, conditions_res: dict) -> list[dict]:
+    """Compare the posted values of the submitted cell with the seed means from results_modal.
+
+    A posted value agrees when it equals the generated seed mean rounded to the
+    decimals the posts use. A disagreement is printed and kept in numbers.json; it
+    does not stop the run, because the posted text is a record, not an input.
+    """
+    rows = []
+    for pcond, metrics in sorted(cell["conditions"].items()):
+        for pmetric, v in sorted(metrics.items()):
+            if pmetric not in POSTED_METRIC or v.get("mean") is None:
+                continue
+            key, mult, dp = POSTED_METRIC[pmetric]
+            generated = conditions_res[key][POSTED_COND[pcond]]["seed_mean"] * mult
+            # Half a unit in the last posted decimal, plus float slack.
+            agrees = abs(generated - v["mean"]) <= 0.5 * 10 ** -dp + 1e-9
+            rows.append({"condition": pcond, "metric": pmetric, "posted": v["mean"],
+                         "generated": generated, "agrees": agrees})
+            if not agrees:
+                print(f"WARNING posted {MAIN_CELL_ID} {pcond}.{pmetric} = {v['mean']} "
+                      f"but results_modal gives {generated:.{dp + 2}f}")
+    return rows
+
+
 def generality_section(posted: dict, conditions_res: dict, out):
     res = {"provenance": posted.get("_provenance"), "cells": []}
     for c in posted["cells"]:
         res["cells"].append({"id": c["id"], "set_aside": c["set_aside"],
                              "same_family_as_evaluator": c["same_family_as_evaluator"],
                              "aggregate_lora_minus_base": posted_aggregate_diff(c)})
+        if c["id"] == MAIN_CELL_ID:
+            res["main_cell_check"] = check_main_cell(c, conditions_res)
     out["generality"] = res
     return res
 
@@ -1166,50 +1212,97 @@ def build_tables(out, seeds) -> dict[str, str]:
 
     if "generality" in out and "posted" in out:
         t["tab_generality"] = generality_table(out["posted"], out)
+        t["tab_generality_aggregate"] = generality_aggregate_table(out["posted"], out)
     return t
 
 
-def generality_table(posted: dict, out) -> str:
-    """Cross-cell table: main cell from results_modal, other cells from posted values."""
-    cond = out["conditions"]
+def _posted_cell_rows(posted: dict, row) -> tuple[list, list]:
+    """Rows for the posted cells, split into kept and set-aside blocks.
 
-    def pct(x):
-        return f"{x:.1f}\\%" if x is not None else "--"
-
-    def arrow(b, l, dp=2):
-        if b is None or l is None:
-            return "--"
-        return f"{b:.{dp}f} $\\to$ {l:.{dp}f}"
-
-    main = [["HealthBench", "MedGemma-27B (Gemma)",
-             pct(100 * cond["active_inquiry"]["base_no_wrapper"]["seed_mean"]),
-             pct(100 * cond["active_inquiry"]["lora_no_wrapper"]["seed_mean"]),
-             arrow(cond["context_seeking"]["base_no_wrapper"]["seed_mean"], cond["context_seeking"]["lora_no_wrapper"]["seed_mean"]),
-             arrow(cond["red_flag"]["base_no_wrapper"]["seed_mean"], cond["red_flag"]["lora_no_wrapper"]["seed_mean"]),
-             fmt(out["contrasts"]["LoRAvsBase"]["metrics"]["healthbench"]["diff"], 3, sign=True)]]
+    The submitted cell is skipped: its row comes from results_modal.
+    """
     kept, aside = [], []
     for c in posted["cells"]:
-        g = c["conditions"]
-
-        def val(cond_name, metric):
-            v = g.get(cond_name, {}).get(metric)
-            return None if v is None else v.get("mean")
-
-        diff = posted_aggregate_diff(c)["diff"]
+        if c["id"] == MAIN_CELL_ID:
+            continue
         model = f"{c['base_model']} ({c['base_family']})"
         if c["same_family_as_evaluator"]:
             # Same family as the Llama evaluator, against the paper's own rule (EVAL-7).
             model += "$^{\\dagger}$"
-        row = [c["benchmark"], model, pct(val("base", "active_inquiry_pct")), pct(val("lora", "active_inquiry_pct")),
-               arrow(val("base", "context_seeking"), val("lora", "context_seeking")),
-               arrow(val("base", "red_flag"), val("lora", "red_flag")),
-               fmt(diff, 3, sign=True) if diff is not None else "--"]
-        (aside if c["set_aside"] else kept).append(row)
+
+        def val(cond_name, metric, g=c["conditions"]):
+            v = g.get(cond_name, {}).get(metric)
+            return None if v is None else v.get("mean")
+
+        (aside if c["set_aside"] else kept).append([c["benchmark"], model] + row(c, val))
+    return kept, aside
+
+
+def _pct(x):
+    return f"{x:.1f}\\%" if x is not None else "--"
+
+
+def _arrow(b, l, dp=2):
+    if b is None or l is None:
+        return "--"
+    return f"{b:.{dp}f} $\\to$ {l:.{dp}f}"
+
+
+def generality_table(posted: dict, out) -> str:
+    """Cross-cell behavior table: main cell from results_modal, other cells from posted values."""
+    cond = out["conditions"]
+
+    def sm(key, cfg):
+        return cond[key][cfg]["seed_mean"]
+
+    main = [[*MAIN_CELL_LABEL,
+             _pct(100 * sm("active_inquiry", "base_no_wrapper")),
+             _pct(100 * sm("active_inquiry", "lora_no_wrapper")),
+             _arrow(sm("context_seeking", "base_no_wrapper"), sm("context_seeking", "lora_no_wrapper")),
+             _arrow(sm("red_flag", "base_no_wrapper"), sm("red_flag", "lora_no_wrapper")),
+             fmt(out["contrasts"]["LoRAvsBase"]["metrics"]["healthbench"]["diff"], 3, sign=True)]]
+
+    def row(c, val):
+        diff = posted_aggregate_diff(c)["diff"]
+        return [_pct(val("base", "active_inquiry_pct")), _pct(val("lora", "active_inquiry_pct")),
+                _arrow(val("base", "context_seeking"), val("lora", "context_seeking")),
+                _arrow(val("base", "red_flag"), val("lora", "red_flag")),
+                fmt(diff, 3, sign=True) if diff is not None else "--"]
+
+    kept, aside = _posted_cell_rows(posted, row)
     blocks = [main, kept] + ([aside] if aside else [])
     return tabular("llrrrrr", ["Benchmark", "Base model (family)", "AI Base", "AI LoRA", "Context-seek",
                                "Red-flag", "Agg.\\ $\\Delta$"], blocks,
                    "results_modal (first row) and data/rebuttal_cells/posted_values.json (other rows; "
                    "Agg. Delta is LoRA minus Base from posted means, no CI)")
+
+
+def generality_aggregate_table(posted: dict, out) -> str:
+    """Cross-cell aggregate HealthBench-rubric score for all four conditions.
+
+    Main cell from results_modal seed means; other cells from posted means. The
+    posted paired t over seeds stays the test (rebuttal/analyses/quality_drop.py
+    once the cell outputs are synced); this table carries no CI.
+    """
+    cond = out["conditions"]["healthbench"]
+
+    def num(x):
+        return fmt(x, 3) if x is not None else "--"
+
+    main = [[*MAIN_CELL_LABEL, *(num(cond[cfg]["seed_mean"]) for cfg in CONDITIONS),
+             fmt(out["contrasts"]["LoRAvsBase"]["metrics"]["healthbench"]["diff"], 3, sign=True)]]
+
+    def row(c, val):
+        diff = posted_aggregate_diff(c)["diff"]
+        return [*(num(val(p, "aggregate")) for p in ("base", "base_cot", "lora", "lora_cot")),
+                fmt(diff, 3, sign=True) if diff is not None else "--"]
+
+    kept, aside = _posted_cell_rows(posted, row)
+    blocks = [main, kept] + ([aside] if aside else [])
+    return tabular("llrrrrr", ["Benchmark", "Base model (family)", *(COND_LABEL[c] for c in CONDITIONS),
+                               "LoRA $-$ Base"], blocks,
+                   "results_modal (first row, seed means) and data/rebuttal_cells/posted_values.json "
+                   "(other rows, posted means; no CI)")
 
 
 # ---------------------------------------------------------------------------

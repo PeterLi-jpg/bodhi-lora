@@ -223,10 +223,25 @@ def test_posted_values_fixture_builds_generality_table(tmp_path):
     assert tab.index("MedQA") > tab.index("Med42-8B")
 
 
+def test_committed_posted_values_main_cell_once_and_agrees(tmp_path):
+    # The committed file repeats the submitted cell as posted. Its rows must come
+    # from results_modal once, and the posted values must match those seed means.
+    out = _run(tmp_path, ROOT / "data" / "rebuttal_cells" / "posted_values.json")
+    check = out["generality"]["main_cell_check"]
+    assert len(check) == 8
+    assert all(r["agrees"] for r in check), [r for r in check if not r["agrees"]]
+    for name in ("tab_generality", "tab_generality_aggregate"):
+        assert (tmp_path / f"{name}.tex").read_text().count("MedGemma-27B") == 1
+    agg = (tmp_path / "tab_generality_aggregate.tex").read_text()
+    assert "MedQuAD & Mistral-Small-24B (Mistral) & \\ensuremath{0.672}" in agg
+    assert "\\ensuremath{-0.086}" in agg
+
+
 def test_missing_posted_values_prints_skip(tmp_path, capsys):
     _run(tmp_path, tmp_path / "absent.json")
     assert "SKIP generality table" in capsys.readouterr().out
     assert not (tmp_path / "tab_generality.tex").exists()
+    assert not (tmp_path / "tab_generality_aggregate.tex").exists()
 
 
 def test_posted_values_schema_is_checked(tmp_path):
