@@ -41,6 +41,10 @@
 \newcommand{\tbd}[1][]{{\color{red}\textbf{[TBD\if\relax#1\relax\else: #1\fi]}}}
 \newcommand{\bodhi}{BODHI}
 \newcommand{\hbhard}{HealthBench-Hard}
+% The code link for reviewers, used in the paper and the checklist. Before
+% submission: this mirror tracks the old public repo (audit HYG-1, G3). Publish the
+% scripts/export_anonymous.sh output as a new anonymous mirror and change it here.
+\newcommand{\codeurl}{\url{https://anonymous.4open.science/r/bodhi-lora-CEB5}}
 % Every number from the results: \stat* macros written by `make numbers`
 % (scripts/paper_stats.py). Tables \input generated/tab_*.tex.
 \input{generated/numbers}
@@ -626,7 +630,7 @@ care, so we report red-flag identification for each condition. The drop under Lo
 motivates the clinician harm review in Appendix~\ref{app:harm}, which is not yet done. The adapter needs gated access to MedGemma-27B and inherits its license.
 
 \paragraph{Code availability.} Code, evaluation outputs and analysis scripts:
-\url{https://anonymous.4open.science/r/bodhi-lora-CEB5}. The adapters are not yet released.
+\codeurl{}. The adapters are not yet released.
 
 \begin{ack}
 Funding: None declared.

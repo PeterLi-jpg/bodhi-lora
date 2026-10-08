@@ -47,7 +47,7 @@
     \item {\bf Experimental result reproducibility}
     \item[] Question: Does the paper fully disclose all the information needed to reproduce the main experimental results of the paper to the extent that it affects the main claims and/or conclusions of the paper (regardless of whether the code and data are provided or not)?
     \item[] Answer: \answerYes{}
-    \item[] Justification: Appendix~\ref{app:hparams} gives the training and evaluation configuration of the added cells and of the MedGemma-27B cell. The MedGemma-27B values come from the code that ran. Values still pending a check against the saved adapter files are marked, and so are settings the launcher did not record (the production training config and the exact vLLM build). Decoding is greedy, and the seeds set the LoRA initialization, the data order, the split and the evaluation draw. Hardware is stated (TPU v6e-8 for training and A100-80GB for evaluation in the MedGemma-27B cell; H100 for the added cells). Code and evaluation outputs are at \url{https://anonymous.4open.science/r/bodhi-lora-CEB5}; the adapters are not yet released.
+    \item[] Justification: Appendix~\ref{app:hparams} gives the training and evaluation configuration of the added cells and of the MedGemma-27B cell. The MedGemma-27B values come from the code that ran. Values still pending a check against the saved adapter files are marked, and so are settings the launcher did not record (the production training config and the exact vLLM build). Decoding is greedy, and the seeds set the LoRA initialization, the data order, the split and the evaluation draw. Hardware is stated (TPU v6e-8 for training and A100-80GB for evaluation in the MedGemma-27B cell; H100 for the added cells). Code and evaluation outputs are at \codeurl{}; the adapters are not yet released.
     \item[] Guidelines:
     \begin{itemize}
         \item The answer \answerNA{} means that the paper does not include experiments.
@@ -66,7 +66,7 @@
 \item {\bf Open access to data and code}
     \item[] Question: Does the paper provide open access to the data and code, with sufficient instructions to faithfully reproduce the main experimental results, as described in supplemental material?
     \item[] Answer: \answerYes{}
-    \item[] Justification: Code, evaluation outputs of the MedGemma-27B cell and analysis scripts are at \url{https://anonymous.4open.science/r/bodhi-lora-CEB5}; \texttt{make numbers} rebuilds every number of the MedGemma-27B cell from them and from the public HealthBench file. The physician $\kappa$ is the exception at its source: \texttt{make kappa} computes it from the returned grading file, which carries the physician's name and is kept outside the repository, so the repository holds only its output. The five adapters are not yet released, and the raw outputs of the added cells are not yet in the repository. HealthBench is public from OpenAI. MedGemma-27B and Llama-3.1-8B need a gated-model access request on Hugging Face; Qwen2.5-14B is open.
+    \item[] Justification: Code, evaluation outputs of the MedGemma-27B cell and analysis scripts are at \codeurl{}; \texttt{make numbers} rebuilds every number of the MedGemma-27B cell from them and from the public HealthBench file. The physician $\kappa$ is the exception at its source: \texttt{make kappa} computes it from the returned grading file, which carries the physician's name and is kept outside the repository, so the repository holds only its output. The five adapters are not yet released, and the raw outputs of the added cells are not yet in the repository. HealthBench is public from OpenAI. MedGemma-27B and Llama-3.1-8B need a gated-model access request on Hugging Face; Qwen2.5-14B is open.
     \item[] Guidelines:
     \begin{itemize}
         \item The answer \answerNA{} means that paper does not include experiments requiring code.
@@ -175,7 +175,7 @@
 \item {\bf New assets}
     \item[] Question: Are new assets introduced in the paper well documented and is the documentation provided alongside the assets?
     \item[] Answer: \answerYes{}
-    \item[] Justification: The new assets are the code, the analysis scripts and the evaluation outputs of the MedGemma-27B cell. They are at \url{https://anonymous.4open.science/r/bodhi-lora-CEB5}, with a README and a reproducibility guide. The five adapters are not yet released and have no model card yet.
+    \item[] Justification: The new assets are the code, the analysis scripts and the evaluation outputs of the MedGemma-27B cell. They are at \codeurl{}, with a README and a reproducibility guide. The five adapters are not yet released and have no model card yet.
     \item[] Guidelines:
     \begin{itemize}
         \item The answer \answerNA{} means that the paper does not release new assets.
