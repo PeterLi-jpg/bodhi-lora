@@ -71,6 +71,9 @@ def aggregate_stage4(per_seed_data: dict[int, dict]) -> dict:
             "score_per_seed": dict(zip([f"seed_{s}" for s in SEEDS], means)),
             "n_examples_per_seed": dict(zip([f"seed_{s}" for s in SEEDS], ns)),
             "n_results_per_seed": dict(zip([f"seed_{s}" for s in SEEDS], results_n)),
+            # Completions pooled over seeds. The CoT conditions lose prompts to the
+            # context cap, so this is the n to quote, not 200 x seeds (PROV-4).
+            "n_results_pooled": sum(results_n),
             "grader_parse_failure_rate_per_seed": dict(zip([f"seed_{s}" for s in SEEDS], parse_fr)),
         }
     return out
@@ -90,6 +93,10 @@ def aggregate_stage5(per_seed_eps: dict[int, dict]) -> dict:
         per_cfg["n_per_seed"] = dict(zip([f"seed_{s}" for s in SEEDS], n_total))
         per_cfg["n_scored_per_seed"] = dict(zip([f"seed_{s}" for s in SEEDS], n_scored))
         per_cfg["n_parse_failures_per_seed"] = dict(zip([f"seed_{s}" for s in SEEDS], n_pf))
+        # Pooled over seeds. Epistemic means use the scored rows only.
+        per_cfg["n_pooled"] = sum(n_total)
+        per_cfg["n_scored_pooled"] = sum(n_scored)
+        per_cfg["n_parse_failures_pooled"] = sum(n_pf)
         for k in EPISTEMIC_AGG_KEYS:
             vals = [per_seed_aggs[s].get(k) for s in SEEDS]
             m, sd = _mean_std(vals)
@@ -170,14 +177,15 @@ def render_md(stage4_agg: dict, stage5_agg: dict) -> str:
 
     # Sample sizes.
     lines.append("## Sample sizes\n")
-    lines.append("| Config | seed_7 n_results | seed_13 | seed_42 | seed_99 | seed_101 |")
-    lines.append("|---|---|---|---|---|---|")
+    lines.append("| Config | seed_7 n_results | seed_13 | seed_42 | seed_99 | seed_101 | pooled | epistemic scored (pooled) |")
+    lines.append("|---|---|---|---|---|---|---|---|")
     for cfg in STAGE4_CONFIGS:
         per = stage4_agg[cfg]["n_results_per_seed"]
         cells = " | ".join(str(per[f"seed_{s}"]) for s in SEEDS)
-        lines.append(f"| {cfg} | {cells} |")
+        lines.append(f"| {cfg} | {cells} | {stage4_agg[cfg]['n_results_pooled']} | "
+                     f"{stage5_agg[cfg]['n_scored_pooled']} |")
     lines.append("")
-    lines.append("(200 = no inference failures. <200 = bodhi 2-pass requests that exceeded the 4096-token context cap; ~4-5%% per bodhi config.)")
+    lines.append("(200 = no inference failures. <200 = bodhi 2-pass requests that exceeded the 4096-token context cap; ~4-5% per bodhi config. Epistemic scored excludes grader parse failures and grade errors.)")
 
     return "\n".join(lines)
 

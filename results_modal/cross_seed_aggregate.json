@@ -31,6 +31,7 @@
         "seed_99": 200,
         "seed_101": 200
       },
+      "n_results_pooled": 1000,
       "grader_parse_failure_rate_per_seed": {
         "seed_7": 0.0,
         "seed_13": 0.0,
@@ -63,6 +64,7 @@
         "seed_99": 188,
         "seed_101": 191
       },
+      "n_results_pooled": 957,
       "grader_parse_failure_rate_per_seed": {
         "seed_7": 0.0,
         "seed_13": 0.0,
@@ -95,6 +97,7 @@
         "seed_99": 200,
         "seed_101": 200
       },
+      "n_results_pooled": 1000,
       "grader_parse_failure_rate_per_seed": {
         "seed_7": 0.0,
         "seed_13": 0.0,
@@ -127,6 +130,7 @@
         "seed_99": 191,
         "seed_101": 191
       },
+      "n_results_pooled": 959,
       "grader_parse_failure_rate_per_seed": {
         "seed_7": 0.0,
         "seed_13": 0.000445632798573975,
@@ -159,6 +163,9 @@
         "seed_99": 0,
         "seed_101": 0
       },
+      "n_pooled": 1000,
+      "n_scored_pooled": 998,
+      "n_parse_failures_pooled": 2,
       "uncertainty_acknowledgment_mean": {
         "mean": 1.939878787878788,
         "std": 0.020311904437832592,
@@ -227,7 +234,7 @@
       },
       "questions_asked_mean": {
         "mean": 0.4491111111111111,
-        "std": 0.10941666314067298,
+        "std": 0.10941666314067297,
         "per_seed": {
           "seed_7": 0.435,
           "seed_13": 0.565,
@@ -282,7 +289,7 @@
       },
       "scope_bounded_rate": {
         "mean": 0.9268888888888889,
-        "std": 0.010726683009908571,
+        "std": 0.01072668300990857,
         "per_seed": {
           "seed_7": 0.925,
           "seed_13": 0.925,
@@ -325,9 +332,12 @@
         "seed_99": 2,
         "seed_101": 0
       },
+      "n_pooled": 956,
+      "n_scored_pooled": 947,
+      "n_parse_failures_pooled": 9,
       "uncertainty_acknowledgment_mean": {
         "mean": 1.895461462598622,
-        "std": 0.016855961359515035,
+        "std": 0.01685596135951503,
         "per_seed": {
           "seed_7": 1.8823529411764706,
           "seed_13": 1.90625,
@@ -371,7 +381,7 @@
       },
       "specificity_mean": {
         "mean": 1.8828620709744,
-        "std": 0.024993538659019234,
+        "std": 0.024993538659019238,
         "per_seed": {
           "seed_7": 1.8823529411764706,
           "seed_13": 1.8958333333333333,
@@ -415,7 +425,7 @@
       },
       "red_flag_rate": {
         "mean": 0.7878955388298242,
-        "std": 0.020734744127001877,
+        "std": 0.02073474412700188,
         "per_seed": {
           "seed_7": 0.786096256684492,
           "seed_13": 0.7864583333333334,
@@ -491,6 +501,9 @@
         "seed_99": 3,
         "seed_101": 3
       },
+      "n_pooled": 999,
+      "n_scored_pooled": 985,
+      "n_parse_failures_pooled": 14,
       "uncertainty_acknowledgment_mean": {
         "mean": 1.9401655147033234,
         "std": 0.010574095600971199,
@@ -657,6 +670,9 @@
         "seed_99": 2,
         "seed_101": 3
       },
+      "n_pooled": 942,
+      "n_scored_pooled": 928,
+      "n_parse_failures_pooled": 14,
       "uncertainty_acknowledgment_mean": {
         "mean": 1.95049325871232,
         "std": 0.02108422700551719,
@@ -725,7 +741,7 @@
       },
       "questions_asked_mean": {
         "mean": 1.706028654219482,
-        "std": 0.11782569950491706,
+        "std": 0.11782569950491704,
         "per_seed": {
           "seed_7": 1.5978260869565217,
           "seed_13": 1.7305699481865284,
