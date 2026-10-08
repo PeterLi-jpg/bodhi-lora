@@ -42,3 +42,24 @@ def test_figure_builder_pins_build_env(monkeypatch):
     env = bpf._build_env()
     assert env["SOURCE_DATE_EPOCH"] == "0"
     assert env["PYTHONHASHSEED"] == "0"
+
+
+def test_forest_plot_draws_the_clustered_bootstrap_cis(tmp_path, monkeypatch):
+    """D7: the forest plot shows paper_stats' prompt-clustered CIs, not a normal approximation."""
+    from scripts import plot_postprocessing as pp
+    numbers = ROOT / "paper" / "generated" / "numbers.json"
+    contrasts = json.loads(numbers.read_text())["contrasts"]
+    drawn = []
+    real_plot = pp.plt.Axes.plot
+
+    def spy(self, xs, ys, *a, **k):
+        drawn.append(tuple(xs))
+        return real_plot(self, xs, ys, *a, **k)
+
+    monkeypatch.setattr(pp.plt.Axes, "plot", spy)
+    pp.plot_effect_sizes(numbers, tmp_path / "forest.pdf")
+    assert (tmp_path / "forest.pdf").stat().st_size > 0
+    rf = contrasts["LoRACoTvsLoRA"]["metrics"]["red_flag"]["d_ci95"]
+    assert tuple(rf) in drawn
+    # Three comparisons x seven dimensions.
+    assert len(drawn) == 21
