@@ -78,7 +78,7 @@ We also ran the recipe with other base models and benchmarks (added cells). In t
 \statCellsAddedCompared{} added cells whose base model is outside the evaluator's family, active
 inquiry rises in \statCellsAddedAIRose{}. BioMistral-7B is a null result. The aggregate score falls
 in all \statCellsAddedWithAggregate{}, by \statCellsAddedDropMin{} to \statCellsAddedDropMax{}
-(each $p \leq \statCellsAddedDropPMax$, paired $t$ over seeds). In a fifth such cell, MedQA, it rose
+(paired $t$ over seeds, largest $p = \statCellsAddedDropPMax$). In a fifth such cell, MedQA, it rose
 (\statCellMedQAMistralAggregateDiff, 95\% CI \statCellMedQAMistralAggregateDiffCI), but there the
 prompt told the model to ask. So the behavior gain comes with an aggregate cost. The third is a
 diagnosis. Adding the CoT protocol to the adapter changes red-flag identification by
@@ -479,9 +479,9 @@ MedGemma-27B cell included, the adapter reaches or passes its teacher's active i
 
 The aggregate score falls under LoRA in all \statCellsAddedWithAggregate{} added cells outside the
 evaluator's family, by \statCellsAddedDropMin{} to \statCellsAddedDropMax. In paired $t$-tests
-over the five seeds, each of these four drops has two-sided $p \leq \statCellsAddedDropPMax$. Each
+over the five seeds, the largest two-sided $p$ of these four drops is \statCellsAddedDropPMax. Each
 stays significant after Holm correction over the \statCellsHolmFamily{} added cells that are not set
-aside ($p_{\text{Holm}} \leq \statCellsAddedDropPHolmMax$), as our posted tests said. In
+aside (largest $p_{\text{Holm}} = \statCellsAddedDropPHolmMax$), as our posted tests said. In
 BioMistral-7B, the score fell without a rise in asking, so a rubric penalty on asking cannot be the
 whole cause. The comparison within the adapter's own responses is self-selected and only suggestive
 (Appendix~\ref{app:generality}). So in these cells, the adapter buys more inquiry at a cost in
