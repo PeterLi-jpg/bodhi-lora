@@ -174,10 +174,11 @@ not tested this conjecture.
 %======================================================================
 
 \paragraph{Calibration and confidence in language models.} \citet{kadavath2022language} showed
-that LLMs hold internal uncertainty signals that probing can read, while RLHF-tuned outputs often
-hide them. Preference labels favor decisive answers \citep{xiong2024can}, so instruction tuning
-with human feedback \citep{ouyang2022training} can penalize appropriate hedging.
-\citet{lin2022teaching} fine-tuned models to state their confidence in words, and
+that large models are well calibrated on multiple-choice questions and can be trained to predict
+whether they know an answer. After tuning with human feedback \citep{ouyang2022training}, token
+probabilities are poorly calibrated, and confidence stated in words is often better
+\citep{tian2023just}, although it still tends toward overconfidence \citep{xiong2024can}.
+\citet{lin2022teaching} fine-tuned a model to state its confidence in words, and
 \citet{tian2023just} got similar effects from prompting alone. These works target numerical
 confidence. We target behaviors in the answer (hedging, asking, declining), and we do not measure
 calibration in the statistical sense. A model can have a low expected calibration error and still
@@ -187,8 +188,8 @@ omit the safety-netting questions a practitioner would ask.
 learn to act well under uncertainty that they cannot remove, instead of seeking false certainty.
 Safety-netting, telling patients what to watch for and when to return \citep{jones2019safety}, is
 a core clinical behavior; our red-flag and scope-bounding dimensions put it into a grading rubric.
-\citet{wornow2023shaky} report that clinical LLMs trained on health records inherit the confident
-style of clinical notes rather than the way a clinician explains uncertainty to a patient.
+\citet{wornow2023shaky} review clinical foundation models and find that most are evaluated on
+tasks that say little about their value to health systems.
 
 \paragraph{Medical LLM evaluation.} Standard medical benchmarks (MedQA, MMLU-Medical) test factual
 accuracy with multiple-choice questions. HealthBench \citep{healthbench2025} grades open-ended
@@ -197,27 +198,20 @@ negative criteria (dangerous advice, false reassurance, failure to escalate). It
 overconfidence and unhelpful hedging. We use its grading protocol, escape template delimiters in
 graded text, and grade with a model family other than the filter's.
 
-\paragraph{Inference-time behavioral interventions.} Chain-of-thought prompting
-\citep{wei2022chain} adds intermediate steps; Constitutional AI \citep{bai2022constitutional}
-uses self-critique against written principles. Interventions at inference time must run at every
-call, which costs tokens and latency, and they leave the model unchanged. We use the \bodhi{} CoT
-protocol as a teacher instead: its outputs become training data, so the deployed adapter does not
-need the protocol.
-
-\paragraph{Parameter-efficient fine-tuning and distillation.} LoRA \citep{hu2022lora} learns
-low-rank updates $\Delta W = BA$; variants include QLoRA \citep{dettmers2023qlora}, DoRA
-\citep{liu2024dora} and rsLoRA \citep{kalajdzievski2023scaling}. We use LoRA to change behavior,
-not to add knowledge. STaR \citep{zelikman2022star} filters model-generated rationales on
-correctness and fine-tunes on the rest; we apply the same filter-then-finetune logic to behavioral
-demonstrations, filtered on rubric quality. Self-play and iterative preference optimization
-\citep{chen2024selfplay, rafailov2023direct, yuan2024selfrewarding} sample from the model's own
-policy; we shift the generation distribution with a structured protocol. Process reward models
-\citep{lightman2024lets} grade single reasoning steps; our filter grades whole responses. RLAIF
-\citep{lee2024rlaif} shows that AI-generated labels can stand in for human ones; we grade the
-filter and the evaluation with different model families to reduce same-model circularity. In
-standard and chain-of-thought distillation \citep{hinton2015distilling, ho2023large,
-magister2023teaching}, a larger teacher trains a smaller student. Here the teacher and the student
-are the same model under different inference conditions.
+\paragraph{Training on generated demonstrations.} Chain-of-thought prompting \citep{wei2022chain}
+changes behavior at inference, at a cost in tokens on every call. Constitutional AI
+\citep{bai2022constitutional} moves a prompted behavior into the weights through self-critique
+against written principles, and STaR \citep{zelikman2022star} fine-tunes on model-generated
+rationales filtered on correctness (\S\ref{sec:prior} compares both with our recipe). Self-play and
+self-rewarding methods \citep{chen2024selfplay, yuan2024selfrewarding} train on the model's own
+samples, often with a preference objective such as DPO \citep{rafailov2023direct}. Process reward
+models \citep{lightman2024lets} grade single reasoning steps; our filter grades whole responses.
+RLAIF \citep{lee2024rlaif} shows that AI labels can stand in for human ones. In standard and
+chain-of-thought distillation \citep{hinton2015distilling, ho2023large, magister2023teaching}, a
+larger teacher trains a smaller student; here the teacher and the student are the same model under
+different inference conditions. We use LoRA \citep{hu2022lora} to change behavior, not to add
+knowledge; variants include QLoRA \citep{dettmers2023qlora}, DoRA \citep{liu2024dora} and rsLoRA
+\citep{kalajdzievski2023scaling}.
 
 %======================================================================
 \section{Method}
