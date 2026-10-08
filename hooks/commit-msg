@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Reject commit messages that carry AI-tool trailers or mention AI tooling.
+#
+# Activate once per clone (the hooks live in the repo, not in .git/hooks):
+#   git config core.hooksPath hooks
+#
+# The repo studies medical language models, so words like "model", "LLM" or
+# "AI-generated response" are normal science and pass. What fails is any sign
+# that a coding assistant wrote or co-wrote the commit.
+#
+# Usage: hooks/commit-msg <message-file>   (git passes the file)
+set -euo pipefail
+
+msg_file="${1:?usage: commit-msg <message-file>}"
+
+# Drop the part git strips anyway: everything below the scissors line that
+# `git commit -v` adds, and comment lines.
+body="$(sed '/^# -\{24\} >8 -\{24\}$/,$d' "$msg_file" | grep -v '^#' || true)"
+
+pattern='claude|anthropic|codex|copilot|chatgpt|claude-mem|worktree-agent'
+pattern+='|generated (with|by) (claude|chatgpt|copilot|codex|an? (ai|llm))'
+pattern+='|(ai|llm)[- ]assisted|🤖'
+pattern+='|^co-authored-by:.*(noreply@anthropic\.com|openai\.com|copilot|cursor|bot\b)'
+
+hits="$(printf '%s\n' "$body" | grep -n -i -E "$pattern" || true)"
+if [ -n "$hits" ]; then
+    echo "commit-msg: AI-tool trace in the commit message:" >&2
+    printf '%s\n' "$hits" | sed 's/^/  line /' >&2
+    echo "Remove it and commit again. See docs/CONVENTIONS.md (no AI traces)." >&2
+    exit 1
+fi
