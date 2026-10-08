@@ -17,7 +17,7 @@
 \item {\bf Limitations}
     \item[] Question: Does the paper discuss the limitations of the work performed by the authors?
     \item[] Answer: \answerYes{}
-    \item[] Justification: \S\ref{sec:limitations} lists them: one CoT protocol and one fine-tuning method (a second protocol is implemented, not run); no empirical baseline (code exists, not run); LLM grading, with a physician check that covers rubric criteria only and is below target, and a grader that does not always keep its anchors; transcribed values for the added cells; a different training stack, recipe and evaluation settings in those cells, including a 4-bit training base evaluated in bfloat16; the Med42-8B family overlap with the evaluator; red-flag sensitivity without a false-positive measure; greedy decoding; no ablations and no unfiltered arm; seeds that do not vary the teacher traces; and an adapter configuration pending a check against the saved files. Appendix~\ref{app:robustness} gives descriptive checks (length quartiles, themes, a second grader on one seed, dimension correlations, two post hoc labelings). Appendix~\ref{app:harm} describes a clinician review that is not yet done.
+    \item[] Justification: \S\ref{sec:limitations} lists them: one CoT protocol and one fine-tuning method (a second protocol is implemented, not run); no empirical baseline (code exists, not run); LLM grading, with a physician check that covers rubric criteria only and is below target, and an evaluator that does not always follow its anchors; transcribed values for the added cells; a different training stack, recipe and evaluation settings in those cells, including a 4-bit training base evaluated in bfloat16; the Med42-8B family overlap with the evaluator; red-flag sensitivity without a false-positive measure; greedy decoding; no ablations and no unfiltered arm; seeds that do not vary the teacher traces; and an adapter configuration pending a check against the saved files. Appendix~\ref{app:robustness} gives descriptive checks (length quartiles, themes, a second grader on one seed, dimension correlations, two post hoc labelings). Appendix~\ref{app:harm} describes a clinician review that is not yet done.
     \item[] Guidelines:
     \begin{itemize}
         \item The answer \answerNA{} means that the paper has no limitation while the answer \answerNo{} means that the paper has limitations, but those are not discussed in the paper.
@@ -47,7 +47,7 @@
     \item {\bf Experimental result reproducibility}
     \item[] Question: Does the paper fully disclose all the information needed to reproduce the main experimental results of the paper to the extent that it affects the main claims and/or conclusions of the paper (regardless of whether the code and data are provided or not)?
     \item[] Answer: \answerYes{}
-    \item[] Justification: Appendix~\ref{app:hparams} gives the training and evaluation configuration of the submitted cell, read from the code that ran, and of the added cells. Values still pending a check against the saved adapter files are marked, and so are settings the launcher did not record (the production training config and the exact vLLM build). Decoding is greedy, and the seeds set the LoRA initialization, the data order, the split and the evaluation draw. Hardware is stated (TPU v6e-8 for training and A100-80GB for evaluation in the submitted cell; H100 for the added cells). Code and evaluation outputs are at \url{https://anonymous.4open.science/r/bodhi-lora-CEB5}; the adapters are not yet released.
+    \item[] Justification: Appendix~\ref{app:hparams} gives the training and evaluation configuration of the added cells and of the MedGemma-27B cell. The MedGemma-27B values come from the code that ran. Values still pending a check against the saved adapter files are marked, and so are settings the launcher did not record (the production training config and the exact vLLM build). Decoding is greedy, and the seeds set the LoRA initialization, the data order, the split and the evaluation draw. Hardware is stated (TPU v6e-8 for training and A100-80GB for evaluation in the MedGemma-27B cell; H100 for the added cells). Code and evaluation outputs are at \url{https://anonymous.4open.science/r/bodhi-lora-CEB5}; the adapters are not yet released.
     \item[] Guidelines:
     \begin{itemize}
         \item The answer \answerNA{} means that the paper does not include experiments.
@@ -66,7 +66,7 @@
 \item {\bf Open access to data and code}
     \item[] Question: Does the paper provide open access to the data and code, with sufficient instructions to faithfully reproduce the main experimental results, as described in supplemental material?
     \item[] Answer: \answerYes{}
-    \item[] Justification: Code, evaluation outputs of the submitted cell and analysis scripts are at \url{https://anonymous.4open.science/r/bodhi-lora-CEB5}; \texttt{make numbers} rebuilds the numbers of the submitted cell from them, except the filter-retention table, which also needs a training split that is not in the repository. The five adapters are not yet released, and the raw outputs of the added cells are not yet in the repository. HealthBench is public from OpenAI. MedGemma-27B and Llama-3.1-8B need a gated-model access request on Hugging Face; Qwen2.5-14B is open.
+    \item[] Justification: Code, evaluation outputs of the MedGemma-27B cell and analysis scripts are at \url{https://anonymous.4open.science/r/bodhi-lora-CEB5}; \texttt{make numbers} rebuilds the numbers of the MedGemma-27B cell from them, except the table of traces kept at a higher $\tau$, which also needs a training split that is not in the repository. The five adapters are not yet released, and the raw outputs of the added cells are not yet in the repository. HealthBench is public from OpenAI. MedGemma-27B and Llama-3.1-8B need a gated-model access request on Hugging Face; Qwen2.5-14B is open.
     \item[] Guidelines:
     \begin{itemize}
         \item The answer \answerNA{} means that paper does not include experiments requiring code.
@@ -82,7 +82,7 @@
 \item {\bf Experimental setting/details}
     \item[] Question: Does the paper specify all the training and test details (e.g., data splits, hyperparameters, how they were chosen, type of optimizer) necessary to understand the results?
     \item[] Answer: \answerYes{}
-    \item[] Justification: \S\ref{sec:method} describes trace generation, grading, filtering, LoRA fine-tuning, and evaluation. Appendix~\ref{app:hparams} gives a hyperparameter table for the submitted cell (rank, $\alpha$, dropout, batch size, learning-rate schedule, sequence length, hardware, seeds, grader models), with the values pending a check against the saved adapter files marked, and a separate table for the added cells.
+    \item[] Justification: \S\ref{sec:method} describes trace generation, grading, filtering, LoRA fine-tuning, and evaluation. Appendix~\ref{app:hparams} gives a hyperparameter table for the MedGemma-27B cell (rank, $\alpha$, dropout, batch size, learning-rate schedule, sequence length, hardware, seeds, grader models), with the values pending a check against the saved adapter files marked, and a separate table for the added cells.
     \item[] Guidelines:
     \begin{itemize}
         \item The answer \answerNA{} means that the paper does not include experiments.
@@ -175,7 +175,7 @@
 \item {\bf New assets}
     \item[] Question: Are new assets introduced in the paper well documented and is the documentation provided alongside the assets?
     \item[] Answer: \answerYes{}
-    \item[] Justification: The new assets are the code, the evaluation outputs of the submitted cell and the analysis scripts, at \url{https://anonymous.4open.science/r/bodhi-lora-CEB5}, with a README and a reproducibility guide. The five adapters are not yet released and have no model card yet.
+    \item[] Justification: The new assets are the code, the analysis scripts and the evaluation outputs of the MedGemma-27B cell. They are at \url{https://anonymous.4open.science/r/bodhi-lora-CEB5}, with a README and a reproducibility guide. The five adapters are not yet released and have no model card yet.
     \item[] Guidelines:
     \begin{itemize}
         \item The answer \answerNA{} means that the paper does not release new assets.
@@ -210,7 +210,7 @@
 \item {\bf Declaration of LLM usage}
     \item[] Question: Does the paper describe the usage of LLMs if it is an important, original, or non-standard component of the core methods in this research? Note that if the LLM is used only for writing, editing, or formatting purposes and does \emph{not} impact the core methodology, scientific rigor, or originality of the research, declaration is not required.
     \item[] Answer: \answerYes{}
-    \item[] Justification: LLMs are central to the methodology. MedGemma-27B-text-it is the base model being adapted; Qwen/Qwen2.5-14B-Instruct is the filter grader (\S\ref{sec:method}); Llama-3.1-8B-Instruct is the evaluation grader (\S\ref{sec:eval}). All model identifiers and versions are in Appendix~\ref{app:hparams}. Separately, the authors used AI assistants (large language models) for editing and drafting assistance during manuscript preparation; all scientific content, experimental design, analyses, and conclusions are the authors' own.
+    \item[] Justification: LLMs are central to the methodology. MedGemma-27B-text-it is the base model being adapted; Qwen/Qwen2.5-14B-Instruct is the filter grader (\S\ref{sec:method}); Llama-3.1-8B-Instruct is the evaluator (\S\ref{sec:eval}). All model identifiers and versions are in Appendix~\ref{app:hparams}. Separately, the authors used AI assistants (large language models) for editing and drafting assistance during manuscript preparation; all scientific content, experimental design, analyses, and conclusions are the authors' own.
     \item[] Guidelines:
     \begin{itemize}
         \item The answer \answerNA{} means that the core method development in this research does not involve LLMs as any important, original, or non-standard components.

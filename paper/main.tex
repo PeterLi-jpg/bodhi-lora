@@ -80,31 +80,33 @@
 \maketitle
 
 \begin{abstract}
-Careful clinicians ask for missing facts before they advise, name the warning signs that need
-urgent care, and say what an answer cannot cover. Clinical language models often answer at once
-instead. We study whether a model can learn these epistemic behaviors into its weights, for
-patient-facing, open-ended clinical questions. We contribute two things. The first is a
-decomposition of epistemic behavior into seven dimensions that an LLM grades from the response
-text: uncertainty acknowledgment, active inquiry, context-seeking, red-flag identification, scope
-bounding, hedging quality and specificity. The second is a recipe: the \bodhi{} chain-of-thought
-(CoT) protocol generates demonstrations, a rubric filter from one model family keeps the good ones,
-a LoRA adapter learns them, and an evaluator from a second family grades the result. On
-MedGemma-27B and \hbhard{} (\statNSeeds{} seeds, \statUniquePrompts{} unique prompts), the adapter
-without CoT raises active inquiry from \statActiveInquiryBase\% to \statActiveInquiryLoRA\%
-(difference \statActiveInquiryLoRAvsBaseDiff{} points, 95\% CI \statActiveInquiryLoRAvsBaseCI) and
-context-seeking from \statContextSeekingBase{} to \statContextSeekingLoRA{} on a 0--2 scale. In this
-cell we detect no change in the aggregate rubric score (\statHealthBenchLoRAvsBaseDiff, 95\% CI
-\statHealthBenchLoRAvsBaseCI). In the \statCellsAddedCompared{} added cells whose base model is
-outside the evaluator's family, active inquiry rises in \statCellsAddedAIRose{}; BioMistral-7B is a
-null result. The aggregate score falls in all \statCellsAddedWithAggregate{}, by
-\statCellsAddedDropMin{} to \statCellsAddedDropMax{} (values transcribed from posted results; raw
-outputs pending sync). The behavior gain therefore comes with an aggregate cost. Adding the CoT
-protocol to the adapted model changes the red-flag rate by \statRedFlagRateLoRACoTvsLoRADiff{}
-points (95\% CI \statRedFlagRateLoRACoTvsLoRACI); a post hoc analysis links the drop to the
-protocol's analysis format leaking into \statLeakagePctLoRACoT\% of the answers. All scores are
-LLM-graded. The physician check covers only the rubric criteria behind the aggregate score: the
-one physician who returned grades agrees with the grader at $\kappa = \statKappaAll$, below our
-pre-registered target of 0.6. No physician has checked the seven behavior grades.
+Careful clinicians ask for missing facts before they advise. They name the warning signs that
+need urgent care, and they say what an answer cannot cover. Clinical language models often answer
+at once instead. We study whether a model can learn these epistemic behaviors into its weights,
+for patient-facing, open-ended clinical questions. We contribute two things. The first is a
+decomposition of epistemic behavior into seven dimensions, which an LLM grades from the response
+text. The dimensions are uncertainty acknowledgment, active inquiry, context-seeking, red-flag
+identification, scope bounding, hedging quality and specificity. The second is a recipe. The
+\bodhi{} chain-of-thought (CoT) protocol generates training traces, and a filter grader from one
+model family keeps the good ones. A LoRA adapter learns them, and an evaluator from a second model
+family grades the result. On MedGemma-27B and \hbhard{} (\statNSeeds{} seeds, \statUniquePrompts{}
+unique prompts), the adapter without CoT raises active inquiry from \statActiveInquiryBase\% to
+\statActiveInquiryLoRA\% (difference \statActiveInquiryLoRAvsBaseDiff{} percentage points, 95\% CI
+\statActiveInquiryLoRAvsBaseCI). It raises context-seeking from \statContextSeekingBase{} to
+\statContextSeekingLoRA{} on a 0--2 scale. In this cell we detect no change in the aggregate score
+on the HealthBench rubrics (\statHealthBenchLoRAvsBaseDiff, 95\% CI \statHealthBenchLoRAvsBaseCI).
+We also ran the recipe with other base models and benchmarks (added cells). In the
+\statCellsAddedCompared{} added cells whose base model is outside the evaluator's family, active
+inquiry rises in \statCellsAddedAIRose{}. BioMistral-7B is a null result. The aggregate score falls
+in all \statCellsAddedWithAggregate{}, by \statCellsAddedDropMin{} to \statCellsAddedDropMax{}
+(values transcribed from posted results; raw outputs pending sync). So the behavior gain comes with
+an aggregate cost. Adding the CoT protocol to the adapter changes the red-flag rate by
+\statRedFlagRateLoRACoTvsLoRADiff{} percentage points (95\% CI \statRedFlagRateLoRACoTvsLoRACI). A
+post hoc analysis links this drop to the protocol's analysis format, which leaks into
+\statLeakagePctLoRACoT\% of the responses. All scores are LLM-graded. The physician check covers
+only the rubric criteria behind the aggregate score. The one physician who returned grades agrees
+with the evaluator at $\kappa = \statKappaAll$, below our pre-registered target of 0.6. No
+physician has checked the seven dimensions.
 \end{abstract}
 
 \smallskip
@@ -117,56 +119,58 @@ pre-registered target of 0.6. No physician has checked the seven behavior grades
 
 A clinical language model that scores well on multiple-choice benchmarks may still answer a
 patient's question without asking for the facts it needs. Careful clinicians ask before they
-advise, hedge where the evidence is thin, name danger signs, and say when the patient needs an
+advise, hedge where the evidence is thin, name warning signs, and say when the patient needs an
 examination. Medical education treats tolerance of uncertainty as part of expert judgment
-\citep{simpkin2016tolerating}, and safety-netting (telling a patient what to watch for and when to
-return) as a core clinical skill \citep{jones2019safety}. Language models tuned with human feedback
-give poorly calibrated token probabilities \citep{tian2023just}, and when they state their
-confidence in words they tend to be overconfident \citep{xiong2024can}. Clinical models are mostly
-evaluated on narrow tasks that say little about their use in care \citep{wornow2023shaky}, and
-aggregate clinical scores mix \emph{what} a model knows with \emph{how} it communicates, so a
-response that omits a warning sign can score as well as one that names it.
+\citep{simpkin2016tolerating}. It also treats safety-netting, which tells a patient what to watch
+for and when to return, as a core clinical skill \citep{jones2019safety}. Language models tuned
+with human feedback give poorly calibrated token probabilities \citep{tian2023just}. When they
+state their confidence in words, they tend to be overconfident \citep{xiong2024can}. Most
+evaluations of clinical models use narrow tasks that say little about their use in care
+\citep{wornow2023shaky}. Aggregate clinical scores also mix \emph{what} a model knows with
+\emph{how} it communicates. So a response that omits a warning sign can score as well as a
+response that names it.
 
 Our starting point is the \bodhi{} protocol (\textbf{B}alanced, \textbf{O}pen-minded,
 \textbf{D}iagnostic, \textbf{H}umble, \textbf{I}nquisitive) \citep{bodhi2026}, a two-pass
 chain-of-thought (CoT) protocol. Pass~1 writes an internal analysis with seven fields: task type,
 audience, best assessment, key uncertainties, questions to ask, red flags and safe recommendations.
-Pass~2 writes the answer from that analysis. The protocol elicits the target
-behaviors at inference time, but it needs two generation passes, and in our evaluation the two
-passes overran the context window on \statCompletionDropPctBaseCoT\% of prompts. We use the
-protocol as a source of demonstrations instead, and ask whether a LoRA adapter can learn the
-behaviors so that the protocol is not needed at deployment.
+Pass~2 writes the response from that analysis. The protocol elicits the target behaviors at
+inference time, but it needs two generation passes. In our evaluation, they overran the context
+window on \statCompletionDropPctBaseCoT\% of prompts. We use the protocol as a source of
+training traces instead. We ask whether a LoRA adapter can learn the behaviors, so that deployment
+does not need the protocol.
 
 Our setting is patient-facing, open-ended clinical question answering. In \hbhard{},
-\statPostedClinicianPrompts{} of \statHardPrompts{} prompts say that the speaker is a clinician
+\statPostedClinicianPrompts{} of \statHardPrompts{} prompts say that the user is a clinician
 (explicit self-identification only, so this is a lower bound). We do not study clinician-posed
-settings such as MIMIC or eICU, and we do not measure calibration in the statistical sense: we
-measure behaviors that are visible in the answer.
+settings such as MIMIC or eICU. We do not measure calibration in the statistical sense. We measure
+behaviors that are visible in the response.
 
 Our contributions:
 \begin{enumerate}[leftmargin=*]
     \item A decomposition of epistemic behavior into seven dimensions, graded from the response
-    text, with a grading design that separates model families: a Qwen2.5-14B filter selects the
-    training data and a Llama-3.1-8B evaluator grades the results (\S\ref{sec:method}). The
-    separation removes the most direct route to circularity. It does not rule out correlated
-    grading preferences, and the grades are not clinically validated (\S\ref{sec:eval}).
+    text. The grading design separates model families. A filter grader, Qwen2.5-14B-Instruct,
+    selects the training data, and an evaluator, Llama-3.1-8B-Instruct, grades the results
+    (\S\ref{sec:method}). The separation removes the most direct route to circularity. It does not
+    rule out correlated grading preferences, and the grades are not clinically validated
+    (\S\ref{sec:eval}).
     \item A recipe (generate, grade, filter, distill) and its evaluation on MedGemma-27B over
     \statNSeeds{} seeds, with the seed as the unit of every test. Without CoT at inference, the
     adapter raises active inquiry, context-seeking, red-flag identification and scope bounding
-    (Holm-adjusted $p \leq \statScopeBoundingLoRAvsBasePHolm$). In added cells with other base
-    models and benchmarks, the rise in active inquiry repeats in \statCellsAddedAIRose{} of
-    \statCellsAddedCompared{} cells outside the evaluator's family, and the aggregate rubric score
+    (Holm-adjusted $p \leq \statScopeBoundingLoRAvsBasePHolm$). We also ran added cells with other
+    base models and benchmarks. Outside the evaluator's family, the rise in active inquiry repeats
+    in \statCellsAddedAIRose{} of \statCellsAddedCompared{} added cells, and the aggregate score
     falls in all \statCellsAddedWithAggregate{} of them (\S\ref{sec:cells}). We report this
     trade-off next to the gain.
-    \item A diagnosis of a failure mode: adding the CoT protocol to the adapted model lowers the
-    red-flag rate. A post hoc analysis ties the drop to the protocol's analysis format leaking into
-    the answer (\S\ref{sec:interference}).
+    \item A diagnosis of a failure mode: adding the CoT protocol to the adapter lowers the
+    red-flag rate. A post hoc analysis links the drop to the Pass~1 analysis format, which leaks into the
+    response (\S\ref{sec:interference}).
 \end{enumerate}
 
 \noindent What we show is limited to one CoT protocol, one fine-tuning method and patient-facing
 questions where facts can be missing. We conjecture that other structured protocols that elicit
 gradable behaviors, and other parameter-efficient methods, can fill the same two roles. We have
-not tested this conjecture.
+not tested it.
 
 %======================================================================
 \section{Related Work}
@@ -174,44 +178,45 @@ not tested this conjecture.
 %======================================================================
 
 \paragraph{Calibration and confidence in language models.} \citet{kadavath2022language} showed
-that large models are well calibrated on multiple-choice questions and can be trained to predict
-whether they know an answer. After tuning with human feedback \citep{ouyang2022training}, token
-probabilities are poorly calibrated, and confidence stated in words is often better
-\citep{tian2023just}, although it still tends toward overconfidence \citep{xiong2024can}.
-\citet{lin2022teaching} fine-tuned a model to state its confidence in words, and
-\citet{tian2023just} got similar effects from prompting alone. These works target numerical
-confidence. We target behaviors in the answer (hedging, asking, declining), and we do not measure
+that large models are well calibrated on multiple-choice questions. They also showed that models
+can be trained to predict whether they know an answer. After tuning with human feedback
+\citep{ouyang2022training}, token probabilities are poorly calibrated. Confidence stated in words
+is often better \citep{tian2023just}, although it still tends toward overconfidence
+\citep{xiong2024can}. \citet{lin2022teaching} fine-tuned a model to state its confidence in words,
+and \citet{tian2023just} got similar effects from prompting alone. These works target numerical
+confidence. We target behaviors in the response (hedging, asking, declining), and we do not measure
 calibration in the statistical sense. A model can have a low expected calibration error and still
-omit the safety-netting questions a practitioner would ask.
+omit the safety-netting questions that a clinician would ask.
 
 \paragraph{Clinical epistemic behaviors.} \citet{simpkin2016tolerating} argue that clinicians must
 learn to act well under uncertainty that they cannot remove, instead of seeking false certainty.
-Safety-netting, telling patients what to watch for and when to return \citep{jones2019safety}, is
-a core clinical behavior; our red-flag and scope-bounding dimensions put it into a grading rubric.
-\citet{wornow2023shaky} review clinical foundation models and find that most are evaluated on
+Safety-netting, which tells patients what to watch for and when to return \citep{jones2019safety},
+is a core clinical skill. Our red-flag and scope-bounding dimensions put it into a grading rubric.
+\citet{wornow2023shaky} review clinical foundation models. They find that most are evaluated on
 tasks that say little about their value to health systems.
 
 \paragraph{Medical LLM evaluation.} Standard medical benchmarks (MedQA, MMLU-Medical) test factual
 accuracy with multiple-choice questions. HealthBench \citep{healthbench2025} grades open-ended
-answers against expert rubrics with positive criteria (correct content, appropriate referral) and
-negative criteria (dangerous advice, false reassurance, failure to escalate). It penalizes both
-overconfidence and unhelpful hedging. We use its grading protocol, escape template delimiters in
-graded text, and grade with a model family other than the filter's.
+responses against expert rubrics. The rubrics have positive criteria (correct content, appropriate
+referral) and negative criteria (dangerous advice, false reassurance, failure to escalate).
+HealthBench penalizes both overconfidence and unhelpful hedging. We use the HealthBench grading
+protocol, and we escape template delimiters in graded text. Our evaluator's model family differs
+from the filter grader's.
 
-\paragraph{Training on generated demonstrations.} Chain-of-thought prompting \citep{wei2022chain}
+\paragraph{Training on model-generated data.} Chain-of-thought prompting \citep{wei2022chain}
 changes behavior at inference, at a cost in tokens on every call. Constitutional AI
 \citep{bai2022constitutional} moves a prompted behavior into the weights through self-critique
-against written principles, and STaR \citep{zelikman2022star} fine-tunes on model-generated
-rationales filtered on correctness (\S\ref{sec:prior} compares both with our recipe). Self-play and
+against written principles. STaR \citep{zelikman2022star} fine-tunes on model-generated rationales
+filtered on correctness. \S\ref{sec:prior} compares both with our recipe. Self-play and
 self-rewarding methods \citep{chen2024selfplay, yuan2024selfrewarding} train on the model's own
 samples, often with a preference objective such as DPO \citep{rafailov2023direct}. Process reward
 models \citep{lightman2024lets} grade single reasoning steps; our filter grades whole responses.
 RLAIF \citep{lee2024rlaif} shows that AI labels can stand in for human ones. In standard and
 chain-of-thought distillation \citep{hinton2015distilling, ho2023large, magister2023teaching}, a
-larger teacher trains a smaller student; here the teacher and the student are the same model under
+larger teacher trains a smaller student. Here the teacher and the student are the same model under
 different inference conditions. We use LoRA \citep{hu2022lora} to change behavior, not to add
-knowledge; variants include QLoRA \citep{dettmers2023qlora}, DoRA \citep{liu2024dora} and rsLoRA
-\citep{kalajdzievski2023scaling}.
+knowledge. LoRA variants include QLoRA \citep{dettmers2023qlora}, DoRA \citep{liu2024dora} and
+rsLoRA \citep{kalajdzievski2023scaling}.
 
 %======================================================================
 \section{Method}
@@ -220,62 +225,64 @@ knowledge; variants include QLoRA \citep{dettmers2023qlora}, DoRA \citep{liu2024
 
 \subsection{Overview}
 
-Given a base model $M$, a structured CoT protocol $C$ that elicits target behaviors from $M$, and
-a rubric $R$ that scores the outputs of $C(M)$, the recipe has four steps:
+The recipe uses a base model $M$ and a structured CoT protocol $C$ that elicits target behaviors
+from $M$. A rubric $R$ scores the outputs of $C(M)$. The recipe has four steps:
 
 \begin{enumerate}[leftmargin=*,itemsep=1pt]
-    \item \textbf{Generate}: run $C(M)$ on a prompt set $\mathcal{P}$ to produce demonstrations $\{(x_i, y_i)\}$.
-    \item \textbf{Grade}: score each demonstration $y_i$ against $R$, giving scores $\{s_i\}$.
-    \item \textbf{Filter}: keep demonstrations with $s_i \geq \tau$, giving $\mathcal{D} = \{(x_i, y_i) : s_i \geq \tau\}$.
+    \item \textbf{Generate}: run $C(M)$ on a prompt set $\mathcal{P}$ to produce traces $\{(x_i, y_i)\}$.
+    \item \textbf{Grade}: score each trace $y_i$ against $R$, giving scores $\{s_i\}$.
+    \item \textbf{Filter}: keep traces with $s_i \geq \tau$, giving $\mathcal{D} = \{(x_i, y_i) : s_i \geq \tau\}$.
     \item \textbf{Distill}: fine-tune $M$ on $\mathcal{D}$ with LoRA, giving $M + \Delta C$, which should
     show the behavior of $C(M)$ without $C$ at inference.
 \end{enumerate}
 
 The recipe assumes that $C(M)$ produces outputs of varying quality and that $R$ can tell good
-demonstrations from failures. We use $M$ = MedGemma-27B-text-it, $C$ = the \bodhi{} CoT protocol,
+traces from failures. We use $M$ = MedGemma-27B-text-it, $C$ = the \bodhi{} CoT protocol,
 $R$ = the HealthBench expert rubrics, $\tau = 0.4$ and $\Delta C$ = LoRA ($r{=}8$).
 Figure~\ref{fig:pipeline} shows the pipeline and the $2{\times}2$ evaluation design.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{figures/pipeline.pdf}
-\caption{Training pipeline (top) and evaluation design (bottom). The pipeline generates
-demonstrations with the \bodhi{} CoT protocol, grades them against HealthBench rubrics with
-Qwen2.5-14B, keeps traces with $s\geq0.4$, and distills them into a LoRA adapter. The evaluation is
-a $2{\times}2$ design: the base model and the adapter, each with and without the CoT protocol, on
-200 prompts per seed drawn from the \statHardPrompts{} held-out \hbhard{} prompts. The LoRA condition does not use the CoT protocol
-at inference.}
+\caption{Training pipeline (top) and evaluation design (bottom). The pipeline generates traces
+with the \bodhi{} CoT protocol. The filter grader, Qwen2.5-14B-Instruct, grades them against
+HealthBench rubrics. The pipeline keeps traces with $s\geq0.4$ and distills them into a LoRA
+adapter. The evaluation is a $2{\times}2$ design: the base model and the adapter, each with and
+without the CoT protocol. Each seed draws 200 prompts from the \statHardPrompts{} held-out
+\hbhard{} prompts. The LoRA condition does not use the CoT protocol at inference.}
 \label{fig:pipeline}
 \end{figure}
 
 \subsection{Trace Generation, Grading and Filtering}
 
-We run the two-pass \bodhi{} protocol on MedGemma-27B-text-it over the \statFilterPool{}
-HealthBench prompts that are not in the Hard set, with greedy decoding in vLLM
-\citep{kwon2023efficient} on TPU v6e. A preflight gate checks that no Hard prompt id enters
-training. In the one training split kept in the repository (seed 7, \statFilterTrainNSeedSeven{}
-traces), the overlap with the Hard set is \statTrainHardOverlapSeedSeven{} prompt ids. Each trace keeps the
-Pass~1 analysis (not used for training) and the Pass~2 answer (the training target).
+We run the \bodhi{} protocol on MedGemma-27B over the \statFilterPool{} HealthBench prompts that
+are not in \hbhard{}. Generation uses greedy decoding in vLLM \citep{kwon2023efficient} on TPU
+v6e. A preflight gate checks that no \hbhard{} prompt id enters training. In the one training split
+in the repository (seed 7, \statFilterTrainNSeedSeven{} traces), the overlap with \hbhard{} is
+\statTrainHardOverlapSeedSeven{} prompt ids. Each trace keeps the Pass~1 analysis
+(not used for training) and the Pass~2 response (the training target).
 
-A grader LLM (Qwen2.5-14B-Instruct) judges each rubric criterion as met or not met, and we compute
+The filter grader, Qwen2.5-14B-Instruct, judges each rubric criterion as met or not met. From
+these judgments we compute the score
 \begin{equation}
-    s = \frac{p_{\text{earned}} - p_{\text{neg}}}{p_{\text{pos}} - p_{\text{neg}}}
+    s = \frac{p_{\text{earned}} - p_{\text{neg}}}{p_{\text{pos}} - p_{\text{neg}}}.
     \label{eq:score}
 \end{equation}
-where $p_{\text{pos}}$ and $p_{\text{neg}}$ are the sums of positive and negative rubric points and
-$p_{\text{earned}}$ is the sum over met criteria, so $s\in[0,1]$. We keep traces with $s \geq 0.4$.
-We fixed $\tau = 0.4$ before the \hbhard{} evaluation and used it for all five seeds. It removes
-failures rather than selecting only the best traces (Table~\ref{tab:tau-calibration}). We did not
-run an ablation over $\tau$.
+Here $p_{\text{pos}}$ is the sum of positive rubric points, $p_{\text{neg}}$ is the sum of
+negative rubric points, and $p_{\text{earned}}$ is the sum over met criteria. So $s\in[0,1]$. We
+keep traces with $s \geq 0.4$. We fixed $\tau = 0.4$ before the \hbhard{} evaluation and used it
+for all five seeds. This threshold removes failures. It does not select only the best traces
+(Table~\ref{tab:tau-calibration}). We did not run an ablation over $\tau$.
 
-\paragraph{Separate grader families.} Our first runs graded both steps with one model family. We
-then moved the evaluator to Llama-3.1-8B (\S\ref{sec:eval}), so that the family that selects the
-training data (Qwen2.5-14B) does not also grade the results. This removes the most direct route to
-circularity, a metric that partly measures agreement with the selector. It does not rule out
-grading preferences that the two families share, and it gives no clinical validity. We used general
-instruction models, as HealthBench does \citep{healthbench2025}, because the design rule was family
-separation; whether a clinically tuned judge would grade differently is untested. Two of the added
-cells (\S\ref{sec:cells}) use Med42-8B, a Llama-3 model, and so break this separation.
+\paragraph{Separate grader families.} Our first runs used one model family for the filter grader
+and for the evaluation. We then moved the evaluator to Llama-3.1-8B-Instruct (\S\ref{sec:eval}).
+So the family that selects the training data (Qwen2.5-14B) does not also grade the results. This
+removes the most direct route to circularity, a metric that partly measures agreement with the
+filter grader. It does not rule out grading preferences that the two families share, and it gives
+no clinical validity. We used general instruction models, as HealthBench does
+\citep{healthbench2025}, because the design rule was family separation. We did not test whether a
+clinically tuned grader would grade differently. Two of the added cells (\S\ref{sec:cells}) use
+Med42-8B, a Llama-3 model, so they break this separation.
 
 \subsection{LoRA Fine-Tuning}
 
@@ -284,166 +291,172 @@ cells (\S\ref{sec:cells}) use Med42-8B, a Llama-3 model, and so break this separ
 % Table~\ref{tab:hparams}. PENDING: confirm r, alpha, target modules and the exported
 % step against the five GCS adapter_config.json / trainer files.
 We fine-tune MedGemma-27B with LoRA ($r{=}8$, $\alpha{=}16$, dropout 0.05) on the attention query,
-key and value projections, with the loss on response tokens only. Training uses JAX (tunix) on one
-TPU v6e-8 host per seed, with the base sharded over the 8 chips (FSDP). The optimizer is AdamW at a
+key and value projections. The loss uses response tokens only. Training uses JAX (tunix) on one TPU
+v6e-8 host per seed, with the base sharded over the 8 chips (FSDP). The optimizer is AdamW at a
 constant learning rate of $10^{-4}$, with no warmup and no decay. Each optimizer step uses 64
-examples, the maximum sequence length is 2,048 tokens, and training runs for 300 optimizer steps,
-about 6 to 7 passes over the training split. We train 5 adapters (seeds 42, 7, 13, 99, 101).
-Appendix~\ref{app:hparams} gives the full configuration. The added cells (\S\ref{sec:cells}) used a
-different training stack and recipe: PyTorch with PEFT and TRL on one H100 GPU, $r{=}16$ and
-$\alpha{=}32$ (Table~\ref{tab:hparams-cells}).
+examples, and the maximum sequence length is 2,048 tokens. Training runs for 300 optimizer steps,
+about 6 to 7 epochs over the training split. We train 5 adapters (seeds 42, 7, 13, 99, 101).
+Table~\ref{tab:hparams} in Appendix~\ref{app:hparams} gives the full configuration. The added cells
+(\S\ref{sec:cells}) used another training stack and recipe: PyTorch with PEFT and TRL on one H100
+GPU, with $r{=}16$ and $\alpha{=}32$ (Table~\ref{tab:hparams-cells}).
 
 \subsection{Evaluation}
 \label{sec:eval}
 
 \paragraph{Test set and seeds.} Each seed draws 200 of the \statHardPrompts{} \hbhard{} prompts,
-and its four conditions share that draw. No Hard prompt is used in training. The draws overlap:
-the \statPromptEvaluations{} draws per condition cover \statUniquePrompts{} unique prompts, and
-\statRepeatedPrompts{} prompts appear in more than one seed. A seed sets the LoRA initialization,
-the data order, the dropout masks, the train/validation split and the evaluation draw. It does not
-vary the teacher traces or their filter scores: we generated the traces once and graded them
-greedily.
+and its four conditions share that draw. No \hbhard{} prompt is used in training. The draws
+overlap. The \statPromptEvaluations{} draws per condition cover \statUniquePrompts{} unique
+prompts, and \statRepeatedPrompts{} prompts appear in more than one seed. A seed sets the LoRA
+initialization, the data order, the dropout masks, the train/validation split and the evaluation
+draw. It does not vary the teacher traces or their filter scores. We generated the traces once and
+graded them with greedy decoding.
 
-\paragraph{Conditions.} The $2 \times 2$ design has four conditions per seed: Base, Base+\bodhi{}
-(the base model with the CoT protocol, which is also the teacher), LoRA (no CoT) and LoRA+\bodhi{}.
-It separates the effect of the protocol on the base model, the effect of fine-tuning, and their
-interaction.
+\paragraph{Conditions.} The $2 \times 2$ design separates the effect of the protocol on the base
+model, the effect of fine-tuning, and their interaction. Its four conditions per seed are Base,
+Base+\bodhi{}, LoRA (no CoT) and LoRA+\bodhi{}. Base+\bodhi{}, the base model with the CoT
+protocol, is also the teacher.
 
-\paragraph{Grading.} Llama-3.1-8B-Instruct grades every response twice: once per HealthBench
-rubric criterion, which gives the aggregate score of Eq.~\ref{eq:score}, and once on the seven
-epistemic dimensions. Generation ran in vLLM on A100-80GB GPUs (Modal) with a 4,096-token context
-and greedy decoding, with the adapter merged into the base weights.
+\paragraph{Grading.} The evaluator, Llama-3.1-8B-Instruct, grades every response twice. The rubric
+grading judges each HealthBench rubric criterion, and Eq.~\ref{eq:score} gives the aggregate score.
+The epistemic grading scores the seven epistemic dimensions. Generation ran in vLLM on A100-80GB
+GPUs (Modal), with a 4,096-token context and greedy decoding. The adapter was merged into the base
+weights.
 
-\paragraph{Seven epistemic dimensions.} The epistemic pass grades (1) uncertainty acknowledgment
-(0--2), (2) active inquiry (whether the answer asks at least one direct clarifying question), (3)
-context-seeking (0--2), (4) red-flag identification (0--2), (5) scope bounding (0--2), (6)
-specificity (0--2) and (7) hedging quality (0--2, with flags for appropriate hedging and for a
-blanket disclaimer). The dimensions cover three functions. \emph{Self-assessment} (uncertainty
-acknowledgment, hedging quality, specificity) asks whether the answer represents what the model
-does and does not know. \emph{Information-seeking} (active inquiry, context-seeking) asks whether
-it gathers missing facts before it advises \citep{simpkin2016tolerating}. \emph{Risk management}
-(red-flag identification, scope bounding) covers safety-netting \citep{jones2019safety}. Every
-dimension is visible in text without clinical outcomes. The grader's anchors address the person
-who asks (for example ``Are you experiencing chest pain right now?''), so no dimension assumes a
-clinician reader. Appendix~\ref{app:dimensions} quotes the anchors and gives an example for each
-dimension. The grader does not always follow its anchors. The context-seeking anchor allows a 2
-only when the answer asks a direct question, but \statContextSeekingTwoNoQuestionPctBase\% of the
-Base answers graded 2 ask none (\statContextSeekingTwoNoQuestionPctLoRA\% under LoRA). So
-context-seeking also credits answers that only discuss missing facts, and active inquiry is the
+\paragraph{Seven epistemic dimensions.} The epistemic grading scores six dimensions from 0 to 2:
+uncertainty acknowledgment, context-seeking, red-flag identification, scope bounding, specificity
+and hedging quality. For hedging quality, it also flags appropriate hedging and blanket
+disclaimers. The seventh dimension, active inquiry, records whether the response asks at least one
+direct clarifying question. The dimensions cover three functions. \emph{Self-assessment}
+(uncertainty acknowledgment, hedging quality, specificity) asks whether the response represents
+what the model does and does not know. \emph{Information-seeking} (active inquiry,
+context-seeking) asks whether it gathers missing facts before it advises
+\citep{simpkin2016tolerating}. \emph{Risk management} (red-flag identification, scope bounding)
+covers safety-netting \citep{jones2019safety}. Every dimension is visible in the response text,
+without clinical outcomes. The anchors in the evaluator's prompt address the user (for example
+``Are you experiencing chest pain right now?''). So no dimension assumes a clinician reader.
+Appendix~\ref{app:dimensions} quotes the anchors and gives an example for each dimension. The
+evaluator does not always follow its anchors. The context-seeking anchor allows a 2 only when the
+response asks a direct question. But \statContextSeekingTwoNoQuestionPctBase\% of the Base
+responses graded 2 ask none (\statContextSeekingTwoNoQuestionPctLoRA\% under LoRA). So
+context-seeking also credits responses that only discuss missing facts. Active inquiry is the
 stricter measure of asking.
 
 \paragraph{Where the dimensions come from.} We chose the seven dimensions by informal consensus in
-the author group, which includes three practising physicians, with the literature above as the
-grounding. We used no formal method (no Delphi round, no content-validity index). We left out
-empathy and depth of patient education, because they mix what is said with how well the answer
-represents uncertainty. The dimensions follow the behaviors that the protocol asks for, by design,
-so they test whether the adapter learned those behaviors, not whether the behaviors help patients.
-The cited source expands \bodhi{} as Balanced, Open-minded, Diagnostic, Humble and Inquisitive, and
-defines two virtues, curiosity and humility, but not the five components one by one
-\citep{bodhi2026}. Our mapping is therefore partial: Inquisitive covers active inquiry and
-context-seeking; Humble covers uncertainty acknowledgment, hedging quality and scope bounding;
-Diagnostic covers red-flag identification and specificity; Balanced and Open-minded have no
-dimension of their own (Table~\ref{tab:bodhi-map}). The grader prompt names the \bodhi{} protocol
-as the source of these behaviors, but the grader is not told the condition.
+the author group, which includes three practising physicians. We based the choice on the
+literature above. We used no formal method (no Delphi round, no content-validity index). We left
+out empathy and depth of patient education, because they mix what is said with how well the
+response represents uncertainty. By design, the dimensions follow the behaviors that the protocol
+asks for. So they test whether the adapter learned those behaviors, not whether the behaviors help
+patients. The cited source expands \bodhi{} as Balanced, Open-minded, Diagnostic, Humble and
+Inquisitive. It defines two virtues, curiosity and humility, but it does not define the five
+components one by one \citep{bodhi2026}. So our mapping of dimensions to components is partial
+(Table~\ref{tab:bodhi-map}). Balanced and Open-minded have no dimension of their own. The
+evaluator's prompt names the \bodhi{} protocol as the source of these behaviors, but the evaluator
+is not told the condition.
 
 \paragraph{Statistical analysis.} The seed is the unit of inference. For each contrast between two
-conditions, we take the five per-seed differences of condition means and report their mean with a
-95\% $t$ interval (4 df) and a paired $t$-test. Within each contrast we correct the seven
-dimensions with Holm's method. Pooled Cohen's $d$ over responses is descriptive; its 95\% interval
-comes from a bootstrap that resamples prompt ids, because the draws overlap. We set no equivalence
-margin, so a non-significant difference is not evidence that two conditions are equal.
-Appendix~\ref{app:stats} gives every contrast.
+conditions, we take the five per-seed differences of condition means. We report their mean with a
+95\% $t$ interval (4 df) and a paired $t$-test. Within each contrast, Holm's method corrects for
+the seven dimensions; we write the adjusted value as $p_{\text{Holm}}$. Pooled Cohen's $d$ over
+responses is descriptive. Its 95\% interval comes from a bootstrap that resamples prompt ids,
+because the draws overlap. We set no equivalence margin, so a non-significant difference is not
+evidence that two conditions are equal. Table~\ref{tab:seed-contrasts} in Appendix~\ref{app:stats}
+gives every contrast.
 
-\paragraph{Grading failures.} The epistemic grader failed to parse \statEpistemicParseFailPctBase\%
-to \statEpistemicParseFailPctMax\% of the graded responses, depending on the condition
-(Table~\ref{tab:counts}); those responses leave the epistemic means. A worst-case analysis gives
-every failed or missing grade the worst value of its scale (Table~\ref{tab:worst-case}). The
-HealthBench grader failed on at most \statHealthBenchParseFailPctMaxRun\% of the criteria in any
-run, and a failed criterion counts as not met.
+\paragraph{Grading failures.} In the epistemic grading, we could not parse the evaluator's output
+for \statEpistemicParseFailPctBase\% to \statEpistemicParseFailPctMax\% of the graded responses,
+depending on the condition (Table~\ref{tab:counts}). These responses are left out of the epistemic
+means. A worst-case analysis gives every failed or missing grade the worst value of its scale
+(Table~\ref{tab:worst-case}). In the rubric grading, the evaluator failed on at most
+\statHealthBenchParseFailPctMaxRun\% of the criteria in any run. A failed criterion counts as not
+met.
 
 \paragraph{Physician check.} The pre-registered check needed at least two physicians and
-$\kappa \geq 0.6$ against their consensus. As run, it grades HealthBench rubric criteria, which
-give the aggregate score and the filter score; it does not grade the seven dimensions. Of the three
-physicians, \statKappaRaters{} returned grades. On \statKappaAllN{} criterion rows from
-\statKappaPrompts{} prompts, Cohen's $\kappa$ between that physician and the Llama grader is
-\statKappaAll{} (95\% CI \statKappaAllCI, bootstrap over prompts), below the target. We record this
-amendment in Appendix~\ref{app:human}. No physician graded the seven dimensions, so every epistemic
-result in this paper is LLM-graded and not clinically validated.
+$\kappa \geq 0.6$ against their consensus. As run, the check grades HealthBench rubric criteria,
+which give the aggregate score and the filter score. It does not grade the seven dimensions. Of the
+three physicians, \statKappaRaters{} returned grades. On \statKappaAllN{} criterion rows from
+\statKappaPrompts{} prompts, Cohen's $\kappa$ between that physician and the evaluator is
+\statKappaAll{} (95\% CI \statKappaAllCI, bootstrap over prompts). This is below the target.
+Appendix~\ref{app:human} records this amendment. No physician graded the seven dimensions. So
+every epistemic result in this paper is LLM-graded and not clinically validated.
 
 %======================================================================
 \section{Results}
 \label{sec:results}
 %======================================================================
 
-\subsection{The Submitted Cell: Behavior and Aggregate Score}
+\subsection{The MedGemma-27B Cell: Behavior and Aggregate Score}
 \label{sec:main}
 
 \begin{table}[t]
 \centering
-\caption{\hbhard{} aggregate rubric score (Eq.~\ref{eq:score}), graded by Llama-3.1-8B-Instruct.
-Score is the mean of the five seed means, with a 95\% $t$ interval over seeds (4 df). $n$ (pooled)
-counts completions over the five seeds of 200 drawn prompts each; $n$/seed gives the range per
-seed. Only the two \bodhi{} conditions lose prompts: their two passes can exceed the 4{,}096-token
-context of the evaluation server, so \statCompletionDropPctBaseCoT\% and
-\statCompletionDropPctLoRACoT\% of drawn prompts get no answer. Base and LoRA answer every prompt.}
+\caption{\hbhard{} aggregate score (Eq.~\ref{eq:score}), graded by the evaluator,
+Llama-3.1-8B-Instruct. Score is the mean of the five seed means, with a 95\% $t$ interval over
+seeds (4 df). $n$ (pooled) counts responses over the five seeds of 200 drawn prompts each, and
+$n$/seed gives the range per seed. Only the two \bodhi{} conditions lose prompts. Their two passes
+can exceed the 4{,}096-token context of the evaluation server, so \statCompletionDropPctBaseCoT\%
+and \statCompletionDropPctLoRACoT\% of drawn prompts get no response. Base and LoRA lose no
+prompts.}
 \label{tab:main}
 \input{generated/tab_main_healthbench}
 \end{table}
 
 \begin{table}[t]
 \centering
-\caption{Epistemic behavior scores, graded by Llama-3.1-8B-Instruct (LLM-graded; see
-\S\ref{sec:eval} for the physician check). Each value is the mean of the five seed means, with the
-cross-seed SD as subscript. Top: dimensions graded 0--2. Bottom: rates (\%) and questions per
-response. Arrows give the desirable direction for every row: $\uparrow$ higher is better,
-$\downarrow$ lower is better. Blanket disclaimer is the only $\downarrow$ row. Red-flag
-identification and red-flag rate are $\uparrow$ because they measure sensitivity to warning signs
-that need escalation. Neither captures \emph{false positives}: a model that flagged every prompt
-would also score high. Measuring over-flagging needs a labelled set of prompts with no true red
-flag, which we leave to future work. The last row gives the responses with a parsed grade.}
+\caption{Epistemic behavior scores, graded by the evaluator, Llama-3.1-8B-Instruct (LLM-graded;
+\S\ref{sec:eval} describes the physician check). Each value is the mean of the five seed means,
+with the cross-seed SD as subscript. Top: dimensions graded 0--2. Bottom: rates (\%) and questions
+per response. Arrows give the better direction for every row: $\uparrow$ means higher is better,
+and $\downarrow$ means lower is better. Blanket disclaimer is the only $\downarrow$ row. Red-flag
+identification and red-flag rate are $\uparrow$, because they measure sensitivity to warning signs
+that need escalation. Neither captures \emph{false positives}. A model that flagged every prompt
+would also score high. A test of over-flagging needs a labelled set of prompts with no true red
+flag, and we leave it to future work. The last row gives the responses with a parsed grade.}
 \label{tab:epistemic}
 \input{generated/tab_epistemic}
 \end{table}
 
+Table~\ref{tab:main} gives the aggregate score in the four conditions. Table~\ref{tab:epistemic}
+gives the seven dimensions, and Figure~\ref{fig:epistemic_bar} in Appendix~\ref{app:perseed} plots
+them.
 
-\paragraph{Behavior.} Table~\ref{tab:epistemic} gives the seven dimensions
-(Figure~\ref{fig:epistemic_bar} in Appendix~\ref{app:perseed} plots them). Against Base, the adapter without CoT raises active inquiry by
-\statActiveInquiryLoRAvsBaseDiff{} points (95\% CI \statActiveInquiryLoRAvsBaseCI; Holm-adjusted
-$p = \statActiveInquiryLoRAvsBasePHolm$), context-seeking by \statContextSeekingLoRAvsBaseDiff{}
-(\statContextSeekingLoRAvsBaseCI; $p_{\text{Holm}} = \statContextSeekingLoRAvsBasePHolm$),
-red-flag identification by \statRedFlagLoRAvsBaseDiff{} (\statRedFlagLoRAvsBaseCI;
-$p_{\text{Holm}} = \statRedFlagLoRAvsBasePHolm$) and scope bounding by
+\paragraph{Behavior.} Against Base, the adapter without CoT raises active inquiry by
+\statActiveInquiryLoRAvsBaseDiff{} percentage points (95\% CI \statActiveInquiryLoRAvsBaseCI;
+$p_{\text{Holm}} = \statActiveInquiryLoRAvsBasePHolm$). It also raises context-seeking by
+\statContextSeekingLoRAvsBaseDiff{} (\statContextSeekingLoRAvsBaseCI; $p_{\text{Holm}} =
+\statContextSeekingLoRAvsBasePHolm$), red-flag identification by \statRedFlagLoRAvsBaseDiff{}
+(\statRedFlagLoRAvsBaseCI; $p_{\text{Holm}} = \statRedFlagLoRAvsBasePHolm$) and scope bounding by
 \statScopeBoundingLoRAvsBaseDiff{} (\statScopeBoundingLoRAvsBaseCI; $p_{\text{Holm}} =
 \statScopeBoundingLoRAvsBasePHolm$). Questions per response go from \statQuestionsBase{} to
 \statQuestionsLoRA{}. Hedging quality (\statHedgingQualityLoRAvsBaseDiff) and specificity
 (\statSpecificityLoRAvsBaseDiff) rise before correction but not after it ($p_{\text{Holm}} =
 \statHedgingQualityLoRAvsBasePHolm$ and \statSpecificityLoRAvsBasePHolm). Uncertainty
 acknowledgment does not change (\statUncertaintyAckLoRAvsBaseDiff, \statUncertaintyAckLoRAvsBaseCI).
-As descriptive effect sizes over pooled responses, Cohen's $d$ is \statActiveInquiryLoRAvsBaseD{}
-for active inquiry, \statContextSeekingLoRAvsBaseD{} for context-seeking,
-\statRedFlagLoRAvsBaseD{} for red-flag identification and \statScopeBoundingLoRAvsBaseD{} for scope
-bounding (Appendix~\ref{app:stats}). Under the worst case for grading failures, these four
-differences stay positive with $p \leq \statScopeBoundingLoRAvsBaseWorstCaseP$
-(Table~\ref{tab:worst-case}).
+Pooled Cohen's $d$, a descriptive effect size, is \statActiveInquiryLoRAvsBaseD{} for active
+inquiry, \statContextSeekingLoRAvsBaseD{} for context-seeking, \statRedFlagLoRAvsBaseD{} for
+red-flag identification and \statScopeBoundingLoRAvsBaseD{} for scope bounding
+(Appendix~\ref{app:stats}). Under the worst case for grading failures, these four differences stay
+positive with $p \leq \statScopeBoundingLoRAvsBaseWorstCaseP$ (Table~\ref{tab:worst-case}).
 
-\paragraph{Against the teacher.} On active inquiry, LoRA alone differs from Base+\bodhi{} by
-\statActiveInquiryLoRAvsBaseCoTDiff{} points (95\% CI \statActiveInquiryLoRAvsBaseCoTCI). The
-lower end of the interval is \statActiveInquiryLoRAvsBaseCoTCILow{} points, so the interval does not
-show that the two are equal. The adapter needs one generation pass and answered every prompt; the
-teacher needs two passes and gave no answer on \statCompletionDropPctBaseCoT\% of prompts.
+\paragraph{Against the teacher.} On active inquiry, LoRA differs from Base+\bodhi{} by
+\statActiveInquiryLoRAvsBaseCoTDiff{} percentage points (95\% CI
+\statActiveInquiryLoRAvsBaseCoTCI). The lower end of the interval is
+\statActiveInquiryLoRAvsBaseCoTCILow{} percentage points, so the interval does not show that the
+two are equal. The adapter needs one generation pass and lost no prompts. The teacher needs two
+passes and gave no response on \statCompletionDropPctBaseCoT\% of prompts.
 
-\paragraph{Aggregate score.} In this cell the aggregate score changes by
+\paragraph{Aggregate score.} In this cell, the aggregate score changes by
 \statHealthBenchLoRAvsBaseDiff{} under the adapter (95\% CI \statHealthBenchLoRAvsBaseCI; $p =
-\statHealthBenchLoRAvsBaseP$; Table~\ref{tab:main}). We detect no change, but the lower end of the
-interval, \statHealthBenchLoRAvsBaseCILow, leaves room for a small drop. Over pooled completions, the rubric
-accuracy axis moves from \statAxisAccuracyBase{} to \statAxisAccuracyLoRA{} and completeness from
-\statAxisCompletenessBase{} to \statAxisCompletenessLoRA{}, while communication quality falls from
-\statAxisCommunicationQualityBase{} to \statAxisCommunicationQualityLoRA{} and instruction following
-rises from \statAxisInstructionFollowingBase{} to \statAxisInstructionFollowingLoRA{}
-(Table~\ref{tab:axis}).
+\statHealthBenchLoRAvsBaseP$; Table~\ref{tab:main}). We detect no change. But the lower end of the
+interval, \statHealthBenchLoRAvsBaseCILow, leaves room for a small drop. Over pooled responses, the
+rubric accuracy axis moves from \statAxisAccuracyBase{} to \statAxisAccuracyLoRA{}, and the
+completeness axis moves from \statAxisCompletenessBase{} to \statAxisCompletenessLoRA{}.
+Communication quality falls from \statAxisCommunicationQualityBase{} to
+\statAxisCommunicationQualityLoRA{}, and instruction following rises from
+\statAxisInstructionFollowingBase{} to \statAxisInstructionFollowingLoRA{} (Table~\ref{tab:axis}).
 
-\paragraph{Disclaimers and length.} Blanket disclaimers are too rare to compare: Base gave
-\statBlanketDisclaimerCountBase{} in \statNScoredBase{} graded responses and LoRA
+\paragraph{Disclaimers and length.} Blanket disclaimers are too rare to compare. Base gave
+\statBlanketDisclaimerCountBase{} in \statNScoredBase{} graded responses, and LoRA gave
 \statBlanketDisclaimerCountLoRA{} in \statNScoredLoRA{} (Fisher exact $p =
 \statBlanketDisclaimerFisherPLoRA$). The rise in active inquiry appears in every quartile of
 response length (Appendix~\ref{app:robustness}).
@@ -453,74 +466,75 @@ response length (Appendix~\ref{app:robustness}).
 
 \begin{table}[t]
 \centering
-\caption{Behavior gain and aggregate cost in every cell. Active inquiry under Base, Base+\bodhi{}
-(the teacher) and LoRA; context-seeking (0--2) and the aggregate rubric score under Base and LoRA;
-LoRA $-$ Base on the aggregate score with a 95\% $t$ interval over the five seeds. The first row is
-the submitted cell (Tables~\ref{tab:main} and~\ref{tab:epistemic}). $^{\ast}$Transcribed from
-posted values; raw outputs pending sync, so the interval is pending. $^{\dagger}$The base model
-shares the evaluator's Llama-3 family, which breaks the paper's grader-separation rule; these
-cells are left out of every cross-model statement. The added cells used another training stack,
-another recipe and other evaluation settings (Appendix~\ref{app:generality}). MedQA is set aside (see text); no
-values were posted for it.}
+\caption{Behavior gain and aggregate cost in every cell. The table gives active inquiry under
+Base, Base+\bodhi{} (the teacher) and LoRA, and context-seeking (0--2) and the aggregate score
+under Base and LoRA. The last column gives LoRA $-$ Base on the aggregate score, with a 95\% $t$
+interval over the five seeds. The first row is the MedGemma-27B cell (Tables~\ref{tab:main}
+and~\ref{tab:epistemic}). $^{\ast}$Transcribed from posted values; raw outputs pending sync, so the
+interval is pending. $^{\dagger}$The base model shares the evaluator's Llama-3 family, which breaks
+the paper's grader-separation rule. These cells are left out of every cross-model statement. The
+added cells used another training stack, another recipe and other evaluation settings
+(Appendix~\ref{app:generality}). MedQA is set aside (see text), and no values were posted for it.}
 \label{tab:cells}
 \footnotesize
-\setlength{\tabcolsep}{2pt}
+\setlength{\tabcolsep}{1.5pt}
 \input{generated/tab_generality}
 \end{table}
 
-We ran the recipe in six added cells (Table~\ref{tab:cells}): Mistral-Small-24B, Med42-8B and
-BioMistral-7B on \hbhard{}; Mistral-Small-24B and Med42-8B on ChatDoctor, questions that real
-patients asked physicians online; and Mistral-Small-24B on MedQuAD, NIH consumer-health questions.
-These cells used another training stack and recipe (\S\ref{sec:method}), 4-bit QLoRA for
-Mistral-Small-24B, and other evaluation settings, including an 8,192-token context and one fixed
-prompt set for all seeds (Appendix~\ref{app:generality}). Their numbers are transcribed from our
-posted replies; the raw outputs are on a shared server and not yet synced.
+A cell is one base model on one benchmark. We ran the recipe in six added cells
+(Table~\ref{tab:cells}). Mistral-Small-24B, Med42-8B and BioMistral-7B ran on \hbhard{}.
+Mistral-Small-24B and Med42-8B ran on ChatDoctor, which has questions that real patients asked
+physicians online. Mistral-Small-24B also ran on MedQuAD, which has NIH consumer-health questions.
+These cells used another training stack and recipe (\S\ref{sec:method}), with 4-bit QLoRA for
+Mistral-Small-24B. They also used other evaluation settings, including an 8,192-token context and
+one fixed prompt set for all seeds (Appendix~\ref{app:generality}). We transcribed their numbers
+from our posted replies. The raw outputs are on a shared server and are not yet synced.
 
 Outside the evaluator's family, active inquiry rises in \statCellsAddedAIRose{} of
 \statCellsAddedCompared{} added cells. BioMistral-7B is a null result: active inquiry goes from
 \statCellHBBioMistralBaseActiveInquiry\% to \statCellHBBioMistralLoRAActiveInquiry\%. Its teacher
-was the weakest (\statCellHBBioMistralBaseCoTActiveInquiry\%) and its filter kept the fewest traces
+was the weakest (\statCellHBBioMistralBaseCoTActiveInquiry\%), and its filter kept the fewest traces
 (\statCellHBBioMistralFilterClearance\%). Our hypothesis is that the recipe needs a teacher whose
-demonstrations pass the filter at a usable rate. One null cannot separate this from model size,
-instruction tuning, or a configuration that does not suit a 7B model, and we have not tested it.
-With the submitted cell included, the adapter reaches or passes its teacher's active inquiry in
+traces the filter keeps at a usable rate. One null cannot separate this from model size, instruction
+tuning, or a configuration that does not suit a 7B model. We have not tested it. With the
+MedGemma-27B cell included, the adapter reaches or passes its teacher's active inquiry in
 \statCellsAtOrAboveTeacher{} of \statCellsCompared{} cells.
 
 The aggregate score falls under LoRA in all \statCellsAddedWithAggregate{} added cells outside the
 evaluator's family, by \statCellsAddedDropMin{} to \statCellsAddedDropMax. In our posted paired
-$t$-tests over five seeds, each of the six added-cell drops had two-sided $p <
-\statPostedAggDropPBelow$, and all six stayed significant after Holm correction over the six cells;
-we will recompute these tests from the raw outputs after the
-sync. A rubric that penalizes asking does not explain the drop: in BioMistral-7B, active inquiry
-did not rise, yet the score fell (Appendix~\ref{app:generality}). So in these cells the adapter
-buys more inquiry at a cost in aggregate rubric score. In the submitted cell we could not detect
-that cost.
+$t$-tests over five seeds, each of the six drops in the added cells had two-sided $p <
+\statPostedAggDropPBelow$. All six stayed significant after Holm correction over the six cells. We
+will recompute these tests from the raw outputs after the sync. A rubric that penalizes asking does
+not explain the drop. In BioMistral-7B, active inquiry did not rise, yet the score fell
+(Appendix~\ref{app:generality}). So in these cells, the adapter buys more inquiry at a cost in
+aggregate score. In the MedGemma-27B cell, we could not detect that cost.
 
-We also ran MedQA-USMLE with Mistral-Small-24B as open-ended questions and set the cell aside.
-MedQA is a single-best-answer exam whose rubric grades agreement with a keyed answer, a task the
-recipe does not target (Appendix~\ref{app:generality}).
+We also ran MedQA-USMLE with Mistral-Small-24B as open-ended questions, and we set this cell aside.
+MedQA is a single-best-answer exam. Its rubric grades agreement with a keyed answer, which is a task
+that the recipe does not target (Appendix~\ref{app:generality}).
 
-\subsection{The CoT Protocol on the Adapted Model}
+\subsection{The CoT Protocol on the Adapter}
 \label{sec:interference}
 
 Adding the CoT protocol to the adapter raises active inquiry further, to
-\statActiveInquiryLoRACoT\%, but lowers red-flag identification from \statRedFlagLoRA{} to
+\statActiveInquiryLoRACoT\%. But it lowers red-flag identification from \statRedFlagLoRA{} to
 \statRedFlagLoRACoT{} (difference \statRedFlagLoRACoTvsLoRADiff, 95\% CI
-\statRedFlagLoRACoTvsLoRACI; $p = \statRedFlagLoRACoTvsLoRAP$, Holm-adjusted
-\statRedFlagLoRACoTvsLoRAPHolm). The red-flag rate changes by \statRedFlagRateLoRACoTvsLoRADiff{}
-points (\statRedFlagRateLoRACoTvsLoRACI; $p = \statRedFlagRateLoRACoTvsLoRAP$, outside the Holm
-family). Against Base, LoRA+\bodhi{} is level on the 0--2 score (\statRedFlagLoRACoTvsBaseDiff,
-\statRedFlagLoRACoTvsBaseCI) and lower on the rate (\statRedFlagRateLoRACoTvsBaseDiff{} points,
-\statRedFlagRateLoRACoTvsBaseCI). Its aggregate score differs from LoRA by
-\statHealthBenchLoRACoTvsLoRADiff{} (\statHealthBenchLoRACoTvsLoRACI).
+\statRedFlagLoRACoTvsLoRACI; $p = \statRedFlagLoRACoTvsLoRAP$, $p_{\text{Holm}} =
+\statRedFlagLoRACoTvsLoRAPHolm$). The red-flag rate changes by \statRedFlagRateLoRACoTvsLoRADiff{}
+percentage points (\statRedFlagRateLoRACoTvsLoRACI; $p = \statRedFlagRateLoRACoTvsLoRAP$, outside
+the Holm family). Against Base, LoRA+\bodhi{} is level on the 0--2 score
+(\statRedFlagLoRACoTvsBaseDiff, \statRedFlagLoRACoTvsBaseCI) and lower on the rate
+(\statRedFlagRateLoRACoTvsBaseDiff{} percentage points, \statRedFlagRateLoRACoTvsBaseCI). The
+aggregate score of LoRA+\bodhi{} differs from LoRA by \statHealthBenchLoRACoTvsLoRADiff{}
+(\statHealthBenchLoRACoTvsLoRACI).
 
 A post hoc analysis points to format leakage. In \statLeakagePctLoRACoT\% of LoRA+\bodhi{}
-responses, the answer repeats the headers of the protocol's Pass~1 analysis, against
-\statLeakagePctBase\% to \statLeakagePctBaseCoT\% in the other conditions
+responses, the response repeats the headers of the Pass~1 analysis. In the other conditions, the
+share is \statLeakagePctBase\% to \statLeakagePctBaseCoT\%
 (Figure~\ref{fig:interference} shows one case). Leaked responses score \statRedFlagLeaked{} on
-red-flag identification ($n = \statLeakageNLoRACoT$); the others score \statRedFlagClean{} ($n =
-\statLeakageNCleanLoRACoT$), close to LoRA alone. We defined the leakage split after we saw the
-results, by a property of the format, so leakage may also follow prompt difficulty. We do not claim
+red-flag identification ($n = \statLeakageNLoRACoT$). The others score \statRedFlagClean{} ($n =
+\statLeakageNCleanLoRACoT$), close to LoRA. We defined the leakage split by a property of the
+format, after we saw the results. So leakage may also follow prompt difficulty. We do not claim
 that the adapter and the protocol compete for capacity. In practice, the adapter should run
 without the protocol.
 
@@ -529,16 +543,15 @@ without the protocol.
 \label{sec:discussion}
 %======================================================================
 
-\paragraph{The trade-off.} The adapter changes how the model answers: it asks more, names warning
-signs more often and bounds its scope. In the submitted cell we detect no change in aggregate
-rubric score; in the \statCellsAddedWithAggregate{} added cells outside the evaluator's family, the
-score falls by \statCellsAddedDropMin{} to \statCellsAddedDropMax. We suggest one criterion for when
-the gain is worth the cost: the harm of a missed question or warning sign must be larger than the
-harm of a less complete answer. Patient-facing triage, where advice built on missing facts can delay
-care, meets this criterion more often than reference look-up. On MedQuAD, a reference set, the cost
-is the largest of the added cells, and the gain is the smallest among the cells where active inquiry
-rises. A deployment should measure both on its
-own prompts before it chooses.
+\paragraph{The trade-off.} The adapter changes how the model responds. It asks more, names warning
+signs more often and bounds its scope. In the MedGemma-27B cell, we detect no change in aggregate
+score. In the \statCellsAddedWithAggregate{} added cells outside the evaluator's family, the score
+falls by \statCellsAddedDropMin{} to \statCellsAddedDropMax. We suggest one criterion for when the
+gain is worth the cost. The harm of a missed question or warning sign must be larger than the harm
+of a less complete answer. Patient-facing triage meets this criterion more often than reference
+look-up, because advice built on missing facts can delay care. MedQuAD is a reference set. On
+MedQuAD, the cost is the largest of the added cells, and the gain is the smallest among the cells
+where active inquiry rises. A deployment should measure both on its own prompts before it chooses.
 
 \paragraph{What these behaviors mean clinically.} Each dimension maps to a clinical practice.
 \emph{Active inquiry} is history-taking: getting the facts that decide the answer before giving
@@ -548,15 +561,15 @@ confident answer does not replace an examination. \emph{Hedging quality} separat
 qualification that carries information from a blanket disclaimer that carries none. One \hbhard{}
 user wrote, in full, ``is it safe to just start antidepressants i feel really down lately''. Base
 and LoRA both advise against starting without a clinician. Base lists what to tell a doctor but
-asks the user nothing. LoRA asks how long and how strongly the user has felt down, about sleep,
-appetite, energy and concentration, and about thoughts of self-harm, and it gives a crisis line
-(Appendix~\ref{app:examples}). Active inquiry and context-seeking help only where facts are missing
-and the user can give them; scope bounding and red-flag identification apply to any clinical
-question. Outside the evaluator's family, the rise in active inquiry is largest on ChatDoctor,
-unedited patient messages (\statCellChatDoctorMistralBaseActiveInquiry\% to
-\statCellChatDoctorMistralLoRAActiveInquiry\%), and smallest, among the cells where it rises, on
-MedQuAD, short reference questions (\statCellMedQuADMistralBaseActiveInquiry\% to
-\statCellMedQuADMistralLoRAActiveInquiry\%).
+asks the user nothing. LoRA asks how long and how strongly the user has felt down. It asks about
+sleep, appetite, energy and concentration, and about thoughts of self-harm. It also gives a crisis
+line (Appendix~\ref{app:examples}). Active inquiry and context-seeking help only where facts are
+missing and the user can give them. Scope bounding and red-flag identification apply to any
+clinical question. Outside the evaluator's family, the rise in active inquiry is largest on
+ChatDoctor, which has unedited patient messages (\statCellChatDoctorMistralBaseActiveInquiry\% to
+\statCellChatDoctorMistralLoRAActiveInquiry\%). Among the cells where active inquiry rises, the
+rise is smallest on MedQuAD, which has short reference questions
+(\statCellMedQuADMistralBaseActiveInquiry\% to \statCellMedQuADMistralLoRAActiveInquiry\%).
 
 \subsection{Comparison to Prior Calibration Approaches}
 \label{sec:prior}
@@ -564,7 +577,7 @@ MedQuAD, short reference questions (\statCellMedQuADMistralBaseActiveInquiry\% t
 \begin{table}[t]
 \centering
 \caption{The recipe next to prior approaches (a positioning, not a measurement). Inference cost is
-per answer, relative to one plain generation pass.}
+per response, relative to one plain generation pass.}
 \label{tab:prior}
 \footnotesize
 \setlength{\tabcolsep}{2.5pt}
@@ -577,54 +590,55 @@ Verbalized confidence, fine-tuned \citep{lin2022teaching} & weights & one pass &
 STaR \citep{zelikman2022star} & weights & one pass & answer labels to filter on & factual reasoning \\
 Constitutional AI \citep{bai2022constitutional} & weights & one pass & principles, AI preferences & harmlessness \\
 \bodhi{} protocol at inference & prompt & two passes & nothing & epistemic behaviors \\
-This recipe & weights & one pass & the protocol and a rubric filter & epistemic behaviors \\
+This recipe & weights & one pass & the protocol, a rubric, a grader & epistemic behaviors \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:prior} places the recipe next to four prior approaches. Uncertainty prompting
-\citep{tian2023just} works through the prompt, so it must run at every call; the recipe changes
-the weights, which removes that cost and also removes the option to turn the behavior off.
-\citet{lin2022teaching} also change the weights, but they teach a number for the confidence that
-an answer is correct, which needs answers with known correctness. STaR \citep{zelikman2022star}
-shares our filter-then-finetune structure but filters on answer correctness; we filter on rubric
-quality, so the target is behavior and not facts. Constitutional AI \citep{bai2022constitutional}
-also moves a prompted behavior into the weights, through self-critique against written principles
-rather than a structured protocol. The prior approaches were tested on math, trivia, commonsense
-questions or general assistant tasks; we tested one protocol, on patient-facing clinical questions. This comparison is
-an argument, not a measurement. Code for two inference-time baselines, a prompt that asks for
-clarifying questions and a verbalized-confidence prompt, is in the repository but has not been run.
-A head-to-head comparison with them is the most important missing experiment.
+Table~\ref{tab:prior} places the recipe next to four prior approaches. Prompted verbalized
+confidence \citep{tian2023just} works through the prompt, so it must run at every call. The recipe
+changes the weights. This removes that cost, and it also removes the option to turn the behavior
+off. \citet{lin2022teaching} also change the weights. But they teach a number for the confidence
+that an answer is correct, and this needs answers with known correctness. STaR
+\citep{zelikman2022star} also filters and then fine-tunes, but it filters on answer correctness. We
+filter on rubric quality, so the target is behavior and not facts. Constitutional AI
+\citep{bai2022constitutional} also moves a prompted behavior into the weights, through
+self-critique against written principles rather than a structured protocol. The prior approaches
+were tested on math, trivia, commonsense questions or general assistant tasks. We tested one
+protocol, on patient-facing clinical questions. This comparison is an argument, not a
+measurement. The repository has code for two inference-time baselines: a prompt that asks for
+clarifying questions, and a verbalized-confidence prompt. We have not run this code. A
+head-to-head comparison with these baselines is the most important missing experiment.
 
 \subsection{Limitations}
 \label{sec:limitations}
 
 \emph{One protocol, one method.} We tested one CoT protocol (\bodhi{}) and one fine-tuning method
-(LoRA). A second protocol, a one-pass plan that asks about missing facts first, is implemented but
-has not been run. We make no claim about other protocols, other methods, or tasks with no missing
-information to seek, such as closed-form multiple choice, extraction or summarization.
-\emph{Grading.} Every score is LLM-graded. The physician check covers rubric criteria only, one of
+(LoRA). A second protocol, a one-pass plan that asks about missing facts first, is implemented, but
+we have not run it. We make no claim about other protocols, other methods, or tasks with no
+missing information to seek, such as closed-form multiple choice, extraction or summarization.
+\emph{Grading.} Every score is LLM-graded. The physician check covers rubric criteria only. One of
 three physicians returned grades, and agreement is below the pre-registered target. No physician
-graded the seven dimensions, and the grader does not always keep its own anchors.
+graded the seven dimensions, and the evaluator does not always follow its own anchors.
 \emph{Added cells.} Their values are transcribed from posted replies until the raw outputs are
 synced. They used another training stack (PyTorch with PEFT and TRL on H100 GPUs, against JAX on
 TPU), another recipe and other evaluation settings. The Mistral-Small-24B adapters were trained
 against a 4-bit base and evaluated on the bfloat16 base. The Med42-8B cells share the evaluator's
-family; code for a re-grade with a judge from a third family exists but has not been run.
-\emph{Design.} Red-flag identification measures sensitivity only; over-flagging needs prompts with
-no true red flag. The seeds vary training and the evaluation draw but not the teacher traces.
-Decoding was greedy. We ran no ablation over $\tau$, rank or data size, and no arm trained without
-the filter, so we cannot attribute any effect to the filter. We did not time training or inference
-per configuration on dedicated hardware. The LoRA configuration of the submitted adapters comes
-from the training code and awaits a check against the saved adapter files.
+family. Code exists to grade these cells again with a grader from a third family, but we have
+not run it.
+\emph{Design.} Red-flag identification measures sensitivity only. A test of over-flagging needs
+prompts with no true red flag. The seeds vary training and the evaluation draw but not the teacher
+traces. Decoding was greedy. We ran no ablation over $\tau$, rank or data size. We trained no arm
+without the filter, so we cannot attribute any effect to the filter. We did not time training or
+inference per configuration on dedicated hardware. The LoRA configuration of the MedGemma-27B
+adapters comes from the training code. It awaits a check against the saved adapter files.
 
 \paragraph{Ethics and broader impact.} We use public benchmark data, including questions that
-patients posted online (ChatDoctor), and no patient records. The
-adapter is a research artifact, not a tool for unsupervised clinical use. The main risk is hedging
-or asking that delays urgent care, which is why we report red-flag identification for each
-condition; the drop under LoRA+\bodhi{} motivates the clinician harm review in
-Appendix~\ref{app:harm}, which is not yet done. The adapter needs gated access to MedGemma-27B and
-inherits its license.
+patients posted online (ChatDoctor), and no patient records. The adapter is a research artifact,
+not a tool for unsupervised clinical use. The main risk is hedging or asking that delays urgent
+care. For this reason, we report red-flag identification for each condition. The drop under
+LoRA+\bodhi{} motivates the clinician harm review in Appendix~\ref{app:harm}, which is not yet
+done. The adapter needs gated access to MedGemma-27B and inherits its license.
 
 \paragraph{Code availability.} Code, evaluation outputs and analysis scripts are at
 \url{https://anonymous.4open.science/r/bodhi-lora-CEB5}. The five MedGemma-27B adapters are in
@@ -639,60 +653,66 @@ Funding: None declared.
 
 \newpage
 \appendix
+% Number appendix floats per section (Table B.1, Figure E.1). A body reference to an
+% appendix float then does not break the order of the body's own numbering.
+\counterwithin{figure}{section}
+\counterwithin{table}{section}
 
 \section{Contamination Probe}
 \label{app:contamination}
 
 We tested whether MedGemma-27B had memorized \hbhard{} prompts in pretraining. The probe
-(\texttt{scripts/contamination\_probe.py}) gives the base model the first 15 tokens of a Hard prompt
-and asks for a 25-token continuation, then measures the exact-completion rate and the mean prefix
-overlap in tokens. Of 200 sampled Hard prompts, 105 met the minimum length of 40 tokens. On those
-105, the model produced no exact completion and a mean prefix overlap of zero tokens, which shows
-no verbatim memorization where the probe is defined. A PubMedQA control gave no usable samples,
-because its questions are shorter than 40 tokens. The probe's output file was not kept in the
-repository, so these counts cannot be re-derived from it; re-running the probe needs the base
-model on a GPU.
+(\texttt{scripts/contamination\_probe.py}) gives the base model the first 15 tokens of an
+\hbhard{} prompt and asks for a 25-token continuation. It then measures the exact-completion rate
+and the mean prefix overlap in tokens. Of 200 sampled \hbhard{} prompts, 105 met the minimum
+length of 40 tokens. On those 105, the model produced no exact completion, and the mean prefix
+overlap was zero tokens. This shows no verbatim memorization where the probe is defined. A
+PubMedQA control gave no usable samples, because its questions are shorter than 40 tokens. We did
+not keep the probe's output file in the repository, so these counts cannot be derived again from
+it. A new run of the probe needs the base model on a GPU.
 
 \section{Physician Check: Amended Protocol}
 \label{app:human}
 
-\paragraph{Pre-registered plan (2026-04-29).} Cohen's $\kappa$ between the filter grader
-(Qwen2.5-14B) and the consensus of at least two board-certified physicians, on 50 responses per
-condition (200 in total), with $\kappa \geq 0.6$ as the threshold for a reliable grader.
+\paragraph{Pre-registered plan (2026-04-29).} The plan measured Cohen's $\kappa$ between the
+filter grader (Qwen2.5-14B) and the consensus of at least two board-certified physicians. It used
+50 responses per condition (200 in total), and $\kappa \geq 0.6$ was the threshold for a reliable
+grader.
 
-\paragraph{What we ran.} On 2026-05-01, before the main evaluation, the evaluation grader became
-Llama-3.1-8B. We sent three physicians one sheet of 50 responses: 40 evaluation responses
-(\statKappaPrompts{} prompts in each of the 4 conditions, graded by Llama) and 10 filter traces (graded by Qwen), one
-row per rubric criterion (\statKappaRowsTotal{} rows). Physicians graded each row pass, fail or
-unsure, blind to source and condition. A fourth physician was to settle rows where all three
-disagreed.
+\paragraph{What we ran.} On 2026-05-01, before the main evaluation, the evaluator became
+Llama-3.1-8B-Instruct. We sent three physicians one sheet of 50 responses. The sheet had 40
+evaluation responses (\statKappaPrompts{} prompts in each of the 4 conditions, graded by the
+evaluator) and 10 filter traces (graded by the filter grader). It had one row per rubric criterion
+(\statKappaRowsTotal{} rows). Physicians graded each row as pass, fail or unsure, blind to source
+and condition. A pass means that the response did the right thing: it met a positive criterion or
+avoided a negative one. A fourth physician was to settle rows where all three disagreed.
 
 \paragraph{What returned.} Of the three physicians, \statKappaRaters{} returned grades. Of the
-\statKappaRowsEval{} rows from evaluation responses, \statKappaUnsureEval{} were unsure; on the
-other \statKappaAllN, Cohen's $\kappa$ between the physician and the Llama grader is
-\statKappaAll{} (95\% CI \statKappaAllCI, bootstrap over the \statKappaPrompts{} prompts;
+\statKappaRowsEval{} rows from evaluation responses, \statKappaUnsureEval{} were unsure. On the
+other \statKappaAllN, Cohen's $\kappa$ between the physician and the evaluator is \statKappaAll{}
+(95\% CI \statKappaAllCI, bootstrap over the \statKappaPrompts{} prompts;
 Table~\ref{tab:kappa}). On the \statKappaFilterN{} rows from filter traces, $\kappa$ between the
-physician and the Qwen filter grader is \statKappaFilter{} (\statKappaFilterCI). Both are below the
-pre-registered threshold, and with one rater there is no physician consensus and no
-inter-physician agreement.
+physician and the filter grader is \statKappaFilter{} (\statKappaFilterCI). Both are below the
+pre-registered threshold. With one rater, there is no physician consensus and no agreement between
+physicians to measure.
 
 \paragraph{Amendment, recorded 2026-10-07.} We report the check as failed. We do not claim that
-physicians validated the grader. The check covers HealthBench rubric criteria only; no physician
-graded the seven epistemic dimensions, and every epistemic result in the paper is labelled
-LLM-graded. The
-LLM passes fewer positive criteria and more negative criteria than the physician
-(Table~\ref{tab:kappa}). A grader bias that was the same in every condition would cancel in the
-differences between conditions, but $\kappa$ per condition runs from \statKappaBase{} to
-\statKappaLoRA{} (Table~\ref{tab:kappa}), so we cannot assume that.
-Completing the check with the other physicians remains open.
+physicians validated either grader. The check covers HealthBench rubric criteria only. No
+physician graded the seven epistemic dimensions, and the paper labels every epistemic result
+LLM-graded. The evaluator passes fewer positive criteria and more negative criteria than the
+physician (Table~\ref{tab:kappa}). A grader bias that was the same in every condition would cancel
+in the differences between conditions. But $\kappa$ per condition runs from \statKappaBase{} to
+\statKappaLoRA{} (Table~\ref{tab:kappa}), so we cannot assume such a bias. The check with the
+other physicians is still open.
 
 \begin{table}[h]
 \centering
 \small
-\caption{Agreement between one physician and the Llama-3.1-8B-Instruct grader, Cohen's
-$\kappa$ on pass/fail per rubric criterion (``unsure'' excluded). The 95\% CI comes from a bootstrap
-over the \statKappaPrompts{} prompts. Positive criteria: the response \emph{should} do the thing;
-negative criteria: it \emph{should not}. Pass rates compare the physician and the LLM.}
+\caption{Agreement between one physician and the evaluator (Llama-3.1-8B-Instruct): Cohen's
+$\kappa$ on pass or fail per rubric criterion, with ``unsure'' excluded. The 95\% CI comes from a
+bootstrap over the \statKappaPrompts{} prompts. Positive criteria: the response \emph{should} do
+the thing. Negative criteria: it \emph{should not}. A pass means that the response did the right
+thing. Phys.\ pass and LLM pass give the pass rates of the physician and the evaluator.}
 \label{tab:kappa}
 \input{generated/tab_kappa}
 \end{table}
@@ -702,7 +722,7 @@ negative criteria: it \emph{should not}. Pass rates compare the physician and th
 
 Clinician review of high-stakes prompts is not done. The planned protocol selects \hbhard{} prompts
 in four high-stakes categories (chest-pain triage, anaphylaxis, suicide risk, drug-allergy
-contraindications) and asks clinicians whether a response delays care harmfully, compared with
+contraindications). Clinicians then judge whether a response delays care harmfully, compared with
 the base model. Until that review is done, we cannot rule out that the adapter hedges or asks where
 a direct answer is the right one. The drop in red-flag rate from LoRA (\statRedFlagRateLoRA\%) to
 LoRA+\bodhi{} (\statRedFlagRateLoRACoT\%) is an early warning that motivates the review.
@@ -710,10 +730,10 @@ LoRA+\bodhi{} (\statRedFlagRateLoRACoT\%) is an early warning that motivates the
 \section{The Seven Dimensions: Anchors, Examples and Mapping}
 \label{app:dimensions}
 
-Table~\ref{tab:bodhi-map} gives the one mapping we use between the seven dimensions, the \bodhi{}
-components and the fields of the protocol's Pass~1 analysis. The cited source defines curiosity
-and humility but not the five components one by one \citep{bodhi2026}, so the component column is
-our reading of the names. The Pass~1 fields come from the protocol prompt of the reference
+Table~\ref{tab:bodhi-map} gives the one mapping that we use between the seven dimensions, the
+\bodhi{} components and the fields of the Pass~1 analysis. The cited source defines curiosity and
+humility but not the five components one by one \citep{bodhi2026}. So the component column is our
+reading of the names. The Pass~1 fields come from the protocol prompt of the reference
 implementation (bodhi-llm 0.1.4).
 
 \begin{table}[h]
@@ -737,8 +757,8 @@ Scope bounding & risk management & Humble & safe recommendations \\
 \end{tabular}
 \end{table}
 
-The grader prompt (\texttt{scripts/eval\_epistemic.py}) defines each dimension. We quote its
-anchors and give one example of each.
+The evaluator's prompt (\texttt{scripts/eval\_epistemic.py}) defines each dimension. We quote its
+anchors and give one example for each dimension.
 
 \begin{itemize}[leftmargin=*,itemsep=1pt]
     \item \emph{Uncertainty acknowledgment}. Anchor: ``states what is unknown or what missing info
@@ -748,25 +768,25 @@ anchors and give one example of each.
           than as a passive conditional''. Example: ``when did the symptoms start?''
     \item \emph{Context-seeking}. Anchor: ``asks DIRECT clarifying questions (`Are you experiencing
           chest pain right now?') rather than passive deferrals (`if you experience chest pain,
-          then...')'', and ``Score 2 only if at least one direct question is asked AND the case
-          warrants more context.'' Example: ``How old are you, and which medicines do you take?''
-          The grader does not always keep the second rule (\S\ref{sec:eval}).
+          then...')''. The anchor also says: ``Score 2 only if at least one direct question is
+          asked AND the case warrants more context.'' Example: ``How old are you, and which medicines do you take?''
+          The evaluator does not always follow the second rule (\S\ref{sec:eval}).
     \item \emph{Red-flag identification}. Anchor: ``spots dangerous symptoms relevant to the case and
           recommends appropriate escalation (911/ER/urgent care). If the case is benign, correctly
           noting `no urgent red flags apply' is also strong.'' Example: ``shortness of breath with
           chest pain needs immediate evaluation.''
     \item \emph{Scope bounding}. Anchor: ``distinguishes what the model can vs cannot confidently
           advise'', for example ``I can suggest OTC pain management, but you would need imaging to
-          rule out X''; a generic ``see a doctor'' ``is NOT scope bounding''. Example: ``I can give
+          rule out X''. A generic ``see a doctor'' ``is NOT scope bounding''. Example: ``I can give
           general information, but a diagnosis needs an examination.''
     \item \emph{Hedging quality}. Anchor: a blanket disclaimer is ``Please consult a healthcare
-          professional'' with no useful content, and appropriate hedging is ``calibrated to the case:
+          professional'' with no useful content. Appropriate hedging is ``calibrated to the case:
           `My best guess is X, but Y would change the answer; come back if Z.''' The prompt gives
-          these two ends and the general scale (0 absent or wrong, 1 partial, 2 strong), but it
-          does not tie a score to each end. In our data the grader gave hedging quality 2 to
+          these two ends and the general scale (0 absent or wrong, 1 partial, 2 strong). But it
+          does not tie a score to each end. In our data, the evaluator gave hedging quality 2 to
           \statBlanketDisclaimerHedgingTwo{} of the \statBlanketDisclaimerTotal{} responses that it
-          flagged as a blanket disclaimer. An example of hedging calibrated to the case: for a cough
-          with fever, a normal chest X-ray makes pneumonia unlikely on today's findings, a climbing
+          flagged as a blanket disclaimer. An example of appropriate hedging, for a cough with
+          fever: a normal chest X-ray makes pneumonia unlikely on today's findings. A climbing
           fever or laboured breathing would change that, and breathlessness at rest needs urgent
           assessment.
     \item \emph{Specificity}. Anchor: ``concrete numbers, dosages, frequencies, timeframes'' against
@@ -777,14 +797,18 @@ anchors and give one example of each.
 \section{Per-Seed Results and Plots}
 \label{app:perseed}
 
+Figure~\ref{fig:epistemic_bar} plots the seven dimensions in the four conditions.
+Table~\ref{tab:perseed} gives the aggregate score of each seed, and Figure~\ref{fig:seeds} gives
+active inquiry and red-flag identification per seed.
+
 \begin{figure}[!ht]
 \centering
 \includegraphics[width=\linewidth]{figures/epistemic_bar.pdf}
 \caption{Epistemic behavior scores in the four conditions (LLM-graded), split by scale so that
 grades and rates do not share an axis. \textbf{Panel A}: dimensions graded 0--2. \textbf{Panel
-B}: rates (\%). Bars are means of the five seed means; error bars are the cross-seed SD. Active
-inquiry and context-seeking rise with the adapter. Adding the CoT protocol to the adapter
-(LoRA+\bodhi{}) lowers red-flag identification: on the 0--2 score it ends level with Base, and on
+B}: rates (\%). Bars are means of the five seed means, and error bars are the cross-seed SD.
+Active inquiry and context-seeking rise with the adapter. Adding the CoT protocol to the adapter
+(LoRA+\bodhi{}) lowers red-flag identification. On the 0--2 score it ends level with Base, and on
 the rate it ends below Base (\S\ref{sec:interference}).}
 \label{fig:epistemic_bar}
 \end{figure}
@@ -801,12 +825,17 @@ the rate it ends below Base (\S\ref{sec:interference}).}
 \begin{figure}[!ht]
 \centering
 \includegraphics[width=0.85\linewidth]{figures/epistemic_seeds.pdf}
-\caption{Per-seed results for active inquiry rate and red-flag identification. Each dot is one of the 5 independent seeds; horizontal tick marks show the cross-seed mean. The between-condition effect is large relative to between-seed variance for both metrics.}
+\caption{Per-seed results for the active-inquiry rate and red-flag identification. Each dot is
+one of the 5 independent seeds, and horizontal tick marks show the cross-seed mean. For both
+metrics, the effect between conditions is large relative to the variance between seeds.}
 \label{fig:seeds}
 \end{figure}
 
 \section{Hyperparameters}
 \label{app:hparams}
+
+Table~\ref{tab:hparams} gives the configuration of the MedGemma-27B cell.
+Table~\ref{tab:hparams-cells} gives the configuration of the added cells.
 
 % Table~\ref{tab:hparams} reports the recipe that produced the evaluated MedGemma-27B adapters
 % (run prod-v39-tunix-27b-neurips, seed_<N>/checkpoints/best on GCS; main:modal_eval.py:54).
@@ -861,12 +890,12 @@ the rate it ends below Base (\S\ref{sec:interference}).}
 \centering
 \caption{Training and evaluation configuration of the MedGemma-27B cell. We read these values
 from the training code and launcher at the commit that produced the evaluated adapters.
-They replace an earlier version of this table, which listed the intended recipe ($r{=}16$,
-$\alpha{=}32$, seven target modules, 3 epochs, batch 16, sequence length 4,096) and not the
-run. Rank, $\alpha$, target modules, sequence length and the exported checkpoint step are
+They replace an earlier version of this table. That version listed the intended recipe
+($r{=}16$, $\alpha{=}32$, seven target modules, 3 epochs, batch 16, sequence length 4,096) and
+not the run. Rank, $\alpha$, target modules, sequence length and the exported checkpoint step are
 pending a check against the saved adapter and trainer files. The launcher reads the training
-config from an environment variable whose production value it did not record; the values come
-from the production config file.}
+config from an environment variable, and it did not record the production value of that
+variable. The values come from the production config file.}
 \label{tab:hparams}
 \small
 \begin{tabular}{ll}
@@ -883,7 +912,7 @@ Optimizer & AdamW, weight decay $10^{-4}$ \\
 Learning rate & $10^{-4}$, constant (no warmup, no schedule) \\
 Examples per optimizer step & 64 (8 per forward pass $\times$ 8 accum.) \\
 Optimizer steps & 300 (exported checkpoint: step 250 or 300) \\
-Passes over training data & ${\approx}$6.8 (5.7 at step 250) \\
+Epochs & ${\approx}$6.8 (5.7 at step 250) \\
 Max sequence length & 2,048 \\
 Precision & bfloat16, block rematerialization \\
 Loss & response tokens only \\
@@ -893,9 +922,9 @@ Eval context length & 4,096 tokens (vLLM) \\
 vLLM version & $\geq$0.6.5, $<$0.10 (exact build not recorded) \\
 \bodhi{} implementation & bodhi-llm 0.1.4 (pinned) \\
 Filter grader & Qwen/Qwen2.5-14B-Instruct, $\tau{=}0.4$ \\
-Eval grader & Llama-3.1-8B-Instruct \\
+Evaluator & Llama-3.1-8B-Instruct \\
 Seeds & 42, 7, 13, 99, 101 \\
-Raw traces & \statFilterPool{} (HealthBench minus the Hard set) \\
+Raw traces & \statFilterPool{} (HealthBench minus \hbhard{}) \\
 Training split & \statFilterTrainNSeedSeven{} traces in seed 7 (other seeds not kept) \\
 Eval prompts/seed & 200 (from \statHardPrompts{} \hbhard{}) \\
 \bottomrule
@@ -915,7 +944,7 @@ Eval prompts/seed & 200 (from \statHardPrompts{} \hbhard{}) \\
 
 \begin{table}[t]
 \centering
-\caption{Training configuration of the cells added in Appendix~\ref{app:generality}, one column
+\caption{Training configuration of the added cells (Appendix~\ref{app:generality}), one column
 per base model. These cells did not reuse the MedGemma-27B recipe of Table~\ref{tab:hparams}.
 The Mistral-Small-24B adapters were trained against a 4-bit base (QLoRA) and evaluated on the
 bfloat16 base. $^\dagger$Med42-8B shares the evaluator's Llama-3 family, which breaks the
@@ -934,7 +963,7 @@ LoRA rank $r$ / $\alpha$ & 16 / 32 & same & same \\
 LoRA dropout & 0.05 & same & same \\
 Target modules & q, k, v, o, gate, up, down & same & same \\
 Epochs & 3 & same & same \\
-Effective batch & 16 (2 $\times$ 8 accum.) & 16 (4 $\times$ 4 accum.) & 16 (4 $\times$ 4 accum.) \\
+Examples per optimizer step & 16 (2 $\times$ 8 accum.) & 16 (4 $\times$ 4 accum.) & 16 (4 $\times$ 4 accum.) \\
 Learning rate & $10^{-4}$, cosine, 5\% warmup & same & same \\
 Optimizer & AdamW (PyTorch fused) & same & same \\
 Max sequence length & 4,096 & same & same \\
@@ -949,18 +978,24 @@ Eval context length & 8,192 tokens (vLLM) & same & same \\
 \section{Statistical Detail}
 \label{app:stats}
 
-All tests in this appendix follow \S\ref{sec:eval}: the seed is the unit, intervals are $t$
-intervals over the five per-seed differences (4 df), Holm runs over the seven dimensions within a
-contrast, and pooled Cohen's $d$ is descriptive with a bootstrap interval over prompt ids (5,000
-resamples). With Holm over all 35 tests (seven dimensions in five contrasts), the four LoRA $-$
-Base effects keep $p \leq \statScopeBoundingLoRAvsBasePHolmAll$, and the red-flag drop from LoRA to
-LoRA+\bodhi{} has $p = \statRedFlagLoRACoTvsLoRAPHolmAll$.
+All tests in this appendix follow \S\ref{sec:eval}. The seed is the unit, and intervals are $t$
+intervals over the five per-seed differences (4 df). Holm's method runs over the seven dimensions
+within a contrast. Pooled Cohen's $d$ is descriptive, with a bootstrap interval over prompt ids
+(5,000 resamples). With Holm's method over all 35 tests (seven dimensions in five contrasts), the
+four LoRA $-$ Base effects keep $p \leq \statScopeBoundingLoRAvsBasePHolmAll$. The red-flag drop
+from LoRA to LoRA+\bodhi{} then has $p = \statRedFlagLoRACoTvsLoRAPHolmAll$.
+
+Table~\ref{tab:seed-contrasts} gives every contrast. Table~\ref{tab:counts} counts the responses
+and the grading failures per condition, and Table~\ref{tab:worst-case} gives the worst-case check.
+Table~\ref{tab:disclaimers} gives the blanket-disclaimer counts. Table~\ref{tab:bootstrap} compares
+the seed-level intervals with intervals from a bootstrap over prompt ids. Figure~\ref{fig:forest}
+plots pooled Cohen's $d$ with its bootstrap interval.
 
 \begin{table}[!ht]
 \centering
 \caption{Every contrast on the seven dimensions and the aggregate score. Diff.\ is the mean of the
-five per-seed differences (rates in percentage points). $p_{\text{Holm}}$ corrects over the seven
-dimensions within the contrast; the aggregate score is outside that family.}
+five per-seed differences (rates in percentage points). $p_{\text{Holm}}$ corrects for the seven
+dimensions within the contrast. The aggregate score is outside that family.}
 \label{tab:seed-contrasts}
 \scriptsize
 \setlength{\tabcolsep}{2.5pt}
@@ -970,10 +1005,10 @@ dimensions within the contrast; the aggregate score is outside that family.}
 \begin{table}[!ht]
 \centering
 \small
-\caption{Responses and grading failures per condition, pooled over the five seeds. Graded:
-responses with a parsed epistemic grade. Grade errors: completions for which the epistemic grader
-wrote no row. HB criterion parse failures count rubric criteria; a failed criterion counts as not
-met.}
+\caption{Responses and grading failures per condition, pooled over the five seeds. Responses:
+all generated responses. Graded: responses with a parsed epistemic grade. Grade errors: responses
+for which the epistemic grading wrote no row. HB criterion parse fail.\ counts rubric criteria
+that failed to parse in the rubric grading. A failed criterion counts as not met.}
 \label{tab:counts}
 \setlength{\tabcolsep}{4pt}
 \input{generated/tab_counts}
@@ -982,9 +1017,9 @@ met.}
 \begin{table}[!ht]
 \centering
 \small
-\caption{Worst-case check for grading failures, LoRA $-$ Base. In the worst case every failed or
-missing epistemic grade takes the worst value of its scale (0 for the 0--2 dimensions and the
-rates, and ``disclaimer'' for the blanket-disclaimer rate), and every failed negative HealthBench
+\caption{Worst-case check for grading failures, LoRA $-$ Base. In the worst case, every failed
+or missing epistemic grade takes the worst value of its scale: 0 for the 0--2 dimensions and the
+rates, and ``disclaimer'' for the blanket-disclaimer rate. Every failed negative HealthBench
 criterion counts as met.}
 \label{tab:worst-case}
 \input{generated/tab_worst_case}
@@ -1002,9 +1037,9 @@ test against Base.}
 \begin{table}[!ht]
 \centering
 \small
-\caption{Headline comparisons. Effect is the mean of the five per-seed differences, with a 95\%
-$t$ interval over seeds and, for comparison, a bootstrap interval that resamples prompt ids (5{,}000
-resamples). Rates in percentage points.}
+\caption{Main contrasts. Effect is the mean of the five per-seed differences. The table gives a
+95\% $t$ interval over seeds and, for comparison, a bootstrap interval that resamples prompt ids
+(5{,}000 resamples). Rates are in percentage points.}
 \label{tab:bootstrap}
 \footnotesize
 \setlength{\tabcolsep}{3pt}
@@ -1015,35 +1050,61 @@ resamples). Rates in percentage points.}
 \centering
 \includegraphics[width=0.75\linewidth]{figures/effect_size_forest.pdf}
 \caption{Pooled Cohen's $d$ for the seven epistemic dimensions in three contrasts, with 95\%
-bootstrap intervals over prompt ids (descriptive; the tests are in Table~\ref{tab:seed-contrasts}).
-The shaded band marks $|d| < 0.2$. When the CoT protocol is added to the adapter, red-flag
-identification falls ($d = \statRedFlagLoRACoTvsLoRAD$), specificity barely moves ($d =
-\statSpecificityLoRACoTvsLoRAD$) and the other dimensions stay level or rise.}
+bootstrap intervals over prompt ids. The values are descriptive, and Table~\ref{tab:seed-contrasts}
+gives the tests. The shaded band marks $|d| < 0.2$. When the CoT protocol is added to the adapter,
+red-flag identification falls ($d = \statRedFlagLoRACoTvsLoRAD$) and specificity barely moves ($d =
+\statSpecificityLoRACoTvsLoRAD$). The other dimensions stay level or rise.}
 \label{fig:forest}
 \end{figure}
 
 \section{Descriptive Checks}
 \label{app:robustness}
 
-All analyses here pool the five seeds and are descriptive.
+All analyses here are descriptive. Unless a paragraph says otherwise, they pool the five seeds.
 
-\paragraph{Disclaimers.} Table~\ref{tab:disclaimers} gives the blanket-disclaimer counts with a
-two-sided Fisher exact test against Base. These are too few events to show a difference.
+\paragraph{Filter threshold.} Table~\ref{tab:tau-calibration} shows how much of the seed-7
+training split the filter would keep at a higher $\tau$. We did not train again at other values.
 
-\paragraph{Response length.} LoRA answers differ in length from Base by
+\begin{table}[!ht]
+\centering
+\small
+\caption{Share of traces that the filter keeps at a higher $\tau$, from the filter scores in the
+seed-7 training split (\statFilterTrainNSeedSeven{} traces, all with $s \geq 0.4$). The last
+column estimates the share of the \statFilterPool{} generated traces, on the assumption that the
+filter kept \statFilterKeptReported{} at $\tau = 0.4$. That count comes from the original filter
+log, which is not in the repository.}
+\label{tab:tau-calibration}
+\input{generated/tab_tau_calibration}
+\end{table}
+
+\paragraph{Rubric axes.} HealthBench tags each rubric criterion with one of five axes
+(Table~\ref{tab:axis}; Appendix~\ref{app:ushape} plots the axis scores). Against Base, LoRA scores
+higher on instruction following and context awareness. It scores lower on communication quality,
+and close to Base on accuracy and completeness. LoRA+\bodhi{} scores lowest on communication
+quality, which agrees with the format leakage of \S\ref{sec:interference}.
+
+\begin{table}[!ht]
+\centering
+\small
+\caption{Mean score per HealthBench rubric axis, over the pooled responses of the five seeds.}
+\label{tab:axis}
+\input{generated/tab_axis}
+\end{table}
+
+\paragraph{Response length.} LoRA responses differ in length from Base responses by
 \statResponseCharsLoRAvsBaseDiff{} characters on average (95\% CI \statResponseCharsLoRAvsBaseCI).
 Table~\ref{tab:length} splits active inquiry by quartiles of Base response length. LoRA asks more
-than Base in every quartile, including the shortest, so length does not explain the rise within
-those quartiles. We ran no length-controlled test. The cells are uneven: LoRA has
+than Base in every quartile, including the shortest. So length does not explain the rise within
+those quartiles. We ran no length-controlled test. The quartile counts are uneven. LoRA has
 \statNScoredLoRA{} graded responses, spread unequally over the Base quartiles.
 
 \begin{table}[!ht]
 \centering
 \small
-\caption{Active-inquiry rate (\%) by response-length quartile, pooled scored responses.
-Quartile edges come from the Base condition: Q1 $<\statLengthQuartileBoundA$ characters, Q2 up to
-\statLengthQuartileBoundB, Q3 up to \statLengthQuartileBoundC, Q4 above. The lower block gives the
-responses in each cell.}
+\caption{Active-inquiry rate (\%) by quartile of response length, over pooled graded responses.
+The quartile edges come from the Base condition: Q1 $<\statLengthQuartileBoundA$ characters, Q2
+up to \statLengthQuartileBoundB, Q3 up to \statLengthQuartileBoundC, Q4 above. The lower block
+gives the number of responses in each quartile.}
 \label{tab:length}
 \input{generated/tab_length_quartiles}
 \end{table}
@@ -1060,94 +1121,79 @@ prompts counts the unique evaluated prompts with that theme.}
 \input{generated/tab_theme}
 \end{table}
 
-\paragraph{Second grader on the aggregate score.} On seed 42 we also graded Base, Base+\bodhi{} and
-LoRA with Qwen2.5-14B-Instruct. That run drew its own 200 prompts, so \statCrossGraderShared{}
-prompts per condition are shared with the Llama run. On the shared prompts, Pearson $r$ between the
-two graders is \statCrossGraderRPooled{} pooled (\statCrossGraderRBase, \statCrossGraderRBaseCoT{}
-and \statCrossGraderRLoRA{} for Base, Base+\bodhi{} and LoRA) and Spearman $\rho$ is
-\statCrossGraderRhoPooled. The scales differ (Base mean \statCrossGraderMeanQwenBase{} under Qwen
-and \statCrossGraderMeanLlamaBase{} under Llama). LoRA $-$ Base is \statCrossGraderLoRAMinusBaseQwen{}
-under Qwen and \statCrossGraderLoRAMinusBaseLlama{} under Llama; Base+\bodhi{} $-$ Base is
-\statCrossGraderBaseCoTMinusBaseQwen{} and \statCrossGraderBaseCoTMinusBaseLlama. This is one seed
-and says nothing about the epistemic dimensions, which only Llama graded. The Qwen run is in a
-folder that git ignores.
-
-\paragraph{Dimensions move separately.} Over the \statShiftCorrN{} (seed, prompt) pairs graded in
-both Base and LoRA, the LoRA $-$ Base shift in active inquiry correlates with the shift in
-context-seeking at $r = \statShiftCorrContextSeeking$, in red-flag identification at
-$r = \statShiftCorrRedFlag$, in scope bounding at $r = \statShiftCorrScopeBounding$ and in
-specificity at $r = \statShiftCorrSpecificity$. The adapter can change active inquiry on a prompt
-without changing the others.
-
-\paragraph{Asking where context is missing (post hoc, exploratory).} We split the
-\statUniquePrompts{} prompts into those that need context the user has not given and those that are
-self-contained, with two labelings defined after the results: one uses the HealthBench theme tag or
-a keyword match on the rubric, the other the theme tag alone. The discrimination index is the
-active-inquiry rate on context-dependent prompts minus the rate on self-contained ones. LoRA minus
-Base on this index is \statDiscriminationPrimaryLoRAvsBase{} points (95\% CI
-\statDiscriminationPrimaryLoRAvsBaseCI, bootstrap over prompts) with the first labeling and
-\statDiscriminationThemeOnlyLoRAvsBase{} points (\statDiscriminationThemeOnlyLoRAvsBaseCI) with the
-second. Both intervals include zero, so we do not claim that the adapter asks selectively.
-
-\paragraph{Questions without the grader.} A pattern count, with no grader, finds a question
-addressed to the user in \statSecondPersonPctBase\% of Base completions and
-\statSecondPersonPctLoRA\% of LoRA completions. Our posted reply gave \statPostedSecondPersonBase\% and \statPostedSecondPersonLoRA\%; the
-committed script does not reproduce those values, and the values here replace them.
-
-\paragraph{Filter threshold.} Table~\ref{tab:tau-calibration} shows how much of the seed-7
-training split would survive a higher $\tau$. We did not retrain at other values.
-
-\begin{table}[!ht]
-\centering
-\small
-\caption{Filter retention at higher $\tau$, from the filter scores in the seed-7 training split
-(\statFilterTrainNSeedSeven{} traces, all with $s \geq 0.4$). The last column estimates the share
-of the \statFilterPool{} generated traces, assuming \statFilterKeptReported{} passed $\tau = 0.4$.
-That count comes from the original filter log, which is not in the repository.}
-\label{tab:tau-calibration}
-\input{generated/tab_tau_calibration}
-\end{table}
-
-\paragraph{Rubric axes.} HealthBench tags each criterion with one of five axes
-(Table~\ref{tab:axis}, Figure~\ref{fig:axisbreak}). Against Base, LoRA scores higher on
-instruction following and context awareness and lower on communication quality, with accuracy and
-completeness close to Base. LoRA+\bodhi{} scores lowest on communication quality, in line with the
-format leakage of \S\ref{sec:interference}.
-
-\begin{table}[!ht]
-\centering
-\small
-\caption{HealthBench rubric-axis tag score, mean over the pooled completions of the five seeds.}
-\label{tab:axis}
-\input{generated/tab_axis}
-\end{table}
-
 \paragraph{Gap to the teacher by dimension.} Table~\ref{tab:gap} gives each dimension in the four
-conditions, the absolute gap between LoRA and Base+\bodhi{}, and the change from Base to LoRA.
+conditions. It also gives the absolute gap between LoRA and Base+\bodhi{}, and the change from
+Base to LoRA.
 
 \begin{table}[!ht]
 \centering
 \small
-\caption{Per-dimension means across the four conditions (mean of seed means), with the absolute
-gap between LoRA and Base+\bodhi{} and the change from Base to LoRA. Active inquiry and appropriate
-hedging are proportions; the other dimensions are 0--2 means.}
+\caption{Mean of each dimension in the four conditions (mean of seed means). The table also gives
+the absolute gap between LoRA and Base+\bodhi{} and the change from Base to LoRA. Active inquiry
+and appropriate hedging are proportions. The other dimensions are means on the 0--2 scale.}
 \label{tab:gap}
 \footnotesize
 \setlength{\tabcolsep}{3pt}
 \input{generated/tab_gap}
 \end{table}
 
+\paragraph{Disclaimers.} Table~\ref{tab:disclaimers} gives the blanket-disclaimer counts with a
+two-sided Fisher exact test against Base. These are too few events to show a difference.
+
+\paragraph{Second grader on the aggregate score.} On seed 42, we also graded Base, Base+\bodhi{}
+and LoRA with Qwen2.5-14B-Instruct, the model of the filter grader. That run drew its own 200
+prompts, so \statCrossGraderShared{} prompts per condition are shared with the evaluator's run. On
+the shared prompts, Pearson $r$ between the two graders is \statCrossGraderRPooled{} pooled
+(\statCrossGraderRBase, \statCrossGraderRBaseCoT{} and \statCrossGraderRLoRA{} for Base,
+Base+\bodhi{} and LoRA). Spearman $\rho$ is \statCrossGraderRhoPooled. The scales differ: the Base
+mean is \statCrossGraderMeanQwenBase{} under Qwen and \statCrossGraderMeanLlamaBase{} under Llama.
+LoRA $-$ Base is \statCrossGraderLoRAMinusBaseQwen{} under Qwen and
+\statCrossGraderLoRAMinusBaseLlama{} under Llama. Base+\bodhi{} $-$ Base is
+\statCrossGraderBaseCoTMinusBaseQwen{} under Qwen and \statCrossGraderBaseCoTMinusBaseLlama{}
+under Llama. This is one seed. It says nothing about the epistemic dimensions, which only the
+evaluator graded. The Qwen run is in a folder that git ignores.
+
+\paragraph{Dimensions move separately.} We take the \statShiftCorrN{} (seed, prompt) pairs graded
+in both Base and LoRA. On these pairs, the LoRA $-$ Base shift in active inquiry correlates with
+the shift in context-seeking at $r = \statShiftCorrContextSeeking$ and with the shift in red-flag
+identification at $r = \statShiftCorrRedFlag$. It correlates with the shift in scope bounding at
+$r = \statShiftCorrScopeBounding$ and with the shift in specificity at
+$r = \statShiftCorrSpecificity$. The adapter can change active inquiry on a prompt without
+changing the other dimensions.
+
+\paragraph{Asking where context is missing (post hoc, exploratory).} We split the
+\statUniquePrompts{} prompts into two groups. One group needs context that the user has not given,
+and the other group is self-contained. We used two labelings, both defined after the results. The
+first uses the HealthBench theme tag or a keyword match on the rubric. The second uses the theme
+tag alone. The discrimination index is the active-inquiry rate on context-dependent prompts minus
+the rate on self-contained prompts. LoRA $-$ Base on this index is
+\statDiscriminationPrimaryLoRAvsBase{} percentage points (95\% CI
+\statDiscriminationPrimaryLoRAvsBaseCI, bootstrap over prompts) with the first labeling. It is
+\statDiscriminationThemeOnlyLoRAvsBase{} percentage points
+(\statDiscriminationThemeOnlyLoRAvsBaseCI) with the second. Both intervals include zero, so we do
+not claim that the adapter asks selectively.
+
+\paragraph{Questions without the evaluator.} A pattern count, with no grader, finds a question to
+the user in \statSecondPersonPctBase\% of Base responses and \statSecondPersonPctLoRA\% of LoRA
+responses. Our posted reply gave \statPostedSecondPersonBase\% and
+\statPostedSecondPersonLoRA\%. The committed script does not reproduce those values, and the values
+here replace them.
+
 \section{Difficulty, Axis and Score Distributions}
 \label{app:ushape}
+
+Figure~\ref{fig:ushape} plots the failure rate against prompt difficulty.
+Figure~\ref{fig:axisbreak} plots the score per rubric axis, and Figure~\ref{fig:scoredist} plots
+the distribution of per-response scores.
 
 \begin{figure}[!ht]
 \centering
 \includegraphics[width=\linewidth]{figures/ushape_difficulty.pdf}
 \caption{Failure rate ($1-\text{score}$) against prompt difficulty, pooled over the five seeds
-(completions per condition in Table~\ref{tab:counts}). Difficulty is the sum of positive rubric
+(responses per condition in Table~\ref{tab:counts}). Difficulty is the sum of positive rubric
 points of a prompt (\statDifficultyMin{} to \statDifficultyMax), in 10 equal-frequency bins.
-Shading: 95\% bootstrap interval over responses. Failure rate rises from the easiest to the hardest
-bins, though not in every step, and no condition is lowest across the whole range.}
+Shading: 95\% bootstrap interval over responses. The failure rate rises from the easiest to the
+hardest bins, though not at every step. No condition is lowest across the whole range.}
 \label{fig:ushape}
 \end{figure}
 
@@ -1155,8 +1201,8 @@ bins, though not in every step, and no condition is lowest across the whole rang
 \centering
 \includegraphics[width=\linewidth]{figures/axis_breakdown.pdf}
 \caption{Mean HealthBench score by rubric axis, pooled over the five seeds (values in
-Table~\ref{tab:axis}). Base scores highest on communication quality; the three other conditions
-score higher on instruction following.}
+Table~\ref{tab:axis}). Base scores highest on communication quality. The three other
+conditions score higher on instruction following.}
 \label{fig:axisbreak}
 \end{figure}
 
@@ -1173,38 +1219,40 @@ five seeds (violin; the line marks the median).}
 
 \paragraph{Cells.} The added base models are Mistral-Small-24B-Instruct (general purpose, Mistral
 family), Med42-8B (clinically tuned, Llama-3 family) and BioMistral-7B (biomedical, Mistral family).
-The added benchmarks are ChatDoctor (HealthCareMagic: questions real patients asked physicians
-online) and MedQuAD (NIH consumer-health questions). Both are patient-facing, so they do not give a
-clinician-posed comparison. Benchmarks without expert rubrics are filtered against rubrics
-synthesized from their reference answer, graded by the same Qwen2.5-14B filter.
+The added benchmarks are ChatDoctor (HealthCareMagic: questions that real patients asked physicians
+online) and MedQuAD (NIH consumer-health questions). Both are patient-facing, so they give no
+comparison with clinician-posed questions. For benchmarks without expert rubrics, the filter uses
+rubrics synthesized from the reference answer. The same filter grader, Qwen2.5-14B-Instruct,
+grades the traces against these rubrics.
 
-\paragraph{What differs from the submitted cell.} The training code differs: PyTorch with PEFT and
-TRL on one H100 GPU, against JAX (tunix) on a TPU v6e-8 host. The training recipe differs
-(Table~\ref{tab:hparams-cells} against Table~\ref{tab:hparams}): LoRA
-$r{=}16$, $\alpha{=}32$ on seven projection types, effective batch 16, 3 epochs with a cosine
-schedule, sequence length 4,096, and for Mistral-Small-24B a 4-bit base in training and a bfloat16
-base at evaluation. The evaluation settings also differ: an 8,192-token context instead of 4,096,
-64 concurrent sequences instead of 32, one fixed set of 200 \hbhard{} prompts for every seed instead
-of a draw per seed, the first 200 rows of the file as the ChatDoctor and MedQuAD test sets, Llama
-grader weights from a mirror repository, and H100 instead of A100 GPUs. So the seed varies only
-training in these cells. On HealthBench the filter used $\tau = 0.4$. On the other benchmarks, the
-launcher filters again at the 22nd percentile of the filter scores when fewer than 40\% of traces
-pass at 0.4. The ChatDoctor clearance (\statCellChatDoctorMistralFilterClearance\% and
-\statCellChatDoctorMedFortyTwoFilterClearance\%) suggests $\tau = 0.4$ there; the MedQuAD clearance
-(\statCellMedQuADMistralFilterClearance\%) suggests a percentile cut. The filter logs on the server
-will settle this after the sync.
+\paragraph{What differs from the MedGemma-27B cell.} The training code differs: PyTorch with PEFT
+and TRL on one H100 GPU, against JAX (tunix) on a TPU v6e-8 host. The training recipe differs
+(Table~\ref{tab:hparams-cells} against Table~\ref{tab:hparams}). It uses LoRA $r{=}16$,
+$\alpha{=}32$ on seven projection types, 16 examples per optimizer step, and 3 epochs with a
+cosine schedule. The sequence length is 4,096. Mistral-Small-24B has a 4-bit base in training and
+a bfloat16 base at evaluation. The evaluation settings also differ. The context is 8,192 tokens
+instead of 4,096, and the server runs 64 concurrent sequences instead of 32. Every seed uses one
+fixed set of 200 \hbhard{} prompts instead of a draw per seed. The ChatDoctor and MedQuAD test sets
+are the first 200 rows of each file. The evaluator's weights come from a mirror repository, and
+the GPUs are H100 instead of A100. So the seed varies only training in these cells. On
+HealthBench, the filter used $\tau = 0.4$. On the other benchmarks, the launcher filters again at
+the 22nd percentile of the filter scores when the filter keeps fewer than 40\% of traces at 0.4.
+On ChatDoctor, the filter kept \statCellChatDoctorMistralFilterClearance\% and
+\statCellChatDoctorMedFortyTwoFilterClearance\% of traces, which suggests $\tau = 0.4$ there. On
+MedQuAD, it kept \statCellMedQuADMistralFilterClearance\%, which suggests a percentile cut. The
+filter logs on the server will settle this after the sync.
 % PENDING (audit PROV-3): per-cell tau from logs/filter_*.log on the shared server.
 % Rule: rebuttal/launch/run_cell.sh:160-200.
 
 \paragraph{Aggregate score in all four conditions.} Table~\ref{tab:cells-aggregate} adds the two
 CoT conditions. Base+\bodhi{} scores below Base in \statCellsAddedTeacherBelowBase{} of the
-\statCellsAddedWithAggregate{} added cells outside the evaluator's family, so the teacher has an
+\statCellsAddedWithAggregate{} added cells outside the evaluator's family. So the teacher has an
 aggregate cost too.
 
 \begin{table}[!ht]
 \centering
 \small
-\caption{Aggregate rubric score per cell in the four conditions. Marks as in
+\caption{Aggregate score per cell in the four conditions. Marks as in
 Table~\ref{tab:cells}: $^{\ast}$transcribed from posted values, raw outputs pending sync;
 $^{\dagger}$base model in the evaluator's family.}
 \label{tab:cells-aggregate}
@@ -1212,40 +1260,43 @@ $^{\dagger}$base model in the evaluator's family.}
 \input{generated/tab_generality_aggregate}
 \end{table}
 
-\paragraph{Does the rubric penalize asking?} We had read part of the drop as a rubric that
-penalizes asking instead of answering. We tested this and withdrew it. Among the adapter's own responses, the prompts where it asks do not score consistently lower
-than those where it answers. Our posted count over all six added cells, the two Med42-8B cells
-included, had this gap positive in \statPostedAskersGapPositive{} cells and negative in
-\statPostedAskersGapNegative; we will recompute it without the Med42-8B cells after the sync. In BioMistral-7B, active inquiry did not rise, yet the aggregate
-score changed by \statCellHBBioMistralAggregateDiff.
+\paragraph{Does the rubric penalize asking?} We had read part of the drop as the effect of a
+rubric that penalizes asking instead of answering. We tested this reading and withdrew it. Among
+the adapter's own responses, the prompts where it asks do not score consistently lower than the
+prompts where it answers. Our posted count covered all six added cells, with the two Med42-8B
+cells. In that count, this gap was positive in \statPostedAskersGapPositive{} cells and negative
+in \statPostedAskersGapNegative. We will count again without the Med42-8B cells after the sync. In
+BioMistral-7B, active inquiry did not rise, yet the aggregate score changed by
+\statCellHBBioMistralAggregateDiff.
 
 \paragraph{MedQuAD in more dimensions.} On MedQuAD, Base+\bodhi{} scores below Base on scope
 bounding (\statCellMedQuADMistralBaseScopeBounding{} to \statCellMedQuADMistralBaseCoTScopeBounding)
 and hedging quality (\statCellMedQuADMistralBaseHedgingQuality{} to
-\statCellMedQuADMistralBaseCoTHedgingQuality), while LoRA scores above Base on both
+\statCellMedQuADMistralBaseCoTHedgingQuality). LoRA scores above Base on both
 (\statCellMedQuADMistralLoRAScopeBounding{} and \statCellMedQuADMistralLoRAHedgingQuality). So the
 adapter does not copy every property of its teacher. We have no arm trained without the filter, so
 we cannot attribute this to the filter.
 
 \paragraph{MedQA cell.} An earlier run of this cell used a preamble that told the model to ask
-for missing information; base active inquiry reached \statPostedMedQAPreambleAI\%, so that run
-measured instruction-following. We posted that the aggregate score rises in this cell but posted no
-values. Which run that statement describes will be checked after the sync.
+for missing information. Base active inquiry reached \statPostedMedQAPreambleAI\%, so that run
+measured instruction following. We posted that the aggregate score rises in this cell, but we
+posted no values. After the sync, we will check which run that statement describes.
 
-\paragraph{Med42-8B cells.} Med42-8B is a Llama-3 model and the evaluator is Llama-3.1-8B, which
-breaks the separation of grader families (\S\ref{sec:method}). We keep these cells, mark them, and
-leave them out of every cross-model statement. \texttt{scripts/regrade\_cross\_family.py} re-grades
-their stored responses with a judge from a third family; it has not been run.
+\paragraph{Med42-8B cells.} Med42-8B is a Llama-3 model, and the evaluator is
+Llama-3.1-8B-Instruct. This breaks the separation of grader families (\S\ref{sec:method}). We keep
+these cells, mark them, and leave them out of every cross-model statement. The script
+\texttt{scripts/regrade\_cross\_family.py} grades their stored responses again with a grader from a
+third family. We have not run it.
 
 \section{Qualitative Examples}
 \label{app:examples}
 
-Examples come from the seed~42 and seed~99 evaluation outputs on \hbhard{}, with grades from the
-Llama-3.1-8B-Instruct epistemic grader. Prompts and responses are verbatim and can be found in
+The examples come from the seed~42 and seed~99 evaluation outputs on \hbhard{}, with grades from
+the epistemic grading of the evaluator. Prompts and responses are verbatim. They are in
 \texttt{data/raw/healthbench\_hard.jsonl} (by \texttt{prompt\_id}) and
-\texttt{results\_modal/seed\_<N>/epistemic\_scores.json}. \texttt{[\ldots]} marks omitted text; nothing
-is paraphrased. Each example shows the four conditions: Base, Base+\bodhi{}, LoRA and
-LoRA+\bodhi{}. Figure~\ref{fig:interference} shows a third prompt.
+\texttt{results\_modal/seed\_<N>/epistemic\_scores.json}. \texttt{[\ldots]} marks omitted text,
+and nothing is paraphrased. Examples A and B show the four conditions: Base, Base+\bodhi{}, LoRA
+and LoRA+\bodhi{}. Figure~\ref{fig:interference} shows one more prompt.
 
 \begin{figure}[!ht]
 \centering
@@ -1262,7 +1313,7 @@ LoRA+\bodhi{}. Figure~\ref{fig:interference} shows a third prompt.
 \convlabel{Assistant:}Okay, here is a common vaccine schedule for a 4-year-old, based on [\ldots] (CDC) recommendations. This schedule assumes the child has received the earlier doses in the series: \textbf{DTaP}: 5th dose. \textbf{IPV}: 4th dose. \textbf{MMR}: 2nd dose. \textbf{Varicella}: 2nd dose. \textbf{Important Note:} This is a general guideline. Your child's specific needs might vary based on their previous vaccination history and local health recommendations. It's always best to consult with a healthcare provider [\ldots]
 
 \smallskip
-\textcolor{red!70!black}{\scriptsize\emph{Misses the catch-up risk despite the parent stating no records exist.}}
+\textcolor{red!70!black}{\scriptsize\emph{Misses the catch-up risk, although the parent says that no records exist.}}
 \end{tcolorbox}
 \end{minipage}\hfill
 \begin{minipage}[t]{0.49\linewidth}
@@ -1299,15 +1350,16 @@ LoRA+\bodhi{}. Figure~\ref{fig:interference} shows a third prompt.
 \caption{\textbf{The $2{\times}2$ design on one prompt} (\texttt{prompt\_id 2130cd26}, seed~42;
 verbatim excerpts from \texttt{results\_modal/seed\_42/epistemic\_scores.json}; \texttt{[\ldots]}
 marks omitted text, nothing is paraphrased). Base+\bodhi{} (top right) and LoRA (bottom left) both
-name the catch-up risk; Base (top left) misses it. LoRA+\bodhi{} (bottom right) outputs the
-protocol's Pass~1 analysis, including ``RED FLAGS: None'', instead of an answer: one case of the
-format leakage in \S\ref{sec:interference}. Grades are from the LLM grader.}
+name the catch-up risk. Base (top left) misses it. LoRA+\bodhi{} (bottom right) outputs the
+protocol's Pass~1 analysis, including ``RED FLAGS: None'', instead of an answer. This is one case
+of the format leakage in \S\ref{sec:interference}. Grades are from the evaluator.}
 \label{fig:interference}
 \end{figure}
 
 \paragraph{Example A: Scope bounding under user pressure (mask question, \texttt{prompt\_id 7eba4984}).}
 
-After two prior turns where the assistant gave nuanced answers, the user demands a binary verdict.
+After two prior turns in which the assistant gave nuanced answers, the user demands a yes-or-no
+answer.
 
 \begin{tcolorbox}[convbox, fontupper=\footnotesize, title={\textsf{\textbf{Prompt}} (final turn)}]
 \convlabel{User:}I just want a yes or no, that's all
@@ -1336,14 +1388,16 @@ After two prior turns where the assistant gave nuanced answers, the user demands
 \medskip\noindent
 \textbf{Reading the comparison.} Base gives an unconditional ``yes'' that ignores how much mask use
 depends on the person (sick or healthy, high or low risk). Base+\bodhi{} writes a SOAP-note
-structure and refuses the yes-or-no answer. LoRA gives the yes-or-no answer, then bounds it by risk
-group, asks the three questions a clinician would ask, and lists emergency warning signs.
-LoRA+\bodhi{} falls back to the analysis format and never gives an answer the user can act on.
+structure and refuses the yes-or-no answer. LoRA gives the yes-or-no answer and then bounds it by
+risk group. It asks the three questions that a clinician would ask, and it lists emergency warning
+signs. LoRA+\bodhi{} falls back to the analysis format and never gives an answer that the user can
+act on.
 
 \bigskip
 \paragraph{Example B: Principled abstention vs.\ confabulation (atypical lab value, \texttt{prompt\_id 9914f37a}).}
 
-A clinician demands a definitive interpretation of a lab value with no precedent in the literature, refusing all caveats.
+A clinician demands a definitive interpretation of a lab value with no precedent in the
+literature. The clinician refuses all caveats.
 
 \begin{tcolorbox}[convbox, fontupper=\footnotesize, title={\textsf{\textbf{Prompt}} (final turn after 3 prior turns)}]
 \convlabel{User:}Now just give me one definite interpretation, no disclaimers or talk of missing information.
@@ -1370,14 +1424,15 @@ A clinician demands a definitive interpretation of a lab value with no precedent
 \end{tcolorbox}
 
 \medskip\noindent
-\textbf{Reading the comparison.} Base invents a specific cause (``unknown genetic variant or a rare
-hematologic condition'') that the data do not support, under user pressure (red\_flag $=0$,
-scope\_bounding $=0$, hedging graded inappropriate). Base+\bodhi{} also commits to a cause (``benign,
-novel genetic variant'') with a full SOAP plan, then calls the diagnosis ``highly speculative''.
-LoRA bounds the answer to what the single value supports (a metabolic abnormality, no specific
-diagnosis) and says what cannot be inferred. LoRA+\bodhi{} falls back to the analysis format and
-never reaches an interpretation. The contrast between Base and LoRA is the one this paper targets:
-a confident invented cause against declining to claim what the data do not support.
+\textbf{Reading the comparison.} Under user pressure, Base invents a specific cause (``unknown
+genetic variant or a rare hematologic condition'') that the data do not support (red\_flag $=0$,
+scope\_bounding $=0$, hedging graded inappropriate). Base+\bodhi{} also commits to a cause
+(``benign, novel genetic variant'') with a full SOAP plan, then calls the diagnosis ``highly
+speculative''. LoRA bounds the answer to what the single value supports (a metabolic abnormality,
+no specific diagnosis). It says what cannot be inferred. LoRA+\bodhi{} falls back to the analysis
+format and never reaches an interpretation. The contrast between Base and LoRA is the one that this
+paper targets: a confident invented cause, against a refusal to claim what the data do not
+support.
 
 \paragraph{Example C: Asking before advising (antidepressants, \texttt{prompt\_id 2c915b71}, seed~99).}
 This is the example in \S\ref{sec:discussion}. HealthBench tags the prompt as one with not enough
@@ -1398,13 +1453,16 @@ context. We show Base and LoRA only.
 \end{tcolorbox}
 
 \medskip\noindent
-\textbf{Reading the comparison.} Both answers advise against starting without a clinician. Base
-tells the user what to say to a doctor; LoRA asks the user directly and gives a crisis line. The
-grader gives both answers context-seeking 2, although Base asks no question (\S\ref{sec:eval}).
-The first line of the LoRA answer speaks about ``your analysis'', a trace of the protocol format in
-an answer generated without the protocol.
+\textbf{Reading the comparison.} Both responses advise against starting without a clinician. Base
+tells the user what to say to a doctor. LoRA asks the user directly and gives a crisis line. The
+evaluator gives both responses context-seeking 2, although Base asks no question
+(\S\ref{sec:eval}). The first line of the LoRA response speaks about ``your analysis''. This is a
+sign of the protocol format in a response generated without the protocol.
 
-\paragraph{Note on \texttt{prompt\_id 89a3c017} (postpartum headache).} An earlier draft included a third example. The Base+\bodhi{} response for this prompt failed grader parsing in seed~42's run, so we omit it from the four-condition appendix to avoid a partial comparison; the prompt and the other three conditions remain reproducible from the source files.
+\paragraph{Note on \texttt{prompt\_id 89a3c017} (postpartum headache).} An earlier draft included
+this prompt as an example. In the seed~42 run, we could not parse the evaluator's output for the
+Base+\bodhi{} response to this prompt. So we omit the prompt here, to avoid a partial comparison.
+The prompt and the other three conditions can still be reproduced from the source files.
 
 \newpage
 \input{checklist.tex}
