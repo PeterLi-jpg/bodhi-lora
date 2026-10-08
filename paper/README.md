@@ -1,67 +1,45 @@
-# SD4H 2026 workshop submission
+# Paper
 
-Target: **Structured Data for Health (SD4H)** workshop at ICML 2026, Seoul.
-
-## Key constraints
-
-- **Deadline**: April 28, 2026 AoE
-- **Format**: ICML 2026 LaTeX style, double-blind, fully anonymized
-- **Length**: 4 pages main body (excluding references and appendix)
-- **Archival**: No — we can still submit a full version elsewhere later
-
-## Files
-
-- `main.tex` — the paper itself
-- `references.bib` — citations (seeded with core refs, expand as needed)
-- `outline.md` — plain-prose version of the paper for quick review without LaTeX
-- `figures/` — generated paper figures plus the source-controlled pipeline diagram in `figures/pipeline.tex`
-- `TODO.md` — what's still a placeholder and blocks a real submission
-
-## Figure inventory
-
-`main.tex` currently references:
-
-- `figures/epistemic_bar.pdf`
-- `figures/epistemic_seeds.pdf`
-- `figures/effect_size_forest.pdf`
-- `figures/training_loss_seed42.pdf`
-- `figures/ushape_difficulty.pdf`
-- `figures/axis_breakdown.pdf`
-
-Supporting assets retained in `figures/` but not currently included in the
-main draft:
-
-- `figures/pipeline.tex` and `figures/pipeline.pdf`
-- `figures/score_distribution.pdf`
-
-Legacy PNGs such as `theme_fail.png`, `training_loss.png`, and
-`u_fail_smooth.png` are obsolete and can be removed by the build script.
-
-## Before compiling
-
-`main.tex` now uses the checked-in `neurips_2026.sty`, so no external style
-download is required for this workspace copy.
-
-Regenerate the figure bundle first:
-
-```bash
-python3 scripts/build_paper_figures.py --clean-legacy
-```
+`paper/main.tex` is the canonical source of the paper. It is the only copy we edit.
+`checklist.tex` and `references.bib` are its inputs.
 
 ## Build
 
 ```bash
-cd paper/
-pdflatex main.tex && bibtex main && pdflatex main.tex && pdflatex main.tex
-# or: latexmk -pdf main.tex
+python3 scripts/build_paper_figures.py --clean-legacy   # figures, first build only
+tectonic -X compile --outdir paper/build paper/main.tex
 ```
 
-Generated LaTeX build products in `paper/` are intentionally ignored.
+`make paper` runs the same build where the top-level Makefile has that target.
+The output is `paper/build/main.pdf`. Git ignores `paper/build/`.
 
-## Anonymization
+The figure PDFs in `paper/figures/` are build outputs and git ignores them. The one
+exception is `figures/pipeline.pdf`, which is tracked. Its source is
+`figures/pipeline_standalone.tex`.
 
-- `main.tex` currently has no author list (blind). DO NOT add names before
-  submission.
-- Any code link must go to an anonymized mirror, e.g.
-  https://anonymous.4open.science/r/bohdi-lora
-- Do not reference `REDACTED-FOR-ANONYMOUS-REVIEW/bohdi-lora` or MIT by name in acknowledgments.
+## Numbers
+
+Numbers in the paper come from `paper/generated/`. The stats scripts write that
+folder; see its README. Do not type a result into `main.tex` by hand. A table that
+still holds typed numbers must be changed to `\input` the generated file.
+
+## Frozen submission
+
+`paper/submitted/neurips2026/` holds the anonymous source of the NeurIPS 2026
+submission, rebuilt and checked against the official PDF. It is a record. Do not edit
+it. Its README gives the provenance and the known differences.
+
+## No other copies
+
+On 2026-10-07 we moved every other copy out of the repo, to
+`BODHI/_archive/paper_copies_2026-10-07/` on the first author's machine. These were
+`arxiv/`, `arxiv_upload/`, `overleaf/`, `preprint/`, `neurips_submission/`,
+`BODHI_overleaf.zip`, `main_cam.*`, `preview.*` (the old workshop draft) and old build
+outputs. Do not make a new copy of the paper in the repo. Make a venue or arXiv
+version from `main.tex` at build time, and mark the commit with a tag.
+
+## Anonymity
+
+`main.tex` keeps the anonymous author block. Real names go only in the gitignored
+`paper/AUTHORS.md`. Code links go to the anonymous mirror. Before you share a build,
+check it for names, emails, account names, bucket names and local paths.
