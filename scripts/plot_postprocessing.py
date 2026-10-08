@@ -4,7 +4,6 @@ Saves to paper/figures/:
   ushape_difficulty.pdf      -- failure rate vs. prompt difficulty (pooled 5 seeds)
   axis_breakdown.pdf         -- mean score by HealthBench rubric axis (pooled 5 seeds)
   score_distribution.pdf     -- per-prompt score violin plot (pooled 5 seeds)
-  training_loss_seed42.pdf   -- train+eval loss curve (seed 42 only)
   effect_size_forest.pdf     -- Cohen's d forest plot for epistemic dimensions
 
 Usage:
@@ -304,53 +303,6 @@ def plot_score_distribution(health_results, out_path):
     print(f"Saved -> {out_path}")
 
 
-# ── Figure 4: Training loss curve ────────────────────────────────────────────
-
-def plot_training_loss(trainer_state_path, out_path):
-    """
-    Train loss and eval loss vs. training step for seed 42.
-    Eval loss is plotted where available; train loss is plotted at every
-    logging step.
-    """
-    with open(trainer_state_path) as f:
-        ts = json.load(f)
-
-    log = ts.get("log_history", [])
-
-    train_steps, train_losses = [], []
-    eval_steps, eval_losses = [], []
-
-    for entry in log:
-        step = entry.get("step", 0)
-        if "loss" in entry:
-            train_steps.append(step)
-            train_losses.append(entry["loss"])
-        if "eval_loss" in entry:
-            eval_steps.append(step)
-            eval_losses.append(entry["eval_loss"])
-
-    fig, ax = plt.subplots(figsize=(7, 4))
-
-    ax.plot(train_steps, train_losses, "-o", color="#0077BB", linewidth=2,
-            markersize=4, label="Train loss", zorder=4)
-    if eval_steps:
-        ax.plot(eval_steps, eval_losses, "s--", color="#EE7733", linewidth=2,
-                markersize=6, label="Eval loss", zorder=5)
-
-    ax.set_xlabel("Training step", fontsize=11)
-    ax.set_ylabel("Cross-entropy loss", fontsize=11)
-    ax.set_title("Training loss curve (seed 42, representative)\n"
-                 f"MedGemma-27B LoRA r=16, 5 epochs, {max(train_steps)} steps",
-                 fontsize=11)
-    ax.legend(fontsize=10)
-    ax.grid(alpha=0.3, zorder=0)
-    ax.set_axisbelow(True)
-    fig.tight_layout()
-    fig.savefig(out_path, dpi=200, bbox_inches="tight")
-    plt.close(fig)
-    print(f"Saved -> {out_path}")
-
-
 # ── Figure 5: Effect size forest plot ────────────────────────────────────────
 
 def plot_effect_sizes(epistemic_examples, out_path):
@@ -463,8 +415,6 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--data-dir",  default="results_modal")
     parser.add_argument("--hb-hard",   default="data/raw/healthbench_hard.jsonl")
-    parser.add_argument("--trainer-state",
-                        default="checkpoints/seed_42/best/trainer_state.json")
     parser.add_argument("--out-dir",   default="paper/figures")
     args = parser.parse_args()
 
@@ -499,12 +449,6 @@ def main():
         health_results,
         out_dir / "score_distribution.pdf"
     )
-
-    trainer_state = Path(args.trainer_state)
-    if trainer_state.exists():
-        plot_training_loss(trainer_state, out_dir / "training_loss_seed42.pdf")
-    else:
-        print(f"  [skip] trainer_state not found: {trainer_state}")
 
     plot_effect_sizes(
         epistemic_examples,

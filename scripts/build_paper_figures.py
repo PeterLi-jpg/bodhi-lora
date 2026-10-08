@@ -28,6 +28,9 @@ FIGURE_RE = re.compile(r"\\includegraphics(?:\[[^]]*\])?\{([^}]+)\}")
 LEGACY_FIGURES = (
     "theme_fail.png",
     "training_loss.png",
+    # The paper dropped the training-loss figure: the only local trainer state is
+    # an early 838-trace run, not the submitted adapters (audit PROV-6, D14).
+    "training_loss_seed42.pdf",
     "u_curve.png",
     "u_curve_smooth.png",
     "u_fail.png",
@@ -103,10 +106,6 @@ def main() -> int:
     parser.add_argument("--data-dir", default="results_modal")
     parser.add_argument("--hb-hard", default="data/raw/healthbench_hard.jsonl")
     parser.add_argument(
-        "--trainer-state",
-        default="checkpoints/seed_42/best/trainer_state.json",
-    )
-    parser.add_argument(
         "--clean-legacy",
         action="store_true",
         help="remove legacy PNG outputs from paper/figures before rebuilding",
@@ -119,7 +118,6 @@ def main() -> int:
     aggregate = (root / args.aggregate).resolve()
     data_dir = (root / args.data_dir).resolve()
     hb_hard = (root / args.hb_hard).resolve()
-    trainer_state = (root / args.trainer_state).resolve()
 
     out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -148,8 +146,6 @@ def main() -> int:
             str(data_dir),
             "--hb-hard",
             str(hb_hard),
-            "--trainer-state",
-            str(trainer_state),
             "--out-dir",
             str(out_dir),
         ],
