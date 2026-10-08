@@ -1,0 +1,63 @@
+{
+  "configs": {
+    "base_no_wrapper": {
+      "n": 998,
+      "leaked_rate": 0.002004008016032064,
+      "red_flag_mean": 1.5220440881763526,
+      "len_median": 3574
+    },
+    "base_bodhi": {
+      "n": 947,
+      "leaked_rate": 0.029567053854276663,
+      "red_flag_mean": 1.6599788806758184,
+      "len_median": 3629
+    },
+    "lora_no_wrapper": {
+      "n": 985,
+      "leaked_rate": 0.018274111675126905,
+      "red_flag_mean": 1.6720812182741116,
+      "len_median": 3647
+    },
+    "lora_bodhi": {
+      "n": 928,
+      "leaked_rate": 0.5463362068965517,
+      "red_flag_mean": 1.511853448275862,
+      "len_median": 6217
+    }
+  },
+  "decisive": {
+    "lora_red_flag": 1.6720812182741116,
+    "lora_bodhi_clean_red_flag": 1.7315914489311164,
+    "lora_bodhi_leaked_red_flag": 1.3293885601577908,
+    "n_clean": 421,
+    "n_leaked": 507,
+    "len_median_clean": 3457,
+    "len_median_leaked": 8564
+  },
+  "length_control_clean": [
+    {
+      "quartile": 1,
+      "len_median": 1508,
+      "red_flag": 1.438095238095238,
+      "n": 105
+    },
+    {
+      "quartile": 2,
+      "len_median": 3097,
+      "red_flag": 1.7809523809523808,
+      "n": 105
+    },
+    {
+      "quartile": 3,
+      "len_median": 3958,
+      "red_flag": 1.838095238095238,
+      "n": 105
+    },
+    {
+      "quartile": 4,
+      "len_median": 5395,
+      "red_flag": 1.8679245283018868,
+      "n": 106
+    }
+  ]
+}

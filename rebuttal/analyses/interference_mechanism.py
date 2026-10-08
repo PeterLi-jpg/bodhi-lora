@@ -62,7 +62,13 @@ def is_leaked(text, threshold=2):
 
 
 def load(config_name):
-    """Pool a config's per-response rows across the 5 seeds."""
+    """Pool a config's per-response rows across the 5 seeds.
+
+    Only responses with a parsed epistemic grade are kept, because the red-flag
+    split needs the grade. So leaked_rate is over graded responses: 507/928 =
+    54.6% for LoRA+CoT, the posted figure. Over every LoRA+CoT completion in the
+    HealthBench result files the same rule gives 532/959 = 55.5%.
+    """
     rows = []
     for sd in SEED_DIRS:
         path = REPO / "results_modal" / sd / "epistemic_scores.json"
