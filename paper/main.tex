@@ -419,9 +419,11 @@ against inference-time calibration baselines; greedy decoding only; and no $\tau
 ablations. Our claim is therefore a recipe plus an evaluation decomposition for open-ended,
 information-seeking clinical Q\&A, not a validated framework for task types where there is no
 missing information to seek (for example closed-form multiple choice or summarization).
-\url{https://anonymous.4open.science/r/bodhi-lora-CEB5}
 
 \paragraph{Ethics and Broader Impact.} No patient data is used (public HealthBench only). The adapter is a research artifact, not for unsupervised clinical deployment. Positive impact: more calibrated clinical AI that asks before answering and recognizes danger signs. Primary risk: excessive hedging that delays emergency care---which is why we report red-flag identification per condition; the LoRA+\bodhi{} red-flag regression motivates the pre-registered clinician harm-potential review (Appendix~\ref{app:harm}). The released artifact requires gated MedGemma-27B access and inherits its license.
+
+\paragraph{Code availability.} Code, adapters and evaluation scripts are at
+\url{https://anonymous.4open.science/r/bodhi-lora-CEB5}.
 
 \begin{ack}
 Funding: None declared.
