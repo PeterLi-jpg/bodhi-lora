@@ -5484,6 +5484,28 @@
       "specificity": -0.0205224
     }
   },
+  "context_seeking_anchor": {
+    "base_no_wrapper": {
+      "n_score_2": 684,
+      "n_score_2_no_question": 509,
+      "pct_no_question": 74.4152
+    },
+    "base_bodhi": {
+      "n_score_2": 829,
+      "n_score_2_no_question": 375,
+      "pct_no_question": 45.2352
+    },
+    "lora_no_wrapper": {
+      "n_score_2": 850,
+      "n_score_2_no_question": 401,
+      "pct_no_question": 47.1765
+    },
+    "lora_bodhi": {
+      "n_score_2": 880,
+      "n_score_2_no_question": 137,
+      "pct_no_question": 15.5682
+    }
+  },
   "axis_scores": {
     "accuracy": {
       "base_no_wrapper": 0.11693,

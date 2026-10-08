@@ -159,6 +159,16 @@ def test_response_size_and_correlations(generated):
         "context_seeking": 0.23, "red_flag": -0.08, "scope_bounding": 0.02, "specificity": -0.02}
 
 
+def test_context_seeking_anchor(generated):
+    # Golden counts from a direct pass over results_modal/seed_*/epistemic_scores.json:
+    # grades of 2 on context-seeking, and how many of them carry no direct question.
+    cs = generated[0]["context_seeking_anchor"]
+    assert {c: (v["n_score_2"], v["n_score_2_no_question"]) for c, v in cs.items()} == {
+        "base_no_wrapper": (684, 509), "base_bodhi": (829, 375),
+        "lora_no_wrapper": (850, 401), "lora_bodhi": (880, 137)}
+    assert _macro(generated[1], "ContextSeekingTwoNoQuestionPctBase") == "74.4"
+
+
 def test_axis_scores(generated):
     ax = generated[0]["axis_scores"]
     assert round(ax["accuracy"]["base_no_wrapper"], 3) == 0.117

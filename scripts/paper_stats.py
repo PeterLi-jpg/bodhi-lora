@@ -822,6 +822,30 @@ def dimension_correlations(df, out, macros):
     return res
 
 
+def context_seeking_anchor(df, out, macros):
+    """How often a context-seeking grade of 2 comes with no direct question.
+
+    The grader prompt (scripts/eval_epistemic.py) says: score 2 only if at least
+    one direct question is asked. The same grade carries the active-inquiry flag
+    (a direct question was asked), so a 2 without the flag breaks the anchor.
+    """
+    scored = df[df["ep_status"] == "scored"]
+    res = {}
+    for cfg in CONDITIONS:
+        twos = scored[(scored["config"] == cfg) & (scored["context_seeking"] == 2)]
+        k = int((twos["active_inquiry"] == 0).sum())
+        n = int(len(twos))
+        res[cfg] = {"n_score_2": n, "n_score_2_no_question": k,
+                    "pct_no_question": 100 * k / n if n else float("nan")}
+        tok = COND_TOKEN[cfg]
+        macros.add(f"ContextSeekingTwoN{tok}", fmt_int(n),
+                   f"{SRC_EP}: scored responses with context-seeking 2")
+        macros.add(f"ContextSeekingTwoNoQuestionPct{tok}", fmt(res[cfg]["pct_no_question"], 1),
+                   f"{SRC_EP}: share of context-seeking 2 grades with active_inquiry false (percent)")
+    out["context_seeking_anchor"] = res
+    return res
+
+
 def axis_scores(df, out, macros):
     """Mean HealthBench rubric-axis tag score over pooled completions (prompts that carry the axis)."""
     res = {}
@@ -1667,6 +1691,7 @@ def run(results_dir: Path, out_dir: Path, healthbench: Path | None, filter_train
     length_quartiles(df, out, macros)
     response_size(df, out, macros)
     dimension_correlations(df, out, macros)
+    context_seeking_anchor(df, out, macros)
     axis_scores(df, out, macros)
 
     def optional(path, what, logical):
