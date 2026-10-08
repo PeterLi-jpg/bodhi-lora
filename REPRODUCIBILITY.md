@@ -22,8 +22,15 @@ cross-model statement. `scripts/regrade_cross_family.py` regrades them with a ju
 outside the Llama and Qwen families.
 
 MedQA-USMLE was run and set aside: it is a single-best-answer exam with complete
-vignettes, so nothing is withheld and asking is not the target behavior. See
-[RESULTS.md](RESULTS.md).
+vignettes, so nothing is withheld and asking is not the target behavior. Its only run used
+the old prompt preamble that told the model to ask (removed in 035d85f), and seed 42's
+epistemic grading found none of its prompts. See [RESULTS.md](RESULTS.md).
+
+Three runs on the GPU host did not finish and are not in the grid: MedGemma-27B on MedQA
+and on MedQuAD (folders with `eval_ids.json` only; trace generation failed on 2026-07-27
+because the vLLM server did not become healthy) and BioMistral-7B on MedQA (a smoke run:
+one seed, 40 traces, 3 kept, 3 optimizer steps, 10 eval prompts).
+`rebuttal/results/cell_recipe.json` records each one's status.
 
 ## 2. Per-cell training configs
 
@@ -34,8 +41,10 @@ vignettes, so nothing is withheld and asking is not the target behavior. See
   `legacy/`.
 - LoRA rank 8 and alpha 16, from repo evidence: the export step in the tunix launcher
   passes `--r 8 --alpha 16`, and the only committed adapter (commit `607440e`, branch
-  `results-temp`) has r=8 and alpha=16. **This is pending direct confirmation** from the
-  `adapter_config.json` of the five submitted adapters on GCS (section 7).
+  `results-temp`) has r=8 and alpha=16. **This is not confirmed** against the
+  `adapter_config.json` of the five submitted adapters: the GCS bucket that held them
+  returned 404 on 2026-10-08 (section 7). The early committed adapter comes from an HF-path
+  run, not from the evaluated adapters.
 - The paper's hyperparameter table for this cell lists the full recipe that ran.
 - `configs/lora_medgemma27b.yaml` and `configs/lora_medgemma27b_qlora.yaml` are configs
   for the GPU path (r=16, alpha=32). They did not train the submitted adapters.
@@ -44,7 +53,12 @@ vignettes, so nothing is withheld and asking is not the target behavior. See
 
 All three configs use LoRA r=16, alpha=32, dropout 0.05 on `q,k,v,o,gate,up,down_proj`,
 3 epochs, effective batch 16, learning rate 1e-4 with a cosine schedule and 5% warmup,
-and maximum sequence length 4,096.
+and maximum sequence length 4,096. The synced `adapter_config.json` and
+`trainer_state.json` of all 35 adapters of the seven cells confirm rank, alpha, dropout,
+target modules, epochs and the effective batch (`rebuttal/results/cell_recipe.json`). The
+evaluated adapter in `ckpt/best/` is the epoch checkpoint with the lowest validation loss
+(`load_best_model_at_end` in `scripts/train_lora.py`): epoch 1, 2 or 3, depending on the
+cell and seed.
 
 | Config | Base model | Training precision | Eval precision | Batch per device x accumulation |
 |---|---|---|---|---|
@@ -60,11 +74,11 @@ The MedGemma cell has no such mismatch.
 | Setting | Submitted cell | Added cells |
 |---|---|---|
 | Trainer | tunix on TPU v6e | `scripts/train_lora.py` (transformers, peft, trl) on H100 |
-| LoRA | r=8, alpha=16 (pending confirmation) | r=16, alpha=32 |
+| LoRA | r=8, alpha=16 (from the code; the saved adapters could not be checked) | r=16, alpha=32 (from the saved adapter configs) |
 | Eval server | vLLM on Modal A100-80GB, `max_model_len` 4096, `--max-num-seqs` 32 | vLLM 0.9 subprocess on H100, `max_model_len` 8192, `--max-num-seqs` 64 |
 | Eval grader | `meta-llama/Llama-3.1-8B-Instruct` | `NousResearch/Meta-Llama-3.1-8B-Instruct`, a mirror of the same model |
 | Eval prompts | a new 200-prompt draw from HealthBench-Hard per seed | HealthBench: the fixed `data/raw/hard_200_sample_ids.json` for every seed; other benchmarks: the first 200 prompts of the built JSONL |
-| Filter threshold tau | 0.4 | 0.4 on HealthBench; on the other benchmarks 0.4, or the 22nd percentile of the scores when 0.4 keeps under 40% of the traces (rule in `rebuttal/launch/run_cell.sh`). The value each cell used is in the GPU-host logs, not yet synced |
+| Filter threshold tau | 0.4 | 0.4 in every cell, from the filter logs (`rebuttal/results/cell_recipe.json`). The launcher's rule would re-filter a non-HealthBench cell at the 22nd percentile of the scores when 0.4 keeps under 40% of the traces (`1262448:rebuttal/launch/run_cell.sh:160-200`); no cell met it, and no log shows a second cut |
 | What a seed changes | eval draw, train/val split, LoRA init, data order | LoRA init and data order. One filter pass per cell, and fixed eval prompts |
 | Teacher traces | generated once with greedy decoding | generated once per cell with greedy decoding |
 
@@ -133,7 +147,7 @@ Its launchers in `legacy/` are kept to document what ran, not as the path to use
 | 3 Train | `scripts/train_lora.py` | adapter in `ckpt/best/`, `trainer_state.json` |
 | 4 Eval | `scripts/eval_healthbench.py` | one JSON per condition: per-prompt score, rubric results, parse failures |
 | 5 Epistemic grade | `scripts/eval_epistemic.py` | `epistemic_scores.json`: per-prompt scores on the seven behaviors |
-| Aggregate | `scripts/aggregate_seeds.py` | `multi_seed_summary.json` |
+| Aggregate | `scripts/aggregate_seeds.py` | `multi_seed_summary.json`. The copies from the GPU host predate 55f6c7c: they list the seeds as `["eval"]` (a wrong glob) and hold one seed. They are gitignored and unused; `make cells` recomputes from the per-seed files |
 
 The normalized rubric score is `(earned - negative) / (positive - negative)`, so it is
 comparable across prompts with different penalty items.
@@ -145,8 +159,9 @@ comparable across prompts with different penalty items.
 | HealthBench JSONL | `data/raw/` (ignored) | `bash setup.sh` |
 | ChatDoctor, MedQuAD, MedQA JSONL | `data/raw/` (ignored) | `scripts/build_benchmark_jsonl.py`, at the pinned dataset revisions; its manifest records the sha256 of each file |
 | Filtered training traces of the submitted cell | `data/sft_qwen_graded/` (ignored) | regenerate with stages 1 and 2 |
-| Submitted adapters and trainer states | `gs://bohdi-runs-tokyo-micron/prod-v39-tunix-27b-neurips/` | `gsutil cp` of each seed's `adapter_config.json` and `trainer_state.json` |
-| Added-cell outputs | `/data/PROJECTS/bohdi/results_rebuttal/` on the shared H100 host | the sync command below |
+| Submitted adapters and trainer states | were at `gs://bohdi-runs-tokyo-micron/prod-v39-tunix-27b-neurips/`; that bucket returned 404 on 2026-10-08, and the project has no buckets | `legacy/modal_eval.py` copied each seed's `checkpoints/best/` and `train.jsonl`/`val.jsonl` into the Modal volume `bohdi-data-cache` (`/data/seed_<N>/`); that volume may still hold them (BLOCKED.md item 3) |
+| Added-cell outputs | `/data/PROJECTS/bohdi/results_rebuttal/` on the shared H100 host; copied on 2026-10-08 to `results_rebuttal/` here and to a local archive outside the repo | the sync command below |
+| Added-cell host logs | `/data/PROJECTS/bohdi/logs/` on the host; copied to `logs/host/` (gitignored) | the second command below |
 | Returned physician grades | the study coordinator | only de-identified grades go in the repo |
 
 Sync the added cells. This copies JSON only (eval files, summaries, eval ids, adapter
@@ -157,8 +172,17 @@ rsync -av --prune-empty-dirs --include '*/' --include '*.json' --exclude '*' \
     <gpu-host>:/data/PROJECTS/bohdi/results_rebuttal/ results_rebuttal/
 ```
 
-Also copy the filter logs (`logs/filter_*.log` on the host) and record the tau of each
-cell in its manifest.
+The copy of 2026-10-08 was complete: 194 of 194 JSON files, 36 of 36 adapter configs and
+108 of 108 trainer states. Git tracks the adapter configs, trainer states and eval ids; the
+per-seed eval JSON (full responses, about 370 MB) is gitignored. Copy the logs too, then
+run `make cells`, which reads both and writes the tracked `generated_values.json`,
+`quality_drop.json` and `cell_recipe.json`:
+
+```bash
+mkdir -p logs/host
+rsync -av <gpu-host>:/data/PROJECTS/bohdi/logs/ logs/host/
+make cells
+```
 
 ## 8. Determinism
 

@@ -37,9 +37,8 @@ DOC_GLOBS = ["docs/**/*.md", "contributions/**/*.md"]
 # Paths the docs name that are not in the repo yet. Each entry is a promise, not
 # a file: the check warns when one exists, so the entry can be removed.
 PENDING = {
-    "results_rebuttal/": "rebuttal-cell outputs, BLOCKED until synced from the GPU host",
-    "data/rebuttal_cells/generated_values.json": "written by make cells once an added cell is synced",
-    "rebuttal/results/quality_drop.json": "written by make cells once the added cells are synced",
+    "results_rebuttal/healthbench__mistralai_Mistral-Small-24B-Instruct-2501__ask_first/":
+        "written by the second-protocol run (BLOCKED.md item 9), not run yet",
 }
 
 TOP_FILES_EXT = (".sh", ".md", ".txt", ".py", ".toml", ".cfg", ".yaml", ".yml")

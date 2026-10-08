@@ -8,14 +8,16 @@ Issue numbers such as #5 are GitHub issues on `PeterLi-jpg/bohdi-lora`.
 
 ### Blocked on data outside the repo
 
-- **Added-cell raw outputs are not synced (PROV-1).** The added cells exist only on the
-  shared H100 host. Until the sync in [REPRODUCIBILITY.md](REPRODUCIBILITY.md) section 7
-  runs, their numbers come from `data/rebuttal_cells/posted_values.json` and carry the
-  "transcribed from posted values" footnote. The per-cell tau (PROV-3) and the MedQA
-  preamble version are in the same logs.
+- **The added cells' full responses are not versioned (PROV-1).** The per-seed eval JSON
+  (about 370 MB) is in the local copy of `results_rebuttal/` and on the shared H100 host,
+  and it is gitignored. The repo tracks what the paper needs from it
+  (`data/rebuttal_cells/generated_values.json`) and the adapter configs, trainer states and
+  eval ids. Rebuilding `generated_values.json` needs the local copy (`make cells`).
 - **The submitted adapter config is not confirmed (HYG-4, D1).** Repo evidence says
-  r=8, alpha=16. The `adapter_config.json` of the five submitted seeds on GCS must
-  confirm it before the paper's hyperparameter table is final.
+  r=8, alpha=16. The GCS bucket that held the five submitted adapters returned 404 on
+  2026-10-08, so the paper says the values come from the code and could not be checked.
+  `legacy/modal_eval.py` copied each seed's `checkpoints/best/` into the Modal volume
+  `bohdi-data-cache`, which may still hold them (BLOCKED.md item 3).
 - **Returned physician grades are not in the repo (PROV-5, EVAL-5).** One of three
   raters returned. `scripts/compute_irr_kappa.py` read that file in place and wrote
   `results_modal/irr/kappa_results.json`, which names no rater. Nobody else can
@@ -33,9 +35,17 @@ Issue numbers such as #5 are GitHub issues on `PeterLi-jpg/bohdi-lora`.
   `paper/generated/numbers.json`).
 - **Med42-8B shares the evaluator's family (EVAL-7, D6).** The cells are marked † and
   kept out of cross-model statements. `scripts/regrade_cross_family.py` is not run yet;
-  it needs the synced outputs and a GPU.
+  it needs a GPU.
 - **No prior-work baseline has run (EVAL-8).** `scripts/baselines/` holds the prompt
   baselines; they need GPU inference on the existing eval sets.
+- **The MedQA cell has only the preamble run.** Its one run used the old prompt that told
+  the model to ask (Base asks in nearly every response), so it measures instruction
+  following. The fixed prompt (035d85f) was never run. The paper reports the cell's
+  aggregate score, sets it aside and says why (withdrawals W12).
+- **MedQA seed 42 has no epistemic grades.** Its grading looked the prompts up in
+  HealthBench-Hard only and skipped all 200 per condition
+  (`logs/host/eval_medqa_mistralai_Mistral-Small-24B-Instruct-2501_s42.log`); later seeds
+  loaded the MedQA prompts. The cell's seven dimensions have four seeds.
 - **The two pipelines differ (REPRO-3).** Context length, server batch size, grader
   mirror, eval-prompt policy, trainer and hardware all differ between the submitted
   and added cells. REPRODUCIBILITY.md section 3 lists each one.
@@ -57,13 +67,17 @@ Issue numbers such as #5 are GitHub issues on `PeterLi-jpg/bohdi-lora`.
 
 ### Reproducibility gaps
 
-- **The posted cells' environment and eval draws are not recorded (REPRO-10, REPRO-11,
-  EVAL-12).** The code side is fixed (see Fixed below). What stays open is the record of
-  the runs that produced the posted numbers: the exact `.venv-infer` versions (no pip
-  freeze was kept; `requirements-infer.txt` gives the range and why), the `eval_ids`
-  files of each added cell, and their overlap-check output. All of these sit on the
-  shared GPU host until `results_rebuttal/` is synced (PROV-1). New runs record them in
-  their manifests (`scripts/run_manifest.py`).
+- **The posted cells' environment is not recorded (REPRO-10, EVAL-12).** The code side is
+  fixed (see Fixed below). What stays open is the record of the runs that produced the
+  posted numbers: the exact `.venv-infer` versions (no pip freeze was kept;
+  `requirements-infer.txt` gives the range and why; each eval JSON records only its
+  transformers and bodhi-llm versions) and an overlap-check output (the gate came after
+  these runs). The eval ids are synced: each non-HealthBench cell has its `eval_ids.json`,
+  and the HealthBench cells used `data/raw/hard_200_sample_ids.json`. New runs record all
+  of this in their manifests (`scripts/run_manifest.py`).
+- **The host's `multi_seed_summary.json` files are wrong.** They predate 55f6c7c and list
+  their seeds as `["eval"]`, so each holds one seed. They are gitignored and unused;
+  `make cells` recomputes from the per-seed files.
 
 ### Repo state
 
@@ -78,6 +92,12 @@ Issue numbers such as #5 are GitHub issues on `PeterLi-jpg/bohdi-lora`.
 
 ## Fixed
 
+- **Added-cell raw outputs synced (PROV-1, PROV-2, PROV-3; 60c1a54, 5d5890e).** The
+  outputs were copied read-only from the GPU host on 2026-10-08. `make cells` computes
+  every added-cell value, the paired tests of the aggregate drop and the per-cell tau,
+  trace counts and adapter recipe from them, and the paper takes every added-cell value
+  from there. One posted value was wrong (MedQuAD Base hedging, withdrawals W21). Every
+  cell used tau = 0.4.
 - **#2** `format_example` mis-zipped single examples in TRL's probe call. It now handles
   both shapes (`scripts/train_lora.py`).
 - **#4** Filtering and eval use one normalized score,

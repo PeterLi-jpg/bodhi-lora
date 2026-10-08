@@ -10,20 +10,24 @@ replies, is `docs/CLAIMS.md`. This file is the number-level map for the current 
 
 Kinds:
 
-- **computed**: the macro comes from committed data in this repository.
+- **computed**: the macro comes from committed data in this repository. For the added cells
+  that data is `data/rebuttal_cells/generated_values.json` and `rebuttal/results/*.json`,
+  which `make cells` computes from the raw outputs synced from the GPU host on 2026-10-08
+  (the per-seed eval JSON and the host logs are gitignored; `make numbers` needs only the
+  tracked files).
 - **computed, untracked input**: the macro comes from a file that git ignores. The only
   such input left is `data/raw/healthbench_hard.jsonl`, a public download (`setup.sh`).
   `make numbers` stops with a message when it is absent.
 - **posted**: the macro comes from `data/rebuttal_cells/posted_values.json`, a transcription
-  of the OpenReview replies. The raw outputs are on the shared GPU host (audit PROV-1). Once
-  `make cells` writes `data/rebuttal_cells/generated_values.json`, the same macros come from
-  the synced outputs instead, and the cross-cell table drops the asterisk.
+  of the OpenReview replies, and the paper quotes it as what was posted. Since the sync no
+  added-cell result is of this kind.
 - **design**: a setting of the experiment (seeds, prompts per seed, context length, tau,
   LoRA rank). Its source is the config or launcher named in the Source column.
 - **unverified**: typed in the paper; the output that produced it is not in the repository.
 
 Inputs: `RM` is `results_modal/seed_*/` (the four `<condition>.json` files and
-`epistemic_scores.json`), `PV` is `data/rebuttal_cells/posted_values.json`.
+`epistemic_scores.json`), `PV` is `data/rebuttal_cells/posted_values.json`, `GV` is
+`data/rebuttal_cells/generated_values.json`, `CR` is `rebuttal/results/cell_recipe.json`.
 
 ## Abstract
 
@@ -33,13 +37,13 @@ Inputs: `RM` is `results_modal/seed_*/` (the four `<condition>.json` files and
 | Active inquiry 17.5% to 45.6%, +28.0 points, 95% CI [+22.9, +33.2] | `\statActiveInquiryBase`, `\statActiveInquiryLoRA`, `\statActiveInquiryLoRAvsBaseDiff`, `...CI` | `describe_conditions`, `compare_conditions` | RM | computed |
 | Context-seeking 1.40 to 1.75 | `\statContextSeekingBase`, `\statContextSeekingLoRA` | `describe_conditions` | RM | computed |
 | No detected change in aggregate score, +0.004 [-0.011, +0.020] | `\statHealthBenchLoRAvsBaseDiff`, `...CI` | `compare_conditions` | RM | computed |
-| In 4 added cells outside the evaluator's family, active inquiry rises in 3 | `\statCellsAddedCompared`, `\statCellsAddedAIRose` | `generality_section` | PV | posted |
-| Aggregate falls in all 4, by 0.014 to 0.086 | `\statCellsAddedWithAggregate`, `\statCellsAddedDropMin`, `\statCellsAddedDropMax` | `generality_section` | PV | posted |
+| In 4 added cells outside the evaluator's family, active inquiry rises in 3 | `\statCellsAddedCompared`, `\statCellsAddedAIRose` | `generality_section` | GV | computed |
+| Aggregate falls in all 4, by 0.014 to 0.086, each paired t p <= 0.016 | `\statCellsAddedWithAggregate`, `\statCellsAddedDropMin`, `\statCellsAddedDropMax`, `\statCellsAddedDropPMax` | `generality_section` | GV | computed |
 | Adding CoT to the adapter changes red-flag identification by -0.161 [-0.262, -0.059] on the 0-2 score, Holm-adjusted p = 0.058 (the rate, -20.6 points, is a secondary measure stated in section 4.3) | `\statRedFlagLoRACoTvsLoRADiff`, `...CI`, `...PHolm` | `compare_conditions` | RM | computed |
 | Format leakage in 54.6% of LoRA+BODHI answers | `\statLeakagePctLoRACoT` | `rebuttal_section` | `rebuttal/results/interference_mechanism.json` | computed |
-| A fifth added cell outside the evaluator's family, MedQA, has no values; the replies said its aggregate rose | none | | `rebuttal/responses/posted/HomM_2_followup_part1.md:11`, `HomM_4_consolidation.md:3` | posted, no number (commitments C24 to-do) |
+| In a fifth such cell, MedQA, the aggregate rose, +0.018 [+0.003, +0.033], but the prompt told the model to ask | `\statCellMedQAMistralAggregateDiff`, `...DiffCI` | `generality_section` | GV | computed (the run identity: withdrawals W12; commitments C24 done) |
 | Physician agreement kappa 0.35, target 0.6 set in advance for the filter grader, on rubric criteria only; no physician graded the seven dimensions | `\statKappaAll`; 0.6 is the target in the plan of 2026-04-29 | `kappa_section` | `results_modal/irr/kappa_results.json`, computed by `make kappa` from the returned rater file, which carries a name and is kept outside the repo; row design in `scripts/make_irr_excel.py` | computed from an input outside the repo (audit NUM-2): the committed `IRR-clinicians/` sheets are blank, so the value cannot be recomputed from the repo |
-| BioMistral-7B is a null result | none in the abstract | | PV (see section 4.2 rows) | posted |
+| BioMistral-7B is a null result | none in the abstract | | GV (see section 4.2 rows) | computed |
 
 ## Introduction
 
@@ -49,7 +53,7 @@ Inputs: `RM` is `results_modal/seed_*/` (the four `<condition>.json` files and
 | 40 of 1,000 Hard prompts tagged as written by a health professional; 63 carry the tag (lower bound) | `\statHardHealthProfessional`, `\statHardSpeakerTagged`, `\statHardPrompts` | `speaker_tags`, `difficulty_range` | `data/raw/healthbench_hard.jsonl` (`physician_agreed_category` tags) | computed; HealthBench is a public download |
 | Posted 14 of 1,000 (Appendix H, as corrected); the committed keyword rule finds 4 of 667 evaluated prompts | `\statPostedClinicianPrompts`, `\statClinicianKeywordPrompts`, `\statMimicryEvalPrompts` | `generality_section`, `rebuttal_section` | PV; `rebuttal/results/mimicry_split.json` | posted (not reproduced; withdrawals W14); computed |
 | Four LoRA - Base effects with Holm-adjusted p <= 0.0065 | `\statScopeBoundingLoRAvsBasePHolm` (the largest of the four) | `compare_conditions` | RM | computed |
-| Active inquiry rises in 3 of 4 added cells; aggregate falls in all 4 | `\statCellsAddedAIRose`, `\statCellsAddedCompared`, `\statCellsAddedWithAggregate` | `generality_section` | PV | posted |
+| Active inquiry rises in 3 of 4 added cells; aggregate falls in all 4 | `\statCellsAddedAIRose`, `\statCellsAddedCompared`, `\statCellsAddedWithAggregate` | `generality_section` | GV | computed |
 | BODHI expansion "Balanced, Open-minded, Diagnostic, Humble, Inquisitive" | none | | the cited BMJ paper (docs/DECISIONS.md, D15 note) | design |
 | Pass 1 has seven fields: task type, audience, best assessment, key uncertainties, questions to ask, red flags, safe recommendations | none | | `bodhi/prompts.py` in bodhi-llm 0.1.4 (pinned in `requirements.txt`) | design |
 
@@ -59,7 +63,8 @@ Inputs: `RM` is `results_modal/seed_*/` (the four `<condition>.json` files and
 |---|---|---|---|---|
 | 4,000 HealthBench prompts outside the Hard set | `\statFilterPool` | `tau_calibration` | constant `FILTER_POOL` (5,000 HealthBench minus 1,000 Hard; legacy launcher) | design |
 | Seed-7 training split: 2,816 traces, 0 in the Hard set | `\statFilterTrainNSeedSeven`, `\statTrainHardOverlapSeedSeven` | `tau_calibration` | `data/derived/seed_7_filter_scores.json` (scores copied from the ignored `data/sft_qwen_graded/seed_7_train.jsonl`), `data/raw/healthbench_hard.jsonl` | computed; HealthBench is a public download |
-| tau = 0.4, r = 8, alpha = 16, 300 steps, 64 examples per step, 2,048 tokens | none | | `legacy/configs/lora_medgemma27b_tunix.yaml`, `legacy/tpu/launch_5seeds_tunix.sh` (Table hparams comments) | design, pending the GCS adapter_config.json check (D1) |
+| tau = 0.4, r = 8, alpha = 16, 300 steps, 64 examples per step, 2,048 tokens | none | | `legacy/configs/lora_medgemma27b_tunix.yaml`, `legacy/tpu/launch_5seeds_tunix.sh` (Table hparams comments) | design; not checked against the saved adapters, because the GCS bucket returned 404 on 2026-10-08 (D1; BLOCKED.md item 3) |
+| Added cells: r = 16, alpha = 32 (section 3.3, Table F.2, Appendix J) | `\statCellsLoRARank`, `\statCellsLoRAAlpha` | `recipe_macros` | CR (the synced `adapter_config.json` of all 35 adapters) | computed |
 | 1,000 draws per condition cover 667 unique prompts; 271 repeat | `\statPromptEvaluations`, `\statUniquePrompts`, `\statRepeatedPrompts` | `counts_and_failures` | RM | computed |
 | Epistemic parse failures 0.20% to 1.49% per condition | `\statEpistemicParseFailPctBase`, `\statEpistemicParseFailPctMax` | `counts_and_failures` | RM | computed |
 | HealthBench criterion failures at most 0.087% per run | `\statHealthBenchParseFailPctMaxRun` | `counts_and_failures` | RM | computed |
@@ -96,14 +101,14 @@ Inputs: `RM` is `results_modal/seed_*/` (the four `<condition>.json` files and
 | Claim | Macro(s) | Function | Source | Kind |
 |---|---|---|---|---|
 | Table 3, first row (MedGemma-27B cell) | `tab_generality.tex` | `generality_table` | RM | computed |
-| Table 3, other rows | `tab_generality.tex` | `generality_table`, `resolve_cells` | PV (or `generated_values.json` after the sync) | posted |
-| Interval for the added cells "pending" | `tab_generality.tex` | `_diff_with_ci` | needs per-seed values from the sync | posted |
-| BioMistral-7B: 11.7% to 10.1%, teacher 14.5%, filter kept 20.4% | `\statCellHBBioMistral<...>` | `generality_section` | PV | posted |
-| Adapter at or above its teacher in 3 of 5 cells (submitted included) | `\statCellsAtOrAboveTeacher`, `\statCellsCompared` | `generality_section` | RM, PV | posted |
-| Aggregate falls in all 4 added cells outside the evaluator's family, 0.014 to 0.086 | `\statCellsAddedWithAggregate`, `\statCellsAddedDropMin`, `\statCellsAddedDropMax` | `generality_section` | PV | posted |
-| Posted paired t: each drop two-sided p < 0.02, all six significant after Holm over six cells | `\statPostedAggDropPBelow` | `generality_section` | PV | posted; recompute with `make cells` (`rebuttal/analyses/quality_drop.py`) |
-| MedQA preamble run: base active inquiry 99% | `\statPostedMedQAPreambleAI` | `generality_section` | PV | posted |
-| MedQA aggregate "rises" | none (no value was posted) | | `rebuttal/responses/posted/HomM_2_followup_part1.md:11` | posted, no number |
+| Table 3, other rows | `tab_generality.tex` | `generality_table`, `resolve_cells` | GV | computed |
+| Interval for each added cell (paired t(4) over seeds) | `tab_generality.tex` | `_diff_with_ci`, `resolve_cells` | GV (per-seed aggregate) | computed |
+| BioMistral-7B: 11.7% to 10.1%, teacher 14.5%, filter kept 20.4% | `\statCellHBBioMistral<...>` | `generality_section` | GV; the filter share from CR | computed |
+| Adapter at or above its teacher in 3 of 5 cells (submitted included) | `\statCellsAtOrAboveTeacher`, `\statCellsCompared` | `generality_section` | RM, GV | computed |
+| Aggregate falls in all 4 added cells outside the evaluator's family, 0.014 to 0.086 | `\statCellsAddedWithAggregate`, `\statCellsAddedDropMin`, `\statCellsAddedDropMax` | `generality_section` | GV | computed |
+| Each drop p <= 0.016; each survives Holm over the 6 added cells not set aside (p_Holm <= 0.016), as posted | `\statCellsAddedDropPMax`, `\statCellsAddedDropPHolmMax`, `\statCellsHolmFamily` | `generality_section` | GV | computed (`rebuttal/results/quality_drop.json` gives the same tests with Holm over 7 cells) |
+| MedQA: Base asked in 99.0% to 100.0% of responses per graded seed; aggregate +0.018 [+0.003, +0.033]; the posted rise | `\statCellMedQAMistralBaseActiveInquirySeedMin`, `...SeedMax`, `\statCellMedQAMistralAggregateDiff`, `...DiffCI` | `generality_section` | GV | computed |
+| MedQA dimensions graded in 4 of 5 seeds | `\statCellMedQAMistralEpistemicSeeds`, `\statCellMedQAMistralSeeds` | `generality_section` | GV (`per_seed`) | computed |
 | Recipe and evaluation differences of the added cells | none | | `rebuttal/configs/*.yaml`, `rebuttal/launch/run_cell.sh`, `scripts/_vllm_engine.py` (comments above Table hparams-cells) | design |
 
 ## Results: CoT on the adapted model (section 4.3)
@@ -123,7 +128,7 @@ Inputs: `RM` is `results_modal/seed_*/` (the four `<condition>.json` files and
 
 | Claim | Macro(s) | Function | Source | Kind |
 |---|---|---|---|---|
-| Aggregate falls by 0.014 to 0.086 in the added cells outside the family | `\statCellsAddedDropMin`, `\statCellsAddedDropMax` | `generality_section` | PV | posted |
+| Aggregate falls by 0.014 to 0.086 in the added cells outside the family | `\statCellsAddedDropMin`, `\statCellsAddedDropMax` | `generality_section` | GV | computed |
 | Baseline code exists and has not run | none | | `scripts/baselines/`, `rebuttal/launch/run_baselines.sh` | design |
 | Antidepressant example: Base asks nothing, LoRA asks about duration, intensity, sleep, appetite, energy, concentration and self-harm, and gives a crisis line | none (qualitative) | | `results_modal/seed_99/{base,lora}_no_wrapper.json` and `epistemic_scores.json`, prompt `2c915b71` | computed (read by hand; quoted in Appendix K) |
 | Table 4: prior approaches compared on what they change, inference cost, what they need and their target | none | | the cited papers | design (positioning, not a measurement) |
@@ -138,6 +143,10 @@ Inputs: `RM` is `results_modal/seed_*/` (the four `<condition>.json` files and
 | Contamination probe: 200 sampled, 105 long enough, 0 exact matches, 0 overlap | Appendix A | unverified | Re-run `scripts/contamination_probe.py` on the base model (GPU) and commit the output |
 | Filter kept 3,129 of 4,000 traces (tau table pool column) | Table tau-calibration | unverified (constant `FILTER_KEPT`) | The filter logs of the submitted run (PROV-11) |
 | Figure 1 labels: 4,000 prompts, 2,816 train in seed 7, r = 8, 250 to 300 steps, 200 of 1,000 prompts | Figure 1 | computed for the counts (`paper/figures/pipeline_standalone.tex` inputs `generated/numbers.tex`); design for r and steps | `make figures` rebuilds the PDF |
-| MedQuAD on every dimension: specificity 1.71 (Base), 1.47 (teacher), 1.33 (LoRA) | Appendix J, `tab_cell_dimensions.tex` | posted (`\statCellMedQuADMistral<Cond><Dim>`; withdrawals W20) | the sync and `make cells` |
+| Every added cell on every dimension (Table J.3), MedQuAD specificity 1.71, 1.47, 1.33 | Appendix J, `tab_cell_dimensions.tex` | computed (GV; `\statCellMedQuADMistral<Cond><Dim>`; withdrawals W20, W21) | Settled by the sync |
+| Per-cell tau, graded, kept, train, val, steps, evaluated epoch (Table J.1); tau = 0.4 in every cell, no re-filter | Appendix J, `tab_cell_filter.tex`, `\statCellsTau`, `\statCellsRefilterLines` | computed (CR, from `logs/host/filter_*.log` and the synced trainer states) | Settled by the sync (PROV-3) |
+| Table F.2: rank, alpha, dropout, target modules, epochs, batch per device and accumulation of the added cells | `\statCellsLoRA*`, `\statCellsTrainEpochs`, `\statCellsEffectiveBatch`, `\statCellsBatchPerDevice*`, `\statCellsGradAccum*` | computed (CR, from the synced adapter and trainer files) | Settled by the sync; learning rate, schedule, sequence length and precision stay design values from `rebuttal/configs/*.yaml` |
+| Askers minus non-askers: positive in 3 of 4 cells, -0.002 in BioMistral-7B; Med42-8B -0.036 and -0.025 | Appendix J, `\statCellsAddedAskersGapPositive`, `\statCell<Cell>AskersGap` | computed (GV, `lora_askers_minus_non_askers`) | Settled by the sync |
+| Incomplete host runs: BioMistral-7B on MedQA, 1 seed, 40 traces, 3 steps, 10 prompts | Appendix J, `\statRunMedQABioMistral<...>` | computed (CR) | |
 | Second grader on seed 42 (r = 0.42, rho = 0.35, 43 shared prompts) | Appendix H | computed (`data/derived/seed_42_qwen_grader_scores.json`, scores copied from the ignored `results/seed_42/eval/`) | Settled: `make derived` rebuilds the copy from the source files |
 | Plan specified in the repository on 2026-04-29 (not an outside registry), grader switch 2026-05-01 | Abstract, section 3.4, Appendix B | design | commits aa7eec4 (`RESULTS.md` 7.B) and 1376aec; the paper omits the hashes because they find the public repo (withdrawals W19) |

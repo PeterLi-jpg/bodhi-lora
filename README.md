@@ -32,12 +32,12 @@ else. Renaming the remote repo is deferred (docs/DECISIONS.md, D15).
   the target of 0.6 set in advance (in the repository, for the filter grader). The paper
   does not claim physician validation (D5).
 - **The adapter has a cost.** We report the seed-level paired difference LoRA minus
-  Base, with a t(4) 95% interval, for the submitted cell. The added cells get the same
-  interval once their raw outputs are synced; until then their difference is a point
-  estimate from the posted means. The aggregate score falls in all six added cells with
-  values. The seventh, MedQA, has no values: the posted replies said its score rose but
-  gave no number, and MedQA does not measure the target behavior. We make no equivalence
-  or non-inferiority claim (D2).
+  Base, with a t(4) 95% interval, for every cell, computed from the raw outputs. The
+  aggregate score falls in all six added cells that are not set aside, and each drop
+  survives Holm correction over those six. It rises in the seventh, MedQA, but that run
+  used a prompt that told the model to ask (Base asked in nearly every response), so it
+  measures instruction following and is set aside. We make no equivalence or
+  non-inferiority claim (D2).
 - **Med42-8B cells carry a dagger.** Med42-8B is a Llama-3 model, the same family as the
   evaluator. That breaks the paper's grader-separation rule, so these cells are not
   used in any cross-model statement (D6).
@@ -53,7 +53,7 @@ configs/            training configs for MedGemma-27B (GPU path) and the smoke m
 data/
   irr_instructions/ physician grading instructions (raters are AnonClinician1-4)
   raw/              HealthBench eval ids; benchmark JSONL is downloaded or built here
-  rebuttal_cells/   values transcribed from the posted rebuttal (posted_values.json)
+  rebuttal_cells/   added-cell values from the raw outputs (generated_values.json) and as posted
 docs/               conventions, decision log, reuse and licenses
 gpu/                single-machine GPU launcher and accelerate configs
 hooks/              commit-msg and pre-push hooks (activate once, see below)
@@ -72,12 +72,13 @@ tests/              pytest suite, no GPU needed
 | Set | Cells | Pipeline | Raw outputs |
 |---|---|---|---|
 | Submitted | MedGemma-27B on HealthBench-Hard | tunix LoRA on 8x TPU v6e; eval on one A100 (Modal). Launchers in `legacy/` | `results_modal/`, committed |
-| Added | Mistral-Small-24B, Med42-8B†, BioMistral-7B on HealthBench-Hard; Mistral-Small-24B and Med42-8B† on ChatDoctor; Mistral-Small-24B on MedQuAD; Mistral-Small-24B on MedQA (set aside) | GPU path: `scripts/train_lora.py` through `rebuttal/launch/run_cell.sh`, on H100 | on the GPU host, not yet synced |
+| Added | Mistral-Small-24B, Med42-8B†, BioMistral-7B on HealthBench-Hard; Mistral-Small-24B and Med42-8B† on ChatDoctor; Mistral-Small-24B on MedQuAD; Mistral-Small-24B on MedQA (set aside) | GPU path: `scripts/train_lora.py` through `rebuttal/launch/run_cell.sh`, on H100 | copied from the GPU host into `results_rebuttal/` (eval JSON gitignored; per-seed values in `data/rebuttal_cells/generated_values.json`) |
 
-Until the added-cell outputs are synced, the paper typesets their numbers from
-`data/rebuttal_cells/posted_values.json` with the footnote "transcribed from posted
-values; raw outputs pending sync". [REPRODUCIBILITY.md](REPRODUCIBILITY.md) has the
-per-cell configs and the differences between the two pipelines.
+The paper takes the added-cell numbers from `data/rebuttal_cells/generated_values.json`,
+which `make cells` computes from the synced raw outputs.
+`data/rebuttal_cells/posted_values.json` stays as the record of what was posted.
+[REPRODUCIBILITY.md](REPRODUCIBILITY.md) has the per-cell configs and the differences
+between the two pipelines.
 
 ## Reproduce the paper
 
@@ -103,8 +104,9 @@ make paper      # numbers + figures, then compile paper/main.tex
 | Physician agreement table | `results_modal/irr/kappa_results.json` (`make kappa` on the returned file, read outside the repo) | per-row grades are not committed, so the value cannot be recomputed from the repo alone (KNOWN_ISSUES) |
 | Discrimination analysis | `rebuttal/analyses/mimicry_split.py` | both labelings side by side, post hoc |
 | Format-leakage analysis | `rebuttal/analyses/interference_mechanism.py` | post hoc diagnosis |
-| Added-cell table | `results_rebuttal/` after sync, else `data/rebuttal_cells/posted_values.json` | Med42-8B rows marked † |
-| Hyperparameter tables | `legacy/` launcher, `rebuttal/configs/*.yaml` | one table per cell group; the submitted adapter config is pending confirmation |
+| Added-cell tables | `data/rebuttal_cells/generated_values.json` (`make cells` from `results_rebuttal/`) | Med42-8B rows marked † |
+| Per-cell tau, trace counts, adapter recipe | `rebuttal/results/cell_recipe.json` (`make cells` from `logs/host/` and the adapter files) | PROV-3 |
+| Hyperparameter tables | `legacy/` launcher, `rebuttal/configs/*.yaml`, the synced adapter files | one table per cell group; the submitted adapter config could not be checked against the saved files |
 
 ## Run the pipeline
 
@@ -140,9 +142,12 @@ regrade with a judge outside the Llama, Qwen and base-model families is
 - `results_modal/irr/`: the blank physician grading sheets and the answer key. Returned
   sheets are not in the repo.
 - `rebuttal/results/`: outputs of the rebuttal analyses.
-- `results_rebuttal/`: the added cells, once synced. Raw generations (`*.jsonl`) and
-  adapter weights stay out of git; per-seed eval JSON, summaries, adapter configs and
-  trainer states go in.
+- `results_rebuttal/`: the added cells, copied from the GPU host on 2026-10-08. Git
+  tracks each cell's `eval_ids.json`, `adapter_config.json` and `trainer_state.json`. The
+  per-seed eval JSON (full responses, about 370 MB), the host's `multi_seed_summary.json`
+  (wrong seed list), raw generations and adapter weights are gitignored. `make cells`
+  turns the eval JSON into `data/rebuttal_cells/generated_values.json`.
+- `logs/host/`: the GPU host's logs (gitignored). `make cells` reads the filter logs.
 - [RESULTS.md](RESULTS.md): what each result is, where it lives and its status.
 
 ## Data and leakage
