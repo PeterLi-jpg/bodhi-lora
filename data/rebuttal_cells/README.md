@@ -134,7 +134,8 @@ lists each posted value that differs from the generated one at the posted decima
 - The folder of each cell is `results_rebuttal/<bench>__<tag>/`, as above. If a name on
   the host differs, pass `--cell-dir <cell id>=<path>`.
 - Until the sync, only the submitted cell has data. Its 8 posted values match
-  `results_modal/`. The script names the 7 missing cells.
+  `results_modal/`. The script names the 7 missing cells and writes no file, because
+  `make numbers` takes the submitted cell from `results_modal/` anyway.
 
 The script does not compute the filter clearance. Read it from the filter log
 (`Kept N/M`), and confirm the denominator against the posted values.

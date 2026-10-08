@@ -48,7 +48,9 @@ def test_submitted_cell_matches_posted_and_missing_cells_are_named(tmp_path):
     assert len(res["cells"][0]["diff_vs_posted"]) == 8
     assert res["mismatches"] == []
     assert len(res["missing"]) == 7
-    assert json.loads(out.read_text())["cells"][0]["seeds"] == [7, 13, 42, 99, 101]
+    assert res["cells"][0]["seeds"] == [7, 13, 42, 99, 101]
+    # Before the sync there is no added cell, so no file is left in the tree (G9).
+    assert not out.exists()
 
 
 def test_synced_cell_layout_is_read_and_a_wrong_posted_value_is_flagged(tmp_path):

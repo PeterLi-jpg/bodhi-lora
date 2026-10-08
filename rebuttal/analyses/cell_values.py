@@ -18,7 +18,9 @@ over scored responses (epistemic metrics) or over all completions (aggregate), t
 mean and the sample SD over seeds. The posts do not say which SD they used.
 
 Until results_rebuttal/ is synced from the shared GPU host, only the submitted cell has
-data. The script names each missing cell and still writes the file.
+data. The script then names each missing cell, checks the submitted cell, and writes no
+file: a file with only the submitted cell adds nothing to make numbers, which reads that
+cell from results_modal/, and it would leave an untracked file in the tree.
 
 Usage:
     python3 rebuttal/analyses/cell_values.py [--cells-root results_rebuttal]
@@ -118,10 +120,14 @@ def run(posted_path: Path, cells_root: Path, results_modal: Path, overrides: dic
               f"{len(bad)} mismatch(es)")
         for r in bad:
             print(f"    {r['condition']}.{r['metric']}: posted {r['posted']}, generated {r['generated']:.4f}")
+    summary = (f"{len(res['cells'])} cell(s), {len(res['missing'])} missing, "
+               f"{len(res['mismatches'])} mismatch(es)")
+    if not any(c["id"] != ps.MAIN_CELL_ID for c in res["cells"]):
+        print(f"no added cell found, so {ps._rel(out)} is not written: {summary}")
+        return res
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(ps.round6(res), indent=2) + "\n")
-    print(f"wrote {ps._rel(out)}: {len(res['cells'])} cell(s), {len(res['missing'])} missing, "
-          f"{len(res['mismatches'])} mismatch(es)")
+    print(f"wrote {ps._rel(out)}: {summary}")
     return res
 
 
