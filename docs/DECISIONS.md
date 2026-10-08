@@ -8,6 +8,11 @@ finding named in brackets.
 To change a decision, add a new dated entry below it that says what changed and why.
 Do not edit the text of an old entry.
 
+**Status (2026-10-08).** The first author has not yet confirmed D1 to D16 in this file.
+Until a dated entry from him confirms or amends them, every audit item closed on one of
+these decisions is provisional, including the title (D3), the scope (D4), the Med42-8B
+handling (D6), the canonical paper (D8) and the statistical unit (D7).
+
 ## 2026-10-07
 
 **D1** LoRA recipe: the paper reports what actually ran. The submitted MedGemma-27B cell used the tunix path; repo evidence (launch_5seeds_tunix.sh exports with --r 8 --alpha 16, the only committed adapter at 607440e is r=8, alpha=16) says r=8, alpha=16. Derive the full submitted recipe (rank, alpha, target modules, epochs/steps, effective batch, seq len, optimizer, lr schedule, hardware) from history at the commit that produced prod-v39-tunix-27b-neurips and correct the hparams table. Report the rebuttal cells' actual configs (rebuttal/configs/*.yaml, r=16 alpha=32, QLoRA 4-bit for Mistral-Small-24B) in a separate per-cell table. Never say "unchanged" or "every hyperparameter fixed". Mark the submitted adapter config as pending direct confirmation from the GCS adapter_config.json files.
