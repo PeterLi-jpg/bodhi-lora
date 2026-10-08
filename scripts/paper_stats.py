@@ -1291,6 +1291,12 @@ def generality_section(posted: dict, generated: dict | None, out, macros):
     if "aggregate_drop_tests" in an:
         macros.add("PostedAggDropPBelow", fmt(an["aggregate_drop_tests"]["paired_t_two_sided_p_below"], 2),
                    f"{SRC_POSTED}: posted bound on the paired t p of the six aggregate drops")
+    if "second_person_questions" in an:
+        v = an["second_person_questions"]
+        macros.add("PostedSecondPersonBase", fmt(v["base_pct"], 1),
+                   f"{SRC_POSTED}: posted share of Base completions with a second-person question (percent)")
+        macros.add("PostedSecondPersonLoRA", fmt(v["lora_pct"], 1),
+                   f"{SRC_POSTED}: posted share of LoRA completions with a second-person question (percent)")
     if "askers_minus_non_askers" in an:
         v = an["askers_minus_non_askers"]
         for key, tok in (("positive_cells", "Positive"), ("negative_cells", "Negative"),
@@ -1589,12 +1595,11 @@ def generality_table(out) -> str:
                 _num(_mean(c, "lora", "aggregate"), 3),
                 _diff_with_ci(c["aggregate_lora_minus_base"])]
 
-    ns = len(out["meta"]["seeds"])
     return _two_row_tabular(
         "llrrrrrrrl",
         [("", 1), ("", 1), ("Active inquiry (\\%)", 3), ("Context-seeking", 2), ("Aggregate score", 3)],
         ["Benchmark", "Base model", "Base", "Base+CoT", "LoRA", "Base", "LoRA", "Base", "LoRA",
-         f"LoRA$-$Base [95\\% CI, $t_{{{ns - 1}}}$]"],
+         "LoRA$-$Base [95\\% CI]"],
         _blocks(out, main, row),
         "results_modal (first row) and data/rebuttal_cells/ (other rows: generated_values.json when "
         "synced, else posted_values.json, marked *)")
