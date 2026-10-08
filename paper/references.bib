@@ -1,27 +1,27 @@
-@article{hu2022lora,
-  title={LoRA: Low-Rank Adaptation of Large Language Models},
+@inproceedings{hu2022lora,
+  title={{LoRA}: Low-Rank Adaptation of Large Language Models},
   author={Hu, Edward J and Shen, Yelong and Wallis, Phillip and Allen-Zhu, Zeyuan and Li, Yuanzhi and Wang, Shean and Wang, Lu and Chen, Weizhu},
-  journal={arXiv preprint arXiv:2106.09685},
+  booktitle={International Conference on Learning Representations},
   year={2022}
 }
 
 @article{dettmers2023qlora,
-  title={QLoRA: Efficient Finetuning of Quantized Language Models},
+  title={{QLoRA}: Efficient Finetuning of Quantized Language Models},
   author={Dettmers, Tim and Pagnoni, Artidoro and Holtzman, Ari and Zettlemoyer, Luke},
   journal={Advances in Neural Information Processing Systems},
   volume={36},
   year={2023}
 }
 
-@article{liu2024dora,
-  title={DoRA: Weight-Decomposed Low-Rank Adaptation},
+@inproceedings{liu2024dora,
+  title={{DoRA}: Weight-Decomposed Low-Rank Adaptation},
   author={Liu, Shih-Yang and Wang, Chien-Yi and Yin, Hongxu and Molchanov, Pavlo and Wang, Yu-Chiang Frank and Cheng, Kwang-Ting and Chen, Min-Hung},
-  journal={arXiv preprint arXiv:2402.09353},
+  booktitle={Proceedings of the 41st International Conference on Machine Learning},
   year={2024}
 }
 
 @article{kalajdzievski2023scaling,
-  title={A Rank Stabilization Scaling Factor for Fine-Tuning with LoRA},
+  title={A Rank Stabilization Scaling Factor for Fine-Tuning with {LoRA}},
   author={Kalajdzievski, Damjan},
   journal={arXiv preprint arXiv:2312.03732},
   year={2023}
@@ -41,11 +41,13 @@
   year={2022}
 }
 
-@article{tian2023just,
+@inproceedings{tian2023just,
   title={Just Ask for Calibration: Strategies for Eliciting Calibrated Confidence Scores from Language Models Fine-Tuned with Human Feedback},
-  author={Tian, Katherine and Mitchell, Eric and Yao, Huaxiu and Manning, Christopher D and Finn, Chelsea},
-  journal={arXiv preprint arXiv:2305.14975},
-  year={2023}
+  author={Tian, Katherine and Mitchell, Eric and Zhou, Allan and Sharma, Archit and Rafailov, Rafael and Yao, Huaxiu and Finn, Chelsea and Manning, Christopher D},
+  booktitle={Proceedings of the 2023 Conference on Empirical Methods in Natural Language Processing},
+  pages={5433--5442},
+  year={2023},
+  doi={10.18653/v1/2023.emnlp-main.330}
 }
 
 @article{singhal2023medpalm,
@@ -65,24 +67,28 @@
 }
 
 @article{bai2022constitutional,
-  title={Constitutional AI: Harmlessness from AI Feedback},
+  title={Constitutional {AI}: Harmlessness from {AI} Feedback},
   author={Bai, Yuntao and Kadavath, Saurav and Kundu, Sandipan and Askell, Amanda and Kernion, Jackson and Jones, Andy and Chen, Anna and Goldie, Anna and Mirhoseini, Azalia and McKinnon, Cameron and others},
   journal={arXiv preprint arXiv:2212.08073},
   year={2022}
 }
 
-@article{ho2023large,
+@inproceedings{ho2023large,
   title={Large Language Models Are Reasoning Teachers},
   author={Ho, Namgyu and Schmid, Laura and Yun, Se-Young},
-  journal={arXiv preprint arXiv:2212.10071},
-  year={2023}
+  booktitle={Proceedings of the 61st Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers)},
+  pages={14852--14882},
+  year={2023},
+  doi={10.18653/v1/2023.acl-long.830}
 }
 
-@article{magister2023teaching,
+@inproceedings{magister2023teaching,
   title={Teaching Small Language Models to Reason},
   author={Magister, Lucie Charlotte and Mallinson, Jonathan and Adamek, Jakub and Malmi, Eric and Severyn, Aliaksei},
-  journal={arXiv preprint arXiv:2212.08410},
-  year={2023}
+  booktitle={Proceedings of the 61st Annual Meeting of the Association for Computational Linguistics (Volume 2: Short Papers)},
+  pages={1773--1781},
+  year={2023},
+  doi={10.18653/v1/2023.acl-short.151}
 }
 
 @inproceedings{kwon2023efficient,
@@ -92,10 +98,10 @@
   year={2023}
 }
 
-@article{xiong2024can,
-  title={Can LLMs Express Their Uncertainty? An Empirical Evaluation of Confidence Elicitation in LLMs},
+@inproceedings{xiong2024can,
+  title={Can {LLMs} Express Their Uncertainty? {An} Empirical Evaluation of Confidence Elicitation in {LLMs}},
   author={Xiong, Miao and Hu, Zhiyuan and Lu, Xinyang and Li, Yifei and Fu, Jie and He, Junxian and Hooi, Bryan},
-  journal={arXiv preprint arXiv:2306.13063},
+  booktitle={International Conference on Learning Representations},
   year={2024}
 }
 
@@ -123,10 +129,10 @@
   year={2022}
 }
 
-@article{chen2024selfplay,
+@inproceedings{chen2024selfplay,
   title={Self-Play Fine-Tuning Converts Weak Language Models to Strong Language Models},
   author={Chen, Zixiang and Deng, Yihe and Yuan, Huizhuo and Ji, Kaixuan and Gu, Quanquan},
-  journal={arXiv preprint arXiv:2401.01335},
+  booktitle={Proceedings of the 41st International Conference on Machine Learning},
   year={2024}
 }
 
@@ -144,7 +150,8 @@
   volume={33},
   number={1},
   pages={e101877},
-  year={2026}
+  year={2026},
+  doi={10.1136/bmjhci-2025-101877}
 }
 
 @techreport{medgemma2025,
@@ -157,7 +164,7 @@
 
 @article{healthbench2025,
   title={{HealthBench}: Evaluating Large Language Models Towards Improved Human Health},
-  author={Arora, Rahul K. and Wei, Jason and Soskin Hicks, Rebecca and Bowman, Preston and Qui{\~n}onero-Candela, Joaquin and Singhal, Karan and others},
+  author={Arora, Rahul K. and Wei, Jason and Soskin Hicks, Rebecca and Bowman, Preston and Qui{\~n}onero-Candela, Joaquin and Tsimpourlas, Foivos and Sharman, Michael and Shah, Meghan and Vallone, Andrea and Beutel, Alex and Heidecke, Johannes and Singhal, Karan},
   journal={arXiv preprint arXiv:2505.08775},
   year={2025}
 }
@@ -223,4 +230,154 @@
   pages={135},
   year={2023},
   doi={10.1038/s41746-023-00879-8}
+}
+
+% The reference implementation of the BODHI protocol (bodhi-llm 0.1.4) cites this paper.
+@article{bodhiplos2026,
+  title={Beyond overconfidence: Embedding curiosity and humility for ethical medical {AI}},
+  author={Cajas Ord{\'o}{\~n}ez, Sebasti{\'a}n Andr{\'e}s and Castro, Rowell and Celi, Leo Anthony and others},
+  journal={{PLOS} Digital Health},
+  volume={5},
+  number={1},
+  pages={e0001013},
+  year={2026},
+  doi={10.1371/journal.pdig.0001013}
+}
+
+% Prior work on asking and abstaining (audit CR-4; rebuttal/prior_work_candidates.bib).
+@inproceedings{li2024mediq,
+  title={{MediQ}: Question-Asking {LLMs} and a Benchmark for Reliable Interactive Clinical Reasoning},
+  author={Li, Shuyue Stella and Balachandran, Vidhisha and Feng, Shangbin and Ilgen, Jonathan S. and Pierson, Emma and Koh, Pang Wei and Tsvetkov, Yulia},
+  booktitle={Advances in Neural Information Processing Systems},
+  volume={37},
+  pages={28858--28888},
+  year={2024}
+}
+
+@article{johri2025craftmd,
+  title={An evaluation framework for clinical use of large language models in patient interaction tasks},
+  author={Johri, Shreya and Jeong, Jaehwan and Tran, Benjamin A. and Schlessinger, Daniel I. and others},
+  journal={Nature Medicine},
+  volume={31},
+  number={1},
+  pages={77--86},
+  year={2025},
+  doi={10.1038/s41591-024-03328-5}
+}
+
+@article{tu2025amie,
+  title={Towards conversational diagnostic artificial intelligence},
+  author={Tu, Tao and Schaekermann, Mike and Palepu, Anil and others},
+  journal={Nature},
+  volume={642},
+  pages={442--450},
+  year={2025},
+  doi={10.1038/s41586-025-08866-7}
+}
+
+@inproceedings{zhang2024rtuning,
+  title={{R-Tuning}: Instructing Large Language Models to Say `{I} Don't Know'},
+  author={Zhang, Hanning and Diao, Shizhe and Lin, Yong and Fung, Yi R. and Lian, Qing and Wang, Xingyao and Chen, Yangyi and Ji, Heng and Zhang, Tong},
+  booktitle={Proceedings of the 2024 Conference of the North American Chapter of the Association for Computational Linguistics (Volume 1: Long Papers)},
+  pages={7113--7139},
+  year={2024},
+  doi={10.18653/v1/2024.naacl-long.394}
+}
+
+@inproceedings{band2024linguistic,
+  title={Linguistic Calibration of Long-Form Generations},
+  author={Band, Neil and Li, Xuechen and Ma, Tengyu and Hashimoto, Tatsunori},
+  booktitle={Proceedings of the 41st International Conference on Machine Learning},
+  year={2024}
+}
+
+% Datasets, models and methods used in the paper (audit CR-8).
+@article{li2023chatdoctor,
+  title={{ChatDoctor}: A Medical Chat Model Fine-Tuned on a Large Language Model Meta-{AI} ({LLaMA}) Using Medical Domain Knowledge},
+  author={Li, Yunxiang and Li, Zihan and Zhang, Kai and Dan, Ruilong and Jiang, Steve and Zhang, You},
+  journal={Cureus},
+  volume={15},
+  number={6},
+  pages={e40895},
+  year={2023},
+  doi={10.7759/cureus.40895}
+}
+
+@article{benabacha2019medquad,
+  title={A question-entailment approach to question answering},
+  author={Ben Abacha, Asma and Demner-Fushman, Dina},
+  journal={BMC Bioinformatics},
+  volume={20},
+  pages={511},
+  year={2019},
+  doi={10.1186/s12859-019-3119-4}
+}
+
+@article{jin2021medqa,
+  title={What Disease Does This Patient Have? {A} Large-Scale Open Domain Question Answering Dataset from Medical Exams},
+  author={Jin, Di and Pan, Eileen and Oufattole, Nassim and Weng, Wei-Hung and Fang, Hanyi and Szolovits, Peter},
+  journal={Applied Sciences},
+  volume={11},
+  number={14},
+  pages={6421},
+  year={2021},
+  doi={10.3390/app11146421}
+}
+
+@inproceedings{labrak2024biomistral,
+  title={{BioMistral}: A Collection of Open-Source Pretrained Large Language Models for Medical Domains},
+  author={Labrak, Yanis and Bazoge, Adrien and Morin, Emmanuel and Gourraud, Pierre-Antoine and Rouvier, Mickael and Dufour, Richard},
+  booktitle={Findings of the Association for Computational Linguistics: ACL 2024},
+  pages={5848--5864},
+  year={2024},
+  doi={10.18653/v1/2024.findings-acl.348}
+}
+
+@article{christophe2024med42,
+  title={{Med42-v2}: A Suite of Clinical {LLMs}},
+  author={Christophe, Cl{\'e}ment and Kanithi, Praveen K. and Raha, Tathagata and Khan, Shadab and Pimentel, Marco A. F.},
+  journal={arXiv preprint arXiv:2408.06142},
+  year={2024}
+}
+
+@misc{mistral2025small,
+  title={{Mistral-Small-24B-Instruct-2501}},
+  author={{Mistral AI}},
+  year={2025},
+  howpublished={\url{https://huggingface.co/mistralai/Mistral-Small-24B-Instruct-2501}}
+}
+
+@article{grattafiori2024llama3,
+  title={The {Llama} 3 Herd of Models},
+  author={Grattafiori, Aaron and Dubey, Abhimanyu and Jauhri, Abhinav and Pandey, Abhinav and others},
+  journal={arXiv preprint arXiv:2407.21783},
+  year={2024}
+}
+
+@article{qwen2024qwen25,
+  title={{Qwen2.5} Technical Report},
+  author={{Qwen Team}},
+  journal={arXiv preprint arXiv:2412.15115},
+  year={2024}
+}
+
+@article{holm1979simple,
+  title={A Simple Sequentially Rejective Multiple Test Procedure},
+  author={Holm, Sture},
+  journal={Scandinavian Journal of Statistics},
+  volume={6},
+  number={2},
+  pages={65--70},
+  year={1979}
+}
+
+@article{cohen1960coefficient,
+  title={A Coefficient of Agreement for Nominal Scales},
+  author={Cohen, Jacob},
+  journal={Educational and Psychological Measurement},
+  volume={20},
+  number={1},
+  pages={37--46},
+  year={1960},
+  doi={10.1177/001316446002000104}
 }
