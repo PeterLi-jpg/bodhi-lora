@@ -17,6 +17,16 @@ container so no cleanup is needed even on exception.
 
 TP-size auto-selection: pass tp_size explicitly, or let _auto_tp() guess
 from the model name (≤8B → 1 chip, everything else → 8 chips).
+
+Serving settings are constructor arguments, not module constants, so a run
+never needs to patch this file: max_model_len, max_num_seqs, revision (the HF
+commit of the base model), quantization ("bitsandbytes" serves the base in
+4-bit NF4, the same quantization QLoRA training used) and request_timeout.
+settings() returns them for the run manifest.
+
+DryRunEngine has the same public API and never starts a server. The --dry-run
+paths of the entry points use it to exercise their prompt and grading code on
+a CPU.
 """
 
 import json
@@ -30,7 +40,9 @@ from typing import List, Optional, Tuple
 
 
 DOCKER_IMAGE_TPU = "vllm/vllm-tpu:latest"
-DOCKER_IMAGE_GPU = "vllm/vllm-openai:latest"
+# Same vLLM release as requirements-infer.txt, so docker mode and subprocess
+# mode serve with one version. ":latest" moved under every run.
+DOCKER_IMAGE_GPU = "vllm/vllm-openai:v0.9.2"
 DEFAULT_PORT = 8000
 
 
@@ -156,6 +168,10 @@ class VLLMEngine:
         port: int = DEFAULT_PORT,
         hf_token: Optional[str] = None,
         enforce_eager: bool = True,
+        max_num_seqs: int = 64,
+        revision: Optional[str] = None,
+        quantization: Optional[str] = None,
+        request_timeout: int = 180,
     ):
         # vllm/vllm-tpu does NOT implement add_lora as of writing — the engine
         # boots, then crashes inside init_static_loras with NotImplementedError
@@ -175,6 +191,21 @@ class VLLMEngine:
         self.model = model
         self.tp_size = tp_size if tp_size is not None else _auto_tp(model)
         self.max_model_len = max_model_len
+        # max_num_seqs caps how many sequences the scheduler runs at once. See
+        # the KV-cache note in _serve_args for how it trades against
+        # max_model_len.
+        self.max_num_seqs = max_num_seqs
+        # HF commit of the served base model. None loads the repo HEAD.
+        self.revision = revision
+        # None serves bf16 weights. "bitsandbytes" quantizes the base to 4-bit
+        # NF4 with double quantization while loading (vLLM 0.9.2
+        # bitsandbytes_loader.py calls quantize_4bit(compress_statistics=True,
+        # quant_type="nf4")), which matches the QLoRA training base in
+        # scripts/train_lora.py.
+        if quantization not in (None, "bitsandbytes"):
+            raise ValueError(f"quantization={quantization!r}: use None or 'bitsandbytes'")
+        self.quantization = quantization
+        self.request_timeout = request_timeout
         # BODHI_VLLM_PORT lets the launcher give each concurrently-running GPU a
         # distinct serve port (e.g. 8000+gpu_index) so parallel seeds don't collide.
         self.port = int(os.environ.get("BODHI_VLLM_PORT", port))
@@ -220,17 +251,9 @@ class VLLMEngine:
 
     # ── lifecycle ───────────────────────────────────────────────────────────
 
-    def _build_docker_cmd(self) -> List[str]:
-        lora_args: List[str] = []
-        if self._lora_path_host:
-            lora_container = self._to_container(self._lora_path_host)
-            lora_args = [
-                "--enable-lora",
-                "--lora-modules", f"{self._lora_name}={lora_container}",
-            ]
-
-        serve_cmd = [
-            "vllm", "serve", self.model,
+    def _serve_args(self) -> List[str]:
+        """`vllm serve` flags shared by docker mode and subprocess mode."""
+        return [
             "--tensor-parallel-size", str(self.tp_size),
             "--max-model-len", str(self.max_model_len),
             "--dtype", "bfloat16",
@@ -240,14 +263,18 @@ class VLLMEngine:
             # max_num_seqs * max_model_len * 360 KB/token for medgemma-27b
             # (28 layers x 8 GQA KV heads x 256 dim x 2 bytes bf16). On a
             # v6e-8 (256 GB HBM, ~200 GB free after weights):
-            #   max_model_len=4096, max_num_seqs=128 -> 188 GB  (was prior config)
-            #   max_model_len=8192, max_num_seqs=64  -> 188 GB  (current; same fit)
-            # We picked the second option after BODHI's two-pass started
-            # producing prompts >2048 tokens (the analysis from pass 1
-            # is fed back as input to pass 2), which would clip at
-            # max_model_len=4096. 64 server slots is still well above
-            # the 32-thread client cap so no client-side queuing.
-            "--max-num-seqs", "64",
+            #   max_model_len=4096, max_num_seqs=128 -> 188 GB
+            #   max_model_len=8192, max_num_seqs=64  -> 188 GB  (the default)
+            # Generation uses the default because BODHI's pass 1 analysis
+            # is fed back into pass 2 and can push prompts past 2048 tokens.
+            # The submitted eval ran 4096 / 32 on one A100-80GB; the eval
+            # scripts pass those values explicitly.
+            "--max-num-seqs", str(self.max_num_seqs),
+            # --revision pins the base weights and --tokenizer-revision the
+            # tokenizer, so an upstream push cannot change a re-run.
+            *(["--revision", self.revision, "--tokenizer-revision", self.revision]
+              if self.revision else []),
+            *(["--quantization", self.quantization] if self.quantization else []),
             # --enforce-eager: skip CUDA-graph pre-capture.  vllm 0.9 with
             # --enable-lora captures ~67 graph shapes and each takes ~2 min
             # on A100, totalling 130+ min before the first prompt is served.
@@ -257,8 +284,36 @@ class VLLMEngine:
             # where graph-mode throughput matters and the long capture
             # cost is acceptable).
             *(["--enforce-eager"] if self._enforce_eager else []),
-            *lora_args,
         ]
+
+    def settings(self) -> dict:
+        """Serving settings for the run manifest."""
+        return {
+            "model": self.model,
+            "revision": self.revision,
+            "max_model_len": self.max_model_len,
+            "max_num_seqs": self.max_num_seqs,
+            "tensor_parallel_size": self.tp_size,
+            "dtype": "bfloat16",
+            "quantization": self.quantization,
+            "enforce_eager": self._enforce_eager,
+            "request_timeout_s": self.request_timeout,
+            "lora_path": self._lora_path_host,
+            "run_mode": self._run_mode,
+            "docker_image": (DOCKER_IMAGE_TPU if _detect_accelerator() == "tpu"
+                             else DOCKER_IMAGE_GPU) if self._run_mode == "docker" else None,
+        }
+
+    def _build_docker_cmd(self) -> List[str]:
+        lora_args: List[str] = []
+        if self._lora_path_host:
+            lora_container = self._to_container(self._lora_path_host)
+            lora_args = [
+                "--enable-lora",
+                "--lora-modules", f"{self._lora_name}={lora_container}",
+            ]
+
+        serve_cmd = ["vllm", "serve", self.model, *self._serve_args(), *lora_args]
 
         # On TPU we mount /dev with --privileged so the container can talk to
         # libtpu via the chip char-devices.  On GPU we instead pass --gpus=all
@@ -307,22 +362,7 @@ class VLLMEngine:
         _vllm = os.path.join(os.path.dirname(_sys.executable), "vllm")
         if not os.path.exists(_vllm):
             _vllm = "vllm"
-        return [
-            _vllm, "serve", self.model,
-            "--tensor-parallel-size", str(self.tp_size),
-            "--max-model-len", str(self.max_model_len),
-            "--dtype", "bfloat16",
-            "--port", str(self.port),
-            # Match docker-mode batching capacity; see comment in
-            # _build_docker_cmd.
-            "--max-num-seqs", "64",
-            # Match the docker-mode default so the two run-modes behave
-            # consistently: --enforce-eager is on by default to skip the
-            # ~130-min CUDA-graph capture hang on LoRA, opt out for
-            # latency benchmarking.
-            *(["--enforce-eager"] if self._enforce_eager else []),
-            *lora_args,
-        ]
+        return [_vllm, "serve", self.model, *self._serve_args(), *lora_args]
 
     def start(self) -> "VLLMEngine":
         lora_tag = f", lora={self._lora_name}" if self._lora_name else ""
@@ -444,7 +484,7 @@ class VLLMEngine:
             url, data=data,
             headers={"Content-Type": "application/json"},
         )
-        with urllib.request.urlopen(req, timeout=180) as r:
+        with urllib.request.urlopen(req, timeout=self.request_timeout) as r:
             return json.loads(r.read())
 
     # ── public API ──────────────────────────────────────────────────────────
@@ -509,3 +549,40 @@ class VLLMEngine:
             e["logprob"] for e in lp_content if e.get("logprob") is not None
         ]
         return text, token_logprobs
+
+
+class DryRunEngine:
+    """Stand-in for VLLMEngine that never starts a server.
+
+    The --dry-run paths use it to run their prompt building, wrapper and
+    grading code on a CPU. ``reply`` is either a fixed string or a function
+    of the messages, so a grader stub can return parseable JSON. Every call
+    is kept in ``calls`` for inspection.
+    """
+
+    def __init__(self, model: str, reply="DRY RUN RESPONSE", **settings):
+        self.model = model
+        self._reply = reply
+        self._settings = {"model": model, "dry_run": True, **settings}
+        self.calls: List[list] = []
+
+    def settings(self) -> dict:
+        return dict(self._settings)
+
+    def __enter__(self) -> "DryRunEngine":
+        return self
+
+    def __exit__(self, *_) -> None:
+        pass
+
+    def _text(self, messages) -> str:
+        self.calls.append(messages)
+        return self._reply(messages) if callable(self._reply) else self._reply
+
+    def chat(self, messages: list, max_new_tokens: int = 2048,
+             temperature: float = 0.0, top_p: float = 1.0) -> str:
+        return self._text(messages)
+
+    def chat_with_logprobs(self, messages: list, max_new_tokens: int = 2048,
+                           temperature: float = 0.0) -> Tuple[str, List[float]]:
+        return self._text(messages), []
