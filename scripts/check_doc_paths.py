@@ -5,7 +5,7 @@ Docs drifted when code paths were deleted (audit HYG-14): README and
 KNOWN_ISSUES pointed at TPU launchers that were gone. This check fails CI when
 a doc names a path that is not there.
 
-What it reads: README.md, RESULTS.md, REPRODUCIBILITY.md, KNOWN_ISSUES.md,
+What it reads: README.md, RESULTS.md, REPRODUCIBILITY.md, KNOWN_ISSUES.md, BLOCKED.md,
 docs/**/*.md and contributions/**/*.md. In each it takes inline code spans,
 markdown link targets and the words inside fenced code blocks, and keeps the
 ones that look like repo paths: the first path part is a top-level entry of
@@ -31,13 +31,15 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
-DOCS = ["README.md", "RESULTS.md", "REPRODUCIBILITY.md", "KNOWN_ISSUES.md"]
+DOCS = ["README.md", "RESULTS.md", "REPRODUCIBILITY.md", "KNOWN_ISSUES.md", "BLOCKED.md"]
 DOC_GLOBS = ["docs/**/*.md", "contributions/**/*.md"]
 
 # Paths the docs name that are not in the repo yet. Each entry is a promise, not
 # a file: the check warns when one exists, so the entry can be removed.
 PENDING = {
     "results_rebuttal/": "rebuttal-cell outputs, BLOCKED until synced from the GPU host",
+    "data/rebuttal_cells/generated_values.json": "written by make cells once an added cell is synced",
+    "rebuttal/results/quality_drop.json": "written by make cells once the added cells are synced",
 }
 
 TOP_FILES_EXT = (".sh", ".md", ".txt", ".py", ".toml", ".cfg", ".yaml", ".yml")

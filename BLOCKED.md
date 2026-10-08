@@ -1,0 +1,392 @@
+# Blocked on the first author
+
+Work that the cleanup of 2026-10-07 and 2026-10-08 could not finish. Each item needs
+Peter: a login, a remote action, GPU time, people, or a decision. Items are in priority
+order. Each one gives the exact command or action, then what to change in the repo
+after it. Run commands from the repo root unless the item says otherwise.
+
+Audit IDs (PROV-1, EVAL-7, ...) refer to `CONVENTIONS_AUDIT_2026-10-07.md`, which sits
+next to the repo. D-numbers refer to [docs/DECISIONS.md](docs/DECISIONS.md). C-numbers
+refer to [rebuttal/commitments.md](rebuttal/commitments.md). G- and NUM-numbers are
+findings of the final verification pass.
+
+The working tree on `cleanup/resubmission` is complete and clean. `make test`,
+`make numbers`, `make figures` and `make paper` pass. Nothing was pushed, and no
+remote state changed.
+
+## 1. Stop the public exposure of rater names and author identity
+
+Why: the public GitHub repo still shows physician rater names. In the local copy of
+`origin/main` (last fetched 2026-07-17), 2 file paths under `results_modal/irr/` and 14
+files carry rater name tokens. Public history also holds the author block of `fcdcd9e`
+and two tool trailers (`cf72766`, `72a428b`). The paper's code link
+(`\codeurl`, `paper/main.tex:47`) points at the anonymous.4open.science mirror of that
+repo. [EVAL-6, HYG-1, G3; audit section 5, decision 7]
+
+Action:
+
+1. Decide now: make the GitHub repo private (Settings, General, Danger Zone, Change
+   visibility) until item 10 is done, or push the cleaned tree. A private repo also
+   cuts off the old anonymous mirror, which is what you want.
+2. Ask the raters what they consent to. Their answer decides how far the purge in
+   item 10 must go.
+3. Build the reviewer copy and publish it as a new repository with a new anonymous
+   mirror. First put the rater names and the co-author names in one deny file in a
+   folder outside every repo (`PRIVATE` below):
+
+   ```bash
+   scripts/export_anonymous.sh ../_export_review --deny-file "$PRIVATE/deny.txt"
+   ```
+
+   The gate passed on 2026-10-08 with the rater names (230 files). With co-author
+   names it will flag `paper/references.bib`, because the cited BODHI papers
+   (`bodhi2026`, `bodhiplos2026`) list them. Decide whether to keep that third-person
+   self-citation (the submitted version had `bodhi2026`).
+4. Change the one line `\newcommand{\codeurl}{...}` in `paper/main.tex:47` to the new
+   mirror and run `make paper`.
+
+## 2. Confirm or amend decisions D1 to D16
+
+Why: the first author's delegate made D1 to D16 on 2026-10-07. Many audit items are
+closed on them (title, scope, Med42-8B handling, canonical paper, statistical unit).
+Until you confirm them, those closures are provisional. [G6]
+
+Action: read [docs/DECISIONS.md](docs/DECISIONS.md). Add a dated entry under the old
+ones that confirms each decision or says what changes. Then delete the "Status
+(2026-10-08)" paragraph at the top. Do not edit the old entries.
+
+## 3. Confirm the submitted adapter recipe on GCS (D1)
+
+Why: the paper reports r=8, alpha=16, dropout 0.05, q/k/v target modules and an
+exported step of 250 or 300. These come from the launcher and trainer code in
+`legacy/`, not from the saved adapters. [D1, HYG-4, PROV-6, PROV-11]
+
+Action:
+
+```bash
+gcloud auth login
+B=gs://bohdi-runs-tokyo-micron/prod-v39-tunix-27b-neurips
+for s in 7 13 42 99 101; do
+  echo "seed $s"
+  gsutil cat "$B/seed_$s/checkpoints/best/adapter_config.json" | python3 -c \
+    'import json,sys; d=json.load(sys.stdin); print(d["r"], d["lora_alpha"], d.get("lora_dropout"), sorted(d["target_modules"]))'
+  gsutil ls "$B/seed_$s/checkpoints/orbax/"
+  gsutil ls -r "$B/seed_$s/" | grep -E 'train\.log|export_lora\.log|trainer_state\.json|train\.jsonl|val\.jsonl'
+done
+```
+
+Expected from the code: `8 16 0.0 ['k_proj', 'q_proj', 'v_proj']` (the exporter writes
+dropout 0.0; training used 0.05). The orbax listing shows whether step 250 or 300 was
+the newest complete checkpoint. Copy any `train.log` and `export_lora.log` you find, and
+count the lines of each seed's `train.jsonl` and `val.jsonl` if they exist (PROV-11).
+
+After, if the values match:
+
+- Delete the PENDING comments at `paper/main.tex:276-277` and `:887-888`, the words
+  "pending the trainer files" at `:283`, the caption sentence at `:899`, and the
+  Limitations sentence at `:624`. State the exported step per seed.
+- Drop "pending confirmation" in `REPRODUCIBILITY.md` (lines 37-38 and 63) and the
+  entry "The submitted adapter config is not confirmed" in `KNOWN_ISSUES.md`.
+- If a seed's filter log turns up, replace the hand constant
+  `FILTER_KEPT, FILTER_POOL = 3129, 4000` (`scripts/paper_stats.py:154`) with a value
+  read from it.
+
+If they do not match, correct Table F.1 and Section 3.3 instead.
+
+## 4. Sync the added cells and replace the posted values
+
+Why: every number for the six added cells and MedQA is transcribed from the posted
+replies. The raw outputs exist only on the shared H100 host. Table 3 shows them with an
+asterisk and the interval "pending". The per-cell tau and the MedQA run identity are in
+the host's logs. [PROV-1, PROV-2, PROV-3, CR-1, C24, W11, W12]
+
+Action, from the repo root on your machine:
+
+```bash
+brev login
+brev ls          # find the shared H100 instance
+brev refresh     # adds it to your ssh config
+ssh mit-critical-data-1 'du -sh /data/PROJECTS/bohdi/results_rebuttal; ls /data/PROJECTS/bohdi/results_rebuttal'
+
+rsync -av --prune-empty-dirs --include '*/' --include '*.json' --exclude '*' \
+    mit-critical-data-1:/data/PROJECTS/bohdi/results_rebuttal/ results_rebuttal/
+mkdir -p logs/host
+rsync -av mit-critical-data-1:/data/PROJECTS/bohdi/logs/ logs/host/
+
+du -sh results_rebuttal   # results_modal/ is 80 MB for one cell; decide what to commit
+make cells                # writes data/rebuttal_cells/generated_values.json and lists every
+                          # posted value that differs; then runs rebuttal/analyses/quality_drop.py
+git add data/rebuttal_cells/generated_values.json rebuttal/results/quality_drop.json
+make numbers && make paper
+```
+
+If a folder name on the host differs from the expected `<bench>__<tag>`, pass
+`--cell-dir <cell id>=<path>` to `rebuttal/analyses/cell_values.py`. The expected names
+are in [data/rebuttal_cells/README.md](data/rebuttal_cells/README.md).
+
+How the posted values get replaced: do not overwrite
+`data/rebuttal_cells/posted_values.json`. It stays as the record of what was posted.
+`scripts/paper_stats.py` takes each synced cell from `generated_values.json` instead,
+drops its asterisk and computes its paired t(4) interval. Do not use the host's
+`multi_seed_summary.json` files: before `55f6c7c`, each one held a single seed.
+
+After:
+
+- Add every posted value that `make cells` reports as different to
+  `rebuttal/withdrawals.md`.
+- Read each cell's tau and kept count from the filter logs
+  (`grep -h -E 'tau=|Kept [0-9]+/[0-9]+' logs/host/filter_*.log`). Fill them into
+  Appendix J and remove the PENDING comments at `paper/main.tex:945` and `:1281`.
+- Name the MedQA run: check whether `results_rebuttal/medqa__*` was generated after
+  commit `035d85f` (which removed the preamble). Then give MedQA its Table 3 row, update
+  the abstract sentence about the fifth cell, and set C24 to done in
+  `rebuttal/commitments.md`.
+- Recount the posted askers-gap without the Med42-8B cells (D6).
+- In `RESULTS.md`, change the status of each synced cell from posted to raw. Remove
+  `results_rebuttal/` from `PENDING` in `scripts/check_doc_paths.py`.
+- While logged in to the host, freeze the environments that made the posted cells
+  (REPRO-10): `ssh mit-critical-data-1 'cd /data/PROJECTS/bohdi && .venv/bin/pip freeze'
+  > requirements-train.lock` and the same with `.venv-infer` into
+  `requirements-infer.lock`. Commit both.
+
+## 5. Commit a dated analysis plan before any new GPU run
+
+Why: convention 3 and EVAL-10 require a plan that fixes metrics, unit, test, correction
+family and contrasts before the results exist. Items 6, 7 and 9 have no plan yet. The
+plan is a methodology choice, so it is yours. [G7, EVAL-10]
+
+Action: write a dated plan, `ANALYSIS_PLAN_<date>.md` in `docs/`, and commit it before
+item 6 starts. The
+cleanup proposed these defaults; none is adopted:
+
+- Unit: the seed (42, 7, 13, 99, 101). Paired per-seed difference, 95% t(4) interval,
+  two-sided paired t. Holm over the seven dimensions within each contrast. Aggregate
+  score and rates are secondary, outside the Holm family. No equivalence margin; a null
+  is "not detected". Pooled d with a prompt-clustered bootstrap is descriptive only.
+- Baselines: LoRA minus `base_clarify` and LoRA minus `base_verbalized_confidence` on
+  the seven dimensions and the aggregate score; `base_clarify` minus Base on active
+  inquiry.
+- Med42-8B re-grade: LoRA minus Base on active inquiry and the aggregate under the new
+  judge; agreement with the original evaluator by kappa per criterion and Pearson r of
+  the aggregate. The dagger stays.
+- Second protocol: LoRA minus Base on the seven dimensions; leakage under both the
+  nine-marker and the seven-header rule.
+- Decide whether the MedGemma-27B baselines pair with the existing Base rows (run on
+  Modal A100s) or with a Base rerun on the same H100.
+
+## 6. Run the prompt baselines (C27, EVAL-8)
+
+Why: reviewers asked for a head-to-head against an inference-time baseline. The code is
+in `scripts/baselines/` and `rebuttal/launch/run_baselines.sh`, tested with stub
+engines only.
+
+Action, on the GPU host after `bash setup.sh` has built `.venv` and `.venv-infer`:
+
+```bash
+# CPU check first
+MODEL=google/medgemma-27b-text-it BENCH=healthbench SEEDS="42 7 13 99 101" \
+    bash rebuttal/launch/run_baselines.sh --dry-run
+# the submitted cell (eval settings of the submitted profile)
+MODEL=google/medgemma-27b-text-it BENCH=healthbench SEEDS="42 7 13 99 101" \
+    bash rebuttal/launch/run_baselines.sh
+# an added cell (eval settings of the posted cells)
+PROFILE=rebuttal-posted MODEL=mistralai/Mistral-Small-24B-Instruct-2501 BENCH=healthbench \
+    SEEDS="42 7 13 99 101" bash rebuttal/launch/run_baselines.sh
+```
+
+Outputs land in each cell's `seed_<N>/eval/` as `base_clarify.json`,
+`base_verbalized_confidence.json` and `epistemic_scores_baselines.json`. Sync them as
+in item 4.
+
+Compute cost (rough estimate, not measured): each seed runs two single-pass conditions
+of 200 prompts plus grading, about a third of a cell's evaluation. The posted replies
+give about two H100-hours per 24B seed end to end, training included. That suggests 2
+to 3 H100-hours per 24-27B cell and 1 to 2 per 7-8B cell. The two cells above: about 4
+to 6 H100-hours. All seven cells: about 12 to 18 H100-hours. On the shared host this has
+no meter but holds a card; at an on-demand cloud rate of $2 to $4 per H100-hour it is
+about $10 to $25 for two cells and $25 to $75 for all. Measure the real per-stage times
+while it runs (C25).
+
+## 7. Re-grade the Med42-8B cells with a third-family judge (EVAL-7, D6, C26)
+
+Why: Med42-8B is built on Llama-3, the evaluator's family. The cells carry a dagger and
+stay out of cross-model statements until a judge from another family checks them.
+
+Action, on the GPU host, where the outputs already are (accept the Gemma 2 license on
+Hugging Face first):
+
+```bash
+.venv-infer/bin/python scripts/regrade_cross_family.py --dry-run \
+    --cell results_rebuttal/healthbench__m42-health_Llama3-Med42-8B \
+    --benchmark-jsonl data/raw/healthbench_hard.jsonl
+.venv-infer/bin/python scripts/regrade_cross_family.py \
+    --cell results_rebuttal/healthbench__m42-health_Llama3-Med42-8B \
+    --benchmark-jsonl data/raw/healthbench_hard.jsonl
+.venv-infer/bin/python scripts/regrade_cross_family.py \
+    --cell results_rebuttal/chatdoctor__m42-health_Llama3-Med42-8B \
+    --benchmark-jsonl data/raw/chatdoctor.jsonl
+```
+
+The default judge is `google/gemma-2-27b-it`. Each eval folder gets
+`regrade_<judge>.json` with the original and the judge score per example. Sync these
+files, then compute the agreement and the re-graded contrasts as the plan in item 5
+says.
+
+Compute cost (rough estimate, not measured): per cell, 5 seeds x 4 conditions x 200
+responses. That is about 48,000 rubric calls on HealthBench (12 criteria per prompt) or
+32,000 on ChatDoctor (8 criteria), plus 4,000 epistemic calls, on a 27B judge. Expect 2
+to 5 H100-hours per cell with both parts, so 4 to 10 for both cells. With
+`--parts epistemic` only, expect under one hour per cell.
+
+## 8. Collect the two remaining physician raters (C28, EVAL-5, PROV-5, NUM-2)
+
+Why: the pre-registered check needs three raters and a consensus kappa against a 0.6
+target. One of three returned grades. The paper reports kappa 0.35 from that one file,
+which is kept outside the repo, so nobody else can recompute it.
+
+Action:
+
+1. Confirm that the returned file in your Downloads folder is the one the kappa came
+   from. Move it to a private folder outside the repo. Then check that it still gives
+   the committed value:
+
+   ```bash
+   make kappa RATER_FILES="<private dir>/<returned Grading file>.xlsx"
+   git diff --exit-code results_modal/irr/kappa_results.json   # expect no diff (0.354, n=509)
+   ```
+
+2. Send the two raters who have not returned their sheet their
+   `results_modal/irr/Grading-reviewer<K>.xlsx`. Keep the returned files outside the
+   repo.
+3. When both are back:
+
+   ```bash
+   python3 scripts/make_tiebreaker_excel.py --rater-files <r1.xlsx> <r2.xlsx> <r3.xlsx>
+   # send the tiebreaker sheet to the fourth physician, then
+   make kappa RATER_FILES="<r1.xlsx> <r2.xlsx> <r3.xlsx>"
+   make numbers && make paper
+   ```
+
+4. Decide whether to commit de-identified per-row grades (grading_id to pass, fail or
+   unsure, with the `physician_id` column removed).
+
+After: update Appendix B, Table B.1, the abstract sentence on kappa, checklist items
+14 and 15, and C28.
+
+## 9. Run the second teaching protocol (C29, HomM-W1)
+
+Why: the posted replies promised a second CoT protocol. `scripts/baselines/ask_first.py`
+implements a one-pass ask-first protocol; `run_cell.sh` runs it with `PROTOCOL=ask_first`.
+It has run only with stub engines.
+
+Action, on the GPU host, after the plan in item 5:
+
+```bash
+PROTOCOL=ask_first MODEL=mistralai/Mistral-Small-24B-Instruct-2501 \
+    CONFIG=rebuttal/configs/lora_mistral_small_24b_qlora.yaml BENCH=healthbench \
+    bash rebuttal/launch/run_cell.sh --dry-run
+PROTOCOL=ask_first MODEL=mistralai/Mistral-Small-24B-Instruct-2501 \
+    CONFIG=rebuttal/configs/lora_mistral_small_24b_qlora.yaml BENCH=healthbench \
+    bash rebuttal/launch/run_cell.sh
+```
+
+The cell lands in `results_rebuttal/healthbench__mistralai_Mistral-Small-24B-Instruct-2501__ask_first/`.
+Before the analysis, `scripts/aggregate_seeds.py` needs an option for the wrapper name:
+its condition names are fixed to the BODHI ones.
+
+Compute cost (rough estimate): a full 24B cell with trace generation, filtering, five
+trainings and evaluation. `rebuttal/PLAN.md` estimated 8 to 13 H100-hours for a 24-27B
+cell on one card.
+
+## 10. Remote cleanup (D16)
+
+Why: none of this ran, because D16 forbids remote changes in the cleanup.
+
+1. Branches. 44 scratch branches (the prefixes that `prune_branches.sh` names) and
+   `origin/results-temp` (MedGemma adapter weights and optimizer state) are on the
+   remote; 24 scratch and 3 temp branches are local.
+
+   ```bash
+   git fetch --prune origin
+   scripts/maintenance/prune_branches.sh            # dry run: read the list
+   scripts/maintenance/prune_branches.sh --apply    # type: delete
+   ```
+
+2. History purge of rater names, the author block and the two tool trailers. Follow
+   `scripts/maintenance/purge_history.md`, steps 0 to 9. First fix one gap: the
+   author-block rule in `scripts/maintenance/purge_callback.py` rewrites only an
+   uncommented `\author{...}`. A selftest on 2026-10-08 with an empty name map left 32
+   affiliation hits: 31 blob versions of `paper/main.tex` and one of
+   `paper/neurips_submission/main.tex` hold the commented-out author block. Add a rule
+   for it and rerun until the selftest prints `residual hits after rules: 0`.
+3. Repo slug. Rename `bohdi-lora` to `bodhi-lora` in the GitHub settings (D15). Then
+   update the URLs in `README.md`, `KNOWN_ISSUES.md`, `contributions/contributing.md`,
+   `contributions/index.md`, `contributions/getting-started/installation.md`,
+   `scripts/launch_gpu.sh` and `scripts/maintenance/purge_history.md`, and run
+   `git remote set-url origin git@github.com:PeterLi-jpg/bodhi-lora.git`.
+4. Hooks. `core.hooksPath` points at a folder that no longer exists, so
+   `hooks/commit-msg` and `hooks/pre-push` never ran on this branch. Every commit message
+   since `61dada9` was checked with `hooks/commit-msg` by hand and passes. Run
+   `git config core.hooksPath hooks` in each clone. [G14]
+5. Local-only refs. Check, then delete, `refs/codex/*`, `refs/original/*` and the tags
+   `backup-before-email-rewrite*` (purge step 9). Run `git worktree prune` for the stale
+   `/private/tmp/bohdi-main` entry. The four merged branches `cleanup/lane-*` can go
+   with `git branch -d`.
+6. Push. `git push origin cleanup/resubmission` runs CI for the first time on this work.
+   The CI step that downloads HealthBench, runs `make numbers` and diffs
+   `paper/generated/` has never run outside this machine. Check it with
+   `gh pr checks` or the Actions tab.
+
+## 11. Other runs that need GPU time or people
+
+- **Contamination probe (NUM-7).** Appendix A types its numbers by hand and says the
+  output was not kept. Run it on a GPU, commit the JSON, and add an emitter to
+  `scripts/paper_stats.py`:
+  `.venv-infer/bin/python scripts/contamination_probe.py --n-prompts 200 --prefix-tokens 15 --continuation-tokens 25 --output results_modal/contamination_probe.json`.
+  About one H100-hour (rough estimate).
+- **Red flags early in the protocol (C31).** Promised to LxMF. No code exists yet. It
+  needs a protocol variant that writes red flags before the extended reasoning, a cell
+  run as in item 9, and a test of LoRA+variant minus LoRA+BODHI on red flag.
+- **Measured cost per stage (C25).** Time each stage in isolation on one H100 while
+  items 6 and 9 run. The paper reports no hours now.
+- **Over-flagging set (C30).** Two physicians label prompts that have no genuine red
+  flag, before any grading, with its own dated plan.
+- **Harm grading (C33).** Appendix "Harm-Potential Analysis" says the clinician harm
+  review is not done.
+- **Clinician-posed benchmark (C32).** D4 makes MIMIC and eICU future work. Running them
+  needs PhysioNet credentialed access.
+
+## 12. Facts and records only you can supply
+
+- **Checklist items 14 and 15.** The checklist says the participating physicians are
+  co-authors and that there is no IRB determination. Neither could be checked. Edit both
+  if either is wrong.
+- **LLM-usage statement.** `paper/checklist.tex` (LLM-usage item) says the authors used
+  AI assistants for editing and drafting. That disclosure is your decision.
+- **Adapter release.** The paper (Code availability) and checklist items 4, 5, 11 and 13
+  say the adapters are not yet released. If you release them, update that paragraph and
+  those items.
+- **Posted replies against OpenReview.** Compare the 7 files in
+  `rebuttal/responses/posted/` with the threads of submission 32818, including the
+  MathJax and plain-text math in the LxMF and HomM rebuttals. Check whether
+  `rebuttal/responses/drafts/meta_review_part1.md` and `meta_review_part2.md` were
+  posted to the AC; if they were, `git mv` them to `rebuttal/responses/posted/` and add them to
+  `rebuttal/README.md`.
+- **Byte-exact submitted source.** In the Overleaf project, download the version from
+  just before the NeurIPS deadline and diff it with
+  `paper/submitted/neurips2026/main.tex`.
+- **Hugging Face pins.** With your token, read the revision of
+  `OpenMeditron/Meditron3-8B` and add it to `configs/families.yaml`; compare the LFS
+  sha256 of `NousResearch/Meta-Llama-3.1-8B-Instruct` with `meta-llama/Llama-3.1-8B-Instruct`.
+- **Training traces of the submitted cell.** `data/sft_qwen_graded/seed_7_train.jsonl`
+  (49 MB) is ignored. `make numbers` reads its scores from the tracked
+  `data/derived/seed_7_filter_scores.json`; `make kappa` and `make derived` still need
+  the file. Decide whether to archive it with its sha256.
+- **Equivalence margin (EVAL-1, D2).** D2 says no margin. If you want a non-inferiority
+  statement, state the margin first; the 90% interval is in
+  `\statHealthBenchLoRAvsBaseCINinety`. Any margin set now is post hoc.
+- **Clean-environment install.** The new dependency pins were never installed in a
+  fresh environment (it needs a download):
+  `python3 -m venv /tmp/v && /tmp/v/bin/pip install -r requirements-dev.txt && /tmp/v/bin/python -m pytest -q`.
+- **Names file.** `../_wt/.clinician_names.txt` (next to the repo) starts with a blank line.
+  A blank pattern in `grep -f` matches every line without `-w`. Delete the blank line.
