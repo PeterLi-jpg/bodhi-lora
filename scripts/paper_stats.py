@@ -1372,14 +1372,14 @@ def build_tables(out, seeds) -> dict[str, str]:
                      fmt_int(c["completions"]),
                      str(min(per)) if min(per) == max(per) else f"{min(per)}--{max(per)}"])
     t["tab_main_healthbench"] = tabular(
-        "lcccc", ["Config", "Score (mean)", f"95\\% CI ($t_{{{ns - 1}}}$)", "$n$ (pooled)", "$n$/seed"],
+        "lcccc", ["Condition", "Score (mean)", f"95\\% CI ($t_{{{ns - 1}}}$)", "$n$ (pooled)", "$n$/seed"],
         [rows], "results_modal/seed_*/<condition>.json (CI: t over seed means)")
 
     # Per-seed HealthBench table.
     rows = [[COND_LABEL[cfg]] + [f"{cond['healthbench'][cfg]['per_seed'][str(s)]:.3f}" for s in seeds]
             for cfg in CONDITIONS]
     t["tab_healthbench_per_seed"] = tabular(
-        "l" + "c" * ns, ["Config"] + [f"Seed {s}" for s in seeds], [rows],
+        "l" + "c" * ns, ["Condition"] + [f"Seed {s}" for s in seeds], [rows],
         "results_modal/seed_*/<condition>.json")
 
     # Table 2: epistemic scores, seed mean with cross-seed SD.
@@ -1433,7 +1433,7 @@ def build_tables(out, seeds) -> dict[str, str]:
                      fmt_ci(r["ci95"][0] * mult, r["ci95"][1] * mult, dpd),
                      fmt_ci(r["diff_ci95"][0] * mult, r["diff_ci95"][1] * mult, dpd)])
     t["tab_bootstrap"] = tabular(
-        "lrrr", ["Comparison", "Effect", f"95\\% CI, seeds ($t_{{{ns - 1}}}$)",
+        "lrrr", ["Contrast", "Effect", f"95\\% CI, seeds ($t_{{{ns - 1}}}$)",
                  "95\\% CI, prompt bootstrap"], [rows],
         "results_modal (effect = mean of seed-level differences; bootstrap CI is for the pooled difference)")
 
@@ -1478,7 +1478,7 @@ def build_tables(out, seeds) -> dict[str, str]:
                      fmt_int(c["epistemic_missing"]),
                      f"{c['hb_item_parse_failures']}/{fmt_int(c['hb_items'])}"])
     t["tab_counts"] = tabular(
-        "lrrrrr", ["Condition", "Completions", "Graded", "Epistemic parse fail.", "Grade errors",
+        "lrrrrr", ["Condition", "Responses", "Graded", "Epistemic parse fail.", "Grade errors",
                    "HB criterion parse fail."], [rows],
         "results_modal (completions pooled over seeds; grade errors have no epistemic row)")
 
@@ -1632,7 +1632,7 @@ def generality_table(out) -> str:
     return _two_row_tabular(
         "llrrrrrrrl",
         [("", 1), ("", 1), ("Active inquiry (\\%)", 3), ("Context-seeking", 2), ("Aggregate score", 3)],
-        ["Benchmark", "Base model", "Base", "Base+CoT", "LoRA", "Base", "LoRA", "Base", "LoRA",
+        ["Benchmark", "Base model", "Base", "Base+\\bodhi{}", "LoRA", "Base", "LoRA", "Base", "LoRA",
          "LoRA$-$Base [95\\% CI]"],
         _blocks(out, main, row),
         "results_modal (first row) and data/rebuttal_cells/ (other rows: generated_values.json when "
