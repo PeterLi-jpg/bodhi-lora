@@ -5,7 +5,7 @@
 \item {\bf Claims}
     \item[] Question: Do the main claims made in the abstract and introduction accurately reflect the paper's contributions and scope?
     \item[] Answer: \answerYes{}
-    \item[] Justification: The abstract and contributions state the setting (patient-facing, open-ended clinical questions), report the behavior gain with seed-level intervals, and state the aggregate cost in the added cells next to it, with the BioMistral-7B null. Every score is labelled LLM-graded. The physician check covers the rubric criteria behind the aggregate score, not the seven dimensions, and is reported as below its pre-registered target. Values for the added cells are marked as transcribed from posted results until their raw outputs are synced. The introduction separates what we show from what we conjecture, and the Limitations subsection (\S\ref{sec:limitations}) lists what is not covered.
+    \item[] Justification: The abstract and contributions state the setting (patient-facing, open-ended clinical questions), report the behavior gain with seed-level intervals, and state the aggregate cost in the added cells next to it, with the BioMistral-7B null. Every score is labelled LLM-graded. The physician check covers the rubric criteria behind the aggregate score, not the seven dimensions, and is reported as below the target that we set in advance. Values for the added cells are marked as transcribed from posted results until their raw outputs are synced. The introduction separates what we show from what we conjecture, and the Limitations subsection (\S\ref{sec:limitations}) lists what is not covered.
     \item[] Guidelines:
     \begin{itemize}
         \item The answer \answerNA{} means that the abstract and introduction do not include the claims made in the paper.
@@ -17,7 +17,7 @@
 \item {\bf Limitations}
     \item[] Question: Does the paper discuss the limitations of the work performed by the authors?
     \item[] Answer: \answerYes{}
-    \item[] Justification: \S\ref{sec:limitations} lists them: one CoT protocol and one fine-tuning method (a second protocol is implemented, not run); no empirical baseline (code exists, not run); LLM grading, with a physician check that covers rubric criteria only and is below target, and an evaluator that does not always follow its anchors; transcribed values for the added cells; a different training stack, recipe and evaluation settings in those cells, including a 4-bit training base evaluated in bfloat16; the Med42-8B family overlap with the evaluator; red-flag sensitivity without a false-positive measure; greedy decoding; no ablations and no unfiltered arm; seeds that do not vary the teacher traces; and an adapter configuration pending a check against the saved files. Appendix~\ref{app:robustness} gives descriptive checks (length quartiles, themes, a second grader on one seed, dimension correlations, two post hoc labelings). Appendix~\ref{app:harm} describes a clinician review that is not yet done.
+    \item[] Justification: \S\ref{sec:limitations} lists them: one CoT protocol and one fine-tuning method (a second protocol is implemented, not run); LLM grading, with a physician check that covers rubric criteria only, is below target and agrees at chance on the negative criteria, physician raters who are co-authors, an evaluator prompt that names the protocol, and an evaluator that does not always follow its anchors; no evidence that the adapter asks selectively; the MedQA cell without values; promised runs not done (a clinical judge, red flags earlier in the protocol); transcribed values for the added cells; a different training stack, recipe and evaluation settings in those cells, including a 4-bit training base evaluated in bfloat16; the Med42-8B family overlap with the evaluator; red-flag sensitivity without a false-positive measure; greedy decoding; no ablations and no unfiltered arm; seeds that do not vary the teacher traces; and an adapter configuration pending a check against the saved files. \S\ref{sec:prior} states the missing empirical baseline (code exists, not run). Appendix~\ref{app:robustness} gives descriptive checks (length quartiles, themes, a second grader on one seed, dimension correlations, two post hoc labelings). Appendix~\ref{app:harm} describes a clinician review that is not yet done.
     \item[] Guidelines:
     \begin{itemize}
         \item The answer \answerNA{} means that the paper has no limitation while the answer \answerNo{} means that the paper has limitations, but those are not discussed in the paper.
@@ -66,7 +66,7 @@
 \item {\bf Open access to data and code}
     \item[] Question: Does the paper provide open access to the data and code, with sufficient instructions to faithfully reproduce the main experimental results, as described in supplemental material?
     \item[] Answer: \answerYes{}
-    \item[] Justification: Code, evaluation outputs of the MedGemma-27B cell and analysis scripts are at \url{https://anonymous.4open.science/r/bodhi-lora-CEB5}; \texttt{make numbers} rebuilds every number of the MedGemma-27B cell from them and from the public HealthBench file. The five adapters are not yet released, and the raw outputs of the added cells are not yet in the repository. HealthBench is public from OpenAI. MedGemma-27B and Llama-3.1-8B need a gated-model access request on Hugging Face; Qwen2.5-14B is open.
+    \item[] Justification: Code, evaluation outputs of the MedGemma-27B cell and analysis scripts are at \url{https://anonymous.4open.science/r/bodhi-lora-CEB5}; \texttt{make numbers} rebuilds every number of the MedGemma-27B cell from them and from the public HealthBench file. The physician $\kappa$ is the exception at its source: \texttt{make kappa} computes it from the returned grading file, which carries the physician's name and is kept outside the repository, so the repository holds only its output. The five adapters are not yet released, and the raw outputs of the added cells are not yet in the repository. HealthBench is public from OpenAI. MedGemma-27B and Llama-3.1-8B need a gated-model access request on Hugging Face; Qwen2.5-14B is open.
     \item[] Guidelines:
     \begin{itemize}
         \item The answer \answerNA{} means that paper does not include experiments requiring code.
@@ -109,8 +109,8 @@
 
 \item {\bf Experiments compute resources}
     \item[] Question: For each experiment, does the paper provide sufficient information on the computer resources (type of compute workers, memory, time of execution) needed to reproduce the experiments?
-    \item[] Answer: \answerYes{}
-    \item[] Justification: Training: one TPU v6e-8 host per seed (8 chips, FSDP), 5 seeds. Evaluation: A100-80GB GPUs via Modal. The added cells of Appendix~\ref{app:generality} train and evaluate on one H100 80GB per seed. The launchers did not record per-stage wall time on dedicated hardware, so we do not report hours. Hardware is stated in Appendix~\ref{app:hparams}.
+    \item[] Answer: \answerNo{}
+    \item[] Justification: We give the type of compute but not the time of execution. Training: one TPU v6e-8 host per seed (8 chips, FSDP), 5 seeds. Evaluation: A100-80GB GPUs via Modal. The added cells of Appendix~\ref{app:generality} train and evaluate on one H100 80GB per seed. The launchers did not record per-stage wall time on dedicated hardware, so we do not report hours, and we do not estimate total compute. Hardware is stated in Appendix~\ref{app:hparams}.
     \item[] Guidelines:
     \begin{itemize}
         \item The answer \answerNA{} means that the paper does not include experiments.
@@ -187,7 +187,7 @@
 \item {\bf Crowdsourcing and research with human subjects}
     \item[] Question: For crowdsourcing experiments and research with human subjects, does the paper include the full text of instructions given to participants and screenshots, if applicable, as well as details about compensation (if any)?
     \item[] Answer: \answerYes{}
-    \item[] Justification: Appendix~\ref{app:human} describes the physician check as planned and as run: grading format, scale and tie-breaking, and the amendment after one of three physicians returned grades. Participating physicians are co-authors; no separate compensation applies beyond authorship.
+    \item[] Justification: Appendix~\ref{app:human} describes the physician check as planned and as run: grading format, scale and tie-breaking, and the amendment after one of three physicians returned grades. The full instruction sheets given to the physicians are in the supplementary repository (\texttt{data/irr\_instructions/primary.json} and \texttt{tiebreaker.json}), with reviewer names replaced. Participating physicians are co-authors; no separate compensation applies beyond authorship.
     \item[] Guidelines:
     \begin{itemize}
         \item The answer \answerNA{} means that the paper does not involve crowdsourcing nor research with human subjects.
