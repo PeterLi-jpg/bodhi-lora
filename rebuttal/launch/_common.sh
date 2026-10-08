@@ -131,7 +131,7 @@ export BODHI_VLLM_TP="${VLLM_TP:-1}"
 # idle = 0% util AND <2GB used, re-snapshotted per wave so we never grab a card
 # another job has started using.
 # Cooperative lease on the shared node (scripts/gpu_lease.sh + /data/GPUS.txt).
-# Claim up front so another agent can't take the same card during the ~2 min
+# Claim up front so another job can't take the same card during the ~2 min
 # before vLLM allocates and the GPU still reads 0 MiB in nvidia-smi. Released
 # automatically on exit; a SIGKILLed run is cleaned up by `gpu_lease.sh reconcile`.
 LEASE="$REPO/scripts/gpu_lease.sh"

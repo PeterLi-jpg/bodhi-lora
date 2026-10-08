@@ -4,7 +4,7 @@
 # WHY THIS EXISTS
 #   nvidia-smi cannot prevent a race: a process takes ~1-2 min between launch and
 #   its first CUDA allocation, so the GPU reads 0 MiB the whole time and a second
-#   agent grabs the same card. Declaring intent up front closes that window.
+#   job grabs the same card. Declaring intent up front closes that window.
 #
 # USAGE
 #   gpu_lease.sh status                     # show the table

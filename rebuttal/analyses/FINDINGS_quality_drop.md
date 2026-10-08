@@ -99,7 +99,7 @@ It has not been run against the real cells yet: they are still only on the
 shared H100 box (PROV-1). Until then the t values above are unchecked
 transcriptions.
 
-Sections 2 to 5 are still inline session code; the pattern is: join
+Sections 2 to 5 were computed with ad hoc code that is not in the repo. The pattern is: join
 `seed_*/eval/<config>.json` (`results[].score`, `criteria_results[]` with
 `points` / `criteria_met` / `tags`) against
 `seed_*/eval/epistemic_scores.json` (`configs[].examples[].scores`) on
