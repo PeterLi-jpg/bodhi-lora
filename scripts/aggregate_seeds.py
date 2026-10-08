@@ -18,10 +18,10 @@ Outputs
 -------
 A single aggregate summary JSON written to ``--output``. For every (config,
 metric) it records ``mean`` / ``std`` / ``min`` / ``max`` / ``values`` plus a
-percentile-based 95 % CI when there are at least 5 seeds. Stratified U-shape
-numbers (by_tier, by_theme) are re-aggregated per seed via ``eval_ushape.py``
-helpers and then combined across seeds, so ``aggregate_seeds`` benefits
-automatically when the U-shape math changes.
+95 % t interval over the seed values (n_seeds - 1 df) when there are at least
+2 seeds. Stratified U-shape numbers (by_tier, by_theme) are re-aggregated per
+seed via ``eval_ushape.py`` helpers and then combined across seeds, so
+``aggregate_seeds`` benefits automatically when the U-shape math changes.
 
 How ``--seed-dirs`` is resolved
 -------------------------------
@@ -41,10 +41,11 @@ across-seed numbers are reported. It guarantees:
   (``"stdev undefined for n_seeds<2"``). Older versions returned 0.0, which
   read as "zero variance" and silently understated uncertainty.
 * ``ci_low`` / ``ci_high`` are ALWAYS present: they are ``None`` when
-  ``n_seeds < 5``. ``ci_method`` documents whether the CI was computed
-  (``"percentile-95 (n>=5)"``) or skipped (``"skipped (n<5)"``), so a
-  consumer can tell "we didn't compute it" from "we computed it and the
-  width was zero."
+  ``n_seeds < 2``. ``ci_method`` documents whether the CI was computed
+  (``"t-95 (df=n-1)"``) or skipped (``"skipped (n<2)"``), so a consumer can
+  tell "we didn't compute it" from "we computed it and the width was zero."
+  Earlier versions reported the 2.5th/97.5th percentiles of the 5 seed
+  values, which is close to min/max and is not a confidence interval.
 * Non-finite values (``NaN`` / ``Inf``) in the per-seed inputs are filtered
   out before any statistic is computed. ``n_excluded_nan`` reports how many
   values were dropped, so a partial corruption is visible rather than
@@ -69,6 +70,7 @@ from collections import defaultdict
 from pathlib import Path
 
 import numpy as np
+from scipy import stats
 
 # Reuse the per-seed aggregation logic from eval_ushape so the two scripts stay
 # in sync. If eval_ushape ever changes its tier math, aggregate_seeds benefits
@@ -100,14 +102,19 @@ def _expand_seed_dirs(raw_patterns):
 
 
 def _seed_label(path):
-    """Recover the seed number from a directory name like eval/seed_42/."""
-    base = Path(path).name
-    if base.startswith("seed_"):
-        try:
-            return int(base.removeprefix("seed_"))
-        except ValueError:
-            pass
-    return base
+    """Recover the seed number from a path like eval/seed_42/ or cell/seed_42/eval/.
+
+    rebuttal/launch/run_cell.sh passes <cell>/seed_<N>/eval, so the seed is in
+    a parent directory, not the last one. Reading only the last name gave every
+    seed the label "eval", and the per-seed dict kept one seed.
+    """
+    for part in reversed(Path(path).parts):
+        if part.startswith("seed_"):
+            try:
+                return int(part.removeprefix("seed_"))
+            except ValueError:
+                pass
+    return Path(path).name
 
 
 def _load_eval_json(path):
@@ -148,7 +155,7 @@ def _aggregate_metric_across_seeds(values, ci=0.95):
       * std is None when N<2 (no second sample to estimate spread from);
         previously we emitted 0.0 which read as "zero variance" instead of
         "undefined."
-      * ci_low/ci_high are ALWAYS present; None when N<5. Callers can
+      * ci_low/ci_high are ALWAYS present; None when N<2. Callers can
         distinguish "skipped" from "computed and was 0-width."
       * note / ci_method strings document why each field is what it is.
       * NaN / Inf are filtered before any statistic is computed and the
@@ -178,15 +185,18 @@ def _aggregate_metric_across_seeds(values, ci=0.95):
         std_val = None
         std_note = "stdev undefined for n_seeds<2"
 
-    if n >= 5:
-        lo, hi = (1 - ci) / 2 * 100, (1 + ci) / 2 * 100
-        ci_low = float(np.percentile(finite, lo))
-        ci_high = float(np.percentile(finite, hi))
-        ci_method = f"percentile-{int(ci * 100)} (n>=5)"
+    if n >= 2:
+        # t interval with n-1 df: the seeds are a small sample, so the normal
+        # 1.96 would be too narrow (t(4) is 2.78).
+        half = float(stats.t.ppf((1 + ci) / 2, n - 1)) * std_val / math.sqrt(n)
+        mean_val = float(statistics.mean(finite))
+        ci_low = mean_val - half
+        ci_high = mean_val + half
+        ci_method = f"t-{int(ci * 100)} (df=n-1)"
     else:
         ci_low = None
         ci_high = None
-        ci_method = "skipped (n<5)"
+        ci_method = "skipped (n<2)"
 
     out = {
         "n_seeds": n,
@@ -209,7 +219,7 @@ def main():
     parser = argparse.ArgumentParser(
         description=(
             "Aggregate per-seed HealthBench eval outputs into across-seed "
-            "means, stds, and 95% CIs (when n>=5)."
+            "means, stds, and 95% t intervals (when n>=2)."
         ),
     )
     parser.add_argument(

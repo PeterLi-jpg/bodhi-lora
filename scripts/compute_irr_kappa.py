@@ -1,42 +1,43 @@
-"""Stage 3 IRR analysis: Cohen's κ on criterion-level pass/fail grades.
+"""Physician validation: Cohen's kappa between physician grades and the LLM graders.
 
-Run AFTER:
-  1. The 3 reviewers return Grading-<name>.xlsx in results_modal/irr/
-  2. scripts/make_tiebreaker_excel.py → Grading-tiebreaker.xlsx
-  3. The adjudicator returns Grading-tiebreaker-<name>.xlsx (or whatever name —
-     anything matching Grading-tiebreaker*.xlsx that has a tiebreaker_grade column)
+Each returned rater file is a Grading-*.xlsx built by scripts/make_irr_excel.py: one
+row per (response, rubric criterion), with the rater's pass / fail / unsure in
+``physician_grade``. The rater files carry personal names in their file names, so
+they stay outside the repo. Pass their paths on the command line; the script reads
+them and never copies them. The output names raters only as rater_A, rater_B, ...
+in the order given, and records no file names.
 
 Approach
 --------
-For each criterion (grading_id) in the 3 reviewer files:
+1. Physician consensus per criterion (grading_id):
+   - one rater: that rater's grade (the preliminary single-physician analysis);
+   - two or more raters: the majority grade among those who graded the row
+     (needs at least 2 votes); a tie goes to the adjudicator file if one is given.
+   ``unsure`` consensus rows are excluded from kappa.
+2. LLM verdict per criterion, from the stored grader output:
+   - eval_llama rows: results_modal/seed_<N>/<config>.json, results[].criteria_results;
+   - filter_qwen rows: data/sft_qwen_graded/seed_7_train.jsonl, grade.criteria_results.
+   The physician's ``pass`` means "the response did the right thing". For a positive
+   criterion that is criteria_met = True. For a negative (avoid) criterion it is
+   criteria_met = False: the response avoided the harm. The first version of this
+   script mapped criteria_met = True to pass for both kinds, which flips every
+   negative row and gives kappa 0.19 instead of the reported 0.35.
+3. Binary Cohen's kappa (pass vs fail) for all rows, positive rows, negative rows and
+   each eval condition, with a 95% CI from a bootstrap that resamples prompt ids
+   (rows from one prompt share a response and a rater sitting, so they are not
+   independent; the eval rows come from 10 prompts).
+4. With two or more raters, pairwise inter-physician kappa on rows both graded.
 
-  1. Compute physician consensus per criterion:
-     - If >=2 of 3 reviewers agree (majority): consensus = the majority grade.
-     - If 3-way split (one of each pass/fail/unsure): consensus = adjudicator's grade.
-     - If reviewer answers contain only `unsure` votes among the agreers
-       (e.g. all three said unsure): consensus = unsure → excluded from κ.
+Output: results_modal/irr/kappa_results.json (de-identified).
 
-  2. Reduce to a binary {pass, fail} for κ math (drop unsure).
-
-  3. The LLM grader's per-criterion verdict comes from results_modal data:
-     - For eval rows (Llama grader): the per-criterion `criteria_met` flag
-       lives in seed_<N>/<config>.json under results[i].criteria_results[j].
-     - For filter rows (Qwen grader): per-criterion `criteria_met` in
-       data/sft_qwen_graded/seed_7_train.jsonl under grade.criteria_results.
-     - LLM "criteria_met" is a boolean; map True → pass, False → fail.
-
-  4. Compute κ between LLM and physician consensus separately for:
-     - eval_llama source (overall + per-config)
-     - filter_qwen source (overall)
-
-  5. Inter-physician κ: average over 3 pairwise comparisons on the 1-vs-1
-     subset of criteria where both reviewers gave a non-unsure grade.
-
-Output: results_modal/irr/kappa_results.{json,md}.
+Usage:
+    python3 scripts/compute_irr_kappa.py --rater-files /path/to/Grading-<rater>.xlsx [...]
 """
 from __future__ import annotations
 
+import argparse
 import json
+import string
 from itertools import combinations
 from pathlib import Path
 
@@ -45,281 +46,229 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parent.parent
 IRR_DIR = ROOT / "results_modal" / "irr"
-RESULTS_DIR = ROOT / "results_modal"
-FILTER_PATH = ROOT / "data" / "sft_qwen_graded" / "seed_7_train.jsonl"
-
-GRADE_VALUES = {"pass", "fail", "unsure"}
-SEEDS = (7, 13, 42, 99, 101)
+GRADES = ("pass", "fail", "unsure")
 CONFIGS = ("base_no_wrapper", "base_bodhi", "lora_no_wrapper", "lora_bodhi")
+BOOTSTRAP_RESAMPLES = 5000
+BOOTSTRAP_SEED = 0
 
 
-def find_reviewer_files() -> list[Path]:
-    out: list[Path] = []
-    for p in sorted(IRR_DIR.glob("Grading-*.xlsx")):
-        if p.stem.lower() in ("grading-template",) or p.stem.lower().startswith("grading-tiebreaker"):
-            continue
-        out.append(p)
+def load_rater(path: Path, label: str) -> pd.DataFrame:
+    """grading_id, prompt_id, grade (lower-case; '' when blank)."""
+    df = pd.read_excel(path, sheet_name="Grading")
+    df["grade"] = df["physician_grade"].astype(str).str.strip().str.lower().replace({"nan": ""})
+    if not df["grade"].isin(GRADES).any():
+        raise SystemExit(f"compute_irr_kappa: {label} has no pass/fail/unsure grades; "
+                         "this looks like a blank template, not a returned file")
+    bad = sorted(set(df["grade"]) - set(GRADES) - {""})
+    if bad:
+        raise SystemExit(f"compute_irr_kappa: {label} has unknown grades {bad}")
+    df["grading_id"] = df["grading_id"].astype(str)
+    return df[["grading_id", "prompt_id", "grade"]]
+
+
+def load_adjudicator(path: Path) -> dict[str, str]:
+    df = pd.read_excel(path, sheet_name="Tiebreaker")
+    out = {}
+    for r in df.itertuples():
+        v = str(getattr(r, "tiebreaker_grade", "")).strip().lower()
+        if v in ("pass", "fail"):
+            out[str(r.grading_id)] = v
     return out
 
 
-def find_tiebreaker_file() -> Path | None:
-    for p in IRR_DIR.glob("Grading-tiebreaker*.xlsx"):
-        # Open and check if the tiebreaker_grade col has any non-empty values —
-        # this distinguishes the unfilled file we generated from the filled
-        # adjudicator return.
-        try:
-            df = pd.read_excel(p, sheet_name="Tiebreaker")
-            tb = df.get("tiebreaker_grade")
-            if tb is None:
-                continue
-            tb_clean = tb.astype(str).str.strip().str.lower().replace({"nan": ""})
-            if (tb_clean.isin({"pass", "fail"})).any():
-                return p
-        except Exception:
+def derive_consensus(rater_grades: list[dict[str, str]], adj: dict[str, str]) -> dict[str, str]:
+    """grading_id -> consensus grade (pass / fail / unsure)."""
+    min_votes = 1 if len(rater_grades) == 1 else 2
+    consensus = {}
+    for gid in sorted(set().union(*rater_grades)):
+        votes = [g[gid] for g in rater_grades if g.get(gid) in GRADES]
+        if len(votes) < min_votes:
             continue
-    return None
-
-
-def load_reviewer(path: Path) -> pd.DataFrame:
-    df = pd.read_excel(path, sheet_name="Grading")
-    df["physician_grade"] = (
-        df["physician_grade"].astype(str).str.strip().str.lower().replace({"nan": ""})
-    )
-    return df[["grading_id", "physician_grade"]]
-
-
-def derive_consensus(reviewer_grades: list[dict[str, str]],
-                     adj_grades: dict[str, str]) -> dict[str, str]:
-    """grading_id → consensus (one of pass/fail/unsure or absent)."""
-    all_ids = set().union(*[d.keys() for d in reviewer_grades])
-    consensus: dict[str, str] = {}
-    for gid in all_ids:
-        votes = [d.get(gid, "") for d in reviewer_grades]
-        votes = [v for v in votes if v in GRADE_VALUES]
-        if len(votes) < 2:
-            continue
-        # Majority?
-        counts: dict[str, int] = {}
-        for v in votes:
-            counts[v] = counts.get(v, 0) + 1
-        top = max(counts.values())
-        majority = [k for k, c in counts.items() if c == top]
-        if len(majority) == 1:
-            consensus[gid] = majority[0]
-        else:
-            # 3-way split (or 2-2 if only 2 reviewers — shouldn't happen w/ 3).
-            adj = adj_grades.get(gid, "").lower().strip()
-            if adj in {"pass", "fail"}:
-                consensus[gid] = adj
-            # else: skip — disputed but no adjudicator vote
+        counts = pd.Series(votes).value_counts()
+        top = counts[counts == counts.max()].index.tolist()
+        if len(top) == 1:
+            consensus[gid] = top[0]
+        elif adj.get(gid) in ("pass", "fail"):
+            consensus[gid] = adj[gid]
+        # else: disputed with no adjudicator vote; left out
     return consensus
 
 
-def cohen_kappa(rater_a: list[str], rater_b: list[str]) -> tuple[float, int]:
-    """Cohen's κ for binary {pass, fail} ratings. Drops any other label."""
-    pairs = [(a, b) for a, b in zip(rater_a, rater_b)
-             if a in {"pass", "fail"} and b in {"pass", "fail"}]
-    n = len(pairs)
-    if n < 2:
-        return float("nan"), n
-    a = [p[0] for p in pairs]
-    b = [p[1] for p in pairs]
-    cats = ["pass", "fail"]
-    cm = np.zeros((2, 2))
-    for x, y in pairs:
-        cm[cats.index(x), cats.index(y)] += 1
-    n_total = cm.sum()
-    if n_total == 0:
-        return float("nan"), n
-    po = (cm[0, 0] + cm[1, 1]) / n_total
-    row_marg = cm.sum(axis=1)
-    col_marg = cm.sum(axis=0)
-    pe = (row_marg[0] * col_marg[0] + row_marg[1] * col_marg[1]) / (n_total ** 2)
-    if 1 - pe == 0:
-        return float("nan"), n
-    return float((po - pe) / (1 - pe)), n
+def cohen_kappa_from_counts(cm: np.ndarray) -> float:
+    """Kappa from a 2x2 table [[pass/pass, pass/fail], [fail/pass, fail/fail]].
 
-
-def load_llm_criterion_verdicts() -> dict[str, str]:
-    """grading_id → LLM grade {pass, fail}.
-
-    'pass' if the rubric criterion's `criteria_met` is True; 'fail' otherwise.
-    Built by re-deriving grading_id from (response_id, criterion_number)
-    using answer_key.xlsx + the source data for each row.
+    Works on the last two axes so a stack of bootstrap tables is one call.
     """
-    ak_path = IRR_DIR / "answer_key.xlsx"
-    if not ak_path.is_file():
-        raise SystemExit(f"missing {ak_path}")
-    ak = pd.read_excel(ak_path)
-    # Map response_id → (source, seed, config, prompt_id) (one row per response).
-    response_meta = (
-        ak[["response_id", "source", "seed", "config", "prompt_id"]]
-        .drop_duplicates("response_id")
-        .set_index("response_id")
-        .to_dict(orient="index")
-    )
+    n = cm.sum(axis=(-2, -1))
+    po = (cm[..., 0, 0] + cm[..., 1, 1]) / n
+    rows, cols = cm.sum(axis=-1), cm.sum(axis=-2)
+    pe = (rows[..., 0] * cols[..., 0] + rows[..., 1] * cols[..., 1]) / n ** 2
+    with np.errstate(invalid="ignore", divide="ignore"):
+        return np.where(pe < 1, (po - pe) / (1 - pe), np.nan)
 
-    # Cache per (seed, config) → results list.
-    eval_cache: dict[tuple, list[dict]] = {}
-    def _eval_results(seed: int, config: str) -> list[dict]:
-        key = (seed, config)
-        if key not in eval_cache:
-            with open(RESULTS_DIR / f"seed_{seed}" / f"{config}.json") as f:
-                eval_cache[key] = json.load(f)["results"]
-        return eval_cache[key]
 
-    # Filter cache: load entire jsonl once.
-    filter_cache: dict[str, dict] = {}
-    if FILTER_PATH.is_file():
-        with open(FILTER_PATH) as f:
+def _table(a: list[str], b: list[str]) -> np.ndarray:
+    cm = np.zeros((2, 2))
+    for x, y in zip(a, b):
+        cm[0 if x == "pass" else 1, 0 if y == "pass" else 1] += 1
+    return cm
+
+
+def kappa_block(sub: pd.DataFrame, rng_seed: int = BOOTSTRAP_SEED) -> dict:
+    """Kappa, agreement, pass rates and a prompt-clustered bootstrap CI.
+
+    ``sub`` has columns prompt_id, consensus, llm (both pass/fail).
+    """
+    if sub.empty:
+        return {"kappa": None, "ci95": [None, None], "n": 0, "n_prompts": 0,
+                "agree": None, "physician_pass": None, "llm_pass": None}
+    cm = _table(sub["consensus"].tolist(), sub["llm"].tolist())
+    prompts = sorted(sub["prompt_id"].unique())
+    # One 2x2 table per prompt; a resample is a weighted sum of these tables.
+    per_prompt = np.stack([_table(g["consensus"].tolist(), g["llm"].tolist())
+                           for _, g in sub.groupby("prompt_id", sort=True)])
+    rng = np.random.default_rng(rng_seed)
+    draws = rng.integers(0, len(prompts), size=(BOOTSTRAP_RESAMPLES, len(prompts)))
+    weights = np.zeros((BOOTSTRAP_RESAMPLES, len(prompts)))
+    np.add.at(weights, (np.repeat(np.arange(BOOTSTRAP_RESAMPLES), len(prompts)), draws.ravel()), 1.0)
+    boot = cohen_kappa_from_counts(np.einsum("bp,pij->bij", weights, per_prompt))
+    boot = boot[np.isfinite(boot)]
+    lo, hi = np.percentile(boot, [2.5, 97.5]) if len(boot) else (np.nan, np.nan)
+    n = int(cm.sum())
+    return {
+        "kappa": float(cohen_kappa_from_counts(cm)),
+        "ci95": [float(lo), float(hi)],
+        "n": n,
+        "n_prompts": len(prompts),
+        "agree": float((cm[0, 0] + cm[1, 1]) / n),
+        "physician_pass": float(cm[0].sum() / n),
+        "llm_pass": float(cm[:, 0].sum() / n),
+    }
+
+
+def llm_verdicts(rows: pd.DataFrame, results_dir: Path, filter_traces: Path | None) -> pd.Series:
+    """grading_id -> LLM pass/fail; NaN where the stored grade is not available."""
+    eval_cache: dict[tuple, dict] = {}
+    filter_cache: dict[str, dict] | None = None
+    if filter_traces is not None and filter_traces.is_file():
+        filter_cache = {}
+        with open(filter_traces) as f:
             for line in f:
                 d = json.loads(line)
-                filter_cache[d.get("prompt_id", "")] = d
+                filter_cache[d["prompt_id"]] = d
+    out = {}
+    for r in rows.itertuples():
+        if r.source == "eval_llama":
+            key = (int(r.seed), r.config)
+            if key not in eval_cache:
+                with open(results_dir / f"seed_{key[0]}" / f"{key[1]}.json") as f:
+                    eval_cache[key] = {x["prompt_id"]: x for x in json.load(f)["results"]}
+            criteria = eval_cache[key][r.prompt_id]["criteria_results"]
+        elif filter_cache is not None:
+            criteria = filter_cache[r.prompt_id]["grade"]["criteria_results"]
+        else:
+            continue
+        c = criteria[int(r.criterion_number) - 1]
+        negative = c["points"] < 0
+        if negative != (str(r.is_avoid_item).strip().upper() == "YES"):
+            raise SystemExit(f"compute_irr_kappa: {r.grading_id} avoid flag disagrees with rubric sign")
+        if c["criterion"].strip() != str(r.criterion_text).strip():
+            raise SystemExit(f"compute_irr_kappa: {r.grading_id} criterion text does not match the grader output")
+        # pass = the response did the right thing (see module docstring).
+        out[r.grading_id] = "pass" if (c["criteria_met"] != negative) else "fail"
+    return pd.Series(out, dtype=object)
 
-    out: dict[str, str] = {}
-    for _, row in ak.iterrows():
-        gid = str(row["grading_id"])
-        rid = row["response_id"]
-        meta = response_meta[rid]
-        cnum = int(row["criterion_number"])  # 1-indexed
-        idx = cnum - 1
-        criteria = []
-        if meta["source"] == "eval_llama":
-            seed = int(meta["seed"])
-            cfg = meta["config"]
-            for r in _eval_results(seed, cfg):
-                if r["prompt_id"] == meta["prompt_id"]:
-                    criteria = r.get("criteria_results", [])
-                    break
-        else:  # filter_qwen
-            tr = filter_cache.get(meta["prompt_id"], {})
-            criteria = tr.get("grade", {}).get("criteria_results", [])
-        if 0 <= idx < len(criteria):
-            met = bool(criteria[idx].get("criteria_met", False))
-            out[gid] = "pass" if met else "fail"
-        # else: missing rubric on the LLM side — leave unmapped, will skip in κ
+
+def run(rater_files: list[Path], answer_key: Path, template: Path, results_dir: Path,
+        filter_traces: Path | None, adjudicator: Path | None) -> dict:
+    labels = [f"rater_{string.ascii_uppercase[i]}" for i in range(len(rater_files))]
+    raters = [load_rater(p, lab) for p, lab in zip(rater_files, labels)]
+    # The template is the sheet the grader output was matched against. The copy a
+    # rater received may reword criterion text (19 rows say "mark pass" where the
+    # rubric says "criteria_met = true"), so text checks use the template.
+    sheet = pd.read_excel(template, sheet_name="Grading")[["grading_id", "prompt_id", "criterion_text"]]
+    sheet["grading_id"] = sheet["grading_id"].astype(str)
+    ref = sheet.set_index("grading_id")["prompt_id"]
+    for lab, r in zip(labels, raters):
+        if not r.set_index("grading_id")["prompt_id"].equals(ref):
+            raise SystemExit(f"compute_irr_kappa: {lab} rows do not match the template")
+    grades = [dict(zip(r["grading_id"], r["grade"])) for r in raters]
+    adj = load_adjudicator(adjudicator) if adjudicator else {}
+    consensus = derive_consensus(grades, adj)
+
+    ak = pd.read_excel(answer_key)
+    ak["grading_id"] = ak["grading_id"].astype(str)
+    rows = ak.merge(sheet, on="grading_id", how="left", validate="one_to_one")
+    rows["consensus"] = rows["grading_id"].map(consensus)
+    rows["llm"] = rows["grading_id"].map(llm_verdicts(rows, results_dir, filter_traces))
+    rows["negative"] = rows["is_avoid_item"].astype(str).str.strip().str.upper().eq("YES")
+    usable = rows[rows["consensus"].isin(["pass", "fail"]) & rows["llm"].isin(["pass", "fail"])]
+
+    out = {
+        "n_raters": len(raters),
+        "raters": labels,
+        "consensus_rule": ("single rater: that rater's grade" if len(raters) == 1 else
+                           "majority of >=2 votes; ties to the adjudicator"),
+        "llm_pass_rule": "positive criterion: criteria_met; negative (avoid) criterion: not criteria_met",
+        "kappa": "binary Cohen's kappa, pass vs fail; unsure excluded",
+        "bootstrap": {"resamples": BOOTSTRAP_RESAMPLES, "seed": BOOTSTRAP_SEED,
+                      "cluster": "prompt_id", "interval": "percentile"},
+        "rows": {"total": int(len(rows)),
+                 **{src: int((rows["source"] == src).sum()) for src in ("eval_llama", "filter_qwen")}},
+        "grades": {lab: {g: int(sum(v == g for v in d.values())) for g in GRADES}
+                   for lab, d in zip(labels, grades)},
+        "unsure_consensus": {src: int(((rows["source"] == src) & (rows["consensus"] == "unsure")).sum())
+                             for src in ("eval_llama", "filter_qwen")},
+        "llm_vs_physician": {},
+    }
+    for src in ("eval_llama", "filter_qwen"):
+        sub = usable[usable["source"] == src]
+        if sub.empty:
+            print(f"SKIP {src}: no rows with both a physician and an LLM grade")
+            continue
+        block = {"all": kappa_block(sub), "positive": kappa_block(sub[~sub["negative"]]),
+                 "negative": kappa_block(sub[sub["negative"]])}
+        if src == "eval_llama":
+            block["by_config"] = {c: kappa_block(sub[sub["config"] == c]) for c in CONFIGS}
+        out["llm_vs_physician"][src] = block
+
+    pairs = []
+    for (la, ga), (lb, gb) in combinations(zip(labels, grades), 2):
+        common = sorted(g for g in set(ga) & set(gb) if ga[g] in ("pass", "fail") and gb[g] in ("pass", "fail"))
+        if len(common) >= 2:
+            cm = _table([ga[g] for g in common], [gb[g] for g in common])
+            pairs.append({"pair": f"{la}-{lb}", "kappa": float(cohen_kappa_from_counts(cm)), "n": len(common)})
+    out["inter_physician"] = {"pairs": pairs} if pairs else {"pairs": [], "note": "needs at least 2 raters"}
     return out
 
 
 def main() -> None:
-    files = find_reviewer_files()
-    if len(files) < 2:
-        raise SystemExit(f"need ≥2 reviewer files, found {len(files)}")
+    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    ap.add_argument("--rater-files", type=Path, nargs="+", required=True,
+                    help="returned Grading-*.xlsx files, read in place; labelled rater_A, rater_B, ... in this order")
+    ap.add_argument("--adjudicator", type=Path, default=None, help="filled tiebreaker xlsx, if any")
+    ap.add_argument("--answer-key", type=Path, default=IRR_DIR / "answer_key.xlsx")
+    ap.add_argument("--template", type=Path, default=IRR_DIR / "Grading-template.xlsx")
+    ap.add_argument("--results-dir", type=Path, default=ROOT / "results_modal")
+    ap.add_argument("--filter-traces", type=Path,
+                    default=ROOT / "data" / "sft_qwen_graded" / "seed_7_train.jsonl")
+    ap.add_argument("--out", type=Path, default=IRR_DIR / "kappa_results.json")
+    a = ap.parse_args()
 
-    print("loading reviewers:")
-    reviewer_dicts: list[dict[str, str]] = []
-    for p in files:
-        df = load_reviewer(p)
-        d = {str(r.grading_id): r.physician_grade for r in df.itertuples()
-             if r.physician_grade in GRADE_VALUES}
-        print(f"  {p.name}: {len(d)} graded criteria")
-        reviewer_dicts.append(d)
-
-    adj_path = find_tiebreaker_file()
-    adj_grades: dict[str, str] = {}
-    if adj_path is not None:
-        df = pd.read_excel(adj_path, sheet_name="Tiebreaker")
-        for r in df.itertuples():
-            v = str(getattr(r, "tiebreaker_grade", "")).strip().lower()
-            if v in {"pass", "fail"}:
-                adj_grades[str(r.grading_id)] = v
-        print(f"  adjudicator ({adj_path.name}): {len(adj_grades)} resolved")
-    else:
-        print("  no adjudicator file yet (3-way-split rows will be skipped from κ)")
-
-    # 1. Inter-physician κ (pairwise, average) — binary pass/fail only.
-    pairwise = []
-    for (i, da), (j, db) in combinations(enumerate(reviewer_dicts), 2):
-        common = set(da) & set(db)
-        a = [da[g] for g in common]
-        b = [db[g] for g in common]
-        k, n = cohen_kappa(a, b)
-        pairwise.append({"pair": f"{i+1}↔{j+1}", "k": k, "n": n})
-
-    inter = float(np.nanmean([p["k"] for p in pairwise])) if pairwise else float("nan")
-
-    # 2. Physician consensus.
-    consensus = derive_consensus(reviewer_dicts, adj_grades)
-    print(f"\nphysician consensus established for {len(consensus)} criteria")
-
-    # 3. LLM verdicts per grading_id.
-    llm = load_llm_criterion_verdicts()
-    print(f"LLM verdict mapped for {len(llm)} criteria")
-
-    # 4. κ vs LLM, per source.
-    ak = pd.read_excel(IRR_DIR / "answer_key.xlsx")
-    ak["grading_id"] = ak["grading_id"].astype(str)
-    ak["consensus"] = ak["grading_id"].map(consensus)
-    ak["llm_verdict"] = ak["grading_id"].map(llm)
-
-    by_source: dict[str, dict] = {}
-    for src in ("eval_llama", "filter_qwen"):
-        sub = ak[(ak["source"] == src)
-                 & ak["consensus"].isin(["pass", "fail"])
-                 & ak["llm_verdict"].isin(["pass", "fail"])]
-        k, n = cohen_kappa(sub["consensus"].tolist(), sub["llm_verdict"].tolist())
-        by_source[src] = {"k": k, "n": n}
-
-    by_eval_config: dict[str, dict] = {}
-    for cfg in CONFIGS:
-        sub = ak[(ak["source"] == "eval_llama") & (ak["config"] == cfg)
-                 & ak["consensus"].isin(["pass", "fail"])
-                 & ak["llm_verdict"].isin(["pass", "fail"])]
-        k, n = cohen_kappa(sub["consensus"].tolist(), sub["llm_verdict"].tolist())
-        by_eval_config[cfg] = {"k": k, "n": n}
-
-    out = {
-        "n_total_grading_rows": int(len(ak)),
-        "n_with_physician_consensus": int(ak["consensus"].notna().sum()),
-        "inter_physician_kappa": {
-            "pairwise": pairwise,
-            "mean_k": inter,
-        },
-        "by_source": by_source,
-        "by_eval_config": by_eval_config,
-    }
-    json_path = IRR_DIR / "kappa_results.json"
-    json_path.write_text(json.dumps(out, indent=2))
-    print(f"\nwrote {json_path}")
-
-    # Markdown summary.
-    lines = [
-        "# Cohen's κ — physician validation of LLM graders\n",
-        f"- Total grading rows:       **{out['n_total_grading_rows']}**",
-        f"- Rows with physician consensus: **{out['n_with_physician_consensus']}**",
-        "- Binary pass/fail κ; `unsure` votes excluded; 3-way splits resolved by adjudicator.",
-        "",
-        "## Inter-physician κ (upper bound)",
-        "",
-        "| Pair | n | κ |",
-        "|---|---|---|",
-    ]
-    for p in pairwise:
-        lines.append(f"| {p['pair']} | {p['n']} | {p['k']:.3f} |")
-    lines.append(f"| **Mean** | — | **{inter:.3f}** |")
-    lines.append("")
-    lines.append("## LLM grader vs physician consensus")
-    lines.append("")
-    lines.append("| Source | Grader | n | κ |")
-    lines.append("|---|---|---|---|")
-    for src, label in [("eval_llama", "Llama-3.1-8B"), ("filter_qwen", "Qwen-14B")]:
-        d = by_source[src]
-        lines.append(f"| {src} | {label} | {d['n']} | **{d['k']:.3f}** |")
-    lines.append("")
-    lines.append("## Eval-grader (Llama) κ by Stage 4 config")
-    lines.append("")
-    lines.append("| Config | n | κ |")
-    lines.append("|---|---|---|")
-    for cfg, d in by_eval_config.items():
-        lines.append(f"| {cfg} | {d['n']} | {d['k']:.3f} |")
-    md_path = IRR_DIR / "kappa_results.md"
-    md_path.write_text("\n".join(lines))
-    print(f"wrote {md_path}")
-    print()
-    print("=== headline numbers ===")
-    print(f"  inter-physician mean κ:  {inter:.3f}")
-    print(f"  Llama vs consensus κ:    {by_source['eval_llama']['k']:.3f}  (n={by_source['eval_llama']['n']})")
-    print(f"  Qwen  vs consensus κ:    {by_source['filter_qwen']['k']:.3f}  (n={by_source['filter_qwen']['n']})")
+    if not a.filter_traces.is_file():
+        print(f"SKIP filter_qwen rows: {a.filter_traces} not found")
+    out = run(a.rater_files, a.answer_key, a.template, a.results_dir, a.filter_traces, a.adjudicator)
+    a.out.parent.mkdir(parents=True, exist_ok=True)
+    a.out.write_text(json.dumps(out, indent=2) + "\n")
+    ev = out["llm_vs_physician"].get("eval_llama", {}).get("all")
+    if ev:
+        print(f"Llama vs physician: kappa {ev['kappa']:.3f} [{ev['ci95'][0]:.2f}, {ev['ci95'][1]:.2f}] "
+              f"n={ev['n']} rows from {ev['n_prompts']} prompts")
+    fq = out["llm_vs_physician"].get("filter_qwen", {}).get("all")
+    if fq:
+        print(f"Qwen vs physician:  kappa {fq['kappa']:.3f} [{fq['ci95'][0]:.2f}, {fq['ci95'][1]:.2f}] "
+              f"n={fq['n']} rows from {fq['n_prompts']} prompts")
+    print(f"wrote {a.out.name}")
 
 
 if __name__ == "__main__":

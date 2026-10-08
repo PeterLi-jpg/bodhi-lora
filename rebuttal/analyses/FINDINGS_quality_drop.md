@@ -92,7 +92,14 @@ Resolve before camera-ready.
 
 ## Reproduce
 
-Scripts used are inline in the session; the pattern is: join
+Section 1 (paired t over seeds, Holm over the six cells) is now
+`rebuttal/analyses/quality_drop.py`. It reads `results_rebuttal/` in the layout
+`rebuttal/launch/run_cell.sh` writes and writes `rebuttal/results/quality_drop.json`.
+It has not been run against the real cells yet: they are still only on the
+shared H100 box (PROV-1). Until then the t values above are unchecked
+transcriptions.
+
+Sections 2 to 5 are still inline session code; the pattern is: join
 `seed_*/eval/<config>.json` (`results[].score`, `criteria_results[]` with
 `points` / `criteria_met` / `tags`) against
 `seed_*/eval/epistemic_scores.json` (`configs[].examples[].scores`) on

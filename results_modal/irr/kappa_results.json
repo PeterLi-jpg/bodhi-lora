@@ -1,0 +1,163 @@
+{
+  "n_raters": 1,
+  "raters": [
+    "rater_A"
+  ],
+  "consensus_rule": "single rater: that rater's grade",
+  "llm_pass_rule": "positive criterion: criteria_met; negative (avoid) criterion: not criteria_met",
+  "kappa": "binary Cohen's kappa, pass vs fail; unsure excluded",
+  "bootstrap": {
+    "resamples": 5000,
+    "seed": 0,
+    "cluster": "prompt_id",
+    "interval": "percentile"
+  },
+  "rows": {
+    "total": 662,
+    "eval_llama": 532,
+    "filter_qwen": 130
+  },
+  "grades": {
+    "rater_A": {
+      "pass": 373,
+      "fail": 261,
+      "unsure": 28
+    }
+  },
+  "unsure_consensus": {
+    "eval_llama": 23,
+    "filter_qwen": 5
+  },
+  "llm_vs_physician": {
+    "eval_llama": {
+      "all": {
+        "kappa": 0.3542347468378762,
+        "ci95": [
+          0.27506799318610525,
+          0.42625599118916263
+        ],
+        "n": 509,
+        "n_prompts": 10,
+        "agree": 0.6758349705304518,
+        "physician_pass": 0.5481335952848723,
+        "llm_pass": 0.4793713163064833
+      },
+      "positive": {
+        "kappa": 0.3581571859952664,
+        "ci95": [
+          0.24236702777045654,
+          0.472867960813265
+        ],
+        "n": 321,
+        "n_prompts": 10,
+        "agree": 0.6947040498442367,
+        "physician_pass": 0.45482866043613707,
+        "llm_pass": 0.23052959501557632
+      },
+      "negative": {
+        "kappa": -0.07254768392370571,
+        "ci95": [
+          -0.14029783968359316,
+          0.03955269951734217
+        ],
+        "n": 188,
+        "n_prompts": 10,
+        "agree": 0.6436170212765957,
+        "physician_pass": 0.7074468085106383,
+        "llm_pass": 0.9042553191489362
+      },
+      "by_config": {
+        "base_no_wrapper": {
+          "kappa": 0.21971000245760638,
+          "ci95": [
+            0.10444444444444455,
+            0.32950212105866894
+          ],
+          "n": 127,
+          "n_prompts": 10,
+          "agree": 0.6062992125984252,
+          "physician_pass": 0.5826771653543307,
+          "llm_pass": 0.47244094488188976
+        },
+        "base_bodhi": {
+          "kappa": 0.3578071463534019,
+          "ci95": [
+            0.19128427830432682,
+            0.5304159643741918
+          ],
+          "n": 128,
+          "n_prompts": 10,
+          "agree": 0.6796875,
+          "physician_pass": 0.578125,
+          "llm_pass": 0.5078125
+        },
+        "lora_no_wrapper": {
+          "kappa": 0.4173589584624922,
+          "ci95": [
+            0.3391825015055288,
+            0.515077550575698
+          ],
+          "n": 127,
+          "n_prompts": 10,
+          "agree": 0.7086614173228346,
+          "physician_pass": 0.5039370078740157,
+          "llm_pass": 0.49606299212598426
+        },
+        "lora_bodhi": {
+          "kappa": 0.4210915362818775,
+          "ci95": [
+            0.2572025779797113,
+            0.5428591214879304
+          ],
+          "n": 127,
+          "n_prompts": 10,
+          "agree": 0.7086614173228346,
+          "physician_pass": 0.5275590551181102,
+          "llm_pass": 0.4409448818897638
+        }
+      }
+    },
+    "filter_qwen": {
+      "all": {
+        "kappa": 0.296812215376373,
+        "ci95": [
+          0.047944214948139566,
+          0.48379052369077313
+        ],
+        "n": 125,
+        "n_prompts": 10,
+        "agree": 0.664,
+        "physician_pass": 0.752,
+        "llm_pass": 0.544
+      },
+      "positive": {
+        "kappa": 0.4054669703872438,
+        "ci95": [
+          0.18952611114943663,
+          0.6052229634781405
+        ],
+        "n": 87,
+        "n_prompts": 10,
+        "agree": 0.6896551724137931,
+        "physician_pass": 0.7126436781609196,
+        "llm_pass": 0.4482758620689655
+      },
+      "negative": {
+        "kappa": -0.23376623376623357,
+        "ci95": [
+          -0.43478260869565233,
+          -0.056563911772522193
+        ],
+        "n": 38,
+        "n_prompts": 10,
+        "agree": 0.6052631578947368,
+        "physician_pass": 0.8421052631578947,
+        "llm_pass": 0.7631578947368421
+      }
+    }
+  },
+  "inter_physician": {
+    "pairs": [],
+    "note": "needs at least 2 raters"
+  }
+}

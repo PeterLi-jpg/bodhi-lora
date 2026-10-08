@@ -1,0 +1,144 @@
+{
+  "n_eval_prompts": 667,
+  "clinician_posed_heuristic": 4,
+  "primary_theme_or_rubric": {
+    "groups": {
+      "context_dependent": 508,
+      "self_contained": 158,
+      "null": 1
+    },
+    "configs": {
+      "base_no_wrapper": {
+        "context_dependent_rate": 0.1800518134715026,
+        "self_contained_rate": 0.1592920353982301,
+        "discrimination": 0.020759778073272506,
+        "discrimination_ci95": [
+          -0.05046697284154602,
+          0.08732727644329219
+        ],
+        "odds_ratio": 1.1589433034930665,
+        "odds_ratio_ci95": [
+          0.7216640605401508,
+          2.0232000209657772
+        ]
+      },
+      "base_bodhi": {
+        "context_dependent_rate": 0.5033738191632928,
+        "self_contained_rate": 0.3932038834951456,
+        "discrimination": 0.1101699356681472,
+        "discrimination_ci95": [
+          0.020646674713737073,
+          0.19889474367570154
+        ],
+        "odds_ratio": 1.5641774020397208,
+        "odds_ratio_ci95": [
+          1.086330837956875,
+          2.2859758626538245
+        ]
+      },
+      "lora_no_wrapper": {
+        "context_dependent_rate": 0.47963206307490147,
+        "self_contained_rate": 0.375,
+        "discrimination": 0.10463206307490147,
+        "discrimination_ci95": [
+          0.017316949180300665,
+          0.1887577001033991
+        ],
+        "odds_ratio": 1.5361952861952863,
+        "odds_ratio_ci95": [
+          1.0727989222654604,
+          2.213395370846428
+        ]
+      },
+      "lora_bodhi": {
+        "context_dependent_rate": 0.7931506849315069,
+        "self_contained_rate": 0.8282828282828283,
+        "discrimination": -0.03513214335132142,
+        "discrimination_ci95": [
+          -0.10080844895300495,
+          0.03155666428499453
+        ],
+        "odds_ratio": 0.7949442739460508,
+        "odds_ratio_ci95": [
+          0.4846129180839003,
+          1.2108875433546147
+        ]
+      }
+    },
+    "lora_minus_base_disc": 0.08387228500162897,
+    "lora_minus_base_disc_ci95": [
+      -0.012119588625807034,
+      0.17875467012920818
+    ]
+  },
+  "robustness_theme_only": {
+    "groups": {
+      "self_contained": 539,
+      "context_dependent": 127,
+      "null": 1
+    },
+    "configs": {
+      "base_no_wrapper": {
+        "context_dependent_rate": 0.20108695652173914,
+        "self_contained_rate": 0.16953316953316952,
+        "discrimination": 0.031553786988569615,
+        "discrimination_ci95": [
+          -0.041651296125773556,
+          0.11213268685659708
+        ],
+        "odds_ratio": 1.2329685497387362,
+        "odds_ratio_ci95": [
+          0.7292209254336889,
+          1.99487927368362
+        ]
+      },
+      "base_bodhi": {
+        "context_dependent_rate": 0.5722222222222222,
+        "self_contained_rate": 0.4576271186440678,
+        "discrimination": 0.11459510357815439,
+        "discrimination_ci95": [
+          0.02432099242991416,
+          0.21141463336157157
+        ],
+        "odds_ratio": 1.5853775853775853,
+        "odds_ratio_ci95": [
+          1.102223041515606,
+          2.3823497926569677
+        ]
+      },
+      "lora_no_wrapper": {
+        "context_dependent_rate": 0.56353591160221,
+        "self_contained_rate": 0.43159203980099503,
+        "discrimination": 0.13194387180121492,
+        "discrimination_ci95": [
+          0.041234985699224055,
+          0.21680142182448542
+        ],
+        "odds_ratio": 1.7004341006092,
+        "odds_ratio_ci95": [
+          1.180080483788662,
+          2.425524217983375
+        ]
+      },
+      "lora_bodhi": {
+        "context_dependent_rate": 0.7848837209302325,
+        "self_contained_rate": 0.8042328042328042,
+        "discrimination": -0.01934908330257168,
+        "discrimination_ci95": [
+          -0.093437162866994,
+          0.05319243638690188
+        ],
+        "odds_ratio": 0.8881578947368421,
+        "odds_ratio_ci95": [
+          0.584388528138528,
+          1.4312620608045188
+        ]
+      }
+    },
+    "lora_minus_base_disc": 0.1003900848126453,
+    "lora_minus_base_disc_ci95": [
+      -0.0046502597479729435,
+      0.20090328645444192
+    ]
+  }
+}

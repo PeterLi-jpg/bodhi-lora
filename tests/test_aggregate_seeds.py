@@ -5,8 +5,8 @@ across-seed summary. The interesting bits (per the audit and PR #150's
 contract) are:
 
   * std is None when n_seeds < 2 (not 0.0)
-  * ci_low/ci_high present-but-None when n_seeds < 5; ci_method strings
-    explain why
+  * ci_low/ci_high present-but-None when n_seeds < 2, otherwise a t
+    interval with n-1 df; ci_method strings say which
   * NaN/Inf are filtered out and counted as n_excluded_nan, never silently
     averaged in
   * malformed per-seed JSONs raise SystemExit with the file path
@@ -41,7 +41,7 @@ def _import_aggregate_seeds():
 
 
 def test_aggregates_clean_seeds():
-    """3 seeds, no NaN: mean/std come out as expected; CI is skipped."""
+    """3 seeds, no NaN: mean/std come out as expected; CI is a t(2) interval."""
     ag = _import_aggregate_seeds()
     values = [0.40, 0.50, 0.60]
     out = ag._aggregate_metric_across_seeds(values)
@@ -54,10 +54,12 @@ def test_aggregates_clean_seeds():
     assert out["max"] == pytest.approx(0.6)
     assert out["values"] == [0.4, 0.5, 0.6]
     assert out["n_excluded_nan"] == 0
-    # 3 < 5: CI is skipped but still reported as None.
-    assert out["ci_low"] is None
-    assert out["ci_high"] is None
-    assert out["ci_method"] == "skipped (n<5)"
+    # t(0.975, 2) = 4.302652729911275, hard-coded so the test does not reuse
+    # the scipy call it checks.
+    half = 4.302652729911275 * statistics.stdev(values) / math.sqrt(3)
+    assert out["ci_low"] == pytest.approx(0.5 - half)
+    assert out["ci_high"] == pytest.approx(0.5 + half)
+    assert out["ci_method"] == "t-95 (df=n-1)"
     assert "note" not in out
 
 
@@ -96,33 +98,48 @@ def test_handles_single_seed():
     # CI fields present-but-None.
     assert out["ci_low"] is None
     assert out["ci_high"] is None
-    assert out["ci_method"] == "skipped (n<5)"
+    assert out["ci_method"] == "skipped (n<2)"
 
 
-def test_handles_few_seeds_for_ci():
-    """N=3 has well-defined std but CI must still be skipped (need n>=5)."""
+def test_handles_two_seeds_for_ci():
+    """N=2 is the smallest sample with a t interval (df=1, very wide)."""
     ag = _import_aggregate_seeds()
-    out = ag._aggregate_metric_across_seeds([0.3, 0.5, 0.7])
+    out = ag._aggregate_metric_across_seeds([0.4, 0.6])
 
-    assert out["n_seeds"] == 3
-    assert out["std"] is not None  # stdev IS defined for n>=2
-    assert out["ci_low"] is None
-    assert out["ci_high"] is None
-    assert out["ci_method"] == "skipped (n<5)"
+    assert out["n_seeds"] == 2
+    half = 12.706204736174698 * statistics.stdev([0.4, 0.6]) / math.sqrt(2)  # t(0.975, 1)
+    assert out["ci_low"] == pytest.approx(0.5 - half)
+    assert out["ci_high"] == pytest.approx(0.5 + half)
+    assert out["ci_method"] == "t-95 (df=n-1)"
 
 
 def test_aggregates_full_5_seeds_with_ci():
-    """N=5 triggers percentile-95 CI; check the bounds match np.percentile."""
+    """N=5 gives a t(4) interval, not the percentiles of the 5 values."""
     ag = _import_aggregate_seeds()
     values = [0.1, 0.3, 0.5, 0.7, 0.9]
     out = ag._aggregate_metric_across_seeds(values)
 
     assert out["n_seeds"] == 5
-    assert out["ci_method"] == "percentile-95 (n>=5)"
-    # 95% CI = 2.5th / 97.5th percentiles.
-    assert out["ci_low"] == pytest.approx(float(np.percentile(values, 2.5)))
-    assert out["ci_high"] == pytest.approx(float(np.percentile(values, 97.5)))
+    assert out["ci_method"] == "t-95 (df=n-1)"
+    half = 2.7764451051977987 * statistics.stdev(values) / math.sqrt(5)  # t(0.975, 4)
+    assert out["ci_low"] == pytest.approx(0.5 - half)
+    assert out["ci_high"] == pytest.approx(0.5 + half)
+    # The old percentile "CI" sat almost on min/max; make sure it is gone.
+    assert out["ci_low"] != pytest.approx(float(np.percentile(values, 2.5)))
     assert out["n_excluded_nan"] == 0
+
+
+def test_t_interval_matches_table_1_lora_bodhi_row():
+    """EVAL-11: Table 1 printed the z interval [0.453, 0.457] for LoRA+BODHI.
+    Over the five committed seed means the t(4) interval is [0.452, 0.458]."""
+    ag = _import_aggregate_seeds()
+    means = []
+    for seed in (7, 13, 42, 99, 101):
+        with open(ROOT / "results_modal" / f"seed_{seed}" / "lora_bodhi.json") as f:
+            means.append(json.load(f)["mean"])
+    out = ag._aggregate_metric_across_seeds(means)
+    assert round(out["ci_low"], 3) == 0.452
+    assert round(out["ci_high"], 3) == 0.458
 
 
 def test_handles_all_none_or_all_nan():
@@ -189,7 +206,7 @@ def _write_seed_dir(seed_dir, score_per_config):
 
 def test_main_aggregates_across_three_seeds(tmp_path, monkeypatch, capsys):
     """End-to-end: 3 seeds with deterministic scores -> summary JSON has the
-    right shape, std is reported (n>=2), CI is skipped (n<5)."""
+    right shape, std and a t(2) interval are reported (n>=2)."""
     ag = _import_aggregate_seeds()
 
     hb_path = tmp_path / "healthbench.jsonl"
@@ -226,9 +243,8 @@ def test_main_aggregates_across_three_seeds(tmp_path, monkeypatch, capsys):
     assert cfg["n_seeds"] == 3
     assert cfg["mean"] == pytest.approx(0.5)
     assert cfg["std"] is not None
-    # n=3 < 5 -> CI skipped per the contract.
-    assert cfg["ci_low"] is None
-    assert cfg["ci_method"] == "skipped (n<5)"
+    assert cfg["ci_low"] < 0.5 < cfg["ci_high"]
+    assert cfg["ci_method"] == "t-95 (df=n-1)"
 
 
 def test_main_aborts_on_malformed_seed_json(tmp_path, monkeypatch):
@@ -265,3 +281,31 @@ def test_main_aborts_on_malformed_seed_json(tmp_path, monkeypatch):
         ag.main()
     assert "malformed JSON" in str(exc.value)
     assert str(bad_path) in str(exc.value)
+
+
+def test_main_keeps_every_seed_when_eval_dir_is_nested(tmp_path, monkeypatch):
+    """run_cell.sh passes <cell>/seed_<N>/eval. Each seed must keep its own
+    label; before the fix all three were labelled "eval" and only one survived."""
+    ag = _import_aggregate_seeds()
+
+    hb_path = tmp_path / "healthbench.jsonl"
+    _write_healthbench_jsonl(hb_path)
+    seed_dirs = []
+    for seed, score in {7: 0.4, 13: 0.5, 42: 0.6}.items():
+        d = tmp_path / "cell" / f"seed_{seed}" / "eval"
+        _write_seed_dir(d, {c: score for c in
+                            ("base_no_wrapper", "base_bodhi", "lora_no_wrapper", "lora_bodhi")})
+        seed_dirs.append(str(d))
+
+    out_path = tmp_path / "summary.json"
+    monkeypatch.setattr(sys, "argv", [
+        "aggregate_seeds.py", "--seed-dirs", *seed_dirs,
+        "--healthbench", str(hb_path), "--output", str(out_path),
+    ])
+    ag.main()
+
+    summary = json.loads(out_path.read_text())
+    assert summary["seeds"] == [7, 13, 42]
+    agg = summary["configs"]["base_no_wrapper"]["overall_mean"]
+    assert agg["n_seeds"] == 3
+    assert agg["mean"] == pytest.approx(0.5)

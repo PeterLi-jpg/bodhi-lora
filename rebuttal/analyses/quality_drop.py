@@ -1,0 +1,108 @@
+"""Rebuttal analysis: is the Base -> LoRA drop in aggregate rubric score real? (HomM, PROV-2)
+
+The posted replies (meta_review_part2.md:7, reviewer_HomM_followup_part2.md:14) say
+the aggregate score falls in all six rebuttal cells, with paired t-tests over five
+seeds putting all six below p = 0.02 and all six surviving Holm correction. The
+numbers sit in rebuttal/analyses/FINDINGS_quality_drop.md, but the code was run
+interactively on the remote host and never committed. This is that test as a script.
+
+For each cell under --cells-root (the layout rebuttal/launch/run_cell.sh writes):
+
+    <cells-root>/<bench>__<model>/seed_<N>/eval/{base_no_wrapper,lora_no_wrapper}.json
+
+it takes the per-seed aggregate score (the ``mean`` field eval_healthbench.py writes),
+pairs Base and LoRA within each seed, and reports the mean difference, its t interval
+(n_seeds - 1 df) and the two-sided paired t p. Holm runs over the cells (statsmodels).
+
+The raw cell outputs are on the shared H100 box and not yet in the repo (PROV-1). Until
+they are synced this script has nothing to read and exits with a message.
+"""
+
+import argparse
+import json
+import sys
+from pathlib import Path
+
+import numpy as np
+from scipy import stats
+from statsmodels.stats.multitest import multipletests
+
+REPO = Path(__file__).resolve().parents[2]
+BASE, LORA = "base_no_wrapper", "lora_no_wrapper"
+
+
+def seed_scores(cell_dir):
+    """seed -> {config: aggregate score} for the seeds that have both configs."""
+    out = {}
+    for seed_dir in sorted(Path(cell_dir).glob("seed_*")):
+        try:
+            seed = int(seed_dir.name.removeprefix("seed_"))
+        except ValueError:
+            continue
+        scores = {}
+        for cfg in (BASE, LORA):
+            p = seed_dir / "eval" / f"{cfg}.json"
+            if p.is_file():
+                with open(p) as f:
+                    scores[cfg] = float(json.load(f)["mean"])
+        if len(scores) == 2:
+            out[seed] = scores
+    return dict(sorted(out.items()))
+
+
+def paired_test(base, lora):
+    """LoRA - Base over seeds: mean difference, 95% t interval, paired t."""
+    base, lora = np.asarray(base, dtype=float), np.asarray(lora, dtype=float)
+    d = lora - base
+    n = len(d)
+    half = float(stats.t.ppf(0.975, n - 1)) * d.std(ddof=1) / np.sqrt(n)
+    t = stats.ttest_rel(lora, base)
+    return {"n_seeds": n, "base_mean": float(base.mean()), "lora_mean": float(lora.mean()),
+            "diff": float(d.mean()), "ci95": [float(d.mean() - half), float(d.mean() + half)],
+            "t": float(t.statistic), "df": n - 1, "p": float(t.pvalue),
+            "per_seed_diff": d.tolist()}
+
+
+def analyse(cells_root):
+    cells = {}
+    for cell_dir in sorted(p for p in Path(cells_root).iterdir() if p.is_dir()):
+        per_seed = seed_scores(cell_dir)
+        if len(per_seed) < 2:
+            print(f"  skip {cell_dir.name}: {len(per_seed)} seed(s) with both configs")
+            continue
+        r = paired_test([v[BASE] for v in per_seed.values()], [v[LORA] for v in per_seed.values()])
+        r["seeds"] = list(per_seed)
+        cells[cell_dir.name] = r
+    if cells:
+        names = list(cells)
+        adj = multipletests([cells[c]["p"] for c in names], method="holm")[1]
+        for c, p in zip(names, adj):
+            cells[c]["p_holm"] = float(p)
+    return {"test": "paired t over seeds, LoRA minus Base aggregate score; Holm over cells",
+            "cells": cells}
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--cells-root", default=str(REPO / "results_rebuttal"))
+    ap.add_argument("--out", default=str(REPO / "rebuttal" / "results" / "quality_drop.json"))
+    args = ap.parse_args()
+
+    root = Path(args.cells_root)
+    if not root.is_dir():
+        sys.exit(f"quality_drop: {root} not found. Sync results_rebuttal/ from the shared "
+                 "H100 box first (PROV-1); the posted t values cannot be checked without it.")
+    res = analyse(root)
+    print(f"{'cell':40s} {'base':>7s} {'lora':>7s} {'diff':>8s} {'t':>7s} {'p':>8s} {'p_holm':>8s}")
+    for name, r in res["cells"].items():
+        print(f"{name:40s} {r['base_mean']:7.4f} {r['lora_mean']:7.4f} {r['diff']:+8.4f} "
+              f"{r['t']:7.2f} {r['p']:8.4f} {r['p_holm']:8.4f}")
+    Path(args.out).parent.mkdir(parents=True, exist_ok=True)
+    with open(args.out, "w") as f:
+        json.dump(res, f, indent=2)
+        f.write("\n")
+    print(f"wrote {args.out}")
+
+
+if __name__ == "__main__":
+    main()

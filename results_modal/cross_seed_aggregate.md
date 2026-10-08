@@ -22,11 +22,11 @@ Mean ± std across 5 random seeds. Each seed evaluates its own deterministic 200
 
 ## Sample sizes
 
-| Config | seed_7 n_results | seed_13 | seed_42 | seed_99 | seed_101 |
-|---|---|---|---|---|---|
-| base_no_wrapper | 200 | 200 | 200 | 200 | 200 |
-| base_bodhi | 191 | 194 | 193 | 188 | 191 |
-| lora_no_wrapper | 200 | 200 | 200 | 200 | 200 |
-| lora_bodhi | 192 | 196 | 189 | 191 | 191 |
+| Config | seed_7 n_results | seed_13 | seed_42 | seed_99 | seed_101 | pooled | epistemic scored (pooled) |
+|---|---|---|---|---|---|---|---|
+| base_no_wrapper | 200 | 200 | 200 | 200 | 200 | 1000 | 998 |
+| base_bodhi | 191 | 194 | 193 | 188 | 191 | 957 | 947 |
+| lora_no_wrapper | 200 | 200 | 200 | 200 | 200 | 1000 | 985 |
+| lora_bodhi | 192 | 196 | 189 | 191 | 191 | 959 | 928 |
 
-(200 = no inference failures. <200 = bodhi 2-pass requests that exceeded the 4096-token context cap; ~4-5%% per bodhi config.)
+(200 = no inference failures. <200 = bodhi 2-pass requests that exceeded the 4096-token context cap; ~4-5% per bodhi config. Epistemic scored excludes grader parse failures and grade errors.)
