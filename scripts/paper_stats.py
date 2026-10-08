@@ -1371,8 +1371,8 @@ def build_tables(out, seeds) -> dict[str, str]:
                      fmt_ci(r["ci95"][0] * mult, r["ci95"][1] * mult, dpd),
                      fmt_ci(r["diff_ci95"][0] * mult, r["diff_ci95"][1] * mult, dpd)])
     t["tab_bootstrap"] = tabular(
-        "lrrr", ["Comparison", "Effect", f"Seed-level 95\\% CI ($t_{{{ns - 1}}}$)",
-                 "Prompt-clustered bootstrap 95\\% CI"], [rows],
+        "lrrr", ["Comparison", "Effect", f"95\\% CI, seeds ($t_{{{ns - 1}}}$)",
+                 "95\\% CI, prompt bootstrap"], [rows],
         "results_modal (effect = mean of seed-level differences; bootstrap CI is for the pooled difference)")
 
     # Length quartiles.
