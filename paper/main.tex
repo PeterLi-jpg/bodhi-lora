@@ -1095,10 +1095,10 @@ $^{\dagger}$base model in the evaluator's family.}
 \end{table}
 
 \paragraph{Does the rubric penalize asking?} We had read part of the drop as a rubric that
-penalizes asking instead of answering. We tested this and withdrew it. Among the adapter's own
-responses, the prompts where it asks do not score consistently lower than those where it answers:
-the gap is positive in \statPostedAskersGapPositive{} added cells and negative in
-\statPostedAskersGapNegative. In BioMistral-7B, active inquiry did not rise, yet the aggregate
+penalizes asking instead of answering. We tested this and withdrew it. Among the adapter's own responses, the prompts where it asks do not score consistently lower
+than those where it answers. Our posted count over all six added cells, the two Med42-8B cells
+included, had this gap positive in \statPostedAskersGapPositive{} cells and negative in
+\statPostedAskersGapNegative; we will recompute it without the Med42-8B cells after the sync. In BioMistral-7B, active inquiry did not rise, yet the aggregate
 score changed by \statCellHBBioMistralAggregateDiff.
 
 \paragraph{MedQuAD in more dimensions.} On MedQuAD, Base+\bodhi{} scores below Base on scope
