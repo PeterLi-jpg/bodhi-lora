@@ -24,8 +24,8 @@ lora:
   r: 16
   lora_alpha: 32
   lora_dropout: 0.05
-  # Mistral uses the same 7 projection module names as MedGemma/Llama, so the
-  # paper's "all 7 linear projections per layer" target set transfers verbatim.
+  # The paper's table lists all 7 linear projections per layer. The submitted
+  # MedGemma adapters targeted q, k and v only (legacy/README.md, section 3).
   target_modules:
     - q_proj
     - k_proj
@@ -40,7 +40,7 @@ lora:
 training:
   num_epochs: 3
   per_device_train_batch_size: 2
-  gradient_accumulation_steps: 8    # effective batch = 16 (matches the paper)
+  gradient_accumulation_steps: 8    # effective batch = 16 (the paper's table; the submitted MedGemma run used 64, see legacy/README.md)
   learning_rate: 1.0e-4
   warmup_ratio: 0.05
   lr_scheduler_type: cosine
@@ -64,4 +64,4 @@ data:
   # Overridden per (benchmark, seed) by the run driver via --train-file/--val-file.
   train_file: data/sft/train.jsonl
   val_file: data/sft/val.jsonl
-  eval_sample_ids: data/raw/hard_200_sample_ids.json
+  # The eval prompts are set by the launcher (rebuttal/launch/_common.sh), not here.

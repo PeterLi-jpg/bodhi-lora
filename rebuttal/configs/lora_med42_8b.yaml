@@ -10,8 +10,9 @@
 #    this HF token; swap `model.name` to OpenMeditron/Meditron3-8B once access is
 #    granted (also Llama-3.1-8B based, so this config transfers unchanged).
 #
-# Caveat to handle in the writeup: Llama-3 is the eval grader's family. The planned
-# clinical-judge re-grade (COVERAGE.md D1) neutralizes the same-family optic.
+# Llama-3 is the eval grader's family, so run_cell.sh refuses this cell unless
+# --allow-same-family is passed (configs/families.yaml). scripts/regrade_cross_family.py
+# re-grades it with a judge from a third family (default google/gemma-2-27b-it).
 #
 # 8B bf16 (~16 GB) -> full-precision LoRA fits easily on one H100 80GB.
 # Llama-3 chat template exposes a clean assistant header
@@ -42,7 +43,7 @@ lora:
 training:
   num_epochs: 3
   per_device_train_batch_size: 4
-  gradient_accumulation_steps: 4    # effective batch = 16 (matches the paper)
+  gradient_accumulation_steps: 4    # effective batch = 16 (the paper's table; the submitted MedGemma run used 64, see legacy/README.md)
   learning_rate: 1.0e-4
   warmup_ratio: 0.05
   lr_scheduler_type: cosine
@@ -59,4 +60,4 @@ data:
   # Llama-3 template auto-detects the response template; no override needed.
   train_file: data/sft/train.jsonl
   val_file: data/sft/val.jsonl
-  eval_sample_ids: data/raw/hard_200_sample_ids.json
+  # The eval prompts are set by the launcher (rebuttal/launch/_common.sh), not here.

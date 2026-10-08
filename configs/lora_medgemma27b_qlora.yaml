@@ -41,4 +41,3 @@ training:
 data:
   train_file: data/sft/train.jsonl
   val_file: data/sft/val.jsonl
-  eval_sample_ids: data/raw/hard_200_sample_ids.json
