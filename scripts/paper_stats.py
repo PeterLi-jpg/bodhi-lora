@@ -23,6 +23,11 @@ Optional (each table that needs one is skipped with a message if it is absent):
   results_modal/irr/kappa_results.json     physician kappa (kappa table)
   rebuttal/results/*.json                  rebuttal analyses (leakage, odds ratios)
   data/rebuttal_cells/posted_values.json   rebuttal cells (generality tables)
+  data/rebuttal_cells/generated_values.json  synced rebuttal cells (make cells); a cell
+                                           found here replaces its posted values and
+                                           gets a paired t interval on the aggregate
+  results/seed_42/eval/<condition>.json    seed-42 side run graded by Qwen2.5-14B
+                                           (cross-grader check)
 
 Statistical units
 -----------------
@@ -673,6 +678,13 @@ def counts_and_failures(df, seeds, out, macros):
     macros.add("PromptEvaluations", fmt_int(res["prompt_evaluations_per_condition"]),
                "prompt draws per condition (5 seeds x 200)")
     macros.add("NSeeds", str(len(seeds)), "results_modal/seed_* directories")
+    # Share of drawn prompts with no completion. Only the two-pass CoT conditions
+    # lose prompts (the 4,096-token context of the submitted eval runs out).
+    for cfg in CONDITIONS:
+        drop = 1 - res["per_condition"][cfg]["completions"] / res["prompt_evaluations_per_condition"]
+        res["per_condition"][cfg]["completion_drop_rate"] = drop
+        macros.add(f"CompletionDropPct{COND_TOKEN[cfg]}", fmt(100 * drop, 1),
+                   "drawn prompts with no completion / prompt draws (percent)")
     worst_ep = max(r["epistemic_parse_failure_rate"] for r in res["per_condition"].values())
     worst_hb = max(r["hb_item_parse_failure_rate_max_run"] for r in res["per_condition"].values())
     macros.add("EpistemicParseFailPctMax", fmt(100 * worst_ep, 2),
@@ -847,20 +859,107 @@ def theme_rates(df, themes, out, macros):
     return res
 
 
-def tau_calibration(path: Path, out):
-    """Share of the seed-7 training split at or above each tau."""
-    scores = []
+def tau_calibration(path: Path, out, macros, hard_ids: set[str] | None = None):
+    """Share of the seed-7 training split at or above each tau, and its overlap with the eval pool."""
+    scores, ids = [], []
     with open(path) as f:
         for line in f:
             if line.strip():
-                scores.append(json.loads(line)["grade"]["normalized_score"])
+                row = json.loads(line)
+                scores.append(row["grade"]["normalized_score"])
+                ids.append(row.get("prompt_id"))
     s = np.asarray(scores, dtype=float)
     res = {"n_train_split": int(len(s)), "rows": []}
     for tau in TAU_GRID:
         share = float((s >= tau - 1e-12).mean())
         res["rows"].append({"tau": tau, "share_of_train_split": share,
                             "share_of_pool_estimate": share * FILTER_KEPT / FILTER_POOL})
+    macros.add("FilterTrainNSeedSeven", fmt_int(len(s)),
+               "data/sft_qwen_graded/seed_7_train.jsonl: rows in the seed-7 training split")
+    macros.add("FilterMinScoreSeedSeven", fmt(float(s.min()), 2),
+               "lowest filter score in the seed-7 training split")
+    # Not data: the count comes from the original filter log, which is not in the repo
+    # (PROV-11). The macro exists so the caption that uses it names its source.
+    macros.add("FilterKeptReported", fmt_int(FILTER_KEPT),
+               "constant FILTER_KEPT in scripts/paper_stats.py, from the original filter log (not in the repo)")
+    macros.add("FilterPool", fmt_int(FILTER_POOL), "constant FILTER_POOL: traces generated per filter run")
+    if hard_ids is not None:
+        overlap = len({i for i in ids if i is not None} & hard_ids)
+        res["overlap_with_hard_set"] = overlap
+        macros.add("TrainHardOverlapSeedSeven", fmt_int(overlap),
+                   "prompt ids shared by the seed-7 training split and the 1,000 HealthBench-Hard prompts")
     out["tau_calibration"] = res
+    return res
+
+
+def difficulty_range(df, path: Path, out, macros):
+    """Range of the difficulty proxy (sum of positive rubric points) over the evaluated prompts."""
+    points = {}
+    with open(path) as f:
+        for line in f:
+            if line.strip():
+                ex = json.loads(line)
+                points[ex["prompt_id"]] = sum(r["points"] for r in ex["rubrics"] if r["points"] > 0)
+    vals = [points[p] for p in sorted(df["prompt_id"].unique())]
+    out["difficulty"] = {"min": min(vals), "max": max(vals), "n_hard_prompts": len(points)}
+    macros.add("DifficultyMin", fmt_int(min(vals)), "data/raw/healthbench_hard.jsonl: lowest positive-point sum, evaluated prompts")
+    macros.add("DifficultyMax", fmt_int(max(vals)), "data/raw/healthbench_hard.jsonl: highest positive-point sum, evaluated prompts")
+    macros.add("HardPrompts", fmt_int(len(points)), "data/raw/healthbench_hard.jsonl: prompts in the Hard set")
+    return set(points)
+
+
+def cross_grader(qdir: Path, results_dir: Path, out, macros):
+    """Seed-42 aggregate scores from the Qwen-graded side run against the Llama-graded main run.
+
+    The side run (results/seed_42/eval/, gitignored) drew its own 200 prompts, so the
+    two runs share only part of their draws. Pearson and Spearman r are over the
+    shared prompts; the mean scores and differences are over each run's own draw.
+    """
+    cfgs = [c for c in CONDITIONS if (qdir / f"{c}.json").is_file()]
+    res = {"conditions": {}, "pooled": {}}
+    q_all, l_all = [], []
+    means = {}
+    for cfg in cfgs:
+        with open(qdir / f"{cfg}.json") as f:
+            q = json.load(f)
+        with open(results_dir / "seed_42" / f"{cfg}.json") as f:
+            ll = json.load(f)
+        qs = {r["prompt_id"]: float(r["score"]) for r in q["results"]}
+        ls = {r["prompt_id"]: float(r["score"]) for r in ll["results"]}
+        shared = sorted(set(qs) & set(ls))
+        a = np.array([qs[p] for p in shared])
+        b = np.array([ls[p] for p in shared])
+        with np.errstate(all="ignore"):
+            r = float(stats.pearsonr(a, b).statistic)
+        means[cfg] = (float(np.mean(list(qs.values()))), float(np.mean(list(ls.values()))))
+        res["conditions"][cfg] = {"n_shared": len(shared), "pearson_r": r,
+                                  "grader": q.get("run_metadata", {}).get("grader_model"),
+                                  "mean_qwen": means[cfg][0], "mean_llama": means[cfg][1]}
+        q_all += a.tolist()
+        l_all += b.tolist()
+        t = COND_TOKEN[cfg]
+        macros.add(f"CrossGraderR{t}", fmt(r, 2), "Pearson r, Qwen vs Llama aggregate score, shared seed-42 prompts")
+        macros.add(f"CrossGraderMeanQwen{t}", fmt(means[cfg][0], 3), "results/seed_42/eval (Qwen grader): mean score")
+        macros.add(f"CrossGraderMeanLlama{t}", fmt(means[cfg][1], 3), "results_modal/seed_42 (Llama grader): mean score")
+    ns = {res["conditions"][c]["n_shared"] for c in cfgs}
+    if len(ns) != 1:
+        raise SystemExit(f"paper_stats: cross-grader shared-prompt counts differ by condition: {ns}")
+    with np.errstate(all="ignore"):
+        res["pooled"] = {"pearson_r": float(stats.pearsonr(q_all, l_all).statistic),
+                         "spearman_rho": float(stats.spearmanr(q_all, l_all).statistic)}
+    macros.add("CrossGraderShared", fmt_int(ns.pop()), "seed-42 prompts graded by both Qwen and Llama, per condition")
+    macros.add("CrossGraderRPooled", fmt(res["pooled"]["pearson_r"], 2), "Pearson r pooled over conditions")
+    macros.add("CrossGraderRhoPooled", fmt(res["pooled"]["spearman_rho"], 2), "Spearman rho pooled over conditions")
+    for cfg in cfgs:
+        if cfg == "base_no_wrapper":
+            continue
+        t = COND_TOKEN[cfg]
+        for g, i in (("Qwen", 0), ("Llama", 1)):
+            d = means[cfg][i] - means["base_no_wrapper"][i]
+            res["conditions"][cfg][f"minus_base_{g.lower()}"] = d
+            macros.add(f"CrossGrader{t}MinusBase{g}", fmt(d, 3, sign=True),
+                       f"seed 42, {g} grader: mean score minus Base, each run's own draw")
+    out["cross_grader"] = res
     return res
 
 
@@ -1008,14 +1107,168 @@ def check_main_cell(cell: dict, conditions_res: dict) -> list[dict]:
     return rows
 
 
-def generality_section(posted: dict, conditions_res: dict, out):
-    res = {"provenance": posted.get("_provenance"), "cells": []}
+# Letters-only macro token for each cell id in posted_values.json.
+CELL_TOKEN = {
+    "healthbench__medgemma-27b": "HBMedGemma",
+    "healthbench__mistral-small-24b": "HBMistral",
+    "healthbench__med42-8b": "HBMedFortyTwo",
+    "healthbench__biomistral-7b": "HBBioMistral",
+    "chatdoctor__mistral-small-24b": "ChatDoctorMistral",
+    "chatdoctor__med42-8b": "ChatDoctorMedFortyTwo",
+    "medquad__mistral-small-24b": "MedQuADMistral",
+    "medqa__mistral-small-24b": "MedQAMistral",
+}
+POSTED_COND_TOKEN = {"base": "Base", "base_cot": "BaseCoT", "lora": "LoRA", "lora_cot": "LoRACoT"}
+POSTED_METRIC_TOKEN = {
+    "active_inquiry_pct": "ActiveInquiry", "uncertainty_ack": "UncertaintyAck",
+    "context_seeking": "ContextSeeking", "red_flag": "RedFlag", "scope_bounding": "ScopeBounding",
+    "hedging_quality": "HedgingQuality", "specificity": "Specificity", "aggregate": "Aggregate",
+}
+SRC_POSTED = "data/rebuttal_cells/posted_values.json (transcribed from posted replies)"
+SRC_SYNCED = "data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py)"
+
+
+def resolve_cells(posted: dict, generated: dict | None) -> list[dict]:
+    """One record per added cell, from the synced outputs when present, else as posted.
+
+    ``generated`` is data/rebuttal_cells/generated_values.json, which make cells
+    writes once results_rebuttal/ is synced (PROV-1). A synced cell has per-seed
+    values, so its aggregate LoRA - Base difference gets a paired t(n-1) interval.
+    A posted cell has means only: the difference is a point estimate (see
+    posted_aggregate_diff) and the interval stays pending.
+    """
+    synced = {c["id"]: c for c in (generated or {}).get("cells", [])}
+    cells = []
     for c in posted["cells"]:
-        res["cells"].append({"id": c["id"], "set_aside": c["set_aside"],
-                             "same_family_as_evaluator": c["same_family_as_evaluator"],
-                             "aggregate_lora_minus_base": posted_aggregate_diff(c)})
+        if c["id"] == MAIN_CELL_ID:
+            continue
+        rec = {k: c[k] for k in ("id", "benchmark", "base_model", "base_family",
+                                 "same_family_as_evaluator", "set_aside")}
+        rec["set_aside_reason"] = c.get("set_aside_reason")
+        rec["filter_clearance_pct"] = c.get("filter_clearance_pct")
+        g = synced.get(c["id"])
+        if g is not None:
+            rec["source"] = "synced"
+            rec["seeds"] = g["seeds"]
+            rec["conditions"] = {pc: {m: {"mean": v["mean"], "sd": v["sd"]} for m, v in ms.items()}
+                                 for pc, ms in g["conditions"].items()}
+            base = g["conditions"]["base"]["aggregate"]["per_seed"]
+            lora = g["conditions"]["lora"]["aggregate"]["per_seed"]
+            common = sorted(set(base) & set(lora), key=int)
+            rec["aggregate_lora_minus_base"] = paired_seed_test(
+                np.array([lora[s] for s in common]), np.array([base[s] for s in common]))
+        else:
+            rec["source"] = "posted"
+            rec["conditions"] = c["conditions"]
+            rec["aggregate_lora_minus_base"] = posted_aggregate_diff(c)
+        cells.append(rec)
+    # Holm over the added cells that have a test (the posted claim's family was the six kept cells).
+    tested = [c for c in cells if not c["set_aside"] and _finite(c["aggregate_lora_minus_base"].get("p"))]
+    for c, ph in zip(tested, holm([c["aggregate_lora_minus_base"]["p"] for c in tested])):
+        c["aggregate_lora_minus_base"]["p_holm_over_cells"] = ph
+    return cells
+
+
+def _mean(cell: dict, cond: str, metric: str):
+    v = cell["conditions"].get(cond, {}).get(metric)
+    return None if v is None else v.get("mean")
+
+
+def generality_section(posted: dict, generated: dict | None, out, macros):
+    """Cross-cell results: per-cell macros and the counts the paper states across cells.
+
+    Cross-cell counts leave out the cells whose base model shares the evaluator's
+    family (decision D6) and the set-aside cell, and include the submitted cell,
+    whose values come from results_modal.
+    """
+    conditions_res = out["conditions"]
+    res = {"provenance": posted.get("_provenance"), "cells": resolve_cells(posted, generated)}
+    for c in posted["cells"]:
         if c["id"] == MAIN_CELL_ID:
             res["main_cell_check"] = check_main_cell(c, conditions_res)
+
+    for cell in res["cells"]:
+        tok = CELL_TOKEN.get(cell["id"])
+        if tok is None:
+            print(f"note: no macro token for cell {cell['id']}; its macros are skipped")
+            continue
+        src = SRC_SYNCED if cell["source"] == "synced" else SRC_POSTED
+        for pc, ms in sorted(cell["conditions"].items()):
+            for pm, v in sorted(ms.items()):
+                if pm not in POSTED_METRIC_TOKEN or v.get("mean") is None:
+                    continue
+                dp = POSTED_METRIC[pm][2]
+                macros.add(f"Cell{tok}{POSTED_COND_TOKEN[pc]}{POSTED_METRIC_TOKEN[pm]}", fmt(v["mean"], dp),
+                           f"{src}: {cell['id']} {pc} {pm} (mean over seeds)")
+        if cell["filter_clearance_pct"] is not None:
+            macros.add(f"Cell{tok}FilterClearance", fmt(cell["filter_clearance_pct"], 1),
+                       f"{SRC_POSTED}: {cell['id']} share of traces that passed the filter (percent)")
+        agg = cell["aggregate_lora_minus_base"]
+        if _finite(agg.get("diff")):
+            macros.add(f"Cell{tok}AggregateDiff", fmt(agg["diff"], 3, sign=True),
+                       f"{src}: {cell['id']} aggregate score, LoRA minus Base")
+        if _finite(agg.get("p")):
+            macros.add(f"Cell{tok}AggregateDiffCI", fmt_ci(agg["ci95"][0], agg["ci95"][1], 3),
+                       f"{src}: 95% t interval of the per-seed paired difference")
+            macros.add(f"Cell{tok}AggregateP", fmt_p(agg["p"]), "paired t over seeds, two-sided")
+            macros.add(f"Cell{tok}AggregatePHolm", fmt_p(agg.get("p_holm_over_cells")),
+                       "Holm over the added cells with a test")
+
+    # Counts across cells (D6: same-family cells and the set-aside cell left out).
+    mc = conditions_res
+    main = {"id": MAIN_CELL_ID,
+            "ai_base": 100 * mc["active_inquiry"]["base_no_wrapper"]["seed_mean"],
+            "ai_teacher": 100 * mc["active_inquiry"]["base_bodhi"]["seed_mean"],
+            "ai_lora": 100 * mc["active_inquiry"]["lora_no_wrapper"]["seed_mean"],
+            "agg_diff": out["contrasts"]["LoRAvsBase"]["metrics"]["healthbench"]["diff"]}
+    rows = [main]
+    for cell in res["cells"]:
+        if cell["set_aside"] or cell["same_family_as_evaluator"]:
+            continue
+        rows.append({"id": cell["id"], "ai_base": _mean(cell, "base", "active_inquiry_pct"),
+                     "ai_teacher": _mean(cell, "base_cot", "active_inquiry_pct"),
+                     "ai_lora": _mean(cell, "lora", "active_inquiry_pct"),
+                     "agg_diff": cell["aggregate_lora_minus_base"].get("diff")})
+    full = [r for r in rows if None not in (r["ai_base"], r["ai_teacher"], r["ai_lora"])]
+    added = [r for r in rows if r["id"] != MAIN_CELL_ID and _finite(r["agg_diff"])]
+    # Compare at the posted precision (one decimal), as the posts did.
+    counts = {
+        "cells_compared": len(full),
+        "ai_rose": sum(round(r["ai_lora"], 1) > round(r["ai_base"], 1) for r in full),
+        "adapter_at_or_above_teacher": sum(round(r["ai_lora"], 1) >= round(r["ai_teacher"], 1) for r in full),
+        "added_cells_with_aggregate": len(added),
+        "added_cells_aggregate_fell": sum(r["agg_diff"] < 0 for r in added),
+        "added_cells_drop_min": min((-r["agg_diff"] for r in added), default=None),
+        "added_cells_drop_max": max((-r["agg_diff"] for r in added), default=None),
+        "excluded_same_family": sorted(c["id"] for c in res["cells"] if c["same_family_as_evaluator"]),
+    }
+    res["cross_cell_counts"] = counts
+    what = "cells outside the evaluator's family, not set aside, submitted cell included"
+    macros.add("CellsCompared", fmt_int(counts["cells_compared"]), what)
+    macros.add("CellsAIRose", fmt_int(counts["ai_rose"]), f"{what}: active inquiry LoRA above Base")
+    macros.add("CellsAtOrAboveTeacher", fmt_int(counts["adapter_at_or_above_teacher"]),
+               f"{what}: active inquiry LoRA at or above Base+CoT (the teacher)")
+    macros.add("CellsAddedWithAggregate", fmt_int(counts["added_cells_with_aggregate"]),
+               "added cells outside the evaluator's family with both aggregate means")
+    macros.add("CellsAddedAggregateFell", fmt_int(counts["added_cells_aggregate_fell"]),
+               "of those, cells where the aggregate score is lower under LoRA")
+    if added:
+        macros.add("CellsAddedDropMin", fmt(counts["added_cells_drop_min"], 3),
+                   "smallest Base minus LoRA aggregate drop in those cells")
+        macros.add("CellsAddedDropMax", fmt(counts["added_cells_drop_max"], 3),
+                   "largest Base minus LoRA aggregate drop in those cells")
+    an = {a["id"]: a["values"] for a in posted.get("analyses", [])}
+    if "clinician_identified_prompts" in an:
+        v = an["clinician_identified_prompts"]
+        macros.add("PostedClinicianPrompts", fmt_int(v["count"]),
+                   f"{SRC_POSTED}: HealthBench-Hard prompts whose speaker says they are a clinician")
+    if "medqa_preamble_run" in an:
+        macros.add("PostedMedQAPreambleAI", fmt_int(an["medqa_preamble_run"]["base_active_inquiry_pct"]),
+                   f"{SRC_POSTED}: MedQA base active inquiry (percent) in the run with the ask-first preamble")
+    if "aggregate_drop_tests" in an:
+        macros.add("PostedAggDropPBelow", fmt(an["aggregate_drop_tests"]["paired_t_two_sided_p_below"], 2),
+                   f"{SRC_POSTED}: posted bound on the paired t p of the six aggregate drops")
+    res["sources"] = {c["id"]: c["source"] for c in res["cells"]}
     out["generality"] = res
     return res
 
@@ -1213,99 +1466,126 @@ def build_tables(out, seeds) -> dict[str, str]:
                                              "Phys.\\ pass", "LLM pass"], blocks,
                                  "results_modal/irr/kappa_results.json (CI: prompt-clustered bootstrap)")
 
-    if "generality" in out and "posted" in out:
-        t["tab_generality"] = generality_table(out["posted"], out)
-        t["tab_generality_aggregate"] = generality_aggregate_table(out["posted"], out)
+    if "generality" in out:
+        t["tab_generality"] = generality_table(out)
+        t["tab_generality_aggregate"] = generality_aggregate_table(out)
     return t
 
 
-def _posted_cell_rows(posted: dict, row) -> tuple[list, list]:
-    """Rows for the posted cells, split into kept and set-aside blocks.
-
-    The submitted cell is skipped: its row comes from results_modal.
-    """
-    kept, aside = [], []
-    for c in posted["cells"]:
-        if c["id"] == MAIN_CELL_ID:
-            continue
-        model = f"{c['base_model']} ({c['base_family']})"
-        if c["same_family_as_evaluator"]:
-            # Same family as the Llama evaluator, against the paper's own rule (EVAL-7).
-            model += "$^{\\dagger}$"
-
-        def val(cond_name, metric, g=c["conditions"]):
-            v = g.get(cond_name, {}).get(metric)
-            return None if v is None else v.get("mean")
-
-        (aside if c["set_aside"] else kept).append([c["benchmark"], model] + row(c, val))
-    return kept, aside
+BENCH_SHORT = {"HealthBench-Hard": "HB-Hard"}
 
 
-def _pct(x):
-    return f"{x:.1f}\\%" if x is not None else "--"
+def _cell_label(cell: dict, short: bool = False) -> list[str]:
+    """Benchmark and base-model cells; marks: * transcribed from posts, dagger same family as evaluator."""
+    bench = BENCH_SHORT.get(cell["benchmark"], cell["benchmark"]) if short else cell["benchmark"]
+    model = cell["base_model"] if short else f"{cell['base_model']} ({cell['base_family']})"
+    marks = ""
+    if cell["same_family_as_evaluator"]:
+        # Same family as the Llama evaluator, against the paper's own rule (EVAL-7, D6).
+        marks += "\\dagger"
+    if cell["source"] == "posted":
+        marks += "\\ast"
+    return [bench, model + (f"$^{{{marks}}}$" if marks else "")]
 
 
-def _arrow(b, l, dp=2):
-    if b is None or l is None:
+def _num(x, dp, sign=False):
+    return fmt(x, dp, sign=sign) if _finite(x) else "--"
+
+
+def _diff_with_ci(r: dict) -> str:
+    """LoRA - Base with its paired t interval, or 'pending' when only posted means exist."""
+    if not _finite(r.get("diff")):
         return "--"
-    return f"{b:.{dp}f} $\\to$ {l:.{dp}f}"
+    if r.get("ci95") is not None and _finite(r["ci95"][0]):
+        return fmt(r["diff"], 3, sign=True) + " " + fmt_ci(r["ci95"][0], r["ci95"][1], 3)
+    return fmt(r["diff"], 3, sign=True) + " [pending]"
 
 
-def generality_table(posted: dict, out) -> str:
-    """Cross-cell behavior table: main cell from results_modal, other cells from posted values."""
+def _blocks(out, main_row, row):
+    kept = [_cell_label(c, True) + row(c) for c in out["generality"]["cells"] if not c["set_aside"]]
+    aside = [_cell_label(c, True) + row(c) for c in out["generality"]["cells"] if c["set_aside"]]
+    return [[main_row], kept] + ([aside] if aside else [])
+
+
+def _two_row_tabular(colspec: str, groups: list[tuple[str, int]], header: list[str],
+                     blocks: list[list[list[str]]], source: str) -> str:
+    """Like tabular(), with a grouped first header row (label, columns spanned)."""
+    first, rules, col = [], [], 1
+    for label, span in groups:
+        if span == 1:
+            first.append(label)
+        elif not label:
+            first += [""] * span
+        else:
+            first.append(f"\\multicolumn{{{span}}}{{c}}{{{label}}}")
+            rules.append(f"\\cmidrule(lr){{{col}-{col + span - 1}}}")
+        col += span
+    lines = [f"% Generated by scripts/paper_stats.py from {source}. Do not edit by hand.",
+             f"\\begin{{tabular}}{{{colspec}}}", "\\toprule", " & ".join(first) + " \\\\",
+             " ".join(rules), " & ".join(header) + " \\\\", "\\midrule"]
+    for i, block in enumerate(blocks):
+        if i:
+            lines.append("\\midrule")
+        for r in block:
+            lines.append(" & ".join(r) + " \\\\")
+    lines += ["\\bottomrule", "\\end{tabular}"]
+    return "\n".join(lines) + "\n"
+
+
+def generality_table(out) -> str:
+    """Behavior gain and aggregate cost per cell. Submitted cell from results_modal."""
     cond = out["conditions"]
 
-    def sm(key, cfg):
-        return cond[key][cfg]["seed_mean"]
+    def sm(key, cfg, mult=1.0):
+        return cond[key][cfg]["seed_mean"] * mult
 
-    main = [[*MAIN_CELL_LABEL,
-             _pct(100 * sm("active_inquiry", "base_no_wrapper")),
-             _pct(100 * sm("active_inquiry", "lora_no_wrapper")),
-             _arrow(sm("context_seeking", "base_no_wrapper"), sm("context_seeking", "lora_no_wrapper")),
-             _arrow(sm("red_flag", "base_no_wrapper"), sm("red_flag", "lora_no_wrapper")),
-             fmt(out["contrasts"]["LoRAvsBase"]["metrics"]["healthbench"]["diff"], 3, sign=True)]]
+    hb = out["contrasts"]["LoRAvsBase"]["metrics"]["healthbench"]
+    main = ["HB-Hard", "MedGemma-27B",
+            _num(sm("active_inquiry", "base_no_wrapper", 100), 1),
+            _num(sm("active_inquiry", "base_bodhi", 100), 1),
+            _num(sm("active_inquiry", "lora_no_wrapper", 100), 1),
+            _num(sm("context_seeking", "base_no_wrapper"), 2),
+            _num(sm("context_seeking", "lora_no_wrapper"), 2),
+            _num(sm("healthbench", "base_no_wrapper"), 3),
+            _num(sm("healthbench", "lora_no_wrapper"), 3),
+            _diff_with_ci(hb)]
 
-    def row(c, val):
-        diff = posted_aggregate_diff(c)["diff"]
-        return [_pct(val("base", "active_inquiry_pct")), _pct(val("lora", "active_inquiry_pct")),
-                _arrow(val("base", "context_seeking"), val("lora", "context_seeking")),
-                _arrow(val("base", "red_flag"), val("lora", "red_flag")),
-                fmt(diff, 3, sign=True) if diff is not None else "--"]
+    def row(c):
+        return [_num(_mean(c, "base", "active_inquiry_pct"), 1),
+                _num(_mean(c, "base_cot", "active_inquiry_pct"), 1),
+                _num(_mean(c, "lora", "active_inquiry_pct"), 1),
+                _num(_mean(c, "base", "context_seeking"), 2),
+                _num(_mean(c, "lora", "context_seeking"), 2),
+                _num(_mean(c, "base", "aggregate"), 3),
+                _num(_mean(c, "lora", "aggregate"), 3),
+                _diff_with_ci(c["aggregate_lora_minus_base"])]
 
-    kept, aside = _posted_cell_rows(posted, row)
-    blocks = [main, kept] + ([aside] if aside else [])
-    return tabular("llrrrrr", ["Benchmark", "Base model (family)", "AI Base", "AI LoRA", "Context-seek",
-                               "Red-flag", "Agg.\\ $\\Delta$"], blocks,
-                   "results_modal (first row) and data/rebuttal_cells/posted_values.json (other rows; "
-                   "Agg. Delta is LoRA minus Base from posted means, no CI)")
+    ns = len(out["meta"]["seeds"])
+    return _two_row_tabular(
+        "llrrrrrrrl",
+        [("", 1), ("", 1), ("Active inquiry (\\%)", 3), ("Context-seeking", 2), ("Aggregate score", 3)],
+        ["Benchmark", "Base model", "Base", "Base+CoT", "LoRA", "Base", "LoRA", "Base", "LoRA",
+         f"LoRA$-$Base [95\\% CI, $t_{{{ns - 1}}}$]"],
+        _blocks(out, main, row),
+        "results_modal (first row) and data/rebuttal_cells/ (other rows: generated_values.json when "
+        "synced, else posted_values.json, marked *)")
 
 
-def generality_aggregate_table(posted: dict, out) -> str:
-    """Cross-cell aggregate HealthBench-rubric score for all four conditions.
-
-    Main cell from results_modal seed means; other cells from posted means. The
-    posted paired t over seeds stays the test (rebuttal/analyses/quality_drop.py
-    once the cell outputs are synced); this table carries no CI.
-    """
+def generality_aggregate_table(out) -> str:
+    """Aggregate HealthBench-rubric score per cell for all four conditions."""
     cond = out["conditions"]["healthbench"]
+    hb = out["contrasts"]["LoRAvsBase"]["metrics"]["healthbench"]
+    main = ["HB-Hard", "MedGemma-27B", *(_num(cond[cfg]["seed_mean"], 3) for cfg in CONDITIONS),
+            _num(hb["diff"], 3, sign=True)]
 
-    def num(x):
-        return fmt(x, 3) if x is not None else "--"
+    def row(c):
+        return [*(_num(_mean(c, p, "aggregate"), 3) for p in ("base", "base_cot", "lora", "lora_cot")),
+                _num(c["aggregate_lora_minus_base"].get("diff"), 3, sign=True)]
 
-    main = [[*MAIN_CELL_LABEL, *(num(cond[cfg]["seed_mean"]) for cfg in CONDITIONS),
-             fmt(out["contrasts"]["LoRAvsBase"]["metrics"]["healthbench"]["diff"], 3, sign=True)]]
-
-    def row(c, val):
-        diff = posted_aggregate_diff(c)["diff"]
-        return [*(num(val(p, "aggregate")) for p in ("base", "base_cot", "lora", "lora_cot")),
-                fmt(diff, 3, sign=True) if diff is not None else "--"]
-
-    kept, aside = _posted_cell_rows(posted, row)
-    blocks = [main, kept] + ([aside] if aside else [])
-    return tabular("llrrrrr", ["Benchmark", "Base model (family)", *(COND_LABEL[c] for c in CONDITIONS),
-                               "LoRA $-$ Base"], blocks,
-                   "results_modal (first row, seed means) and data/rebuttal_cells/posted_values.json "
-                   "(other rows, posted means; no CI)")
+    return tabular("llrrrrr", ["Benchmark", "Base model", *(COND_LABEL[c] for c in CONDITIONS),
+                               "LoRA $-$ Base"], _blocks(out, main, row),
+                   "results_modal (first row, seed means) and data/rebuttal_cells/ (other rows: "
+                   "generated_values.json when synced, else posted_values.json, marked *)")
 
 
 # ---------------------------------------------------------------------------
@@ -1329,7 +1609,8 @@ def _rel(path: Path) -> str:
 
 
 def run(results_dir: Path, out_dir: Path, healthbench: Path | None, filter_train: Path | None,
-        kappa: Path | None, rebuttal_results: Path | None, posted_values: Path | None) -> dict:
+        kappa: Path | None, rebuttal_results: Path | None, posted_values: Path | None,
+        generated_values: Path | None = None, qwen_grader_dir: Path | None = None) -> dict:
     seeds = discover_seeds(results_dir)
     df = load_responses(results_dir, seeds)
     out: dict = {"meta": {"seeds": seeds, "conditions": list(CONDITIONS),
@@ -1361,10 +1642,19 @@ def run(results_dir: Path, out_dir: Path, healthbench: Path | None, filter_train
         print(f"SKIP {what}: {path} not found")
         return False
 
+    hard_ids = None
     if optional(healthbench, "theme table", "data/raw/healthbench_hard.jsonl"):
         theme_rates(df, load_themes(healthbench), out, macros)
+        hard_ids = difficulty_range(df, healthbench, out, macros)
     if optional(filter_train, "tau table", "data/sft_qwen_graded/seed_7_train.jsonl"):
-        tau_calibration(filter_train, out)
+        tau_calibration(filter_train, out, macros, hard_ids)
+    if qwen_grader_dir is not None and (qwen_grader_dir / "base_no_wrapper.json").is_file():
+        for p in sorted(qwen_grader_dir.glob("*.json")):
+            if p.stem in CONDITIONS:
+                out["meta"]["inputs"][f"results/seed_42/eval/{p.name}"] = _sha256(p)
+        cross_grader(qwen_grader_dir, results_dir, out, macros)
+    else:
+        print(f"SKIP cross-grader check: {qwen_grader_dir} not found")
     if optional(kappa, "kappa table", "results_modal/irr/kappa_results.json"):
         kappa_section(kappa, out, macros)
     if rebuttal_results is not None and rebuttal_results.is_dir():
@@ -1374,11 +1664,17 @@ def run(results_dir: Path, out_dir: Path, healthbench: Path | None, filter_train
     else:
         print(f"SKIP rebuttal analyses: {rebuttal_results} not found")
     if optional(posted_values, "generality table (rebuttal cells)", "data/rebuttal_cells/posted_values.json"):
-        out["posted"] = load_posted_values(posted_values)
-        generality_section(out["posted"], cond, out)
+        posted = load_posted_values(posted_values)
+        generated = None
+        if generated_values is not None and generated_values.is_file():
+            out["meta"]["inputs"]["data/rebuttal_cells/generated_values.json"] = _sha256(generated_values)
+            with open(generated_values) as f:
+                generated = json.load(f)
+        else:
+            print(f"note: {generated_values} not found; added cells use posted values (PROV-1)")
+        generality_section(posted, generated, out, macros)
 
     tables = build_tables(out, seeds)
-    out.pop("posted", None)
 
     out_dir.mkdir(parents=True, exist_ok=True)
     # A table whose input went missing must not survive from an earlier run.
@@ -1406,9 +1702,14 @@ def main() -> None:
     ap.add_argument("--rebuttal-results", type=Path, default=ROOT / "rebuttal" / "results")
     ap.add_argument("--posted-values", type=Path,
                     default=ROOT / "data" / "rebuttal_cells" / "posted_values.json")
+    # Written by `make cells` once results_rebuttal/ is synced; replaces posted values cell by cell.
+    ap.add_argument("--generated-values", type=Path,
+                    default=ROOT / "data" / "rebuttal_cells" / "generated_values.json")
+    # Seed-42 side run graded by Qwen2.5-14B (gitignored results/); optional.
+    ap.add_argument("--qwen-grader-dir", type=Path, default=ROOT / "results" / "seed_42" / "eval")
     a = ap.parse_args()
     run(a.results_dir, a.out_dir, a.healthbench, a.filter_train, a.kappa, a.rebuttal_results,
-        a.posted_values)
+        a.posted_values, a.generated_values, a.qwen_grader_dir)
 
 
 if __name__ == "__main__":

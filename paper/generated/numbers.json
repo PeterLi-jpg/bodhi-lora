@@ -56,6 +56,9 @@
       "results_modal/seed_101/epistemic_scores.json": "0b8675bc6b60eb87dd85c21f291b796317c254a12fd7acc635fa4cc7454bbfb4",
       "data/raw/healthbench_hard.jsonl": "b0320430e5cd974e746585594c1dd10b5a3fc2aff9c72b26106c2c4a069d74e9",
       "data/sft_qwen_graded/seed_7_train.jsonl": "60bc234058dec78b0d4e091d8776b3e406a8e078f01205dc73e153028f4c313e",
+      "results/seed_42/eval/base_bodhi.json": "f34925bf196ea6fb7d78d355ed7298165c8faf17c98293b2a3c3ef8139381ec2",
+      "results/seed_42/eval/base_no_wrapper.json": "fd1bc306120e1cb4e1177b84f0c7bb73f95dabad48ebd5b2d1d6d952268dde88",
+      "results/seed_42/eval/lora_no_wrapper.json": "5205b963a0944d255d10ecee2428c103cb00cd5575989ad233230db2c1f2a7fa",
       "results_modal/irr/kappa_results.json": "194b39fe7522dcffdce270bcf59bd9f2d094e57c08b570c3c5fcd08cb86d8535",
       "rebuttal/results/interference_mechanism.json": "ec5eea5d9a56df86e04ab3427feb6df315fe1e599b4a8b4d753a7c83df5f194f",
       "rebuttal/results/mimicry_split.json": "0d62757fb6ca4409fb1797004daf13170d1939700a7f9f3ed59374521ab6e769",
@@ -3637,7 +3640,8 @@
         "hb_items": 11750,
         "hb_item_parse_failures": 2,
         "hb_item_parse_failure_rate": 0.000170213,
-        "hb_item_parse_failure_rate_max_run": 0.000825764
+        "hb_item_parse_failure_rate_max_run": 0.000825764,
+        "completion_drop_rate": 0.0
       },
       "base_bodhi": {
         "completions": 957,
@@ -3657,7 +3661,8 @@
         "hb_items": 11212,
         "hb_item_parse_failures": 4,
         "hb_item_parse_failure_rate": 0.000356761,
-        "hb_item_parse_failure_rate_max_run": 0.000874126
+        "hb_item_parse_failure_rate_max_run": 0.000874126,
+        "completion_drop_rate": 0.043
       },
       "lora_no_wrapper": {
         "completions": 1000,
@@ -3677,7 +3682,8 @@
         "hb_items": 11750,
         "hb_item_parse_failures": 1,
         "hb_item_parse_failure_rate": 8.51064e-05,
-        "hb_item_parse_failure_rate_max_run": 0.000422476
+        "hb_item_parse_failure_rate_max_run": 0.000422476,
+        "completion_drop_rate": 0.0
       },
       "lora_bodhi": {
         "completions": 959,
@@ -3697,7 +3703,8 @@
         "hb_items": 11257,
         "hb_item_parse_failures": 3,
         "hb_item_parse_failure_rate": 0.000266501,
-        "hb_item_parse_failure_rate_max_run": 0.000449438
+        "hb_item_parse_failure_rate_max_run": 0.000449438,
+        "completion_drop_rate": 0.041
       }
     },
     "unique_prompts": 667,
@@ -5621,6 +5628,11 @@
       }
     }
   },
+  "difficulty": {
+    "min": 5,
+    "max": 215,
+    "n_hard_prompts": 1000
+  },
   "tau_calibration": {
     "n_train_split": 2816,
     "rows": [
@@ -5654,7 +5666,41 @@
         "share_of_train_split": 0.0671165,
         "share_of_pool_estimate": 0.0525019
       }
-    ]
+    ],
+    "overlap_with_hard_set": 0
+  },
+  "cross_grader": {
+    "conditions": {
+      "base_no_wrapper": {
+        "n_shared": 43,
+        "pearson_r": 0.349349,
+        "grader": "Qwen/Qwen2.5-14B-Instruct",
+        "mean_qwen": 0.151283,
+        "mean_llama": 0.47235
+      },
+      "base_bodhi": {
+        "n_shared": 43,
+        "pearson_r": 0.370469,
+        "grader": "Qwen/Qwen2.5-14B-Instruct",
+        "mean_qwen": 0.114893,
+        "mean_llama": 0.46009,
+        "minus_base_qwen": -0.0363897,
+        "minus_base_llama": -0.0122592
+      },
+      "lora_no_wrapper": {
+        "n_shared": 43,
+        "pearson_r": 0.511055,
+        "grader": "Qwen/Qwen2.5-14B-Instruct",
+        "mean_qwen": 0.143289,
+        "mean_llama": 0.468113,
+        "minus_base_qwen": -0.00799354,
+        "minus_base_llama": -0.00423678
+      }
+    },
+    "pooled": {
+      "pearson_r": 0.423693,
+      "spearman_rho": 0.354181
+    }
   },
   "kappa": {
     "n_raters": 1,
@@ -6100,18 +6146,61 @@
     "provenance": "transcribed from posted OpenReview replies; raw outputs on mit-critical-data-1:/data/PROJECTS/bohdi/results_rebuttal/ pending sync",
     "cells": [
       {
-        "id": "healthbench__medgemma-27b",
-        "set_aside": false,
-        "same_family_as_evaluator": false,
-        "aggregate_lora_minus_base": {
-          "diff": 0.004,
-          "note": "point estimate only; inference is the posted paired t over seeds"
-        }
-      },
-      {
         "id": "healthbench__mistral-small-24b",
-        "set_aside": false,
+        "benchmark": "HealthBench-Hard",
+        "base_model": "Mistral-Small-24B",
+        "base_family": "Mistral",
         "same_family_as_evaluator": false,
+        "set_aside": false,
+        "set_aside_reason": null,
+        "filter_clearance_pct": 62.1,
+        "source": "posted",
+        "conditions": {
+          "base": {
+            "active_inquiry_pct": {
+              "mean": 25.6,
+              "sd": null
+            },
+            "context_seeking": {
+              "mean": 1.05,
+              "sd": null
+            },
+            "aggregate": {
+              "mean": 0.425,
+              "sd": 0.004
+            }
+          },
+          "base_cot": {
+            "active_inquiry_pct": {
+              "mean": 54.2,
+              "sd": null
+            },
+            "aggregate": {
+              "mean": 0.416,
+              "sd": 0.001
+            }
+          },
+          "lora": {
+            "active_inquiry_pct": {
+              "mean": 56.6,
+              "sd": null
+            },
+            "context_seeking": {
+              "mean": 1.76,
+              "sd": null
+            },
+            "aggregate": {
+              "mean": 0.411,
+              "sd": 0.006
+            }
+          },
+          "lora_cot": {
+            "aggregate": {
+              "mean": 0.404,
+              "sd": 0.011
+            }
+          }
+        },
         "aggregate_lora_minus_base": {
           "diff": -0.014,
           "note": "point estimate only; inference is the posted paired t over seeds"
@@ -6119,8 +6208,60 @@
       },
       {
         "id": "healthbench__med42-8b",
-        "set_aside": false,
+        "benchmark": "HealthBench-Hard",
+        "base_model": "Med42-8B",
+        "base_family": "Llama-3",
         "same_family_as_evaluator": true,
+        "set_aside": false,
+        "set_aside_reason": null,
+        "filter_clearance_pct": 50.8,
+        "source": "posted",
+        "conditions": {
+          "base": {
+            "active_inquiry_pct": {
+              "mean": 11.8,
+              "sd": null
+            },
+            "context_seeking": {
+              "mean": 0.52,
+              "sd": null
+            },
+            "aggregate": {
+              "mean": 0.405,
+              "sd": 0.003
+            }
+          },
+          "base_cot": {
+            "active_inquiry_pct": {
+              "mean": 57.1,
+              "sd": null
+            },
+            "aggregate": {
+              "mean": 0.391,
+              "sd": 0.006
+            }
+          },
+          "lora": {
+            "active_inquiry_pct": {
+              "mean": 52.5,
+              "sd": null
+            },
+            "context_seeking": {
+              "mean": 1.4,
+              "sd": null
+            },
+            "aggregate": {
+              "mean": 0.392,
+              "sd": 0.004
+            }
+          },
+          "lora_cot": {
+            "aggregate": {
+              "mean": 0.382,
+              "sd": 0.007
+            }
+          }
+        },
         "aggregate_lora_minus_base": {
           "diff": -0.013,
           "note": "point estimate only; inference is the posted paired t over seeds"
@@ -6128,8 +6269,60 @@
       },
       {
         "id": "healthbench__biomistral-7b",
-        "set_aside": false,
+        "benchmark": "HealthBench-Hard",
+        "base_model": "BioMistral-7B",
+        "base_family": "Mistral",
         "same_family_as_evaluator": false,
+        "set_aside": false,
+        "set_aside_reason": null,
+        "filter_clearance_pct": 20.4,
+        "source": "posted",
+        "conditions": {
+          "base": {
+            "active_inquiry_pct": {
+              "mean": 11.7,
+              "sd": null
+            },
+            "context_seeking": {
+              "mean": 0.27,
+              "sd": null
+            },
+            "aggregate": {
+              "mean": 0.378,
+              "sd": 0.003
+            }
+          },
+          "base_cot": {
+            "active_inquiry_pct": {
+              "mean": 14.5,
+              "sd": null
+            },
+            "aggregate": {
+              "mean": 0.363,
+              "sd": 0.001
+            }
+          },
+          "lora": {
+            "active_inquiry_pct": {
+              "mean": 10.1,
+              "sd": null
+            },
+            "context_seeking": {
+              "mean": 0.28,
+              "sd": null
+            },
+            "aggregate": {
+              "mean": 0.363,
+              "sd": 0.007
+            }
+          },
+          "lora_cot": {
+            "aggregate": {
+              "mean": 0.362,
+              "sd": 0.003
+            }
+          }
+        },
         "aggregate_lora_minus_base": {
           "diff": -0.015,
           "note": "point estimate only; inference is the posted paired t over seeds"
@@ -6137,8 +6330,60 @@
       },
       {
         "id": "chatdoctor__mistral-small-24b",
-        "set_aside": false,
+        "benchmark": "ChatDoctor",
+        "base_model": "Mistral-Small-24B",
+        "base_family": "Mistral",
         "same_family_as_evaluator": false,
+        "set_aside": false,
+        "set_aside_reason": null,
+        "filter_clearance_pct": 97.6,
+        "source": "posted",
+        "conditions": {
+          "base": {
+            "active_inquiry_pct": {
+              "mean": 7.8,
+              "sd": null
+            },
+            "context_seeking": {
+              "mean": 0.83,
+              "sd": null
+            },
+            "aggregate": {
+              "mean": 0.557,
+              "sd": 0.004
+            }
+          },
+          "base_cot": {
+            "active_inquiry_pct": {
+              "mean": 54.5,
+              "sd": null
+            },
+            "aggregate": {
+              "mean": 0.55,
+              "sd": 0.006
+            }
+          },
+          "lora": {
+            "active_inquiry_pct": {
+              "mean": 58.6,
+              "sd": null
+            },
+            "context_seeking": {
+              "mean": 1.49,
+              "sd": null
+            },
+            "aggregate": {
+              "mean": 0.541,
+              "sd": 0.006
+            }
+          },
+          "lora_cot": {
+            "aggregate": {
+              "mean": 0.448,
+              "sd": 0.015
+            }
+          }
+        },
         "aggregate_lora_minus_base": {
           "diff": -0.016,
           "note": "point estimate only; inference is the posted paired t over seeds"
@@ -6146,8 +6391,60 @@
       },
       {
         "id": "chatdoctor__med42-8b",
-        "set_aside": false,
+        "benchmark": "ChatDoctor",
+        "base_model": "Med42-8B",
+        "base_family": "Llama-3",
         "same_family_as_evaluator": true,
+        "set_aside": false,
+        "set_aside_reason": null,
+        "filter_clearance_pct": 96.0,
+        "source": "posted",
+        "conditions": {
+          "base": {
+            "active_inquiry_pct": {
+              "mean": 2.9,
+              "sd": null
+            },
+            "context_seeking": {
+              "mean": 0.71,
+              "sd": null
+            },
+            "aggregate": {
+              "mean": 0.498,
+              "sd": 0.003
+            }
+          },
+          "base_cot": {
+            "active_inquiry_pct": {
+              "mean": 83.4,
+              "sd": null
+            },
+            "aggregate": {
+              "mean": 0.497,
+              "sd": 0.004
+            }
+          },
+          "lora": {
+            "active_inquiry_pct": {
+              "mean": 86.4,
+              "sd": null
+            },
+            "context_seeking": {
+              "mean": 1.81,
+              "sd": null
+            },
+            "aggregate": {
+              "mean": 0.457,
+              "sd": 0.007
+            }
+          },
+          "lora_cot": {
+            "aggregate": {
+              "mean": 0.461,
+              "sd": 0.005
+            }
+          }
+        },
         "aggregate_lora_minus_base": {
           "diff": -0.041,
           "note": "point estimate only; inference is the posted paired t over seeds"
@@ -6155,8 +6452,124 @@
       },
       {
         "id": "medquad__mistral-small-24b",
-        "set_aside": false,
+        "benchmark": "MedQuAD",
+        "base_model": "Mistral-Small-24B",
+        "base_family": "Mistral",
         "same_family_as_evaluator": false,
+        "set_aside": false,
+        "set_aside_reason": null,
+        "filter_clearance_pct": 78.4,
+        "source": "posted",
+        "conditions": {
+          "base": {
+            "scope_bounding": {
+              "mean": 1.85,
+              "sd": 0.02
+            },
+            "hedging_quality": {
+              "mean": 1.46,
+              "sd": 0.01
+            },
+            "context_seeking": {
+              "mean": 0.32,
+              "sd": 0.02
+            },
+            "red_flag": {
+              "mean": 0.57,
+              "sd": 0.02
+            },
+            "uncertainty_ack": {
+              "mean": 1.87,
+              "sd": 0.01
+            },
+            "specificity": {
+              "mean": 1.71,
+              "sd": 0.01
+            },
+            "active_inquiry_pct": {
+              "mean": 6.5,
+              "sd": 1.6
+            },
+            "aggregate": {
+              "mean": 0.672,
+              "sd": 0.003
+            }
+          },
+          "base_cot": {
+            "scope_bounding": {
+              "mean": 1.61,
+              "sd": 0.03
+            },
+            "hedging_quality": {
+              "mean": 1.4,
+              "sd": 0.03
+            },
+            "context_seeking": {
+              "mean": 0.87,
+              "sd": 0.02
+            },
+            "red_flag": {
+              "mean": 0.74,
+              "sd": 0.02
+            },
+            "uncertainty_ack": {
+              "mean": 1.78,
+              "sd": 0.02
+            },
+            "specificity": {
+              "mean": 1.47,
+              "sd": 0.03
+            },
+            "active_inquiry_pct": {
+              "mean": 23.1,
+              "sd": 1.2
+            },
+            "aggregate": {
+              "mean": 0.542,
+              "sd": 0.005
+            }
+          },
+          "lora": {
+            "scope_bounding": {
+              "mean": 1.89,
+              "sd": 0.02
+            },
+            "hedging_quality": {
+              "mean": 1.78,
+              "sd": 0.03
+            },
+            "context_seeking": {
+              "mean": 1.23,
+              "sd": 0.05
+            },
+            "red_flag": {
+              "mean": 0.68,
+              "sd": 0.03
+            },
+            "uncertainty_ack": {
+              "mean": 1.98,
+              "sd": 0.0
+            },
+            "specificity": {
+              "mean": 1.33,
+              "sd": 0.03
+            },
+            "active_inquiry_pct": {
+              "mean": 26.5,
+              "sd": 2.3
+            },
+            "aggregate": {
+              "mean": 0.586,
+              "sd": 0.022
+            }
+          },
+          "lora_cot": {
+            "aggregate": {
+              "mean": 0.505,
+              "sd": 0.017
+            }
+          }
+        },
         "aggregate_lora_minus_base": {
           "diff": -0.086,
           "note": "point estimate only; inference is the posted paired t over seeds"
@@ -6164,8 +6577,20 @@
       },
       {
         "id": "medqa__mistral-small-24b",
-        "set_aside": true,
+        "benchmark": "MedQA",
+        "base_model": "Mistral-Small-24B",
+        "base_family": "Mistral",
         "same_family_as_evaluator": false,
+        "set_aside": true,
+        "set_aside_reason": "a single-best-answer exam benchmark whose rubric grades agreement with a keyed answer, which is a different task from the open-ended setting the recipe targets",
+        "filter_clearance_pct": null,
+        "source": "posted",
+        "conditions": {
+          "base": {},
+          "base_cot": {},
+          "lora": {},
+          "lora_cot": {}
+        },
         "aggregate_lora_minus_base": {
           "diff": null,
           "note": "aggregate mean not posted for both conditions"
@@ -6229,6 +6654,28 @@
         "generated": 1.67216,
         "agrees": true
       }
-    ]
+    ],
+    "cross_cell_counts": {
+      "cells_compared": 5,
+      "ai_rose": 4,
+      "adapter_at_or_above_teacher": 3,
+      "added_cells_with_aggregate": 4,
+      "added_cells_aggregate_fell": 4,
+      "added_cells_drop_min": 0.014,
+      "added_cells_drop_max": 0.086,
+      "excluded_same_family": [
+        "chatdoctor__med42-8b",
+        "healthbench__med42-8b"
+      ]
+    },
+    "sources": {
+      "healthbench__mistral-small-24b": "posted",
+      "healthbench__med42-8b": "posted",
+      "healthbench__biomistral-7b": "posted",
+      "chatdoctor__mistral-small-24b": "posted",
+      "chatdoctor__med42-8b": "posted",
+      "medquad__mistral-small-24b": "posted",
+      "medqa__mistral-small-24b": "posted"
+    }
   }
 }

@@ -971,6 +971,10 @@
 \newcommand{\statRepeatedPrompts}{271} % prompt ids drawn by more than one seed
 \newcommand{\statPromptEvaluations}{1{,}000} % prompt draws per condition (5 seeds x 200)
 \newcommand{\statNSeeds}{5} % results_modal/seed_* directories
+\newcommand{\statCompletionDropPctBase}{\ensuremath{0.0}} % drawn prompts with no completion / prompt draws (percent)
+\newcommand{\statCompletionDropPctBaseCoT}{\ensuremath{4.3}} % drawn prompts with no completion / prompt draws (percent)
+\newcommand{\statCompletionDropPctLoRA}{\ensuremath{0.0}} % drawn prompts with no completion / prompt draws (percent)
+\newcommand{\statCompletionDropPctLoRACoT}{\ensuremath{4.1}} % drawn prompts with no completion / prompt draws (percent)
 \newcommand{\statEpistemicParseFailPctMax}{\ensuremath{1.49}} % highest epistemic parse-failure rate of the 4 conditions (percent)
 \newcommand{\statHealthBenchParseFailPctMaxRun}{\ensuremath{0.087}} % highest criterion parse-failure rate of any single run (percent)
 \newcommand{\statUncertaintyAckBaseWorstCase}{\ensuremath{1.94}} % worst case: failed or missing grades take the worst value
@@ -1098,6 +1102,30 @@
 \newcommand{\statAxisInstructionFollowingBaseCoT}{\ensuremath{0.300}} % results_modal/seed_*/<condition>.json: mean axis:instruction_following tag score over pooled completions
 \newcommand{\statAxisInstructionFollowingLoRA}{\ensuremath{0.286}} % results_modal/seed_*/<condition>.json: mean axis:instruction_following tag score over pooled completions
 \newcommand{\statAxisInstructionFollowingLoRACoT}{\ensuremath{0.263}} % results_modal/seed_*/<condition>.json: mean axis:instruction_following tag score over pooled completions
+\newcommand{\statDifficultyMin}{5} % data/raw/healthbench_hard.jsonl: lowest positive-point sum, evaluated prompts
+\newcommand{\statDifficultyMax}{215} % data/raw/healthbench_hard.jsonl: highest positive-point sum, evaluated prompts
+\newcommand{\statHardPrompts}{1{,}000} % data/raw/healthbench_hard.jsonl: prompts in the Hard set
+\newcommand{\statFilterTrainNSeedSeven}{2{,}816} % data/sft_qwen_graded/seed_7_train.jsonl: rows in the seed-7 training split
+\newcommand{\statFilterMinScoreSeedSeven}{\ensuremath{0.40}} % lowest filter score in the seed-7 training split
+\newcommand{\statFilterKeptReported}{3{,}129} % constant FILTER_KEPT in scripts/paper_stats.py, from the original filter log (not in the repo)
+\newcommand{\statFilterPool}{4{,}000} % constant FILTER_POOL: traces generated per filter run
+\newcommand{\statTrainHardOverlapSeedSeven}{0} % prompt ids shared by the seed-7 training split and the 1,000 HealthBench-Hard prompts
+\newcommand{\statCrossGraderRBase}{\ensuremath{0.35}} % Pearson r, Qwen vs Llama aggregate score, shared seed-42 prompts
+\newcommand{\statCrossGraderMeanQwenBase}{\ensuremath{0.151}} % results/seed_42/eval (Qwen grader): mean score
+\newcommand{\statCrossGraderMeanLlamaBase}{\ensuremath{0.472}} % results_modal/seed_42 (Llama grader): mean score
+\newcommand{\statCrossGraderRBaseCoT}{\ensuremath{0.37}} % Pearson r, Qwen vs Llama aggregate score, shared seed-42 prompts
+\newcommand{\statCrossGraderMeanQwenBaseCoT}{\ensuremath{0.115}} % results/seed_42/eval (Qwen grader): mean score
+\newcommand{\statCrossGraderMeanLlamaBaseCoT}{\ensuremath{0.460}} % results_modal/seed_42 (Llama grader): mean score
+\newcommand{\statCrossGraderRLoRA}{\ensuremath{0.51}} % Pearson r, Qwen vs Llama aggregate score, shared seed-42 prompts
+\newcommand{\statCrossGraderMeanQwenLoRA}{\ensuremath{0.143}} % results/seed_42/eval (Qwen grader): mean score
+\newcommand{\statCrossGraderMeanLlamaLoRA}{\ensuremath{0.468}} % results_modal/seed_42 (Llama grader): mean score
+\newcommand{\statCrossGraderShared}{43} % seed-42 prompts graded by both Qwen and Llama, per condition
+\newcommand{\statCrossGraderRPooled}{\ensuremath{0.42}} % Pearson r pooled over conditions
+\newcommand{\statCrossGraderRhoPooled}{\ensuremath{0.35}} % Spearman rho pooled over conditions
+\newcommand{\statCrossGraderBaseCoTMinusBaseQwen}{\ensuremath{-0.036}} % seed 42, Qwen grader: mean score minus Base, each run's own draw
+\newcommand{\statCrossGraderBaseCoTMinusBaseLlama}{\ensuremath{-0.012}} % seed 42, Llama grader: mean score minus Base, each run's own draw
+\newcommand{\statCrossGraderLoRAMinusBaseQwen}{\ensuremath{-0.008}} % seed 42, Qwen grader: mean score minus Base, each run's own draw
+\newcommand{\statCrossGraderLoRAMinusBaseLlama}{\ensuremath{-0.004}} % seed 42, Llama grader: mean score minus Base, each run's own draw
 \newcommand{\statKappaAll}{\ensuremath{0.35}} % results_modal/irr/kappa_results.json: Cohen's kappa, physician vs Llama grader
 \newcommand{\statKappaAllN}{509} % criterion rows with a pass/fail grade from both
 \newcommand{\statKappaAllCI}{\ensuremath{[+0.28,\,+0.43]}} % prompt-clustered bootstrap 95% CI for kappa
@@ -1148,3 +1176,95 @@
 \newcommand{\statSecondPersonPctBaseCoT}{\ensuremath{36.2}} % rebuttal/results/second_person_questions.json: completions with a second-person question
 \newcommand{\statSecondPersonPctLoRA}{\ensuremath{36.7}} % rebuttal/results/second_person_questions.json: completions with a second-person question
 \newcommand{\statSecondPersonPctLoRACoT}{\ensuremath{65.4}} % rebuttal/results/second_person_questions.json: completions with a second-person question
+\newcommand{\statCellHBMistralBaseActiveInquiry}{\ensuremath{25.6}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): healthbench__mistral-small-24b base active_inquiry_pct (mean over seeds)
+\newcommand{\statCellHBMistralBaseAggregate}{\ensuremath{0.425}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): healthbench__mistral-small-24b base aggregate (mean over seeds)
+\newcommand{\statCellHBMistralBaseContextSeeking}{\ensuremath{1.05}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): healthbench__mistral-small-24b base context_seeking (mean over seeds)
+\newcommand{\statCellHBMistralBaseCoTActiveInquiry}{\ensuremath{54.2}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): healthbench__mistral-small-24b base_cot active_inquiry_pct (mean over seeds)
+\newcommand{\statCellHBMistralBaseCoTAggregate}{\ensuremath{0.416}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): healthbench__mistral-small-24b base_cot aggregate (mean over seeds)
+\newcommand{\statCellHBMistralLoRAActiveInquiry}{\ensuremath{56.6}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): healthbench__mistral-small-24b lora active_inquiry_pct (mean over seeds)
+\newcommand{\statCellHBMistralLoRAAggregate}{\ensuremath{0.411}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): healthbench__mistral-small-24b lora aggregate (mean over seeds)
+\newcommand{\statCellHBMistralLoRAContextSeeking}{\ensuremath{1.76}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): healthbench__mistral-small-24b lora context_seeking (mean over seeds)
+\newcommand{\statCellHBMistralLoRACoTAggregate}{\ensuremath{0.404}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): healthbench__mistral-small-24b lora_cot aggregate (mean over seeds)
+\newcommand{\statCellHBMistralFilterClearance}{\ensuremath{62.1}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): healthbench__mistral-small-24b share of traces that passed the filter (percent)
+\newcommand{\statCellHBMistralAggregateDiff}{\ensuremath{-0.014}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): healthbench__mistral-small-24b aggregate score, LoRA minus Base
+\newcommand{\statCellHBMedFortyTwoBaseActiveInquiry}{\ensuremath{11.8}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): healthbench__med42-8b base active_inquiry_pct (mean over seeds)
+\newcommand{\statCellHBMedFortyTwoBaseAggregate}{\ensuremath{0.405}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): healthbench__med42-8b base aggregate (mean over seeds)
+\newcommand{\statCellHBMedFortyTwoBaseContextSeeking}{\ensuremath{0.52}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): healthbench__med42-8b base context_seeking (mean over seeds)
+\newcommand{\statCellHBMedFortyTwoBaseCoTActiveInquiry}{\ensuremath{57.1}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): healthbench__med42-8b base_cot active_inquiry_pct (mean over seeds)
+\newcommand{\statCellHBMedFortyTwoBaseCoTAggregate}{\ensuremath{0.391}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): healthbench__med42-8b base_cot aggregate (mean over seeds)
+\newcommand{\statCellHBMedFortyTwoLoRAActiveInquiry}{\ensuremath{52.5}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): healthbench__med42-8b lora active_inquiry_pct (mean over seeds)
+\newcommand{\statCellHBMedFortyTwoLoRAAggregate}{\ensuremath{0.392}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): healthbench__med42-8b lora aggregate (mean over seeds)
+\newcommand{\statCellHBMedFortyTwoLoRAContextSeeking}{\ensuremath{1.40}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): healthbench__med42-8b lora context_seeking (mean over seeds)
+\newcommand{\statCellHBMedFortyTwoLoRACoTAggregate}{\ensuremath{0.382}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): healthbench__med42-8b lora_cot aggregate (mean over seeds)
+\newcommand{\statCellHBMedFortyTwoFilterClearance}{\ensuremath{50.8}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): healthbench__med42-8b share of traces that passed the filter (percent)
+\newcommand{\statCellHBMedFortyTwoAggregateDiff}{\ensuremath{-0.013}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): healthbench__med42-8b aggregate score, LoRA minus Base
+\newcommand{\statCellHBBioMistralBaseActiveInquiry}{\ensuremath{11.7}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): healthbench__biomistral-7b base active_inquiry_pct (mean over seeds)
+\newcommand{\statCellHBBioMistralBaseAggregate}{\ensuremath{0.378}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): healthbench__biomistral-7b base aggregate (mean over seeds)
+\newcommand{\statCellHBBioMistralBaseContextSeeking}{\ensuremath{0.27}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): healthbench__biomistral-7b base context_seeking (mean over seeds)
+\newcommand{\statCellHBBioMistralBaseCoTActiveInquiry}{\ensuremath{14.5}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): healthbench__biomistral-7b base_cot active_inquiry_pct (mean over seeds)
+\newcommand{\statCellHBBioMistralBaseCoTAggregate}{\ensuremath{0.363}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): healthbench__biomistral-7b base_cot aggregate (mean over seeds)
+\newcommand{\statCellHBBioMistralLoRAActiveInquiry}{\ensuremath{10.1}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): healthbench__biomistral-7b lora active_inquiry_pct (mean over seeds)
+\newcommand{\statCellHBBioMistralLoRAAggregate}{\ensuremath{0.363}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): healthbench__biomistral-7b lora aggregate (mean over seeds)
+\newcommand{\statCellHBBioMistralLoRAContextSeeking}{\ensuremath{0.28}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): healthbench__biomistral-7b lora context_seeking (mean over seeds)
+\newcommand{\statCellHBBioMistralLoRACoTAggregate}{\ensuremath{0.362}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): healthbench__biomistral-7b lora_cot aggregate (mean over seeds)
+\newcommand{\statCellHBBioMistralFilterClearance}{\ensuremath{20.4}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): healthbench__biomistral-7b share of traces that passed the filter (percent)
+\newcommand{\statCellHBBioMistralAggregateDiff}{\ensuremath{-0.015}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): healthbench__biomistral-7b aggregate score, LoRA minus Base
+\newcommand{\statCellChatDoctorMistralBaseActiveInquiry}{\ensuremath{7.8}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): chatdoctor__mistral-small-24b base active_inquiry_pct (mean over seeds)
+\newcommand{\statCellChatDoctorMistralBaseAggregate}{\ensuremath{0.557}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): chatdoctor__mistral-small-24b base aggregate (mean over seeds)
+\newcommand{\statCellChatDoctorMistralBaseContextSeeking}{\ensuremath{0.83}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): chatdoctor__mistral-small-24b base context_seeking (mean over seeds)
+\newcommand{\statCellChatDoctorMistralBaseCoTActiveInquiry}{\ensuremath{54.5}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): chatdoctor__mistral-small-24b base_cot active_inquiry_pct (mean over seeds)
+\newcommand{\statCellChatDoctorMistralBaseCoTAggregate}{\ensuremath{0.550}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): chatdoctor__mistral-small-24b base_cot aggregate (mean over seeds)
+\newcommand{\statCellChatDoctorMistralLoRAActiveInquiry}{\ensuremath{58.6}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): chatdoctor__mistral-small-24b lora active_inquiry_pct (mean over seeds)
+\newcommand{\statCellChatDoctorMistralLoRAAggregate}{\ensuremath{0.541}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): chatdoctor__mistral-small-24b lora aggregate (mean over seeds)
+\newcommand{\statCellChatDoctorMistralLoRAContextSeeking}{\ensuremath{1.49}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): chatdoctor__mistral-small-24b lora context_seeking (mean over seeds)
+\newcommand{\statCellChatDoctorMistralLoRACoTAggregate}{\ensuremath{0.448}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): chatdoctor__mistral-small-24b lora_cot aggregate (mean over seeds)
+\newcommand{\statCellChatDoctorMistralFilterClearance}{\ensuremath{97.6}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): chatdoctor__mistral-small-24b share of traces that passed the filter (percent)
+\newcommand{\statCellChatDoctorMistralAggregateDiff}{\ensuremath{-0.016}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): chatdoctor__mistral-small-24b aggregate score, LoRA minus Base
+\newcommand{\statCellChatDoctorMedFortyTwoBaseActiveInquiry}{\ensuremath{2.9}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): chatdoctor__med42-8b base active_inquiry_pct (mean over seeds)
+\newcommand{\statCellChatDoctorMedFortyTwoBaseAggregate}{\ensuremath{0.498}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): chatdoctor__med42-8b base aggregate (mean over seeds)
+\newcommand{\statCellChatDoctorMedFortyTwoBaseContextSeeking}{\ensuremath{0.71}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): chatdoctor__med42-8b base context_seeking (mean over seeds)
+\newcommand{\statCellChatDoctorMedFortyTwoBaseCoTActiveInquiry}{\ensuremath{83.4}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): chatdoctor__med42-8b base_cot active_inquiry_pct (mean over seeds)
+\newcommand{\statCellChatDoctorMedFortyTwoBaseCoTAggregate}{\ensuremath{0.497}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): chatdoctor__med42-8b base_cot aggregate (mean over seeds)
+\newcommand{\statCellChatDoctorMedFortyTwoLoRAActiveInquiry}{\ensuremath{86.4}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): chatdoctor__med42-8b lora active_inquiry_pct (mean over seeds)
+\newcommand{\statCellChatDoctorMedFortyTwoLoRAAggregate}{\ensuremath{0.457}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): chatdoctor__med42-8b lora aggregate (mean over seeds)
+\newcommand{\statCellChatDoctorMedFortyTwoLoRAContextSeeking}{\ensuremath{1.81}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): chatdoctor__med42-8b lora context_seeking (mean over seeds)
+\newcommand{\statCellChatDoctorMedFortyTwoLoRACoTAggregate}{\ensuremath{0.461}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): chatdoctor__med42-8b lora_cot aggregate (mean over seeds)
+\newcommand{\statCellChatDoctorMedFortyTwoFilterClearance}{\ensuremath{96.0}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): chatdoctor__med42-8b share of traces that passed the filter (percent)
+\newcommand{\statCellChatDoctorMedFortyTwoAggregateDiff}{\ensuremath{-0.041}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): chatdoctor__med42-8b aggregate score, LoRA minus Base
+\newcommand{\statCellMedQuADMistralBaseActiveInquiry}{\ensuremath{6.5}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): medquad__mistral-small-24b base active_inquiry_pct (mean over seeds)
+\newcommand{\statCellMedQuADMistralBaseAggregate}{\ensuremath{0.672}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): medquad__mistral-small-24b base aggregate (mean over seeds)
+\newcommand{\statCellMedQuADMistralBaseContextSeeking}{\ensuremath{0.32}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): medquad__mistral-small-24b base context_seeking (mean over seeds)
+\newcommand{\statCellMedQuADMistralBaseHedgingQuality}{\ensuremath{1.46}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): medquad__mistral-small-24b base hedging_quality (mean over seeds)
+\newcommand{\statCellMedQuADMistralBaseRedFlag}{\ensuremath{0.57}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): medquad__mistral-small-24b base red_flag (mean over seeds)
+\newcommand{\statCellMedQuADMistralBaseScopeBounding}{\ensuremath{1.85}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): medquad__mistral-small-24b base scope_bounding (mean over seeds)
+\newcommand{\statCellMedQuADMistralBaseSpecificity}{\ensuremath{1.71}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): medquad__mistral-small-24b base specificity (mean over seeds)
+\newcommand{\statCellMedQuADMistralBaseUncertaintyAck}{\ensuremath{1.87}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): medquad__mistral-small-24b base uncertainty_ack (mean over seeds)
+\newcommand{\statCellMedQuADMistralBaseCoTActiveInquiry}{\ensuremath{23.1}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): medquad__mistral-small-24b base_cot active_inquiry_pct (mean over seeds)
+\newcommand{\statCellMedQuADMistralBaseCoTAggregate}{\ensuremath{0.542}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): medquad__mistral-small-24b base_cot aggregate (mean over seeds)
+\newcommand{\statCellMedQuADMistralBaseCoTContextSeeking}{\ensuremath{0.87}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): medquad__mistral-small-24b base_cot context_seeking (mean over seeds)
+\newcommand{\statCellMedQuADMistralBaseCoTHedgingQuality}{\ensuremath{1.40}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): medquad__mistral-small-24b base_cot hedging_quality (mean over seeds)
+\newcommand{\statCellMedQuADMistralBaseCoTRedFlag}{\ensuremath{0.74}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): medquad__mistral-small-24b base_cot red_flag (mean over seeds)
+\newcommand{\statCellMedQuADMistralBaseCoTScopeBounding}{\ensuremath{1.61}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): medquad__mistral-small-24b base_cot scope_bounding (mean over seeds)
+\newcommand{\statCellMedQuADMistralBaseCoTSpecificity}{\ensuremath{1.47}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): medquad__mistral-small-24b base_cot specificity (mean over seeds)
+\newcommand{\statCellMedQuADMistralBaseCoTUncertaintyAck}{\ensuremath{1.78}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): medquad__mistral-small-24b base_cot uncertainty_ack (mean over seeds)
+\newcommand{\statCellMedQuADMistralLoRAActiveInquiry}{\ensuremath{26.5}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): medquad__mistral-small-24b lora active_inquiry_pct (mean over seeds)
+\newcommand{\statCellMedQuADMistralLoRAAggregate}{\ensuremath{0.586}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): medquad__mistral-small-24b lora aggregate (mean over seeds)
+\newcommand{\statCellMedQuADMistralLoRAContextSeeking}{\ensuremath{1.23}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): medquad__mistral-small-24b lora context_seeking (mean over seeds)
+\newcommand{\statCellMedQuADMistralLoRAHedgingQuality}{\ensuremath{1.78}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): medquad__mistral-small-24b lora hedging_quality (mean over seeds)
+\newcommand{\statCellMedQuADMistralLoRARedFlag}{\ensuremath{0.68}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): medquad__mistral-small-24b lora red_flag (mean over seeds)
+\newcommand{\statCellMedQuADMistralLoRAScopeBounding}{\ensuremath{1.89}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): medquad__mistral-small-24b lora scope_bounding (mean over seeds)
+\newcommand{\statCellMedQuADMistralLoRASpecificity}{\ensuremath{1.33}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): medquad__mistral-small-24b lora specificity (mean over seeds)
+\newcommand{\statCellMedQuADMistralLoRAUncertaintyAck}{\ensuremath{1.98}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): medquad__mistral-small-24b lora uncertainty_ack (mean over seeds)
+\newcommand{\statCellMedQuADMistralLoRACoTAggregate}{\ensuremath{0.505}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): medquad__mistral-small-24b lora_cot aggregate (mean over seeds)
+\newcommand{\statCellMedQuADMistralFilterClearance}{\ensuremath{78.4}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): medquad__mistral-small-24b share of traces that passed the filter (percent)
+\newcommand{\statCellMedQuADMistralAggregateDiff}{\ensuremath{-0.086}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): medquad__mistral-small-24b aggregate score, LoRA minus Base
+\newcommand{\statCellsCompared}{5} % cells outside the evaluator's family, not set aside, submitted cell included
+\newcommand{\statCellsAIRose}{4} % cells outside the evaluator's family, not set aside, submitted cell included: active inquiry LoRA above Base
+\newcommand{\statCellsAtOrAboveTeacher}{3} % cells outside the evaluator's family, not set aside, submitted cell included: active inquiry LoRA at or above Base+CoT (the teacher)
+\newcommand{\statCellsAddedWithAggregate}{4} % added cells outside the evaluator's family with both aggregate means
+\newcommand{\statCellsAddedAggregateFell}{4} % of those, cells where the aggregate score is lower under LoRA
+\newcommand{\statCellsAddedDropMin}{\ensuremath{0.014}} % smallest Base minus LoRA aggregate drop in those cells
+\newcommand{\statCellsAddedDropMax}{\ensuremath{0.086}} % largest Base minus LoRA aggregate drop in those cells
+\newcommand{\statPostedClinicianPrompts}{14} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): HealthBench-Hard prompts whose speaker says they are a clinician
+\newcommand{\statPostedMedQAPreambleAI}{99} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): MedQA base active inquiry (percent) in the run with the ask-first preamble
+\newcommand{\statPostedAggDropPBelow}{\ensuremath{0.02}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): posted bound on the paired t p of the six aggregate drops

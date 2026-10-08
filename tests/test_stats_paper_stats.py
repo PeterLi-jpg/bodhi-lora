@@ -220,7 +220,9 @@ def test_posted_values_fixture_builds_generality_table(tmp_path):
     assert "point estimate only" in mistral["note"]
     assert cells["medqa__mistral-small-24b"]["aggregate_lora_minus_base"]["diff"] is None
     tab = (tmp_path / "tab_generality.tex").read_text()
-    assert "Med42-8B (Llama-3)$^{\\dagger}$" in tab
+    # Dagger: same family as the evaluator (D6). Asterisk: transcribed from the posts.
+    assert "Med42-8B$^{\\dagger\\ast}$" in tab
+    assert "[pending]" in tab
     # Set-aside cell sits in its own block after the kept cells.
     assert tab.index("MedQA") > tab.index("Med42-8B")
 
@@ -235,8 +237,78 @@ def test_committed_posted_values_main_cell_once_and_agrees(tmp_path):
     for name in ("tab_generality", "tab_generality_aggregate"):
         assert (tmp_path / f"{name}.tex").read_text().count("MedGemma-27B") == 1
     agg = (tmp_path / "tab_generality_aggregate.tex").read_text()
-    assert "MedQuAD & Mistral-Small-24B (Mistral) & \\ensuremath{0.672}" in agg
+    assert "MedQuAD & Mistral-Small-24B$^{\\ast}$ & \\ensuremath{0.672}" in agg
     assert "\\ensuremath{-0.086}" in agg
+
+
+def test_cross_cell_counts_leave_out_same_family_cells(tmp_path):
+    # D6: the Med42-8B cells share the evaluator's family and stay out of every
+    # cross-cell count; the submitted cell is in.
+    out = _run(tmp_path, ROOT / "data" / "rebuttal_cells" / "posted_values.json")
+    c = out["generality"]["cross_cell_counts"]
+    assert c["excluded_same_family"] == ["chatdoctor__med42-8b", "healthbench__med42-8b"]
+    # MedGemma, Mistral HB, BioMistral, ChatDoctor Mistral, MedQuAD Mistral.
+    assert c["cells_compared"] == 5
+    # Adapter at or above its teacher: Mistral HB 56.6 vs 54.2, ChatDoctor 58.6 vs 54.5,
+    # MedQuAD 26.5 vs 23.1. Behind: MedGemma 45.6 vs 47.9, BioMistral 10.1 vs 14.5.
+    assert c["adapter_at_or_above_teacher"] == 3
+    assert c["ai_rose"] == 4  # all but BioMistral (11.7 -> 10.1)
+    assert c["added_cells_aggregate_fell"] == c["added_cells_with_aggregate"] == 4
+    assert c["added_cells_drop_min"] == pytest.approx(0.014)
+    assert c["added_cells_drop_max"] == pytest.approx(0.086)
+    assert _macro(tmp_path, "CellMedQuADMistralBaseCoTScopeBounding") == "1.61"
+    assert _macro(tmp_path, "CellHBBioMistralBaseCoTActiveInquiry") == "14.5"
+
+
+def test_synced_cell_replaces_posted_values_and_gets_a_t_interval(tmp_path):
+    # Once make cells has written generated_values.json, a synced cell's row comes from
+    # it, loses the transcription mark and gets a paired t interval. The fake synced
+    # Mistral cell here is the MedGemma output, so its interval must equal Table 1's.
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "cell_values", ROOT / "rebuttal" / "analyses" / "cell_values.py")
+    cv = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(cv)
+    gen = tmp_path / "generated_values.json"
+    cv.run(ROOT / "data" / "rebuttal_cells" / "posted_values.json", tmp_path / "none",
+           ROOT / "results_modal", {"healthbench__mistral-small-24b": ROOT / "results_modal"}, gen)
+    out_dir = tmp_path / "out"
+    out = ps.run(ROOT / "results_modal", out_dir, None, None, None, None,
+                 ROOT / "data" / "rebuttal_cells" / "posted_values.json", gen)
+    cells = {c["id"]: c for c in out["generality"]["cells"]}
+    m = cells["healthbench__mistral-small-24b"]
+    assert m["source"] == "synced"
+    main = out["contrasts"]["LoRAvsBase"]["metrics"]["healthbench"]
+    # generated_values.json keeps 6 significant digits, hence the tolerance.
+    assert m["aggregate_lora_minus_base"]["diff"] == pytest.approx(main["diff"], abs=1e-5)
+    assert m["aggregate_lora_minus_base"]["ci95"] == pytest.approx(main["ci95"], abs=1e-5)
+    assert cells["healthbench__med42-8b"]["source"] == "posted"
+    tab = (out_dir / "tab_generality.tex").read_text()
+    row = next(line for line in tab.splitlines() if line.startswith("HB-Hard & Mistral-Small-24B"))
+    assert "ast" not in row and "pending" not in row
+    assert "\\ensuremath{[-0.011,\\,+0.020]}" in row
+    assert _macro(out_dir, "CellHBMistralAggregateDiffCI") == "[-0.011,\\,+0.020]"
+
+
+def test_completion_drop_and_filter_macros(generated):
+    out, out_dir = generated
+    assert _macro(out_dir, "CompletionDropPctBase") == "0.0"
+    assert _macro(out_dir, "CompletionDropPctBaseCoT") == "4.3"   # 957 of 1,000
+    assert _macro(out_dir, "CompletionDropPctLoRACoT") == "4.1"   # 959 of 1,000
+
+
+def test_cross_grader_side_run(tmp_path):
+    qdir = ROOT / "results" / "seed_42" / "eval"
+    if not (qdir / "base_no_wrapper.json").is_file():
+        pytest.skip("gitignored Qwen-graded side run not present")
+    out = ps.run(ROOT / "results_modal", tmp_path, None, None, None, None, None, None, qdir)
+    cg = out["cross_grader"]
+    assert {c["n_shared"] for c in cg["conditions"].values()} == {43}
+    assert all(c["grader"] == "Qwen/Qwen2.5-14B-Instruct" for c in cg["conditions"].values())
+    # The paper had r = 0.42 pooled (0.35, 0.37, 0.51) and Spearman 0.34; Spearman is 0.354.
+    assert cg["pooled"]["pearson_r"] == pytest.approx(0.4237, abs=1e-3)
+    assert cg["pooled"]["spearman_rho"] == pytest.approx(0.3542, abs=1e-3)
+    assert cg["conditions"]["lora_no_wrapper"]["minus_base_qwen"] == pytest.approx(-0.008, abs=5e-4)
 
 
 def test_missing_posted_values_prints_skip(tmp_path, capsys):

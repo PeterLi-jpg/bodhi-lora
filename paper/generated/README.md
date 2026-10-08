@@ -23,9 +23,11 @@ Then replace the body of a table with `\input{generated/tab_<name>}`.
 | `results_modal/seed_*/` | yes | every number about the submitted MedGemma cell |
 | `results_modal/irr/kappa_results.json` | yes | `tab_kappa`, `\statKappa*` |
 | `rebuttal/results/*.json` | yes | leakage, discrimination, odds ratio and second-person macros |
-| `data/rebuttal_cells/posted_values.json` | yes | `tab_generality`, `tab_generality_aggregate` |
-| `data/raw/healthbench_hard.jsonl` | no | `tab_theme` |
-| `data/sft_qwen_graded/seed_7_train.jsonl` | no | `tab_tau_calibration` |
+| `data/rebuttal_cells/posted_values.json` | yes | `tab_generality`, `tab_generality_aggregate`, `\statCell*` |
+| `data/rebuttal_cells/generated_values.json` | after `make cells` | replaces the posted values of each synced cell |
+| `data/raw/healthbench_hard.jsonl` | no | `tab_theme`, `\statDifficulty*`, `\statHardPrompts` |
+| `data/sft_qwen_graded/seed_7_train.jsonl` | no | `tab_tau_calibration`, `\statFilter*`, `\statTrainHardOverlapSeedSeven` |
+| `results/seed_42/eval/<condition>.json` | no | `\statCrossGrader*` (the seed-42 run graded by Qwen2.5-14B) |
 
 If an untracked input is missing, the script prints `SKIP` and leaves out that table.
 Pass other paths with `make numbers HB_HARD=... FILTER_TRAIN=...`.
@@ -42,8 +44,17 @@ details.
 ## Cross-cell tables
 
 `tab_generality` and `tab_generality_aggregate` take the first row (the submitted
-cell) from `results_modal/`. The other rows are posted values, transcribed from the
-OpenReview replies into `data/rebuttal_cells/posted_values.json`. Their raw outputs
-are not in the repo yet (audit PROV-1). These rows carry no CI. The script checks
-that the posted values of the submitted cell match `results_modal/` and stores the
-result in `numbers.json` under `generality.main_cell_check`.
+cell) from `results_modal/`. Each other row comes from
+`data/rebuttal_cells/generated_values.json` when `make cells` has written that cell
+from the synced raw outputs. Otherwise the row holds the posted values, transcribed
+from the OpenReview replies into `data/rebuttal_cells/posted_values.json`, and carries
+an asterisk. The raw outputs of the added cells are not in the repo yet (audit PROV-1).
+
+A synced row gets a paired t interval on LoRA minus Base for the aggregate score. A
+posted row has means only, so its interval reads "pending". A dagger marks a cell whose
+base model shares the evaluator's Llama-3 family (decision D6). The `\statCells*`
+counts leave those cells and the set-aside MedQA cell out, and include the submitted
+cell.
+
+The script checks that the posted values of the submitted cell match `results_modal/`
+and stores the result in `numbers.json` under `generality.main_cell_check`.
