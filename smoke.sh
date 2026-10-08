@@ -15,8 +15,7 @@
 # A passing smoke means the pipeline does NOT crash — it does NOT prove
 # MedGemma-27B training will succeed. 27B-specific bugs (FSDP+LoRA
 # sharding edge cases, quantization behavior, tensor-parallel topology)
-# are not exercised here. For a 27B-targeted smoke, run smoke_27b_tpu.sh
-# on a v6e-8 (~30 min).
+# are not exercised here. There is no 27B smoke in the repo.
 #
 
 set -euo pipefail
