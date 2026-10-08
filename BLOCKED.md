@@ -38,116 +38,98 @@ Action:
    scripts/export_anonymous.sh ../_export_review --deny-file "$PRIVATE/deny.txt"
    ```
 
-   The gate passed on 2026-10-08 with the rater names (230 files). With co-author
+   The gate passed on 2026-10-08 with the rater names (387 files at 624a1db). With co-author
    names it will flag `paper/references.bib`, because the cited BODHI papers
    (`bodhi2026`, `bodhiplos2026`) list them. Decide whether to keep that third-person
    self-citation (the submitted version had `bodhi2026`).
 4. Change the one line `\newcommand{\codeurl}{...}` in `paper/main.tex:47` to the new
    mirror and run `make paper`.
 
-## 2. Confirm or amend decisions D1 to D16
+## 2. Review the applied decisions D1 to D16
 
-Why: the first author's delegate made D1 to D16 on 2026-10-07. Many audit items are
-closed on them (title, scope, Med42-8B handling, canonical paper, statistical unit).
-Until you confirm them, those closures are provisional. [G6]
+Why: you delegated D1 to D16 on 2026-10-07, and they are applied: the title, the scope,
+the Med42-8B handling, the canonical paper and the statistical unit all follow them, and
+the audit items closed on them are closed. Three got notes after the sync of 2026-10-08:
+D12 (the added cells now come from the raw outputs), D1 (the GCS bucket is gone, item 3)
+and D6 (the askers count without Med42-8B). [G6]
 
-Action: read [docs/DECISIONS.md](docs/DECISIONS.md). Add a dated entry under the old
-ones that confirms each decision or says what changes. Then delete the "Status
-(2026-10-08)" paragraph at the top. Do not edit the old entries.
+Action: read [docs/DECISIONS.md](docs/DECISIONS.md), the "Status (2026-10-08)" paragraph
+and the notes at the end. To revise a decision, add a dated entry below it that says what
+changes and why; do not edit the old entries. Nothing here blocks the paper.
 
-## 3. Confirm the submitted adapter recipe on GCS (D1)
+## 3. Find another copy of the submitted adapter configs (D1)
 
-Why: the paper reports r=8, alpha=16, dropout 0.05, q/k/v target modules and an
-exported step of 250 or 300. These come from the launcher and trainer code in
-`legacy/`, not from the saved adapters. [D1, HYG-4, PROV-6, PROV-11]
+Why: the paper reports r=8, alpha=16, dropout 0.05, q/k/v target modules and an exported
+step of 250 or 300 for the MedGemma-27B cell. These come from the launcher and trainer
+code in `legacy/`, not from the saved adapters. The adapters were in
+`gs://bohdi-runs-tokyo-micron/prod-v39-tunix-27b-neurips/`. On 2026-10-08 that bucket
+returned 404, and its project has no buckets left. So the GCS check cannot run, and the
+paper now says that the values come from the code and could not be checked against the
+saved files (Section 3.3, the Table F.1 caption, the Limitations and the checklist).
+[D1, HYG-4, PROV-6, PROV-11]
 
-Action:
+What evidence remains:
+
+- The code that trained and exported the adapters: `legacy/tpu/launch_5seeds_tunix.sh`
+  (exports with `--r 8 --alpha 16`), `legacy/configs/lora_medgemma27b_tunix.yaml` and
+  `legacy/scripts/export_tunix_lora_to_peft.py`. The comments above Table F.1 in
+  `paper/main.tex` cite each value.
+- The only MedGemma adapter in git, `607440e:checkpoints/seed_42/best/adapter_config.json`
+  (r=8, alpha=16). It comes from an early HF-path run on 838 traces, not from the
+  evaluated adapters, so it supports the rank only indirectly.
+- Possibly the Modal volume `bohdi-data-cache`. `legacy/modal_eval.py` (lines 119 and
+  435-447) pulled each seed's `checkpoints/best/` (with `adapter_config.json`) and its
+  `train.jsonl` and `val.jsonl` from the bucket into that volume, at `/seed_<N>/`, before
+  the evaluation. A Modal volume persists until someone deletes it. No other store is named
+  in `legacy/` or `results_modal/`: the second volume, `bohdi-hf-cache`, holds base-model
+  weights only.
+
+Action, with your Modal login (reading a volume uses no GPU; `-` writes to stdout, per the
+help of the installed modal 1.4.2):
 
 ```bash
-gcloud auth login
-B=gs://bohdi-runs-tokyo-micron/prod-v39-tunix-27b-neurips
+python3 -m modal volume ls bohdi-data-cache
 for s in 7 13 42 99 101; do
   echo "seed $s"
-  gsutil cat "$B/seed_$s/checkpoints/best/adapter_config.json" | python3 -c \
+  python3 -m modal volume get bohdi-data-cache "seed_$s/checkpoints/best/adapter_config.json" - | python3 -c \
     'import json,sys; d=json.load(sys.stdin); print(d["r"], d["lora_alpha"], d.get("lora_dropout"), sorted(d["target_modules"]))'
-  gsutil ls "$B/seed_$s/checkpoints/orbax/"
-  gsutil ls -r "$B/seed_$s/" | grep -E 'train\.log|export_lora\.log|trainer_state\.json|train\.jsonl|val\.jsonl'
+  python3 -m modal volume ls bohdi-data-cache "seed_$s"
 done
 ```
 
 Expected from the code: `8 16 0.0 ['k_proj', 'q_proj', 'v_proj']` (the exporter writes
-dropout 0.0; training used 0.05). The orbax listing shows whether step 250 or 300 was
-the newest complete checkpoint. Copy any `train.log` and `export_lora.log` you find, and
-count the lines of each seed's `train.jsonl` and `val.jsonl` if they exist (PROV-11).
+dropout 0.0; training used 0.05). The exported step is not in `adapter_config.json`; look
+for a trainer or export log next to it. If `train.jsonl` and `val.jsonl` are there, count
+their lines per seed (PROV-11). Any other copy (a TPU VM disk, a local download) works the
+same way.
 
-After, if the values match:
+After, if the values match: replace "could not check" in Section 3.3, the Table F.1
+caption and the Limitations with the confirmation, update the comments at the top of
+Section 3.3 and above Table F.1, and drop the "not confirmed" lines in
+`REPRODUCIBILITY.md` and `KNOWN_ISSUES.md`. If a filter log turns up, replace the hand
+constant `FILTER_KEPT, FILTER_POOL = 3129, 4000` in `scripts/paper_stats.py` with a value
+read from it. If they do not match, correct Table F.1 and Section 3.3 instead. If no copy
+exists, nothing changes: the paper already says what it cannot check.
 
-- Delete the PENDING comments at `paper/main.tex:276-277` and `:887-888`, the words
-  "pending the trainer files" at `:283`, the caption sentence at `:899`, and the
-  Limitations sentence at `:624`. State the exported step per seed.
-- Drop "pending confirmation" in `REPRODUCIBILITY.md` (lines 37-38 and 63) and the
-  entry "The submitted adapter config is not confirmed" in `KNOWN_ISSUES.md`.
-- If a seed's filter log turns up, replace the hand constant
-  `FILTER_KEPT, FILTER_POOL = 3129, 4000` (`scripts/paper_stats.py:154`) with a value
-  read from it.
+## 4. Sync the added cells (done) and freeze the host environments
 
-If they do not match, correct Table F.1 and Section 3.3 instead.
+Done on 2026-10-08. The raw outputs and logs were copied read-only from the GPU host
+(60c1a54). `make cells` computes every added-cell value, the paired tests and the per-cell
+tau, trace counts and adapter recipe (5d5890e, d5d5637, b7bbdfb). The paper takes them
+from there, with no "transcribed" footnote, names the MedQA run (the preamble run) and the
+incomplete host runs (38b800e). The records followed (bd40a05, 5f3f858, 624a1db): one
+posted value was wrong (W21), C24 is done, and `results_rebuttal/` left the `PENDING` list
+of `scripts/check_doc_paths.py`. [PROV-1, PROV-2, PROV-3, CR-1, C24, W11, W12]
 
-## 4. Sync the added cells and replace the posted values
-
-Why: every number for the six added cells and MedQA is transcribed from the posted
-replies. The raw outputs exist only on the shared H100 host. Table 3 shows them with an
-asterisk and the interval "pending". The per-cell tau and the MedQA run identity are in
-the host's logs. [PROV-1, PROV-2, PROV-3, CR-1, C24, W11, W12]
-
-Action, from the repo root on your machine:
+One step remains. It needs a login to the host (REPRO-10):
 
 ```bash
-brev login
-brev ls          # find the shared H100 instance
-brev refresh     # adds it to your ssh config
-ssh mit-critical-data-1 'du -sh /data/PROJECTS/bohdi/results_rebuttal; ls /data/PROJECTS/bohdi/results_rebuttal'
-
-rsync -av --prune-empty-dirs --include '*/' --include '*.json' --exclude '*' \
-    mit-critical-data-1:/data/PROJECTS/bohdi/results_rebuttal/ results_rebuttal/
-mkdir -p logs/host
-rsync -av mit-critical-data-1:/data/PROJECTS/bohdi/logs/ logs/host/
-
-du -sh results_rebuttal   # results_modal/ is 80 MB for one cell; decide what to commit
-make cells                # writes data/rebuttal_cells/generated_values.json and lists every
-                          # posted value that differs; then runs rebuttal/analyses/quality_drop.py
-git add data/rebuttal_cells/generated_values.json rebuttal/results/quality_drop.json
-make numbers && make paper
+ssh mit-critical-data-1 'cd /data/PROJECTS/bohdi && .venv/bin/pip freeze' > requirements-train.lock
+ssh mit-critical-data-1 'cd /data/PROJECTS/bohdi && .venv-infer/bin/pip freeze' > requirements-infer.lock
 ```
 
-If a folder name on the host differs from the expected `<bench>__<tag>`, pass
-`--cell-dir <cell id>=<path>` to `rebuttal/analyses/cell_values.py`. The expected names
-are in [data/rebuttal_cells/README.md](data/rebuttal_cells/README.md).
-
-How the posted values get replaced: do not overwrite
-`data/rebuttal_cells/posted_values.json`. It stays as the record of what was posted.
-`scripts/paper_stats.py` takes each synced cell from `generated_values.json` instead,
-drops its asterisk and computes its paired t(4) interval. Do not use the host's
-`multi_seed_summary.json` files: before `55f6c7c`, each one held a single seed.
-
-After:
-
-- Add every posted value that `make cells` reports as different to
-  `rebuttal/withdrawals.md`.
-- Read each cell's tau and kept count from the filter logs
-  (`grep -h -E 'tau=|Kept [0-9]+/[0-9]+' logs/host/filter_*.log`). Fill them into
-  Appendix J and remove the PENDING comments at `paper/main.tex:945` and `:1281`.
-- Name the MedQA run: check whether `results_rebuttal/medqa__*` was generated after
-  commit `035d85f` (which removed the preamble). Then give MedQA its Table 3 row, update
-  the abstract sentence about the fifth cell, and set C24 to done in
-  `rebuttal/commitments.md`.
-- Recount the posted askers-gap without the Med42-8B cells (D6).
-- In `RESULTS.md`, change the status of each synced cell from posted to raw. Remove
-  `results_rebuttal/` from `PENDING` in `scripts/check_doc_paths.py`.
-- While logged in to the host, freeze the environments that made the posted cells
-  (REPRO-10): `ssh mit-critical-data-1 'cd /data/PROJECTS/bohdi && .venv/bin/pip freeze'
-  > requirements-train.lock` and the same with `.venv-infer` into
-  `requirements-infer.lock`. Commit both.
+Commit both, and point `REPRODUCIBILITY.md` section 4 at them. The environment may have
+changed since July, so record the freeze date with them.
 
 ## 5. Commit a dated analysis plan before any new GPU run
 
@@ -196,7 +178,7 @@ PROFILE=rebuttal-posted MODEL=mistralai/Mistral-Small-24B-Instruct-2501 BENCH=he
 
 Outputs land in each cell's `seed_<N>/eval/` as `base_clarify.json`,
 `base_verbalized_confidence.json` and `epistemic_scores_baselines.json`. Sync them as
-in item 4.
+in [REPRODUCIBILITY.md](REPRODUCIBILITY.md) section 7.
 
 Compute cost (rough estimate, not measured): each seed runs two single-pass conditions
 of 200 prompts plus grading, about a third of a cell's evaluation. The posted replies
@@ -339,6 +321,12 @@ Why: none of this ran, because D16 forbids remote changes in the cleanup.
 
 ## 11. Other runs that need GPU time or people
 
+- **MedQA without the preamble (optional).** The only MedQA run used the prompt that told
+  the model to ask, so the paper sets the cell aside. A run with the fixed prompt (035d85f)
+  would test the recipe there:
+  `MODEL=mistralai/Mistral-Small-24B-Instruct-2501 CONFIG=rebuttal/configs/lora_mistral_small_24b_qlora.yaml BENCH=medqa bash rebuttal/launch/run_cell.sh`
+  (about one 24B cell, 8 to 13 H100-hours by `rebuttal/PLAN.md`). Rebuild the MedQA JSONL
+  first so the old preamble is gone. It needs a dated plan (item 5).
 - **Contamination probe (NUM-7).** Appendix A types its numbers by hand and says the
   output was not kept. Run it on a GPU, commit the JSON, and add an emitter to
   `scripts/paper_stats.py`:
@@ -378,6 +366,10 @@ Why: none of this ran, because D16 forbids remote changes in the cleanup.
 - **Hugging Face pins.** With your token, read the revision of
   `OpenMeditron/Meditron3-8B` and add it to `configs/families.yaml`; compare the LFS
   sha256 of `NousResearch/Meta-Llama-3.1-8B-Instruct` with `meta-llama/Llama-3.1-8B-Instruct`.
+- **Full responses of the added cells.** The per-seed eval JSON (about 370 MB) is in the
+  gitignored `results_rebuttal/`, in a local archive outside the repo and on the host. The
+  repo tracks only what `make numbers` needs. Decide whether to archive it with its
+  sha256, as for the training traces below; reviewers who ask for per-cell outputs need it.
 - **Training traces of the submitted cell.** `data/sft_qwen_graded/seed_7_train.jsonl`
   (49 MB) is ignored. `make numbers` reads its scores from the tracked
   `data/derived/seed_7_filter_scores.json`; `make kappa` and `make derived` still need
