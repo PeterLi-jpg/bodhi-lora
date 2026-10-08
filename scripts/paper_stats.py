@@ -1112,6 +1112,16 @@ def rebuttal_section(rdir: Path, out, macros):
                        "prompt-clustered bootstrap 95% CI (pp)")
             for cfg in CONDITIONS:
                 c = sec["configs"][cfg]
+                ct = COND_TOKEN[cfg]
+                macros.add(f"AskSelfContained{tok}{ct}", fmt(100 * c["self_contained_rate"], 1),
+                           f"[{label}] active-inquiry rate on self-contained prompts (percent)")
+                macros.add(f"AskContextDependent{tok}{ct}", fmt(100 * c["context_dependent_rate"], 1),
+                           f"[{label}] active-inquiry rate on context-dependent prompts (percent)")
+                macros.add(f"Discrimination{tok}{ct}", fmt(100 * c["discrimination"], 1, sign=True),
+                           f"[{label}] context-dependent minus self-contained asking rate (pp)")
+                lo, hi = c["discrimination_ci95"]
+                macros.add(f"Discrimination{tok}{ct}CI", fmt_ci(100 * lo, 100 * hi, 1),
+                           "prompt-clustered bootstrap 95% CI (pp)")
                 if "odds_ratio" in c:
                     macros.add(f"AskOddsRatio{tok}{COND_TOKEN[cfg]}", fmt(c["odds_ratio"], 2),
                                f"[{label}] odds ratio of asking, context-dependent vs self-contained")
@@ -1438,7 +1448,9 @@ def build_tables(out, seeds) -> dict[str, str]:
     top = ["uncertainty_ack", "context_seeking", "red_flag", "scope_bounding", "hedging_quality", "specificity"]
     bottom = ["questions", "active_inquiry", "red_flag_rate", "scope_bounded_rate", "specificity_rate",
               "blanket_disclaimer", "appropriate_hedging"]
-    arrow = {"blanket_disclaimer": "$\\downarrow$"}
+    # Asking helps only where facts are missing, so questions per response has no
+    # better direction (audit CR-19); the caption explains the circle.
+    arrow = {"blanket_disclaimer": "$\\downarrow$", "questions": "$\\circ$"}
     blocks = []
     for keys in (top, bottom):
         blocks.append([[METRIC[k]["label"] + " " + arrow.get(k, "$\\uparrow$")]
@@ -1590,6 +1602,9 @@ def build_tables(out, seeds) -> dict[str, str]:
     if "generality" in out:
         t["tab_generality"] = generality_table(out)
         t["tab_generality_aggregate"] = generality_aggregate_table(out)
+        dims_tab = cell_dimensions_table(out)
+        if dims_tab is not None:
+            t["tab_cell_dimensions"] = dims_tab
     return t
 
 
@@ -1706,6 +1721,29 @@ def generality_aggregate_table(out) -> str:
                                "LoRA $-$ Base"], _blocks(out, main, row),
                    "results_modal (first row, seed means) and data/rebuttal_cells/ (other rows: "
                    "generated_values.json when synced, else posted_values.json, marked *)")
+
+
+def cell_dimensions_table(out) -> str | None:
+    """Every epistemic dimension under Base, Base+CoT and LoRA, for each added cell that
+    has all seven posted (only MedQuAD so far), so the costs sit next to the gains."""
+    dims = [("active_inquiry_pct", 1), ("uncertainty_ack", 2), ("context_seeking", 2), ("red_flag", 2),
+            ("scope_bounding", 2), ("hedging_quality", 2), ("specificity", 2)]
+    cells = [c for c in out["generality"]["cells"]
+             if all(_mean(c, cond, m) is not None for cond in ("base", "lora") for m, _ in dims)]
+    if not cells:
+        return None
+    blocks = []
+    for c in cells:
+        mark = "$^{\\ast}$" if c["source"] == "posted" else ""
+        block = [[f"\\multicolumn{{5}}{{l}}{{\\emph{{{c['benchmark']}, {c['base_model']}}}{mark}}}"]]
+        for m, dp in dims:
+            key = POSTED_METRIC[m][0]
+            b, t, lo = (_mean(c, cond, m) for cond in ("base", "base_cot", "lora"))
+            block.append([METRIC[key]["label"], _num(b, dp), _num(t, dp), _num(lo, dp),
+                          _num(lo - b, dp, sign=True)])
+        blocks.append(block)
+    return tabular("lrrrr", ["Dimension", "Base", "Base+\\bodhi{}", "LoRA", "LoRA $-$ Base"], blocks,
+                   "data/rebuttal_cells/ (generated_values.json when synced, else posted_values.json, marked *)")
 
 
 # ---------------------------------------------------------------------------

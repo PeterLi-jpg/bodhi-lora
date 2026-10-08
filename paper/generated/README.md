@@ -64,5 +64,8 @@ base model shares the evaluator's Llama-3 family (decision D6). The `\statCells*
 counts leave those cells and the set-aside MedQA cell out, and include the submitted
 cell.
 
+`tab_cell_dimensions` lists every epistemic dimension under Base, Base+BODHI and LoRA for
+each added cell that has all seven posted. Only MedQuAD does so far.
+
 The script checks that the posted values of the submitted cell match `results_modal/`
 and stores the result in `numbers.json` under `generality.main_cell_check`.
