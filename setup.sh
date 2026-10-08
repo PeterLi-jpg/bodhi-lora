@@ -37,6 +37,18 @@ mkdir -p logs data/raw data/sft eval checkpoints
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 
+# vLLM serving needs its own env (requirements-infer.txt explains why). vLLM
+# wheels are Linux and CUDA only, so a Mac or CPU dev box skips this step.
+if [ "$(uname -s)" = "Linux" ] && [ "${SKIP_INFER_ENV:-0}" != "1" ]; then
+    echo
+    echo "=== .venv-infer (requirements-infer.txt) ==="
+    python -m venv .venv-infer
+    .venv-infer/bin/python -m pip install --upgrade pip
+    .venv-infer/bin/python -m pip install -r requirements-infer.txt
+else
+    echo "skipping .venv-infer (not Linux, or SKIP_INFER_ENV=1); vLLM stages will not run here"
+fi
+
 echo
 echo "=== pip check ==="
 if ! python -m pip check; then

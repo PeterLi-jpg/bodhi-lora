@@ -4,7 +4,9 @@
 # locally before burning slurm time on the 27B run.
 #
 # Prereqs:
-#   - Python env with requirements installed (bash setup.sh)
+#   - Python envs installed by bash setup.sh: the active env (training) and
+#     .venv-infer (vLLM). INFER_PY defaults to .venv-infer/bin/python when it
+#     exists, else python; TRAIN_PY defaults to python.
 #   - HF_TOKEN only if using a gated Gemma / MedGemma smoke model
 #
 # Runs in ~5-10 min on a single consumer GPU. CPU-only works but is slow.
@@ -38,6 +40,10 @@ N_EXAMPLES="${N_EXAMPLES:-3}"
 SMOKE_SEED="${SMOKE_SEED:-42}"
 SEED_IDS="data/raw/hard_seed_${SMOKE_SEED}.json"
 RUNTIME_CONFIG="data/sft/smoke/runtime_train_config.yaml"
+# vLLM stages need the inference env (requirements-infer.txt); training needs
+# the training env (requirements.txt).
+INFER_PY="${INFER_PY:-$([ -x .venv-infer/bin/python ] && echo .venv-infer/bin/python || echo python)}"
+TRAIN_PY="${TRAIN_PY:-python}"
 
 case "$MODEL" in
     google/gemma-*|google/medgemma-*)
@@ -100,7 +106,7 @@ echo "--- 1/4: download data ---"
 python scripts/download_data.py
 
 echo "--- 2/4: generate $N_EXAMPLES BOHDI traces ---"
-python scripts/generate_traces.py \
+"$INFER_PY" scripts/generate_traces.py \
     --model "$MODEL" \
     --datasets healthbench_hard \
     --output data/sft/smoke/raw_traces.jsonl \
@@ -112,7 +118,7 @@ echo "--- 3/4: grade and filter (production threshold to exercise the gate) ---"
 # grade + filter quality gate. With small N_EXAMPLES it's possible 0 traces
 # survive; that's fine as smoke output (train_lora.py errors loudly on empty
 # train.jsonl) and surfaces grader regressions before cluster time burns.
-python scripts/filter_traces.py \
+"$INFER_PY" scripts/filter_traces.py \
     --input data/sft/smoke/raw_traces.jsonl \
     --healthbench-data data/raw/healthbench_hard.jsonl \
     --grader-model "$GRADER" \
@@ -132,7 +138,7 @@ echo "--- 4a/4: train 1 epoch on the smoke set ---"
 # them, train_lora.py reads the runtime yaml's data.train_file, which
 # inherits the base config's data/sft/{train,val}.jsonl and silently
 # trains on stale full-pipeline output if any happens to be present.
-python scripts/train_lora.py \
+"$TRAIN_PY" scripts/train_lora.py \
     --config "$RUNTIME_CONFIG" \
     --train-file data/sft/smoke/train.jsonl \
     --val-file data/sft/smoke/val.jsonl
@@ -144,7 +150,7 @@ python scripts/make_bootstrap_eval_ids.py \
     --healthbench-jsonl data/raw/healthbench_hard.jsonl \
     --seed "$SMOKE_SEED" \
     --output "$SEED_IDS"
-python scripts/eval_healthbench.py \
+"$INFER_PY" scripts/eval_healthbench.py \
     --model "$MODEL" \
     --lora-path checkpoints/best \
     --sample-ids "$SEED_IDS" \
