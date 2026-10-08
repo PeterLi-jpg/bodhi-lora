@@ -100,14 +100,19 @@ def _expand_seed_dirs(raw_patterns):
 
 
 def _seed_label(path):
-    """Recover the seed number from a directory name like eval/seed_42/."""
-    base = Path(path).name
-    if base.startswith("seed_"):
-        try:
-            return int(base.removeprefix("seed_"))
-        except ValueError:
-            pass
-    return base
+    """Recover the seed number from a path like eval/seed_42/ or cell/seed_42/eval/.
+
+    rebuttal/launch/run_cell.sh passes <cell>/seed_<N>/eval, so the seed is in
+    a parent directory, not the last one. Reading only the last name gave every
+    seed the label "eval", and the per-seed dict kept one seed.
+    """
+    for part in reversed(Path(path).parts):
+        if part.startswith("seed_"):
+            try:
+                return int(part.removeprefix("seed_"))
+            except ValueError:
+                pass
+    return Path(path).name
 
 
 def _load_eval_json(path):

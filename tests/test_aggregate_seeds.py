@@ -265,3 +265,31 @@ def test_main_aborts_on_malformed_seed_json(tmp_path, monkeypatch):
         ag.main()
     assert "malformed JSON" in str(exc.value)
     assert str(bad_path) in str(exc.value)
+
+
+def test_main_keeps_every_seed_when_eval_dir_is_nested(tmp_path, monkeypatch):
+    """run_cell.sh passes <cell>/seed_<N>/eval. Each seed must keep its own
+    label; before the fix all three were labelled "eval" and only one survived."""
+    ag = _import_aggregate_seeds()
+
+    hb_path = tmp_path / "healthbench.jsonl"
+    _write_healthbench_jsonl(hb_path)
+    seed_dirs = []
+    for seed, score in {7: 0.4, 13: 0.5, 42: 0.6}.items():
+        d = tmp_path / "cell" / f"seed_{seed}" / "eval"
+        _write_seed_dir(d, {c: score for c in
+                            ("base_no_wrapper", "base_bodhi", "lora_no_wrapper", "lora_bodhi")})
+        seed_dirs.append(str(d))
+
+    out_path = tmp_path / "summary.json"
+    monkeypatch.setattr(sys, "argv", [
+        "aggregate_seeds.py", "--seed-dirs", *seed_dirs,
+        "--healthbench", str(hb_path), "--output", str(out_path),
+    ])
+    ag.main()
+
+    summary = json.loads(out_path.read_text())
+    assert summary["seeds"] == [7, 13, 42]
+    agg = summary["configs"]["base_no_wrapper"]["overall_mean"]
+    assert agg["n_seeds"] == 3
+    assert agg["mean"] == pytest.approx(0.5)
