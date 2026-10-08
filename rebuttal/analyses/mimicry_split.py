@@ -22,6 +22,14 @@ with a discrimination index:
 Template mimicry (asking everywhere) collapses discrimination toward Base. Internalized
 calibration keeps LoRA's discrimination close to the wrapper's and well above Base.
 
+A difference of proportions is compressed at low base rates, so each config also gets
+the scale-free odds ratio of asking, context_dependent vs self_contained:
+
+  odds_ratio(config) = [cd / (1 - cd)] / [sc / (1 - sc)]
+
+with a CI from the same prompt-level bootstrap resamples. (The ORs quoted to LxMF,
+1.16 / 1.54 / 1.56, were computed by hand from the rates; this is the scripted version.)
+
 Runs against the committed results in results_modal/. No inference, no H100.
 """
 
@@ -62,10 +70,10 @@ CLINICIAN_RE = re.compile(
 )
 
 
-def load_prompt_meta():
+def load_prompt_meta(path=HARD):
     """prompt_id -> {theme, clarify_rubric, clinician_posed}."""
     meta = {}
-    with open(HARD) as f:
+    with open(path) as f:
         for line in f:
             line = line.strip()
             if not line:
@@ -145,6 +153,14 @@ def _rate(bools):
     return (sum(1.0 for b in bools if b) / len(bools)) if bools else float("nan")
 
 
+def odds_ratio(cd_rate, sc_rate):
+    """Odds of asking on context_dependent prompts over odds on self_contained ones.
+    NaN when a rate is 0 or 1 (the odds are then 0 or infinite)."""
+    if not (0 < cd_rate < 1 and 0 < sc_rate < 1):
+        return float("nan")
+    return (cd_rate / (1 - cd_rate)) / (sc_rate / (1 - sc_rate))
+
+
 def build_pid_index(rows, labelfn, meta):
     """config -> pid -> {"group":..., "ai":[bool,...]} pooling responses across seeds."""
     idx = {cfg: {} for cfg in CONFIG_ORDER}
@@ -175,25 +191,32 @@ def discrimination(pid_map, pids):
 
 def bootstrap_disc(idx, eval_pids, B=5000, seed=0):
     """Prompt-level bootstrap. Resample prompt_ids (paired across configs) B times;
-    return per-config discrimination CI and the LoRA-Base discrimination-diff CI."""
+    return per-config discrimination CI, the LoRA-Base discrimination-diff CI and the
+    per-config odds-ratio CI. The ORs ride on the same resamples, so adding them did not
+    change the discrimination CIs."""
     import numpy as np
     rng = np.random.default_rng(seed)
     pids = list(eval_pids)
     per_cfg = {cfg: [] for cfg in CONFIG_ORDER}
+    or_cfg = {cfg: [] for cfg in CONFIG_ORDER}
     diff_lora_base = []
     for _ in range(B):
         samp = [pids[i] for i in rng.integers(0, len(pids), len(pids))]
         ds = {}
         for cfg in CONFIG_ORDER:
-            d, _, _ = discrimination(idx[cfg], samp)
+            d, cd, sc = discrimination(idx[cfg], samp)
             per_cfg[cfg].append(d)
+            or_cfg[cfg].append(odds_ratio(cd, sc))
             ds[cfg] = d
         diff_lora_base.append(ds["lora_no_wrapper"] - ds["base_no_wrapper"])
 
     def ci(a):
+        a = np.asarray(a, dtype=float)
+        a = a[np.isfinite(a)]
         return float(np.percentile(a, 2.5)), float(np.percentile(a, 97.5))
 
-    return {cfg: ci(per_cfg[cfg]) for cfg in CONFIG_ORDER}, ci(diff_lora_base)
+    return ({cfg: ci(per_cfg[cfg]) for cfg in CONFIG_ORDER}, ci(diff_lora_base),
+            {cfg: ci(or_cfg[cfg]) for cfg in CONFIG_ORDER})
 
 
 def report(idx, eval_pids, meta, labelname, out):
@@ -205,21 +228,26 @@ def report(idx, eval_pids, meta, labelname, out):
     print(f"  context_dependent={gcount.get('context_dependent',0)}  "
           f"self_contained={gcount.get('self_contained',0)}   (pooled 5 seeds)")
     print("=" * 78)
-    header = f"{'Config':22s} {'context_dep':>12s} {'self_cont':>12s} {'discrim':>10s} {'95% CI (pp)':>18s}"
+    header = (f"{'Config':22s} {'context_dep':>12s} {'self_cont':>12s} {'discrim':>10s} "
+              f"{'95% CI (pp)':>18s} {'odds ratio [95% CI]':>22s}")
     print(header)
     print("-" * len(header))
-    ci_cfg, diff_ci = bootstrap_disc(idx, eval_pids)
+    ci_cfg, diff_ci, or_ci = bootstrap_disc(idx, eval_pids)
     disc = {}
     label_out = {"groups": dict(gcount), "configs": {}}
     for cfg in CONFIG_ORDER:
         d, cd, sc = discrimination(idx[cfg], eval_pids)
         disc[cfg] = d
         lo, hi = ci_cfg[cfg]
+        orr = odds_ratio(cd, sc)
+        olo, ohi = or_ci[cfg]
         print(f"{CONFIG_DISPLAY[cfg]:22s} {100*cd:11.1f}% {100*sc:11.1f}% "
-              f"{100*d:8.1f}pp   [{100*lo:+5.1f},{100*hi:+6.1f}]")
+              f"{100*d:8.1f}pp   [{100*lo:+5.1f},{100*hi:+6.1f}]   "
+              f"{orr:5.2f} [{olo:4.2f},{ohi:5.2f}]")
         label_out["configs"][cfg] = {
             "context_dependent_rate": cd, "self_contained_rate": sc,
             "discrimination": d, "discrimination_ci95": [lo, hi],
+            "odds_ratio": orr, "odds_ratio_ci95": [olo, ohi],
         }
     dd = disc["lora_no_wrapper"] - disc["base_no_wrapper"]
     print("-" * len(header))
@@ -240,9 +268,11 @@ def report(idx, eval_pids, meta, labelname, out):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default=str(REPO / "rebuttal" / "results" / "mimicry_split.json"))
+    # data/raw/*.jsonl is gitignored; pass the path when the file lives elsewhere.
+    ap.add_argument("--healthbench", default=str(HARD))
     args = ap.parse_args()
 
-    meta = load_prompt_meta()
+    meta = load_prompt_meta(args.healthbench)
     rows = load_examples()
     eval_pids = sorted({r["prompt_id"] for r in rows})
 
