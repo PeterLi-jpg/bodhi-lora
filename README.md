@@ -30,9 +30,9 @@ else. Renaming the remote repo is deferred (docs/DECISIONS.md, D15).
   returned grades, and agreement with the LLM grader is below the pre-registered
   target of 0.6. The paper does not claim physician validation (D5).
 - **The adapter has a cost.** We report the seed-level paired difference LoRA minus
-  Base, with a t(4) 95% interval, for every cell. The aggregate score falls in all six
-  added cells that the paper reports. We make no equivalence or non-inferiority claim
-  (D2).
+  Base, with a t(4) 95% interval, for every cell. The aggregate score falls in six of
+  the seven added cells. It rises only in the MedQA cell, which does not measure the
+  target behavior. We make no equivalence or non-inferiority claim (D2).
 - **Med42-8B cells carry a dagger.** Med42-8B is a Llama-3 model, the same family as the
   evaluator. That breaks the paper's grader-separation rule, so these cells are not
   used in any cross-model statement (D6).
@@ -76,7 +76,8 @@ per-cell configs and the differences between the two pipelines.
 
 ## Reproduce the paper
 
-Every number in the paper comes from a script. Nothing is typed by hand.
+The rule is that every number in the paper comes from a script and none is typed by
+hand (docs/CONVENTIONS.md, rule 2).
 
 ```bash
 make test       # pytest suite
@@ -167,4 +168,4 @@ see [NOTICE](NOTICE) and [docs/REUSE.md](docs/REUSE.md).
 
 ## Citation
 
-The paper is under review. A citation entry will follow the decision.
+There is no citation entry yet. One will follow publication.
