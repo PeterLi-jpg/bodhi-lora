@@ -6,13 +6,17 @@ build/
 .pytest_cache/
 
 data/raw/*.jsonl
+# Per-seed eval draws; scripts/make_bootstrap_eval_ids.py rebuilds them from the seed.
+data/raw/hard_seed_*.json
 data/sft/*.jsonl
+data/sft/seed_*/
 data/sft/smoke/
 data/sft/figures/
 # Filtered training traces (49 MB per seed). Regenerable from Stages 1-2.
 data/sft_qwen_graded/
 eval/smoke/
 eval/*.json
+eval/seed_*/
 eval/figures/
 
 # Model weights, optimizer state and tokenizer copies never go in git.
