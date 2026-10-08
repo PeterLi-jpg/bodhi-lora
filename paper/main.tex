@@ -310,15 +310,17 @@ epistemic dimensions. Generation ran in vLLM on A100-80GB GPUs (Modal) with a 4,
 and greedy decoding, with the adapter merged into the base weights.
 
 \paragraph{Seven epistemic dimensions.} The epistemic pass grades (1) uncertainty acknowledgment
-(0--2), (2) active inquiry (whether the answer asks the user a question), (3) context-seeking
-(0--2, how substantive the questions are), (4) red-flag identification (0--2), (5) scope bounding
+(0--2), (2) active inquiry (whether the answer asks at least one direct clarifying question), (3)
+context-seeking (0--2; a 2 needs a direct question in a case that needs more context), (4)
+red-flag identification (0--2), (5) scope bounding
 (0--2), (6) specificity (0--2) and (7) hedging quality (0--2, with flags for appropriate hedging
 and for a blanket disclaimer). The dimensions cover three functions. \emph{Self-assessment}
 (uncertainty acknowledgment, hedging quality, specificity) asks whether the answer represents what
 the model does and does not know. \emph{Information-seeking} (active inquiry, context-seeking)
 asks whether it gathers missing facts before it advises \citep{simpkin2016tolerating}. \emph{Risk
 management} (red-flag identification, scope bounding) covers safety-netting
-\citep{jones2019safety}. Every dimension is visible in text without clinical outcomes, and none
+\citep{jones2019safety}. Every dimension is visible in text without clinical outcomes. The grader's anchors address the
+person who asks (for example ``Are you experiencing chest pain right now?''), so no dimension
 assumes a clinician reader. We chose the seven dimensions by informal consensus in the author
 group, which includes three practising physicians. We used no formal method (no Delphi round, no
 content-validity index). They are not a renaming of the five \bodhi{} components: \bodhi{} is the
@@ -539,7 +541,13 @@ it. \emph{Red-flag identification} is recognizing presentations that need escala
 reassurance; its absence is the one most directly linked to delayed care. \emph{Scope bounding} is
 declining to advise past the available evidence, so that a confident answer does not replace an
 examination. \emph{Hedging quality} separates a qualification that carries information (it names
-the alternative under consideration) from a blanket disclaimer that carries none.
+the alternative under consideration) from a blanket disclaimer that carries none. Active inquiry
+and context-seeking help only where facts are missing and the user can give them; scope bounding
+and red-flag identification apply to any clinical question. Outside the evaluator's family, the
+rise in active inquiry is largest on ChatDoctor, unedited patient messages
+(\statCellChatDoctorMistralBaseActiveInquiry\% to \statCellChatDoctorMistralLoRAActiveInquiry\%),
+and smallest among the cells where it rises on MedQuAD, short reference questions
+(\statCellMedQuADMistralBaseActiveInquiry\% to \statCellMedQuADMistralLoRAActiveInquiry\%).
 
 \paragraph{Comparison to prior approaches.} Uncertainty prompting \citep{lin2022teaching,
 tian2023just} works through the prompt, so it must run at every call; the recipe changes the
@@ -661,7 +669,13 @@ Because the dimensions are graded from text, we state what each one looks like:
     \item \emph{Scope bounding}: ``I can give general information, but a diagnosis needs an
           examination.''
     \item \emph{Hedging quality}: a specific qualified statement (``this could be either anxiety or a
-          cardiac cause'') rather than a generic ``consult a doctor'' disclaimer.
+          cardiac cause'') rather than a generic ``consult a doctor'' disclaimer. The grader prompt
+          (\texttt{scripts/eval\_epistemic.py}) defines the two ends: a blanket disclaimer is
+          ``Please consult a healthcare professional'' with no useful content, and appropriate
+          hedging is calibrated to the case, ``My best guess is X, but Y would change the answer;
+          come back if Z.'' A case-bound example of the second: for a cough with fever, a normal
+          chest X-ray makes pneumonia unlikely on today's findings, a climbing fever or laboured
+          breathing would change that, and breathlessness at rest needs urgent assessment.
     \item \emph{Specificity}: a concrete dose or time frame (``325\,mg aspirin if no allergy'') rather
           than ``consider medication.''
 \end{itemize}
