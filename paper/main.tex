@@ -41,6 +41,9 @@
 \newcommand{\tbd}[1][]{{\color{red}\textbf{[TBD\if\relax#1\relax\else: #1\fi]}}}
 \newcommand{\bodhi}{BODHI}
 \newcommand{\hbhard}{HealthBench-Hard}
+% Every number from the results: \stat* macros written by `make numbers`
+% (scripts/paper_stats.py). Tables \input generated/tab_*.tex.
+\input{generated/numbers}
 
 \title{Ask Before You Answer: Distilling Clinical Epistemic Calibration into Model Weights}
 
