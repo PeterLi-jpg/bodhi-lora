@@ -181,8 +181,10 @@ def test_every_macro_has_a_source_comment(generated):
 
 
 def test_no_absolute_paths_in_outputs(generated):
+    # Neither the repo location nor the home folder may leak into committed files.
     for f in generated[1].iterdir():
-        assert "/Users/" not in f.read_text(), f.name
+        text = f.read_text()
+        assert str(ROOT) not in text and str(Path.home()) not in text, f.name
 
 
 # ---------------------------------------------------------------- determinism
