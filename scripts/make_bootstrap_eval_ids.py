@@ -8,11 +8,17 @@ output), so re-running this script with the same seed produces the same file.
 This is the eval-set side of the leakage fix: training already excludes all
 1000 Hard via --exclude-ids, so any 200 we draw here are genuinely held-out.
 
+The same rule serves the other benchmarks: --pool-ids takes the held-out
+pool written by build_benchmark_jsonl.py (its <stem>_holdout_ids.json) in place
+of a JSONL, so every cell draws its per-seed eval set the same way.
+
 Usage:
     python scripts/make_bootstrap_eval_ids.py \\
         --healthbench-jsonl data/raw/healthbench_hard.jsonl \\
         --seed 42 \\
         --output data/raw/hard_seed_42.json
+    python scripts/make_bootstrap_eval_ids.py \\
+        --pool-ids data/raw/chatdoctor_s0_holdout_ids.json --seed 42 --output <cell>/eval_ids/seed_42.json
 """
 
 import argparse
@@ -27,6 +33,9 @@ def main():
     p.add_argument("--healthbench-jsonl",
                    default="data/raw/healthbench_hard.jsonl",
                    help="Source pool to draw from.")
+    p.add_argument("--pool-ids", default=None,
+                   help="JSON list or {'prompt_ids': [...]} to draw from instead of "
+                        "--healthbench-jsonl (a held-out pool of another benchmark).")
     p.add_argument("--seed", type=int, required=True,
                    help="Per-seed RNG; same seed → same draw.")
     p.add_argument("--size", type=int, default=200,
@@ -44,22 +53,29 @@ def main():
         return
 
     ids = []
-    with open(args.healthbench_jsonl) as f:
-        for lineno, raw in enumerate(f, start=1):
-            line = raw.strip()
-            if not line:
-                continue
-            try:
-                obj = json.loads(line)
-            except json.JSONDecodeError as e:
-                raise SystemExit(
-                    f"make_bootstrap_eval_ids: malformed JSON at "
-                    f"{args.healthbench_jsonl}:{lineno}"
-                ) from e
-            ids.append(obj["prompt_id"])
+    if args.pool_ids:
+        with open(args.pool_ids) as f:
+            data = json.load(f)
+        ids = list(data["prompt_ids"] if isinstance(data, dict) else data)
+        source = args.pool_ids
+    else:
+        source = args.healthbench_jsonl
+        with open(args.healthbench_jsonl) as f:
+            for lineno, raw in enumerate(f, start=1):
+                line = raw.strip()
+                if not line:
+                    continue
+                try:
+                    obj = json.loads(line)
+                except json.JSONDecodeError as e:
+                    raise SystemExit(
+                        f"make_bootstrap_eval_ids: malformed JSON at "
+                        f"{args.healthbench_jsonl}:{lineno}"
+                    ) from e
+                ids.append(obj["prompt_id"])
     if len(ids) < args.size:
         raise SystemExit(
-            f"only {len(ids)} prompts in {args.healthbench_jsonl}, "
+            f"only {len(ids)} prompts in {source}, "
             f"need {args.size}")
 
     # sample without replacement: 200 distinct prompts. sort the result so
@@ -76,12 +92,13 @@ def main():
     with open(tmp, "w") as f:
         json.dump({
             "description": (f"Bootstrap eval draw: {args.size} of "
-                            f"{len(ids)} HealthBench Hard prompts, "
+                            f"{len(ids)} "
+                            f"{'held-out pool' if args.pool_ids else 'HealthBench Hard'} prompts, "
                             f"seed={args.seed}"),
             "seed": args.seed,
             "size": args.size,
             "total_pool": len(ids),
-            "source": str(args.healthbench_jsonl),
+            "source": str(source),
             "prompt_ids": drawn,
         }, f, indent=2)
     os.replace(tmp, out)
