@@ -67,13 +67,13 @@ Inputs: `RM` is `results_modal/seed_*/` (the four `<condition>.json` files and
 | General graders as in HealthBench (GPT-4.1 grader) | none | | `healthbench2025` | design |
 | Hedging 2 given to 4 of the 5 flagged blanket disclaimers (Appendix D) | `\statBlanketDisclaimerHedgingTwo`, `\statBlanketDisclaimerTotal` | `blanket_disclaimers` | RM | computed |
 
-## Results: the submitted cell (section 4.1, Tables 1 and 2; Figure 2 is in Appendix E)
+## Results: the MedGemma-27B cell (section 4.1, Tables 1 and 2; Figure E.1 is in Appendix E)
 
 | Claim | Macro(s) | Function | Source | Kind |
 |---|---|---|---|---|
 | Table 1 (score, t interval, pooled n, n per seed) | `tab_main_healthbench.tex` | `build_tables` | RM | computed |
 | Table 2 (seven dimensions, rates, scored n) | `tab_epistemic.tex` | `build_tables` | RM | computed |
-| Figure 2 (two panels) | `paper/figures/epistemic_bar.pdf` | `scripts/plot_epistemic_figures.py` | `results_modal/cross_seed_aggregate.json` | computed |
+| Figure E.1 (two panels) | `paper/figures/epistemic_bar.pdf` | `scripts/plot_epistemic_figures.py` | `results_modal/cross_seed_aggregate.json` | computed |
 | Active inquiry, context-seeking, red flag, scope: diff, CI, Holm p | `\stat<Dim>LoRAvsBaseDiff`, `...CI`, `...PHolm` | `compare_conditions` | RM | computed |
 | Questions per response 0.45 to 1.16 | `\statQuestionsBase`, `\statQuestionsLoRA` | `describe_conditions` | RM | computed |
 | Hedging and specificity significant before but not after Holm | `\statHedgingQualityLoRAvsBaseDiff`, `\statSpecificityLoRAvsBaseDiff`, `...PHolm` | `compare_conditions` | RM | computed |
@@ -92,7 +92,7 @@ Inputs: `RM` is `results_modal/seed_*/` (the four `<condition>.json` files and
 
 | Claim | Macro(s) | Function | Source | Kind |
 |---|---|---|---|---|
-| Table 3, first row (submitted cell) | `tab_generality.tex` | `generality_table` | RM | computed |
+| Table 3, first row (MedGemma-27B cell) | `tab_generality.tex` | `generality_table` | RM | computed |
 | Table 3, other rows | `tab_generality.tex` | `generality_table`, `resolve_cells` | PV (or `generated_values.json` after the sync) | posted |
 | Interval for the added cells "pending" | `tab_generality.tex` | `_diff_with_ci` | needs per-seed values from the sync | posted |
 | BioMistral-7B: 11.7% to 10.1%, teacher 14.5%, filter kept 20.4% | `\statCellHBBioMistral<...>` | `generality_section` | PV | posted |
