@@ -537,58 +537,104 @@ without the protocol.
 
 \paragraph{The trade-off.} The adapter changes how the model answers: it asks more, names warning
 signs more often and bounds its scope. In the submitted cell we detect no change in aggregate
-rubric score; in the \statCellsAddedWithAggregate{} added cells outside the evaluator's family,
-the score falls by \statCellsAddedDropMin{} to \statCellsAddedDropMax. Whether the gain is worth the cost depends on the deployment risk. Where a
-missed warning sign or advice built on missing facts is costly, as in patient-facing triage, more
-inquiry can be worth a small loss in rubric score. Where users ask well-specified questions and
-expect a complete answer, as in MedQuAD, the cost is larger and the gain smaller. A deployment
-should measure both on its own prompts before it chooses.
+rubric score; in the \statCellsAddedWithAggregate{} added cells outside the evaluator's family, the
+score falls by \statCellsAddedDropMin{} to \statCellsAddedDropMax. We suggest one criterion for when
+the gain is worth the cost: the harm of a missed question or warning sign must be larger than the
+harm of a less complete answer. Patient-facing triage, where advice built on missing facts can delay
+care, meets this criterion more often than reference look-up. On MedQuAD, a reference set, the cost
+is the largest of the added cells, and the gain is the smallest among the cells where active inquiry
+rises. A deployment should measure both on its
+own prompts before it chooses.
 
 \paragraph{What these behaviors mean clinically.} Each dimension maps to a clinical practice.
 \emph{Active inquiry} is history-taking: getting the facts that decide the answer before giving
 it. \emph{Red-flag identification} is recognizing presentations that need escalation, not
-reassurance; its absence is the one most directly linked to delayed care. \emph{Scope bounding} is
-declining to advise past the available evidence, so that a confident answer does not replace an
-examination. \emph{Hedging quality} separates a qualification that carries information (it names
-the alternative under consideration) from a blanket disclaimer that carries none. Active inquiry
-and context-seeking help only where facts are missing and the user can give them; scope bounding
-and red-flag identification apply to any clinical question. Outside the evaluator's family, the
-rise in active inquiry is largest on ChatDoctor, unedited patient messages
-(\statCellChatDoctorMistralBaseActiveInquiry\% to \statCellChatDoctorMistralLoRAActiveInquiry\%),
-and smallest among the cells where it rises on MedQuAD, short reference questions
-(\statCellMedQuADMistralBaseActiveInquiry\% to \statCellMedQuADMistralLoRAActiveInquiry\%).
+reassurance. \emph{Scope bounding} is declining to advise past the available evidence, so that a
+confident answer does not replace an examination. \emph{Hedging quality} separates a
+qualification that carries information from a blanket disclaimer that carries none. One \hbhard{}
+user wrote, in full, ``is it safe to just start antidepressants i feel really down lately''. Base
+and LoRA both advise against starting without a clinician. Base lists what to tell a doctor but
+asks the user nothing. LoRA asks how long and how strongly the user has felt down, about sleep,
+appetite, energy and concentration, and about thoughts of self-harm, and it gives a crisis line
+(Appendix~\ref{app:examples}). Active inquiry and context-seeking help only where facts are missing
+and the user can give them; scope bounding and red-flag identification apply to any clinical
+question. Outside the evaluator's family, the rise in active inquiry is largest on ChatDoctor,
+unedited patient messages (\statCellChatDoctorMistralBaseActiveInquiry\% to
+\statCellChatDoctorMistralLoRAActiveInquiry\%), and smallest, among the cells where it rises, on
+MedQuAD, short reference questions (\statCellMedQuADMistralBaseActiveInquiry\% to
+\statCellMedQuADMistralLoRAActiveInquiry\%).
 
-\paragraph{Comparison to prior approaches.} Uncertainty prompting \citep{lin2022teaching,
-tian2023just} works through the prompt, so it must run at every call; the recipe changes the
-weights, which removes that cost and also removes the option to turn the behavior off.
-STaR-style self-improvement \citep{zelikman2022star} shares the filter-then-finetune structure but
-filters on answer correctness; we filter on rubric quality. Constitutional AI
-\citep{bai2022constitutional} also distills a prompted behavior into weights, through self-critique
-against written principles rather than a structured protocol. We report no empirical comparison
-with an inference-time baseline. Code for two such baselines (a clarifying-question prompt and a
-verbalized-confidence prompt) is in the repository but has not been run. We regard this as the most
-important missing experiment.
+\subsection{Comparison to Prior Calibration Approaches}
+\label{sec:prior}
 
-\paragraph{Limitations.} We tested one CoT protocol (\bodhi{}) and one fine-tuning method (LoRA).
-We make no claim about other protocols, other methods, or tasks with no missing information to
-seek, such as closed-form multiple choice, extraction or summarization. Every behavior score is
-LLM-graded, and the one returned physician agrees with the grader below the pre-registered target.
-The added-cell values are transcribed from posted replies until the raw outputs are synced, and
-those cells used another recipe and other evaluation settings. Red-flag identification measures
-sensitivity only; over-flagging needs prompts with no true red flag. Decoding was greedy, and we ran
-no ablation over $\tau$, rank or data size. The seeds vary training and the evaluation draw but not
-the teacher traces. The LoRA configuration of the submitted adapters comes from the training code
-and awaits a direct check against the saved adapter files.
+\begin{table}[t]
+\centering
+\caption{The recipe next to prior approaches (a positioning, not a measurement). Inference cost is
+per answer, relative to one plain generation pass.}
+\label{tab:prior}
+\footnotesize
+\setlength{\tabcolsep}{2.5pt}
+\begin{tabular}{lllll}
+\toprule
+Approach & Changes & Inference cost & What it needs & Target \\
+\midrule
+Verbalized confidence, prompted \citep{tian2023just} & prompt & extra instruction & nothing & factual confidence \\
+Verbalized confidence, fine-tuned \citep{lin2022teaching} & weights & one pass & answers with known correctness & factual confidence \\
+STaR \citep{zelikman2022star} & weights & one pass & answer labels to filter on & factual reasoning \\
+Constitutional AI \citep{bai2022constitutional} & weights & one pass & principles, AI preferences & harmlessness \\
+\bodhi{} protocol at inference & prompt & two passes & nothing & epistemic behaviors \\
+This recipe & weights & one pass & the protocol and a rubric filter & epistemic behaviors \\
+\bottomrule
+\end{tabular}
+\end{table}
 
-\paragraph{Ethics and broader impact.} We use public HealthBench data and no patient data. The
+Table~\ref{tab:prior} places the recipe next to four prior approaches. Uncertainty prompting
+\citep{tian2023just} works through the prompt, so it must run at every call; the recipe changes
+the weights, which removes that cost and also removes the option to turn the behavior off.
+\citet{lin2022teaching} also change the weights, but they teach a number for the confidence that
+an answer is correct, which needs answers with known correctness. STaR \citep{zelikman2022star}
+shares our filter-then-finetune structure but filters on answer correctness; we filter on rubric
+quality, so the target is behavior and not facts. Constitutional AI \citep{bai2022constitutional}
+also moves a prompted behavior into the weights, through self-critique against written principles
+rather than a structured protocol. The prior approaches were tested on math, trivia, commonsense
+questions or general assistant tasks; we tested one protocol, on patient-facing clinical questions. This comparison is
+an argument, not a measurement. Code for two inference-time baselines, a prompt that asks for
+clarifying questions and a verbalized-confidence prompt, is in the repository but has not been run.
+A head-to-head comparison with them is the most important missing experiment.
+
+\subsection{Limitations}
+\label{sec:limitations}
+
+\emph{One protocol, one method.} We tested one CoT protocol (\bodhi{}) and one fine-tuning method
+(LoRA). A second protocol, a one-pass plan that asks about missing facts first, is implemented but
+has not been run. We make no claim about other protocols, other methods, or tasks with no missing
+information to seek, such as closed-form multiple choice, extraction or summarization.
+\emph{Grading.} Every score is LLM-graded. The physician check covers rubric criteria only, one of
+three physicians returned grades, and agreement is below the pre-registered target. No physician
+graded the seven dimensions, and the grader does not always keep its own anchors.
+\emph{Added cells.} Their values are transcribed from posted replies until the raw outputs are
+synced. They used another training stack (PyTorch with PEFT and TRL on H100 GPUs, against JAX on
+TPU), another recipe and other evaluation settings. The Mistral-Small-24B adapters were trained
+against a 4-bit base and evaluated on the bfloat16 base. The Med42-8B cells share the evaluator's
+family; code for a re-grade with a judge from a third family exists but has not been run.
+\emph{Design.} Red-flag identification measures sensitivity only; over-flagging needs prompts with
+no true red flag. The seeds vary training and the evaluation draw but not the teacher traces.
+Decoding was greedy. We ran no ablation over $\tau$, rank or data size, and no arm trained without
+the filter, so we cannot attribute any effect to the filter. We did not time training or inference
+per configuration on dedicated hardware. The LoRA configuration of the submitted adapters comes
+from the training code and awaits a check against the saved adapter files.
+
+\paragraph{Ethics and broader impact.} We use public benchmark data, including questions that
+patients posted online (ChatDoctor), and no patient records. The
 adapter is a research artifact, not a tool for unsupervised clinical use. The main risk is hedging
 or asking that delays urgent care, which is why we report red-flag identification for each
 condition; the drop under LoRA+\bodhi{} motivates the clinician harm review in
 Appendix~\ref{app:harm}, which is not yet done. The adapter needs gated access to MedGemma-27B and
 inherits its license.
 
-\paragraph{Code availability.} Code, adapters and evaluation scripts are at
-\url{https://anonymous.4open.science/r/bodhi-lora-CEB5}.
+\paragraph{Code availability.} Code, evaluation outputs and analysis scripts are at
+\url{https://anonymous.4open.science/r/bodhi-lora-CEB5}. The five MedGemma-27B adapters are in
+cloud storage and are not yet released.
 
 \begin{ack}
 Funding: None declared.
@@ -1195,10 +1241,10 @@ their stored responses with a judge from a third family; it has not been run.
 \section{Qualitative Examples}
 \label{app:examples}
 
-Examples come from seed~42 evaluation outputs on \hbhard{}, with grades from the Llama-3.1-8B-Instruct
-epistemic grader. Prompts and responses are verbatim and can be found in
+Examples come from the seed~42 and seed~99 evaluation outputs on \hbhard{}, with grades from the
+Llama-3.1-8B-Instruct epistemic grader. Prompts and responses are verbatim and can be found in
 \texttt{data/raw/healthbench\_hard.jsonl} (by \texttt{prompt\_id}) and
-\texttt{results\_modal/seed\_42/epistemic\_scores.json}. \texttt{[\ldots]} marks omitted text; nothing
+\texttt{results\_modal/seed\_<N>/epistemic\_scores.json}. \texttt{[\ldots]} marks omitted text; nothing
 is paraphrased. Each example shows the four conditions: Base, Base+\bodhi{}, LoRA and
 LoRA+\bodhi{}. Figure~\ref{fig:interference} shows a third prompt.
 
@@ -1333,6 +1379,31 @@ LoRA bounds the answer to what the single value supports (a metabolic abnormalit
 diagnosis) and says what cannot be inferred. LoRA+\bodhi{} falls back to the analysis format and
 never reaches an interpretation. The contrast between Base and LoRA is the one this paper targets:
 a confident invented cause against declining to claim what the data do not support.
+
+\paragraph{Example C: Asking before advising (antidepressants, \texttt{prompt\_id 2c915b71}, seed~99).}
+This is the example in \S\ref{sec:discussion}. HealthBench tags the prompt as one with not enough
+context. We show Base and LoRA only.
+
+\begin{tcolorbox}[convbox, fontupper=\footnotesize, title={\textsf{\textbf{Prompt}} (single turn)}]
+\convlabel{User:}is it safe to just start antidepressants i feel really down lately
+\end{tcolorbox}
+
+\begin{tcolorbox}[convbox, fontupper=\footnotesize,
+  title={\textsf{\textbf{Base}}\quad\textcolor{gray}{\scriptsize context\_seeking $=2/2$ $\cdot$ active\_inquiry $=$\textsc{false} (0 questions) $\cdot$ red\_flag $=2/2$}}]
+\convlabel{Assistant:}[\ldots] here's a breakdown of why it's generally \textbf{not recommended to just start them on your own} [\ldots] \textbf{Be Honest and Detailed:} When you talk to a professional, be open about: How you're feeling (specific symptoms, intensity, duration). When it started. [\ldots] Any other medications, supplements, or substances you use. [\ldots]
+\end{tcolorbox}
+
+\begin{tcolorbox}[convbox, fontupper=\footnotesize,
+  title={\textsf{\textbf{LoRA}}\quad\textcolor{gray}{\scriptsize context\_seeking $=2/2$ $\cdot$ active\_inquiry $=$\textsc{true} (3 questions) $\cdot$ red\_flag $=2/2$}}]
+\convlabel{Assistant:}Okay, let's craft a warm and helpful response based on your analysis. [\ldots] \textbf{It's really important \emph{not} to start them on your own without talking to a doctor first.} [\ldots] To help figure out the best next steps, could you tell me a little more about what you're experiencing? \textbf{How long have you been feeling this way?} [\ldots] \textbf{How intense is the feeling?} [\ldots] \textbf{Are you experiencing any other symptoms?} (For example, have you noticed changes in your sleep [\ldots]? Changes in your appetite? Feeling tired all the time? Difficulty concentrating? Or perhaps feelings of hopelessness or thoughts of harming yourself?) [\ldots] You can call or text 988 in the US and Canada to reach the Suicide \& Crisis Lifeline [\ldots]
+\end{tcolorbox}
+
+\medskip\noindent
+\textbf{Reading the comparison.} Both answers advise against starting without a clinician. Base
+tells the user what to say to a doctor; LoRA asks the user directly and gives a crisis line. The
+grader gives both answers context-seeking 2, although Base asks no question (\S\ref{sec:eval}).
+The first line of the LoRA answer speaks about ``your analysis'', a trace of the protocol format in
+an answer generated without the protocol.
 
 \paragraph{Note on \texttt{prompt\_id 89a3c017} (postpartum headache).} An earlier draft included a third example. The Base+\bodhi{} response for this prompt failed grader parsing in seed~42's run, so we omit it from the four-condition appendix to avoid a partial comparison; the prompt and the other three conditions remain reproducible from the source files.
 
