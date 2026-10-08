@@ -446,9 +446,11 @@ def scale_of(kind: str) -> tuple[float, int]:
 
 
 def round6(obj):
-    """Round floats for numbers.json so the file is stable across platforms."""
+    """Round floats to 6 significant digits for numbers.json, so the file is stable
+    across platforms. Significant digits, not decimal places: p-values go down to
+    1e-8 and 6 decimal places would print them as 0."""
     if isinstance(obj, float):
-        return round(obj, 6) if math.isfinite(obj) else None
+        return float(f"{obj:.6g}") if math.isfinite(obj) else None
     if isinstance(obj, dict):
         return {k: round6(v) for k, v in obj.items()}
     if isinstance(obj, (list, tuple)):

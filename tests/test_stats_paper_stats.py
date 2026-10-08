@@ -238,6 +238,12 @@ def test_posted_values_schema_is_checked(tmp_path):
 
 # ---------------------------------------------------------------- units
 
+def test_small_p_values_survive_in_numbers_json(generated):
+    p = json.loads((generated[1] / "numbers.json").read_text())[
+        "contrasts"]["LoRACoTvsLoRA"]["metrics"]["red_flag"]["pooled_welch_p"]
+    assert 0 < p < 1e-6
+
+
 def test_formatting():
     assert ps.fmt(0.1234, 2) == "\\ensuremath{0.12}"
     assert ps.fmt(-0.0004, 3, sign=True) == "\\ensuremath{0.000}"
