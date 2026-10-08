@@ -34,6 +34,13 @@ results/
 # eval JSON; keep raw generations and adapter binaries out. Only the adapter
 # config and trainer state from each checkpoint are kept.
 results_rebuttal/**/*.jsonl
+# per-seed eval outputs hold full model responses (~370 MB); they stay on the
+# GPU host and in a local archive. make cells turns them into the tracked
+# data/rebuttal_cells/generated_values.json.
+results_rebuttal/**/eval/*.json
+# multi_seed_summary.json on the host lists its seeds as ["eval"] (wrong glob);
+# cell_values.py recomputes from the per-seed files instead.
+results_rebuttal/**/multi_seed_summary.json
 results_rebuttal/**/ckpt/**
 !results_rebuttal/**/ckpt/**/
 !results_rebuttal/**/ckpt/**/adapter_config.json

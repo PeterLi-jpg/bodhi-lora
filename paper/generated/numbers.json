@@ -60,8 +60,10 @@
       "results_modal/irr/kappa_results.json": "194b39fe7522dcffdce270bcf59bd9f2d094e57c08b570c3c5fcd08cb86d8535",
       "rebuttal/results/interference_mechanism.json": "b85713aab71610aec4f3c0e95077db6319a1ff2895eb9796a5b94df369a4af81",
       "rebuttal/results/mimicry_split.json": "0d62757fb6ca4409fb1797004daf13170d1939700a7f9f3ed59374521ab6e769",
+      "rebuttal/results/quality_drop.json": "9fea3707877b0cdb48ceff3c1c5a7419e28dc68064f1162bdc0e073cdf113f69",
       "rebuttal/results/second_person_questions.json": "d84862d8bddef8119f084722629b24336155a40a431d2da7af0fb3bcd539060a",
-      "data/rebuttal_cells/posted_values.json": "860fad299d02fd1200efaaf6bbe66deec7800c28df40a3895b2ab97929dcbfc0"
+      "data/rebuttal_cells/posted_values.json": "860fad299d02fd1200efaaf6bbe66deec7800c28df40a3895b2ab97929dcbfc0",
+      "data/rebuttal_cells/generated_values.json": "a2cd6ad2049a22160a374cb80f6e2e52fd6c5d3be953b87e0c927ea19bf77e6d"
     }
   },
   "conditions": {
@@ -6192,56 +6194,173 @@
         "set_aside": false,
         "set_aside_reason": null,
         "filter_clearance_pct": 62.1,
-        "source": "posted",
+        "source": "synced",
+        "seeds": [
+          7,
+          13,
+          42,
+          99,
+          101
+        ],
         "conditions": {
           "base": {
             "active_inquiry_pct": {
               "mean": 25.6,
-              "sd": null
+              "sd": 2.13307
+            },
+            "uncertainty_ack": {
+              "mean": 1.922,
+              "sd": 0.00570088
             },
             "context_seeking": {
-              "mean": 1.05,
-              "sd": null
+              "mean": 1.048,
+              "sd": 0.0349285
+            },
+            "red_flag": {
+              "mean": 1.03,
+              "sd": 0.0187083
+            },
+            "scope_bounding": {
+              "mean": 1.769,
+              "sd": 0.0114018
+            },
+            "hedging_quality": {
+              "mean": 1.677,
+              "sd": 0.0201866
+            },
+            "specificity": {
+              "mean": 1.638,
+              "sd": 0.0115109
             },
             "aggregate": {
-              "mean": 0.425,
-              "sd": 0.004
+              "mean": 0.424787,
+              "sd": 0.00380103
             }
           },
           "base_cot": {
             "active_inquiry_pct": {
-              "mean": 54.2,
-              "sd": null
+              "mean": 54.1613,
+              "sd": 2.05769
+            },
+            "uncertainty_ack": {
+              "mean": 1.93982,
+              "sd": 0.018803
+            },
+            "context_seeking": {
+              "mean": 1.80241,
+              "sd": 0.0125736
+            },
+            "red_flag": {
+              "mean": 1.72617,
+              "sd": 0.0292857
+            },
+            "scope_bounding": {
+              "mean": 1.95987,
+              "sd": 0.00872974
+            },
+            "hedging_quality": {
+              "mean": 1.88568,
+              "sd": 0.015427
+            },
+            "specificity": {
+              "mean": 1.92076,
+              "sd": 0.00414667
             },
             "aggregate": {
-              "mean": 0.416,
-              "sd": 0.001
+              "mean": 0.415853,
+              "sd": 0.000699634
             }
           },
           "lora": {
             "active_inquiry_pct": {
-              "mean": 56.6,
-              "sd": null
+              "mean": 56.5628,
+              "sd": 3.9825
+            },
+            "uncertainty_ack": {
+              "mean": 1.97891,
+              "sd": 0.0148297
             },
             "context_seeking": {
-              "mean": 1.76,
-              "sd": null
+              "mean": 1.76023,
+              "sd": 0.0535891
+            },
+            "red_flag": {
+              "mean": 1.67495,
+              "sd": 0.036624
+            },
+            "scope_bounding": {
+              "mean": 1.9709,
+              "sd": 0.00747917
+            },
+            "hedging_quality": {
+              "mean": 1.89964,
+              "sd": 0.0325235
+            },
+            "specificity": {
+              "mean": 1.87258,
+              "sd": 0.0371389
             },
             "aggregate": {
-              "mean": 0.411,
-              "sd": 0.006
+              "mean": 0.411053,
+              "sd": 0.0060856
             }
           },
           "lora_cot": {
+            "active_inquiry_pct": {
+              "mean": 72.3805,
+              "sd": 17.4072
+            },
+            "uncertainty_ack": {
+              "mean": 1.86947,
+              "sd": 0.0945624
+            },
+            "context_seeking": {
+              "mean": 1.77405,
+              "sd": 0.161247
+            },
+            "red_flag": {
+              "mean": 1.64882,
+              "sd": 0.0576593
+            },
+            "scope_bounding": {
+              "mean": 1.91164,
+              "sd": 0.0704021
+            },
+            "hedging_quality": {
+              "mean": 1.82629,
+              "sd": 0.126184
+            },
+            "specificity": {
+              "mean": 1.83727,
+              "sd": 0.106356
+            },
             "aggregate": {
-              "mean": 0.404,
-              "sd": 0.011
+              "mean": 0.403987,
+              "sd": 0.0108187
             }
           }
         },
         "aggregate_lora_minus_base": {
-          "diff": -0.014,
-          "note": "point estimate only; inference is the posted paired t over seeds"
+          "diff": -0.0137344,
+          "ci95": [
+            -0.0207108,
+            -0.00675802
+          ],
+          "ci90": [
+            -0.0190911,
+            -0.0083777
+          ],
+          "t": -5.46599,
+          "df": 4,
+          "p": 0.00544867,
+          "per_seed_diff": [
+            -0.009107,
+            -0.00919,
+            -0.012775,
+            -0.022798,
+            -0.014802
+          ],
+          "p_holm_over_cells": 0.016346
         }
       },
       {
@@ -6253,56 +6372,173 @@
         "set_aside": false,
         "set_aside_reason": null,
         "filter_clearance_pct": 50.8,
-        "source": "posted",
+        "source": "synced",
+        "seeds": [
+          7,
+          13,
+          42,
+          99,
+          101
+        ],
         "conditions": {
           "base": {
             "active_inquiry_pct": {
               "mean": 11.8,
-              "sd": null
+              "sd": 0.273861
+            },
+            "uncertainty_ack": {
+              "mean": 1.789,
+              "sd": 0.00894427
             },
             "context_seeking": {
-              "mean": 0.52,
-              "sd": null
+              "mean": 0.515,
+              "sd": 0.0106066
+            },
+            "red_flag": {
+              "mean": 0.806,
+              "sd": 0.033429
+            },
+            "scope_bounding": {
+              "mean": 1.503,
+              "sd": 0.0171756
+            },
+            "hedging_quality": {
+              "mean": 1.381,
+              "sd": 0.0240832
+            },
+            "specificity": {
+              "mean": 1.389,
+              "sd": 0.0194936
             },
             "aggregate": {
-              "mean": 0.405,
-              "sd": 0.003
+              "mean": 0.405044,
+              "sd": 0.00328908
             }
           },
           "base_cot": {
             "active_inquiry_pct": {
-              "mean": 57.1,
-              "sd": null
+              "mean": 57.1111,
+              "sd": 1.59377
+            },
+            "uncertainty_ack": {
+              "mean": 1.95191,
+              "sd": 0.00754738
+            },
+            "context_seeking": {
+              "mean": 1.4689,
+              "sd": 0.0400151
+            },
+            "red_flag": {
+              "mean": 1.09616,
+              "sd": 0.036615
+            },
+            "scope_bounding": {
+              "mean": 1.82366,
+              "sd": 0.0162668
+            },
+            "hedging_quality": {
+              "mean": 1.66737,
+              "sd": 0.0200849
+            },
+            "specificity": {
+              "mean": 1.42283,
+              "sd": 0.0158866
             },
             "aggregate": {
-              "mean": 0.391,
-              "sd": 0.006
+              "mean": 0.391122,
+              "sd": 0.00570197
             }
           },
           "lora": {
             "active_inquiry_pct": {
               "mean": 52.5,
-              "sd": null
+              "sd": 3.85681
+            },
+            "uncertainty_ack": {
+              "mean": 1.972,
+              "sd": 0.00908295
             },
             "context_seeking": {
-              "mean": 1.4,
-              "sd": null
+              "mean": 1.401,
+              "sd": 0.0339853
+            },
+            "red_flag": {
+              "mean": 1.026,
+              "sd": 0.0320936
+            },
+            "scope_bounding": {
+              "mean": 1.79,
+              "sd": 0.0169558
+            },
+            "hedging_quality": {
+              "mean": 1.642,
+              "sd": 0.0130384
+            },
+            "specificity": {
+              "mean": 1.307,
+              "sd": 0.0222486
             },
             "aggregate": {
-              "mean": 0.392,
-              "sd": 0.004
+              "mean": 0.392043,
+              "sd": 0.00352459
             }
           },
           "lora_cot": {
+            "active_inquiry_pct": {
+              "mean": 84.2693,
+              "sd": 3.54191
+            },
+            "uncertainty_ack": {
+              "mean": 1.99599,
+              "sd": 0.00549102
+            },
+            "context_seeking": {
+              "mean": 1.87776,
+              "sd": 0.0225277
+            },
+            "red_flag": {
+              "mean": 1.09115,
+              "sd": 0.0329749
+            },
+            "scope_bounding": {
+              "mean": 1.87072,
+              "sd": 0.0197459
+            },
+            "hedging_quality": {
+              "mean": 1.79258,
+              "sd": 0.0214274
+            },
+            "specificity": {
+              "mean": 1.49996,
+              "sd": 0.0515618
+            },
             "aggregate": {
-              "mean": 0.382,
-              "sd": 0.007
+              "mean": 0.38172,
+              "sd": 0.00682668
             }
           }
         },
         "aggregate_lora_minus_base": {
-          "diff": -0.013,
-          "note": "point estimate only; inference is the posted paired t over seeds"
+          "diff": -0.013001,
+          "ci95": [
+            -0.0188244,
+            -0.00717756
+          ],
+          "ci90": [
+            -0.0174724,
+            -0.00852957
+          ],
+          "t": -6.19849,
+          "df": 4,
+          "p": 0.00344487,
+          "per_seed_diff": [
+            -0.017861,
+            -0.013558,
+            -0.016798,
+            -0.006498,
+            -0.01029
+          ],
+          "p_holm_over_cells": 0.0137795
         }
       },
       {
@@ -6314,56 +6550,173 @@
         "set_aside": false,
         "set_aside_reason": null,
         "filter_clearance_pct": 20.4,
-        "source": "posted",
+        "source": "synced",
+        "seeds": [
+          7,
+          13,
+          42,
+          99,
+          101
+        ],
         "conditions": {
           "base": {
             "active_inquiry_pct": {
               "mean": 11.7,
-              "sd": null
+              "sd": 0.974679
+            },
+            "uncertainty_ack": {
+              "mean": 1.218,
+              "sd": 0.0243926
             },
             "context_seeking": {
               "mean": 0.27,
-              "sd": null
+              "sd": 0.015
+            },
+            "red_flag": {
+              "mean": 0.286,
+              "sd": 0.0134164
+            },
+            "scope_bounding": {
+              "mean": 0.747,
+              "sd": 0.0103682
+            },
+            "hedging_quality": {
+              "mean": 0.674,
+              "sd": 0.0124499
+            },
+            "specificity": {
+              "mean": 0.636,
+              "sd": 0.0129422
             },
             "aggregate": {
-              "mean": 0.378,
-              "sd": 0.003
+              "mean": 0.378067,
+              "sd": 0.00257405
             }
           },
           "base_cot": {
             "active_inquiry_pct": {
               "mean": 14.5,
-              "sd": null
+              "sd": 0.612372
+            },
+            "uncertainty_ack": {
+              "mean": 1.187,
+              "sd": 0.00974679
+            },
+            "context_seeking": {
+              "mean": 0.395,
+              "sd": 0.0176777
+            },
+            "red_flag": {
+              "mean": 0.316,
+              "sd": 0.0178185
+            },
+            "scope_bounding": {
+              "mean": 0.624,
+              "sd": 0.0174642
+            },
+            "hedging_quality": {
+              "mean": 0.582,
+              "sd": 0.0175357
+            },
+            "specificity": {
+              "mean": 0.533,
+              "sd": 0.00758288
             },
             "aggregate": {
-              "mean": 0.363,
-              "sd": 0.001
+              "mean": 0.362753,
+              "sd": 0.00114271
             }
           },
           "lora": {
             "active_inquiry_pct": {
               "mean": 10.1,
-              "sd": null
+              "sd": 1.85068
+            },
+            "uncertainty_ack": {
+              "mean": 1.189,
+              "sd": 0.074027
             },
             "context_seeking": {
-              "mean": 0.28,
-              "sd": null
+              "mean": 0.283,
+              "sd": 0.0305369
+            },
+            "red_flag": {
+              "mean": 0.366,
+              "sd": 0.033053
+            },
+            "scope_bounding": {
+              "mean": 0.698,
+              "sd": 0.0772658
+            },
+            "hedging_quality": {
+              "mean": 0.569,
+              "sd": 0.060663
+            },
+            "specificity": {
+              "mean": 0.604,
+              "sd": 0.0767626
             },
             "aggregate": {
-              "mean": 0.363,
-              "sd": 0.007
+              "mean": 0.362864,
+              "sd": 0.00726816
             }
           },
           "lora_cot": {
+            "active_inquiry_pct": {
+              "mean": 10.5106,
+              "sd": 2.37183
+            },
+            "uncertainty_ack": {
+              "mean": 1.16805,
+              "sd": 0.141752
+            },
+            "context_seeking": {
+              "mean": 0.282251,
+              "sd": 0.0513587
+            },
+            "red_flag": {
+              "mean": 0.452367,
+              "sd": 0.119126
+            },
+            "scope_bounding": {
+              "mean": 0.685653,
+              "sd": 0.0948418
+            },
+            "hedging_quality": {
+              "mean": 0.587528,
+              "sd": 0.0948135
+            },
+            "specificity": {
+              "mean": 0.582533,
+              "sd": 0.0769881
+            },
             "aggregate": {
-              "mean": 0.362,
-              "sd": 0.003
+              "mean": 0.362245,
+              "sd": 0.00333153
             }
           }
         },
         "aggregate_lora_minus_base": {
-          "diff": -0.015,
-          "note": "point estimate only; inference is the posted paired t over seeds"
+          "diff": -0.0152024,
+          "ci95": [
+            -0.0257378,
+            -0.00466698
+          ],
+          "ci90": [
+            -0.0232918,
+            -0.00711295
+          ],
+          "t": -4.00635,
+          "df": 4,
+          "p": 0.0160451,
+          "per_seed_diff": [
+            -0.024159,
+            -0.023388,
+            -0.004321,
+            -0.0109,
+            -0.013244
+          ],
+          "p_holm_over_cells": 0.016346
         }
       },
       {
@@ -6375,56 +6728,173 @@
         "set_aside": false,
         "set_aside_reason": null,
         "filter_clearance_pct": 97.6,
-        "source": "posted",
+        "source": "synced",
+        "seeds": [
+          7,
+          13,
+          42,
+          99,
+          101
+        ],
         "conditions": {
           "base": {
             "active_inquiry_pct": {
               "mean": 7.8,
-              "sd": null
+              "sd": 0.67082
+            },
+            "uncertainty_ack": {
+              "mean": 2.0,
+              "sd": 0.0
             },
             "context_seeking": {
-              "mean": 0.83,
-              "sd": null
+              "mean": 0.832,
+              "sd": 0.0189077
+            },
+            "red_flag": {
+              "mean": 1.435,
+              "sd": 0.0183712
+            },
+            "scope_bounding": {
+              "mean": 1.894,
+              "sd": 0.0155724
+            },
+            "hedging_quality": {
+              "mean": 1.638,
+              "sd": 0.00908295
+            },
+            "specificity": {
+              "mean": 1.507,
+              "sd": 0.0201866
             },
             "aggregate": {
-              "mean": 0.557,
-              "sd": 0.004
+              "mean": 0.557286,
+              "sd": 0.00412685
             }
           },
           "base_cot": {
             "active_inquiry_pct": {
-              "mean": 54.5,
-              "sd": null
+              "mean": 54.5136,
+              "sd": 2.21848
+            },
+            "uncertainty_ack": {
+              "mean": 1.88977,
+              "sd": 0.00728804
+            },
+            "context_seeking": {
+              "mean": 1.58919,
+              "sd": 0.0184714
+            },
+            "red_flag": {
+              "mean": 1.91786,
+              "sd": 0.0142354
+            },
+            "scope_bounding": {
+              "mean": 1.9459,
+              "sd": 0.00818643
+            },
+            "hedging_quality": {
+              "mean": 1.82065,
+              "sd": 0.0100916
+            },
+            "specificity": {
+              "mean": 1.89481,
+              "sd": 0.0148466
             },
             "aggregate": {
-              "mean": 0.55,
-              "sd": 0.006
+              "mean": 0.550476,
+              "sd": 0.00561105
             }
           },
           "lora": {
             "active_inquiry_pct": {
-              "mean": 58.6,
-              "sd": null
+              "mean": 58.6307,
+              "sd": 3.2261
+            },
+            "uncertainty_ack": {
+              "mean": 1.8815,
+              "sd": 0.053901
             },
             "context_seeking": {
-              "mean": 1.49,
-              "sd": null
+              "mean": 1.48691,
+              "sd": 0.0378503
+            },
+            "red_flag": {
+              "mean": 1.87848,
+              "sd": 0.0323645
+            },
+            "scope_bounding": {
+              "mean": 1.93975,
+              "sd": 0.0268506
+            },
+            "hedging_quality": {
+              "mean": 1.7831,
+              "sd": 0.0407563
+            },
+            "specificity": {
+              "mean": 1.85035,
+              "sd": 0.0405807
             },
             "aggregate": {
-              "mean": 0.541,
-              "sd": 0.006
+              "mean": 0.541357,
+              "sd": 0.00598834
             }
           },
           "lora_cot": {
+            "active_inquiry_pct": {
+              "mean": 48.799,
+              "sd": 2.33415
+            },
+            "uncertainty_ack": {
+              "mean": 1.48919,
+              "sd": 0.085329
+            },
+            "context_seeking": {
+              "mean": 1.16734,
+              "sd": 0.0595665
+            },
+            "red_flag": {
+              "mean": 1.84874,
+              "sd": 0.017792
+            },
+            "scope_bounding": {
+              "mean": 1.66759,
+              "sd": 0.10631
+            },
+            "hedging_quality": {
+              "mean": 1.40602,
+              "sd": 0.093863
+            },
+            "specificity": {
+              "mean": 1.58835,
+              "sd": 0.100921
+            },
             "aggregate": {
-              "mean": 0.448,
-              "sd": 0.015
+              "mean": 0.44781,
+              "sd": 0.0153372
             }
           }
         },
         "aggregate_lora_minus_base": {
-          "diff": -0.016,
-          "note": "point estimate only; inference is the posted paired t over seeds"
+          "diff": -0.0159284,
+          "ci95": [
+            -0.0242151,
+            -0.00764169
+          ],
+          "ci90": [
+            -0.0222912,
+            -0.00956559
+          ],
+          "t": -5.33678,
+          "df": 4,
+          "p": 0.00593812,
+          "per_seed_diff": [
+            -0.011547,
+            -0.024524,
+            -0.017976,
+            -0.018333,
+            -0.007262
+          ],
+          "p_holm_over_cells": 0.016346
         }
       },
       {
@@ -6436,56 +6906,173 @@
         "set_aside": false,
         "set_aside_reason": null,
         "filter_clearance_pct": 96.0,
-        "source": "posted",
+        "source": "synced",
+        "seeds": [
+          7,
+          13,
+          42,
+          99,
+          101
+        ],
         "conditions": {
           "base": {
             "active_inquiry_pct": {
               "mean": 2.9,
-              "sd": null
+              "sd": 0.821584
+            },
+            "uncertainty_ack": {
+              "mean": 1.8,
+              "sd": 0.0176777
             },
             "context_seeking": {
-              "mean": 0.71,
-              "sd": null
+              "mean": 0.709,
+              "sd": 0.0274773
+            },
+            "red_flag": {
+              "mean": 1.146,
+              "sd": 0.0114018
+            },
+            "scope_bounding": {
+              "mean": 1.556,
+              "sd": 0.0124499
+            },
+            "hedging_quality": {
+              "mean": 1.513,
+              "sd": 0.0135093
+            },
+            "specificity": {
+              "mean": 1.337,
+              "sd": 0.0168077
             },
             "aggregate": {
-              "mean": 0.498,
-              "sd": 0.003
+              "mean": 0.498381,
+              "sd": 0.00310735
             }
           },
           "base_cot": {
             "active_inquiry_pct": {
               "mean": 83.4,
-              "sd": null
+              "sd": 2.45967
+            },
+            "uncertainty_ack": {
+              "mean": 1.983,
+              "sd": 0.0067082
+            },
+            "context_seeking": {
+              "mean": 1.817,
+              "sd": 0.0251496
+            },
+            "red_flag": {
+              "mean": 1.374,
+              "sd": 0.0245967
+            },
+            "scope_bounding": {
+              "mean": 1.948,
+              "sd": 0.0067082
+            },
+            "hedging_quality": {
+              "mean": 1.737,
+              "sd": 0.0125499
+            },
+            "specificity": {
+              "mean": 1.424,
+              "sd": 0.0108397
             },
             "aggregate": {
-              "mean": 0.497,
-              "sd": 0.004
+              "mean": 0.496643,
+              "sd": 0.00438978
             }
           },
           "lora": {
             "active_inquiry_pct": {
               "mean": 86.4,
-              "sd": null
+              "sd": 2.30217
+            },
+            "uncertainty_ack": {
+              "mean": 1.998,
+              "sd": 0.00447214
             },
             "context_seeking": {
-              "mean": 1.81,
-              "sd": null
+              "mean": 1.811,
+              "sd": 0.0277038
+            },
+            "red_flag": {
+              "mean": 1.186,
+              "sd": 0.0345326
+            },
+            "scope_bounding": {
+              "mean": 1.872,
+              "sd": 0.0213892
+            },
+            "hedging_quality": {
+              "mean": 1.59,
+              "sd": 0.0244949
+            },
+            "specificity": {
+              "mean": 1.227,
+              "sd": 0.0402492
             },
             "aggregate": {
-              "mean": 0.457,
-              "sd": 0.007
+              "mean": 0.457381,
+              "sd": 0.00651181
             }
           },
           "lora_cot": {
+            "active_inquiry_pct": {
+              "mean": 77.6,
+              "sd": 6.58976
+            },
+            "uncertainty_ack": {
+              "mean": 1.996,
+              "sd": 0.00894427
+            },
+            "context_seeking": {
+              "mean": 1.828,
+              "sd": 0.0570745
+            },
+            "red_flag": {
+              "mean": 1.346,
+              "sd": 0.045194
+            },
+            "scope_bounding": {
+              "mean": 1.871,
+              "sd": 0.0328634
+            },
+            "hedging_quality": {
+              "mean": 1.666,
+              "sd": 0.0201246
+            },
+            "specificity": {
+              "mean": 1.329,
+              "sd": 0.0343511
+            },
             "aggregate": {
-              "mean": 0.461,
-              "sd": 0.005
+              "mean": 0.460833,
+              "sd": 0.00457134
             }
           }
         },
         "aggregate_lora_minus_base": {
           "diff": -0.041,
-          "note": "point estimate only; inference is the posted paired t over seeds"
+          "ci95": [
+            -0.0518334,
+            -0.0301666
+          ],
+          "ci90": [
+            -0.0493182,
+            -0.0326818
+          ],
+          "t": -10.5077,
+          "df": 4,
+          "p": 0.000463812,
+          "per_seed_diff": [
+            -0.051786,
+            -0.048572,
+            -0.031547,
+            -0.035595,
+            -0.0375
+          ],
+          "p_holm_over_cells": 0.00278287
         }
       },
       {
@@ -6497,120 +7084,173 @@
         "set_aside": false,
         "set_aside_reason": null,
         "filter_clearance_pct": 78.4,
-        "source": "posted",
+        "source": "synced",
+        "seeds": [
+          7,
+          13,
+          42,
+          99,
+          101
+        ],
         "conditions": {
           "base": {
-            "scope_bounding": {
-              "mean": 1.85,
-              "sd": 0.02
-            },
-            "hedging_quality": {
-              "mean": 1.46,
-              "sd": 0.01
-            },
-            "context_seeking": {
-              "mean": 0.32,
-              "sd": 0.02
-            },
-            "red_flag": {
-              "mean": 0.57,
-              "sd": 0.02
+            "active_inquiry_pct": {
+              "mean": 6.52714,
+              "sd": 1.55337
             },
             "uncertainty_ack": {
-              "mean": 1.87,
-              "sd": 0.01
+              "mean": 1.86748,
+              "sd": 0.00824476
+            },
+            "context_seeking": {
+              "mean": 0.319256,
+              "sd": 0.0210667
+            },
+            "red_flag": {
+              "mean": 0.570276,
+              "sd": 0.0206969
+            },
+            "scope_bounding": {
+              "mean": 1.85139,
+              "sd": 0.0155189
+            },
+            "hedging_quality": {
+              "mean": 1.45481,
+              "sd": 0.0148944
             },
             "specificity": {
-              "mean": 1.71,
-              "sd": 0.01
-            },
-            "active_inquiry_pct": {
-              "mean": 6.5,
-              "sd": 1.6
+              "mean": 1.71386,
+              "sd": 0.0136438
             },
             "aggregate": {
-              "mean": 0.672,
-              "sd": 0.003
+              "mean": 0.671643,
+              "sd": 0.00342704
             }
           },
           "base_cot": {
-            "scope_bounding": {
-              "mean": 1.61,
-              "sd": 0.03
-            },
-            "hedging_quality": {
-              "mean": 1.4,
-              "sd": 0.03
-            },
-            "context_seeking": {
-              "mean": 0.87,
-              "sd": 0.02
-            },
-            "red_flag": {
-              "mean": 0.74,
-              "sd": 0.02
+            "active_inquiry_pct": {
+              "mean": 23.0678,
+              "sd": 1.24411
             },
             "uncertainty_ack": {
-              "mean": 1.78,
-              "sd": 0.02
+              "mean": 1.78135,
+              "sd": 0.0228666
+            },
+            "context_seeking": {
+              "mean": 0.870583,
+              "sd": 0.0197719
+            },
+            "red_flag": {
+              "mean": 0.736191,
+              "sd": 0.0168342
+            },
+            "scope_bounding": {
+              "mean": 1.61386,
+              "sd": 0.0264724
+            },
+            "hedging_quality": {
+              "mean": 1.39918,
+              "sd": 0.0338869
             },
             "specificity": {
-              "mean": 1.47,
-              "sd": 0.03
-            },
-            "active_inquiry_pct": {
-              "mean": 23.1,
-              "sd": 1.2
+              "mean": 1.47345,
+              "sd": 0.0327473
             },
             "aggregate": {
-              "mean": 0.542,
-              "sd": 0.005
+              "mean": 0.541929,
+              "sd": 0.00517303
             }
           },
           "lora": {
-            "scope_bounding": {
-              "mean": 1.89,
-              "sd": 0.02
+            "active_inquiry_pct": {
+              "mean": 26.5,
+              "sd": 2.3184
             },
-            "hedging_quality": {
-              "mean": 1.78,
-              "sd": 0.03
+            "uncertainty_ack": {
+              "mean": 1.982,
+              "sd": 0.00447214
             },
             "context_seeking": {
               "mean": 1.23,
-              "sd": 0.05
+              "sd": 0.0520817
             },
             "red_flag": {
-              "mean": 0.68,
-              "sd": 0.03
+              "mean": 0.684,
+              "sd": 0.0318983
             },
-            "uncertainty_ack": {
-              "mean": 1.98,
-              "sd": 0.0
+            "scope_bounding": {
+              "mean": 1.892,
+              "sd": 0.0171756
+            },
+            "hedging_quality": {
+              "mean": 1.781,
+              "sd": 0.0281514
             },
             "specificity": {
-              "mean": 1.33,
-              "sd": 0.03
-            },
-            "active_inquiry_pct": {
-              "mean": 26.5,
-              "sd": 2.3
+              "mean": 1.326,
+              "sd": 0.0260768
             },
             "aggregate": {
-              "mean": 0.586,
-              "sd": 0.022
+              "mean": 0.586024,
+              "sd": 0.0222968
             }
           },
           "lora_cot": {
+            "active_inquiry_pct": {
+              "mean": 42.2,
+              "sd": 3.63318
+            },
+            "uncertainty_ack": {
+              "mean": 1.994,
+              "sd": 0.00547723
+            },
+            "context_seeking": {
+              "mean": 1.68,
+              "sd": 0.115596
+            },
+            "red_flag": {
+              "mean": 1.327,
+              "sd": 0.0222486
+            },
+            "scope_bounding": {
+              "mean": 1.954,
+              "sd": 0.0191703
+            },
+            "hedging_quality": {
+              "mean": 1.921,
+              "sd": 0.0207364
+            },
+            "specificity": {
+              "mean": 1.72,
+              "sd": 0.0480885
+            },
             "aggregate": {
-              "mean": 0.505,
-              "sd": 0.017
+              "mean": 0.50531,
+              "sd": 0.0165792
             }
           }
         },
         "aggregate_lora_minus_base": {
-          "diff": -0.086,
-          "note": "point estimate only; inference is the posted paired t over seeds"
+          "diff": -0.0856192,
+          "ci95": [
+            -0.111962,
+            -0.0592769
+          ],
+          "ci90": [
+            -0.105846,
+            -0.0653927
+          ],
+          "t": -9.02414,
+          "df": 4,
+          "p": 0.000835189,
+          "per_seed_diff": [
+            -0.070596,
+            -0.056905,
+            -0.100119,
+            -0.092738,
+            -0.107738
+          ],
+          "p_holm_over_cells": 0.00417595
         }
       },
       {
@@ -6622,16 +7262,172 @@
         "set_aside": true,
         "set_aside_reason": "a single-best-answer exam benchmark whose rubric grades agreement with a keyed answer, which is a different task from the open-ended setting the recipe targets",
         "filter_clearance_pct": null,
-        "source": "posted",
+        "source": "synced",
+        "seeds": [
+          7,
+          13,
+          42,
+          99,
+          101
+        ],
         "conditions": {
-          "base": {},
-          "base_cot": {},
-          "lora": {},
-          "lora_cot": {}
+          "base": {
+            "active_inquiry_pct": {
+              "mean": null,
+              "sd": null
+            },
+            "uncertainty_ack": {
+              "mean": null,
+              "sd": null
+            },
+            "context_seeking": {
+              "mean": null,
+              "sd": null
+            },
+            "red_flag": {
+              "mean": null,
+              "sd": null
+            },
+            "scope_bounding": {
+              "mean": null,
+              "sd": null
+            },
+            "hedging_quality": {
+              "mean": null,
+              "sd": null
+            },
+            "specificity": {
+              "mean": null,
+              "sd": null
+            },
+            "aggregate": {
+              "mean": 0.665167,
+              "sd": 0.00750406
+            }
+          },
+          "base_cot": {
+            "active_inquiry_pct": {
+              "mean": null,
+              "sd": null
+            },
+            "uncertainty_ack": {
+              "mean": null,
+              "sd": null
+            },
+            "context_seeking": {
+              "mean": null,
+              "sd": null
+            },
+            "red_flag": {
+              "mean": null,
+              "sd": null
+            },
+            "scope_bounding": {
+              "mean": null,
+              "sd": null
+            },
+            "hedging_quality": {
+              "mean": null,
+              "sd": null
+            },
+            "specificity": {
+              "mean": null,
+              "sd": null
+            },
+            "aggregate": {
+              "mean": 0.673714,
+              "sd": 0.00755995
+            }
+          },
+          "lora": {
+            "active_inquiry_pct": {
+              "mean": null,
+              "sd": null
+            },
+            "uncertainty_ack": {
+              "mean": null,
+              "sd": null
+            },
+            "context_seeking": {
+              "mean": null,
+              "sd": null
+            },
+            "red_flag": {
+              "mean": null,
+              "sd": null
+            },
+            "scope_bounding": {
+              "mean": null,
+              "sd": null
+            },
+            "hedging_quality": {
+              "mean": null,
+              "sd": null
+            },
+            "specificity": {
+              "mean": null,
+              "sd": null
+            },
+            "aggregate": {
+              "mean": 0.683429,
+              "sd": 0.00606349
+            }
+          },
+          "lora_cot": {
+            "active_inquiry_pct": {
+              "mean": null,
+              "sd": null
+            },
+            "uncertainty_ack": {
+              "mean": null,
+              "sd": null
+            },
+            "context_seeking": {
+              "mean": null,
+              "sd": null
+            },
+            "red_flag": {
+              "mean": null,
+              "sd": null
+            },
+            "scope_bounding": {
+              "mean": null,
+              "sd": null
+            },
+            "hedging_quality": {
+              "mean": null,
+              "sd": null
+            },
+            "specificity": {
+              "mean": null,
+              "sd": null
+            },
+            "aggregate": {
+              "mean": 0.688452,
+              "sd": 0.0213584
+            }
+          }
         },
         "aggregate_lora_minus_base": {
-          "diff": null,
-          "note": "aggregate mean not posted for both conditions"
+          "diff": 0.0182616,
+          "ci95": [
+            0.00316782,
+            0.0333554
+          ],
+          "ci90": [
+            0.00667209,
+            0.0298511
+          ],
+          "t": 3.35915,
+          "df": 4,
+          "p": 0.0283271,
+          "per_seed_diff": [
+            0.00238,
+            0.020833,
+            0.015714,
+            0.01619,
+            0.036191
+          ]
         }
       }
     ],
@@ -6702,21 +7498,21 @@
       "added_cells_with_aggregate": 4,
       "added_cells_aggregate_fell": 4,
       "added_cells_teacher_below_base": 4,
-      "added_cells_drop_min": 0.014,
-      "added_cells_drop_max": 0.086,
+      "added_cells_drop_min": 0.0137344,
+      "added_cells_drop_max": 0.0856192,
       "excluded_same_family": [
         "chatdoctor__med42-8b",
         "healthbench__med42-8b"
       ]
     },
     "sources": {
-      "healthbench__mistral-small-24b": "posted",
-      "healthbench__med42-8b": "posted",
-      "healthbench__biomistral-7b": "posted",
-      "chatdoctor__mistral-small-24b": "posted",
-      "chatdoctor__med42-8b": "posted",
-      "medquad__mistral-small-24b": "posted",
-      "medqa__mistral-small-24b": "posted"
+      "healthbench__mistral-small-24b": "synced",
+      "healthbench__med42-8b": "synced",
+      "healthbench__biomistral-7b": "synced",
+      "chatdoctor__mistral-small-24b": "synced",
+      "chatdoctor__med42-8b": "synced",
+      "medquad__mistral-small-24b": "synced",
+      "medqa__mistral-small-24b": "synced"
     }
   }
 }
