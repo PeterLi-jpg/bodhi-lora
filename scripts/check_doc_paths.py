@@ -46,13 +46,17 @@ PENDING = {
     "scripts/build_paper_figures.py": "figure builder, untracked until now (paper lane)",
     "paper/submitted/neurips2026/": "frozen submitted source (paper lane)",
     "data/rebuttal_cells/posted_values.json": "posted rebuttal values (stats lane)",
+    "rebuttal/results/": "rebuttal analysis JSON, un-ignored in .gitignore (rebuttal lane)",
     "results_rebuttal/": "rebuttal-cell outputs, BLOCKED until synced from the GPU host",
 }
 
 TOP_FILES_EXT = (".sh", ".md", ".txt", ".py", ".toml", ".cfg", ".yaml", ".yml")
+# A relative path ending in one of these is checked even when its first folder is
+# gone from the repo. That is how a doc pointing at a deleted tpu/ launcher fails.
+FILE_EXT = TOP_FILES_EXT + (".json", ".jsonl", ".tex", ".bib", ".xlsx", ".pdf", ".csv", ".ipynb")
 CODE_SPAN = re.compile(r"`([^`\n]+)`")
 LINK = re.compile(r"\]\(([^)\s]+)\)")
-FENCE = re.compile(r"^\s*(```|~~~)")
+FENCE = re.compile(r"^\s*(>\s*)*(```|~~~)")  # also fences inside a blockquote
 COMMIT_PATH = re.compile(r"^([0-9a-f]{7,40}):(.+)$")
 
 
@@ -123,7 +127,7 @@ def exists(path: str) -> bool:
     return True
 
 
-def candidate(tok: str, doc_dir: Path, is_link: bool) -> str | None:
+def candidate(tok: str, doc_dir: Path, is_link: bool, in_fence: bool = False) -> str | None:
     tok = tok.strip().strip("'\"").rstrip(".,;:)")
     tok = tok.split("#", 1)[0]
     tok = re.sub(r":\d+(-\d+)?$", "", tok)  # file:line references
@@ -142,10 +146,17 @@ def candidate(tok: str, doc_dir: Path, is_link: bool) -> str | None:
             return None
         if (ROOT / tok).is_dir() and not tok.endswith("/"):
             tok += "/"
+        return tok  # a link always names a repo path
     if tok.startswith("./"):
         tok = tok[2:]
     first = tok.split("/", 1)[0]
     if "/" in tok and first in TOP:
+        return tok
+    if "/" in tok and not first.startswith(".") and tok.endswith(FILE_EXT):
+        return tok
+    if not in_fence and re.fullmatch(r"[A-Za-z0-9_-]+/", tok):
+        # A bare top-level folder in prose, such as `legacy/`. Inside a code
+        # block the same shape is usually a line of a folder tree.
         return tok
     if "/" not in tok and (tok in TOP or tok in PENDING) and (tok.endswith(TOP_FILES_EXT) or tok in PENDING
                                                                or tok in {"LICENSE", "NOTICE"}):
@@ -172,12 +183,13 @@ def main() -> int:
                 continue
             toks = []
             if in_fence:
-                toks = [(t, False) for t in re.split(r"[\s\"'()]+", line)]
+                # Split on = too, so VAR=path in a shell line yields the path.
+                toks = [(t, False) for t in re.split(r"[\s\"'()=]+", line)]
             else:
                 toks = [(t, False) for t in CODE_SPAN.findall(line)]
                 toks += [(t, True) for t in LINK.findall(line)]
             for raw, is_link in toks:
-                path = candidate(raw, rel.parent, is_link)
+                path = candidate(raw, rel.parent, is_link, in_fence)
                 if path is None:
                     continue
                 checked += 1
