@@ -780,9 +780,11 @@ def length_quartiles(df, out, macros):
             rows.append({"n": int(len(sel)), "rate": float(sel.mean()) if len(sel) else float("nan")})
         res["conditions"][cfg] = {"quartiles": rows, "overall": float(sub["active_inquiry"].mean()),
                                   "n": int(len(sub))}
+    # Lengths are whole characters and the bins are right-open at each edge, so the
+    # first length of the next bin is ceil(edge): Q1 is below A, Q4 is C or more.
     for i, v in enumerate(q, 1):
-        macros.add(f"LengthQuartileBound{'ABC'[i - 1]}", fmt_int(round(v)),
-                   "Base response length quartile boundary (chars, linear quantile)")
+        macros.add(f"LengthQuartileBound{'ABC'[i - 1]}", fmt_int(math.ceil(v)),
+                   f"first response length (chars) of quartile {i + 1}; Base linear-quantile edge {v:g}")
     out["length_quartiles"] = res
     return res
 

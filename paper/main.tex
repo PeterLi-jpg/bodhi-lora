@@ -1081,9 +1081,12 @@ those quartiles. We ran no length-controlled test. The quartile counts are uneve
 \centering
 \small
 \caption{Active-inquiry rate (\%) by quartile of response length, over pooled graded responses.
-The quartile edges come from the Base condition: Q1 $<\statLengthQuartileBoundA$ characters, Q2
-up to \statLengthQuartileBoundB, Q3 up to \statLengthQuartileBoundC, Q4 above. The lower block
-gives the number of responses in each quartile.}
+The quartile edges come from the Base condition. Q1 is below \statLengthQuartileBoundA{}
+characters, Q2 from \statLengthQuartileBoundA{} to below \statLengthQuartileBoundB, Q3 from
+\statLengthQuartileBoundB{} to below \statLengthQuartileBoundC, and Q4 at
+\statLengthQuartileBoundC{} or more. Overall is the pooled rate, so it can differ in the last
+digit from the mean of seed means in Table~\ref{tab:epistemic}. The lower block gives the number
+of responses in each quartile.}
 \label{tab:length}
 \input{generated/tab_length_quartiles}
 \end{table}
