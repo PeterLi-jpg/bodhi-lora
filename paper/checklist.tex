@@ -5,7 +5,7 @@
 \item {\bf Claims}
     \item[] Question: Do the main claims made in the abstract and introduction accurately reflect the paper's contributions and scope?
     \item[] Answer: \answerYes{}
-    \item[] Justification: The abstract and contributions list frame this explicitly as a proof of concept on one model (MedGemma-27B), one domain (medicine), and one benchmark (\hbhard{}). The Scope paragraph (\S\ref{sec:discussion}) states ``we do not claim this has been validated'' beyond the single setting. Effect sizes are reported at the prompt level ($n\approx1{,}000$, $d=0.20$--$0.63$), not inflated seed-level estimates.
+    \item[] Justification: The abstract and contributions state the setting (patient-facing, open-ended clinical questions), report the behavior gain with seed-level intervals, and state the aggregate cost in the added cells next to it. Behavior scores are labelled LLM-graded, and the physician check is reported as below its pre-registered target. Values for the added cells are marked as transcribed from posted results until their raw outputs are synced. The Limitations paragraph (\S\ref{sec:discussion}) lists what is not covered.
     \item[] Guidelines:
     \begin{itemize}
         \item The answer \answerNA{} means that the abstract and introduction do not include the claims made in the paper.
@@ -17,7 +17,7 @@
 \item {\bf Limitations}
     \item[] Question: Does the paper discuss the limitations of the work performed by the authors?
     \item[] Answer: \answerYes{}
-    \item[] Justification: \S\ref{sec:discussion} has explicit paragraphs on single-setting scope (one model, domain, benchmark), self-distillation circularity, LLM-as-judge evaluation, greedy-only decoding, and missing ablations. The Robustness paragraph and Appendix~\ref{app:robustness} address several principal alternative explanations (verbosity artifact, theme-subgroup robustness, filter-threshold calibration, behavioral-dimension distinctness, cross-grader effect-direction agreement). Appendices~\ref{app:human} and~\ref{app:harm} describe pre-registered studies currently in progress.
+    \item[] Justification: \S\ref{sec:discussion} has a Limitations paragraph: one CoT protocol and one fine-tuning method, LLM grading with a physician check below target, transcribed values for the added cells, recipe and evaluation differences between cells, red-flag sensitivity without a false-positive measure, greedy decoding, no ablations, and seeds that do not vary the teacher traces. Appendix~\ref{app:robustness} gives descriptive checks (length quartiles, themes, a second grader on one seed, dimension correlations, two post hoc labelings). Appendix~\ref{app:harm} describes a clinician review that is not yet done.
     \item[] Guidelines:
     \begin{itemize}
         \item The answer \answerNA{} means that the paper has no limitation while the answer \answerNo{} means that the paper has limitations, but those are not discussed in the paper.
@@ -93,7 +93,7 @@
 \item {\bf Experiment statistical significance}
     \item[] Question: Does the paper report error bars suitably and correctly defined or other appropriate information about the statistical significance of the experiments?
     \item[] Answer: \answerYes{}
-    \item[] Justification: Table~\ref{tab:main} reports 95\% CIs across 5 seeds. Table~\ref{tab:epistemic} reports cross-seed std as subscripts. All epistemic virtue claims use prompt-level two-sample $t$-tests ($n\approx985$--$998$ per condition, pooled across 5 seeds; seeds draw without replacement within-seed but independently across seeds, introducing some prompt overlap that does not affect binary significance conclusions at reported effect sizes), with Cohen's $d$ and exact $p$-values. The statistical method and its limitations are stated explicitly in \S\ref{sec:results}.
+    \item[] Justification: The seed is the unit of inference. Every test is a paired $t$-test over the \statNSeeds{} per-seed differences, with a 95\% $t$ interval (4 df), and Holm correction over the seven dimensions within each contrast (\S\ref{sec:eval}; Table~\ref{tab:seed-contrasts}). Pooled Cohen's $d$ is descriptive, with a bootstrap interval over prompt ids, because the \statPromptEvaluations{} prompt draws per condition cover \statUniquePrompts{} unique prompts. Response counts per condition and grading failures are in Table~\ref{tab:counts}, with a worst-case check in Table~\ref{tab:worst-case}. The added cells carry no interval until their raw outputs are synced.
     \item[] Guidelines:
     \begin{itemize}
         \item The answer \answerNA{} means that the paper does not include experiments.
@@ -110,7 +110,7 @@
 \item {\bf Experiments compute resources}
     \item[] Question: For each experiment, does the paper provide sufficient information on the computer resources (type of compute workers, memory, time of execution) needed to reproduce the experiments?
     \item[] Answer: \answerYes{}
-    \item[] Justification: Training: one TPU v6e-8 host per seed (8 chips, 256\,GB HBM, FSDP), ${\sim}$4\,h/seed $\times$ 5 seeds. Evaluation: A100-80GB via Modal, ${\sim}$2\,h/seed. The added cells of Appendix~\ref{app:generality} train and evaluate on one H100 80GB per seed. Hardware is stated in Appendix~\ref{app:hparams}.
+    \item[] Justification: Training: one TPU v6e-8 host per seed (8 chips, FSDP), 5 seeds. Evaluation: A100-80GB GPUs via Modal. The added cells of Appendix~\ref{app:generality} train and evaluate on one H100 80GB per seed. The launchers did not record per-stage wall time on dedicated hardware, so we do not report hours. Hardware is stated in Appendix~\ref{app:hparams}.
     \item[] Guidelines:
     \begin{itemize}
         \item The answer \answerNA{} means that the paper does not include experiments.
@@ -133,7 +133,7 @@
 \item {\bf Broader impacts}
     \item[] Question: Does the paper discuss both potential positive societal impacts and negative societal impacts of the work performed?
     \item[] Answer: \answerYes{}
-    \item[] Justification: The Ethics Statement discusses both positive impact (more calibrated medical AI) and the primary negative risk (excessive hedging delaying emergency care). Appendix~\ref{app:harm} pre-registers clinician review on chest pain, anaphylaxis, suicide risk, and drug-allergy scenarios.
+    \item[] Justification: The Ethics paragraph (\S\ref{sec:discussion}) gives the intended benefit (a model that asks before it answers and names warning signs) and the main risk (hedging or asking that delays urgent care). Appendix~\ref{app:harm} describes a clinician review of chest pain, anaphylaxis, suicide risk and drug-allergy prompts, which is not yet done.
     \item[] Guidelines:
     \begin{itemize}
         \item The answer \answerNA{} means that there is no societal impact of the work performed.
@@ -187,7 +187,7 @@
 \item {\bf Crowdsourcing and research with human subjects}
     \item[] Question: For crowdsourcing experiments and research with human subjects, does the paper include the full text of instructions given to participants and screenshots, if applicable, as well as details about compensation (if any)?
     \item[] Answer: \answerYes{}
-    \item[] Justification: Appendix~\ref{app:human} describes the physician validation protocol in full: grading criteria, per-criterion format, confidence scale, and tie-breaking procedure. Participating physicians are co-authors; no separate compensation applies beyond authorship.
+    \item[] Justification: Appendix~\ref{app:human} describes the physician check as planned and as run: grading format, scale and tie-breaking, and the amendment after one of three physicians returned grades. Participating physicians are co-authors; no separate compensation applies beyond authorship.
     \item[] Guidelines:
     \begin{itemize}
         \item The answer \answerNA{} means that the paper does not involve crowdsourcing nor research with human subjects.
