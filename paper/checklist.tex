@@ -5,7 +5,7 @@
 \item {\bf Claims}
     \item[] Question: Do the main claims made in the abstract and introduction accurately reflect the paper's contributions and scope?
     \item[] Answer: \answerYes{}
-    \item[] Justification: The abstract and contributions state the setting (patient-facing, open-ended clinical questions), report the behavior gain with seed-level intervals, and state the aggregate cost in the added cells next to it. Behavior scores are labelled LLM-graded, and the physician check is reported as below its pre-registered target. Values for the added cells are marked as transcribed from posted results until their raw outputs are synced. The Limitations paragraph (\S\ref{sec:discussion}) lists what is not covered.
+    \item[] Justification: The abstract and contributions state the setting (patient-facing, open-ended clinical questions), report the behavior gain with seed-level intervals, and state the aggregate cost in the added cells next to it, with the BioMistral-7B null. Every score is labelled LLM-graded. The physician check covers the rubric criteria behind the aggregate score, not the seven dimensions, and is reported as below its pre-registered target. Values for the added cells are marked as transcribed from posted results until their raw outputs are synced. The introduction separates what we show from what we conjecture, and the Limitations subsection (\S\ref{sec:limitations}) lists what is not covered.
     \item[] Guidelines:
     \begin{itemize}
         \item The answer \answerNA{} means that the abstract and introduction do not include the claims made in the paper.
@@ -17,7 +17,7 @@
 \item {\bf Limitations}
     \item[] Question: Does the paper discuss the limitations of the work performed by the authors?
     \item[] Answer: \answerYes{}
-    \item[] Justification: \S\ref{sec:discussion} has a Limitations paragraph: one CoT protocol and one fine-tuning method, LLM grading with a physician check below target, transcribed values for the added cells, recipe and evaluation differences between cells, red-flag sensitivity without a false-positive measure, greedy decoding, no ablations, and seeds that do not vary the teacher traces. Appendix~\ref{app:robustness} gives descriptive checks (length quartiles, themes, a second grader on one seed, dimension correlations, two post hoc labelings). Appendix~\ref{app:harm} describes a clinician review that is not yet done.
+    \item[] Justification: \S\ref{sec:limitations} lists them: one CoT protocol and one fine-tuning method (a second protocol is implemented, not run); no empirical baseline (code exists, not run); LLM grading, with a physician check that covers rubric criteria only and is below target, and a grader that does not always keep its anchors; transcribed values for the added cells; a different training stack, recipe and evaluation settings in those cells, including a 4-bit training base evaluated in bfloat16; the Med42-8B family overlap with the evaluator; red-flag sensitivity without a false-positive measure; greedy decoding; no ablations and no unfiltered arm; seeds that do not vary the teacher traces; and an adapter configuration pending a check against the saved files. Appendix~\ref{app:robustness} gives descriptive checks (length quartiles, themes, a second grader on one seed, dimension correlations, two post hoc labelings). Appendix~\ref{app:harm} describes a clinician review that is not yet done.
     \item[] Guidelines:
     \begin{itemize}
         \item The answer \answerNA{} means that the paper has no limitation while the answer \answerNo{} means that the paper has limitations, but those are not discussed in the paper.
@@ -47,7 +47,7 @@
     \item {\bf Experimental result reproducibility}
     \item[] Question: Does the paper fully disclose all the information needed to reproduce the main experimental results of the paper to the extent that it affects the main claims and/or conclusions of the paper (regardless of whether the code and data are provided or not)?
     \item[] Answer: \answerYes{}
-    \item[] Justification: Full hyperparameters are in Appendix~\ref{app:hparams}. The pipeline is deterministic given fixed seeds (greedy decoding, seeded LoRA init, seeded data order, seeded eval draws). Hardware is specified (TPU v6e-8 for training, A100-80GB for evaluation). Code and trained adapters are at \url{https://anonymous.4open.science/r/bodhi-lora-CEB5}.
+    \item[] Justification: Appendix~\ref{app:hparams} gives the training and evaluation configuration of the submitted cell, read from the code that ran, and of the added cells. Values still pending a check against the saved adapter files are marked, and so are settings the launcher did not record (the production training config and the exact vLLM build). Decoding is greedy, and the seeds set the LoRA initialization, the data order, the split and the evaluation draw. Hardware is stated (TPU v6e-8 for training and A100-80GB for evaluation in the submitted cell; H100 for the added cells). Code and evaluation outputs are at \url{https://anonymous.4open.science/r/bodhi-lora-CEB5}; the adapters are not yet released.
     \item[] Guidelines:
     \begin{itemize}
         \item The answer \answerNA{} means that the paper does not include experiments.
@@ -66,7 +66,7 @@
 \item {\bf Open access to data and code}
     \item[] Question: Does the paper provide open access to the data and code, with sufficient instructions to faithfully reproduce the main experimental results, as described in supplemental material?
     \item[] Answer: \answerYes{}
-    \item[] Justification: Code, trained LoRA adapters (5 seeds), and evaluation scripts are at \url{https://anonymous.4open.science/r/bodhi-lora-CEB5}. HealthBench is publicly available from OpenAI. MedGemma-27B requires a standard HuggingFace gated-model access request; Qwen and Llama graders are fully open.
+    \item[] Justification: Code, evaluation outputs of the submitted cell and analysis scripts are at \url{https://anonymous.4open.science/r/bodhi-lora-CEB5}; \texttt{make numbers} rebuilds the numbers of the submitted cell from them, except the filter-retention table, which also needs a training split that is not in the repository. The five adapters are not yet released, and the raw outputs of the added cells are not yet in the repository. HealthBench is public from OpenAI. MedGemma-27B and Llama-3.1-8B need a gated-model access request on Hugging Face; Qwen2.5-14B is open.
     \item[] Guidelines:
     \begin{itemize}
         \item The answer \answerNA{} means that paper does not include experiments requiring code.
@@ -82,7 +82,7 @@
 \item {\bf Experimental setting/details}
     \item[] Question: Does the paper specify all the training and test details (e.g., data splits, hyperparameters, how they were chosen, type of optimizer) necessary to understand the results?
     \item[] Answer: \answerYes{}
-    \item[] Justification: \S\ref{sec:method} describes trace generation, grading, filtering, LoRA fine-tuning, and evaluation. Appendix~\ref{app:hparams} contains a complete hyperparameter table (rank, $\alpha$, dropout, batch size, LR schedule, sequence length, hardware, seeds, grader models) and a separate table for the added cells.
+    \item[] Justification: \S\ref{sec:method} describes trace generation, grading, filtering, LoRA fine-tuning, and evaluation. Appendix~\ref{app:hparams} gives a hyperparameter table for the submitted cell (rank, $\alpha$, dropout, batch size, learning-rate schedule, sequence length, hardware, seeds, grader models), with the values pending a check against the saved adapter files marked, and a separate table for the added cells.
     \item[] Guidelines:
     \begin{itemize}
         \item The answer \answerNA{} means that the paper does not include experiments.
@@ -93,7 +93,7 @@
 \item {\bf Experiment statistical significance}
     \item[] Question: Does the paper report error bars suitably and correctly defined or other appropriate information about the statistical significance of the experiments?
     \item[] Answer: \answerYes{}
-    \item[] Justification: The seed is the unit of inference. Every test is a paired $t$-test over the \statNSeeds{} per-seed differences, with a 95\% $t$ interval (4 df), and Holm correction over the seven dimensions within each contrast (\S\ref{sec:eval}; Table~\ref{tab:seed-contrasts}). Pooled Cohen's $d$ is descriptive, with a bootstrap interval over prompt ids, because the \statPromptEvaluations{} prompt draws per condition cover \statUniquePrompts{} unique prompts. Response counts per condition and grading failures are in Table~\ref{tab:counts}, with a worst-case check in Table~\ref{tab:worst-case}. The added cells carry no interval until their raw outputs are synced.
+    \item[] Justification: The seed is the unit of inference. Every test of a difference between conditions is a paired $t$-test over the \statNSeeds{} per-seed differences, with a 95\% $t$ interval (4 df), and Holm correction over the seven dimensions within each contrast (\S\ref{sec:eval}; Table~\ref{tab:seed-contrasts}). Pooled Cohen's $d$ is descriptive, with a bootstrap interval over prompt ids, because the \statPromptEvaluations{} prompt draws per condition cover \statUniquePrompts{} unique prompts. Response counts per condition and grading failures are in Table~\ref{tab:counts}, with a worst-case check in Table~\ref{tab:worst-case}. Blanket-disclaimer counts use a two-sided Fisher exact test, and physician agreement a bootstrap interval over prompts. The added cells carry no interval until their raw outputs are synced.
     \item[] Guidelines:
     \begin{itemize}
         \item The answer \answerNA{} means that the paper does not include experiments.
@@ -122,7 +122,7 @@
 \item {\bf Code of ethics}
     \item[] Question: Does the research conducted in the paper conform, in every respect, with the NeurIPS Code of Ethics \url{https://neurips.cc/public/EthicsGuidelines}?
     \item[] Answer: \answerYes{}
-    \item[] Justification: No patient data is used. Training data is from a public benchmark (HealthBench). The Ethics Statement addresses the primary risk (excessive hedging delaying emergency care) and states the model is a research contribution not intended for unsupervised clinical deployment.
+    \item[] Justification: No patient records are used. Training data comes from public benchmarks (HealthBench, and for the added cells ChatDoctor and MedQuAD). The Ethics paragraph (\S\ref{sec:discussion}) addresses the main risk (hedging or asking that delays urgent care) and states that the adapter is a research artifact, not a tool for unsupervised clinical use.
     \item[] Guidelines:
     \begin{itemize}
         \item The answer \answerNA{} means that the authors have not reviewed the NeurIPS Code of Ethics.
@@ -147,7 +147,7 @@
 \item {\bf Safeguards}
     \item[] Question: Does the paper describe safeguards that have been put in place for responsible release of data or models that have a high risk for misuse (e.g., pre-trained language models, image generators, or scraped datasets)?
     \item[] Answer: \answerYes{}
-    \item[] Justification: The adapter increases epistemic caution rather than enabling harmful outputs. It requires the gated base model (MedGemma-27B) and is released under the same terms. The paper states it is not for unsupervised clinical deployment.
+    \item[] Justification: The adapters are not yet released. A release needs the gated base model (MedGemma-27B) and follows its terms. The paper states that the adapter is not for unsupervised clinical use and that the clinician harm review (Appendix~\ref{app:harm}) is not done.
     \item[] Guidelines:
     \begin{itemize}
         \item The answer \answerNA{} means that the paper poses no such risks.
@@ -159,7 +159,7 @@
 \item {\bf Licenses for existing assets}
     \item[] Question: Are the creators or original owners of assets (e.g., code, data, models), used in the paper, properly credited and are the license and terms of use explicitly mentioned and properly respected?
     \item[] Answer: \answerYes{}
-    \item[] Justification: HealthBench \citep{healthbench2025}: MIT license (OpenAI). MedGemma-27B \citep{medgemma2025}: Health AI Developer Foundations terms (Google). Qwen2.5-14B: Qwen License. Llama-3.1-8B: Meta Llama 3.1 Community License. LoRA \citep{hu2022lora}: Apache 2.0. All used within stated terms.
+    \item[] Justification: HealthBench \citep{healthbench2025}: MIT license (OpenAI simple-evals). MedGemma-27B \citep{medgemma2025}: Health AI Developer Foundations terms (Google). Qwen2.5-14B-Instruct, Mistral-Small-24B-Instruct and BioMistral-7B: Apache 2.0. Llama-3.1-8B-Instruct: Llama 3.1 Community License. Med42-8B: Llama 3 license. The \bodhi{} protocol \citep{bodhi2026}: the bodhi-llm package. ChatDoctor (HealthCareMagic) and MedQuAD: the Hugging Face copies we used state no license, so we use them for research only and do not redistribute them. The repository's \texttt{docs/REUSE.md} lists every asset with its source.
     \item[] Guidelines:
     \begin{itemize}
         \item The answer \answerNA{} means that the paper does not use existing assets.
@@ -175,7 +175,7 @@
 \item {\bf New assets}
     \item[] Question: Are new assets introduced in the paper well documented and is the documentation provided alongside the assets?
     \item[] Answer: \answerYes{}
-    \item[] Justification: Five trained LoRA adapters are released at \url{https://anonymous.4open.science/r/bodhi-lora-CEB5} with a model card covering training procedure, intended use, limitations, and license. Evaluation code and grading scripts are included with usage instructions.
+    \item[] Justification: The new assets are the code, the evaluation outputs of the submitted cell and the analysis scripts, at \url{https://anonymous.4open.science/r/bodhi-lora-CEB5}, with a README and a reproducibility guide. The five adapters are not yet released and have no model card yet.
     \item[] Guidelines:
     \begin{itemize}
         \item The answer \answerNA{} means that the paper does not release new assets.
@@ -198,7 +198,7 @@
 \item {\bf Institutional review board (IRB) approvals or equivalent for research with human subjects}
     \item[] Question: Does the paper describe potential risks incurred by study participants, whether such risks were disclosed to the subjects, and whether Institutional Review Board (IRB) approvals (or an equivalent approval/review based on the requirements of your country or institution) were obtained?
     \item[] Answer: \answerNo{}
-    \item[] Justification: The physician validation (Appendix~\ref{app:human}) involves co-authors grading AI-generated text against publicly available rubrics. No patient data or patient contact is involved. A formal IRB determination is being sought at the participating institutions for camera-ready.
+    \item[] Justification: The physician check (Appendix~\ref{app:human}) asks physicians to grade AI-generated text against public rubrics. No patient data or patient contact is involved. We have not obtained an IRB determination for it.
     \item[] Guidelines:
     \begin{itemize}
         \item The answer \answerNA{} means that the paper does not involve crowdsourcing nor research with human subjects.
