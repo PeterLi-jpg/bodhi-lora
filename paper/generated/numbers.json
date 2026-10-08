@@ -59,7 +59,8 @@
       "results_modal/irr/kappa_results.json": "194b39fe7522dcffdce270bcf59bd9f2d094e57c08b570c3c5fcd08cb86d8535",
       "rebuttal/results/interference_mechanism.json": "ec5eea5d9a56df86e04ab3427feb6df315fe1e599b4a8b4d753a7c83df5f194f",
       "rebuttal/results/mimicry_split.json": "0d62757fb6ca4409fb1797004daf13170d1939700a7f9f3ed59374521ab6e769",
-      "rebuttal/results/second_person_questions.json": "54b3310af333de0f3ad85c64e4cf5535b6a04114414554438af739d55ea96ed4"
+      "rebuttal/results/second_person_questions.json": "54b3310af333de0f3ad85c64e4cf5535b6a04114414554438af739d55ea96ed4",
+      "data/rebuttal_cells/posted_values.json": "860fad299d02fd1200efaaf6bbe66deec7800c28df40a3895b2ab97929dcbfc0"
     }
   },
   "conditions": {
@@ -6094,5 +6095,140 @@
         "p": 0.000132915
       }
     }
+  },
+  "generality": {
+    "provenance": "transcribed from posted OpenReview replies; raw outputs on mit-critical-data-1:/data/PROJECTS/bohdi/results_rebuttal/ pending sync",
+    "cells": [
+      {
+        "id": "healthbench__medgemma-27b",
+        "set_aside": false,
+        "same_family_as_evaluator": false,
+        "aggregate_lora_minus_base": {
+          "diff": 0.004,
+          "note": "point estimate only; inference is the posted paired t over seeds"
+        }
+      },
+      {
+        "id": "healthbench__mistral-small-24b",
+        "set_aside": false,
+        "same_family_as_evaluator": false,
+        "aggregate_lora_minus_base": {
+          "diff": -0.014,
+          "note": "point estimate only; inference is the posted paired t over seeds"
+        }
+      },
+      {
+        "id": "healthbench__med42-8b",
+        "set_aside": false,
+        "same_family_as_evaluator": true,
+        "aggregate_lora_minus_base": {
+          "diff": -0.013,
+          "note": "point estimate only; inference is the posted paired t over seeds"
+        }
+      },
+      {
+        "id": "healthbench__biomistral-7b",
+        "set_aside": false,
+        "same_family_as_evaluator": false,
+        "aggregate_lora_minus_base": {
+          "diff": -0.015,
+          "note": "point estimate only; inference is the posted paired t over seeds"
+        }
+      },
+      {
+        "id": "chatdoctor__mistral-small-24b",
+        "set_aside": false,
+        "same_family_as_evaluator": false,
+        "aggregate_lora_minus_base": {
+          "diff": -0.016,
+          "note": "point estimate only; inference is the posted paired t over seeds"
+        }
+      },
+      {
+        "id": "chatdoctor__med42-8b",
+        "set_aside": false,
+        "same_family_as_evaluator": true,
+        "aggregate_lora_minus_base": {
+          "diff": -0.041,
+          "note": "point estimate only; inference is the posted paired t over seeds"
+        }
+      },
+      {
+        "id": "medquad__mistral-small-24b",
+        "set_aside": false,
+        "same_family_as_evaluator": false,
+        "aggregate_lora_minus_base": {
+          "diff": -0.086,
+          "note": "point estimate only; inference is the posted paired t over seeds"
+        }
+      },
+      {
+        "id": "medqa__mistral-small-24b",
+        "set_aside": true,
+        "same_family_as_evaluator": false,
+        "aggregate_lora_minus_base": {
+          "diff": null,
+          "note": "aggregate mean not posted for both conditions"
+        }
+      }
+    ],
+    "main_cell_check": [
+      {
+        "condition": "base",
+        "metric": "active_inquiry_pct",
+        "posted": 17.5,
+        "generated": 17.5384,
+        "agrees": true
+      },
+      {
+        "condition": "base",
+        "metric": "aggregate",
+        "posted": 0.459,
+        "generated": 0.459139,
+        "agrees": true
+      },
+      {
+        "condition": "base",
+        "metric": "context_seeking",
+        "posted": 1.4,
+        "generated": 1.40387,
+        "agrees": true
+      },
+      {
+        "condition": "base_cot",
+        "metric": "active_inquiry_pct",
+        "posted": 47.9,
+        "generated": 47.943,
+        "agrees": true
+      },
+      {
+        "condition": "lora",
+        "metric": "active_inquiry_pct",
+        "posted": 45.6,
+        "generated": 45.5708,
+        "agrees": true
+      },
+      {
+        "condition": "lora",
+        "metric": "aggregate",
+        "posted": 0.463,
+        "generated": 0.463386,
+        "agrees": true
+      },
+      {
+        "condition": "lora",
+        "metric": "context_seeking",
+        "posted": 1.75,
+        "generated": 1.75043,
+        "agrees": true
+      },
+      {
+        "condition": "lora",
+        "metric": "red_flag",
+        "posted": 1.67,
+        "generated": 1.67216,
+        "agrees": true
+      }
+    ]
   }
 }
