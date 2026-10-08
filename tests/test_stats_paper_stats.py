@@ -257,6 +257,7 @@ def test_cross_cell_counts_leave_out_same_family_cells(tmp_path):
     assert c["adapter_at_or_above_teacher"] == 3
     assert c["ai_rose"] == 4  # all but BioMistral (11.7 -> 10.1)
     assert (c["added_cells_compared"], c["added_ai_rose"]) == (4, 3)
+    assert c["added_cells_teacher_below_base"] == 4
     assert c["added_cells_aggregate_fell"] == c["added_cells_with_aggregate"] == 4
     assert c["added_cells_drop_min"] == pytest.approx(0.014)
     assert c["added_cells_drop_max"] == pytest.approx(0.086)

@@ -6663,6 +6663,7 @@
       "added_ai_rose": 3,
       "added_cells_with_aggregate": 4,
       "added_cells_aggregate_fell": 4,
+      "added_cells_teacher_below_base": 4,
       "added_cells_drop_min": 0.014,
       "added_cells_drop_max": 0.086,
       "excluded_same_family": [

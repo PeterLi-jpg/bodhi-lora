@@ -1235,10 +1235,12 @@ def generality_section(posted: dict, generated: dict | None, out, macros):
     for cell in res["cells"]:
         if cell["set_aside"] or cell["same_family_as_evaluator"]:
             continue
+        b, t = _mean(cell, "base", "aggregate"), _mean(cell, "base_cot", "aggregate")
         rows.append({"id": cell["id"], "ai_base": _mean(cell, "base", "active_inquiry_pct"),
                      "ai_teacher": _mean(cell, "base_cot", "active_inquiry_pct"),
                      "ai_lora": _mean(cell, "lora", "active_inquiry_pct"),
-                     "agg_diff": cell["aggregate_lora_minus_base"].get("diff")})
+                     "agg_diff": cell["aggregate_lora_minus_base"].get("diff"),
+                     "teacher_minus_base": None if None in (b, t) else t - b})
     full = [r for r in rows if None not in (r["ai_base"], r["ai_teacher"], r["ai_lora"])]
     added = [r for r in rows if r["id"] != MAIN_CELL_ID and _finite(r["agg_diff"])]
     # Compare at the posted precision (one decimal), as the posts did.
@@ -1251,6 +1253,8 @@ def generality_section(posted: dict, generated: dict | None, out, macros):
                              for r in full),
         "added_cells_with_aggregate": len(added),
         "added_cells_aggregate_fell": sum(r["agg_diff"] < 0 for r in added),
+        "added_cells_teacher_below_base": sum(r["id"] != MAIN_CELL_ID and r.get("teacher_minus_base") is not None
+                                              and r["teacher_minus_base"] < 0 for r in rows),
         "added_cells_drop_min": min((-r["agg_diff"] for r in added), default=None),
         "added_cells_drop_max": max((-r["agg_diff"] for r in added), default=None),
         "excluded_same_family": sorted(c["id"] for c in res["cells"] if c["same_family_as_evaluator"]),
@@ -1269,6 +1273,8 @@ def generality_section(posted: dict, generated: dict | None, out, macros):
                "added cells outside the evaluator's family with both aggregate means")
     macros.add("CellsAddedAggregateFell", fmt_int(counts["added_cells_aggregate_fell"]),
                "of those, cells where the aggregate score is lower under LoRA")
+    macros.add("CellsAddedTeacherBelowBase", fmt_int(counts["added_cells_teacher_below_base"]),
+               "of those, cells where the aggregate score is lower under Base+CoT than Base")
     if added:
         macros.add("CellsAddedDropMin", fmt(counts["added_cells_drop_min"], 3),
                    "smallest Base minus LoRA aggregate drop in those cells")
