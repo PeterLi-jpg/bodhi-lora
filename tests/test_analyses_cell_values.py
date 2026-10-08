@@ -73,4 +73,10 @@ def test_synced_cell_layout_is_read_and_a_wrong_posted_value_is_flagged(tmp_path
     assert cell["eval_subdir"] == "eval"
     assert abs(cell["conditions"]["base"]["aggregate"]["mean"] - 0.459) <= 0.0005
     assert [(m["condition"], m["metric"]) for m in res["mismatches"]] == [("lora", "aggregate")]
+    # Askers minus non-askers among LoRA's graded responses: every scored LoRA response
+    # (985 in the submitted cell) falls in one of the two groups.
+    gap = cell["lora_askers_minus_non_askers"]
+    assert gap["n_ask"] + gap["n_no_ask"] == 985
+    assert gap["seeds_with_grades"] == [7, 13, 42, 99, 101]
+    assert abs(gap["gap"]) < 0.05
 

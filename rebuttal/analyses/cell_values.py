@@ -17,10 +17,12 @@ The metrics are the ones scripts/paper_stats.py computes for the paper: a per-se
 over scored responses (epistemic metrics) or over all completions (aggregate), then the
 mean and the sample SD over seeds. The posts do not say which SD they used.
 
-Until results_rebuttal/ is synced from the shared GPU host, only the submitted cell has
-data. The script then names each missing cell, checks the submitted cell, and writes no
-file: a file with only the submitted cell adds nothing to make numbers, which reads that
-cell from results_modal/, and it would leave an untracked file in the tree.
+The per-seed eval JSON of the added cells (full responses, about 370 MB) is copied
+from the shared GPU host into results_rebuttal/ and gitignored; the output file is
+tracked. Without those copies only the submitted cell has data. The script then names
+each missing cell, checks the submitted cell, and writes no file: a file with only the
+submitted cell adds nothing to make numbers, which reads that cell from results_modal/,
+and it would leave an untracked file in the tree.
 
 Usage:
     python3 rebuttal/analyses/cell_values.py [--cells-root results_rebuttal]
@@ -69,8 +71,28 @@ def locate(cell_id: str, cells_root: Path, results_modal: Path, overrides: dict)
     return cells_root / cell_dir_name(*CELLS[cell_id])
 
 
+def askers_gap(df) -> dict:
+    """Aggregate score of the LoRA responses that ask minus those that do not, pooled over seeds.
+
+    A response asks when its epistemic grade sets active inquiry; responses without a
+    parsed grade are left out. The posted replies (HomM_3_followup_part2.md:16) used this
+    gap to test whether the rubric penalizes asking. The two groups are self-selected,
+    so the gap is descriptive.
+    """
+    lora = df[(df["config"] == "lora_no_wrapper") & (df["ep_status"] == "scored")]
+    ask = lora.loc[lora["active_inquiry"] == 1.0, "healthbench"]
+    rest = lora.loc[lora["active_inquiry"] == 0.0, "healthbench"]
+    gap = float(ask.mean() - rest.mean()) if len(ask) and len(rest) else None
+    return {"gap": gap, "n_ask": int(len(ask)), "n_no_ask": int(len(rest)),
+            "seeds_with_grades": sorted(int(s) for s in lora["seed"].unique())}
+
+
 def cell_values(cell_dir: Path) -> dict:
-    """Seed mean and sample SD of every posted metric, per posted condition."""
+    """Seed mean and sample SD of every posted metric, per posted condition.
+
+    A seed whose epistemic grading failed has no value for the seven dimensions; the
+    mean and SD of those metrics are then null, and per_seed shows which seed is missing.
+    """
     seeds = ps.discover_seeds(cell_dir)
     # A rebuttal cell keeps its eval files in seed_<N>/eval/; results_modal does not.
     subdir = "eval" if (cell_dir / f"seed_{seeds[0]}" / "eval").is_dir() else ""
@@ -82,7 +104,8 @@ def cell_values(cell_dir: Path) -> dict:
             sm = ps.seed_means(ps.metric_frame(df, key), seeds)[cfg].to_numpy(dtype=float) * mult
             conditions[pcond][pmetric] = {"mean": float(np.mean(sm)), "sd": float(np.std(sm, ddof=1)),
                                           "per_seed": {str(s): float(v) for s, v in zip(seeds, sm)}}
-    return {"seeds": seeds, "eval_subdir": subdir, "conditions": conditions}
+    return {"seeds": seeds, "eval_subdir": subdir, "conditions": conditions,
+            "lora_askers_minus_non_askers": askers_gap(df)}
 
 
 def diff_cell(posted_cell: dict, generated: dict) -> list[dict]:

@@ -374,6 +374,18 @@
           }
         }
       },
+      "lora_askers_minus_non_askers": {
+        "gap": 0.00912816,
+        "n_ask": 449,
+        "n_no_ask": 536,
+        "seeds_with_grades": [
+          7,
+          13,
+          42,
+          99,
+          101
+        ]
+      },
       "diff_vs_posted": [
         {
           "condition": "base",
@@ -805,6 +817,18 @@
             }
           }
         }
+      },
+      "lora_askers_minus_non_askers": {
+        "gap": 0.00374002,
+        "n_ask": 564,
+        "n_no_ask": 433,
+        "seeds_with_grades": [
+          7,
+          13,
+          42,
+          99,
+          101
+        ]
       },
       "diff_vs_posted": [
         {
@@ -1245,6 +1269,18 @@
           }
         }
       },
+      "lora_askers_minus_non_askers": {
+        "gap": -0.0359513,
+        "n_ask": 525,
+        "n_no_ask": 475,
+        "seeds_with_grades": [
+          7,
+          13,
+          42,
+          99,
+          101
+        ]
+      },
       "diff_vs_posted": [
         {
           "condition": "base",
@@ -1683,6 +1719,18 @@
             }
           }
         }
+      },
+      "lora_askers_minus_non_askers": {
+        "gap": -0.00189506,
+        "n_ask": 101,
+        "n_no_ask": 899,
+        "seeds_with_grades": [
+          7,
+          13,
+          42,
+          99,
+          101
+        ]
       },
       "diff_vs_posted": [
         {
@@ -2123,6 +2171,18 @@
           }
         }
       },
+      "lora_askers_minus_non_askers": {
+        "gap": 0.0833682,
+        "n_ask": 584,
+        "n_no_ask": 412,
+        "seeds_with_grades": [
+          7,
+          13,
+          42,
+          99,
+          101
+        ]
+      },
       "diff_vs_posted": [
         {
           "condition": "base",
@@ -2562,6 +2622,18 @@
           }
         }
       },
+      "lora_askers_minus_non_askers": {
+        "gap": -0.0248097,
+        "n_ask": 864,
+        "n_no_ask": 136,
+        "seeds_with_grades": [
+          7,
+          13,
+          42,
+          99,
+          101
+        ]
+      },
       "diff_vs_posted": [
         {
           "condition": "base",
@@ -3000,6 +3072,18 @@
             }
           }
         }
+      },
+      "lora_askers_minus_non_askers": {
+        "gap": 0.0444414,
+        "n_ask": 265,
+        "n_no_ask": 735,
+        "seeds_with_grades": [
+          7,
+          13,
+          42,
+          99,
+          101
+        ]
       },
       "diff_vs_posted": [
         {
@@ -3551,6 +3635,17 @@
             }
           }
         }
+      },
+      "lora_askers_minus_non_askers": {
+        "gap": -0.000910193,
+        "n_ask": 489,
+        "n_no_ask": 310,
+        "seeds_with_grades": [
+          7,
+          13,
+          99,
+          101
+        ]
       },
       "diff_vs_posted": []
     }

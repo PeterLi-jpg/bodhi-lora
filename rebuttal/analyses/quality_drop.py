@@ -14,8 +14,9 @@ it takes the per-seed aggregate score (the ``mean`` field eval_healthbench.py wr
 pairs Base and LoRA within each seed, and reports the mean difference, its t interval
 (n_seeds - 1 df) and the two-sided paired t p. Holm runs over the cells (statsmodels).
 
-The raw cell outputs are on the shared H100 box and not yet in the repo (PROV-1). Until
-they are synced this script has nothing to read and exits with a message.
+The per-seed eval JSON of the added cells is copied from the shared H100 host into
+results_rebuttal/ and gitignored (PROV-1). Without that copy the script has nothing to
+read and exits with a message.
 """
 
 import argparse
