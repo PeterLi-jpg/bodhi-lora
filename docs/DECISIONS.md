@@ -84,3 +84,13 @@ Why: a history rewrite and remote branch deletion change public state, which is 
   Discerning, Humble, Inquiring", which matches a different paper by the same group
   (PLOS Digital Health, 2026). The paper must either use the BMJ expansion or cite the
   paper whose expansion it uses.
+- D15, mapping (2026-10-08). The cited BMJ paper defines two virtues, curiosity and humility,
+  but not the five components one by one. The posted reply (`FzpA_1_rebuttal.md:34`) mapped
+  the dimensions onto the other expansion (Bridging, Open, Discerning, Humble, Inquiring).
+  The paper now gives one mapping onto the BMJ names, read from the names, the two virtues and
+  the Pass 1 fields of bodhi-llm 0.1.4: Inquisitive covers active inquiry and context-seeking;
+  Humble covers uncertainty acknowledgment, hedging quality and scope bounding; Diagnostic
+  covers red-flag identification and specificity; Balanced and Open-minded have no dimension
+  of their own (`paper/main.tex`, Table bodhi-map). The installed bodhi-llm 0.1.4 package
+  still expands the acronym the other way in its docstrings and cites the PLOS Digital Health
+  paper.

@@ -26,9 +26,10 @@ else. Renaming the remote repo is deferred (docs/DECISIONS.md, D15).
 
 ## Read this first
 
-- **The epistemic-behavior scores are LLM-graded.** One of three physician raters
-  returned grades, and agreement with the LLM grader is below the pre-registered
-  target of 0.6. The paper does not claim physician validation (D5).
+- **The epistemic-behavior scores are LLM-graded.** The physician check grades the
+  HealthBench rubric criteria behind the aggregate score, not the seven behaviors. One
+  of three physician raters returned grades, and agreement with the LLM grader is below
+  the pre-registered target of 0.6. The paper does not claim physician validation (D5).
 - **The adapter has a cost.** We report the seed-level paired difference LoRA minus
   Base, with a t(4) 95% interval, for every cell. The aggregate score falls in six of
   the seven added cells. It rises only in the MedQA cell, which does not measure the

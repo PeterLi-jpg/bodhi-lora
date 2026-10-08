@@ -24,8 +24,13 @@ Issue numbers such as #5 are GitHub issues on `PeterLi-jpg/bohdi-lora`.
 
 ### Measurement and design
 
-- **Physician validation is incomplete (D5).** Agreement is below the pre-registered
-  0.6 target, so every epistemic-behavior result is labeled LLM-graded.
+- **Physician validation is incomplete (D5).** The check grades HealthBench rubric
+  criteria only, and agreement is below the pre-registered 0.6 target. No physician
+  graded the seven behaviors, so every epistemic-behavior result is labeled LLM-graded.
+- **The grader departs from its own anchors.** It gives context-seeking 2 to answers
+  that ask no direct question, and hedging 2 to most answers it flags as blanket
+  disclaimers (`context_seeking_anchor` and `blanket_disclaimers` in
+  `paper/generated/numbers.json`).
 - **Med42-8B shares the evaluator's family (EVAL-7, D6).** The cells are marked † and
   kept out of cross-model statements. `scripts/regrade_cross_family.py` is not run yet;
   it needs the synced outputs and a GPU.

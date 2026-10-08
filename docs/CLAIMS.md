@@ -27,6 +27,8 @@ Columns:
 | 10 | The method distills clinical epistemic calibration | withdrawn: calibration is not measured | none | D3; CLAIM-7 | 99d97ec |
 | 11 | The target is clinical decision support; the dimensions were shaped by practising physician co-authors | withdrawn: the scope is patient-facing open-ended QA; the dimensions came from informal author consensus | none | D4; CLAIM-3 | 99d97ec |
 | 12 | Physicians validated the LLM grader | withdrawn: 1 of 3 raters returned, agreement below the 0.6 target | returned grades (blocked), `scripts/compute_irr_kappa.py` | D5; EVAL-5 | 99d97ec |
+| 17 | The physician check (kappa 0.35) bears on the seven behavior anchors | withdrawn: the check grades HealthBench rubric criteria only; no physician graded the seven dimensions | `scripts/make_irr_excel.py`, `scripts/compute_irr_kappa.py` | D5 | a59cb82 |
+| 18 | Context-seeking 2 requires a direct question; bare referral scores 0 on hedging | restated: the grader often departs from both anchors, and the paper reports the rates | `results_modal/seed_*/epistemic_scores.json`, `make numbers` | D5 | a59cb82 |
 | 13 | The adapter is statistically indistinguishable from the wrapper at lower cost | withdrawn as an equivalence claim; the output-length difference can be reported as measured | `results_modal/`, `make numbers` | D2; CLAIM-9 | 99d97ec |
 | 14 | Cross-family grading prevents filter-grader bias | restated: it separates the families; it does not rule out correlated preferences, and Med42-8B breaks it | design, `scripts/regrade_cross_family.py` | D6; CLAIM-9 | 99d97ec |
 | 15 | Length analysis rules out verbosity | withdrawn unless a direct test is added | `results_modal/`, `make numbers` | CLAIM-9 | 99d97ec |

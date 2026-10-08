@@ -36,7 +36,8 @@ Inputs: `RM` is `results_modal/seed_*/` (the four `<condition>.json` files and
 | Aggregate falls in all 4, by 0.014 to 0.086 | `\statCellsAddedWithAggregate`, `\statCellsAddedDropMin`, `\statCellsAddedDropMax` | `generality_section` | PV | posted |
 | Adding CoT to the adapter changes the red-flag rate by -20.6 points [-29.8, -11.4] | `\statRedFlagRateLoRACoTvsLoRADiff`, `...CI` | `compare_conditions` | RM | computed |
 | Format leakage in 54.6% of LoRA+BODHI answers | `\statLeakagePctLoRACoT` | `rebuttal_section` | `rebuttal/results/interference_mechanism.json` | computed |
-| Physician agreement kappa 0.35, target 0.6 | `\statKappaAll`; 0.6 is the pre-registered target | `kappa_section` | `results_modal/irr/kappa_results.json` | computed (target: design) |
+| Physician agreement kappa 0.35, target 0.6, on rubric criteria only; no physician graded the seven dimensions | `\statKappaAll`; 0.6 is the pre-registered target | `kappa_section` | `results_modal/irr/kappa_results.json`; row design in `scripts/make_irr_excel.py` | computed (target: design) |
+| BioMistral-7B is a null result | none in the abstract | | PV (see section 4.2 rows) | posted |
 
 ## Introduction
 
@@ -47,6 +48,7 @@ Inputs: `RM` is `results_modal/seed_*/` (the four `<condition>.json` files and
 | Four LoRA - Base effects with Holm-adjusted p <= 0.0065 | `\statScopeBoundingLoRAvsBasePHolm` (the largest of the four) | `compare_conditions` | RM | computed |
 | Active inquiry rises in 3 of 4 added cells; aggregate falls in all 4 | `\statCellsAddedAIRose`, `\statCellsAddedCompared`, `\statCellsAddedWithAggregate` | `generality_section` | PV | posted |
 | BODHI expansion "Balanced, Open-minded, Diagnostic, Humble, Inquisitive" | none | | the cited BMJ paper (docs/DECISIONS.md, D15 note) | design |
+| Pass 1 has seven fields: task type, audience, best assessment, key uncertainties, questions to ask, red flags, safe recommendations | none | | `bodhi/prompts.py` in bodhi-llm 0.1.4 (pinned in `requirements.txt`) | design |
 
 ## Method and evaluation
 
@@ -60,8 +62,12 @@ Inputs: `RM` is `results_modal/seed_*/` (the four `<condition>.json` files and
 | HealthBench criterion failures at most 0.087% per run | `\statHealthBenchParseFailPctMaxRun` | `counts_and_failures` | RM | computed |
 | 1 of 3 physicians; kappa 0.35 [0.28, 0.43] on 509 rows from 10 prompts | `\statKappaRaters`, `\statKappaAll`, `\statKappaAllCI`, `\statKappaAllN`, `\statKappaPrompts` | `kappa_section` | `results_modal/irr/kappa_results.json` | computed |
 | 4,096-token evaluation context, greedy decoding, A100-80GB | none | | `legacy/modal_eval.py` (max_model_len patch, GPU type) | design |
+| Context-seeking 2 without a direct question: 74.4% of Base 2s, 47.2% of LoRA 2s | `\statContextSeekingTwoNoQuestionPctBase`, `\statContextSeekingTwoNoQuestionPctLoRA` | `context_seeking_anchor` | RM | computed |
+| Mapping of the seven dimensions to the BODHI components (Table bodhi-map) | none | | names in the cited BMJ paper; Pass 1 fields in bodhi-llm 0.1.4 | design (our reading) |
+| General graders as in HealthBench (GPT-4.1 grader) | none | | `healthbench2025` | design |
+| Hedging 2 given to 4 of the 5 flagged blanket disclaimers (Appendix D) | `\statBlanketDisclaimerHedgingTwo`, `\statBlanketDisclaimerTotal` | `blanket_disclaimers` | RM | computed |
 
-## Results: the submitted cell (section 4.1, Tables 1 and 2, Figure 2)
+## Results: the submitted cell (section 4.1, Tables 1 and 2; Figure 2 is in Appendix E)
 
 | Claim | Macro(s) | Function | Source | Kind |
 |---|---|---|---|---|
@@ -92,7 +98,7 @@ Inputs: `RM` is `results_modal/seed_*/` (the four `<condition>.json` files and
 | BioMistral-7B: 11.7% to 10.1%, teacher 14.5%, filter kept 20.4% | `\statCellHBBioMistral<...>` | `generality_section` | PV | posted |
 | Adapter at or above its teacher in 3 of 5 cells (submitted included) | `\statCellsAtOrAboveTeacher`, `\statCellsCompared` | `generality_section` | RM, PV | posted |
 | Aggregate falls in all 4 added cells outside the evaluator's family, 0.014 to 0.086 | `\statCellsAddedWithAggregate`, `\statCellsAddedDropMin`, `\statCellsAddedDropMax` | `generality_section` | PV | posted |
-| Posted paired t: each drop p < 0.02 after Holm over six cells | `\statPostedAggDropPBelow` | `generality_section` | PV | posted; recompute with `make cells` (`rebuttal/analyses/quality_drop.py`) |
+| Posted paired t: each drop two-sided p < 0.02, all six significant after Holm over six cells | `\statPostedAggDropPBelow` | `generality_section` | PV | posted; recompute with `make cells` (`rebuttal/analyses/quality_drop.py`) |
 | MedQA preamble run: base active inquiry 99% | `\statPostedMedQAPreambleAI` | `generality_section` | PV | posted |
 | MedQA aggregate "rises" | none (no value was posted) | | `rebuttal/responses/posted/HomM_2_followup_part1.md:11` | posted, no number |
 | Recipe and evaluation differences of the added cells | none | | `rebuttal/configs/*.yaml`, `rebuttal/launch/run_cell.sh`, `scripts/_vllm_engine.py` (comments above Table hparams-cells) | design |
@@ -115,6 +121,9 @@ Inputs: `RM` is `results_modal/seed_*/` (the four `<condition>.json` files and
 |---|---|---|---|---|
 | Aggregate falls by 0.014 to 0.086 in the added cells outside the family | `\statCellsAddedDropMin`, `\statCellsAddedDropMax` | `generality_section` | PV | posted |
 | Baseline code exists and has not run | none | | `scripts/baselines/`, `rebuttal/launch/run_baselines.sh` | design |
+| Antidepressant example: Base asks nothing, LoRA asks about duration, intensity, sleep, appetite, energy, concentration and self-harm, and gives a crisis line | none (qualitative) | | `results_modal/seed_99/{base,lora}_no_wrapper.json` and `epistemic_scores.json`, prompt `2c915b71` | computed (read by hand; quoted in Appendix K) |
+| Table 4: prior approaches compared on what they change, inference cost, what they need and their target | none | | the cited papers | design (positioning, not a measurement) |
+| Second protocol implemented, not run | none | | `scripts/baselines/ask_first.py` | design |
 
 ## Appendix numbers that are not computed here
 
