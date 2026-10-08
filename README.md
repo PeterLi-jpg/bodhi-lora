@@ -146,8 +146,8 @@ regrade with a judge outside the Llama, Qwen and base-model families is
 `setup.sh` downloads HealthBench into `data/raw/`. HealthBench-Hard (1,000 prompts) is a
 subset of HealthBench (5,000). All 1,000 Hard prompts are excluded from training by
 `prompt_id` (`--exclude-ids`), so about 4,000 prompts feed trace generation. The
-submitted-cell launcher also ran `scripts/check_dataset_overlap.py` as a gate before
-training; `rebuttal/launch/run_cell.sh` does not run that gate yet (KNOWN_ISSUES).
+submitted-cell launcher ran `scripts/check_dataset_overlap.py` as a gate before
+training, and `rebuttal/launch/run_cell.sh` runs the same gate on every cell.
 On 2026-10-07 the seed-7 training set of the submitted cell had 0 Hard prompts among its
 2,816 prompts and 0 overlap with the 667 eval prompts. ChatDoctor, MedQuAD and MedQA are
 converted to the same format by `scripts/build_benchmark_jsonl.py`.

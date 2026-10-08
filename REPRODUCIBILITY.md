@@ -73,9 +73,10 @@ The MedGemma cell has no such mismatch.
 - Training: `requirements.txt` in a `.venv` (torch 2.7.0, transformers 4.57.6,
   peft 0.19.1, trl 0.11.4, bodhi-llm 0.1.4). `bash setup.sh` installs it and runs
   `pip check`.
-- Inference: a second env, `.venv-infer`, for vLLM 0.9, which needs an older
+- Inference: a second env, `.venv-infer`, for vLLM 0.9.2, which needs an older
   transformers. `run_cell.sh` calls `.venv-infer/bin/python` for generation, grading
-  and eval. Its exact pins are not recorded yet (KNOWN_ISSUES).
+  and eval. `requirements-infer.txt` pins it. The env that produced the posted cells
+  was not frozen (KNOWN_ISSUES).
 - Hardware for an added cell: one H100 80GB per seed. `rebuttal/PLAN.md` estimated 8 to
   13 hours per 24-27B cell and 5 to 6 hours per 7-8B cell on one card.
 - Gated models need Hugging Face access: MedGemma-27B-text-it, Mistral-Small-24B,
@@ -107,9 +108,8 @@ bash rebuttal/launch/run_cell.sh
 
 `run_cell.sh` builds the benchmark JSONL if needed, generates and filters once, trains
 and evaluates each seed on a free GPU, and aggregates. Output goes to
-`results_rebuttal/<bench>__<model>/`. The cell list in `rebuttal/launch/run_grid.sh`
-predates the final grid (it has no Med42-8B or ChatDoctor cells), so use the table
-above. After each run, `scripts/run_manifest.py` records the resolved config, git commit
+`results_rebuttal/<bench>__<model>/`. `rebuttal/launch/run_grid.sh` lists every cell of
+the table above. After each run, `scripts/run_manifest.py` records the resolved config, git commit
 and dirty flag, library versions, model revisions and adapter hash.
 
 Check on the first run of a new base model:
@@ -143,7 +143,7 @@ comparable across prompts with different penalty items.
 | Data | Where | How to get it |
 |---|---|---|
 | HealthBench JSONL | `data/raw/` (ignored) | `bash setup.sh` |
-| ChatDoctor, MedQuAD, MedQA JSONL | `data/raw/` (ignored) | `scripts/build_benchmark_jsonl.py`; dataset revisions are not pinned yet |
+| ChatDoctor, MedQuAD, MedQA JSONL | `data/raw/` (ignored) | `scripts/build_benchmark_jsonl.py`, at the pinned dataset revisions; its manifest records the sha256 of each file |
 | Filtered training traces of the submitted cell | `data/sft_qwen_graded/` (ignored) | regenerate with stages 1 and 2 |
 | Submitted adapters and trainer states | `gs://bohdi-runs-tokyo-micron/prod-v39-tunix-27b-neurips/` | `gsutil cp` of each seed's `adapter_config.json` and `trainer_state.json` |
 | Added-cell outputs | `/data/PROJECTS/bohdi/results_rebuttal/` on the shared H100 host | the sync command below |

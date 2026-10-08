@@ -57,18 +57,13 @@ Issue numbers such as #5 are GitHub issues on `PeterLi-jpg/bohdi-lora`.
 
 ### Reproducibility gaps
 
-- **Dependency pins (REPRO-10).** The `.venv-infer` env for vLLM is not written down,
-  vLLM is pinned only to `>=0.9.0,<0.10`, and no model or grader has a Hugging Face
-  revision pin.
-- **Benchmark data is not pinned (REPRO-11).** `scripts/build_benchmark_jsonl.py` reads
-  the latest revision of each Hugging Face dataset, and the eval holdout is the first
-  200 rows, not a seeded draw.
-- **No leakage gate in the added-cell launcher (EVAL-12).** Generation excludes eval ids
-  with `--exclude-ids`, but `rebuttal/launch/run_cell.sh` does not run
-  `scripts/check_dataset_overlap.py`, and no overlap or contamination output is
-  committed.
-- **`rebuttal/launch/run_grid.sh` predates the final grid.** It has no Med42-8B or
-  ChatDoctor cells. Use the cell table in REPRODUCIBILITY.md section 5.
+- **The posted cells' environment and eval draws are not recorded (REPRO-10, REPRO-11,
+  EVAL-12).** The code side is fixed (see Fixed below). What stays open is the record of
+  the runs that produced the posted numbers: the exact `.venv-infer` versions (no pip
+  freeze was kept; `requirements-infer.txt` gives the range and why), the `eval_ids`
+  files of each added cell, and their overlap-check output. All of these sit on the
+  shared GPU host until `results_rebuttal/` is synced (PROV-1). New runs record them in
+  their manifests (`scripts/run_manifest.py`).
 
 ### Repo state
 
@@ -96,6 +91,19 @@ Issue numbers such as #5 are GitHub issues on `PeterLi-jpg/bohdi-lora`.
   hangs in vLLM 0.9.
 - **#3** The filter grader (Qwen2.5-14B) and the evaluator (Llama-3.1-8B) come from
   different families. Med42-8B breaks this rule for its own cells (see above).
+- **Dependency pins (REPRO-10, b2452bc).** `requirements-infer.txt` pins
+  `vllm==0.9.2` and `torch==2.7.0` and bounds transformers below 4.54, and
+  `configs/families.yaml` pins a Hugging Face revision for each model and grader
+  (e6e1f2d). Every run manifest records the package versions it ran with.
+- **Benchmark data pinning (REPRO-11, 92aed30).** `scripts/build_benchmark_jsonl.py`
+  loads each dataset at a pinned revision (`DEFAULT_REVISIONS`), draws the pool and the
+  holdout with a seed, and writes a manifest with the sha256 of each output. The
+  head-of-file mode that the posted cells used stays available as `--select head`.
+- **Leakage gate in the added-cell launcher (EVAL-12, 838e0a9).**
+  `rebuttal/launch/run_cell.sh` runs `scripts/check_dataset_overlap.py` on the graded
+  traces before training and writes `overlap_check.json` into the cell folder.
+- **`rebuttal/launch/run_grid.sh`** now lists every cell of the final grid, with the
+  Med42-8B and ChatDoctor cells.
 - **Train/eval separation (CLAIM-11).** Older docs said training used Hard prompts. It
   did not: all 1,000 HealthBench-Hard prompts are excluded from training, and the
   seed-7 training set of the submitted cell has no Hard prompt.
