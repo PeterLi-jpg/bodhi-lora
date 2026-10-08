@@ -90,7 +90,7 @@ make paper      # numbers + figures, then compile paper/main.tex
 |---|---|---|
 | Main HealthBench-Hard table, per-seed table | `results_modal/seed_*/{base_no_wrapper,base_bodhi,lora_no_wrapper,lora_bodhi}.json` | seed is the unit: paired t over 5 seeds, t intervals |
 | Epistemic-behavior table, effect sizes | `results_modal/seed_*/epistemic_scores.json` | Holm over the seven behaviors in each contrast; prompt-level d is descriptive, with a prompt-clustered bootstrap interval |
-| Physician agreement table | de-identified returned grades and `scripts/compute_irr_kappa.py` | blocked until the grades are committed (KNOWN_ISSUES) |
+| Physician agreement table | `results_modal/irr/kappa_results.json` (`make kappa` on the returned file, read outside the repo) | per-row grades are not committed, so the value cannot be recomputed from the repo alone (KNOWN_ISSUES) |
 | Discrimination analysis | `rebuttal/analyses/mimicry_split.py` | both labelings side by side, post hoc |
 | Format-leakage analysis | `rebuttal/analyses/interference_mechanism.py` | post hoc diagnosis |
 | Added-cell table | `results_rebuttal/` after sync, else `data/rebuttal_cells/posted_values.json` | Med42-8B rows marked † |

@@ -68,7 +68,7 @@ python -c "import json,glob; print(len({r['prompt_id'] for f in glob.glob('resul
 |---|---|---|---|
 | Aggregate rubric score, LoRA minus Base, every cell | `make numbers` | raw (submitted), posted (added) | seed-level paired difference with a t(4) 95% interval; no equivalence claim (D2, D7) |
 | Seven epistemic behaviors | `make numbers` from `epistemic_scores.json` | raw (submitted), posted (added) | LLM-graded; paired t over seeds, Holm over the seven within each contrast; prompt-level d is descriptive (D5, D7) |
-| Physician agreement (kappa) | `scripts/compute_irr_kappa.py` | blocked: returned grades are not in the repo | 1 of 3 raters returned; below the pre-registered 0.6 target; prompt-clustered bootstrap interval (D5) |
+| Physician agreement (kappa) | `scripts/compute_irr_kappa.py` (`make kappa`), output in `results_modal/irr/kappa_results.json` | raw output committed; per-row grades not in the repo | 1 of 3 raters returned; below the pre-registered 0.6 target; prompt-clustered bootstrap interval (D5) |
 | Blanket disclaimers | `make numbers` | raw | counts per condition with a two-sided Fisher exact p, in the results only (D10) |
 | Grader parse failures | `make numbers` | raw (submitted), posted (added) | rate per condition for both graders, and a worst case that scores failures as not met (D13) |
 | Discrimination (asks when information is missing, holds back when it is not) | `rebuttal/analyses/mimicry_split.py`, output in `rebuttal/results/` | raw | rubric-based and theme-only labelings side by side, both post hoc and exploratory (D9) |

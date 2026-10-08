@@ -4,8 +4,9 @@ Most parts of this project are reused: the prompt, the benchmarks, the base mode
 graders and the training libraries. The code in this repo is the pipeline around them:
 trace generation, rubric grading and filtering, leakage checks, the multi-seed eval, the
 seven-behavior grading and the statistics. This file lists what is reused so the
-paper's reuse statement is exact. Python pins live in `requirements.txt` and
-`requirements.lock.txt`. "See upstream" means we have not copied the license terms here;
+paper's reuse statement is exact. Python pins live in `requirements.txt` (training and
+analysis) and `requirements-infer.txt` (vLLM serving); `legacy/requirements.lock.txt` is
+the old lock from the submission era. "See upstream" means we have not copied the license terms here;
 read them at the source before you redistribute anything.
 
 ## Code

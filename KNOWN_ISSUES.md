@@ -17,9 +17,10 @@ Issue numbers such as #5 are GitHub issues on `PeterLi-jpg/bohdi-lora`.
   r=8, alpha=16. The `adapter_config.json` of the five submitted seeds on GCS must
   confirm it before the paper's hyperparameter table is final.
 - **Returned physician grades are not in the repo (PROV-5, EVAL-5).** One of three
-  raters returned. The agreement value cannot be recomputed until the de-identified
-  grades (grading_id to pass, fail or unsure) are committed and
-  `scripts/compute_irr_kappa.py` is rerun. Rater identities stay out of git.
+  raters returned. `scripts/compute_irr_kappa.py` read that file in place and wrote
+  `results_modal/irr/kappa_results.json`, which names no rater. Nobody else can
+  recompute it until the de-identified grades (grading_id to pass, fail or unsure) are
+  committed. Strip the `physician_id` column first. Rater identities stay out of git.
 
 ### Measurement and design
 
