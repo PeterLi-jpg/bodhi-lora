@@ -1,4 +1,5 @@
-# Pre-commit hooks for bohdi-lora (issue #22).
+# Pre-commit hooks for this repo (issue #22). The commit-msg and pre-push hooks
+# live in hooks/ and are activated with `git config core.hooksPath hooks`.
 #
 # Install once per clone:
 #   pip install pre-commit
@@ -20,9 +21,9 @@ repos:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
-        # configs/lora_*.yaml + tpu/accelerate_*.yaml are valid YAML but
-        # contain GitHub-style anchors / multi-doc separators in some
-        # hand-edited configs.  Allow check_yaml to fail soft.
+        # Some hand-edited configs/lora_*.yaml use anchors or multi-doc
+        # separators that check-yaml rejects, so configs/ is skipped here.
+        # CI loads every config with yaml.safe_load instead.
         exclude: ^configs/.*\.yaml$
       - id: check-merge-conflict
       - id: check-added-large-files
@@ -35,6 +36,13 @@ repos:
         entry: bash scripts/check_no_secrets.sh
         language: system
         pass_filenames: false
-        # Run on every commit, even if no obviously-sensitive file is staged
-        # — the script ls-files's the entire tree.
+        # Run on every commit, even if no sensitive file is staged: the
+        # script scans every tracked file.
         always_run: true
+
+      - id: doc-paths
+        name: every repo path named in the docs exists
+        entry: python scripts/check_doc_paths.py
+        language: system
+        pass_filenames: false
+        files: \.md$
