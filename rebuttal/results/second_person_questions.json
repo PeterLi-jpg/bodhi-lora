@@ -1,0 +1,68 @@
+{
+  "definition": "sentence ending in '?' with a second-person pronoun, markdown stripped; denominator = all completions",
+  "conditions": {
+    "base_no_wrapper": {
+      "count": 179,
+      "n": 1000,
+      "rate": 0.179,
+      "per_seed_rate": {
+        "7": 0.185,
+        "13": 0.205,
+        "42": 0.19,
+        "99": 0.155,
+        "101": 0.16
+      }
+    },
+    "base_bodhi": {
+      "count": 346,
+      "n": 957,
+      "rate": 0.361546499477534,
+      "per_seed_rate": {
+        "7": 0.39267015706806285,
+        "13": 0.35051546391752575,
+        "42": 0.34196891191709844,
+        "99": 0.39893617021276595,
+        "101": 0.32460732984293195
+      }
+    },
+    "lora_no_wrapper": {
+      "count": 367,
+      "n": 1000,
+      "rate": 0.367,
+      "per_seed_rate": {
+        "7": 0.4,
+        "13": 0.36,
+        "42": 0.355,
+        "99": 0.34,
+        "101": 0.38
+      }
+    },
+    "lora_bodhi": {
+      "count": 627,
+      "n": 959,
+      "rate": 0.6538060479666319,
+      "per_seed_rate": {
+        "7": 0.6354166666666666,
+        "13": 0.673469387755102,
+        "42": 0.7037037037037037,
+        "99": 0.6492146596858639,
+        "101": 0.6073298429319371
+      }
+    }
+  },
+  "posted": {
+    "base_no_wrapper": 0.184,
+    "lora_no_wrapper": 0.396,
+    "source": "rebuttal/responses/reviewer_FzpA_followup.md:13; meta_review_part1.md:27"
+  },
+  "lora_minus_base": {
+    "diff": 0.188,
+    "ci95": [
+      0.15190621363242868,
+      0.22409378636757132
+    ],
+    "t": 14.461538461538458,
+    "df": 4,
+    "p": 0.00013291515296260943
+  }
+}
