@@ -46,3 +46,25 @@ temporal/
 
 data/grading/
 REBUTTAL_NOTES.md
+
+# --- submission build artifacts (regenerable, never commit) ---
+*.zip
+*.tar.gz
+paper/arxiv/
+paper/arxiv_upload/
+paper/neurips_submission/
+paper/preprint/
+paper/*.aux
+paper/*.log
+paper/*.out
+paper/*.bbl
+paper/*.blg
+
+# --- kept out while the paper is under double-blind review ---
+# (these carry real names; re-enable after acceptance)
+IRR-clinicians/
+paper/AUTHORS.md
+CONTRIBUTORS.md
+
+# --- AI-generated review simulations and scratch output ---
+outputs/
