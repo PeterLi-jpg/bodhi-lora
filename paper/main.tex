@@ -7,6 +7,9 @@
 
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
+% float must load before hyperref. Loaded after it, every figure and table
+% anchor is written twice ("Object @figure.N already defined").
+\usepackage{float}
 \usepackage{hyperref}
 \usepackage{url}
 \usepackage{booktabs}
@@ -18,7 +21,6 @@
 \usepackage{graphicx}
 \usepackage{multirow}
 \usepackage{enumitem}
-\usepackage{float}
 \usepackage[breakable]{tcolorbox}
 
 % Conversation box: light warm background, subtle border, no rounding
