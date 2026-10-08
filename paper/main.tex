@@ -522,7 +522,11 @@ LoRA + \bodhi{} & 0.456 & 0.457 & 0.457 & 0.456 & 0.452 \\
 %   training path   main:tpu/launch_5seeds_tunix.sh:525-529 (scripts/train_lora_tunix.py)
 %   base model      main:configs/lora_medgemma27b_tunix.yaml:19
 %   r, alpha        main:configs/lora_medgemma27b_tunix.yaml:37-38; PEFT export
-%                   main:tpu/launch_5seeds_tunix.sh:540 (--r 8 --alpha 16 --dropout 0.0)
+%                   main:tpu/launch_5seeds_tunix.sh:540 (--r 8 --alpha 16 --dropout 0.0).
+%                   The only MedGemma adapter in git, 607440e:checkpoints/seed_42/best/
+%                   adapter_config.json:19,29, also has r=8, alpha=16, but it comes from an
+%                   early HF-path run (q_proj/v_proj, 5 epochs on 838 traces), not from
+%                   the evaluated adapters.
 %   dropout         main:configs/lora_medgemma27b_tunix.yaml:39, applied by qwix.LoraRule
 %                   main:scripts/train_lora_tunix.py:365,372-378; written as 0.0 in the export
 %   target modules  main:configs/lora_medgemma27b_tunix.yaml:40-42 (q_einsum, kv_einsum);
