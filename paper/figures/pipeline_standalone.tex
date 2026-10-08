@@ -54,9 +54,9 @@
   {\footnotesize score $s\!\in\![0,1]$}};
 \node[pC, right=9mm of s2] (s3) {%
   \textbf{3 · Filter}\\[1pt] Retain $s \geq 0.4$\\ 90/10 train--val\\
-  {\footnotesize $\sim$3,100 traces/seed}};
+  {\footnotesize $\sim$3,100 kept (seed 7)}};
 \node[pD, right=9mm of s3] (s4) {%
-  \textbf{4 · Distill}\\[1pt] LoRA SFT\\ $r{=}16$, 3 epochs\\
+  \textbf{4 · Distill}\\[1pt] LoRA SFT\\ $r{=}8$, 300 steps\\
   {\footnotesize 5 seeds}};
 
 \draw[arr] (s1) -- (s2);
@@ -96,15 +96,15 @@
 \coordinate (cellsmid) at ($(elora)!0.5!(elcot)$);
 \node[holdout] (hb) at ($(cellsmid |- m.south)+(0,-15mm)$) {%
   \textbf{HealthBench-Hard} (held-out)\\
-  {\footnotesize 1,000 prompts · Llama-3.1-8B-Instruct grader}};
+  {\footnotesize 200 of 1,000 prompts per seed · Llama-3.1-8B-Instruct grader}};
 
 \draw[arr] ($(cellsmid |- m.south)+(0,-1mm)$) -- (hb.north);
 
-%% The Base+CoT cell is not a fourth arbitrary condition: it is bit-for-bit the
-%% step-1 generator, which is what makes the adapter a self-distillation. Said in
+%% The Base+CoT cell is not a fourth arbitrary condition: it is the same model and
+%% protocol as the step-1 generator (served with other settings), which is what makes the adapter a self-distillation. Said in
 %% a footnote rather than a feedback arrow, which would re-clutter the layout.
 \node[font=\footnotesize, text=colGray, align=center, below=3.5mm of hb] (tnote)
-  {$\dagger$ identical to the step-1 generator, so the adapter is distilled from this configuration};
+  {$\dagger$ same model and protocol as the step-1 generator, so the adapter is distilled from this configuration};
 
 %% ── Background regions ────────────────────────────────────────────────────
 \begin{scope}[on background layer]
