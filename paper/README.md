@@ -6,12 +6,13 @@
 ## Build
 
 ```bash
-python3 scripts/build_paper_figures.py --clean-legacy   # figures, first build only
-tectonic -X compile --outdir paper/build paper/main.tex
+make paper
 ```
 
-`make paper` runs the same build where the top-level Makefile has that target.
-The output is `paper/build/main.pdf`. Git ignores `paper/build/`.
+`make paper` runs `make numbers` and `make figures`, then
+`tectonic -X compile --outdir paper/build paper/main.tex`. The output is
+`paper/build/main.pdf`. Git ignores `paper/build/`. To remove old PNG figures from
+`paper/figures/`, run `python3 scripts/build_paper_figures.py --clean-legacy` once.
 
 The figure PDFs in `paper/figures/` are build outputs and git ignores them. The one
 exception is `figures/pipeline.pdf`, which is tracked. Its source is
