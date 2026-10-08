@@ -58,12 +58,13 @@
       "data/derived/seed_7_filter_scores.json": "3e3e688090c0de5df809d6df0bf18ccdcf64dec49ab0b25ba9a80253c653b9a0",
       "data/derived/seed_42_qwen_grader_scores.json": "cd6dadc8be1fef7c6d2e01d62b71cca1f418784893633d461262a3d0c416bc15",
       "results_modal/irr/kappa_results.json": "194b39fe7522dcffdce270bcf59bd9f2d094e57c08b570c3c5fcd08cb86d8535",
+      "rebuttal/results/cell_recipe.json": "ba8727f3265633232c3ca4c4ab2eab7b8cfa07c62869ba8d24331992aa2a5a93",
       "rebuttal/results/interference_mechanism.json": "b85713aab71610aec4f3c0e95077db6319a1ff2895eb9796a5b94df369a4af81",
       "rebuttal/results/mimicry_split.json": "0d62757fb6ca4409fb1797004daf13170d1939700a7f9f3ed59374521ab6e769",
       "rebuttal/results/quality_drop.json": "9fea3707877b0cdb48ceff3c1c5a7419e28dc68064f1162bdc0e073cdf113f69",
       "rebuttal/results/second_person_questions.json": "d84862d8bddef8119f084722629b24336155a40a431d2da7af0fb3bcd539060a",
       "data/rebuttal_cells/posted_values.json": "860fad299d02fd1200efaaf6bbe66deec7800c28df40a3895b2ab97929dcbfc0",
-      "data/rebuttal_cells/generated_values.json": "a2cd6ad2049a22160a374cb80f6e2e52fd6c5d3be953b87e0c927ea19bf77e6d"
+      "data/rebuttal_cells/generated_values.json": "e431955303bd24abe81023c955da2a7edc064208bdc93b9017f6dc84bd80ba20"
     }
   },
   "conditions": {
@@ -6182,6 +6183,63 @@
       }
     }
   },
+  "cell_recipe": {
+    "cells": [
+      "healthbench__mistral-small-24b",
+      "healthbench__med42-8b",
+      "healthbench__biomistral-7b",
+      "chatdoctor__mistral-small-24b",
+      "chatdoctor__med42-8b",
+      "medquad__mistral-small-24b",
+      "medqa__mistral-small-24b"
+    ],
+    "tau": 0.4,
+    "r": 16,
+    "lora_alpha": 32,
+    "lora_dropout": 0.05,
+    "target_modules": [
+      "down_proj",
+      "gate_proj",
+      "k_proj",
+      "o_proj",
+      "q_proj",
+      "up_proj",
+      "v_proj"
+    ],
+    "epochs": 3,
+    "effective_batch": [
+      16
+    ],
+    "adapters": 35,
+    "refilter_lines": 0,
+    "best_epoch_min": 1.0,
+    "best_epoch_max": 3.0,
+    "per_model": {
+      "Mistral-Small-24B": {
+        "per_device_batch": 2,
+        "grad_accumulation": [
+          8
+        ]
+      },
+      "Med42-8B": {
+        "per_device_batch": 4,
+        "grad_accumulation": [
+          4
+        ]
+      },
+      "BioMistral-7B": {
+        "per_device_batch": 4,
+        "grad_accumulation": [
+          4
+        ]
+      }
+    },
+    "incomplete": {
+      "medqa__BioMistral_BioMistral-7B": "partial",
+      "medqa__google_medgemma-27b-text-it": "not run",
+      "medquad__google_medgemma-27b-text-it": "not run"
+    }
+  },
   "generality": {
     "provenance": "transcribed from posted OpenReview replies; raw outputs on mit-critical-data-1:/data/PROJECTS/bohdi/results_rebuttal/ pending sync",
     "cells": [
@@ -6193,7 +6251,8 @@
         "same_family_as_evaluator": false,
         "set_aside": false,
         "set_aside_reason": null,
-        "filter_clearance_pct": 62.1,
+        "filter_clearance_pct": 62.15,
+        "filter_clearance_source": "log",
         "source": "synced",
         "seeds": [
           7,
@@ -6340,6 +6399,19 @@
             }
           }
         },
+        "partial": {},
+        "askers_gap": {
+          "gap": 0.00374002,
+          "n_ask": 564,
+          "n_no_ask": 433,
+          "seeds_with_grades": [
+            7,
+            13,
+            42,
+            99,
+            101
+          ]
+        },
         "aggregate_lora_minus_base": {
           "diff": -0.0137344,
           "ci95": [
@@ -6361,6 +6433,71 @@
             -0.014802
           ],
           "p_holm_over_cells": 0.016346
+        },
+        "recipe": {
+          "adapter": {
+            "base_model": "mistralai/Mistral-Small-24B-Instruct-2501",
+            "lora_alpha": 32,
+            "lora_dropout": 0.05,
+            "max_steps": 420,
+            "num_train_epochs": 3,
+            "peft_version": "0.19.1",
+            "r": 16,
+            "steps_per_epoch": 140,
+            "target_modules": [
+              "down_proj",
+              "gate_proj",
+              "k_proj",
+              "o_proj",
+              "q_proj",
+              "up_proj",
+              "v_proj"
+            ],
+            "train_batch_size": 2
+          },
+          "benchmark": "healthbench",
+          "best_epoch": {
+            "101": 2.0,
+            "13": 1.0,
+            "42": 1.0,
+            "7": 1.0,
+            "99": 2.0
+          },
+          "dir": "results_rebuttal/healthbench__mistralai_Mistral-Small-24B-Instruct-2501",
+          "effective_batch_consistent": [
+            16
+          ],
+          "filter": {
+            "graded": 4000,
+            "kept": 2486,
+            "kept_pct": 62.15,
+            "n_filter_passes": 1,
+            "parsed": true,
+            "path": "logs/host/filter_healthbench_mistralai_Mistral-Small-24B-Instruct-2501.log",
+            "raw": 4000,
+            "rubric_parse_failures": [
+              2,
+              45391
+            ],
+            "score_field": "overall_score",
+            "sha256": "29e4c028df9e0ef75cb0e0979adce4ceab6484c450e04f5d91cadbc8f4b568b4",
+            "tau": 0.4,
+            "train": 2238,
+            "val": 248
+          },
+          "grad_accumulation_consistent": [
+            8
+          ],
+          "model_tag": "mistralai_Mistral-Small-24B-Instruct-2501",
+          "n_eval_ids": null,
+          "seeds": [
+            7,
+            13,
+            42,
+            99,
+            101
+          ],
+          "status": "complete"
         }
       },
       {
@@ -6371,7 +6508,8 @@
         "same_family_as_evaluator": true,
         "set_aside": false,
         "set_aside_reason": null,
-        "filter_clearance_pct": 50.8,
+        "filter_clearance_pct": 50.75,
+        "filter_clearance_source": "log",
         "source": "synced",
         "seeds": [
           7,
@@ -6518,6 +6656,19 @@
             }
           }
         },
+        "partial": {},
+        "askers_gap": {
+          "gap": -0.0359513,
+          "n_ask": 525,
+          "n_no_ask": 475,
+          "seeds_with_grades": [
+            7,
+            13,
+            42,
+            99,
+            101
+          ]
+        },
         "aggregate_lora_minus_base": {
           "diff": -0.013001,
           "ci95": [
@@ -6539,6 +6690,71 @@
             -0.01029
           ],
           "p_holm_over_cells": 0.0137795
+        },
+        "recipe": {
+          "adapter": {
+            "base_model": "m42-health/Llama3-Med42-8B",
+            "lora_alpha": 32,
+            "lora_dropout": 0.05,
+            "max_steps": 345,
+            "num_train_epochs": 3,
+            "peft_version": "0.19.1",
+            "r": 16,
+            "steps_per_epoch": 115,
+            "target_modules": [
+              "down_proj",
+              "gate_proj",
+              "k_proj",
+              "o_proj",
+              "q_proj",
+              "up_proj",
+              "v_proj"
+            ],
+            "train_batch_size": 4
+          },
+          "benchmark": "healthbench",
+          "best_epoch": {
+            "101": 2.0,
+            "13": 2.0,
+            "42": 2.0,
+            "7": 2.0,
+            "99": 2.0
+          },
+          "dir": "results_rebuttal/healthbench__m42-health_Llama3-Med42-8B",
+          "effective_batch_consistent": [
+            16
+          ],
+          "filter": {
+            "graded": 4000,
+            "kept": 2030,
+            "kept_pct": 50.75,
+            "n_filter_passes": 1,
+            "parsed": true,
+            "path": "logs/host/filter_healthbench_m42-health_Llama3-Med42-8B.log",
+            "raw": 4000,
+            "rubric_parse_failures": [
+              0,
+              45391
+            ],
+            "score_field": "overall_score",
+            "sha256": "dcc26981ca813555114fcbcf90ed3b315cc9ae21fd20907024dcdb2b85a7bac9",
+            "tau": 0.4,
+            "train": 1827,
+            "val": 203
+          },
+          "grad_accumulation_consistent": [
+            4
+          ],
+          "model_tag": "m42-health_Llama3-Med42-8B",
+          "n_eval_ids": null,
+          "seeds": [
+            7,
+            13,
+            42,
+            99,
+            101
+          ],
+          "status": "complete"
         }
       },
       {
@@ -6549,7 +6765,8 @@
         "same_family_as_evaluator": false,
         "set_aside": false,
         "set_aside_reason": null,
-        "filter_clearance_pct": 20.4,
+        "filter_clearance_pct": 20.35,
+        "filter_clearance_source": "log",
         "source": "synced",
         "seeds": [
           7,
@@ -6696,6 +6913,19 @@
             }
           }
         },
+        "partial": {},
+        "askers_gap": {
+          "gap": -0.00189506,
+          "n_ask": 101,
+          "n_no_ask": 899,
+          "seeds_with_grades": [
+            7,
+            13,
+            42,
+            99,
+            101
+          ]
+        },
         "aggregate_lora_minus_base": {
           "diff": -0.0152024,
           "ci95": [
@@ -6717,6 +6947,71 @@
             -0.013244
           ],
           "p_holm_over_cells": 0.016346
+        },
+        "recipe": {
+          "adapter": {
+            "base_model": "BioMistral/BioMistral-7B",
+            "lora_alpha": 32,
+            "lora_dropout": 0.05,
+            "max_steps": 138,
+            "num_train_epochs": 3,
+            "peft_version": "0.19.1",
+            "r": 16,
+            "steps_per_epoch": 46,
+            "target_modules": [
+              "down_proj",
+              "gate_proj",
+              "k_proj",
+              "o_proj",
+              "q_proj",
+              "up_proj",
+              "v_proj"
+            ],
+            "train_batch_size": 4
+          },
+          "benchmark": "healthbench",
+          "best_epoch": {
+            "101": 1.0,
+            "13": 1.0,
+            "42": 2.0,
+            "7": 2.0,
+            "99": 1.0
+          },
+          "dir": "results_rebuttal/healthbench__BioMistral_BioMistral-7B",
+          "effective_batch_consistent": [
+            16
+          ],
+          "filter": {
+            "graded": 4000,
+            "kept": 814,
+            "kept_pct": 20.35,
+            "n_filter_passes": 1,
+            "parsed": true,
+            "path": "logs/host/filter_healthbench_BioMistral_BioMistral-7B.log",
+            "raw": 4000,
+            "rubric_parse_failures": [
+              0,
+              45391
+            ],
+            "score_field": "overall_score",
+            "sha256": "f90614d386def0a6ab1942d08733f63a6fe957563552862301de4ee9e976d9c7",
+            "tau": 0.4,
+            "train": 733,
+            "val": 81
+          },
+          "grad_accumulation_consistent": [
+            4
+          ],
+          "model_tag": "BioMistral_BioMistral-7B",
+          "n_eval_ids": null,
+          "seeds": [
+            7,
+            13,
+            42,
+            99,
+            101
+          ],
+          "status": "complete"
         }
       },
       {
@@ -6727,7 +7022,8 @@
         "same_family_as_evaluator": false,
         "set_aside": false,
         "set_aside_reason": null,
-        "filter_clearance_pct": 97.6,
+        "filter_clearance_pct": 97.5952,
+        "filter_clearance_source": "log",
         "source": "synced",
         "seeds": [
           7,
@@ -6874,6 +7170,19 @@
             }
           }
         },
+        "partial": {},
+        "askers_gap": {
+          "gap": 0.0833682,
+          "n_ask": 584,
+          "n_no_ask": 412,
+          "seeds_with_grades": [
+            7,
+            13,
+            42,
+            99,
+            101
+          ]
+        },
         "aggregate_lora_minus_base": {
           "diff": -0.0159284,
           "ci95": [
@@ -6895,6 +7204,71 @@
             -0.007262
           ],
           "p_holm_over_cells": 0.016346
+        },
+        "recipe": {
+          "adapter": {
+            "base_model": "mistralai/Mistral-Small-24B-Instruct-2501",
+            "lora_alpha": 32,
+            "lora_dropout": 0.05,
+            "max_steps": 693,
+            "num_train_epochs": 3,
+            "peft_version": "0.19.1",
+            "r": 16,
+            "steps_per_epoch": 231,
+            "target_modules": [
+              "down_proj",
+              "gate_proj",
+              "k_proj",
+              "o_proj",
+              "q_proj",
+              "up_proj",
+              "v_proj"
+            ],
+            "train_batch_size": 2
+          },
+          "benchmark": "chatdoctor",
+          "best_epoch": {
+            "101": 2.0,
+            "13": 2.0,
+            "42": 2.0,
+            "7": 2.0,
+            "99": 2.0
+          },
+          "dir": "results_rebuttal/chatdoctor__mistralai_Mistral-Small-24B-Instruct-2501",
+          "effective_batch_consistent": [
+            16
+          ],
+          "filter": {
+            "graded": 4200,
+            "kept": 4099,
+            "kept_pct": 97.5952,
+            "n_filter_passes": 1,
+            "parsed": true,
+            "path": "logs/host/filter_chatdoctor_mistralai_Mistral-Small-24B-Instruct-2501.log",
+            "raw": 4200,
+            "rubric_parse_failures": [
+              0,
+              33600
+            ],
+            "score_field": "overall_score",
+            "sha256": "22eac3850d310ee3e5b39886f9fbda073e88d17f45482201794b38a30e7f9e6e",
+            "tau": 0.4,
+            "train": 3690,
+            "val": 409
+          },
+          "grad_accumulation_consistent": [
+            8
+          ],
+          "model_tag": "mistralai_Mistral-Small-24B-Instruct-2501",
+          "n_eval_ids": 200,
+          "seeds": [
+            7,
+            13,
+            42,
+            99,
+            101
+          ],
+          "status": "complete"
         }
       },
       {
@@ -6906,6 +7280,7 @@
         "set_aside": false,
         "set_aside_reason": null,
         "filter_clearance_pct": 96.0,
+        "filter_clearance_source": "log",
         "source": "synced",
         "seeds": [
           7,
@@ -7052,6 +7427,19 @@
             }
           }
         },
+        "partial": {},
+        "askers_gap": {
+          "gap": -0.0248097,
+          "n_ask": 864,
+          "n_no_ask": 136,
+          "seeds_with_grades": [
+            7,
+            13,
+            42,
+            99,
+            101
+          ]
+        },
         "aggregate_lora_minus_base": {
           "diff": -0.041,
           "ci95": [
@@ -7073,6 +7461,71 @@
             -0.0375
           ],
           "p_holm_over_cells": 0.00278287
+        },
+        "recipe": {
+          "adapter": {
+            "base_model": "m42-health/Llama3-Med42-8B",
+            "lora_alpha": 32,
+            "lora_dropout": 0.05,
+            "max_steps": 681,
+            "num_train_epochs": 3,
+            "peft_version": "0.19.1",
+            "r": 16,
+            "steps_per_epoch": 227,
+            "target_modules": [
+              "down_proj",
+              "gate_proj",
+              "k_proj",
+              "o_proj",
+              "q_proj",
+              "up_proj",
+              "v_proj"
+            ],
+            "train_batch_size": 4
+          },
+          "benchmark": "chatdoctor",
+          "best_epoch": {
+            "101": 2.0,
+            "13": 2.0,
+            "42": 2.0,
+            "7": 2.0,
+            "99": 2.0
+          },
+          "dir": "results_rebuttal/chatdoctor__m42-health_Llama3-Med42-8B",
+          "effective_batch_consistent": [
+            16
+          ],
+          "filter": {
+            "graded": 4200,
+            "kept": 4032,
+            "kept_pct": 96.0,
+            "n_filter_passes": 1,
+            "parsed": true,
+            "path": "logs/host/filter_chatdoctor_m42-health_Llama3-Med42-8B.log",
+            "raw": 4200,
+            "rubric_parse_failures": [
+              0,
+              33600
+            ],
+            "score_field": "overall_score",
+            "sha256": "2db7f8e318955a20fcdc625b6a4ef1d37d912954b6036a434d0cd3f49c76b5be",
+            "tau": 0.4,
+            "train": 3629,
+            "val": 403
+          },
+          "grad_accumulation_consistent": [
+            4
+          ],
+          "model_tag": "m42-health_Llama3-Med42-8B",
+          "n_eval_ids": 200,
+          "seeds": [
+            7,
+            13,
+            42,
+            99,
+            101
+          ],
+          "status": "complete"
         }
       },
       {
@@ -7083,7 +7536,8 @@
         "same_family_as_evaluator": false,
         "set_aside": false,
         "set_aside_reason": null,
-        "filter_clearance_pct": 78.4,
+        "filter_clearance_pct": 78.4286,
+        "filter_clearance_source": "log",
         "source": "synced",
         "seeds": [
           7,
@@ -7230,6 +7684,19 @@
             }
           }
         },
+        "partial": {},
+        "askers_gap": {
+          "gap": 0.0444414,
+          "n_ask": 265,
+          "n_no_ask": 735,
+          "seeds_with_grades": [
+            7,
+            13,
+            42,
+            99,
+            101
+          ]
+        },
         "aggregate_lora_minus_base": {
           "diff": -0.0856192,
           "ci95": [
@@ -7251,6 +7718,71 @@
             -0.107738
           ],
           "p_holm_over_cells": 0.00417595
+        },
+        "recipe": {
+          "adapter": {
+            "base_model": "mistralai/Mistral-Small-24B-Instruct-2501",
+            "lora_alpha": 32,
+            "lora_dropout": 0.05,
+            "max_steps": 558,
+            "num_train_epochs": 3,
+            "peft_version": "0.19.1",
+            "r": 16,
+            "steps_per_epoch": 186,
+            "target_modules": [
+              "down_proj",
+              "gate_proj",
+              "k_proj",
+              "o_proj",
+              "q_proj",
+              "up_proj",
+              "v_proj"
+            ],
+            "train_batch_size": 2
+          },
+          "benchmark": "medquad",
+          "best_epoch": {
+            "101": 3.0,
+            "13": 3.0,
+            "42": 3.0,
+            "7": 3.0,
+            "99": 3.0
+          },
+          "dir": "results_rebuttal/medquad__mistralai_Mistral-Small-24B-Instruct-2501",
+          "effective_batch_consistent": [
+            16
+          ],
+          "filter": {
+            "graded": 4200,
+            "kept": 3294,
+            "kept_pct": 78.4286,
+            "n_filter_passes": 1,
+            "parsed": true,
+            "path": "logs/host/filter_medquad_mistralai_Mistral-Small-24B-Instruct-2501.log",
+            "raw": 4200,
+            "rubric_parse_failures": [
+              0,
+              33600
+            ],
+            "score_field": "overall_score",
+            "sha256": "fde8a4d247e39e99c857daca3db5f642d5de1a55b2038fd54c279b80b92facf2",
+            "tau": 0.4,
+            "train": 2965,
+            "val": 329
+          },
+          "grad_accumulation_consistent": [
+            8
+          ],
+          "model_tag": "mistralai_Mistral-Small-24B-Instruct-2501",
+          "n_eval_ids": 200,
+          "seeds": [
+            7,
+            13,
+            42,
+            99,
+            101
+          ],
+          "status": "complete"
         }
       },
       {
@@ -7261,7 +7793,8 @@
         "same_family_as_evaluator": false,
         "set_aside": true,
         "set_aside_reason": "a single-best-answer exam benchmark whose rubric grades agreement with a keyed answer, which is a different task from the open-ended setting the recipe targets",
-        "filter_clearance_pct": null,
+        "filter_clearance_pct": 99.881,
+        "filter_clearance_source": "log",
         "source": "synced",
         "seeds": [
           7,
@@ -7408,6 +7941,307 @@
             }
           }
         },
+        "partial": {
+          "base": {
+            "active_inquiry_pct": {
+              "seeds": [
+                7,
+                13,
+                99,
+                101
+              ],
+              "min": 99.0,
+              "max": 100.0
+            },
+            "uncertainty_ack": {
+              "seeds": [
+                7,
+                13,
+                99,
+                101
+              ],
+              "min": 2.0,
+              "max": 2.0
+            },
+            "context_seeking": {
+              "seeds": [
+                7,
+                13,
+                99,
+                101
+              ],
+              "min": 2.0,
+              "max": 2.0
+            },
+            "red_flag": {
+              "seeds": [
+                7,
+                13,
+                99,
+                101
+              ],
+              "min": 1.14,
+              "max": 1.195
+            },
+            "scope_bounding": {
+              "seeds": [
+                7,
+                13,
+                99,
+                101
+              ],
+              "min": 1.975,
+              "max": 1.995
+            },
+            "hedging_quality": {
+              "seeds": [
+                7,
+                13,
+                99,
+                101
+              ],
+              "min": 1.97,
+              "max": 1.985
+            },
+            "specificity": {
+              "seeds": [
+                7,
+                13,
+                99,
+                101
+              ],
+              "min": 1.855,
+              "max": 1.89
+            }
+          },
+          "base_cot": {
+            "active_inquiry_pct": {
+              "seeds": [
+                7,
+                13,
+                99,
+                101
+              ],
+              "min": 59.0,
+              "max": 62.0
+            },
+            "uncertainty_ack": {
+              "seeds": [
+                7,
+                13,
+                99,
+                101
+              ],
+              "min": 2.0,
+              "max": 2.0
+            },
+            "context_seeking": {
+              "seeds": [
+                7,
+                13,
+                99,
+                101
+              ],
+              "min": 1.995,
+              "max": 2.0
+            },
+            "red_flag": {
+              "seeds": [
+                7,
+                13,
+                99,
+                101
+              ],
+              "min": 1.73869,
+              "max": 1.755
+            },
+            "scope_bounding": {
+              "seeds": [
+                7,
+                13,
+                99,
+                101
+              ],
+              "min": 2.0,
+              "max": 2.0
+            },
+            "hedging_quality": {
+              "seeds": [
+                7,
+                13,
+                99,
+                101
+              ],
+              "min": 2.0,
+              "max": 2.0
+            },
+            "specificity": {
+              "seeds": [
+                7,
+                13,
+                99,
+                101
+              ],
+              "min": 1.97487,
+              "max": 1.995
+            }
+          },
+          "lora": {
+            "active_inquiry_pct": {
+              "seeds": [
+                7,
+                13,
+                99,
+                101
+              ],
+              "min": 54.2714,
+              "max": 67.5
+            },
+            "uncertainty_ack": {
+              "seeds": [
+                7,
+                13,
+                99,
+                101
+              ],
+              "min": 2.0,
+              "max": 2.0
+            },
+            "context_seeking": {
+              "seeds": [
+                7,
+                13,
+                99,
+                101
+              ],
+              "min": 2.0,
+              "max": 2.0
+            },
+            "red_flag": {
+              "seeds": [
+                7,
+                13,
+                99,
+                101
+              ],
+              "min": 1.76382,
+              "max": 1.78
+            },
+            "scope_bounding": {
+              "seeds": [
+                7,
+                13,
+                99,
+                101
+              ],
+              "min": 2.0,
+              "max": 2.0
+            },
+            "hedging_quality": {
+              "seeds": [
+                7,
+                13,
+                99,
+                101
+              ],
+              "min": 2.0,
+              "max": 2.0
+            },
+            "specificity": {
+              "seeds": [
+                7,
+                13,
+                99,
+                101
+              ],
+              "min": 1.98,
+              "max": 1.995
+            }
+          },
+          "lora_cot": {
+            "active_inquiry_pct": {
+              "seeds": [
+                7,
+                13,
+                99,
+                101
+              ],
+              "min": 64.5,
+              "max": 92.0
+            },
+            "uncertainty_ack": {
+              "seeds": [
+                7,
+                13,
+                99,
+                101
+              ],
+              "min": 2.0,
+              "max": 2.0
+            },
+            "context_seeking": {
+              "seeds": [
+                7,
+                13,
+                99,
+                101
+              ],
+              "min": 1.98995,
+              "max": 2.0
+            },
+            "red_flag": {
+              "seeds": [
+                7,
+                13,
+                99,
+                101
+              ],
+              "min": 1.67337,
+              "max": 1.78392
+            },
+            "scope_bounding": {
+              "seeds": [
+                7,
+                13,
+                99,
+                101
+              ],
+              "min": 1.99497,
+              "max": 2.0
+            },
+            "hedging_quality": {
+              "seeds": [
+                7,
+                13,
+                99,
+                101
+              ],
+              "min": 1.98995,
+              "max": 2.0
+            },
+            "specificity": {
+              "seeds": [
+                7,
+                13,
+                99,
+                101
+              ],
+              "min": 1.97487,
+              "max": 1.995
+            }
+          }
+        },
+        "askers_gap": {
+          "gap": -0.000910193,
+          "n_ask": 489,
+          "n_no_ask": 310,
+          "seeds_with_grades": [
+            7,
+            13,
+            99,
+            101
+          ]
+        },
         "aggregate_lora_minus_base": {
           "diff": 0.0182616,
           "ci95": [
@@ -7428,6 +8262,71 @@
             0.01619,
             0.036191
           ]
+        },
+        "recipe": {
+          "adapter": {
+            "base_model": "mistralai/Mistral-Small-24B-Instruct-2501",
+            "lora_alpha": 32,
+            "lora_dropout": 0.05,
+            "max_steps": 708,
+            "num_train_epochs": 3,
+            "peft_version": "0.19.1",
+            "r": 16,
+            "steps_per_epoch": 236,
+            "target_modules": [
+              "down_proj",
+              "gate_proj",
+              "k_proj",
+              "o_proj",
+              "q_proj",
+              "up_proj",
+              "v_proj"
+            ],
+            "train_batch_size": 2
+          },
+          "benchmark": "medqa",
+          "best_epoch": {
+            "101": 2.0,
+            "13": 2.0,
+            "42": 2.0,
+            "7": 2.0,
+            "99": 2.0
+          },
+          "dir": "results_rebuttal/medqa__mistralai_Mistral-Small-24B-Instruct-2501",
+          "effective_batch_consistent": [
+            16
+          ],
+          "filter": {
+            "graded": 4200,
+            "kept": 4195,
+            "kept_pct": 99.881,
+            "n_filter_passes": 1,
+            "parsed": true,
+            "path": "logs/host/filter_medqa_mistralai_Mistral-Small-24B-Instruct-2501.log",
+            "raw": 4200,
+            "rubric_parse_failures": [
+              1,
+              33600
+            ],
+            "score_field": "overall_score",
+            "sha256": "ee34525bb0da244870ada63a2372cc86076065e3d48600282693706ff34daaec",
+            "tau": 0.4,
+            "train": 3776,
+            "val": 419
+          },
+          "grad_accumulation_consistent": [
+            8
+          ],
+          "model_tag": "mistralai_Mistral-Small-24B-Instruct-2501",
+          "n_eval_ids": 200,
+          "seeds": [
+            7,
+            13,
+            42,
+            99,
+            101
+          ],
+          "status": "complete"
         }
       }
     ],
@@ -7503,7 +8402,12 @@
       "excluded_same_family": [
         "chatdoctor__med42-8b",
         "healthbench__med42-8b"
-      ]
+      ],
+      "added_cells_drop_p_max": 0.0160451,
+      "added_cells_drop_p_holm_max": 0.016346,
+      "holm_family_cells": 6,
+      "added_cells_askers_gap_positive": 3,
+      "added_cells_askers_gap_negative": 1
     },
     "sources": {
       "healthbench__mistral-small-24b": "synced",

@@ -29,6 +29,9 @@ Optional (each table that needs one is skipped with a message if it is absent):
   data/rebuttal_cells/generated_values.json  synced rebuttal cells (make cells); a cell
                                            found here replaces its posted values and
                                            gets a paired t interval on the aggregate
+  rebuttal/results/cell_recipe.json        per-cell tau, trace counts and adapter recipe,
+                                           read from the host logs and the synced adapter
+                                           files (make cells; filter table, Table F.2)
   data/derived/seed_42_qwen_grader_scores.json  seed-42 side run graded by Qwen2.5-14B
                                            (cross-grader check)
 
@@ -1232,18 +1235,129 @@ POSTED_METRIC_TOKEN = {
 }
 SRC_POSTED = "data/rebuttal_cells/posted_values.json (transcribed from posted replies)"
 SRC_SYNCED = "data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py)"
+SRC_RECIPE = "rebuttal/results/cell_recipe.json (rebuttal/analyses/cell_recipe.py)"
+# Base model -> macro token for the per-model rows of Table F.2.
+MODEL_TOKEN = {"Mistral-Small-24B": "Mistral", "Med42-8B": "MedFortyTwo", "BioMistral-7B": "BioMistral"}
+# Folders on the host that hold no finished cell, and their macro tokens (run history).
+INCOMPLETE_RUN_TOKEN = {
+    "medqa__BioMistral_BioMistral-7B": "MedQABioMistral",
+    "medqa__google_medgemma-27b-text-it": "MedQAMedGemma",
+    "medquad__google_medgemma-27b-text-it": "MedQuADMedGemma",
+}
+# Order in which the paper names the LoRA target projections.
+MODULE_ORDER = ("q", "k", "v", "o", "gate", "up", "down")
 
 
-def resolve_cells(posted: dict, generated: dict | None) -> list[dict]:
+def _one(values, what: str):
+    """The single value every cell shares, or stop: the paper states one value."""
+    vals = {json.dumps(v, sort_keys=True) for v in values}
+    if len(vals) != 1:
+        raise SystemExit(f"paper_stats: the added cells disagree on {what}: {sorted(vals)}")
+    return json.loads(vals.pop())
+
+
+def recipe_macros(recipe: dict, cells: list[dict], out, macros):
+    """Tau, trace counts and adapter recipe of the added cells (Appendix J, Table F.2).
+
+    The finished cells are the ones in the generality table; their adapters must share
+    rank, alpha, dropout, target modules, epochs and effective batch, because the paper
+    states one value for each. The runs that never finished are counted for the run
+    history.
+    """
+    done = [c for c in cells if c.get("recipe") and c["recipe"]["status"] == "complete"]
+    if not done:
+        return
+    rs = [c["recipe"] for c in done]
+    ad = [r["adapter"] for r in rs]
+    res = {"cells": [c["id"] for c in done],
+           "tau": _one([r["filter"]["tau"] for r in rs], "the filter tau"),
+           "r": _one([a["r"] for a in ad], "LoRA rank"),
+           "lora_alpha": _one([a["lora_alpha"] for a in ad], "LoRA alpha"),
+           "lora_dropout": _one([a["lora_dropout"] for a in ad], "LoRA dropout"),
+           "target_modules": _one([a["target_modules"] for a in ad], "target modules"),
+           "epochs": _one([a["num_train_epochs"] for a in ad], "epochs"),
+           "effective_batch": _one([r["effective_batch_consistent"] for r in rs], "effective batch"),
+           "adapters": sum(len(r["seeds"]) for r in rs),
+           "refilter_lines": len(recipe.get("refilter_lines", []))}
+    if len(res["effective_batch"]) != 1:
+        raise SystemExit(f"paper_stats: effective batch not determined: {res['effective_batch']}")
+    best = [e for r in rs for e in r["best_epoch"].values()]
+    res["best_epoch_min"], res["best_epoch_max"] = min(best), max(best)
+    src = SRC_RECIPE
+    macros.add("CellsTau", fmt(res["tau"], 1), f"{src}: threshold= in the Kept line of every filter log")
+    macros.add("CellsRefilterLines", fmt_int(res["refilter_lines"]),
+               f"{src}: re-filtering lines (22nd-percentile cut) in all host logs")
+    macros.add("CellsAdapters", fmt_int(res["adapters"]), f"{src}: adapter_config.json files read (cells x seeds)")
+    macros.add("CellsLoRARank", fmt_int(res["r"]), f"{src}: r in every adapter_config.json")
+    macros.add("CellsLoRAAlpha", fmt_int(res["lora_alpha"]), f"{src}: lora_alpha in every adapter_config.json")
+    macros.add("CellsLoRADropout", fmt(res["lora_dropout"], 2), f"{src}: lora_dropout in every adapter_config.json")
+    short = [m.removesuffix("_proj") for m in res["target_modules"]]
+    ordered = [m for m in MODULE_ORDER if m in short] + sorted(m for m in short if m not in MODULE_ORDER)
+    macros.add("CellsLoRATargets", ", ".join(ordered),
+               f"{src}: target_modules in every adapter_config.json, without _proj")
+    macros.add("CellsTrainEpochs", fmt_int(res["epochs"]), f"{src}: num_train_epochs in every trainer_state.json")
+    macros.add("CellsEffectiveBatch", fmt_int(res["effective_batch"][0]),
+               f"{src}: the only batch that gives the logged steps per epoch for the logged train count")
+    macros.add("CellsBestEpochMin", fmt_int(res["best_epoch_min"]),
+               f"{src}: earliest epoch of an evaluated (lowest validation loss) checkpoint")
+    macros.add("CellsBestEpochMax", fmt_int(res["best_epoch_max"]),
+               f"{src}: latest epoch of an evaluated (lowest validation loss) checkpoint")
+    res["per_model"] = {}
+    for model, tok in MODEL_TOKEN.items():
+        mr = [c["recipe"] for c in done if c["base_model"] == model]
+        if not mr:
+            continue
+        bs = _one([r["adapter"]["train_batch_size"] for r in mr], f"per-device batch of {model}")
+        acc = _one([r["grad_accumulation_consistent"] for r in mr], f"accumulation of {model}")
+        res["per_model"][model] = {"per_device_batch": bs, "grad_accumulation": acc}
+        macros.add(f"CellsBatchPerDevice{tok}", fmt_int(bs), f"{src}: train_batch_size of every {model} seed")
+        macros.add(f"CellsGradAccum{tok}", fmt_int(acc[0]),
+                   f"{src}: accumulation that fits the {model} steps per epoch")
+    # Host folders that hold no finished cell (run history in Appendix J).
+    incomplete = {name: c for name, c in recipe["cells"].items() if c["status"] != "complete"}
+    res["incomplete"] = {name: c["status"] for name, c in incomplete.items()}
+    macros.add("CellsNotRun", fmt_int(sum(c["status"] == "not run" for c in incomplete.values())),
+               f"{src}: host folders with eval ids only (trace generation failed)")
+    for name, c in sorted(incomplete.items()):
+        tok = INCOMPLETE_RUN_TOKEN.get(name)
+        if tok is None or c["status"] != "partial":
+            continue
+        f = c["filter"]
+        macros.add(f"Run{tok}Seeds", fmt_int(len(c["seeds"])), f"{src}: {name} seeds trained")
+        macros.add(f"Run{tok}Traces", fmt_int(f["raw"]), f"{src}: {name} traces generated")
+        macros.add(f"Run{tok}Kept", fmt_int(f["kept"]), f"{src}: {name} traces kept by the filter")
+        macros.add(f"Run{tok}Steps", fmt_int(c["adapter"]["max_steps"]), f"{src}: {name} optimizer steps")
+        macros.add(f"Run{tok}EvalPrompts", fmt_int(c["n_eval_ids"]), f"{src}: {name} eval prompts")
+    out["cell_recipe"] = res
+
+
+def _partial(g: dict) -> dict:
+    """Metrics whose mean is null because some seeds lack a value (a failed epistemic
+    grading): the seeds that have one, and their range."""
+    res = {}
+    for pc, ms in g["conditions"].items():
+        for m, v in ms.items():
+            vals = {k: x for k, x in v.get("per_seed", {}).items() if _finite(x)}
+            if v.get("mean") is None and vals:
+                res.setdefault(pc, {})[m] = {"seeds": sorted(int(k) for k in vals),
+                                             "min": min(vals.values()), "max": max(vals.values())}
+    return res
+
+
+def resolve_cells(posted: dict, generated: dict | None, recipe: dict | None = None) -> list[dict]:
     """One record per added cell, from the synced outputs when present, else as posted.
 
     ``generated`` is data/rebuttal_cells/generated_values.json, which make cells
-    writes once results_rebuttal/ is synced (PROV-1). A synced cell has per-seed
+    writes from the synced results_rebuttal/ (PROV-1). A synced cell has per-seed
     values, so its aggregate LoRA - Base difference gets a paired t(n-1) interval.
     A posted cell has means only: the difference is a point estimate (see
     posted_aggregate_diff) and the interval stays pending.
+
+    ``recipe`` is rebuttal/results/cell_recipe.json (make cells). When it has the
+    cell's filter log, the filter clearance comes from the log instead of the posts.
     """
     synced = {c["id"]: c for c in (generated or {}).get("cells", [])}
+    recipes = (recipe or {}).get("cells", {})
     cells = []
     for c in posted["cells"]:
         if c["id"] == MAIN_CELL_ID:
@@ -1252,17 +1366,26 @@ def resolve_cells(posted: dict, generated: dict | None) -> list[dict]:
                                  "same_family_as_evaluator", "set_aside")}
         rec["set_aside_reason"] = c.get("set_aside_reason")
         rec["filter_clearance_pct"] = c.get("filter_clearance_pct")
+        rec["filter_clearance_source"] = "posted"
         g = synced.get(c["id"])
         if g is not None:
             rec["source"] = "synced"
             rec["seeds"] = g["seeds"]
             rec["conditions"] = {pc: {m: {"mean": v["mean"], "sd": v["sd"]} for m, v in ms.items()}
                                  for pc, ms in g["conditions"].items()}
+            rec["partial"] = _partial(g)
+            rec["askers_gap"] = g.get("lora_askers_minus_non_askers")
             base = g["conditions"]["base"]["aggregate"]["per_seed"]
             lora = g["conditions"]["lora"]["aggregate"]["per_seed"]
             common = sorted(set(base) & set(lora), key=int)
             rec["aggregate_lora_minus_base"] = paired_seed_test(
                 np.array([lora[s] for s in common]), np.array([base[s] for s in common]))
+            r = recipes.get(Path(g["dir"]).name)
+            if r is not None:
+                rec["recipe"] = r
+                if (r.get("filter") or {}).get("parsed"):
+                    rec["filter_clearance_pct"] = r["filter"]["kept_pct"]
+                    rec["filter_clearance_source"] = "log"
         else:
             rec["source"] = "posted"
             rec["conditions"] = c["conditions"]
@@ -1280,7 +1403,7 @@ def _mean(cell: dict, cond: str, metric: str):
     return None if v is None else v.get("mean")
 
 
-def generality_section(posted: dict, generated: dict | None, out, macros):
+def generality_section(posted: dict, generated: dict | None, out, macros, recipe: dict | None = None):
     """Cross-cell results: per-cell macros and the counts the paper states across cells.
 
     Cross-cell counts leave out the cells whose base model shares the evaluator's
@@ -1288,7 +1411,7 @@ def generality_section(posted: dict, generated: dict | None, out, macros):
     whose values come from results_modal.
     """
     conditions_res = out["conditions"]
-    res = {"provenance": posted.get("_provenance"), "cells": resolve_cells(posted, generated)}
+    res = {"provenance": posted.get("_provenance"), "cells": resolve_cells(posted, generated, recipe)}
     for c in posted["cells"]:
         if c["id"] == MAIN_CELL_ID:
             res["main_cell_check"] = check_main_cell(c, conditions_res)
@@ -1307,8 +1430,10 @@ def generality_section(posted: dict, generated: dict | None, out, macros):
                 macros.add(f"Cell{tok}{POSTED_COND_TOKEN[pc]}{POSTED_METRIC_TOKEN[pm]}", fmt(v["mean"], dp),
                            f"{src}: {cell['id']} {pc} {pm} (mean over seeds)")
         if cell["filter_clearance_pct"] is not None:
+            fsrc = (SRC_RECIPE + ": Kept K/G line of the filter log" if cell["filter_clearance_source"] == "log"
+                    else SRC_POSTED)
             macros.add(f"Cell{tok}FilterClearance", fmt(cell["filter_clearance_pct"], 1),
-                       f"{SRC_POSTED}: {cell['id']} share of traces that passed the filter (percent)")
+                       f"{fsrc}: {cell['id']} share of traces that passed the filter (percent)")
         agg = cell["aggregate_lora_minus_base"]
         if _finite(agg.get("diff")):
             macros.add(f"Cell{tok}AggregateDiff", fmt(agg["diff"], 3, sign=True),
@@ -1317,8 +1442,29 @@ def generality_section(posted: dict, generated: dict | None, out, macros):
             macros.add(f"Cell{tok}AggregateDiffCI", fmt_ci(agg["ci95"][0], agg["ci95"][1], 3),
                        f"{src}: 95% t interval of the per-seed paired difference")
             macros.add(f"Cell{tok}AggregateP", fmt_p(agg["p"]), "paired t over seeds, two-sided")
-            macros.add(f"Cell{tok}AggregatePHolm", fmt_p(agg.get("p_holm_over_cells")),
+        if _finite(agg.get("p_holm_over_cells")):
+            macros.add(f"Cell{tok}AggregatePHolm", fmt_p(agg["p_holm_over_cells"]),
                        "Holm over the added cells with a test")
+        if _finite((cell.get("askers_gap") or {}).get("gap")):
+            macros.add(f"Cell{tok}AskersGap", fmt(cell["askers_gap"]["gap"], 3, sign=True),
+                       f"{SRC_SYNCED}: aggregate score of LoRA responses that ask minus those that do not")
+        # A cell where some seeds have no epistemic grade (MedQA: seed 42's grading found
+        # none of its prompts). Its seven-dimension means stay empty in the tables; the
+        # text gives the seeds that have a grade and their range.
+        partial = cell.get("partial") or {}
+        if partial:
+            n_ep = len(next(iter(partial["base"].values()))["seeds"]) if "base" in partial else 0
+            macros.add(f"Cell{tok}Seeds", fmt_int(len(cell["seeds"])), f"{src}: seeds of {cell['id']}")
+            macros.add(f"Cell{tok}EpistemicSeeds", fmt_int(n_ep),
+                       f"{src}: seeds of {cell['id']} with an epistemic grade")
+            for pc, ms in sorted(partial.items()):
+                v = ms.get("active_inquiry_pct")
+                if v is None:
+                    continue
+                macros.add(f"Cell{tok}{POSTED_COND_TOKEN[pc]}ActiveInquirySeedMin", fmt(v["min"], 1),
+                           f"{src}: {cell['id']} {pc} active inquiry, lowest seed (percent)")
+                macros.add(f"Cell{tok}{POSTED_COND_TOKEN[pc]}ActiveInquirySeedMax", fmt(v["max"], 1),
+                           f"{src}: {cell['id']} {pc} active inquiry, highest seed (percent)")
 
     # Counts across cells (D6: same-family cells and the set-aside cell left out).
     mc = conditions_res
@@ -1355,6 +1501,19 @@ def generality_section(posted: dict, generated: dict | None, out, macros):
         "added_cells_drop_max": max((-r["agg_diff"] for r in added), default=None),
         "excluded_same_family": sorted(c["id"] for c in res["cells"] if c["same_family_as_evaluator"]),
     }
+    # Paired tests of the aggregate drop, for the cells counted above, and the size of
+    # the Holm family (every added cell with a test that is not set aside).
+    by_id = {c["id"]: c for c in res["cells"]}
+    tests = [by_id[r["id"]]["aggregate_lora_minus_base"] for r in added]
+    if tests and all(_finite(t.get("p")) for t in tests):
+        counts["added_cells_drop_p_max"] = max(t["p"] for t in tests)
+        counts["added_cells_drop_p_holm_max"] = max(t["p_holm_over_cells"] for t in tests)
+        counts["holm_family_cells"] = sum(_finite(c["aggregate_lora_minus_base"].get("p_holm_over_cells"))
+                                          for c in res["cells"])
+    gaps = [by_id[r["id"]].get("askers_gap") for r in rows if r["id"] != MAIN_CELL_ID]
+    if gaps and all(g and _finite(g.get("gap")) for g in gaps):
+        counts["added_cells_askers_gap_positive"] = sum(g["gap"] > 0 for g in gaps)
+        counts["added_cells_askers_gap_negative"] = sum(g["gap"] < 0 for g in gaps)
     res["cross_cell_counts"] = counts
     what = "cells outside the evaluator's family, not set aside, submitted cell included"
     macros.add("CellsCompared", fmt_int(counts["cells_compared"]), what)
@@ -1376,6 +1535,20 @@ def generality_section(posted: dict, generated: dict | None, out, macros):
                    "smallest Base minus LoRA aggregate drop in those cells")
         macros.add("CellsAddedDropMax", fmt(counts["added_cells_drop_max"], 3),
                    "largest Base minus LoRA aggregate drop in those cells")
+    if "added_cells_drop_p_max" in counts:
+        macros.add("CellsAddedDropPMax", fmt_p(counts["added_cells_drop_p_max"]),
+                   f"{SRC_SYNCED}: largest paired t p (two-sided, over seeds) of those drops")
+        macros.add("CellsAddedDropPHolmMax", fmt_p(counts["added_cells_drop_p_holm_max"]),
+                   "largest Holm-adjusted p of those drops, Holm over the added cells with a test")
+        macros.add("CellsHolmFamily", fmt_int(counts["holm_family_cells"]),
+                   "added cells in the Holm family of the aggregate tests (not set aside, with a test)")
+    if "added_cells_askers_gap_positive" in counts:
+        macros.add("CellsAddedAskersGapPositive", fmt_int(counts["added_cells_askers_gap_positive"]),
+                   f"{SRC_SYNCED}: added cells outside the evaluator's family where LoRA's askers score higher")
+        macros.add("CellsAddedAskersGapNegative", fmt_int(counts["added_cells_askers_gap_negative"]),
+                   f"{SRC_SYNCED}: added cells outside the evaluator's family where LoRA's askers score lower")
+    if recipe is not None:
+        recipe_macros(recipe, res["cells"], out, macros)
     an = {a["id"]: a["values"] for a in posted.get("analyses", [])}
     if "clinician_identified_prompts" in an:
         v = an["clinician_identified_prompts"]
@@ -1605,6 +1778,9 @@ def build_tables(out, seeds) -> dict[str, str]:
         dims_tab = cell_dimensions_table(out)
         if dims_tab is not None:
             t["tab_cell_dimensions"] = dims_tab
+        filter_tab = cell_filter_table(out)
+        if filter_tab is not None:
+            t["tab_cell_filter"] = filter_tab
     return t
 
 
@@ -1725,7 +1901,7 @@ def generality_aggregate_table(out) -> str:
 
 def cell_dimensions_table(out) -> str | None:
     """Every epistemic dimension under Base, Base+CoT and LoRA, for each added cell that
-    has all seven posted (only MedQuAD so far), so the costs sit next to the gains."""
+    has all seven for every seed, so the costs sit next to the gains."""
     dims = [("active_inquiry_pct", 1), ("uncertainty_ack", 2), ("context_seeking", 2), ("red_flag", 2),
             ("scope_bounding", 2), ("hedging_quality", 2), ("specificity", 2)]
     cells = [c for c in out["generality"]["cells"]
@@ -1734,7 +1910,8 @@ def cell_dimensions_table(out) -> str | None:
         return None
     blocks = []
     for c in cells:
-        mark = "$^{\\ast}$" if c["source"] == "posted" else ""
+        mark = "$^{\\dagger}$" if c["same_family_as_evaluator"] else ""
+        mark += "$^{\\ast}$" if c["source"] == "posted" else ""
         block = [[f"\\multicolumn{{5}}{{l}}{{\\emph{{{c['benchmark']}, {c['base_model']}}}{mark}}}"]]
         for m, dp in dims:
             key = POSTED_METRIC[m][0]
@@ -1744,6 +1921,30 @@ def cell_dimensions_table(out) -> str | None:
         blocks.append(block)
     return tabular("lrrrr", ["Dimension", "Base", "Base+\\bodhi{}", "LoRA", "LoRA $-$ Base"], blocks,
                    "data/rebuttal_cells/ (generated_values.json when synced, else posted_values.json, marked *)")
+
+
+def cell_filter_table(out) -> str | None:
+    """Filter tau, trace counts, optimizer steps and evaluated epoch of each added cell,
+    from the host filter logs and the synced trainer states (rebuttal/results/cell_recipe.json)."""
+    cells = [c for c in out["generality"]["cells"] if c.get("recipe")
+             and (c["recipe"].get("filter") or {}).get("parsed")]
+    if not cells:
+        return None
+
+    def row(c):
+        r = c["recipe"]
+        f = r["filter"]
+        ep = sorted({int(e) for e in r["best_epoch"].values()})
+        epochs = str(ep[0]) if len(ep) == 1 else f"{ep[0]}--{ep[-1]}"
+        return [fmt(f["tau"], 1), fmt_int(f["graded"]), fmt(f["kept_pct"], 1), fmt_int(f["train"]),
+                fmt_int(f["val"]), fmt_int(r["adapter"]["max_steps"]), epochs]
+
+    kept = [_cell_label(c, True) + row(c) for c in cells if not c["set_aside"]]
+    aside = [_cell_label(c, True) + row(c) for c in cells if c["set_aside"]]
+    return tabular("llrrrrrrc", ["Benchmark", "Base model", "$\\tau$", "Graded", "Kept (\\%)", "Train",
+                                 "Val", "Steps", "Epoch"], [kept] + ([aside] if aside else []),
+                   "rebuttal/results/cell_recipe.json (logs/host/filter_*.log, results_rebuttal/*/seed_*/"
+                   "ckpt/best/trainer_state.json)")
 
 
 # ---------------------------------------------------------------------------
@@ -1827,7 +2028,14 @@ def run(results_dir: Path, out_dir: Path, healthbench: Path | None, filter_score
                 generated = json.load(f)
         else:
             print(f"note: {generated_values} not found; added cells use posted values (PROV-1)")
-        generality_section(posted, generated, out, macros)
+        recipe = None
+        recipe_path = None if rebuttal_results is None else rebuttal_results / "cell_recipe.json"
+        if recipe_path is not None and recipe_path.is_file():
+            with open(recipe_path) as f:
+                recipe = json.load(f)
+        else:
+            print(f"SKIP added-cell recipe and filter table: {recipe_path} not found (make cells)")
+        generality_section(posted, generated, out, macros, recipe)
 
     tables = build_tables(out, seeds)
 

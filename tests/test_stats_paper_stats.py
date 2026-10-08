@@ -307,6 +307,34 @@ def test_synced_cell_replaces_posted_values_and_gets_a_t_interval(tmp_path):
     assert _macro(out_dir, "CellHBMistralAggregateDiffCI") == "[-0.011,\\,+0.020]"
 
 
+def test_committed_cells_give_tests_recipe_and_filter_table(tmp_path):
+    # The committed generated_values.json and cell_recipe.json (make cells), as the
+    # paper uses them: every added cell synced, no transcription mark, one recipe.
+    out = ps.run(ROOT / "results_modal", tmp_path, None, None, None, ROOT / "rebuttal" / "results",
+                 ROOT / "data" / "rebuttal_cells" / "posted_values.json",
+                 ROOT / "data" / "rebuttal_cells" / "generated_values.json")
+    cells = {c["id"]: c for c in out["generality"]["cells"]}
+    assert {c["source"] for c in cells.values()} == {"synced"}
+    c = out["generality"]["cross_cell_counts"]
+    # Four drops outside the evaluator's family, Holm over the six cells not set aside.
+    assert c["holm_family_cells"] == 6
+    assert c["added_cells_drop_p_max"] < 0.02 and c["added_cells_drop_p_holm_max"] < 0.05
+    assert (c["added_cells_askers_gap_positive"], c["added_cells_askers_gap_negative"]) == (3, 1)
+    # MedQA: seed 42's epistemic grading found none of its prompts; four seeds remain.
+    assert _macro(tmp_path, "CellMedQAMistralEpistemicSeeds") == "4"
+    assert float(_macro(tmp_path, "CellMedQAMistralBaseActiveInquirySeedMin")) >= 99.0
+    assert "stat" + "CellMedQAMistralAggregatePHolm" not in (tmp_path / "numbers.tex").read_text()
+    r = out["cell_recipe"]
+    assert (r["tau"], r["r"], r["lora_alpha"], r["lora_dropout"], r["epochs"]) == (0.4, 16, 32, 0.05, 3)
+    assert r["effective_batch"] == [16] and r["adapters"] == 35 and r["refilter_lines"] == 0
+    assert _macro(tmp_path, "CellsLoRATargets") == "q, k, v, o, gate, up, down"
+    assert _macro(tmp_path, "CellMedQuADMistralFilterClearance") == "78.4"
+    tab = (tmp_path / "tab_cell_filter.tex").read_text()
+    assert "MedQuAD & Mistral-Small-24B & \\ensuremath{0.4} & 4{,}200 & \\ensuremath{78.4} & 2{,}965" in tab
+    assert "Med42-8B}$^{\\dagger}$" in (tmp_path / "tab_cell_dimensions.tex").read_text()
+    assert "ast" not in (tmp_path / "tab_generality.tex").read_text()
+
+
 def test_completion_drop_and_filter_macros(generated):
     out, out_dir = generated
     assert _macro(out_dir, "CompletionDropPctBase") == "0.0"
