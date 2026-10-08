@@ -72,6 +72,9 @@ python3 paper/submitted/neurips2026/compare_to_official.py \
 
 Result on 2026-10-07 (tectonic 0.17.0, pdftotext 26.04.0):
 
+- The build warns "Object @figure.N already defined" for every figure and table,
+  because `float` loads after `hyperref`. `paper/main.tex` has the fix. This record
+  keeps the submitted preamble.
 - 23 pages in both PDFs.
 - Every section heading, table and figure is on the same page in both PDFs.
 - With word order ignored, the words are the same. The script still prints 8
