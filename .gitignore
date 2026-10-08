@@ -18,6 +18,17 @@ checkpoints/
 *.safetensors
 results/
 paper/figures/*.pdf
+paper/figures/*.png
+paper/*.aux
+paper/*.bbl
+paper/*.blg
+paper/*.fdb_latexmk
+paper/*.fls
+paper/*.log
+paper/*.out
+paper/*.pdf
+paper/*.synctex.gz
+paper/missfont.log
 
 logs/
 wandb/
@@ -34,3 +45,4 @@ env/
 temporal/
 
 data/grading/
+REBUTTAL_NOTES.md

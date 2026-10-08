@@ -26,7 +26,7 @@ This guide covers environment setup on Mac, Linux, and Windows, how to run the p
 ### Mac / Linux
 
 ```bash
-git clone https://github.com/PeterLi-jpg/bohdi-lora.git
+git clone https://github.com/REDACTED-FOR-ANONYMOUS-REVIEW/bohdi-lora.git
 cd bohdi-lora
 
 # create and activate the conda environment
@@ -49,7 +49,7 @@ Use [WSL2](https://learn.microsoft.com/en-us/windows/wsl/install) (Ubuntu) and f
 Alternatively, use Git Bash with Conda:
 
 ```bash
-git clone https://github.com/PeterLi-jpg/bohdi-lora.git
+git clone https://github.com/REDACTED-FOR-ANONYMOUS-REVIEW/bohdi-lora.git
 cd bohdi-lora
 conda create -n bohdi python=3.11 -y
 conda activate bohdi
@@ -126,7 +126,7 @@ This scans all tracked files for HuggingFace (`hf_...`), OpenAI (`sk-...`), and 
 4. Open a PR against `main` — CI will run automatically (syntax check, shellcheck, YAML validation, pytest)
 5. Address any review comments
 
-Keep PRs focused. One issue per PR makes review faster. If you are unsure what to work on, check the [open issues](https://github.com/PeterLi-jpg/bohdi-lora/issues).
+Keep PRs focused. One issue per PR makes review faster. If you are unsure what to work on, check the [open issues](https://github.com/REDACTED-FOR-ANONYMOUS-REVIEW/bohdi-lora/issues).
 
 ---
 
@@ -155,4 +155,4 @@ bohdi-lora/
 
 ## Questions
 
-Open a [GitHub Issue](https://github.com/PeterLi-jpg/bohdi-lora/issues) or ping `@PeterLi-jpg` in the group chat.
+Open a [GitHub Issue](https://github.com/REDACTED-FOR-ANONYMOUS-REVIEW/bohdi-lora/issues) or ping `@REDACTED-FOR-ANONYMOUS-REVIEW` in the group chat.

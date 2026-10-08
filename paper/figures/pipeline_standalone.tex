@@ -75,7 +75,7 @@
     \node[colhead] {$+$ BODHI CoT at inference};              \\
     \node[rowhead] {Base model\\MedGemma-27B};                &
     \node[cBase] (ebase) {\textbf{Base}};                     &
-    \node[cBase] (ebcot) {\textbf{Base $+$ BODHI CoT}};       \\
+    \node[cBase] (ebcot) {\textbf{Base $+$ BODHI CoT}$^{\dagger}$};  \\
     \node[rowhead] (lorarow) {LoRA adapter\\(5 seeds)};        &
     \node[cLora] (elora) {\textbf{LoRA}};                     &
     \node[cLora] (elcot) {\textbf{LoRA $+$ BODHI CoT}};       \\
@@ -100,6 +100,12 @@
 
 \draw[arr] ($(cellsmid |- m.south)+(0,-1mm)$) -- (hb.north);
 
+%% The Base+CoT cell is not a fourth arbitrary condition: it is bit-for-bit the
+%% step-1 generator, which is what makes the adapter a self-distillation. Said in
+%% a footnote rather than a feedback arrow, which would re-clutter the layout.
+\node[font=\footnotesize, text=colGray, align=center, below=3.5mm of hb] (tnote)
+  {$\dagger$ identical to the step-1 generator, so the adapter is distilled from this configuration};
+
 %% ── Background regions ────────────────────────────────────────────────────
 \begin{scope}[on background layer]
   \node[region, draw=colTeal!60!black, fill=colTeal!4,
@@ -107,7 +113,7 @@
         label={[font=\footnotesize\bfseries, text=colTeal!70!black]
                above:{\strut Training pipeline}}] {};
   \node[region, draw=colRed!50!black, fill=colRed!3,
-        fit=(m)(hb),
+        fit=(m)(hb)(tnote),
         label={[font=\footnotesize\bfseries, text=colRed!70!black]
                below:{\strut Evaluation ($2{\times}2$ factorial, out-of-sample)}}] {};
 \end{scope}

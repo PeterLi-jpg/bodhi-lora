@@ -6,7 +6,7 @@ Each Excel has 3 sheets:
     yellow columns: ``physician_id``, ``physician_grade`` (pass/fail/unsure),
     ``physician_confidence`` (1/2/3), plus optional ``notes``.
   - **Instructions - Primary**: workflow + grading rules (verbatim from
-    the Sebastian-processed template at data/irr_instructions/primary.json).
+    the AnonAuthor2-processed template at data/irr_instructions/primary.json).
   - **Instructions - Tiebreaker**: instructions for the adjudicator (used
     only after Stage-1 reviewers return; verbatim from
     data/irr_instructions/tiebreaker.json).
@@ -61,7 +61,7 @@ FILTER_RESPONSES = 10           # 10 Qwen-graded BODHI traces
 SHUFFLE_SEED = 42
 
 # Issue #73 clinical leads. Update if the reviewer roster changes.
-REVIEWER_NAMES = ("zineb", "ash", "hillary")
+REVIEWER_NAMES = ("anonclinician1", "anonclinician2", "anonauthor7")
 
 # Style constants pulled byte-exact from clinician_1-processed.xlsx.
 HEADER_FILL = PatternFill("solid", fgColor="1F3864")
@@ -351,8 +351,8 @@ def write_readme(out_path: Path, n_responses: int, n_grading_rows: int,
                  n_eval: int, n_filter: int) -> None:
     out_path.write_text(f"""# Inter-rater reliability (issue #73 + dual-grader validation)
 
-Format mirrors the Sebastian-processed template at
-`/Users/anqipeterli/Downloads/clinician_1-processed.xlsx`. Each Excel has
+Format mirrors the AnonAuthor2-processed template at
+`/Users/REDACTED-USER/Downloads/clinician_1-processed.xlsx`. Each Excel has
 three sheets — Grading, Instructions - Primary, Instructions - Tiebreaker —
 with the full grading instructions and a worked example baked into the file
 itself.
@@ -361,9 +361,9 @@ itself.
 
 ```
 Grading-template.xlsx     master template, do not edit
-Grading-zineb.xlsx        → email to Zineb
-Grading-ash.xlsx          → email to Ash (Doulla)
-Grading-hillary.xlsx      → email to Hillary
+Grading-anonclinician1.xlsx        → email to AnonClinician1
+Grading-anonclinician2.xlsx          → email to AnonClinician2
+Grading-anonauthor7.xlsx      → email to AnonAuthor7
 answer_key.xlsx           DO NOT SEND. Maps grading_id → source/config/llm_score
                           for downstream κ analysis.
 ```

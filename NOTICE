@@ -1,0 +1,9 @@
+BOHDI-LoRA
+Copyright 2026 BOHDI-LoRA contributors
+
+This product reuses released research code, datasets, and model checkpoints. See
+docs/REUSE.md for the full list, versions, and licenses. Notably it builds on the
+BOHDI epistemic wrapper (https://github.com/sebasmos/bodhi-llms), OpenAI HealthBench
+(the HealthBench Hard / Full evaluation sets), Google's MedGemma / Gemma checkpoints
+(which carry their own model licenses), and Google's tunix + qwix and MaxText LoRA
+training stacks.

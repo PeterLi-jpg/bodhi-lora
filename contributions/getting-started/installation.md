@@ -13,7 +13,7 @@ Environment setup for Mac, Linux, and Windows.
 ## Step 1 — Clone the repo
 
 ```bash
-git clone https://github.com/PeterLi-jpg/bohdi-lora.git
+git clone https://github.com/REDACTED-FOR-ANONYMOUS-REVIEW/bohdi-lora.git
 cd bohdi-lora
 ```
 

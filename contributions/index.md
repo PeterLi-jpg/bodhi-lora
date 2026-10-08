@@ -4,7 +4,7 @@ LoRA fine-tuning to internalize BOHDI epistemic virtues (humility, calibration, 
 
 ## What is this?
 
-Standard RLHF training rewards confident answers, which reinforces overconfidence in medical LLMs. The [BOHDI wrapper](https://github.com/sebasmos/bodhi-llms) fixes this at inference time, but the underlying weights still behave poorly without it. This project uses supervised fine-tuning with LoRA to bake the virtues into the weights — so the model behaves humbly **without** any wrapper.
+Standard RLHF training rewards confident answers, which reinforces overconfidence in medical LLMs. The [BOHDI wrapper](https://github.com/REDACTED/bodhi-llms) fixes this at inference time, but the underlying weights still behave poorly without it. This project uses supervised fine-tuning with LoRA to bake the virtues into the weights — so the model behaves humbly **without** any wrapper.
 
 ## Contents
 

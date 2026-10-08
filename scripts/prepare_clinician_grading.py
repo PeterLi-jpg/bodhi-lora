@@ -206,10 +206,10 @@ def build_primary_instructions_tab(wb):
 
     r = _write_line(ws, r, "Physician Reviewer Instructions — Primary Reviewers (Reviewers 1, 2, 3)", TITLE_FONT)
     r = _write_line(ws, r, "")
-    r = _write_line(ws, r, "Reviewers: Zineb, Ash Doulla, Hillary", H2_FONT)
+    r = _write_line(ws, r, "Reviewers: AnonClinician1, AnonClinician2, AnonAuthor7", H2_FONT)
     r = _write_line(ws, r, "Estimated time: ~2 hours (50 responses × ~2 min per criterion set)")
     r = _write_line(ws, r, "Format: Work in your own copy of this file. Fill in the Grading tab only. Do not open anyone else's copy.")
-    r = _write_line(ws, r, "Return: Save as grading_[your name].xlsx and send to Peter or Sahil.")
+    r = _write_line(ws, r, "Return: Save as grading_[your name].xlsx and send to Peter or AnonAuthor4.")
     r = _write_line(ws, r, "")
 
     r = _write_line(ws, r, "What you are doing and why", H2_FONT)
@@ -323,15 +323,15 @@ def build_tiebreaker_instructions_tab(wb):
 
     r = _write_line(ws, r, "Physician Reviewer Instructions — Tiebreaker (Reviewer 4)", TITLE_FONT)
     r = _write_line(ws, r, "")
-    r = _write_line(ws, r, "Reviewer: Felipe (felipeocampoos)", H2_FONT)
+    r = _write_line(ws, r, "Reviewer: AnonAuthor3 (anon-contrib-3)", H2_FONT)
     r = _write_line(ws, r, "Estimated time: 30–60 minutes (you only see disputed criteria, not all 300 responses).")
     r = _write_line(ws, r, "Format: Fill in the Tiebreaker tab of this file when it appears.")
-    r = _write_line(ws, r, "Return: Save the file and send back to Peter or Sahil.")
+    r = _write_line(ws, r, "Return: Save the file and send back to Peter or AnonAuthor4.")
     r = _write_line(ws, r, "")
 
     r = _write_line(ws, r, "What you are doing and why", H2_FONT)
     r = _write_line(ws, r,
-        "Three primary physician reviewers (Zineb, Ash Doulla, Hillary) each independently graded AI-generated medical responses. "
+        "Three primary physician reviewers (AnonClinician1, AnonClinician2, AnonAuthor7) each independently graded AI-generated medical responses. "
         "For most criteria, at least two of the three agreed — those are resolved automatically by majority vote. "
         "Where all three disagreed (a genuine three-way split), your vote decides the final answer. "
         "You will not see all 300 responses, only the criteria where the three reviewers split. "

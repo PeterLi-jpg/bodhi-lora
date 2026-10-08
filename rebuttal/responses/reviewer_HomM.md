@@ -6,7 +6,7 @@ The constraint was compute access rather than a judgment about what mattered. Tr
 
 What was ours to fix is the mismatch between that evidence and the language around it. The contribution will be described as a recipe plus an evaluation decomposition for open-ended, information-seeking clinical Q&A, not as a validated general framework, and we will state what it does not cover.
 
-*Results on additional base models and evaluation sets.* You asked for one or two additional base models, or one additional clinical evaluation set. We re-ran the pipeline unchanged, every hyperparameter fixed (LoRA $r=16$, $\alpha=32$, effective batch 16, 3 epochs, $\tau=0.4$, Qwen-14B filter, Llama-3.1-8B evaluator), on two further model families and two further benchmarks, 5 seeds per cell and ~200 prompts per seed per condition.
+*Results on additional base models and evaluation sets.* You asked for one or two additional base models, or one additional clinical evaluation set. We re-ran the pipeline unchanged, every hyperparameter fixed (LoRA r = 16, alpha = 32, effective batch 16, 3 epochs, tau = 0.4, Qwen-14B filter, Llama-3.1-8B evaluator), on two further model families and two further benchmarks, 5 seeds per cell and ~200 prompts per seed per condition.
 
 **Table R1.** Transfer across model families and benchmarks. Every cell reads Base → LoRA. Mistral-Small-24B is general-purpose, Med42-8B is clinically tuned (Llama-3 family), BioMistral-7B is a scope condition. Row 1 repeats the submitted result for comparison.
 
@@ -34,7 +34,7 @@ We share this concern and have not resolved it.
 
 On the choice of graders the reason is structural. The evaluator must sit in a different family from the Qwen-14B filter, because that separation is what prevents filter-grader circularity: if one family both selects training traces and scores the result, the metric partly measures agreement with the selector. Meditron-3, Med42-v2 and the Aloe family are all Llama-derived, so promoting one to evaluator would put filter and grader in adjacent families and weaken that property. If accepted we will state this and add a clinical judge as an additional robustness panel alongside the primary grader rather than replacing it.
 
-On the strength of the evidence, the physician validation remains partial: one of three raters has returned grades, giving $\kappa = 0.35$ against the Llama-3.1-8B grader, below our pre-registered target of 0.6. We report that as a limitation on the aggregate-quality claims and do not present LLM grading as settled clinical validation.
+On the strength of the evidence, the physician validation remains partial: one of three raters has returned grades, giving kappa = 0.35 against the Llama-3.1-8B grader, below our pre-registered target of 0.6. We report that as a limitation on the aggregate-quality claims and do not present LLM grading as settled clinical validation.
 
 One piece of evidence does not depend on the grader's own scores, and it covers one of the three dimensions you named. Using labels the grader never sees, HealthBench's `context_seeking` theme tag and whether a prompt's rubric rewards asking, the adapter distinguishes information-withholding prompts from self-contained ones (+10.5pp, bootstrap CI excluding zero) while the base model does not (+2.1pp, CI including zero). Context-seeking is therefore supported by a signal external to the grader. Hedging quality and red-flag identification are not, and we do not claim otherwise; those two rest on the automatic grader until the physician panel is complete.
 

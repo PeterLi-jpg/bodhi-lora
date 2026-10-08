@@ -47,7 +47,7 @@ export HF_TOKEN=hf_...
 ## 2. Setup (one-time)
 
 ```bash
-git clone https://github.com/PeterLi-jpg/bohdi-lora.git
+git clone https://github.com/REDACTED-FOR-ANONYMOUS-REVIEW/bohdi-lora.git
 cd bohdi-lora
 python3 -m venv .venv
 source .venv/bin/activate
@@ -173,7 +173,7 @@ gcloud compute instances create $NAME \
 gcloud compute ssh $NAME --zone=$ZONE
 
 # --- inside the VM ---
-git clone https://github.com/PeterLi-jpg/bohdi-lora.git
+git clone https://github.com/REDACTED-FOR-ANONYMOUS-REVIEW/bohdi-lora.git
 cd bohdi-lora
 python3 -m venv .venv
 source .venv/bin/activate
@@ -193,7 +193,7 @@ If smoke passes, the pipeline is wired correctly. Scale up to a bigger GPU + rea
 
 ## 3b. Smoke test on a local Mac (≥32 GB unified RAM)
 
-Run this FIRST, every time you change any pipeline code. It exercises all four stages (generate, filter, train, eval) end-to-end with `gemma-3n-E4B-it` so bugs surface in minutes instead of after a 20-minute slurm queue. Per Felipe, 4B is the floor for meaningful BOHDI signal; E2B works too but its reasoning is often too weak to produce traces worth training on. Scale to MedGemma-27B once local runs show promise.
+Run this FIRST, every time you change any pipeline code. It exercises all four stages (generate, filter, train, eval) end-to-end with `gemma-3n-E4B-it` so bugs surface in minutes instead of after a 20-minute slurm queue. Per AnonAuthor3, 4B is the floor for meaningful BOHDI signal; E2B works too but its reasoning is often too weak to produce traces worth training on. Scale to MedGemma-27B once local runs show promise.
 
 ```bash
 # default: 3 examples, ~10 min. For a meatier smoke:

@@ -2,7 +2,7 @@
 
 Triage of issues raised against this repo, with status for each.
 
-Issue numbers below match GitHub issues on `PeterLi-jpg/bohdi-lora`.
+Issue numbers below match GitHub issues on `REDACTED-FOR-ANONYMOUS-REVIEW/bohdi-lora`.
 
 ## (resolved) Custom MaxText LoRA glue replaced with tunix + qwix
 

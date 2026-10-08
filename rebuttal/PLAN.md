@@ -66,6 +66,22 @@ One new EVAL-ONLY calibration probe (no training cell):
 Dropped: **MIMIC/eICU-derived clinician questions** — the cluster's MIMIC is `mimic-iv-echo` (videos),
 not text notes; would need credentialed PhysioNet access to MIMIC-IV notes / eICU. Cite as future work.
 
+**EXPANSION (user steer 2026-07-23): go to 4-5 benchmarks, prioritizing ones that EXERCISE
+context-seeking** (underspecified prompts where asking is appropriate), since that is where the
+method delivers and the aggregate score is structurally blind. Add (verify HF availability + schema,
+same build_benchmark_jsonl.py pattern): **MedicationQA** and/or **MedDialog** (real patient queries,
+often missing dosage/history -> trigger inquiry) and **MedMCQA** (clinician MCQ, breadth). Spread:
+HealthBench + MedDialog/MedicationQA (underspecified -> inquiry) vs MedQA + MedMCQA (complete-info ->
+restraint) + MedQuAD (patient factual).
+
+**CONTEXT-SEEKING SIGNIFICANCE — headline the rebuttal on this (user steer):** the flat aggregate
+(p=0.57) is the POINT, not a weakness — the adapter changes HOW the model communicates (asks the
+right clarifying question first) without degrading WHAT it knows; aggregate benchmarks conflate these
+and can penalize asking as "incomplete." Add a clinical-significance exhibit: on the info-missing
+subset, show responses materially change (relevant clarifying questions) while the aggregate rubric
+score is unchanged -> quantify what the overall score misses. This elevates B1 (mimicry_split) from
+a defense into the paper's central positive claim.
+
 ### Judges (grading robustness — W3, HomM Q4, LxMF Q3)
 Keep asymmetric Qwen-14B / Llama-8B unchanged for comparability. ADD one clinical judge
 re-grade of the epistemic dimensions (Med42-v2 or a medical-Qwen) as a robustness panel.

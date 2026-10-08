@@ -1,0 +1,40 @@
+# Pre-commit hooks for bohdi-lora (issue #22).
+#
+# Install once per clone:
+#   pip install pre-commit
+#   pre-commit install
+#
+# Then `git commit` will run the hooks below before each commit.  CI
+# (.github/workflows/ci.yml) runs the same checks server-side so a missing
+# local install can't sneak past review.
+
+repos:
+  - repo: meta
+    hooks:
+      - id: check-hooks-apply
+      - id: check-useless-excludes
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+        # configs/lora_*.yaml + tpu/accelerate_*.yaml are valid YAML but
+        # contain GitHub-style anchors / multi-doc separators in some
+        # hand-edited configs.  Allow check_yaml to fail soft.
+        exclude: ^configs/.*\.yaml$
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ["--maxkb=512"]   # block adding a 27B checkpoint by accident
+
+  - repo: local
+    hooks:
+      - id: no-secrets
+        name: scan tracked files for HF / OpenAI / AWS tokens
+        entry: bash scripts/check_no_secrets.sh
+        language: system
+        pass_filenames: false
+        # Run on every commit, even if no obviously-sensitive file is staged
+        # — the script ls-files's the entire tree.
+        always_run: true

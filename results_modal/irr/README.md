@@ -1,7 +1,7 @@
 # Inter-rater reliability (issue #73 + dual-grader validation)
 
-Format mirrors the Sebastian-processed template at
-`/Users/anqipeterli/Downloads/clinician_1-processed.xlsx`. Each Excel has
+Format mirrors the AnonAuthor2-processed template at
+`/Users/REDACTED-USER/Downloads/clinician_1-processed.xlsx`. Each Excel has
 three sheets — Grading, Instructions - Primary, Instructions - Tiebreaker —
 with the full grading instructions and a worked example baked into the file
 itself.
@@ -10,9 +10,9 @@ itself.
 
 ```
 Grading-template.xlsx     master template, do not edit
-Grading-zineb.xlsx        → email to Zineb
-Grading-ash.xlsx          → email to Ash (Doulla)
-Grading-hillary.xlsx      → email to Hillary
+Grading-anonclinician1.xlsx        → email to AnonClinician1
+Grading-anonclinician2.xlsx          → email to AnonClinician2
+Grading-anonauthor7.xlsx      → email to AnonAuthor7
 answer_key.xlsx           DO NOT SEND. Maps grading_id → source/config/llm_score
                           for downstream κ analysis.
 ```

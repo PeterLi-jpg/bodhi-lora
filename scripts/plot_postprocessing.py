@@ -435,15 +435,21 @@ def plot_effect_sizes(epistemic_examples, out_path):
     ax.grid(axis="x", alpha=0.3, zorder=0)
     ax.set_axisbelow(True)
 
-    # Legend
+    # Shaded interpretation region. Drawn before the legend so it can supply a
+    # handle: the band is otherwise unexplained in the rendered figure.
+    ax.axvspan(-0.2, 0.2, alpha=0.04, color="#aaa", zorder=1)
+
+    # Legend sits below the x-label, not in the axes. Active inquiry is the
+    # bottom group and its largest effect lands in the lower right, which is
+    # where an in-axes legend hid the point entirely.
     handles = [
         mpatches.Patch(color=c, label=lbl)
         for (_, _, lbl, c) in comparisons
     ]
-    ax.legend(handles=handles, fontsize=9, loc="lower right")
-
-    # Shaded interpretation regions
-    ax.axvspan(-0.2, 0.2, alpha=0.04, color="#aaa", zorder=1, label="trivial (|d|<0.2)")
+    handles.append(mpatches.Patch(color="#aaa", alpha=0.25,
+                                  label="trivial ($|d| < 0.2$)"))
+    ax.legend(handles=handles, fontsize=9, loc="upper center",
+              bbox_to_anchor=(0.5, -0.10), ncol=3, frameon=False)
 
     fig.tight_layout()
     fig.savefig(out_path, dpi=200, bbox_inches="tight")
