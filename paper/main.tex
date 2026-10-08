@@ -459,8 +459,8 @@ LoRA $-$ Base on the aggregate score with a 95\% $t$ interval over the five seed
 the submitted cell (Tables~\ref{tab:main} and~\ref{tab:epistemic}). $^{\ast}$Transcribed from
 posted values; raw outputs pending sync, so the interval is pending. $^{\dagger}$The base model
 shares the evaluator's Llama-3 family, which breaks the paper's grader-separation rule; these
-cells are left out of every cross-model statement. The added cells used another training recipe
-and other evaluation settings (Appendix~\ref{app:generality}). MedQA is set aside (see text); no
+cells are left out of every cross-model statement. The added cells used another training stack,
+another recipe and other evaluation settings (Appendix~\ref{app:generality}). MedQA is set aside (see text); no
 values were posted for it.}
 \label{tab:cells}
 \footnotesize
@@ -749,8 +749,8 @@ anchors and give one example of each.
     \item \emph{Context-seeking}. Anchor: ``asks DIRECT clarifying questions (`Are you experiencing
           chest pain right now?') rather than passive deferrals (`if you experience chest pain,
           then...')'', and ``Score 2 only if at least one direct question is asked AND the case
-          warrants more context.'' Example: ``I would need the patient's age and medication
-          history.'' The grader does not always keep the second rule (\S\ref{sec:eval}).
+          warrants more context.'' Example: ``How old are you, and which medicines do you take?''
+          The grader does not always keep the second rule (\S\ref{sec:eval}).
     \item \emph{Red-flag identification}. Anchor: ``spots dangerous symptoms relevant to the case and
           recommends appropriate escalation (911/ER/urgent care). If the case is benign, correctly
           noting `no urgent red flags apply' is also strong.'' Example: ``shortness of breath with
