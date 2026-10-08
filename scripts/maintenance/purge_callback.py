@@ -37,7 +37,11 @@ SKIP = re.compile(rb"^(results_modal/seed_[^/]+/|results_rebuttal/|third_party/|
 # unread, which keeps the rewrite fast.
 TEXT_EXT = (b".md", b".txt", b".tex", b".bib", b".py", b".sh", b".json", b".jsonl",
             b".yaml", b".yml", b".toml", b".cfg", b".csv", b".html")
-AFFILIATION = re.compile(rb"MIT Critical Data|YCRG|King's College|Makerere", re.I)
+# The selftest reports any affiliation left in a .tex blob. The second pattern is
+# case-sensitive and allows MIT as a license name (as scripts/export_anonymous.sh does).
+AFFILIATION = re.compile(rb"MIT Critical Data|YCRG|King's College|Makerere|Chapel Hill"
+                         rb"|North Carolina|Massachusetts Institute", re.I)
+AFFILIATION_CAPS = re.compile(rb"\bUNC\b|\bMIT\b(?!\s*(?:[Ll]icen[cs]e|, see|\|))")
 
 
 def read_map(path: str) -> list[tuple[str, str]]:
@@ -175,7 +179,7 @@ def selftest(map_path: str) -> int:
         left = sum(1 for pat, _ in purger.rules for m in pat.finditer(text) if not m.group(0).isupper())
         if left:
             residual[path.decode()] += left
-        if low.endswith(b".tex") and AFFILIATION.search(text):
+        if low.endswith(b".tex") and (AFFILIATION.search(text) or AFFILIATION_CAPS.search(text)):
             residual[path.decode() + " (affiliation)"] += 1
     # Some paths contain a name (Grading-<name>.xlsx), so print them masked.
     def mask(p):

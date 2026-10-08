@@ -129,7 +129,12 @@ GATE = [
     ("gcp project or bucket", re.compile(r"tokyo-micron", re.I)),
     ("home path", re.compile(r"/Users/")),
     ("machine hostname", re.compile(r"\.localdomain\b|@[\w-]+(\.[\w-]+)*\.local\b", re.I)),
-    ("affiliation", re.compile(r"YCRG|King's College|Makerere", re.I)),
+    ("affiliation", re.compile(r"YCRG|King's College|Makerere|Chapel Hill|North Carolina"
+                               r"|Massachusetts Institute", re.I)),
+    # All-caps affiliations, case-sensitive. The deny-file skips all-caps hits as
+    # acronyms, so these must be built in. "MIT" is also a license name; those
+    # uses (MIT License, "MIT, see LICENSE", a "| MIT |" table cell) are allowed.
+    ("affiliation", re.compile(r"\bUNC\b|\bMIT\b(?!\s*(?:[Ll]icen[cs]e|, see|\|))")),
     ("repo slug", re.compile(r"bohdi", re.I)),
 ]
 EMAIL = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)*\.[A-Za-z]{2,}")
