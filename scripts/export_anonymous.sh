@@ -230,12 +230,14 @@ PY
 
 if [ "$make_git" -eq 1 ]; then
     # One commit, anonymous identity, no hooks or signing from the caller's config.
+    # --force: some tracked files match .gitignore (paper/figures/pipeline.pdf),
+    # and the copy must hold exactly the tracked files of REF.
     # The fixed date hides when the export was made, and makes the commit id
     # depend only on the content.
     GIT_AUTHOR_NAME="Anonymous Authors" GIT_AUTHOR_EMAIL="anonymous@example.org" \
     GIT_COMMITTER_NAME="Anonymous Authors" GIT_COMMITTER_EMAIL="anonymous@example.org" \
     GIT_AUTHOR_DATE="2000-01-01T00:00:00Z" GIT_COMMITTER_DATE="2000-01-01T00:00:00Z" \
-        bash -c 'cd "$1" && git init -q -b main && git add -A \
+        bash -c 'cd "$1" && git init -q -b main && git add -A --force \
             && git -c core.hooksPath=/dev/null -c commit.gpgsign=false commit -q -m "Anonymous code release"' _ "$out"
     echo "git: one commit in $out ($(git -C "$out" rev-parse --short HEAD))"
 fi
