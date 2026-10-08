@@ -197,6 +197,12 @@ family_guard() {
 prepare_data() {
     if [ "$BENCH" = "healthbench" ]; then
         BENCH_JSONL="${DATA_RAW}/healthbench_hard.jsonl"
+        # The per-seed eval draw and the leakage gate read the HealthBench
+        # files before stage 1 would download them. generate_traces.py reads
+        # data/raw itself, so keep DATA_RAW=data/raw for HealthBench cells.
+        if [ ! -s "$BENCH_JSONL" ] || [ ! -s "${DATA_RAW}/healthbench.jsonl" ]; then
+            "$INFER_PY" scripts/download_data.py
+        fi
         # The pool is all 1000 Hard prompts; training excludes every one of them.
         HOLDOUT_IDS="$BENCH_JSONL"
         EXCLUDE=("${DATA_RAW}/healthbench_hard.jsonl" "${DATA_RAW}/hard_200_sample_ids.json")
