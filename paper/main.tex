@@ -411,21 +411,9 @@ flag, which we leave to future work. The last row gives the responses with a par
 \input{generated/tab_epistemic}
 \end{table}
 
-\begin{figure}[t]
-\centering
-\includegraphics[width=\linewidth]{figures/epistemic_bar.pdf}
-\caption{Epistemic behavior scores in the four conditions (LLM-graded), split by scale so that
-grades and rates do not share an axis. \textbf{Panel A}: dimensions graded 0--2. \textbf{Panel
-B}: rates (\%). Bars are means of the five seed means; error bars are the cross-seed SD. Active
-inquiry and context-seeking rise with the adapter. Adding the CoT protocol to the adapter
-(LoRA+\bodhi{}) lowers red-flag identification: on the 0--2 score it ends level with Base, and on
-the rate it ends below Base (\S\ref{sec:interference}). Appendix~\ref{app:perseed} shows the
-seeds.}
-\label{fig:epistemic_bar}
-\end{figure}
 
-\paragraph{Behavior.} Table~\ref{tab:epistemic} and Figure~\ref{fig:epistemic_bar} give the seven
-dimensions. Against Base, the adapter without CoT raises active inquiry by
+\paragraph{Behavior.} Table~\ref{tab:epistemic} gives the seven dimensions
+(Figure~\ref{fig:epistemic_bar} in Appendix~\ref{app:perseed} plots them). Against Base, the adapter without CoT raises active inquiry by
 \statActiveInquiryLoRAvsBaseDiff{} points (95\% CI \statActiveInquiryLoRAvsBaseCI; Holm-adjusted
 $p = \statActiveInquiryLoRAvsBasePHolm$), context-seeking by \statContextSeekingLoRAvsBaseDiff{}
 (\statContextSeekingLoRAvsBaseCI; $p_{\text{Holm}} = \statContextSeekingLoRAvsBasePHolm$),
@@ -460,14 +448,11 @@ accuracy axis moves from \statAxisAccuracyBase{} to \statAxisAccuracyLoRA{} and 
 rises from \statAxisInstructionFollowingBase{} to \statAxisInstructionFollowingLoRA{}
 (Table~\ref{tab:axis}).
 
-\paragraph{Disclaimers and length.} Base gave \statBlanketDisclaimerCountBase{} blanket
-disclaimers in \statNScoredBase{} graded responses, and LoRA gave \statBlanketDisclaimerCountLoRA{}
-in \statNScoredLoRA{} (two-sided Fisher exact $p = \statBlanketDisclaimerFisherPLoRA$;
-Table~\ref{tab:disclaimers}). These are too few events to show a difference. LoRA answers differ in length
-from Base by \statResponseCharsLoRAvsBaseDiff{} characters on average (95\% CI
-\statResponseCharsLoRAvsBaseCI). The rise in active inquiry appears in every quartile of response
-length (Table~\ref{tab:length}), so length does not explain it within those quartiles. We ran no
-length-controlled test.
+\paragraph{Disclaimers and length.} Blanket disclaimers are too rare to compare: Base gave
+\statBlanketDisclaimerCountBase{} in \statNScoredBase{} graded responses and LoRA
+\statBlanketDisclaimerCountLoRA{} in \statNScoredLoRA{} (Fisher exact $p =
+\statBlanketDisclaimerFisherPLoRA$). The rise in active inquiry appears in every quartile of
+response length (Appendix~\ref{app:robustness}).
 
 \subsection{Added Base Models and Benchmarks}
 \label{sec:cells}
@@ -492,8 +477,8 @@ values were posted for it.}
 We ran the recipe in six added cells (Table~\ref{tab:cells}): Mistral-Small-24B, Med42-8B and
 BioMistral-7B on \hbhard{}; Mistral-Small-24B and Med42-8B on ChatDoctor, questions that real
 patients asked physicians online; and Mistral-Small-24B on MedQuAD, NIH consumer-health questions.
-These cells used another recipe ($r{=}16$ on seven projection types, 3 epochs, and 4-bit QLoRA for
-Mistral-Small-24B) and other evaluation settings, including an 8,192-token context and one fixed
+These cells used another training stack and recipe (\S\ref{sec:method}), 4-bit QLoRA for
+Mistral-Small-24B, and other evaluation settings, including an 8,192-token context and one fixed
 prompt set for all seeds (Appendix~\ref{app:generality}). Their numbers are transcribed from our
 posted replies; the raw outputs are on a shared server and not yet synced.
 
@@ -509,8 +494,9 @@ With the submitted cell included, the adapter reaches or passes its teacher's ac
 
 The aggregate score falls under LoRA in all \statCellsAddedWithAggregate{} added cells outside the
 evaluator's family, by \statCellsAddedDropMin{} to \statCellsAddedDropMax. In our posted paired
-$t$-tests over five seeds, each added-cell drop had $p < \statPostedAggDropPBelow$ after Holm
-correction over the six added cells; we will recompute these tests from the raw outputs after the
+$t$-tests over five seeds, each of the six added-cell drops had two-sided $p <
+\statPostedAggDropPBelow$, and all six stayed significant after Holm correction over the six cells;
+we will recompute these tests from the raw outputs after the
 sync. A rubric that penalizes asking does not explain the drop: in BioMistral-7B, active inquiry
 did not rise, yet the score fell (Appendix~\ref{app:generality}). So in these cells the adapter
 buys more inquiry at a cost in aggregate rubric score. In the submitted cell we could not detect
@@ -518,10 +504,7 @@ that cost.
 
 We also ran MedQA-USMLE with Mistral-Small-24B as open-ended questions and set the cell aside.
 MedQA is a single-best-answer exam whose rubric grades agreement with a keyed answer, a task the
-recipe does not target. An earlier run of this cell used a preamble that told the model to ask for
-missing information; base active inquiry reached \statPostedMedQAPreambleAI\%, so that run measured
-instruction-following. We posted that the aggregate score rises in this cell but posted no values.
-Which run that statement describes will be checked after the sync.
+recipe does not target (Appendix~\ref{app:generality}).
 
 \subsection{The CoT Protocol on the Adapted Model}
 \label{sec:interference}
@@ -751,8 +734,21 @@ anchors and give one example of each.
           allergy'') rather than ``consider medication.''
 \end{itemize}
 
-\section{Per-Seed Results}
+\section{Per-Seed Results and Plots}
 \label{app:perseed}
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[width=\linewidth]{figures/epistemic_bar.pdf}
+\caption{Epistemic behavior scores in the four conditions (LLM-graded), split by scale so that
+grades and rates do not share an axis. \textbf{Panel A}: dimensions graded 0--2. \textbf{Panel
+B}: rates (\%). Bars are means of the five seed means; error bars are the cross-seed SD. Active
+inquiry and context-seeking rise with the adapter. Adding the CoT protocol to the adapter
+(LoRA+\bodhi{}) lowers red-flag identification: on the 0--2 score it ends level with Base, and on
+the rate it ends below Base (\S\ref{sec:interference}).}
+\label{fig:epistemic_bar}
+\end{figure}
+
 
 \begin{table}[t]
 \centering
@@ -986,9 +982,15 @@ the CoT protocol is added to the adapter.}
 
 All analyses here pool the five seeds and are descriptive.
 
-\paragraph{Response length.} Table~\ref{tab:length} splits active inquiry by quartiles of Base
-response length. LoRA asks more than Base in every quartile, including the shortest. The cells are
-uneven: LoRA has \statNScoredLoRA{} graded responses, spread unequally over the Base quartiles.
+\paragraph{Disclaimers.} Table~\ref{tab:disclaimers} gives the blanket-disclaimer counts with a
+two-sided Fisher exact test against Base. These are too few events to show a difference.
+
+\paragraph{Response length.} LoRA answers differ in length from Base by
+\statResponseCharsLoRAvsBaseDiff{} characters on average (95\% CI \statResponseCharsLoRAvsBaseCI).
+Table~\ref{tab:length} splits active inquiry by quartiles of Base response length. LoRA asks more
+than Base in every quartile, including the shortest, so length does not explain the rise within
+those quartiles. We ran no length-controlled test. The cells are uneven: LoRA has
+\statNScoredLoRA{} graded responses, spread unequally over the Base quartiles.
 
 \begin{table}[!ht]
 \centering
@@ -1131,8 +1133,9 @@ online) and MedQuAD (NIH consumer-health questions). Both are patient-facing, so
 clinician-posed comparison. Benchmarks without expert rubrics are filtered against rubrics
 synthesized from their reference answer, graded by the same Qwen2.5-14B filter.
 
-\paragraph{What differs from the submitted cell.} We did not re-run the pipeline unchanged. The
-training recipe differs (Table~\ref{tab:hparams-cells} against Table~\ref{tab:hparams}): LoRA
+\paragraph{What differs from the submitted cell.} The training code differs: PyTorch with PEFT and
+TRL on one H100 GPU, against JAX (tunix) on a TPU v6e-8 host. The training recipe differs
+(Table~\ref{tab:hparams-cells} against Table~\ref{tab:hparams}): LoRA
 $r{=}16$, $\alpha{=}32$ on seven projection types, effective batch 16, 3 epochs with a cosine
 schedule, sequence length 4,096, and for Mistral-Small-24B a 4-bit base in training and a bfloat16
 base at evaluation. The evaluation settings also differ: an 8,192-token context instead of 4,096,
@@ -1178,6 +1181,11 @@ and hedging quality (\statCellMedQuADMistralBaseHedgingQuality{} to
 (\statCellMedQuADMistralLoRAScopeBounding{} and \statCellMedQuADMistralLoRAHedgingQuality). So the
 adapter does not copy every property of its teacher. We have no arm trained without the filter, so
 we cannot attribute this to the filter.
+
+\paragraph{MedQA cell.} An earlier run of this cell used a preamble that told the model to ask
+for missing information; base active inquiry reached \statPostedMedQAPreambleAI\%, so that run
+measured instruction-following. We posted that the aggregate score rises in this cell but posted no
+values. Which run that statement describes will be checked after the sync.
 
 \paragraph{Med42-8B cells.} Med42-8B is a Llama-3 model and the evaluator is Llama-3.1-8B, which
 breaks the separation of grader families (\S\ref{sec:method}). We keep these cells, mark them, and
