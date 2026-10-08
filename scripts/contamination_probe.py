@@ -34,6 +34,7 @@ from transformers import AutoTokenizer, set_seed
 # bare _vllm_engine import.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from _vllm_engine import VLLMEngine  # noqa: E402
+import run_manifest as rmf  # noqa: E402
 
 HEALTHBENCH_HARD_URL = (
     "https://openaipublic.blob.core.windows.net/simple-evals/healthbench/"
@@ -286,6 +287,8 @@ INTERPRETATION = (
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--model", default="google/medgemma-27b-text-it")
+    parser.add_argument("--model-revision", default=None,
+                        help="HF commit of --model. Default: the pin in configs/families.yaml.")
     parser.add_argument("--n-prompts", type=int, default=100,
                         help="Per-set sample size (HB and PubMedQA each).")
     parser.add_argument("--prefix-tokens", type=int, default=30)
@@ -338,11 +341,13 @@ def main():
     ]
     pq_prompts = [(i, ex["question"]) for i, ex in enumerate(pq_sample)]
 
-    tokenizer = AutoTokenizer.from_pretrained(args.model)
+    revision = rmf.effective_revision(args.model, args.model_revision)
+    tokenizer = AutoTokenizer.from_pretrained(args.model, revision=revision)
     eval_concurrency = int(os.environ.get("EVAL_CONCURRENCY", "16"))
 
     # Single base-model engine, no LoRA, no wrapper.
-    with VLLMEngine(args.model) as engine:
+    engine_ctx = VLLMEngine(args.model, revision=revision)
+    with engine_ctx as engine:
         hb_result = run_probe_set(
             "healthbench", hb_prompts, tokenizer, engine,
             args.prefix_tokens, args.continuation_tokens, eval_concurrency,
@@ -376,6 +381,16 @@ def main():
     out.parent.mkdir(parents=True, exist_ok=True)
     with open(out, "w") as f:
         json.dump(summary, f, indent=2)
+    rmf.write_manifest(rmf.manifest_path_for(out), rmf.build_manifest(
+        "contamination_probe",
+        config=vars(args),
+        models={"base": (args.model, args.model_revision)},
+        engines={"base": {**engine_ctx.settings(), "concurrency": eval_concurrency}},
+        inputs=[hb_path, pq_path],
+        outputs=[out],
+        counts={"healthbench_hits": hb_hits, "pubmedqa_hits": pq_hits,
+                "n_per_set": args.n_prompts, "fisher_p_value": p_value},
+    ))
 
     hb_rate = hb_result["exact_match_rate"]
     pq_rate = pq_result["exact_match_rate"]
