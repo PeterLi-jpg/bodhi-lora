@@ -98,6 +98,16 @@ def keep_case(word):
 
 # Order matters: specific forms before the bare handle or username.
 REDACT = [
+    # Repos under a co-author's account. Rewriting the account gives a dead link whose
+    # slug still finds the account, so the grader fork is withheld and the BODHI
+    # wrapper points at its PyPI package.
+    (re.compile(r"https?://github\.com/sebasmos/humbleai-healthbench[\w./-]*", re.I),
+     "a HealthBench grader fork (link withheld for review)"),
+    (re.compile(r"https?://github\.com/sebasmos/bodhi-llms?\b[\w./-]*", re.I),
+     "https://pypi.org/project/bodhi-llm/"),
+    # Branch-policy lines name the scratch-branch prefixes of the team's tools.
+    (re.compile(r"a `claude/\*` or `worktree-agent\*` branch"), "a scratch branch"),
+    (re.compile(r"`claude/\*` and `worktree-agent\*` pushes"), "scratch-branch pushes"),
     (re.compile(r"github\.com([/:])(PeterLi-jpg|sebasmos)/", re.I), r"github.com\1anonymous/"),
     (re.compile(r"\b(PeterLi-jpg|sebasmos)\b", re.I), "anonymous"),
     (re.compile(r"\banqipeter[\w.+-]*@[\w.-]+", re.I), "anonymous@example.org"),
@@ -136,6 +146,8 @@ GATE = [
     # uses (MIT License, "MIT, see LICENSE", a "| MIT |" table cell) are allowed.
     ("affiliation", re.compile(r"\bUNC\b|\bMIT\b(?!\s*(?:[Ll]icen[cs]e|, see|\|))")),
     ("repo slug", re.compile(r"bohdi", re.I)),
+    ("co-author repo", re.compile(r"humbleai", re.I)),
+    ("tool branch prefix", re.compile(r"claude/|worktree-agent", re.I)),
 ]
 EMAIL = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)*\.[A-Za-z]{2,}")
 EMAIL_OK = re.compile(
