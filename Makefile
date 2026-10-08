@@ -4,7 +4,7 @@
 #   make paper     both, then paper/build/main.pdf
 #   make test      the test suite
 #   make rebuttal  rebuttal/results/*.json from results_modal/
-#   make cells     rebuttal-cell values and paired tests (needs results_rebuttal/ synced)
+#   make cells     rebuttal-cell values, paired tests, tau and recipe (needs the host copies)
 #   make kappa     results_modal/irr/kappa_results.json (needs RATER_FILES)
 #   make derived   data/derived/*.json from the large ignored files they copy scores from
 
@@ -44,11 +44,14 @@ rebuttal: $(HB_HARD)
 	$(PYTHON) rebuttal/analyses/interference_mechanism.py
 	$(PYTHON) rebuttal/analyses/second_person_questions.py
 
-# The added cells' raw outputs are on the shared GPU host until synced (audit PROV-1).
-# cell_values.py diffs them against data/rebuttal_cells/posted_values.json.
+# Reads the added cells' raw eval JSON in results_rebuttal/ and the filter logs in
+# logs/host/, both copied from the GPU host and gitignored (REPRODUCIBILITY.md section 7).
+# cell_values.py diffs the values against data/rebuttal_cells/posted_values.json;
+# cell_recipe.py reads tau, trace counts and the adapter recipe per cell (PROV-3).
 cells:
 	$(PYTHON) rebuttal/analyses/cell_values.py
 	$(PYTHON) rebuttal/analyses/quality_drop.py
+	$(PYTHON) rebuttal/analyses/cell_recipe.py
 
 # The returned rater files carry names, so they stay outside the repo; pass their
 # paths, e.g. make kappa RATER_FILES="/path/to/Grading-<rater>.xlsx".
