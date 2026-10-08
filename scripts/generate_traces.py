@@ -1,4 +1,11 @@
-"""Generate BOHDI wrapper traces over HealthBench for SFT training data."""
+"""Generate BOHDI wrapper traces over HealthBench for SFT training data.
+
+--protocol picks the teaching protocol: bodhi (the paper's two-pass wrapper,
+same as --use-bodhi), ask_first (a second, single-pass protocol in
+scripts/baselines/ask_first.py) or none (bare inference). Every run writes
+<output stem>.manifest.json (scripts/run_manifest.py). --dry-run stubs the
+engine and writes <output stem>.dryrun.jsonl for a few prompts on a CPU.
+"""
 
 import argparse
 import json
@@ -18,8 +25,13 @@ import torch
 from tqdm import tqdm
 from transformers import set_seed
 
-from _vllm_engine import VLLMEngine
+from _vllm_engine import DryRunEngine, VLLMEngine
 from _bodhi_ablation import make_ablated_bodhi_config
+from baselines.ask_first import AskFirstProtocol
+import run_manifest as rmf
+
+PROTOCOLS = ("none", "bodhi", "ask_first")
+DRY_RUN_REPLY = "<plan>dry run plan</plan>\nREPLY:\nDRY RUN RESPONSE"
 
 DATA_DIR = Path("data/raw")
 
@@ -124,6 +136,24 @@ def load_exclude_ids(paths):
     return ids
 
 
+def make_protocol_wrapper(protocol, engine, ablate_component: str = "none"):
+    """Wrapper for the chosen teaching protocol, or None for bare inference."""
+    if protocol == "none":
+        return None
+    if protocol == "ask_first":
+        return AskFirstProtocol(lambda msgs: engine.chat(msgs))
+    return make_bodhi_wrapper(engine, ablate_component=ablate_component)
+
+
+def resolve_protocol(protocol, use_bodhi):
+    """--use-bodhi is the short form of --protocol bodhi."""
+    if use_bodhi:
+        if protocol not in (None, "bodhi"):
+            raise SystemExit(f"--use-bodhi conflicts with --protocol {protocol}")
+        return "bodhi"
+    return protocol or "none"
+
+
 def make_bodhi_wrapper(engine, ablate_component: str = "none"):
     """Set up BODHI wrapper once, reuse across examples.
 
@@ -213,6 +243,26 @@ def main():
              "(default: bare inference)",
     )
     parser.add_argument(
+        "--protocol",
+        choices=PROTOCOLS,
+        default=None,
+        help="Teaching protocol: bodhi (= --use-bodhi), ask_first "
+             "(scripts/baselines/ask_first.py) or none. Default none.",
+    )
+    parser.add_argument(
+        "--model-revision",
+        default=None,
+        help="HF commit of --model. Default: the pin in configs/families.yaml.",
+    )
+    # Engine settings: the VLLMEngine defaults the submitted generation ran with.
+    parser.add_argument("--max-model-len", type=int, default=8192)
+    parser.add_argument("--max-num-seqs", type=int, default=64)
+    parser.add_argument(
+        "--dry-run", action="store_true",
+        help="Stub the engine, generate --dry-run-examples traces on a CPU and "
+             "write <output stem>.dryrun.jsonl. Never writes --output.")
+    parser.add_argument("--dry-run-examples", type=int, default=2)
+    parser.add_argument(
         "--ablate-component",
         choices=["none", "no_calibration", "no_questions",
                  "no_abstention", "no_domain_framing"],
@@ -250,6 +300,9 @@ def main():
              "(issue #6/7).",
     )
     args = parser.parse_args()
+    protocol = resolve_protocol(args.protocol, args.use_bodhi)
+    if args.ablate_component != "none" and protocol != "bodhi":
+        raise SystemExit("--ablate-component applies to the bodhi protocol only")
 
     # Expand ~ in any path the user may have passed so $HOME-relative paths
     # work without manual expansion. Done after parse_args so we mutate the
@@ -284,6 +337,10 @@ def main():
 
     if args.max_examples:
         examples = examples[:args.max_examples]
+    if args.dry_run:
+        examples = examples[:args.dry_run_examples]
+        args.output = str(Path(args.output).with_name(Path(args.output).stem + ".dryrun.jsonl"))
+        args.resume_from = None
 
     done_ids = set()
     if args.resume_from and Path(args.resume_from).exists():
@@ -291,8 +348,8 @@ def main():
         # same model + bodhi setting. Mixing settings silently corrupts the
         # training corpus. Refuse to resume on mismatch unless --force-resume.
         prev_models = set()
-        prev_bodhi = set()
         prev_ablate = set()
+        prev_protocol = set()
         n_skipped_malformed = 0
         with open(args.resume_from) as f:
             for line in f:
@@ -301,10 +358,14 @@ def main():
                     done_ids.add(row["prompt_id"])
                     if "model" in row:
                         prev_models.add(row["model"])
-                    if "bodhi" in row:
-                        prev_bodhi.add(row["bodhi"])
                     if "ablate_component" in row:
                         prev_ablate.add(row["ablate_component"])
+                    # Rows written before --protocol existed carry only the
+                    # bodhi flag.
+                    if "protocol" in row:
+                        prev_protocol.add(row["protocol"])
+                    elif "bodhi" in row:
+                        prev_protocol.add("bodhi" if row["bodhi"] else "none")
                 except (json.JSONDecodeError, KeyError):
                     # Skip corrupt lines from interrupted runs, but count them
                     # so the operator sees how much truncation happened.
@@ -316,19 +377,19 @@ def main():
             )
 
         model_mismatch = prev_models and prev_models != {args.model}
-        bodhi_mismatch = prev_bodhi and prev_bodhi != {args.use_bodhi}
+        protocol_mismatch = prev_protocol and prev_protocol != {protocol}
         # Mixing ablation tags would invalidate the figure-3 ablation (issue
         # #69): different rows would have been generated with different
         # wrapper components disabled. Treat it like the model/bodhi mismatch.
         ablate_mismatch = prev_ablate and prev_ablate != {args.ablate_component}
-        if model_mismatch or bodhi_mismatch or ablate_mismatch:
+        if model_mismatch or protocol_mismatch or ablate_mismatch:
             msg = (
                 f"resume config mismatch — refusing to append to {args.resume_from}\n"
                 f"  existing rows: model={prev_models or '{unknown}'} "
-                f"bodhi={prev_bodhi or '{unknown}'} "
+                f"protocol={prev_protocol or '{unknown}'} "
                 f"ablate={prev_ablate or '{unknown}'}\n"
                 f"  this run:      model={{{args.model!r}}} "
-                f"bodhi={{{args.use_bodhi}}} "
+                f"protocol={{{protocol!r}}} "
                 f"ablate={{{args.ablate_component!r}}}\n"
                 f"  re-running with different settings would silently mix "
                 f"outputs (issue #6/7, #69)\n"
@@ -340,11 +401,11 @@ def main():
 
         examples = [ex for ex in examples if ex["prompt_id"] not in done_ids]
         print(f"Resuming, skipping {len(done_ids)} already done "
-              f"(prev model={prev_models or '?'} bodhi={prev_bodhi or '?'} "
+              f"(prev model={prev_models or '?'} protocol={prev_protocol or '?'} "
               f"ablate={prev_ablate or '?'})")
 
-    print(f"\nGenerating {len(examples)} traces, bodhi={args.use_bodhi}, "
-          f"ablate={args.ablate_component}\n")
+    print(f"\nGenerating {len(examples)} traces, protocol={protocol}, "
+          f"ablate={args.ablate_component}{' [DRY RUN]' if args.dry_run else ''}\n")
 
     out_path = Path(args.output)
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -388,11 +449,14 @@ def main():
     import threading
     GEN_CONCURRENCY = int(os.environ.get("GEN_CONCURRENCY", "32"))
 
-    with VLLMEngine(args.model) as engine:
-        bodhi_wrapper = (
-            make_bodhi_wrapper(engine, ablate_component=args.ablate_component)
-            if args.use_bodhi else None
-        )
+    model_revision = rmf.effective_revision(args.model, args.model_revision)
+    engine_kwargs = dict(revision=model_revision, max_model_len=args.max_model_len,
+                         max_num_seqs=args.max_num_seqs)
+    engine_ctx = (DryRunEngine(args.model, reply=DRY_RUN_REPLY, **engine_kwargs)
+                  if args.dry_run else VLLMEngine(args.model, **engine_kwargs))
+    with engine_ctx as engine:
+        bodhi_wrapper = make_protocol_wrapper(
+            protocol, engine, ablate_component=args.ablate_component)
         # Lock around the JSONL append: workers can finish in any order, but
         # f.write() / f.flush() must not interleave or we get corrupt lines.
         write_lock = threading.Lock()
@@ -400,7 +464,7 @@ def main():
         def _gen_one(ex):
             try:
                 out = generate_response(
-                    engine, ex["prompt"], args.use_bodhi, bodhi_wrapper,
+                    engine, ex["prompt"], bodhi_wrapper is not None, bodhi_wrapper,
                     ablate_component=args.ablate_component,
                 )
                 return {
@@ -412,7 +476,8 @@ def main():
                     "tags": ex.get("example_tags", []),
                     "source_dataset": ex.get("_source", "unknown"),
                     "model": args.model,
-                    "bodhi": args.use_bodhi,
+                    "bodhi": protocol == "bodhi",
+                    "protocol": protocol,
                     # Top-level for the resume-from consistency check.
                     # Also lives inside bodhi_metadata for analysis tools.
                     "ablate_component": args.ablate_component,
@@ -442,6 +507,18 @@ def main():
                         fail += 1
 
     print(f"\nDone: {ok} ok, {fail} failed -> {out_path}")
+    rmf.write_manifest(rmf.manifest_path_for(out_path), rmf.build_manifest(
+        "generate",
+        config={**vars(args), "protocol": protocol},
+        models={"teacher": (args.model, args.model_revision)},
+        engines={"teacher": {**engine_ctx.settings(), "concurrency": GEN_CONCURRENCY}},
+        inputs=list(args.dataset_files or []) + [str(DATA_DIR / f"{n}.jsonl") for n in (args.datasets or [])]
+               + list(args.exclude_ids or []),
+        outputs=[out_path],
+        counts={"n_prompts_this_run": len(examples), "n_resumed": len(done_ids),
+                "n_ok": ok, "n_failed": fail},
+        extra={"protocol": protocol, "ablate_component": args.ablate_component},
+    ))
 
 
 if __name__ == "__main__":

@@ -15,11 +15,21 @@ Config knobs (see rebuttal/configs/*.yaml):
 GPU throughput: FlashAttention-2 when available (else SDPA), TF32 matmuls, fused
 AdamW, and padding to the longest sequence in each batch (not a fixed 4096 — that
 was a TPU XLA-recompile workaround and wastes GPU compute).
+
+The base model loads at model.revision, else at the pin in configs/families.yaml.
+Every run writes <output-dir>/manifest.json: the resolved config and its sha256,
+the effective batch, the train and val file hashes, the adapter sha256 and the
+trainer's step, epoch and loss record (scripts/run_manifest.py).
+
+This trainer is not the one behind the submitted MedGemma numbers. Those came
+from the TPU tunix path in legacy/ (r=8, alpha=16); see legacy/README.md.
 """
 
 import argparse
 import json
+import os
 import random
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -29,6 +39,9 @@ from datasets import Dataset
 from transformers import AutoModelForCausalLM, AutoTokenizer, set_seed
 from trl import SFTTrainer, SFTConfig, DataCollatorForCompletionOnlyLM
 from peft import LoraConfig
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import run_manifest as rmf
 
 # TF32 matmuls on Ampere+ (H100): large SFT throughput win, negligible precision
 # cost for LoRA fine-tuning. Safe to enable unconditionally on CUDA.
@@ -128,6 +141,51 @@ def latest_checkpoint(output_dir):
     return str(checkpoints[-1][1])
 
 
+def effective_batch(train_cfg, world_size=None):
+    """Examples per optimizer step: per-device batch x accumulation x processes."""
+    world_size = world_size or int(os.environ.get("WORLD_SIZE", "1"))
+    return (int(train_cfg["per_device_train_batch_size"])
+            * int(train_cfg["gradient_accumulation_steps"]) * world_size)
+
+
+def trainer_record(state) -> dict:
+    """Step, epoch and loss summary from a trainer_state dict."""
+    history = state.get("log_history") or []
+    train_losses = [h["loss"] for h in history if "loss" in h]
+    eval_losses = [(h.get("step"), h["eval_loss"]) for h in history if "eval_loss" in h]
+    return {
+        "global_step": state.get("global_step"),
+        "epoch": state.get("epoch"),
+        "max_steps": state.get("max_steps"),
+        "num_train_epochs": state.get("num_train_epochs"),
+        "first_train_loss": train_losses[0] if train_losses else None,
+        "last_train_loss": train_losses[-1] if train_losses else None,
+        "eval_loss_by_step": eval_losses,
+        "best_metric": state.get("best_metric"),
+        "best_model_checkpoint": state.get("best_model_checkpoint"),
+    }
+
+
+def build_train_manifest(cfg, config_path, seed, train_file, val_file,
+                         output_dir, best_path, state):
+    """Manifest for one training run. Kept separate from main() for testing."""
+    model_cfg, train_cfg = cfg["model"], cfg["training"]
+    return rmf.build_manifest(
+        "train",
+        config=cfg,
+        config_path=config_path,
+        models={"base": (model_cfg["name"], model_cfg.get("revision"))},
+        adapter_dir=best_path,
+        inputs=[train_file, val_file],
+        counts={"seed": seed,
+                "effective_batch": effective_batch(train_cfg),
+                "world_size": int(os.environ.get("WORLD_SIZE", "1")),
+                **trainer_record(state)},
+        extra={"output_dir": str(output_dir),
+               "quantization": model_cfg.get("quantization")},
+    )
+
+
 def main():
     global _tokenizer
 
@@ -144,6 +202,8 @@ def main():
     parser.add_argument("--lora-variant", default=None, choices=list(LORA_VARIANTS),
                         help="override lora.variant")
     parser.add_argument("--lora-r", type=int, default=None, help="override lora.r")
+    parser.add_argument("--model-revision", default=None,
+                        help="override model.revision (HF commit of the base model)")
     args = parser.parse_args()
 
     with open(args.config) as f:
@@ -157,15 +217,20 @@ def main():
         cfg["lora"]["r"] = args.lora_r
 
     model_cfg, lora_cfg, train_cfg, data_cfg = cfg["model"], cfg["lora"], cfg["training"], cfg["data"]
+    # Pin the base weights: flag, then config, then configs/families.yaml.
+    model_cfg["revision"] = rmf.effective_revision(
+        model_cfg["name"], args.model_revision or model_cfg.get("revision"))
 
     seed = args.seed if args.seed is not None else int(cfg.get("seed", train_cfg.get("seed", 42)))
+    cfg["seed"] = seed
     random.seed(seed); np.random.seed(seed); torch.manual_seed(seed); set_seed(seed)
 
     # model.tokenizer_kwargs lets a config pass loader flags, e.g. Mistral-Small's
     # fix_mistral_regex=True (its tekken tokenizer otherwise warns of incorrect
     # tokenization). Default {} preserves prior behavior for every other model.
     _tokenizer = AutoTokenizer.from_pretrained(
-        model_cfg["name"], **model_cfg.get("tokenizer_kwargs", {}))
+        model_cfg["name"], revision=model_cfg["revision"],
+        **model_cfg.get("tokenizer_kwargs", {}))
     if _tokenizer.pad_token is None:
         _tokenizer.pad_token = _tokenizer.eos_token
     # Half-precision SFT overflows with left padding; force right.
@@ -202,6 +267,7 @@ def main():
     print(f"Attention implementation: {attn_impl}")
     model = AutoModelForCausalLM.from_pretrained(
         model_cfg["name"],
+        revision=model_cfg["revision"],
         torch_dtype=dtype,
         device_map="auto",              # single visible GPU -> whole model on it
         quantization_config=quant_config,
@@ -320,6 +386,16 @@ def main():
     except (ValueError, TypeError) as e:
         print(f"trainer_state.json skipped ({e!r}) — NaN in eval metrics")
     print(f"saved adapter to {best_path}")
+
+    if trainer.is_world_process_zero():
+        state = {k: getattr(trainer.state, k, None) for k in (
+            "global_step", "epoch", "max_steps", "num_train_epochs",
+            "log_history", "best_metric", "best_model_checkpoint")}
+        manifest_path = rmf.write_manifest(
+            Path(args.output_dir) / "manifest.json",
+            build_train_manifest(cfg, args.config, seed, train_file, val_file,
+                                 args.output_dir, best_path, state))
+        print(f"train manifest -> {manifest_path}")
 
 
 if __name__ == "__main__":

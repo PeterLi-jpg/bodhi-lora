@@ -1,4 +1,24 @@
-"""Evaluate model on HealthBench Hard (base vs lora, with/without BOHDI wrapper)."""
+"""Evaluate model on HealthBench Hard (base vs lora, with/without BOHDI wrapper).
+
+Conditions (the "config" tag in the output JSON):
+  base_no_wrapper / lora_no_wrapper    the model as is
+  base_bodhi / lora_bodhi              --use-bodhi (same as --wrapper bodhi)
+  base_ask_first / lora_ask_first      --wrapper ask_first, the second CoT
+                                       protocol (scripts/baselines/ask_first.py)
+  base_clarify                         --baseline clarify
+  base_verbalized_confidence           --baseline verbalized_confidence
+The prompt baselines are in scripts/baselines/prompts.py.
+
+Eval settings are flags, so no run patches this file. The defaults equal the
+submitted MedGemma eval (legacy/modal_eval.py): max_model_len 4096,
+max_num_seqs 32, 32 client threads, a 900 s request timeout and the
+meta-llama/Llama-3.1-8B-Instruct grader at its pinned revision. Every run
+writes <output stem>.manifest.json next to the output (scripts/run_manifest.py).
+
+--dry-run replaces both vLLM engines with stubs, runs the prompt, wrapper and
+grading code on --dry-run-examples prompts on a CPU, and writes
+<output stem>.dryrun.json. It never writes --output.
+"""
 
 import argparse
 from datetime import datetime, timezone
@@ -22,8 +42,11 @@ from transformers import set_seed
 import os as _os
 sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from _vllm_engine import VLLMEngine
+from _vllm_engine import DryRunEngine, VLLMEngine
 from scripts.filter_traces import GRADER_TEMPLATE, LocalGrader, parse_json_response, grade_trace
+import run_manifest as rmf
+from baselines.ask_first import AskFirstProtocol
+from baselines.prompts import BASELINE_PROMPTS, apply_instructions
 
 HEALTHBENCH_HARD_URL = "https://openaipublic.blob.core.windows.net/simple-evals/healthbench/hard_2025-05-08-21-00-10.jsonl"
 DATA_DIR = Path("data/raw")
@@ -76,11 +99,50 @@ def load_eval_data(sample_ids_path, benchmark_jsonl=None):
     return filtered
 
 
+WRAPPERS = ("none", "bodhi", "ask_first")
+
+# Dry-run stub replies. The policy reply carries the ask-first markers so the
+# reply parser runs too; the grader reply is a valid rubric verdict.
+DRY_RUN_POLICY_REPLY = "<plan>dry run plan</plan>\nREPLY:\nDRY RUN RESPONSE"
+DRY_RUN_GRADER_REPLY = '```json\n{"explanation": "dry run", "criteria_met": false}\n```'
+
+
+def make_wrapper(protocol: str, engine):
+    """Build the CoT wrapper used by the '+CoT' conditions."""
+    chat_fn = lambda msgs: engine.chat(msgs)
+    if protocol == "ask_first":
+        return AskFirstProtocol(chat_fn)
+    from bodhi import BODHI, BODHIConfig
+    return BODHI(chat_function=chat_fn, config=BODHIConfig(domain="medical"))
+
+
 def make_bodhi_wrapper(engine: VLLMEngine):
     """Build a reusable BODHI wrapper backed by a vLLM engine."""
-    from bodhi import BODHI, BODHIConfig
-    chat_fn = lambda msgs: engine.chat(msgs)
-    return BODHI(chat_function=chat_fn, config=BODHIConfig(domain="medical"))
+    return make_wrapper("bodhi", engine)
+
+
+def resolve_condition(args):
+    """Return (wrapper, baseline, tag) from the flags.
+
+    --use-bodhi is kept as the short form of --wrapper bodhi so the existing
+    launchers keep working.
+    """
+    wrapper = args.wrapper
+    if args.use_bodhi:
+        if wrapper not in (None, "bodhi"):
+            raise SystemExit("--use-bodhi conflicts with --wrapper " + wrapper)
+        wrapper = "bodhi"
+    wrapper = wrapper or "none"
+    if args.baseline and wrapper != "none":
+        raise SystemExit("--baseline adds a prompt to the bare model; do not combine it with a wrapper")
+    if args.baseline:
+        condition = args.baseline
+    elif wrapper == "none":
+        condition = "no_wrapper"
+    else:
+        condition = wrapper
+    tag = f"{'lora' if args.lora_path else 'base'}_{condition}"
+    return wrapper, args.baseline, tag
 
 
 def gen_response(engine: VLLMEngine, messages, use_bodhi, bodhi_wrapper=None, max_new_tokens=1024):
@@ -246,7 +308,14 @@ def _safe_git_sha():
         return None
 
 
-def collect_run_metadata(seed, grader_model):
+def collect_run_metadata(seed, grader_model, **settings):
+    """Provenance stored inside the result JSON.
+
+    The keys up to peft_version are the ones the submitted results carry.
+    settings adds the eval settings (context length, batch slots, revisions,
+    eval-id hash and so on), so a result file states how it was produced.
+    The full record is the manifest next to the output.
+    """
     return {
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
         "git_sha": _safe_git_sha(),
@@ -255,6 +324,9 @@ def collect_run_metadata(seed, grader_model):
         "bodhi_version": _safe_package_version("bodhi-llm"),
         "transformers_version": _safe_package_version("transformers"),
         "peft_version": _safe_package_version("peft"),
+        "vllm_version": _safe_package_version("vllm"),
+        "torch_version": _safe_package_version("torch"),
+        **settings,
     }
 
 
@@ -271,9 +343,37 @@ def main():
         help="Optional PEFT adapter directory to merge with --model.",
     )
     parser.add_argument(
+        "--model-revision",
+        default=None,
+        help="HF commit of --model. Default: the pin in configs/families.yaml.",
+    )
+    parser.add_argument(
         "--use-bodhi",
         action="store_true",
-        help="Wrap inference in the BODHI calibration prompt.",
+        help="Wrap inference in the BODHI calibration prompt (= --wrapper bodhi).",
+    )
+    parser.add_argument(
+        "--wrapper",
+        choices=WRAPPERS,
+        default=None,
+        help="CoT wrapper for the '+CoT' conditions: bodhi or ask_first "
+             "(scripts/baselines/ask_first.py). Default none.",
+    )
+    parser.add_argument(
+        "--baseline",
+        choices=sorted(BASELINE_PROMPTS),
+        default=None,
+        help="Inference-time prompt baseline on the bare model "
+             "(scripts/baselines/prompts.py). Writes the config tag "
+             "base_<baseline>.",
+    )
+    parser.add_argument(
+        "--instruction-placement",
+        choices=("auto", "system", "first_user"),
+        default="auto",
+        help="Where --baseline puts its instructions. auto uses a system "
+             "message unless configs/families.yaml marks the model "
+             "system_role: false.",
     )
     parser.add_argument(
         "--sample-ids",
@@ -287,6 +387,11 @@ def main():
         help="Rebuttal: HealthBench-format JSONL to eval on instead of downloading "
              "HealthBench Hard (e.g. data/raw/medqa_open.jsonl). --sample-ids then "
              "selects the eval holdout prompt_ids from this file.",
+    )
+    parser.add_argument(
+        "--grader-revision",
+        default=None,
+        help="HF commit of --grader-model. Default: the pin in configs/families.yaml.",
     )
     parser.add_argument(
         "--grader-model",
@@ -327,6 +432,29 @@ def main():
         default=42,
         help="RNG seed for grader sampling and inference shuffling (default 42).",
     )
+    # Eval settings. Defaults = the submitted MedGemma eval, which ran with
+    # these values patched into the code at run time (legacy/modal_eval.py
+    # patches (a), (b) and the 900 s timeout, EVAL_CONCURRENCY=32).
+    parser.add_argument("--max-model-len", type=int, default=4096,
+                        help="vLLM context length for the policy and grader engines.")
+    parser.add_argument("--max-num-seqs", type=int, default=32,
+                        help="vLLM scheduler slots for the policy and grader engines.")
+    parser.add_argument("--concurrency", type=int,
+                        default=int(os.environ.get("EVAL_CONCURRENCY", "32")),
+                        help="Client threads per engine (env EVAL_CONCURRENCY).")
+    parser.add_argument("--request-timeout", type=int, default=900,
+                        help="Seconds before one HTTP request to vLLM times out.")
+    parser.add_argument("--drain-seconds", type=float, default=0.0,
+                        help="Pause between engines. Only the old TPU runtime needed "
+                             "one (30 s); GPU runs use 0.")
+    parser.add_argument("--base-quantization", choices=("none", "bitsandbytes"),
+                        default="none",
+                        help="Serve the base model in 4-bit NF4 (bitsandbytes). Use it "
+                             "to evaluate a QLoRA adapter on the base it was trained on.")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="Stub both engines, run --dry-run-examples prompts on CPU, "
+                             "write <output stem>.dryrun.json, never write --output.")
+    parser.add_argument("--dry-run-examples", type=int, default=2)
     args = parser.parse_args()
 
     # Resolve `~` so callers can pass `~/results/foo.json` without surprise.
@@ -341,7 +469,7 @@ def main():
     # own and protects direct invocations. Empty (size 0) files are treated as
     # partial writes from a crashed run and are allowed to be overwritten.
     out_path = Path(args.output)
-    if out_path.is_file() and out_path.stat().st_size > 0:
+    if out_path.is_file() and out_path.stat().st_size > 0 and not args.dry_run:
         print(
             f"[eval_healthbench] {out_path} already exists "
             f"({out_path.stat().st_size} bytes), skipping.",
@@ -365,34 +493,63 @@ def main():
     np.random.seed(args.seed)
     set_seed(args.seed)
 
+    wrapper, baseline, tag = resolve_condition(args)
+    placement = args.instruction_placement
+    if placement == "auto":
+        placement = "system" if rmf.supports_system_role(args.model) else "first_user"
+
     examples = load_eval_data(args.sample_ids, args.benchmark_jsonl)
     if args.max_examples:
         examples = examples[:args.max_examples]
+    if args.dry_run:
+        examples = examples[:args.dry_run_examples]
+    data_path = (Path(args.benchmark_jsonl).expanduser() if args.benchmark_jsonl
+                 else DATA_DIR / "healthbench_hard.jsonl")
 
-    tag = f"{'lora' if args.lora_path else 'base'}_{'bodhi' if args.use_bodhi else 'no_wrapper'}"
-    print(f"\nEval: {tag}  ({len(examples)} examples)\n")
+    model_revision = rmf.effective_revision(args.model, args.model_revision)
+    grader_revision = rmf.effective_revision(args.grader_model, args.grader_revision)
+    quantization = None if args.base_quantization == "none" else args.base_quantization
+    engine_kwargs = dict(max_model_len=args.max_model_len, max_num_seqs=args.max_num_seqs,
+                         request_timeout=args.request_timeout)
+
+    def _engine(model, revision, reply, **extra):
+        if args.dry_run:
+            return DryRunEngine(model, reply=reply, revision=revision, **engine_kwargs, **extra)
+        return VLLMEngine(model, revision=revision, **engine_kwargs, **extra)
+
+    print(f"\nEval: {tag}  ({len(examples)} examples)"
+          f"{'  [DRY RUN]' if args.dry_run else ''}\n")
 
     # ── Pass 1: generate responses with the inference engine ─────────────────
     # Concurrent generation — vLLM batches concurrent requests server-side.
-    # 16 is conservative; we saw vLLM crash at 32 on Qwen-14B grading.
+    # The default of 32 threads is what the submitted eval ran
+    # (EVAL_CONCURRENCY=32 in legacy/modal_eval.py). filter_traces.py keeps 16
+    # because vLLM crashed at 32 there on Qwen-14B grading.
     # Per-task try/except so one HTTP error doesn't kill all 200 examples.
     from concurrent.futures import ThreadPoolExecutor, as_completed
-    EVAL_CONCURRENCY = int(os.environ.get("EVAL_CONCURRENCY", "16"))
+    EVAL_CONCURRENCY = args.concurrency
 
     raw_generations = []  # list of {prompt_id, messages, rubrics, response, token_logprobs}
     failed_inference = []
 
     # GPU: vLLM serves the base model and applies the LoRA adapter directly.
-    engine_ctx = VLLMEngine(args.model, lora_path=args.lora_path)
+    engine_ctx = _engine(args.model, model_revision, DRY_RUN_POLICY_REPLY,
+                         lora_path=args.lora_path, quantization=quantization)
+    policy_settings = engine_ctx.settings()
     _eval_concurrency = EVAL_CONCURRENCY
 
     with engine_ctx as engine:
-        bodhi_wrapper = make_bodhi_wrapper(engine) if args.use_bodhi else None
+        cot_wrapper = make_wrapper(wrapper, engine) if wrapper != "none" else None
 
         def _gen_one(ex):
             try:
+                # A baseline changes only what the model sees. The grader below
+                # gets the original conversation (item["messages"]), the same as
+                # every other condition.
+                gen_messages = (apply_instructions(ex["prompt"], BASELINE_PROMPTS[baseline], placement)
+                                if baseline else ex["prompt"])
                 resp, token_logprobs = gen_response(
-                    engine, ex["prompt"], args.use_bodhi, bodhi_wrapper
+                    engine, gen_messages, cot_wrapper is not None, cot_wrapper
                 )
                 return {
                     "prompt_id": ex["prompt_id"],
@@ -426,8 +583,9 @@ def main():
     # the grader engine hits "Engine core initialization failed" because the
     # inference container's TPU resources haven't fully released yet.
     import time as _t
-    print("  draining TPU 30s before grader startup...", flush=True)
-    _t.sleep(30)
+    if args.drain_seconds:
+        print(f"  draining {args.drain_seconds}s before grader startup...", flush=True)
+        _t.sleep(args.drain_seconds)
 
     # ── Pass 2: grade with the grader engine ──────────────────────────────────
     all_results = []
@@ -436,7 +594,9 @@ def main():
     total_parse_failures = 0
     total_rubric_items = 0
     failed_grading = []
-    with VLLMEngine(args.grader_model) as grader_engine:
+    grader_ctx = _engine(args.grader_model, grader_revision, DRY_RUN_GRADER_REPLY)
+    grader_settings = grader_ctx.settings()
+    with grader_ctx as grader_engine:
         grader = LocalGrader(grader_engine)
 
         def _grade_one(item):
@@ -488,14 +648,18 @@ def main():
     # cross-grader correlation (per scripts/grader_correlation.py) without
     # changing the primary grader, so the headline numbers stay stable.
     secondary_grader_runs = []
+    secondary_settings = {}
     for sec_model in args.secondary_grader_model:
         print(f"  starting secondary grader {sec_model}...", flush=True)
-        _t.sleep(30)  # drain TPU before spinning up the next vLLM container
+        if args.drain_seconds:
+            _t.sleep(args.drain_seconds)
         sec_results = []
         sec_scores = []
         sec_parse_failures = 0
         sec_rubric_items = 0
-        with VLLMEngine(sec_model) as sec_engine:
+        sec_ctx = _engine(sec_model, rmf.effective_revision(sec_model), DRY_RUN_GRADER_REPLY)
+        secondary_settings[sec_model] = sec_ctx.settings()
+        with sec_ctx as sec_engine:
             sec_grader = LocalGrader(sec_engine)
 
             def _grade_one_sec(item):
@@ -540,11 +704,27 @@ def main():
         })
 
     primary_agg = _aggregate_scores(scores)
+    eval_ids = rmf.id_list_digest(args.sample_ids)
     summary = {
         "config": tag, "model": args.model,
-        "lora_path": args.lora_path, "use_bodhi": args.use_bodhi,
+        "lora_path": args.lora_path, "use_bodhi": wrapper == "bodhi",
+        "wrapper": wrapper, "baseline": baseline,
+        "instruction_placement": placement if baseline else None,
         "n_examples": len(examples),
-        "run_metadata": collect_run_metadata(args.seed, args.grader_model),
+        "run_metadata": collect_run_metadata(
+            args.seed, args.grader_model,
+            model_revision=model_revision,
+            grader_revision=grader_revision,
+            max_model_len=args.max_model_len,
+            max_num_seqs=args.max_num_seqs,
+            concurrency=EVAL_CONCURRENCY,
+            request_timeout_s=args.request_timeout,
+            base_quantization=quantization,
+            eval_ids_n=eval_ids.get("n"),
+            eval_ids_sha256=eval_ids.get("ids_sha256"),
+            eval_data_sha256=rmf.file_digest(data_path).get("sha256"),
+            dry_run=args.dry_run,
+        ),
         **primary_agg,
         "score_metric": "normalized_score",
         "model_confidence_method": (
@@ -568,9 +748,37 @@ def main():
     }
 
     out = Path(args.output)
+    if args.dry_run:
+        # Never write --output in a dry run: its idempotency check would then
+        # skip the real eval.
+        out = out.with_name(out.stem + ".dryrun.json")
+        summary["dry_run_policy_calls"] = engine_ctx.calls[:4]
     out.parent.mkdir(parents=True, exist_ok=True)
     with open(out, "w") as f:
         json.dump(summary, f, indent=2)
+
+    models = {"policy": (args.model, args.model_revision),
+              "grader": (args.grader_model, args.grader_revision)}
+    for i, sec_model in enumerate(args.secondary_grader_model):
+        models[f"secondary_grader_{i}"] = (sec_model, None)
+    rmf.write_manifest(rmf.manifest_path_for(out), rmf.build_manifest(
+        "eval",
+        config=vars(args),
+        models=models,
+        engines={"policy": policy_settings, "grader": grader_settings,
+                 **{f"secondary:{k}": v for k, v in secondary_settings.items()}},
+        adapter_dir=args.lora_path,
+        eval_ids=args.sample_ids,
+        inputs=[data_path],
+        outputs=[out],
+        counts={"n_examples": len(examples), "n_generated": len(raw_generations),
+                "n_failed_inference": len(failed_inference),
+                "n_graded": len(all_results), "n_failed_grading": len(failed_grading),
+                "grader_parse_failures_total": total_parse_failures,
+                "grader_rubric_items_total": total_rubric_items},
+        extra={"condition": {"tag": tag, "wrapper": wrapper, "baseline": baseline,
+                             "instruction_placement": placement if baseline else None}},
+    ))
 
     model_brier_str = f"{model_brier:.4f}" if model_brier is not None else "n/a"
     model_ece_str = f"{model_ece:.4f}" if model_ece is not None else "n/a"

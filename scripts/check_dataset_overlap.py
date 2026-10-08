@@ -22,6 +22,20 @@ Run (full pre-training check):
         --train-jsonl data/sft/train.jsonl \
         --seeds 5 \
         --tag-overlap
+
+Other benchmarks (--benchmark-jsonl): the check takes the held-out pool
+(--holdout-ids) and fails if any training prompt_id is in it, or if any
+training prompt has the same text as a held-out prompt after lowercasing and
+collapsing whitespace (a near-duplicate under a different id). With --eval-ids
+it also checks that each per-seed eval file lies inside the pool.
+
+    python scripts/check_dataset_overlap.py --benchmark-jsonl data/raw/chatdoctor_s0.jsonl \
+        --holdout-ids data/raw/chatdoctor_s0_holdout_ids.json \
+        --train-jsonl <cell>/sft/train.jsonl --eval-ids <cell>/eval_ids/seed_*.json \
+        --json-out <cell>/overlap_check.json
+
+The HealthBench mode runs the same text check against all of HealthBench Hard.
+--json-out writes the result, pass or fail, so a run keeps a record of it.
 """
 
 import argparse
@@ -29,6 +43,107 @@ import json
 import random
 from collections import Counter
 from pathlib import Path
+
+
+def normalize_text(text):
+    """Lowercase and collapse whitespace, as in contamination_probe.py."""
+    return " ".join(str(text).lower().split())
+
+
+def last_user_text(messages):
+    """The last user turn of a prompt, or '' when there is none."""
+    for m in reversed(messages or []):
+        if m.get("role") == "user":
+            content = m.get("content", "")
+            if isinstance(content, list):
+                content = "\n".join(p.get("text", "") for p in content if isinstance(p, dict))
+            return content
+    return ""
+
+
+def load_prompt_texts(path, key):
+    """{prompt_id: normalized last user turn} from a JSONL file.
+
+    key is "prompt" for benchmark rows and "messages" for trace rows.
+    """
+    texts = {}
+    with open(path) as f:
+        for lineno, line in enumerate(f, start=1):
+            if not line.strip():
+                continue
+            try:
+                obj = json.loads(line)
+            except json.JSONDecodeError as e:
+                raise SystemExit(
+                    f"check_dataset_overlap: malformed JSON at {path}:{lineno}") from e
+            texts[obj["prompt_id"]] = normalize_text(last_user_text(obj.get(key)))
+    return texts
+
+
+def text_duplicates(train_texts, held_texts):
+    """Training prompt_ids whose text equals a held-out prompt's text."""
+    held = {t for t in held_texts.values() if t}
+    return sorted(pid for pid, t in train_texts.items() if t and t in held)
+
+
+def write_report(path, report):
+    if path:
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
+        with open(path, "w") as f:
+            json.dump(report, f, indent=2)
+        print(f"overlap report -> {path}")
+
+
+def fail(report, json_out, message):
+    """Record a failed check, then stop the run."""
+    report["passed"] = False
+    report.setdefault("errors", []).append(message)
+    write_report(json_out, report)
+    raise SystemExit(message)
+
+
+def check_benchmark(args):
+    """Leakage gate for a non-HealthBench cell."""
+    for p in (args.benchmark_jsonl, args.holdout_ids, args.train_jsonl):
+        if not p or not Path(p).exists():
+            raise SystemExit(f"missing file: {p}  (benchmark mode needs "
+                             "--benchmark-jsonl, --holdout-ids and --train-jsonl)")
+    held_ids = load_eval_ids(args.holdout_ids)
+    bench_texts = load_prompt_texts(args.benchmark_jsonl, "prompt")
+    train_texts = load_prompt_texts(args.train_jsonl, "messages")
+    held_texts = {pid: bench_texts.get(pid, "") for pid in held_ids}
+    report = {
+        "mode": "benchmark",
+        "benchmark_jsonl": args.benchmark_jsonl,
+        "holdout_ids": args.holdout_ids,
+        "train_jsonl": args.train_jsonl,
+        "n_holdout": len(held_ids),
+        "n_holdout_missing_from_benchmark": len(held_ids - set(bench_texts)),
+        "n_train": len(train_texts),
+    }
+    id_leak = sorted(held_ids & set(train_texts))
+    dup = text_duplicates(train_texts, held_texts)
+    report.update({"id_leak": len(id_leak), "id_leak_first": id_leak[:5],
+                   "text_duplicates": len(dup), "text_duplicates_first": dup[:5]})
+    print(f"holdout pool: {len(held_ids)}  train: {len(train_texts)}")
+    print(f"id leakage: {len(id_leak)}  text duplicates: {len(dup)}")
+    report["eval_files"] = []
+    for path in args.eval_ids_files or []:
+        ids = load_eval_ids(path)
+        outside = sorted(ids - held_ids)
+        report["eval_files"].append({"path": path, "n": len(ids), "outside_pool": len(outside)})
+        if outside:
+            fail(report, args.json_out, f"{path}: {len(outside)} eval ids are not in the holdout pool")
+    if report["n_holdout_missing_from_benchmark"]:
+        fail(report, args.json_out, "holdout ids missing from --benchmark-jsonl "
+             f"({report['n_holdout_missing_from_benchmark']}); wrong benchmark file?")
+    if id_leak:
+        fail(report, args.json_out, f"DATA LEAKAGE: {len(id_leak)} holdout prompt_ids in training file")
+    if dup:
+        fail(report, args.json_out, f"DATA LEAKAGE: {len(dup)} training prompts repeat a holdout prompt's text")
+    report["passed"] = True
+    write_report(args.json_out, report)
+    print("\noverlap check passed")
 
 
 def load_prompt_ids(path):
@@ -143,7 +258,20 @@ def main():
     parser.add_argument("--tag-overlap", action="store_true",
                         help="report tag/theme distribution imbalance between "
                              "training pool and each eval draw")
+    parser.add_argument("--benchmark-jsonl", default=None,
+                        help="benchmark mode: the benchmark rows (prompt_id, prompt)")
+    parser.add_argument("--holdout-ids", default=None,
+                        help="benchmark mode: the held-out pool of prompt_ids")
+    parser.add_argument("--eval-ids-files", nargs="*", default=None,
+                        help="benchmark mode: per-seed eval id files that must lie "
+                             "inside the pool")
+    parser.add_argument("--json-out", default=None,
+                        help="write the check result (pass or fail) to this JSON file")
     args = parser.parse_args()
+
+    if args.benchmark_jsonl:
+        check_benchmark(args)
+        return
 
     for p in (args.healthbench, args.healthbench_hard, args.eval_ids):
         if not Path(p).exists():
@@ -165,6 +293,9 @@ def main():
 
     full_hard_overlap = full_ids & hard_ids
     hard_is_subset = full_hard_overlap == hard_ids
+    report = {"mode": "healthbench", "train_jsonl": args.train_jsonl,
+              "n_full": len(full_ids), "n_hard": len(hard_ids),
+              "n_fixed_eval": len(eval_ids), "n_train": len(train_ids)}
 
     print(f"HealthBench Full:     {len(full_ids):>6} prompts")
     print(f"HealthBench Hard:     {len(hard_ids):>6} prompts")
@@ -203,8 +334,10 @@ def main():
             print(f"\nDATA LEAKAGE: {len(leaked)} fixed eval IDs found in training file!")
             for pid in sorted(leaked):
                 print(f"  {pid}")
-            raise SystemExit("Abort — training data is contaminated with eval IDs. "
-                             "Re-run generate_traces.py with --exclude-ids.")
+            report["fixed_eval_leak"] = len(leaked)
+            fail(report, args.json_out,
+                 "Abort — training data is contaminated with eval IDs. "
+                 "Re-run generate_traces.py with --exclude-ids.")
         else:
             print(f"leakage (fixed eval): clean — 0/{len(eval_ids)} eval IDs in training file")
 
@@ -219,12 +352,26 @@ def main():
             print(f"\nDATA LEAKAGE: {len(hard_leak)} HealthBench Hard prompts in "
                   f"training file (training pool must exclude all 1K Hard).")
             print(f"  first {len(sample)}: {sample}")
-            raise SystemExit("Abort — training data contains HealthBench Hard. "
-                             "Pass --exclude-ids data/raw/healthbench_hard.jsonl to "
-                             "generate_traces.py + filter_traces.py and re-run.")
+            report["hard_id_leak"] = len(hard_leak)
+            fail(report, args.json_out,
+                 "Abort — training data contains HealthBench Hard. "
+                 "Pass --exclude-ids data/raw/healthbench_hard.jsonl to "
+                 "generate_traces.py + filter_traces.py and re-run.")
         else:
             print(f"leakage (full Hard): clean — 0/{len(hard_ids)} Hard prompts "
                   f"in training file")
+        report["fixed_eval_leak"] = 0
+        report["hard_id_leak"] = 0
+
+        # Same prompt text under another id (a near-duplicate) also leaks.
+        dup = text_duplicates(load_prompt_texts(args.train_jsonl, "messages"),
+                              load_prompt_texts(args.healthbench_hard, "prompt"))
+        report["text_duplicates"] = len(dup)
+        report["text_duplicates_first"] = dup[:5]
+        if dup:
+            fail(report, args.json_out,
+                 f"DATA LEAKAGE: {len(dup)} training prompts repeat a Hard prompt's text")
+        print("leakage (Hard text):  clean, 0 training prompts repeat a Hard prompt's text")
 
     errors = []
 
@@ -278,8 +425,10 @@ def main():
 
     if errors:
         print(f"\n{len(errors)} leakage error(s) found. Abort before training.")
-        raise SystemExit("\n".join(errors))
+        fail(report, args.json_out, "\n".join(errors))
 
+    report["passed"] = True
+    write_report(args.json_out, report)
     print("\noverlap check passed")
 
 

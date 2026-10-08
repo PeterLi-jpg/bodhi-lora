@@ -38,7 +38,7 @@ lora:
 training:
   num_epochs: 3
   per_device_train_batch_size: 4
-  gradient_accumulation_steps: 4    # effective batch = 16 (matches the paper)
+  gradient_accumulation_steps: 4    # effective batch = 16 (the paper's table; the submitted MedGemma run used 64, see legacy/README.md)
   learning_rate: 1.0e-4
   warmup_ratio: 0.05
   lr_scheduler_type: cosine
@@ -55,4 +55,4 @@ data:
   response_template: "[/INST]"      # Mistral-family; verify on first run
   train_file: data/sft/train.jsonl
   val_file: data/sft/val.jsonl
-  eval_sample_ids: data/raw/hard_200_sample_ids.json
+  # The eval prompts are set by the launcher (rebuttal/launch/_common.sh), not here.

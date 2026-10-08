@@ -42,4 +42,3 @@ training:
 data:
   train_file: data/sft/smoke/train.jsonl
   val_file: data/sft/smoke/val.jsonl
-  eval_sample_ids: data/raw/hard_200_sample_ids.json

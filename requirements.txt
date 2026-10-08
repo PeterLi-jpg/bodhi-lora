@@ -1,8 +1,13 @@
+# Training env (.venv): scripts/train_lora.py and the CPU analysis scripts.
+# vLLM serving (generate, filter, eval, re-grade) runs in a second env built
+# from requirements-infer.txt, because vLLM 0.9.2 fails at import with the
+# transformers version pinned here (see that file). gpu/setup_gpu.sh and
+# setup.sh install from these two files.
 bodhi-llm[all]==0.1.4
 # ML libraries pinned to EXACT versions (rebuttal branch: GPU-only). This codebase
 # works around shape bugs in transformers DynamicLayer and API drift in trl
-# SFTTrainer; a patch release between runs can break either. Keep in lock-step with
-# gpu/setup_gpu.sh.
+# SFTTrainer; a patch release between runs can break either.
+# torch is the version vLLM 0.9.2 pins, so the two envs agree on torch.
 torch==2.7.0
 transformers==4.57.6
 peft==0.19.1
@@ -25,8 +30,4 @@ numpy>=1.24,<3.0
 pandas>=2.0,<3.0
 tqdm>=4.65
 matplotlib>=3.7,<4.0
-# vLLM for trace generation + eval inference (scripts/_vllm_engine.py). 0.9.x pins
-# torch 2.7.0 (matches the torch pin above); enforce_eager=True is the default in
-# _vllm_engine to dodge the CUDA-graph capture hang on LoRA. If pip can't resolve a
-# build for the box's CUDA, pin the exact vllm at setup (gpu/setup_gpu.sh).
-vllm>=0.9.0,<0.10
+# vLLM is in requirements-infer.txt.
