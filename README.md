@@ -29,11 +29,15 @@ else. Renaming the remote repo is deferred (docs/DECISIONS.md, D15).
 - **The epistemic-behavior scores are LLM-graded.** The physician check grades the
   HealthBench rubric criteria behind the aggregate score, not the seven behaviors. One
   of three physician raters returned grades, and agreement with the LLM grader is below
-  the pre-registered target of 0.6. The paper does not claim physician validation (D5).
+  the target of 0.6 set in advance (in the repository, for the filter grader). The paper
+  does not claim physician validation (D5).
 - **The adapter has a cost.** We report the seed-level paired difference LoRA minus
-  Base, with a t(4) 95% interval, for every cell. The aggregate score falls in six of
-  the seven added cells. It rises only in the MedQA cell, which does not measure the
-  target behavior. We make no equivalence or non-inferiority claim (D2).
+  Base, with a t(4) 95% interval, for the submitted cell. The added cells get the same
+  interval once their raw outputs are synced; until then their difference is a point
+  estimate from the posted means. The aggregate score falls in all six added cells with
+  values. The seventh, MedQA, has no values: the posted replies said its score rose but
+  gave no number, and MedQA does not measure the target behavior. We make no equivalence
+  or non-inferiority claim (D2).
 - **Med42-8B cells carry a dagger.** Med42-8B is a Llama-3 model, the same family as the
   evaluator. That breaks the paper's grader-separation rule, so these cells are not
   used in any cross-model statement (D6).
