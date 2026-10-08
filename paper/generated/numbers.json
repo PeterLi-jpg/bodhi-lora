@@ -5657,6 +5657,10 @@
     "max": 215,
     "n_hard_prompts": 1000
   },
+  "speaker_tags": {
+    "health_professional": 40,
+    "tagged_for_speaker": 63
+  },
   "tau_calibration": {
     "n_train_split": 2816,
     "rows": [

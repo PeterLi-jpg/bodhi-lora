@@ -45,7 +45,8 @@ Inputs: `RM` is `results_modal/seed_*/` (the four `<condition>.json` files and
 | Claim | Macro(s) | Function | Source | Kind |
 |---|---|---|---|---|
 | The two passes overran the context on 4.3% of prompts | `\statCompletionDropPctBaseCoT` | `counts_and_failures` | RM | computed |
-| 14 of 1,000 Hard prompts name a clinician speaker | `\statPostedClinicianPrompts`, `\statHardPrompts` | `generality_section`, `difficulty_range` | PV; `data/raw/healthbench_hard.jsonl` | posted; computed, untracked input |
+| 40 of 1,000 Hard prompts tagged as written by a health professional; 63 carry the tag (lower bound) | `\statHardHealthProfessional`, `\statHardSpeakerTagged`, `\statHardPrompts` | `speaker_tags`, `difficulty_range` | `data/raw/healthbench_hard.jsonl` (`physician_agreed_category` tags) | computed; HealthBench is a public download |
+| Posted 14 of 1,000 (Appendix H, as corrected); the committed keyword rule finds 4 of 667 evaluated prompts | `\statPostedClinicianPrompts`, `\statClinicianKeywordPrompts`, `\statMimicryEvalPrompts` | `generality_section`, `rebuttal_section` | PV; `rebuttal/results/mimicry_split.json` | posted (not reproduced; withdrawals W14); computed |
 | Four LoRA - Base effects with Holm-adjusted p <= 0.0065 | `\statScopeBoundingLoRAvsBasePHolm` (the largest of the four) | `compare_conditions` | RM | computed |
 | Active inquiry rises in 3 of 4 added cells; aggregate falls in all 4 | `\statCellsAddedAIRose`, `\statCellsAddedCompared`, `\statCellsAddedWithAggregate` | `generality_section` | PV | posted |
 | BODHI expansion "Balanced, Open-minded, Diagnostic, Humble, Inquisitive" | none | | the cited BMJ paper (docs/DECISIONS.md, D15 note) | design |

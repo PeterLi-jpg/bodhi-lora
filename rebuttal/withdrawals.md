@@ -1,9 +1,10 @@
 # Withdrawn and corrected claims
 
 This file lists every claim that the authors corrected or withdrew during the NeurIPS 2026
-discussion of submission 32818. It also lists two posted claims that the discussion never
-corrected but that the audit found wrong (W10, W11). Each entry gives the claim as made, the
-correction with its source, and the statement the paper must carry.
+discussion of submission 32818. It also lists posted claims that the discussion never
+corrected but that the audit or a later check found wrong (W10, W11, and W14 onward). Each
+entry gives the claim as made, the correction with its source, and the statement the paper
+must carry.
 
 The paper must carry the corrected statement in every place where the claim appears. A
 correction that exists only in a reply does not count.
@@ -373,6 +374,30 @@ confirm that the HomM numbers come from the run without the preamble.
 different model families. This removes the most direct route to circularity. It does not rule
 out correlated grading preferences, and it gives no clinical validity. In the two Med42-8B
 cells, the evaluator is from the same family as the base model (audit EVAL-7).
+
+---
+
+## W14. "14 of 1,000 HealthBench-Hard prompts identify a clinician" (corrected after the discussion)
+
+**Claim as made.**
+- Posted `FzpA_1_rebuttal.md:46`: "Auditing HealthBench-Hard for explicit clinician
+  self-identification ("my patient", "as a physician"), 14 of 1,000 prompts (1.4%)
+  identify the speaker as a clinician."
+- Posted `FzpA_2_followup.md:5`: the same count.
+
+**Correction.** Not corrected in the discussion. The keyword rule behind 14 was never
+committed, and no script in the repo gives 14. The committed rule, `CLINICIAN_RE` in
+`rebuttal/analyses/mimicry_split.py`, finds 4 of the 667 evaluated prompts
+(`rebuttal/results/mimicry_split.json`). HealthBench's own physician-agreed tag
+(`physician_agreed_category:health-professional`) marks 40 of the 1,000 Hard prompts as
+written by a health professional. Only 63 prompts, all in the communication theme, carry
+the tag, so 40 is a lower bound.
+
+**The paper must say.** HealthBench's physicians tagged 40 of the 1,000 Hard prompts as
+written by a health professional, and only 63 carry the tag, so this is a lower bound.
+The posted 14 came from a keyword rule we did not keep; the tag count replaces it. The
+benchmark is still mostly patient-facing. Done in `paper/main.tex` (introduction and
+Appendix H, macros `\statHardHealthProfessional`, `\statHardSpeakerTagged`).
 
 ---
 

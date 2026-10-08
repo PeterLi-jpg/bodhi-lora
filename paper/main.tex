@@ -116,9 +116,10 @@ window on \statCompletionDropPctBaseCoT\% of prompts. We use the protocol as a s
 training traces instead. We ask whether a LoRA adapter can learn the behaviors, so that deployment
 does not need the protocol.
 
-Our setting is patient-facing, open-ended clinical question answering. In \hbhard{},
-\statPostedClinicianPrompts{} of \statHardPrompts{} prompts say that the user is a clinician
-(explicit self-identification only, so this is a lower bound). We do not study clinician-posed
+Our setting is patient-facing, open-ended clinical question answering. HealthBench's physicians
+tagged \statHardHealthProfessional{} of the \statHardPrompts{} \hbhard{} prompts as written by a
+health professional. Only \statHardSpeakerTagged{} prompts carry this tag, so the count is a lower
+bound (Appendix~\ref{app:robustness}). We do not study clinician-posed
 settings such as MIMIC or eICU. We do not measure calibration in the statistical sense. We measure
 behaviors that are visible in the response.
 
@@ -1150,6 +1151,15 @@ the rate on self-contained prompts. LoRA $-$ Base on this index is
 \statDiscriminationThemeOnlyLoRAvsBase{} percentage points
 (\statDiscriminationThemeOnlyLoRAvsBaseCI) with the second. Both intervals include zero, so we do
 not claim that the adapter asks selectively.
+
+\paragraph{Clinician-posed prompts.} Our posted reply said that \statPostedClinicianPrompts{} of
+the \statHardPrompts{} \hbhard{} prompts identify the speaker as a clinician. That count came from
+a keyword audit whose rule we did not keep, and no committed script reproduces it. The committed
+keyword rule (\texttt{rebuttal/analyses/mimicry\_split.py}) finds \statClinicianKeywordPrompts{}
+of the \statMimicryEvalPrompts{} evaluated prompts. HealthBench's own tag marks
+\statHardHealthProfessional{} of the \statHardPrompts{} prompts as written by a health
+professional, among the \statHardSpeakerTagged{} prompts that carry the tag. The tag count
+replaces the posted value.
 
 \paragraph{Format leakage with the Pass~1 headers only.} The leakage rule of
 \S\ref{sec:interference} counts nine markers. Two of them, ``differential'' and ``scope of'', are

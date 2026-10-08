@@ -948,6 +948,29 @@ def difficulty_range(df, path: Path, out, macros):
     return set(points)
 
 
+def speaker_tags(path: Path, out, macros):
+    """How many Hard prompts HealthBench's physicians tagged as written by a health professional.
+
+    The tag (physician_agreed_category:health-professional vs not-health-professional)
+    exists only on the prompts of one theme, so the count is a lower bound on
+    clinician-posed prompts. It replaces the posted 14 of 1,000, whose keyword rule was
+    not kept (audit NUM-1).
+    """
+    pro, tagged = 0, 0
+    with open(path) as f:
+        for line in f:
+            if line.strip():
+                tags = json.loads(line).get("example_tags", [])
+                pro += "physician_agreed_category:health-professional" in tags
+                tagged += any(t in tags for t in ("physician_agreed_category:health-professional",
+                                                  "physician_agreed_category:not-health-professional"))
+    out["speaker_tags"] = {"health_professional": pro, "tagged_for_speaker": tagged}
+    macros.add("HardHealthProfessional", fmt_int(pro),
+               "data/raw/healthbench_hard.jsonl: prompts tagged physician_agreed_category:health-professional")
+    macros.add("HardSpeakerTagged", fmt_int(tagged),
+               "data/raw/healthbench_hard.jsonl: prompts that carry the health-professional tag either way")
+
+
 def cross_grader(path: Path, results_dir: Path, out, macros):
     """Seed-42 aggregate scores from the Qwen-graded side run against the Llama-graded main run.
 
@@ -1070,6 +1093,11 @@ def rebuttal_section(rdir: Path, out, macros):
     if ms.is_file():
         d = json.load(open(ms))
         res["mimicry_split"] = d
+        macros.add("ClinicianKeywordPrompts", fmt_int(d["clinician_posed_heuristic"]),
+                   "rebuttal/results/mimicry_split.json: evaluated prompts whose first user turn matches "
+                   "CLINICIAN_RE (explicit self-identification)")
+        macros.add("MimicryEvalPrompts", fmt_int(d["n_eval_prompts"]),
+                   "rebuttal/results/mimicry_split.json: unique evaluated prompts")
         for label, tok in (("primary_theme_or_rubric", "Primary"), ("robustness_theme_only", "ThemeOnly")):
             sec = d[label]
             macros.add(f"Discrimination{tok}LoRAvsBase", fmt(100 * sec["lora_minus_base_disc"], 1, sign=True),
@@ -1734,6 +1762,7 @@ def run(results_dir: Path, out_dir: Path, healthbench: Path | None, filter_score
     if optional(healthbench, "theme table", "data/raw/healthbench_hard.jsonl"):
         theme_rates(df, load_themes(healthbench), out, macros)
         hard_ids = difficulty_range(df, healthbench, out, macros)
+        speaker_tags(healthbench, out, macros)
     if optional(filter_scores, "tau table", "data/derived/seed_7_filter_scores.json"):
         tau_calibration(filter_scores, out, macros, hard_ids)
     if optional(qwen_grader_scores, "cross-grader check", "data/derived/seed_42_qwen_grader_scores.json"):

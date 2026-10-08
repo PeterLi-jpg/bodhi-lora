@@ -1115,6 +1115,8 @@
 \newcommand{\statDifficultyMin}{5} % data/raw/healthbench_hard.jsonl: lowest positive-point sum, evaluated prompts
 \newcommand{\statDifficultyMax}{215} % data/raw/healthbench_hard.jsonl: highest positive-point sum, evaluated prompts
 \newcommand{\statHardPrompts}{1{,}000} % data/raw/healthbench_hard.jsonl: prompts in the Hard set
+\newcommand{\statHardHealthProfessional}{40} % data/raw/healthbench_hard.jsonl: prompts tagged physician_agreed_category:health-professional
+\newcommand{\statHardSpeakerTagged}{63} % data/raw/healthbench_hard.jsonl: prompts that carry the health-professional tag either way
 \newcommand{\statFilterTrainNSeedSeven}{2{,}816} % data/derived/seed_7_filter_scores.json: rows in the seed-7 training split
 \newcommand{\statFilterMinScoreSeedSeven}{\ensuremath{0.40}} % lowest filter score in the seed-7 training split
 \newcommand{\statFilterKeptReported}{3{,}129} % constant FILTER_KEPT in scripts/paper_stats.py, from the original filter log (not in the repo)
@@ -1182,6 +1184,8 @@
 \newcommand{\statLeakagePassOneNCleanLoRACoT}{434} % non-leaked LoRA+CoT responses, 7 Pass-1 headers only
 \newcommand{\statRedFlagLeakedPassOne}{\ensuremath{1.32}} % red-flag (0-2), leaked LoRA+CoT, 7 Pass-1 headers only
 \newcommand{\statRedFlagCleanPassOne}{\ensuremath{1.73}} % red-flag (0-2), non-leaked LoRA+CoT, 7 Pass-1 headers only
+\newcommand{\statClinicianKeywordPrompts}{4} % rebuttal/results/mimicry_split.json: evaluated prompts whose first user turn matches CLINICIAN_RE (explicit self-identification)
+\newcommand{\statMimicryEvalPrompts}{667} % rebuttal/results/mimicry_split.json: unique evaluated prompts
 \newcommand{\statDiscriminationPrimaryLoRAvsBase}{\ensuremath{+8.4}} % rebuttal/results/mimicry_split.json [primary_theme_or_rubric]: LoRA minus Base discrimination (pp)
 \newcommand{\statDiscriminationPrimaryLoRAvsBaseCI}{\ensuremath{[-1.2,\,+17.9]}} % prompt-clustered bootstrap 95% CI (pp)
 \newcommand{\statAskOddsRatioPrimaryBase}{\ensuremath{1.16}} % [primary_theme_or_rubric] odds ratio of asking, context-dependent vs self-contained
