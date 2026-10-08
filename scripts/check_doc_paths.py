@@ -34,19 +34,9 @@ ROOT = Path(__file__).resolve().parent.parent
 DOCS = ["README.md", "RESULTS.md", "REPRODUCIBILITY.md", "KNOWN_ISSUES.md"]
 DOC_GLOBS = ["docs/**/*.md", "contributions/**/*.md"]
 
-# Paths that other cleanup lanes add on their own branches (2026-10-07), and
-# the synced rebuttal outputs. Each entry is a promise, not a file: the check
-# warns when one exists, so the entry can be removed after the merge.
+# Paths the docs name that are not in the repo yet. Each entry is a promise, not
+# a file: the check warns when one exists, so the entry can be removed.
 PENDING = {
-    "Makefile": "make targets test, numbers, figures, paper (pipeline lane)",
-    "legacy/": "submitted-cell launchers restored from main (pipeline lane)",
-    "scripts/run_manifest.py": "per-run manifest writer (pipeline lane)",
-    "scripts/baselines/": "prior-work prompt baselines (pipeline lane)",
-    "scripts/regrade_cross_family.py": "Med42 regrade outside Llama/Qwen (pipeline lane)",
-    "scripts/build_paper_figures.py": "figure builder, untracked until now (paper lane)",
-    "paper/submitted/neurips2026/": "frozen submitted source (paper lane)",
-    "data/rebuttal_cells/posted_values.json": "posted rebuttal values (stats lane)",
-    "rebuttal/results/": "rebuttal analysis JSON, un-ignored in .gitignore (rebuttal lane)",
     "results_rebuttal/": "rebuttal-cell outputs, BLOCKED until synced from the GPU host",
 }
 
@@ -159,7 +149,7 @@ def candidate(tok: str, doc_dir: Path, is_link: bool, in_fence: bool = False) ->
         # block the same shape is usually a line of a folder tree.
         return tok
     if "/" not in tok and (tok in TOP or tok in PENDING) and (tok.endswith(TOP_FILES_EXT) or tok in PENDING
-                                                               or tok in {"LICENSE", "NOTICE"}):
+                                                               or tok in {"LICENSE", "NOTICE", "Makefile"}):
         return tok
     return None
 
