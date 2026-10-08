@@ -2,7 +2,7 @@
 
 Reads ``results_modal/irr/Grading-*.xlsx`` (NOT Grading-template, NOT
 Grading-tiebreaker), joins by ``grading_id``, and emits ONE Excel containing
-only the rows where the 3 primary reviewers split. The adjudicator (AnonAuthor6)
+only the rows where the 3 primary reviewers split. The adjudicator (AnonClinician4)
 fills in the Tiebreaker tab.
 
 Dispute logic
@@ -220,7 +220,7 @@ def main() -> None:
     if len(files) != 3:
         raise SystemExit(
             f"Found {len(files)} reviewer files in {IRR_DIR}, expected exactly 3 "
-            "(Grading-<name1>.xlsx, Grading-<name2>.xlsx, Grading-<name3>.xlsx). "
+            "(Grading-reviewer1.xlsx, Grading-reviewer2.xlsx, Grading-reviewer3.xlsx). "
             "If reviewers are still grading, wait until all three return."
         )
 
@@ -249,7 +249,7 @@ def main() -> None:
     out_path = IRR_DIR / "Grading-tiebreaker.xlsx"
     write_tiebreaker_workbook(disputes, out_path)
     print(f"\nwrote {out_path}")
-    print(f"  send to adjudicator (AnonAuthor6)")
+    print(f"  send to adjudicator (AnonClinician4)")
 
 
 if __name__ == "__main__":

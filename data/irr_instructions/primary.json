@@ -8,7 +8,7 @@
     "bold": false
   },
   {
-    "text": "Reviewers: AnonClinician1, AnonClinician2, AnonAuthor7",
+    "text": "Reviewers: AnonClinician1, AnonClinician2, AnonClinician3",
     "bold": true
   },
   {
@@ -20,7 +20,7 @@
     "bold": false
   },
   {
-    "text": "Return: Save as grading_[your name].xlsx and send to Peter or AnonAuthor4.",
+    "text": "Return: Keep the file name you received (Grading-reviewerN.xlsx) and send the file back to the study coordinator.",
     "bold": false
   },
   {
@@ -64,7 +64,7 @@
     "bold": false
   },
   {
-    "text": "      physician_id: FILL IN your name or initials. Put it on every row.",
+    "text": "      physician_id: FILL IN your reviewer ID (AnonClinician1, 2 or 3), not your name. Put it on every row.",
     "bold": false
   },
   {

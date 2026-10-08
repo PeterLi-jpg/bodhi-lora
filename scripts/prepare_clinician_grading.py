@@ -24,16 +24,16 @@ Usage:
   # Step 2 — after 3 reviewers return filled copies, generate tiebreaker tab
   python scripts/prepare_clinician_grading.py tiebreak \\
       --processed data/grading/clinician_1-processed.xlsx \\
-      --filled    data/filled_zineb.xlsx \\
-                  data/filled_ash.xlsx \\
-                  data/filled_hillary.xlsx
+      --filled    data/filled_reviewer1.xlsx \\
+                  data/filled_reviewer2.xlsx \\
+                  data/filled_reviewer3.xlsx
 
   # Step 3 — after tiebreaker is returned, compute kappa
   python scripts/prepare_clinician_grading.py kappa \\
-      --filled     data/filled_zineb.xlsx \\
-                   data/filled_ash.xlsx \\
-                   data/filled_hillary.xlsx \\
-      --tiebreaker data/filled_felipe.xlsx \\
+      --filled     data/filled_reviewer1.xlsx \\
+                   data/filled_reviewer2.xlsx \\
+                   data/filled_reviewer3.xlsx \\
+      --tiebreaker data/filled_tiebreaker.xlsx \\
       --qwen-eval  data/eval/base_no_wrapper.json \\
                    data/eval/base_bodhi.json \\
                    data/eval/lora_no_wrapper.json \\
@@ -206,10 +206,10 @@ def build_primary_instructions_tab(wb):
 
     r = _write_line(ws, r, "Physician Reviewer Instructions — Primary Reviewers (Reviewers 1, 2, 3)", TITLE_FONT)
     r = _write_line(ws, r, "")
-    r = _write_line(ws, r, "Reviewers: AnonClinician1, AnonClinician2, AnonAuthor7", H2_FONT)
+    r = _write_line(ws, r, "Reviewers: AnonClinician1, AnonClinician2, AnonClinician3", H2_FONT)
     r = _write_line(ws, r, "Estimated time: ~2 hours (50 responses × ~2 min per criterion set)")
     r = _write_line(ws, r, "Format: Work in your own copy of this file. Fill in the Grading tab only. Do not open anyone else's copy.")
-    r = _write_line(ws, r, "Return: Save as grading_[your name].xlsx and send to Peter or AnonAuthor4.")
+    r = _write_line(ws, r, "Return: Keep the file name you received (Grading-reviewerN.xlsx) and send the file back to the study coordinator.")
     r = _write_line(ws, r, "")
 
     r = _write_line(ws, r, "What you are doing and why", H2_FONT)
@@ -228,7 +228,7 @@ def build_primary_instructions_tab(wb):
         ("grading_id / response_id / criterion_number", "Identifiers. Do not change."),
         ("is_avoid_item", "YES = the AI should NOT do this. no = the AI should do this. Read before grading every row."),
         ("criterion_text", "The specific criterion you are grading."),
-        ("physician_id", "FILL IN your name or initials. Put it on every row."),
+        ("physician_id", "FILL IN your reviewer ID (AnonClinician1, 2 or 3), not your name. Put it on every row."),
         ("physician_grade", "FILL IN: pass, fail, or unsure. See rules below."),
         ("physician_confidence", "FILL IN: 1 (low), 2 (medium), or 3 (high confidence in your grade)."),
         ("notes", "Optional. Add a note if the grade was difficult or you want to flag something."),
@@ -323,15 +323,15 @@ def build_tiebreaker_instructions_tab(wb):
 
     r = _write_line(ws, r, "Physician Reviewer Instructions — Tiebreaker (Reviewer 4)", TITLE_FONT)
     r = _write_line(ws, r, "")
-    r = _write_line(ws, r, "Reviewer: AnonAuthor3 (anon-contrib-3)", H2_FONT)
+    r = _write_line(ws, r, "Reviewer: AnonClinician4", H2_FONT)
     r = _write_line(ws, r, "Estimated time: 30–60 minutes (you only see disputed criteria, not all 300 responses).")
     r = _write_line(ws, r, "Format: Fill in the Tiebreaker tab of this file when it appears.")
-    r = _write_line(ws, r, "Return: Save the file and send back to Peter or AnonAuthor4.")
+    r = _write_line(ws, r, "Return: Keep the file name you received and send the file back to the study coordinator.")
     r = _write_line(ws, r, "")
 
     r = _write_line(ws, r, "What you are doing and why", H2_FONT)
     r = _write_line(ws, r,
-        "Three primary physician reviewers (AnonClinician1, AnonClinician2, AnonAuthor7) each independently graded AI-generated medical responses. "
+        "Three primary physician reviewers (AnonClinician1, AnonClinician2, AnonClinician3) each independently graded AI-generated medical responses. "
         "For most criteria, at least two of the three agreed — those are resolved automatically by majority vote. "
         "Where all three disagreed (a genuine three-way split), your vote decides the final answer. "
         "You will not see all 300 responses, only the criteria where the three reviewers split. "
@@ -344,7 +344,7 @@ def build_tiebreaker_instructions_tab(wb):
         ("is_avoid_item", "YES = AI should NOT do this. no = AI should do this."),
         ("criterion_text", "The specific criterion to decide on."),
         ("reviewer_1_grade / reviewer_2_grade / reviewer_3_grade", "What each primary reviewer said. Use as reference, not as your answer."),
-        ("tiebreaker_id", "FILL IN your name or initials."),
+        ("tiebreaker_id", "FILL IN your reviewer ID (AnonClinician4), not your name."),
         ("tiebreaker_grade", "FILL IN: pass or fail ONLY. No unsure — you must decide."),
         ("tiebreaker_confidence", "FILL IN: 1 (low), 2 (medium), or 3 (high)."),
         ("tiebreaker_notes", "REQUIRED. Write 1–2 sentences explaining your reasoning. This appears in the paper's supplementary materials."),
@@ -447,7 +447,7 @@ def cmd_prepare(args):
     print("  3. Collect the 3 filled files and run:")
     print("     python scripts/prepare_clinician_grading.py tiebreak \\")
     print("         --processed data/grading/clinician_1-processed.xlsx \\")
-    print("         --filled filled_zineb.xlsx filled_ash.xlsx filled_hillary.xlsx")
+    print("         --filled filled_reviewer1.xlsx filled_reviewer2.xlsx filled_reviewer3.xlsx")
 
 
 # ── tiebreak subcommand ───────────────────────────────────────────────────────
