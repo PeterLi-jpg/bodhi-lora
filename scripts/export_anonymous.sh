@@ -111,6 +111,8 @@ REDACT = [
     (re.compile(r"BODHI: GPU Accelerated Epistemic AI", re.I), "ANONYMOUS-ORG"),
     (re.compile(r"MIT Critical Data", re.I), "ANONYMOUS-LAB"),
     (re.compile(r"Substrate Labs", re.I), "ANONYMOUS-LAB"),
+    # The slurm partition name gives away the cluster's institution.
+    (re.compile(r"\bmit_normal_gpu\b"), "gpu"),
     (re.compile(r"\bPeter Li\b"), "Anonymous Authors"),
     # The repo slug misspells BODHI. The misspelling finds the public repo.
     (re.compile(r"bohdi", re.I), keep_case("bodhi")),
@@ -122,6 +124,7 @@ GATE = [
     ("author name", re.compile(r"\bPeter Li\b|\bAnqi\b", re.I)),
     ("local username", re.compile(r"anqipeter", re.I)),
     ("lab or host", re.compile(r"\bmit[ -]critical|substrate labs", re.I)),
+    ("cluster partition", re.compile(r"\bmit_[a-z]")),
     ("brev host", re.compile(r"\bbrev-[a-z0-9]{6,}\b", re.I)),
     ("gcp project or bucket", re.compile(r"tokyo-micron", re.I)),
     ("home path", re.compile(r"/Users/")),
