@@ -253,7 +253,7 @@ We run the two-pass \bodhi{} protocol on MedGemma-27B-text-it over the \statFilt
 HealthBench prompts that are not in the Hard set, with greedy decoding in vLLM
 \citep{kwon2023efficient} on TPU v6e. A preflight gate checks that no Hard prompt id enters
 training. In the one training split kept in the repository (seed 7, \statFilterTrainNSeedSeven{}
-traces), \statTrainHardOverlapSeedSeven{} prompt ids are in the Hard set. Each trace keeps the
+traces), the overlap with the Hard set is \statTrainHardOverlapSeedSeven{} prompt ids. Each trace keeps the
 Pass~1 analysis (not used for training) and the Pass~2 answer (the training target).
 
 A grader LLM (Qwen2.5-14B-Instruct) judges each rubric criterion as met or not met, and we compute
@@ -344,8 +344,8 @@ HealthBench grader failed on at most \statHealthBenchParseFailPctMaxRun\% of the
 run, and a failed criterion counts as not met.
 
 \paragraph{Physician check.} The pre-registered check needed at least two physicians and
-$\kappa \geq 0.6$ against their consensus. \statKappaRaters{} of the three physicians returned
-grades. On \statKappaAllN{} criterion rows from \statKappaPrompts{} prompts, Cohen's $\kappa$
+$\kappa \geq 0.6$ against their consensus. Of the three physicians, \statKappaRaters{}
+returned grades. On \statKappaAllN{} criterion rows from \statKappaPrompts{} prompts, Cohen's $\kappa$
 between that physician and the Llama grader is \statKappaAll{} (95\% CI \statKappaAllCI, bootstrap
 over prompts), below the target. We record this amendment in Appendix~\ref{app:human}. Every
 epistemic result in this paper is therefore LLM-graded and not clinically validated.
@@ -618,7 +618,7 @@ row per rubric criterion (\statKappaRowsTotal{} rows). Physicians graded each ro
 unsure, blind to source and condition. A fourth physician was to settle rows where all three
 disagreed.
 
-\paragraph{What returned.} \statKappaRaters{} of the three physicians returned grades. Of the
+\paragraph{What returned.} Of the three physicians, \statKappaRaters{} returned grades. Of the
 \statKappaRowsEval{} rows from evaluation responses, \statKappaUnsureEval{} were unsure; on the
 other \statKappaAllN, Cohen's $\kappa$ between the physician and the Llama grader is
 \statKappaAll{} (95\% CI \statKappaAllCI, bootstrap over the \statKappaPrompts{} prompts;
@@ -631,7 +631,8 @@ inter-physician agreement.
 physicians validated the grader. Every epistemic result in the paper is labelled LLM-graded. The
 LLM passes fewer positive criteria and more negative criteria than the physician
 (Table~\ref{tab:kappa}). A grader bias that was the same in every condition would cancel in the
-differences between conditions, but $\kappa$ differs by condition, so we cannot assume that.
+differences between conditions, but $\kappa$ per condition runs from \statKappaBase{} to
+\statKappaLoRA{} (Table~\ref{tab:kappa}), so we cannot assume that.
 Completing the check with the other physicians remains open.
 
 \begin{table}[h]
