@@ -1016,8 +1016,9 @@ resamples). Rates in percentage points.}
 \includegraphics[width=0.75\linewidth]{figures/effect_size_forest.pdf}
 \caption{Pooled Cohen's $d$ for the seven epistemic dimensions in three contrasts, with 95\%
 bootstrap intervals over prompt ids (descriptive; the tests are in Table~\ref{tab:seed-contrasts}).
-The shaded band marks $|d| < 0.2$. Red-flag identification is the only dimension that falls when
-the CoT protocol is added to the adapter.}
+The shaded band marks $|d| < 0.2$. When the CoT protocol is added to the adapter, red-flag
+identification falls ($d = \statRedFlagLoRACoTvsLoRAD$), specificity barely moves ($d =
+\statSpecificityLoRACoTvsLoRAD$) and the other dimensions stay level or rise.}
 \label{fig:forest}
 \end{figure}
 
