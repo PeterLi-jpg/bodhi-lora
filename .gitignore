@@ -6,6 +6,7 @@ build/
 .pytest_cache/
 
 data/raw/*.jsonl
+!data/raw/high_stakes_prompts.jsonl
 # Per-seed eval draws; scripts/make_bootstrap_eval_ids.py rebuilds them from the seed.
 data/raw/hard_seed_*.json
 data/sft/*.jsonl
@@ -40,6 +41,9 @@ results_rebuttal/**/ckpt/**
 
 paper/build/
 paper/figures/*.pdf
+# Figure 1 is hand-drawn TikZ; its PDF is tracked so the paper builds without a
+# second LaTeX run, and make figures rebuilds it byte for byte.
+!paper/figures/pipeline.pdf
 paper/figures/*.png
 paper/*.aux
 paper/*.bbl
