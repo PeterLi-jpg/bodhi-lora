@@ -78,10 +78,11 @@ We also ran the recipe with other base models and benchmarks (added cells). In t
 \statCellsAddedCompared{} added cells whose base model is outside the evaluator's family, active
 inquiry rises in \statCellsAddedAIRose{}. BioMistral-7B is a null result. The aggregate score falls
 in all \statCellsAddedWithAggregate{}, by \statCellsAddedDropMin{} to \statCellsAddedDropMax{}
-(values transcribed from posted results; raw outputs pending sync). A fifth such cell, MedQA, has
-no values yet, and our posted replies said that its aggregate score rose. So the behavior gain comes
-with an aggregate cost. The third is a diagnosis. Adding the CoT protocol to the adapter changes
-red-flag identification by \statRedFlagLoRACoTvsLoRADiff{} on the 0--2 scale (95\% CI
+(each $p \leq \statCellsAddedDropPMax$, paired $t$ over seeds). In a fifth such cell, MedQA, it rose
+(\statCellMedQAMistralAggregateDiff, 95\% CI \statCellMedQAMistralAggregateDiffCI), but there the
+prompt told the model to ask. So the behavior gain comes with an aggregate cost. The third is a
+diagnosis. Adding the CoT protocol to the adapter changes red-flag identification by
+\statRedFlagLoRACoTvsLoRADiff{} on the 0--2 scale (95\% CI
 \statRedFlagLoRACoTvsLoRACI; $p_{\text{Holm}} = \statRedFlagLoRACoTvsLoRAPHolm$). A post hoc
 analysis links this drop to the protocol's analysis format, which leaks into
 \statLeakagePctLoRACoT\% of the responses. All scores are LLM-graded. The physician check covers
@@ -273,17 +274,19 @@ Med42-8B \citep{christophe2024med42}, a Llama-3 model, so they break this separa
 
 % Recipe read from the tunix training path that produced the evaluated adapters
 % (gs://.../prod-v39-tunix-27b-neurips); evidence per value is in the comments of
-% Table~\ref{tab:hparams}. PENDING: confirm r, alpha, target modules and the exported
-% step against the five GCS adapter_config.json / trainer files.
+% Table~\ref{tab:hparams}. Not confirmed against the saved adapters: the GCS bucket
+% returned 404 on 2026-10-08. legacy/modal_eval.py:119,435-447 copied each seed's
+% checkpoints/best/ (adapter_config.json included) into the Modal volume
+% bohdi-data-cache, which may still hold them (BLOCKED.md item 3).
 We fine-tune MedGemma-27B with LoRA ($r{=}8$, $\alpha{=}16$, dropout 0.05) on the attention query,
 key and value projections. The loss uses response tokens only. Training uses JAX (tunix) on one TPU
 v6e-8 host per seed, with the base sharded over the 8 chips (FSDP). The optimizer is AdamW at a
 constant learning rate of $10^{-4}$, with no warmup and no decay. Each optimizer step uses 64
 examples, and the maximum sequence length is 2,048 tokens. Training runs for 300 optimizer steps.
-The exported checkpoint is step 250 or 300 (5.7 to 6.8 epochs), pending the trainer files. We train 5 adapters (seeds 42, 7, 13, 99, 101).
+The exported checkpoint is step 250 or 300 (5.7 to 6.8 epochs); we could not check which. We train 5 adapters (seeds 42, 7, 13, 99, 101).
 Table~\ref{tab:hparams} in Appendix~\ref{app:hparams} gives the full configuration. The added cells
 (\S\ref{sec:cells}) used another training stack and recipe: PyTorch with PEFT and TRL on one H100
-GPU, with $r{=}16$ and $\alpha{=}32$ (Table~\ref{tab:hparams-cells}).
+GPU, with $r{=}\statCellsLoRARank$ and $\alpha{=}\statCellsLoRAAlpha$ (Table~\ref{tab:hparams-cells}).
 
 \subsection{Evaluation}
 \label{sec:eval}
@@ -443,26 +446,26 @@ response length (Appendix~\ref{app:robustness}).
 \caption{Behavior gain and aggregate cost in every cell: active inquiry under Base,
 Base+\bodhi{} (the teacher) and LoRA, and context-seeking (0--2) and aggregate score under Base and
 LoRA. The last column is LoRA $-$ Base with a 95\% $t$ interval over the five seeds. The first row
-is the MedGemma-27B cell. $^{\ast}$Transcribed from posted values; raw outputs pending sync, so the
-interval is pending. $^{\dagger}$The base model shares the evaluator's Llama-3 family, which breaks
-the paper's grader-separation rule; these cells are left out of every cross-model statement. The
-added cells used another training stack, recipe and evaluation settings
-(Appendix~\ref{app:generality}). The MedQA cell has no values yet (see text).}
+is the MedGemma-27B cell. We computed the other rows from the raw outputs of each cell.
+$^{\dagger}$The base model shares the evaluator's Llama-3 family, which breaks the paper's
+grader-separation rule; these cells are left out of every cross-model statement. The added cells
+used another training stack, recipe and evaluation settings (Appendix~\ref{app:generality}). MedQA
+is set aside (see text); its dimensions are graded in only \statCellMedQAMistralEpistemicSeeds{} of
+\statCellMedQAMistralSeeds{} seeds, so we leave them out.}
 \label{tab:cells}
 \footnotesize
 \setlength{\tabcolsep}{1.5pt}
 \input{generated/tab_generality}
 \end{table}
 
-A cell is one base model on one benchmark. We ran the recipe in seven added cells and have values
-for six (Table~\ref{tab:cells}). Mistral-Small-24B, Med42-8B and BioMistral-7B
+A cell is one base model on one benchmark. We ran the recipe in seven added cells
+(Table~\ref{tab:cells}). Mistral-Small-24B, Med42-8B and BioMistral-7B
 \citep{labrak2024biomistral} ran on \hbhard{}.
 Mistral-Small-24B and Med42-8B ran on ChatDoctor \citep{li2023chatdoctor}, which has questions
 that real patients asked physicians online. Mistral-Small-24B also ran on MedQuAD
 \citep{benabacha2019medquad}, which has NIH consumer-health questions. These cells used another
 training stack, recipe and evaluation settings, including 4-bit QLoRA for Mistral-Small-24B and an
-8,192-token context (Appendix~\ref{app:generality}). We transcribed their numbers from our posted
-replies; the raw outputs are not yet synced.
+8,192-token context (Appendix~\ref{app:generality}). We computed their values from the raw outputs.
 
 Outside the evaluator's family, active inquiry rises in \statCellsAddedAIRose{} of
 \statCellsAddedCompared{} added cells. BioMistral-7B is a null result: active inquiry goes from
@@ -475,20 +478,22 @@ MedGemma-27B cell included, the adapter reaches or passes its teacher's active i
 \statCellsAtOrAboveTeacher{} of \statCellsCompared{} cells.
 
 The aggregate score falls under LoRA in all \statCellsAddedWithAggregate{} added cells outside the
-evaluator's family, by \statCellsAddedDropMin{} to \statCellsAddedDropMax. In our posted paired
-$t$-tests over five seeds, each of these four drops had two-sided $p < \statPostedAggDropPBelow$.
-They stayed significant after Holm correction over all six added cells with values, so they also do
-over these four. We will recompute these tests from the raw outputs after the sync. In
+evaluator's family, by \statCellsAddedDropMin{} to \statCellsAddedDropMax. In paired $t$-tests
+over the five seeds, each of these four drops has two-sided $p \leq \statCellsAddedDropPMax$. Each
+stays significant after Holm correction over the \statCellsHolmFamily{} added cells that are not set
+aside ($p_{\text{Holm}} \leq \statCellsAddedDropPHolmMax$), as our posted tests said. In
 BioMistral-7B, the score fell without a rise in asking, so a rubric penalty on asking cannot be the
 whole cause. The comparison within the adapter's own responses is self-selected and only suggestive
 (Appendix~\ref{app:generality}). So in these cells, the adapter buys more inquiry at a cost in
 aggregate score.
 
 We also ran MedQA-USMLE with Mistral-Small-24B as open-ended questions. MedQA is a
-single-best-answer exam. Its rubric grades agreement with a keyed answer, which is a task that the
-recipe does not target, so we leave the cell out of the counts above. Our posted replies promised
-to report this cell in the main evaluation and said that its aggregate score rose. We have not met
-that promise: no values were posted, and the raw outputs are not synced
+single-best-answer exam, and its rubric grades agreement with a keyed answer. The only run of this
+cell used a prompt that told the model to ask for missing information. Base asked in
+\statCellMedQAMistralBaseActiveInquirySeedMin\% to \statCellMedQAMistralBaseActiveInquirySeedMax\%
+of responses per graded seed, so the cell measures instruction following, and we leave it out of
+the counts above. Its aggregate score rose by \statCellMedQAMistralAggregateDiff{} (95\% CI
+\statCellMedQAMistralAggregateDiffCI). This is the rise that our posted replies reported
 (Appendix~\ref{app:generality}).
 
 \subsection{The CoT Protocol on the Adapter}
@@ -610,10 +615,9 @@ it trains active inquiry, which may favor responses in the protocol's style, alt
 told the condition. We promised a clinical judge as a second grader and have not run it.
 \emph{Selectivity.} We do not show that the adapter learned when to ask (\S\ref{sec:discussion}).
 Our posted replies claimed that it asks selectively; we withdraw that claim.
-\emph{Added cells.} Their values are transcribed from posted replies until the raw outputs are
-synced. The MedQA cell has no values, against our posted promise to report it. The added cells
-used another training stack, recipe and evaluation settings. The Mistral-Small-24B adapters were
-trained against a 4-bit base and evaluated on the bfloat16 base. The Med42-8B cells share the
+\emph{Added cells.} The only MedQA run used a prompt that cues asking, so it does not test the
+recipe there. The added cells used another training stack, recipe and evaluation settings. The
+Mistral-Small-24B adapters were trained against a 4-bit base and evaluated on the bfloat16 base. The Med42-8B cells share the
 evaluator's family; code to grade them again with a third family exists but has not run.
 \emph{Design.} Red-flag identification measures sensitivity only; a test of over-flagging needs
 prompts with no true red flag. We promised to test the leakage account by moving red flags earlier
@@ -621,7 +625,7 @@ in the protocol, and have not run it. The seeds vary training and the evaluation
 teacher traces. Decoding was greedy. We ran no ablation over $\tau$, rank or data size, and no arm
 without the filter, so we cannot attribute any effect to the filter. We did not time training or
 inference per configuration on dedicated hardware. The LoRA configuration of the MedGemma-27B
-adapters comes from the training code and awaits a check against the saved adapter files.
+adapters comes from the training code; we could not check it against the saved adapter files.
 
 \paragraph{Ethics and broader impact.} We use public benchmark data, including questions that
 patients posted online (ChatDoctor), and no patient records. The adapter is a research artifact,
@@ -884,8 +888,10 @@ Table~\ref{tab:hparams-cells} gives the configuration of the added cells.
 %   eval            A100-80GB (main:modal_eval.py:290), vllm>=0.6.5,<0.10 (main:modal_eval.py:73),
 %                   max_model_len patched to 4096 (main:modal_eval.py:364),
 %                   max-num-seqs 32 (main:modal_eval.py:375), seeds (main:modal_eval.py:59)
-% PENDING: confirm r, alpha, target modules, max sequence length and the exported step
-% against adapter_config.json and the trainer logs of the five seeds on GCS.
+% Not confirmed: r, alpha, target modules, max sequence length and the exported step
+% against adapter_config.json and the trainer logs of the five seeds. The GCS bucket
+% returned 404 on 2026-10-08; a copy of each checkpoints/best/ may remain in the Modal
+% volume bohdi-data-cache (legacy/modal_eval.py:119,435-447; BLOCKED.md item 3).
 % The submitted version of this table (paper/submitted/neurips2026) gave the intended
 % recipe: r=16, alpha=32, seven modules, 3 epochs, batch 16, seq 4096, cosine, FSDPv2.
 
@@ -895,8 +901,8 @@ Table~\ref{tab:hparams-cells} gives the configuration of the added cells.
 from the training code and launcher at the commit that produced the evaluated adapters.
 They replace an earlier version of this table. That version listed the intended recipe
 ($r{=}16$, $\alpha{=}32$, seven target modules, 3 epochs, batch 16, sequence length 4,096) and
-not the run. Rank, $\alpha$, target modules, sequence length and the exported checkpoint step are
-pending a check against the saved adapter and trainer files. The launcher reads the training
+not the run. We could not check rank, $\alpha$, target modules, sequence length and the exported
+checkpoint step against the saved adapter and trainer files. The launcher reads the training
 config from an environment variable, and it did not record the production value of that
 variable. The values come from the production config file.}
 \label{tab:hparams}
@@ -942,16 +948,20 @@ Eval prompts/seed & 200 (from \statHardPrompts{} \hbhard{}) \\
 %                   scripts/_vllm_engine.py:154 (max_model_len 8192) and :298-314
 %                   (--enable-lora, --dtype bfloat16: the base is served unquantized)
 %   hardware        the comment at the top of each config (one H100 80GB)
-% PENDING: which config each cell used, and the MedQA cell's base model, come from the
-% run logs in results_rebuttal/, which are not synced into the repo yet.
+% Rank, alpha, dropout, target modules, epochs, per-device batch and accumulation come
+% from the synced results_rebuttal/*/seed_*/ckpt/best/{adapter_config,trainer_state}.json
+% through rebuttal/results/cell_recipe.json (\statCells* macros). The base model of each
+% cell, MedQA included, is base_model_name_or_path in the same adapter_config.json.
 
 \begin{table}[t]
 \centering
 \caption{Training configuration of the added cells (Appendix~\ref{app:generality}), one column
 per base model. These cells did not reuse the MedGemma-27B recipe of Table~\ref{tab:hparams}.
-The Mistral-Small-24B adapters were trained against a 4-bit base (QLoRA) and evaluated on the
-bfloat16 base. $^\dagger$Med42-8B shares the evaluator's Llama-3 family, which breaks the
-paper's grader-separation rule.}
+Rank, $\alpha$, dropout, target modules, epochs and batch come from the saved adapter and trainer
+files of all \statCellsAdapters{} adapters (the seven cells, five seeds each); the other rows come
+from the training configs. The Mistral-Small-24B adapters were trained against a 4-bit base
+(QLoRA) and evaluated on the bfloat16 base. $^\dagger$Med42-8B shares the evaluator's Llama-3
+family, which breaks the paper's grader-separation rule.}
 \label{tab:hparams-cells}
 \footnotesize
 \setlength{\tabcolsep}{4pt}
@@ -959,14 +969,16 @@ paper's grader-separation rule.}
 \toprule
 Parameter & Mistral-Small-24B & Med42-8B$^\dagger$ & BioMistral-7B \\
 \midrule
-Cells & HealthBench, ChatDoctor, MedQuAD & HealthBench, ChatDoctor & HealthBench \\
+Cells & HealthBench, ChatDoctor, & HealthBench, ChatDoctor & HealthBench \\
+ & MedQuAD, MedQA & & \\
 Training code & PyTorch, PEFT, TRL & same & same \\
 Base weights in training & 4-bit NF4 (QLoRA) & bfloat16 & bfloat16 \\
-LoRA rank $r$ / $\alpha$ & 16 / 32 & same & same \\
-LoRA dropout & 0.05 & same & same \\
-Target modules & q, k, v, o, gate, up, down & same & same \\
-Epochs & 3 & same & same \\
-Examples per optimizer step & 16 (2 $\times$ 8 accum.) & 16 (4 $\times$ 4 accum.) & 16 (4 $\times$ 4 accum.) \\
+LoRA rank $r$ / $\alpha$ & \statCellsLoRARank{} / \statCellsLoRAAlpha & same & same \\
+LoRA dropout & \statCellsLoRADropout & same & same \\
+Target modules & \statCellsLoRATargets & same & same \\
+Epochs & \statCellsTrainEpochs & same & same \\
+Evaluated checkpoint & lowest validation loss & same & same \\
+Examples per optimizer step & \statCellsEffectiveBatch{} (\statCellsBatchPerDeviceMistral{} $\times$ \statCellsGradAccumMistral{} accum.) & \statCellsEffectiveBatch{} (\statCellsBatchPerDeviceMedFortyTwo{} $\times$ \statCellsGradAccumMedFortyTwo{} accum.) & \statCellsEffectiveBatch{} (\statCellsBatchPerDeviceBioMistral{} $\times$ \statCellsGradAccumBioMistral{} accum.) \\
 Learning rate & $10^{-4}$, cosine, 5\% warmup & same & same \\
 Optimizer & AdamW (PyTorch fused) & same & same \\
 Max sequence length & 4,096 & same & same \\
@@ -1260,26 +1272,42 @@ The added benchmarks are ChatDoctor (HealthCareMagic: questions that real patien
 online) and MedQuAD (NIH consumer-health questions). Both are patient-facing, so they give no
 comparison with clinician-posed questions. For benchmarks without expert rubrics, the filter uses
 rubrics synthesized from the reference answer. The same filter grader, Qwen2.5-14B-Instruct,
-grades the traces against these rubrics.
+grades the traces against these rubrics. Other runs on the GPU host did not finish, and we report
+none of them. MedGemma-27B on MedQA and on MedQuAD stopped in trace generation because the
+inference server did not start, and BioMistral-7B on MedQA was a smoke test
+(\statRunMedQABioMistralSeeds{} seed, \statRunMedQABioMistralTraces{} traces,
+\statRunMedQABioMistralSteps{} optimizer steps, \statRunMedQABioMistralEvalPrompts{} evaluation
+prompts).
 
 \paragraph{What differs from the MedGemma-27B cell.} The training code differs: PyTorch with PEFT
 and TRL on one H100 GPU, against JAX (tunix) on a TPU v6e-8 host. The training recipe differs
-(Table~\ref{tab:hparams-cells} against Table~\ref{tab:hparams}). It uses LoRA $r{=}16$,
-$\alpha{=}32$ on seven projection types, 16 examples per optimizer step, and 3 epochs with a
+(Table~\ref{tab:hparams-cells} against Table~\ref{tab:hparams}). It uses LoRA
+$r{=}\statCellsLoRARank$, $\alpha{=}\statCellsLoRAAlpha$ on seven projection types,
+\statCellsEffectiveBatch{} examples per optimizer step, and \statCellsTrainEpochs{} epochs with a
 cosine schedule. The sequence length is 4,096. Mistral-Small-24B has a 4-bit base in training and
 a bfloat16 base at evaluation. The evaluation settings also differ. The context is 8,192 tokens
 instead of 4,096, and the server runs 64 concurrent sequences instead of 32. Every seed uses one
 fixed set of 200 \hbhard{} prompts instead of a draw per seed. The ChatDoctor and MedQuAD test sets
 are the first 200 rows of each file. The evaluator's weights come from a mirror repository, and
-the GPUs are H100 instead of A100. So the seed varies only training in these cells. On
-HealthBench, the filter used $\tau = 0.4$. On the other benchmarks, the launcher filters again at
-the 22nd percentile of the filter scores when the filter keeps fewer than 40\% of traces at 0.4.
-On ChatDoctor, the filter kept \statCellChatDoctorMistralFilterClearance\% and
-\statCellChatDoctorMedFortyTwoFilterClearance\% of traces, which suggests $\tau = 0.4$ there. On
-MedQuAD, it kept \statCellMedQuADMistralFilterClearance\%, which suggests a percentile cut. The
-filter logs on the server will settle this after the sync.
-% PENDING (audit PROV-3): per-cell tau from logs/filter_*.log on the shared server.
-% Rule: rebuttal/launch/run_cell.sh:160-200.
+the GPUs are H100 instead of A100. So the seed varies only training in these cells. The filter
+logs give $\tau = \statCellsTau$ in every cell (Table~\ref{tab:cell-filter}). The launcher would
+filter a cell outside HealthBench again at the 22nd percentile of the filter scores if 0.4 kept
+fewer than 40\% of its traces. No cell met that condition, and no run log shows a second cut.
+% Per-cell tau, counts and the re-filter check: rebuttal/analyses/cell_recipe.py on the host
+% logs (audit PROV-3). Rule as run: 1262448:rebuttal/launch/run_cell.sh:160-200.
+
+\begin{table}[!ht]
+\centering
+\small
+\caption{Filter and training per added cell, from the filter logs and the saved trainer files.
+$\tau$: filter threshold. Graded: traces that the filter grader scored. Kept: share of graded
+traces with $s \geq \tau$. Train and Val: the split of the kept traces, one per cell. Steps:
+optimizer steps, the same in every seed. Epoch: epoch of the evaluated checkpoint (lowest
+validation loss) over the five seeds. $^{\dagger}$Base model in the evaluator's family.}
+\label{tab:cell-filter}
+\setlength{\tabcolsep}{4pt}
+\input{generated/tab_cell_filter}
+\end{table}
 
 \paragraph{Aggregate score in all four conditions.} Table~\ref{tab:cells-aggregate} adds the two
 CoT conditions. Base+\bodhi{} scores below Base in \statCellsAddedTeacherBelowBase{} of the
@@ -1289,9 +1317,8 @@ aggregate cost too.
 \begin{table}[!ht]
 \centering
 \small
-\caption{Aggregate score per cell in the four conditions. Marks as in
-Table~\ref{tab:cells}: $^{\ast}$transcribed from posted values, raw outputs pending sync;
-$^{\dagger}$base model in the evaluator's family.}
+\caption{Aggregate score per cell in the four conditions, from the raw outputs.
+$^{\dagger}$Base model in the evaluator's family.}
 \label{tab:cells-aggregate}
 \setlength{\tabcolsep}{4pt}
 \input{generated/tab_generality_aggregate}
@@ -1300,14 +1327,16 @@ $^{\dagger}$base model in the evaluator's family.}
 \paragraph{Does the rubric penalize asking?} We had read part of the drop as the effect of a
 rubric that penalizes asking instead of answering. We tested this reading and withdrew it. Among
 the adapter's own responses, the prompts where it asks do not score consistently lower than the
-prompts where it answers. Our posted count covered all six added cells, with the two Med42-8B
-cells. In that count, this gap was positive in \statPostedAskersGapPositive{} cells and negative
-in \statPostedAskersGapNegative. We will count again without the Med42-8B cells after the sync. In
+prompts where it answers. We take the aggregate score of the responses that ask minus that of
+the responses that do not, pooled over seeds. In the \statCellsAddedCompared{} added cells outside the evaluator's
+family, this gap is positive in \statCellsAddedAskersGapPositive{} and
+\statCellHBBioMistralAskersGap{} in BioMistral-7B. Our posted count also had the two Med42-8B cells,
+where the gap is \statCellHBMedFortyTwoAskersGap{} and \statCellChatDoctorMedFortyTwoAskersGap. In
 BioMistral-7B, active inquiry did not rise, yet the aggregate score changed by
 \statCellHBBioMistralAggregateDiff.
 
-\paragraph{MedQuAD in more dimensions.} MedQuAD is the one added cell with posted values on every
-dimension (Table~\ref{tab:cell-dims}); the other cells wait for the sync. On MedQuAD, Base+\bodhi{}
+\paragraph{All seven dimensions.} Table~\ref{tab:cell-dims} gives every dimension in each added
+cell that is not set aside. On MedQuAD, Base+\bodhi{}
 scores below Base on scope bounding (\statCellMedQuADMistralBaseScopeBounding{} to
 \statCellMedQuADMistralBaseCoTScopeBounding) and hedging quality
 (\statCellMedQuADMistralBaseHedgingQuality{} to \statCellMedQuADMistralBaseCoTHedgingQuality). LoRA
@@ -1322,18 +1351,24 @@ and it has costs on single dimensions as well as on the aggregate score.
 \begin{table}[!ht]
 \centering
 \small
-\caption{The MedQuAD cell (Mistral-Small-24B) on every epistemic dimension.
-$^{\ast}$Transcribed from posted values; raw outputs pending sync. LoRA $-$ Base is the difference
-of the posted means.}
+\caption{Every epistemic dimension in each added cell that is not set aside, from the raw
+outputs. LoRA $-$ Base is the difference of the seed means. $^{\dagger}$Base model in the
+evaluator's family.}
 \label{tab:cell-dims}
 \input{generated/tab_cell_dimensions}
 \end{table} We have no arm trained without the filter, so
 we cannot attribute this to the filter.
 
-\paragraph{MedQA cell.} An earlier run of this cell used a preamble that told the model to ask
-for missing information. Base active inquiry reached \statPostedMedQAPreambleAI\%, so that run
-measured instruction following. We posted that the aggregate score rises in this cell, but we
-posted no values. After the sync, we will check which run that statement describes.
+\paragraph{MedQA cell.} The MedQA outputs come from one run. We made it before we removed a
+preamble that told the model to ask for missing information. In the
+\statCellMedQAMistralEpistemicSeeds{} seeds with an epistemic grade, Base asked in
+\statCellMedQAMistralBaseActiveInquirySeedMin\% to \statCellMedQAMistralBaseActiveInquirySeedMax\% of
+responses; we posted \statPostedMedQAPreambleAI\% for the preamble run. So this is the preamble run,
+and it measures instruction following. Its aggregate score rose by
+\statCellMedQAMistralAggregateDiff{} (\statCellMedQAMistralAggregateDiffCI; $p =
+\statCellMedQAMistralAggregateP$). This is the rise that our posted replies reported without a
+value. The epistemic grading of seed 42 found none of the MedQA prompts, so Table~\ref{tab:cells}
+leaves out the seven dimensions of this cell. No run without the preamble exists.
 
 \paragraph{Med42-8B cells.} Med42-8B is a Llama-3 model, and the evaluator is
 Llama-3.1-8B-Instruct. This breaks the separation of grader families (\S\ref{sec:method}). We keep
