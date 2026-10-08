@@ -99,7 +99,8 @@ outside the evaluator's family, active inquiry rises in \statCellsAddedAIRose{},
 score falls in all \statCellsAddedWithAggregate{}, by \statCellsAddedDropMin{} to
 \statCellsAddedDropMax{} (values transcribed from posted results; raw outputs pending sync). The
 behavior gain therefore comes with an aggregate cost. Adding the CoT protocol to the adapted model
-lowers red-flag identification; a post hoc analysis links the drop to the protocol's analysis
+changes the red-flag rate by \statRedFlagRateLoRACoTvsLoRADiff{} points (95\% CI
+\statRedFlagRateLoRACoTvsLoRACI); a post hoc analysis links the drop to the protocol's analysis
 format leaking into \statLeakagePctLoRACoT\% of the answers. All behavior scores are LLM-graded: the one
 physician who returned grades agrees with the grader at $\kappa = \statKappaAll$, below our
 pre-registered target of 0.6.
@@ -156,9 +157,9 @@ Our contributions:
     \statCellsAddedCompared{} cells outside the evaluator's family, and the aggregate rubric score
     falls in all \statCellsAddedWithAggregate{} of them (\S\ref{sec:cells}). We report this
     trade-off next to the gain.
-    \item A diagnosis of a failure mode: adding the CoT protocol to the adapted model lowers
-    red-flag identification. A post hoc analysis ties the drop to the protocol's analysis format
-    leaking into the answer (\S\ref{sec:interference}).
+    \item A diagnosis of a failure mode: adding the CoT protocol to the adapted model lowers the
+    red-flag rate. A post hoc analysis ties the drop to the protocol's analysis format leaking into
+    the answer (\S\ref{sec:interference}).
 \end{enumerate}
 
 %======================================================================

@@ -34,6 +34,7 @@ Inputs: `RM` is `results_modal/seed_*/` (the four `<condition>.json` files and
 | No detected change in aggregate score, +0.004 [-0.011, +0.020] | `\statHealthBenchLoRAvsBaseDiff`, `...CI` | `compare_conditions` | RM | computed |
 | In 4 added cells outside the evaluator's family, active inquiry rises in 3 | `\statCellsAddedCompared`, `\statCellsAddedAIRose` | `generality_section` | PV | posted |
 | Aggregate falls in all 4, by 0.014 to 0.086 | `\statCellsAddedWithAggregate`, `\statCellsAddedDropMin`, `\statCellsAddedDropMax` | `generality_section` | PV | posted |
+| Adding CoT to the adapter changes the red-flag rate by -20.6 points [-29.8, -11.4] | `\statRedFlagRateLoRACoTvsLoRADiff`, `...CI` | `compare_conditions` | RM | computed |
 | Format leakage in 54.6% of LoRA+BODHI answers | `\statLeakagePctLoRACoT` | `rebuttal_section` | `rebuttal/results/interference_mechanism.json` | computed |
 | Physician agreement kappa 0.35, target 0.6 | `\statKappaAll`; 0.6 is the pre-registered target | `kappa_section` | `results_modal/irr/kappa_results.json` | computed (target: design) |
 
