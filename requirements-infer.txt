@@ -27,3 +27,6 @@ huggingface-hub
 numpy>=1.24,<3.0
 pyyaml>=6.0,<7.0
 tqdm>=4.65
+# rebuttal/launch/run_cell.sh runs scripts/aggregate_seeds.py with this env, and it
+# computes its t interval with scipy.
+scipy>=1.11,<2.0

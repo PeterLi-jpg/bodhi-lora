@@ -30,4 +30,8 @@ numpy>=1.24,<3.0
 pandas>=2.0,<3.0
 tqdm>=4.65
 matplotlib>=3.7,<4.0
+# Statistics for aggregate_seeds.py, paper_stats.py and the rebuttal analyses.
+scipy>=1.11,<2.0
+statsmodels>=0.14,<0.15
+openpyxl>=3.1,<4.0
 # vLLM is in requirements-infer.txt.

@@ -1,5 +1,12 @@
-# Dev / test dependencies. Not installed on production TPUs.
+# Dev / test dependencies: pytest and the libraries the analysis scripts and their
+# tests import (make numbers, make test). CI installs this file.
 # Install: pip install -r requirements-dev.txt
 pytest>=7.0
 pyyaml>=6.0,<7.0
 numpy>=1.24,<3.0
+pandas>=2.0,<4.0
+scipy>=1.11,<2.0
+statsmodels>=0.14,<0.15
+matplotlib>=3.7,<4.0
+# compute_irr_kappa.py reads the grading spreadsheets.
+openpyxl>=3.1,<4.0
