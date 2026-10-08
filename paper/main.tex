@@ -138,7 +138,7 @@ Given a base model $M$, a structured CoT protocol $C$ that elicits target behavi
     \item \textbf{Distill}: Fine-tune $M$ on $\mathcal{D}$ with LoRA, producing $M + \Delta C$ that approximates $C(M)$'s behavior without $C$ at inference.
 \end{enumerate}
 
-The key assumption is that $C(M)$ produces outputs of varying quality, and that $R$ can distinguish successful demonstrations from failures. The filter step ensures the adapter trains only on demonstrations where the CoT protocol elicited the target behavior. We instantiate this with $M$ = MedGemma-27B-text-it, $C$ = \bodhi{} CoT protocol, $R$ = HealthBench expert rubrics, $\tau = 0.4$, and $\Delta C$ = LoRA ($r{=}16$). Figure~\ref{fig:pipeline} shows the full pipeline and the $2{\times}2$ evaluation design.
+The key assumption is that $C(M)$ produces outputs of varying quality, and that $R$ can distinguish successful demonstrations from failures. The filter step ensures the adapter trains only on demonstrations where the CoT protocol elicited the target behavior. We instantiate this with $M$ = MedGemma-27B-text-it, $C$ = \bodhi{} CoT protocol, $R$ = HealthBench expert rubrics, $\tau = 0.4$, and $\Delta C$ = LoRA ($r{=}8$). Figure~\ref{fig:pipeline} shows the full pipeline and the $2{\times}2$ evaluation design.
 
 \begin{figure}[t]
 \centering
@@ -166,7 +166,17 @@ where $p_{\text{pos}}, p_{\text{neg}}$ are sums of positive and negative rubric 
 
 \subsection{LoRA Fine-Tuning}
 
-We fine-tune MedGemma-27B with LoRA ($r{=}16$, $\alpha{=}32$, dropout 0.05) on all 7 linear projections per layer (q, k, v, o, gate, up, down) using completion-only loss masking. Hyperparameters: 3 epochs, effective batch size 16, learning rate $10^{-4}$ (cosine, 5\% warmup), bfloat16. The 27B base is sharded across 8 TPU v6e chips via FSDPv2. We train 5 independent adapters (seeds 42, 7, 13, 99, 101) varying LoRA initialization, data order, and dropout masks; all results are mean $\pm$ std across these 5 seeds. Full configuration in Appendix~\ref{app:hparams}.
+% Recipe read from the tunix training path that produced the evaluated adapters
+% (gs://.../prod-v39-tunix-27b-neurips); evidence per value is in the comments of
+% Table~\ref{tab:hparams}. PENDING: confirm r, alpha, target modules and the exported
+% step against the five GCS adapter_config.json / trainer files.
+We fine-tune MedGemma-27B with LoRA ($r{=}8$, $\alpha{=}16$, dropout 0.05) on the attention
+query, key and value projections, with the loss on response tokens only. Training uses
+JAX (tunix) on one TPU v6e-8 host per seed, with the 27B base sharded across the 8 chips
+(FSDP). The optimizer is AdamW at a constant learning rate of $10^{-4}$, with no warmup and
+no decay schedule. Each optimizer step uses 64 examples (8 per forward pass, one per chip,
+over 8 accumulation steps), the maximum sequence length is 2,048 tokens, and training runs
+for 300 optimizer steps, about 6 to 7 passes over the ${\sim}$2,800 training traces. We train 5 independent adapters (seeds 42, 7, 13, 99, 101) varying LoRA initialization, data order, and dropout masks; all results are mean $\pm$ std across these 5 seeds. Full configuration in Appendix~\ref{app:hparams}. The cells added in Appendix~\ref{app:generality} use a different recipe (Table~\ref{tab:hparams-cells}).
 
 \subsection{Evaluation}
 \label{sec:eval}
@@ -504,32 +514,132 @@ LoRA + \bodhi{} & 0.456 & 0.457 & 0.457 & 0.456 & 0.452 \\
 \section{Hyperparameters}
 \label{app:hparams}
 
+% Table~\ref{tab:hparams} reports the recipe that produced the evaluated MedGemma-27B adapters
+% (run prod-v39-tunix-27b-neurips, seed_<N>/checkpoints/best on GCS; main:modal_eval.py:54).
+% Evidence is cited at git main (e0cca7c). The training config there is the one from
+% b89f47b (2026-05-03 11:12), its last change; the trainer differs from b89f47b only by a
+% checkpoint-flush wait (8684816):
+%   training path   main:tpu/launch_5seeds_tunix.sh:525-529 (scripts/train_lora_tunix.py)
+%   base model      main:configs/lora_medgemma27b_tunix.yaml:19
+%   r, alpha        main:configs/lora_medgemma27b_tunix.yaml:37-38; PEFT export
+%                   main:tpu/launch_5seeds_tunix.sh:540 (--r 8 --alpha 16 --dropout 0.0)
+%   dropout         main:configs/lora_medgemma27b_tunix.yaml:39, applied by qwix.LoraRule
+%                   main:scripts/train_lora_tunix.py:365,372-378; written as 0.0 in the export
+%   target modules  main:configs/lora_medgemma27b_tunix.yaml:40-42 (q_einsum, kv_einsum);
+%                   exported as q_proj, k_proj, v_proj with k and v sharing lora_A
+%                   (main:scripts/export_tunix_lora_to_peft.py:19-37)
+%   batch           per_device 1 x grad_accum 8 per forward pass, 8 accumulation steps,
+%                   64 examples per update (main:configs/lora_medgemma27b_tunix.yaml:45-63,
+%                   main:scripts/train_lora_tunix.py:401-402)
+%   steps           max_steps 300 (main:configs/lora_medgemma27b_tunix.yaml:90); tunix counts
+%                   max_steps and checkpoint steps in optimizer updates (google/tunix main,
+%                   tunix/sft/peft_trainer.py, read 2026-10-07; the TPU image installed an
+%                   unpinned google-tunix, main:tpu/setup_tpu.sh:253). The launcher treats the
+%                   step-250 save as the last complete one and says the step-300 save was
+%                   seen broken (main:tpu/launch_5seeds_tunix.sh:512-519); the exporter falls
+%                   back to an earlier step in that case (commit 9bd7522).
+%   passes          300 x 64 / 2,816 seed-7 train rows = 6.8 (5.7 at step 250)
+%   optimizer       optax.adamw(learning_rate=1e-4), no schedule
+%                   (main:scripts/train_lora_tunix.py:448-449; optax default weight decay 1e-4)
+%   seq length      2048 (main:configs/lora_medgemma27b_tunix.yaml:112). Between 07:39 and
+%                   10:55 on 2026-05-03 the value moved between 1024 and 2048 (commits
+%                   86c350e..b44837b), and 4dfee2f says seeds 7 and 101 ran at 2048.
+%   precision       bfloat16 (yaml:28), block rematerialization
+%                   (main:scripts/train_lora_tunix.py:163)
+%   hardware        one v6e-8 host per seed (main:tpu/launch_5seeds_tunix.sh:884),
+%                   mesh fsdp=8, tp=1 (main:scripts/train_lora_tunix.py:308-316)
+%   loss mask       response tokens only (main:scripts/train_lora_tunix.py:230)
+%   filter          Qwen2.5-14B-Instruct, --min-score 0.4, --val-ratio 0.1
+%                   (main:tpu/launch_5seeds_tunix.sh:420-429)
+%   eval            A100-80GB (main:modal_eval.py:290), vllm>=0.6.5,<0.10 (main:modal_eval.py:73),
+%                   max_model_len patched to 4096 (main:modal_eval.py:364),
+%                   max-num-seqs 32 (main:modal_eval.py:375), seeds (main:modal_eval.py:59)
+% PENDING: confirm r, alpha, target modules, max sequence length and the exported step
+% against adapter_config.json and the trainer logs of the five seeds on GCS.
+% The submitted version of this table (paper/submitted/neurips2026) gave the intended
+% recipe: r=16, alpha=32, seven modules, 3 epochs, batch 16, seq 4096, cosine, FSDPv2.
+
 \begin{table}[t]
 \centering
-\caption{Training and evaluation configuration.}
+\caption{Training and evaluation configuration of the MedGemma-27B cell. We read these values
+from the training code and launcher at the commit that produced the evaluated adapters.
+They replace an earlier version of this table, which listed the intended recipe ($r{=}16$,
+$\alpha{=}32$, seven target modules, 3 epochs, batch 16, sequence length 4,096) and not the
+run. Rank, $\alpha$, target modules, sequence length and the exported checkpoint step are
+pending a check against the saved adapter and trainer files.}
+\label{tab:hparams}
+\small
 \begin{tabular}{ll}
 \toprule
 Parameter & Value \\
 \midrule
 Base model & google/medgemma-27b-text-it \\
-LoRA rank $r$ & 16 \\
-LoRA $\alpha$ & 32 \\
-LoRA dropout & 0.05 \\
-Target modules & \texttt{\{q,k,v,o,gate,up,down\}\_proj} \\
-Epochs & 3 \\
-Effective batch size & 16 (2/device $\times$ 8 accum.) \\
-Learning rate & $10^{-4}$ (cosine, 5\% warmup) \\
-Max sequence length & 4096 \\
-Precision & bfloat16 \\
-Training hardware & $8\times$ TPU v6e (FSDPv2) \\
+Training code & JAX tunix with qwix LoRA \\
+LoRA rank $r$ & 8 \\
+LoRA $\alpha$ & 16 \\
+LoRA dropout & 0.05 (training) \\
+Target modules & attention q, k, v projections \\
+Optimizer & AdamW, weight decay $10^{-4}$ \\
+Learning rate & $10^{-4}$, constant (no warmup, no schedule) \\
+Examples per optimizer step & 64 (8 per forward pass $\times$ 8 accum.) \\
+Optimizer steps & 300 (exported checkpoint: step 250 or 300) \\
+Passes over training data & ${\approx}$6.8 (5.7 at step 250) \\
+Max sequence length & 2,048 \\
+Precision & bfloat16, block rematerialization \\
+Loss & response tokens only \\
+Training hardware & one TPU v6e-8 host per seed (FSDP over 8 chips) \\
 Eval hardware & A100-80GB (Modal) \\
-vLLM version & $\geq$0.6.5, $<$0.10 (0.6.x series) \\
-Filter grader & Qwen/Qwen2.5-14B-Instruct \\
+Eval context length & 4,096 tokens (vLLM) \\
+vLLM version & $\geq$0.6.5, $<$0.10 (exact build not recorded) \\
+Filter grader & Qwen/Qwen2.5-14B-Instruct, $\tau{=}0.4$ \\
 Eval grader & Llama-3.1-8B-Instruct \\
 Seeds & 42, 7, 13, 99, 101 \\
 Raw traces & 4,000 \\
 Filtered traces/seed & ${\sim}$2,800 train + ${\sim}$310 val \\
 Eval prompts/seed & 200 (from 1,000 \hbhard{}) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Table~\ref{tab:hparams-cells}: rebuttal/configs/*.yaml at this commit, read by
+% scripts/train_lora.py (HF PEFT + TRL SFTTrainer) from rebuttal/launch/run_cell.sh:212-215.
+%   4-bit           scripts/train_lora.py:186-191 (NF4, double quantization, bf16 compute)
+%   optimizer       scripts/train_lora.py:290 (default adamw_torch_fused)
+%   eval serving    subprocess mode (rebuttal/launch/run_cell.sh:54);
+%                   scripts/_vllm_engine.py:154 (max_model_len 8192) and :298-314
+%                   (--enable-lora, --dtype bfloat16: the base is served unquantized)
+%   hardware        the comment at the top of each config (one H100 80GB)
+% PENDING: which config each cell used, and the MedQA cell's base model, come from the
+% run logs in results_rebuttal/, which are not synced into the repo yet.
+
+\begin{table}[t]
+\centering
+\caption{Training configuration of the cells added in Appendix~\ref{app:generality}, one column
+per base model. These cells did not reuse the MedGemma-27B recipe of Table~\ref{tab:hparams}.
+The Mistral-Small-24B adapters were trained against a 4-bit base (QLoRA) and evaluated on the
+bfloat16 base. $^\dagger$Med42-8B shares the evaluator's Llama-3 family, which breaks the
+paper's grader-separation rule.}
+\label{tab:hparams-cells}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{llll}
+\toprule
+Parameter & Mistral-Small-24B & Med42-8B$^\dagger$ & BioMistral-7B \\
+\midrule
+Cells & HealthBench, ChatDoctor, MedQuAD & HealthBench, ChatDoctor & HealthBench \\
+Base weights in training & 4-bit NF4 (QLoRA) & bfloat16 & bfloat16 \\
+LoRA rank $r$ / $\alpha$ & 16 / 32 & same & same \\
+LoRA dropout & 0.05 & same & same \\
+Target modules & q, k, v, o, gate, up, down & same & same \\
+Epochs & 3 & same & same \\
+Effective batch & 16 (2 $\times$ 8 accum.) & 16 (4 $\times$ 4 accum.) & 16 (4 $\times$ 4 accum.) \\
+Learning rate & $10^{-4}$, cosine, 5\% warmup & same & same \\
+Optimizer & AdamW (PyTorch fused) & same & same \\
+Max sequence length & 4,096 & same & same \\
+Precision & bfloat16 compute & bfloat16 & bfloat16 \\
+Training hardware & one H100 80GB & same & same \\
+Eval serving & bfloat16 base + adapter & same & same \\
+Eval context length & 8,192 tokens (vLLM) & same & same \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -704,10 +814,17 @@ appropriate\_hedging (rate) & 0.906 & 0.917 & 0.942 & 0.949 & 0.026 & $+0.036$ \
 \label{app:generality}
 
 The main results instantiate the recipe on one model and one benchmark. To test whether the
-behavioral transfer depends on that choice, we re-ran the pipeline unchanged, holding every
-hyperparameter fixed (LoRA $r{=}16$, $\alpha{=}32$, effective batch 16, 3 epochs, $\tau{=}0.4$,
-Qwen-14B filter, Llama-3.1-8B evaluator), on two additional base models and two additional
-benchmarks, with 5 seeds per cell and ${\sim}200$ prompts per seed per condition.
+behavioral transfer depends on that choice, we ran the same four stages (generate, grade,
+filter, distill) on two additional base models and two additional benchmarks, with the same
+Qwen-14B filter and Llama-3.1-8B evaluator, 5 seeds per cell and ${\sim}200$ prompts per seed
+per condition. The training recipe of these cells differs from the MedGemma-27B cell:
+LoRA $r{=}16$, $\alpha{=}32$ on all seven projections, effective batch 16, 3 epochs with a
+cosine schedule, and 4-bit QLoRA for Mistral-Small-24B (Table~\ref{tab:hparams-cells};
+compare Table~\ref{tab:hparams}). On HealthBench the filter threshold is $\tau{=}0.4$. On the
+other benchmarks, a cell whose training split holds fewer than 40\% of its traces at
+$\tau{=}0.4$ is filtered again at the 22nd percentile of its filter scores.
+% PENDING (audit PROV-3): the tau each non-HealthBench cell used is in the filter logs in
+% results_rebuttal/, not yet synced. Rule: rebuttal/launch/run_cell.sh:160-200.
 
 The added base models are \textbf{Mistral-Small-24B-Instruct} (general-purpose, Mistral family) and
 \textbf{Med42-8B} (clinically tuned, Llama-3 family), spanning both a different family from the

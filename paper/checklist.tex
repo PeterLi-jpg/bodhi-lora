@@ -82,7 +82,7 @@
 \item {\bf Experimental setting/details}
     \item[] Question: Does the paper specify all the training and test details (e.g., data splits, hyperparameters, how they were chosen, type of optimizer) necessary to understand the results?
     \item[] Answer: \answerYes{}
-    \item[] Justification: \S\ref{sec:method} describes trace generation, grading, filtering, LoRA fine-tuning, and evaluation. Appendix~\ref{app:hparams} contains a complete hyperparameter table (rank, $\alpha$, dropout, batch size, LR schedule, sequence length, hardware, seeds, grader models).
+    \item[] Justification: \S\ref{sec:method} describes trace generation, grading, filtering, LoRA fine-tuning, and evaluation. Appendix~\ref{app:hparams} contains a complete hyperparameter table (rank, $\alpha$, dropout, batch size, LR schedule, sequence length, hardware, seeds, grader models) and a separate table for the added cells.
     \item[] Guidelines:
     \begin{itemize}
         \item The answer \answerNA{} means that the paper does not include experiments.
@@ -110,7 +110,7 @@
 \item {\bf Experiments compute resources}
     \item[] Question: For each experiment, does the paper provide sufficient information on the computer resources (type of compute workers, memory, time of execution) needed to reproduce the experiments?
     \item[] Answer: \answerYes{}
-    \item[] Justification: Training: $8\times$ TPU v6e (256\,GB HBM, FSDPv2), ${\sim}$4\,h/seed $\times$ 5 seeds. Evaluation: A100-80GB via Modal, ${\sim}$2\,h/seed. Hardware is stated in Appendix~\ref{app:hparams} and the Reproducibility Statement.
+    \item[] Justification: Training: one TPU v6e-8 host per seed (8 chips, 256\,GB HBM, FSDP), ${\sim}$4\,h/seed $\times$ 5 seeds. Evaluation: A100-80GB via Modal, ${\sim}$2\,h/seed. The added cells of Appendix~\ref{app:generality} train and evaluate on one H100 80GB per seed. Hardware is stated in Appendix~\ref{app:hparams}.
     \item[] Guidelines:
     \begin{itemize}
         \item The answer \answerNA{} means that the paper does not include experiments.
