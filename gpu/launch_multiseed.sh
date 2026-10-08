@@ -2,7 +2,7 @@
 # launch_multiseed.sh (GPU) — run the full pipeline on one GPU machine.
 #
 # Stages:
-#   1 — generate BOHDI traces (MedGemma-27B inference)
+#   1 — generate BODHI traces (MedGemma-27B inference)
 #   2 — grade + filter traces (Qwen2.5-14B-Instruct, bfloat16)
 #   3 — LoRA SFT, one run per seed (multi-GPU DDP or single-GPU)
 #   4 — evaluate all 4 configs per seed + U-shape + rubric diff
@@ -84,7 +84,7 @@ mkdir -p data/raw data/sft "${RESULTS_DIR}"
 
 # ── Stage 1: generate traces ──────────────────────────────────────────────────
 echo "========================================"
-echo "  Stage 1: generate BOHDI traces"
+echo "  Stage 1: generate BODHI traces"
 echo "========================================"
 
 if [ -f "data/sft/raw_traces.jsonl" ]; then
@@ -158,7 +158,7 @@ for SEED in $SEEDS; do
         --seed "$SEED" \
         --output "${EVAL_DIR}/base_no_wrapper.json"
 
-    echo "  -- base + BOHDI wrapper --"
+    echo "  -- base + BODHI wrapper --"
     python scripts/eval_healthbench.py \
         --model "$MODEL" \
         --use-bodhi \
@@ -174,7 +174,7 @@ for SEED in $SEEDS; do
         --seed "$SEED" \
         --output "${EVAL_DIR}/lora_no_wrapper.json"
 
-    echo "  -- LoRA + BOHDI wrapper --"
+    echo "  -- LoRA + BODHI wrapper --"
     python scripts/eval_healthbench.py \
         --model "$MODEL" \
         --lora-path "$LORA" \

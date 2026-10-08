@@ -1,4 +1,4 @@
-"""Analyze graded BOHDI traces and render a small summary bundle."""
+"""Analyze graded BODHI traces and render a small summary bundle."""
 
 import argparse
 import json

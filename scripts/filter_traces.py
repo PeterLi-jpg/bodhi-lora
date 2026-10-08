@@ -1,4 +1,4 @@
-"""Grade BOHDI traces with the HealthBench rubric grader and filter by score.
+"""Grade BODHI traces with the HealthBench rubric grader and filter by score.
 
 The threshold tau is fixed (--min-score, default 0.4, the paper's value). A
 data-derived tau is used only when --tau-percentile is passed, and the value

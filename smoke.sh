@@ -104,7 +104,7 @@ fi
 echo "--- 1/4: download data ---"
 python scripts/download_data.py
 
-echo "--- 2/4: generate $N_EXAMPLES BOHDI traces ---"
+echo "--- 2/4: generate $N_EXAMPLES BODHI traces ---"
 "$INFER_PY" scripts/generate_traces.py \
     --model "$MODEL" \
     --datasets healthbench_hard \

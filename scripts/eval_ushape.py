@@ -5,7 +5,7 @@ Inspired by the Nature Medicine 2026 "ChatGPT triage" paper
 across clinical acuity, worst at the extremes (nonurgent and emergency),
 best in the middle.
 
-BOHDI's central claim is epistemic humility. If LoRA-BOHDI works, it should
+BODHI's central claim is epistemic humility. If LoRA-BODHI works, it should
 flatten this U: lift the tails, especially the high-acuity failures where
 overconfident wrong answers are most harmful.
 

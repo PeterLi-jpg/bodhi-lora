@@ -1,4 +1,4 @@
-"""Talk to the BOHDI LoRA model from a shell.
+"""Talk to the BODHI LoRA model from a shell.
 
 Useful for spot-checking a trained checkpoint without running the full eval
 harness. Type a prompt, get a response, toggle the BODHI wrapper mid-session

@@ -8,7 +8,7 @@
 seed: 42
 
 model:
-  # AnonAuthor3: "4B has good reasoning" — E2B is too weak to produce BOHDI-useful
+  # AnonAuthor3: "4B has good reasoning" — E2B is too weak to produce BODHI-useful
   # traces. E4B is the floor for meaningful signal. Swap back to E2B only if
   # VRAM is tight on your box.
   name: google/gemma-3n-E4B-it

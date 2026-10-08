@@ -1,4 +1,4 @@
-"""Evaluate model on HealthBench Hard (base vs lora, with/without BOHDI wrapper).
+"""Evaluate model on HealthBench Hard (base vs lora, with/without BODHI wrapper).
 
 Conditions (the "config" tag in the output JSON):
   base_no_wrapper / lora_no_wrapper    the model as is

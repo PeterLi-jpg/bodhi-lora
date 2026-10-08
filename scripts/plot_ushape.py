@@ -47,9 +47,9 @@ CONFIG_COLORS = {
 }
 CONFIG_LABELS = {
     "base_no_wrapper": "Base (no wrapper)",
-    "base_bodhi":      "Base + BOHDI wrapper",
+    "base_bodhi":      "Base + BODHI wrapper",
     "lora_no_wrapper": "LoRA (no wrapper)",
-    "lora_bodhi":      "LoRA + BOHDI wrapper",
+    "lora_bodhi":      "LoRA + BODHI wrapper",
 }
 
 

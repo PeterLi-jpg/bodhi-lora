@@ -1,4 +1,4 @@
-"""Latency benchmark across base/lora x with/without BOHDI wrapper.
+"""Latency benchmark across base/lora x with/without BODHI wrapper.
 
 Measures end-to-end latency for a fixed batch of HealthBench Hard prompts,
 running each of 4 configs through its own vLLM engine and recording per-

@@ -1,4 +1,4 @@
-"""Generate BOHDI wrapper traces over HealthBench for SFT training data.
+"""Generate BODHI wrapper traces over HealthBench for SFT training data.
 
 --protocol picks the teaching protocol: bodhi (the paper's two-pass wrapper,
 same as --use-bodhi), ask_first (a second, single-pass protocol in
