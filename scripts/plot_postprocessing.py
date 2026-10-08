@@ -4,7 +4,7 @@ Saves to paper/figures/:
   ushape_difficulty.pdf      -- failure rate vs. prompt difficulty (pooled 5 seeds)
   axis_breakdown.pdf         -- mean score by HealthBench rubric axis (pooled 5 seeds)
   score_distribution.pdf     -- per-prompt score violin plot (pooled 5 seeds)
-  effect_size_forest.pdf     -- Cohen's d forest plot for epistemic dimensions
+  effect_size_forest.pdf     -- Cohen's d forest plot (reads paper/generated/numbers.json)
 
 Usage:
     python scripts/plot_postprocessing.py [--data-dir results_modal] [--hb-hard data/raw/healthbench_hard.jsonl] [--out-dir paper/figures]
@@ -12,7 +12,6 @@ Usage:
 
 import argparse
 import json
-import math
 import random
 from pathlib import Path
 
@@ -48,35 +47,8 @@ AXIS_LABELS = {
     "axis:instruction_following":"Instruction\nfollowing",
 }
 
-EPISTEMIC_DIMS = [
-    ("active_inquiry",         "Active inquiry",          True),   # bool → 0/1
-    ("context_seeking",        "Context-seeking",         False),  # 0–2
-    ("red_flag_identification","Red-flag ID",             False),
-    ("scope_bounding",         "Scope bounding",          False),
-    ("uncertainty_acknowledgment","Uncertainty ack.",     False),
-    ("hedging",                "Hedging quality",         False),
-    ("specificity",            "Specificity",             False),
-]
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
-
-def cohens_d(a, b):
-    """Cohen's d with pooled std, returns (d, se_d)."""
-    a = np.asarray(a, dtype=float)
-    b = np.asarray(b, dtype=float)
-    n1, n2 = len(a), len(b)
-    if n1 < 2 or n2 < 2:
-        return 0.0, 0.0
-    m1, m2 = a.mean(), b.mean()
-    s1, s2 = a.std(ddof=1), b.std(ddof=1)
-    pooled = math.sqrt(((n1 - 1) * s1**2 + (n2 - 1) * s2**2) / (n1 + n2 - 2))
-    if pooled == 0:
-        return 0.0, 0.0
-    d = (m1 - m2) / pooled
-    # Approximate SE of d (Hedges & Olkin formula)
-    se = math.sqrt((n1 + n2) / (n1 * n2) + d**2 / (2 * (n1 + n2 - 2)))
-    return d, se
-
 
 def load_healthbench_difficulty(hb_path):
     """Return dict: prompt_id -> total positive rubric points (difficulty proxy)."""
@@ -106,31 +78,6 @@ def load_health_results(data_dir, seeds=SEEDS, configs=None):
             d = json.load(open(path))
             for r in d["results"]:
                 pooled[cfg].append(r)
-    return pooled
-
-
-def load_epistemic_examples(data_dir, seeds=SEEDS, configs=None):
-    """
-    Load per-prompt epistemic scores from epistemic_scores.json.
-    Returns dict: config -> list of scores dicts (with keys like
-    'uncertainty_acknowledgment', 'context_seeking', etc.)
-    """
-    if configs is None:
-        configs = CONFIG_ORDER
-    pooled = {cfg: [] for cfg in configs}
-    for seed in seeds:
-        path = Path(data_dir) / f"seed_{seed}" / "epistemic_scores.json"
-        if not path.exists():
-            print(f"  [warn] missing: {path}")
-            continue
-        d = json.load(open(path))
-        for cfg_block in d.get("configs", []):
-            name = cfg_block["name"]
-            if name not in pooled:
-                continue
-            for ex in cfg_block.get("examples", []):
-                if not ex.get("parse_failure"):
-                    pooled[name].append(ex["scores"])
     return pooled
 
 
@@ -305,103 +252,71 @@ def plot_score_distribution(health_results, out_path):
 
 # ── Figure 5: Effect size forest plot ────────────────────────────────────────
 
-def plot_effect_sizes(epistemic_examples, out_path):
+def plot_effect_sizes(numbers_path, out_path):
     """
     Cohen's d forest plot for each epistemic dimension.
-    Compares each CoT variant against its no-CoT baseline:
-      - base_bodhi vs base_no_wrapper
-      - lora_bodhi vs lora_no_wrapper
 
-    95% CI via normal approximation of SE(d).
+    d and its 95% CI come from paper/generated/numbers.json (scripts/paper_stats.py):
+    pooled d over the scored responses, CI from a bootstrap that resamples prompt ids.
+    The 5 seed draws overlap (667 unique prompts per 1,000 draws), so a normal-
+    approximation CI that treats responses as independent would be too narrow.
+    The seed-level paired tests are in the paper's tables; this figure is descriptive.
     """
-    def get_scores(examples_list, dim, is_binary):
-        """Extract per-example numeric scores for a dimension."""
-        out = []
-        for s in examples_list:
-            val = s.get(dim)
-            if val is None:
-                continue
-            if isinstance(val, bool):
-                out.append(float(val))
-            else:
-                try:
-                    out.append(float(val))
-                except (TypeError, ValueError):
-                    pass
-        return out
+    with open(numbers_path) as f:
+        contrasts = json.load(f)["contrasts"]
 
-    # Which dim keys appear in the scores dict
     dim_keys = [
-        ("active_inquiry",          "Active inquiry",              True),
-        ("context_seeking",         "Context-seeking (0–2)",       False),
-        ("red_flag_identification",  "Red-flag ID (0–2)",          False),
-        ("scope_bounding",          "Scope bounding (0–2)",        False),
-        ("uncertainty_acknowledgment","Uncertainty ack. (0–2)",    False),
-        ("hedging",                 "Hedging quality (0–2)",       False),
-        ("specificity",             "Specificity (0–2)",           False),
+        ("active_inquiry",  "Active inquiry"),
+        ("context_seeking", "Context-seeking (0–2)"),
+        ("red_flag",        "Red-flag ID (0–2)"),
+        ("scope_bounding",  "Scope bounding (0–2)"),
+        ("uncertainty_ack", "Uncertainty ack. (0–2)"),
+        ("hedging_quality", "Hedging quality (0–2)"),
+        ("specificity",     "Specificity (0–2)"),
     ]
 
     comparisons = [
-        ("base_bodhi",  "base_no_wrapper",  "Base + BODHI vs Base", "#EE7733"),
-        ("lora_bodhi",  "lora_no_wrapper",  "LoRA + BODHI vs LoRA", "#009988"),
+        ("LoRAvsBase",    "LoRA vs Base",                CONFIG_COLORS["lora_no_wrapper"]),
+        ("BaseCoTvsBase", "Base + BODHI vs Base",        "#EE7733"),
+        ("LoRACoTvsLoRA", "LoRA + BODHI vs LoRA",        "#009988"),
     ]
 
     n_dims = len(dim_keys)
-    # y positions: group each dimension, two bars per group
-    spacing = 1.2
     group_gap = 2.8
-    offsets = [-spacing / 2, spacing / 2]
+    offsets = [-0.8, 0.0, 0.8]
 
     fig, ax = plt.subplots(figsize=(9, max(5, n_dims * 0.9 + 1)))
-
     group_centers = [i * group_gap for i in range(n_dims)]
 
-    for ci, (treat, ctrl, label, color) in enumerate(comparisons):
-        ys, ds, lows, highs = [], [], [], []
-        for gi, (dim_key, dim_label, is_binary) in enumerate(dim_keys):
-            treat_scores = get_scores(epistemic_examples[treat], dim_key, is_binary)
-            ctrl_scores  = get_scores(epistemic_examples[ctrl],  dim_key, is_binary)
-            d, se = cohens_d(treat_scores, ctrl_scores)
+    for ci, (ctok, label, color) in enumerate(comparisons):
+        for gi, (dim_key, _) in enumerate(dim_keys):
+            r = contrasts[ctok]["metrics"][dim_key]
+            d = r["pooled_d"]
+            lo, hi = r["d_ci95"]
             y = group_centers[gi] + offsets[ci]
-            ys.append(y)
-            ds.append(d)
-            lows.append(d - 1.96 * se)
-            highs.append(d + 1.96 * se)
-
-        # Plot CI lines and dots
-        for y, d, lo, hi in zip(ys, ds, lows, highs):
             ax.plot([lo, hi], [y, y], color=color, linewidth=2, alpha=0.8, zorder=3)
             ax.scatter([d], [y], color=color, s=55, zorder=5, edgecolors="white",
                        linewidths=0.5)
 
-    # Zero line
     ax.axvline(0, color="#333", linewidth=1, linestyle="--", zorder=2, alpha=0.6)
-
-    # y-axis labels at group centers
     ax.set_yticks(group_centers)
     ax.set_yticklabels([dk[1] for dk in dim_keys], fontsize=10)
-    ax.set_xlabel("Cohen's $d$ (positive = CoT variant improves dimension)", fontsize=11)
-    ax.set_title("Effect sizes for epistemic dimensions\n"
-                 "(95% CI; pooled 5 seeds × 200 prompts/seed)",
+    ax.set_xlabel("Pooled Cohen's $d$ (first condition minus second)", fontsize=11)
+    ax.set_title("Effect sizes for the seven epistemic dimensions\n"
+                 "(95% CI: bootstrap over prompt ids; descriptive)",
                  fontsize=11)
     ax.grid(axis="x", alpha=0.3, zorder=0)
     ax.set_axisbelow(True)
 
-    # Shaded interpretation region. Drawn before the legend so it can supply a
-    # handle: the band is otherwise unexplained in the rendered figure.
+    # Shaded band drawn before the legend so it can supply a handle.
     ax.axvspan(-0.2, 0.2, alpha=0.04, color="#aaa", zorder=1)
 
-    # Legend sits below the x-label, not in the axes. Active inquiry is the
-    # bottom group and its largest effect lands in the lower right, which is
-    # where an in-axes legend hid the point entirely.
-    handles = [
-        mpatches.Patch(color=c, label=lbl)
-        for (_, _, lbl, c) in comparisons
-    ]
+    # Legend sits below the x-label, not in the axes, so it hides no point.
+    handles = [mpatches.Patch(color=c, label=lbl) for (_, lbl, c) in comparisons]
     handles.append(mpatches.Patch(color="#aaa", alpha=0.25,
-                                  label="trivial ($|d| < 0.2$)"))
+                                  label="$|d| < 0.2$"))
     ax.legend(handles=handles, fontsize=9, loc="upper center",
-              bbox_to_anchor=(0.5, -0.10), ncol=3, frameon=False)
+              bbox_to_anchor=(0.5, -0.10), ncol=4, frameon=False)
 
     fig.tight_layout()
     fig.savefig(out_path, dpi=200, bbox_inches="tight")
@@ -416,6 +331,8 @@ def main():
     parser.add_argument("--data-dir",  default="results_modal")
     parser.add_argument("--hb-hard",   default="data/raw/healthbench_hard.jsonl")
     parser.add_argument("--out-dir",   default="paper/figures")
+    # Written by scripts/paper_stats.py (make numbers); the forest plot reads d and its CI.
+    parser.add_argument("--numbers",   default="paper/generated/numbers.json")
     args = parser.parse_args()
 
     out_dir = Path(args.out_dir)
@@ -429,9 +346,6 @@ def main():
 
     print("Loading per-prompt HealthBench results (5 seeds × 4 configs) …")
     health_results = load_health_results(args.data_dir)
-
-    print("Loading per-prompt epistemic scores (5 seeds × 4 configs) …")
-    epistemic_examples = load_epistemic_examples(args.data_dir)
 
     print("\nGenerating figures …")
 
@@ -451,7 +365,7 @@ def main():
     )
 
     plot_effect_sizes(
-        epistemic_examples,
+        args.numbers,
         out_dir / "effect_size_forest.pdf"
     )
 

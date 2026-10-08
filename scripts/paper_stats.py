@@ -333,7 +333,7 @@ def paired_seed_test(a: np.ndarray, b: np.ndarray) -> dict:
 
 
 def cohens_d(a: np.ndarray, b: np.ndarray) -> float:
-    """Cohen's d for a - b with the pooled SD (same formula as plot_postprocessing)."""
+    """Cohen's d for a - b with the pooled SD."""
     n1, n2 = len(a), len(b)
     s1, s2 = np.var(a, ddof=1), np.var(b, ddof=1)
     sp = math.sqrt(((n1 - 1) * s1 + (n2 - 1) * s2) / (n1 + n2 - 2))
