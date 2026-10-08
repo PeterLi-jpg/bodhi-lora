@@ -82,8 +82,7 @@ Checks run on the committed file:
   claim.
 - The submitted cell matches `results_modal/cross_seed_aggregate.json` (8 values).
 - The discrimination index and the leakage numbers match `rebuttal/results/mimicry_split.json`
-  and `interference_mechanism.json`. Those two files are gitignored and exist only in
-  the main worktree (41 values, 0 mismatches).
+  and `interference_mechanism.json` (41 values, 0 mismatches). Both files are now tracked.
 - The Base and LoRA aggregate means in Table 3 match the 4-decimal table in
   `rebuttal/analyses/FINDINGS_quality_drop.md`.
 
@@ -114,32 +113,36 @@ names on the host. Each cell directory should hold these files:
   `lora_cot`.
 - `seed_<N>/eval/epistemic_scores.json`: the seven-dimension grades.
 - `multi_seed_summary.json`: the cross-seed summary, if `aggregate_seeds.py` succeeded.
+  Do not use the copies on the host. Before commit 55f6c7c, `aggregate_seeds.py` named
+  every seed `eval`, so each summary holds one seed only. Run it again after the sync.
 
 The filter and eval logs are under `logs/` on the host
 (`filter_<bench>_<tag>.log`, `eval_<bench>_<tag>_s<seed>.log`). The filter log holds the
 tau that each cell used, which the audit needs for PROV-3.
 
-## How to replace this file with generated values
+## How to check this file against generated values
 
-When the outputs are synced to a versioned location:
+`rebuttal/analyses/cell_values.py` (`make cells`) does the check. For each cell it reads
+the per-seed eval files, computes every posted metric with the definitions of
+`scripts/paper_stats.py`, and writes `generated_values.json` in the same shape. Then it
+lists each posted value that differs from the generated one at the posted decimals.
 
-1. For each cell and condition, compute per-seed means over scored examples. Read
-   `examples[].scores` in `epistemic_scores.json`. `active_inquiry` (boolean) gives
-   `active_inquiry_pct` as 100 times the mean. `context_seeking`, `scope_bounding`,
-   `hedging`, `red_flag_identification`, `uncertainty_acknowledgment` and `specificity`
-   give the 0 to 2 metrics. `results[].score` in the eval JSONs gives `aggregate`.
-2. Take the mean and SD across the five seeds. The posts do not say which SD they used.
-   The submitted cell uses the sample SD (`scripts/aggregate_cross_seed.py:56`).
-3. Compute clearance as kept traces over graded traces. The filter log prints this as
-   `Kept N/M`. The posts do not define the denominator, so confirm it against the
-   posted values.
-4. Write `generated_values.json` with the same shape, and diff it against this file at
-   the posted precision.
-5. Where a generated value differs from a posted value by more than rounding, the
-   generated value is the record. Add the difference to `rebuttal/withdrawals.md` as a
-   posted number that was wrong.
+- The metrics are per-seed means over scored responses (epistemic metrics) or over all
+  completions (`aggregate`), then the mean and the sample SD over seeds. The posts do not
+  say which SD they used. The submitted cell uses the sample SD
+  (`scripts/aggregate_cross_seed.py:56`).
+- The folder of each cell is `results_rebuttal/<bench>__<tag>/`, as above. If a name on
+  the host differs, pass `--cell-dir <cell id>=<path>`.
+- Until the sync, only the submitted cell has data. Its 8 posted values match
+  `results_modal/`. The script names the 7 missing cells.
 
-Keep this file after that. It stays as the record of what was posted.
+The script does not compute the filter clearance. Read it from the filter log
+(`Kept N/M`), and confirm the denominator against the posted values.
+
+When a generated value differs from a posted value by more than rounding, the generated
+value is the record. Add the difference to `rebuttal/withdrawals.md` as a posted number
+that was wrong. Keep `posted_values.json` after that. It stays as the record of what was
+posted.
 
 ## Not in this file
 

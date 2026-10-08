@@ -195,16 +195,19 @@ def _epistemic_columns(scores: dict) -> dict:
     }
 
 
-def load_responses(results_dir: Path, seeds: list[int]) -> pd.DataFrame:
+def load_responses(results_dir: Path, seeds: list[int], subdir: str = "") -> pd.DataFrame:
     """One row per HealthBench completion, joined to its epistemic grade.
 
     ``ep_status`` is "scored", "parse_failure" (the grader output did not
     parse) or "missing" (eval_epistemic hit a grade error and wrote no row).
     Epistemic metric columns are NaN unless the row is scored.
+
+    ``subdir`` is the folder inside each seed dir that holds the eval files:
+    "" for results_modal/, "eval" for a rebuttal cell (rebuttal/launch/run_cell.sh).
     """
     rows = []
     for seed in seeds:
-        seed_dir = results_dir / f"seed_{seed}"
+        seed_dir = results_dir / f"seed_{seed}" / subdir
         with open(seed_dir / "epistemic_scores.json") as f:
             ep = {c["name"]: {e["prompt_id"]: e for e in c["examples"]}
                   for c in json.load(f)["configs"]}
