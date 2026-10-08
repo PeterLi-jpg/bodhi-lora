@@ -130,6 +130,8 @@ def test_blanket_disclaimers_fisher(generated):
     assert (bd["base_no_wrapper"]["count"], bd["base_no_wrapper"]["n"]) == (5, 998)
     assert (bd["lora_no_wrapper"]["count"], bd["lora_no_wrapper"]["n"]) == (0, 985)
     assert round(bd["lora_no_wrapper"]["fisher_p_vs_base"], 3) == 0.062
+    # 4 of the 5 flagged disclaimers (all in Base) still get hedging quality 2.
+    assert bd["all_conditions"] == {"flagged": 5, "flagged_hedging_2": 4}
 
 
 def test_worst_case_keeps_headline_effects(generated):

@@ -741,6 +741,16 @@ def blanket_disclaimers(df, out, macros):
         res[cfg]["fisher_p_vs_base"] = p
         macros.add(f"BlanketDisclaimerFisherP{COND_TOKEN[cfg]}", fmt_p(p),
                    f"two-sided Fisher exact p, {k}/{n} vs Base {kb}/{nb}")
+    # The grader flags a blanket disclaimer and scores hedging 0-2 in the same
+    # grade; the paper says how often the two disagree (a flagged disclaimer
+    # that still gets the top hedging score).
+    flagged = scored[scored["blanket_disclaimer"] == 1]
+    res["all_conditions"] = {"flagged": int(len(flagged)),
+                             "flagged_hedging_2": int((flagged["hedging_quality"] == 2).sum())}
+    macros.add("BlanketDisclaimerTotal", fmt_int(len(flagged)),
+               f"{SRC_EP}: responses flagged as a blanket disclaimer, all conditions")
+    macros.add("BlanketDisclaimerHedgingTwo", fmt_int(res["all_conditions"]["flagged_hedging_2"]),
+               f"{SRC_EP}: of those, responses with hedging quality 2")
     out["blanket_disclaimers"] = res
     return res
 
