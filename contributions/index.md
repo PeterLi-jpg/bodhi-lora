@@ -1,33 +1,24 @@
-# BOHDI-LoRA Docs
+# Contributor docs
 
-LoRA fine-tuning to internalize BOHDI epistemic virtues (humility, calibration, abstention) directly into model weights, replacing the inference-time prompt wrapper.
+This folder is for people who work on the code. For what the repo is and how to
+reproduce the paper, start at the [README](../README.md).
 
-## What is this?
-
-Standard RLHF training rewards confident answers, which reinforces overconfidence in medical LLMs. The [BOHDI wrapper](https://github.com/REDACTED/bodhi-llms) fixes this at inference time, but the underlying weights still behave poorly without it. This project uses supervised fine-tuning with LoRA to bake the virtues into the weights — so the model behaves humbly **without** any wrapper.
-
-## Contents
-
-| File / Folder | What it covers |
+| Page | What it covers |
 |---|---|
-| [getting-started/installation.md](getting-started/installation.md) | Environment setup on Mac, Linux, and Windows |
-| [getting-started/quickstart.md](getting-started/quickstart.md) | Run your first smoke test in under 10 minutes |
-| [reproducibility.md](reproducibility.md) | Full pipeline, expected outputs, and determinism guarantees |
-| [contributing.md](contributing.md) | How to open a PR, run tests, and hygiene checks |
+| [getting-started/installation.md](getting-started/installation.md) | Python envs, Hugging Face access, a check that the install works |
+| [getting-started/quickstart.md](getting-started/quickstart.md) | the smoke test, and how to run one stage alone |
+| [contributing.md](contributing.md) | hooks, tests, repo checks, pull requests, anonymous exports |
+| [../REPRODUCIBILITY.md](../REPRODUCIBILITY.md) | every cell in the paper, its config, and what lives outside the repo |
+| [../docs/CONVENTIONS.md](../docs/CONVENTIONS.md) | the lab rules for this repo and how each one is enforced |
 
-## Base Model
+Two words, used the same way everywhere:
 
-[google/medgemma-27b-text-it](https://huggingface.co/google/medgemma-27b-text-it) — Google's 27B medical Gemma model. Pre-trained on medical data, so LoRA only needs to teach behavioral virtues rather than domain knowledge. Requires accepting Google's Health AI terms on HuggingFace.
+- **BODHI** is the two-pass chain-of-thought prompt that makes the demonstrations
+  (Balanced, Open-minded, Diagnostic, Humble, and Inquisitive; Arslan et al., BMJ
+  Health & Care Informatics, 2026). The repo slug `bohdi-lora` misspells it.
+- **Epistemic behaviors** are the seven graded dimensions: uncertainty
+  acknowledgment, hedging quality, specificity, active inquiry, context-seeking,
+  red-flag identification and scope bounding.
 
-## Evaluation
-
-Four configurations compared on a 200-sample HealthBench Hard holdout:
-
-| Configuration | Measures |
-|---|---|
-| Base model, no wrapper | Baseline overconfidence |
-| Base model + BOHDI wrapper | Wrapper benefit |
-| **LoRA model, no wrapper** | **Core claim: virtues in weights** |
-| LoRA model + BOHDI wrapper | Additive benefit |
-
-Headline metric: does `lora_no_wrapper` match or beat `base_bodhi`?
+The TPU, MaxText and tunix pages that used to live here described a path that this
+branch deleted. They are in git history; KNOWN_ISSUES.md has a short note.

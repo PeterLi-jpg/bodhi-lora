@@ -1,57 +1,48 @@
 # Quickstart
 
-Get the pipeline running in under 10 minutes using the smoke test.
+Finish [installation.md](installation.md) first.
 
-## Prerequisites
-
-Complete [installation.md](installation.md) first.
-
-## Run the smoke test
+## Smoke test
 
 ```bash
-export HF_TOKEN=hf_...
 bash smoke.sh
 ```
 
-This runs the full four-stage pipeline (generate → filter → train → eval) on `gemma-3n-E4B-it` with 3 examples. Expected runtime: under 10 minutes on a single GPU.
-
-If you only want an ungated local wiring check, override the smoke model explicitly:
+This runs generate, filter, train and eval on `google/gemma-3n-E4B-it` with 3 examples,
+in under 10 minutes on one GPU. Without access to gated models, use an ungated model:
 
 ```bash
 SMOKE_MODEL=Qwen/Qwen2.5-0.5B-Instruct bash smoke.sh
 ```
 
+For a larger sample, set `N_EXAMPLES=20`. Do not pipe the run into `tee`: the pipe
+returns the exit code of `tee`, so a failed smoke test looks like a pass. Redirect to a
+file instead:
+
+```bash
+mkdir -p logs && bash smoke.sh > logs/smoke.log 2>&1; echo "smoke exit=$?"
+```
+
 Expected outputs:
 
 ```
-data/sft/smoke/raw_traces.jsonl     # 3 BOHDI traces
-data/sft/smoke/train.jsonl          # graded training examples
-data/sft/smoke/val.jsonl            # validation split
-checkpoints/best/                   # LoRA adapter weights
-eval/smoke/lora.json                # eval scores (mean, brier, ece)
+data/sft/smoke/raw_traces.jsonl   3 traces
+data/sft/smoke/train.jsonl        graded training examples
+data/sft/smoke/val.jsonl          validation split
+eval/smoke/lora.json              eval summary
 ```
 
-If all four stages complete without error, your environment is correctly set up.
+Fix any failing stage before you start a real run.
 
-## Run on a larger sample
+## Real runs
 
-```bash
-N_EXAMPLES=20 bash smoke.sh
-```
+One added cell, or the whole grid, is in [REPRODUCIBILITY.md](../../REPRODUCIBILITY.md)
+section 5. On a slurm cluster, `bash run_all.sh` submits the stages as a dependency chain
+using the scripts in `slurm/`.
 
-## Run the full pipeline (cluster)
+## One stage alone
 
-Once smoke passes, submit the full Slurm job chain:
-
-```bash
-bash run_all.sh
-```
-
-See [reproducibility.md](../reproducibility.md) for expected runtimes, outputs, and how to monitor jobs.
-
-## Run the eval only (no training)
-
-To evaluate a checkpoint that already exists:
+Evaluate an adapter that already exists:
 
 ```bash
 python scripts/eval_healthbench.py \
@@ -61,6 +52,5 @@ python scripts/eval_healthbench.py \
     --output eval/lora_no_wrapper.json
 ```
 
-## Troubleshooting
-
-See the [Troubleshooting](../reproducibility.md#7-troubleshooting) section in `reproducibility.md` for common errors.
+Resume an interrupted generation with `scripts/generate_traces.py --resume-from <file>`;
+it skips the prompt ids it already wrote.

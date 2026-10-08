@@ -1,158 +1,73 @@
-# Contributing to BOHDI-LoRA
+# Contributing
 
-This guide covers environment setup on Mac, Linux, and Windows, how to run the pipeline, and how to open a pull request.
+How to set up a clone, what to run before a pull request, and how review copies are
+made. The lab rules behind these steps are in [docs/CONVENTIONS.md](../docs/CONVENTIONS.md).
 
-## Table of Contents
-
-- [Environment Setup](#environment-setup)
-- [Running the Smoke Test](#running-the-smoke-test)
-- [Running Tests](#running-tests)
-- [Secret Hygiene](#secret-hygiene)
-- [Pull Request Process](#pull-request-process)
-- [Project Layout](#project-layout)
-
----
-
-## Environment Setup
-
-### Prerequisites
-
-- Dev box / GPU: Python 3.10, 3.11, or 3.12 (3.11 recommended).
-- TPU (v6e): Python 3.11 required, provisioned automatically by `tpu/setup_tpu.sh` via apt + venv at `~/.venv-py311`.
-- [Conda](https://docs.conda.io/en/latest/miniconda.html) (recommended) or `pip` + `venv`
-- A HuggingFace account with access to [google/medgemma-27b-text-it](https://huggingface.co/google/medgemma-27b-text-it) (accept Google Health AI terms on the model card)
-- GPU with ≥ 40 GB VRAM for the full model (A100/H100). For the smoke test, a smaller GPU or CPU is fine.
-
-### Mac / Linux
+## Set up a clone
 
 ```bash
-git clone https://github.com/REDACTED-FOR-ANONYMOUS-REVIEW/bohdi-lora.git
+git clone https://github.com/PeterLi-jpg/bohdi-lora.git
 cd bohdi-lora
-
-# create and activate the conda environment
-conda create -n bohdi python=3.11 -y
-conda activate bohdi
-
-# install all dependencies
-bash setup.sh
-
-# set your HuggingFace token
-export HF_TOKEN=hf_...
+git config core.hooksPath hooks
 ```
 
-`setup.sh` prints a loud warning if you run it outside an isolated env, and Conda `base` is treated as shared here too because it is a common source of vague dependency conflicts. It also runs `python -m pip check` after install so broken environments fail clearly instead of much later in training.
+Then follow [getting-started/installation.md](getting-started/installation.md).
 
-### Windows
+The last line activates the two hooks in `hooks/`. Git does not run hooks from a
+tracked folder until you point `core.hooksPath` at it, so every clone needs it once.
 
-Use [WSL2](https://learn.microsoft.com/en-us/windows/wsl/install) (Ubuntu) and follow the Mac/Linux steps above. Native Windows is not tested.
+- `hooks/commit-msg` rejects a commit message that names a coding assistant or carries
+  its trailer (`Co-Authored-By` for a tool, "Generated with").
+- `hooks/pre-push` rejects a push of a `claude/*` or `worktree-agent*` branch, a pushed
+  commit whose message fails `commit-msg`, and a commit whose author or committer email
+  is a machine hostname (`*.local`). That last one means git identity was never set.
+  Deleting a scratch branch on the remote is allowed.
 
-Alternatively, use Git Bash with Conda:
+## Before a pull request
 
 ```bash
-git clone https://github.com/REDACTED-FOR-ANONYMOUS-REVIEW/bohdi-lora.git
-cd bohdi-lora
-conda create -n bohdi python=3.11 -y
-conda activate bohdi
-bash setup.sh
-export HF_TOKEN=hf_...
+pytest tests/                         # no GPU needed
+bash scripts/check_no_secrets.sh      # Hugging Face, OpenAI and AWS token shapes
+python scripts/check_doc_paths.py     # every path a doc names must exist
 ```
 
----
+CI runs the same checks, plus `py_compile` on `scripts/`, a YAML check on `configs/`
+and shellcheck. Optional: `pip install pre-commit && pre-commit install` runs the
+whitespace, large-file and secret checks on each commit.
 
-## Running the Smoke Test
+## Pull requests
 
-The smoke test runs the full pipeline end-to-end on a small model (`gemma-3n-E4B-it`) to catch setup issues before committing cluster time.
+1. Branch from the mainline with a short descriptive name. Scratch branches stay local.
+2. One logical change per commit. The subject line says what changed, for example
+   `scripts: compute seed-level paired t for all dims`.
+3. If you change code a doc describes, change the doc in the same pull request.
+4. If you add a number to the paper, add the script that makes it. `make numbers` must
+   regenerate it.
+5. Open the pull request against the mainline. CI must pass.
+
+## Results and data
+
+- Commit result summaries and per-seed eval JSON. Do not commit raw generations,
+  adapter weights, optimizer states or tokenizers; `.gitignore` keeps them out.
+- Record each run with `scripts/run_manifest.py`.
+- Never put a rater's name in a tracked file, a file name or a commit message. Raters
+  are AnonClinician1-4. The key from number to person stays with the study coordinator.
+
+## Review copies
+
+Reviewers never get this repo or its history. Make a squashed, anonymized copy:
 
 ```bash
-bash smoke.sh
+scripts/export_anonymous.sh /path/outside/repo/bodhi-review \
+    --deny-file /path/outside/repo/names.txt
 ```
 
-Expected runtime: under 10 minutes on a single GPU. If this passes, the full pipeline should work. If you do not have HF access yet and only want a local wiring check, run `SMOKE_MODEL=Qwen/Qwen2.5-0.5B-Instruct bash smoke.sh`.
-
----
-
-## Running the Full Pipeline
-
-Jobs are submitted as a Slurm dependency chain:
-
-```bash
-bash run_all.sh
-```
-
-Outputs are archived under `results/<date>_<config>_seed<N>/`. See [reproducibility.md](reproducibility.md) for expected outputs and troubleshooting.
-
----
-
-## Running Tests
-
-Tests live in `tests/`. They cover pure-Python logic and do not require a GPU.
-
-```bash
-# install test dependencies
-pip install pytest
-
-# run all tests
-pytest tests/ -v
-```
-
-Tests that require `matplotlib` are automatically skipped if it is not installed. Pure-logic tests that touch `torch` / `transformers` paths use mocks, so they still run in CI.
-
-To run the full suite against the real ML stack as well, install the complete dependencies first:
-
-```bash
-pip install -r requirements.txt
-pytest tests/ -v
-```
-
----
-
-## Secret Hygiene
-
-Before opening a PR, run the secret scanner to make sure no tokens are accidentally committed:
-
-```bash
-bash scripts/check_no_secrets.sh
-```
-
-This scans all tracked files for HuggingFace (`hf_...`), OpenAI (`sk-...`), and AWS (`AKIA...`) token shapes. Keep your `HF_TOKEN` in a local `.env` file (gitignored) and never hard-code it.
-
----
-
-## Pull Request Process
-
-1. Fork the repo and create a branch: `git checkout -b your-name/short-description`
-2. Make your changes, add tests if relevant
-3. Run `bash scripts/check_no_secrets.sh` and `pytest tests/ -v`
-4. Open a PR against `main` — CI will run automatically (syntax check, shellcheck, YAML validation, pytest)
-5. Address any review comments
-
-Keep PRs focused. One issue per PR makes review faster. If you are unsure what to work on, check the [open issues](https://github.com/REDACTED-FOR-ANONYMOUS-REVIEW/bohdi-lora/issues).
-
----
-
-## Project Layout
-
-```
-bohdi-lora/
-├── configs/          # Training hyperparameters (full + smoke)
-├── data/
-│   ├── raw/          # HealthBench eval IDs
-│   └── sft/          # Generated and filtered training data
-├── eval/             # Evaluation outputs (gitignored)
-├── results/          # Per-run archived outputs (gitignored)
-├── scripts/          # Generation, filtering, training, and eval scripts
-├── slurm/            # SBATCH job scripts for cluster execution
-├── tests/            # Pytest test suite
-├── smoke.sh          # End-to-end smoke test (<10 min)
-├── run_all.sh        # Full pipeline slurm dependency chain
-├── setup.sh          # One-time environment setup
-├── contributions/    # Docs, setup, and reproducibility guides
-├── KNOWN_ISSUES.md
-└── requirements.txt
-```
-
----
+The script copies the tracked files of `HEAD`, redacts author names, handles, emails,
+cloud project and bucket names, host names and home paths, and then scans the copy. It
+exits 1 and makes no git commit if anything identifying is left. The deny file lists
+extra tokens to block (rater and co-author names), one per line; keep it outside the
+repo.
 
 ## Questions
 
-Open a [GitHub Issue](https://github.com/REDACTED-FOR-ANONYMOUS-REVIEW/bohdi-lora/issues) or ping `@REDACTED-FOR-ANONYMOUS-REVIEW` in the group chat.
+Open a GitHub issue.
