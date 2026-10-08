@@ -1147,6 +1147,10 @@
 \newcommand{\statKappaLoRACoT}{\ensuremath{0.42}} % results_modal/irr/kappa_results.json: Cohen's kappa, physician vs Llama grader
 \newcommand{\statKappaLoRACoTN}{127} % criterion rows with a pass/fail grade from both
 \newcommand{\statKappaLoRACoTCI}{\ensuremath{[+0.26,\,+0.54]}} % prompt-clustered bootstrap 95% CI for kappa
+\newcommand{\statKappaFilter}{\ensuremath{0.30}} % results_modal/irr/kappa_results.json: Cohen's kappa, physician vs Qwen filter grader
+\newcommand{\statKappaFilterN}{125} % filter-trace criterion rows with a pass/fail grade from both
+\newcommand{\statKappaFilterCI}{\ensuremath{[+0.05,\,+0.48]}} % prompt-clustered bootstrap 95% CI for kappa
+\newcommand{\statKappaFilterPrompts}{10} % distinct traces behind the filter kappa rows
 \newcommand{\statKappaPrompts}{10} % distinct prompts behind the kappa rows
 \newcommand{\statKappaRaters}{1} % physicians whose grades were returned
 \newcommand{\statKappaRowsTotal}{662} % criterion rows in the grading sheet
@@ -1270,3 +1274,6 @@
 \newcommand{\statPostedClinicianPrompts}{14} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): HealthBench-Hard prompts whose speaker says they are a clinician
 \newcommand{\statPostedMedQAPreambleAI}{99} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): MedQA base active inquiry (percent) in the run with the ask-first preamble
 \newcommand{\statPostedAggDropPBelow}{\ensuremath{0.02}} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): posted bound on the paired t p of the six aggregate drops
+\newcommand{\statPostedAskersGapPositive}{3} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): cells where LoRA's askers minus non-askers aggregate gap is positive_cells
+\newcommand{\statPostedAskersGapNegative}{3} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): cells where LoRA's askers minus non-askers aggregate gap is negative_cells
+\newcommand{\statPostedAskersGapNearZero}{1} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): cells where LoRA's askers minus non-askers aggregate gap is near_zero_cells

@@ -170,6 +170,9 @@ def test_kappa_and_rebuttal_macros(generated):
     d = generated[1]
     assert _macro(d, "KappaAll") == "0.35"
     assert _macro(d, "KappaAllN") == "509"
+    # The pre-registered comparison was against the Qwen filter grader (10 filter traces).
+    assert _macro(d, "KappaFilter") == "0.30"
+    assert _macro(d, "KappaFilterN") == "125"
     assert _macro(d, "LeakagePctLoRACoT") == "54.6"
     assert _macro(d, "AskOddsRatioPrimaryLoRA") == "1.54"
 

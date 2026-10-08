@@ -980,6 +980,16 @@ def kappa_section(path: Path, out, macros):
         macros.add(f"Kappa{name}N", fmt_int(r["n"]), "criterion rows with a pass/fail grade from both")
         macros.add(f"Kappa{name}CI", fmt_ci(r["ci95"][0], r["ci95"][1], 2),
                    "prompt-clustered bootstrap 95% CI for kappa")
+    # The pre-registered check was on the filter grader (Qwen2.5-14B); its rows are the 10
+    # filter traces in the same sheet.
+    fq = k["llm_vs_physician"].get("filter_qwen", {}).get("all")
+    if fq:
+        macros.add("KappaFilter", fmt(fq["kappa"], 2),
+                   "results_modal/irr/kappa_results.json: Cohen's kappa, physician vs Qwen filter grader")
+        macros.add("KappaFilterN", fmt_int(fq["n"]), "filter-trace criterion rows with a pass/fail grade from both")
+        macros.add("KappaFilterCI", fmt_ci(fq["ci95"][0], fq["ci95"][1], 2),
+                   "prompt-clustered bootstrap 95% CI for kappa")
+        macros.add("KappaFilterPrompts", fmt_int(fq["n_prompts"]), "distinct traces behind the filter kappa rows")
     macros.add("KappaPrompts", fmt_int(ev["all"]["n_prompts"]), "distinct prompts behind the kappa rows")
     macros.add("KappaRaters", fmt_int(k["n_raters"]), "physicians whose grades were returned")
     macros.add("KappaRowsTotal", fmt_int(k["rows"]["total"]), "criterion rows in the grading sheet")
@@ -1275,6 +1285,12 @@ def generality_section(posted: dict, generated: dict | None, out, macros):
     if "aggregate_drop_tests" in an:
         macros.add("PostedAggDropPBelow", fmt(an["aggregate_drop_tests"]["paired_t_two_sided_p_below"], 2),
                    f"{SRC_POSTED}: posted bound on the paired t p of the six aggregate drops")
+    if "askers_minus_non_askers" in an:
+        v = an["askers_minus_non_askers"]
+        for key, tok in (("positive_cells", "Positive"), ("negative_cells", "Negative"),
+                         ("near_zero_cells", "NearZero")):
+            macros.add(f"PostedAskersGap{tok}", fmt_int(v[key]),
+                       f"{SRC_POSTED}: cells where LoRA's askers minus non-askers aggregate gap is {key}")
     res["sources"] = {c["id"]: c["source"] for c in res["cells"]}
     out["generality"] = res
     return res
