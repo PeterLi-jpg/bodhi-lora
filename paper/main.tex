@@ -504,12 +504,14 @@ the Holm family). Against Base, LoRA+\bodhi{} is level on the 0--2 score
 aggregate score of LoRA+\bodhi{} differs from LoRA by \statHealthBenchLoRACoTvsLoRADiff{}
 (\statHealthBenchLoRACoTvsLoRACI).
 
-A post hoc analysis points to format leakage. In \statLeakagePctLoRACoT\% of LoRA+\bodhi{}
-responses, the response repeats the headers of the Pass~1 analysis. In the other conditions, the
-share is \statLeakagePctBase\% to \statLeakagePctBaseCoT\%
-(Figure~\ref{fig:interference} shows one case). Leaked responses score \statRedFlagLeaked{} on
-red-flag identification ($n = \statLeakageNLoRACoT$). The others score \statRedFlagClean{} ($n =
-\statLeakageNCleanLoRACoT$), close to LoRA. We defined the leakage split by a property of the
+A post hoc analysis points to format leakage. A response leaks when it has at least two of nine
+markers of the analysis format: the seven Pass~1 headers, ``differential'' and ``scope of''.
+\statLeakagePctLoRACoT\% of LoRA+\bodhi{} responses leak, against \statLeakagePctBase\% to
+\statLeakagePctBaseCoT\% in the other conditions (Figure~\ref{fig:interference} shows one case).
+Leaked responses score \statRedFlagLeaked{} on red-flag identification ($n =
+\statLeakageNLoRACoT$). The others score \statRedFlagClean{} ($n = \statLeakageNCleanLoRACoT$),
+and LoRA scores \statRedFlagLoRA{}. The seven Pass~1 headers alone give nearly the same split
+(Appendix~\ref{app:robustness}). We defined the leakage split by a property of the
 format, after we saw the results. So leakage may also follow prompt difficulty. We do not claim
 that the adapter and the protocol compete for capacity. In practice, the adapter should run
 without the protocol.
@@ -1148,6 +1150,16 @@ the rate on self-contained prompts. LoRA $-$ Base on this index is
 \statDiscriminationThemeOnlyLoRAvsBase{} percentage points
 (\statDiscriminationThemeOnlyLoRAvsBaseCI) with the second. Both intervals include zero, so we do
 not claim that the adapter asks selectively.
+
+\paragraph{Format leakage with the Pass~1 headers only.} The leakage rule of
+\S\ref{sec:interference} counts nine markers. Two of them, ``differential'' and ``scope of'', are
+not Pass~1 headers. They come from the Pass~2 instructions and the SOAP-note drafts that leaked
+responses often continue into. With the seven Pass~1 headers alone and the same threshold of two,
+\statLeakagePassOnePctLoRACoT\% of LoRA+\bodhi{} responses leak, against
+\statLeakagePassOnePctBase\% to \statLeakagePassOnePctBaseCoT\% in the other conditions. Leaked
+responses score \statRedFlagLeakedPassOne{} on red-flag identification ($n =
+\statLeakagePassOneNLoRACoT$), and the others score \statRedFlagCleanPassOne{} ($n =
+\statLeakagePassOneNCleanLoRACoT$). Our posted replies used the nine-marker rule.
 
 \paragraph{Questions without the evaluator.} A pattern count, with no grader, finds a question to
 the user in \statSecondPersonPctBase\% of Base responses and \statSecondPersonPctLoRA\% of LoRA

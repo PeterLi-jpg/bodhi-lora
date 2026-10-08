@@ -113,7 +113,8 @@ Inputs: `RM` is `results_modal/seed_*/` (the four `<condition>.json` files and
 | Red-flag rate -20.6 points [-29.8, -11.4], p = 0.0034 | `\statRedFlagRateLoRACoTvsLoRADiff`, `...CI`, `...P` | `compare_conditions` | RM | computed |
 | Against Base: level on the score, lower on the rate | `\statRedFlagLoRACoTvsBaseDiff`, `...CI`, `\statRedFlagRateLoRACoTvsBaseDiff`, `...CI` | `compare_conditions` | RM | computed |
 | Aggregate LoRA+BODHI minus LoRA -0.008 [-0.020, +0.004] | `\statHealthBenchLoRACoTvsLoRADiff`, `...CI` | `compare_conditions` | RM | computed |
-| Leakage 54.6% against 0.2% to 3.0% | `\statLeakagePct<Cond>` | `rebuttal_section` | `rebuttal/results/interference_mechanism.json` | computed |
+| Leakage 54.6% against 0.2% to 3.0%: at least 2 of 9 analysis-format markers (the 7 Pass 1 headers, "differential", "scope of") | `\statLeakagePct<Cond>` | `rebuttal_section` | `rebuttal/results/interference_mechanism.json` | computed |
+| Seven Pass 1 headers only (Appendix H): 53.2% against 0.0% to 0.8%; red flag 1.32 (n = 494) and 1.73 (n = 434) | `\statLeakagePassOnePct<Cond>`, `\statRedFlagLeakedPassOne`, `\statRedFlagCleanPassOne`, `\statLeakagePassOneN...` | `rebuttal_section` | `rebuttal/results/interference_mechanism.json` | computed |
 | Red flag 1.33 (n = 507) leaked, 1.73 (n = 421) not leaked | `\statRedFlagLeaked`, `\statRedFlagClean`, `\statLeakageNLoRACoT`, `\statLeakageNCleanLoRACoT` | `rebuttal_section` | `rebuttal/results/interference_mechanism.json` | computed |
 
 ## Discussion

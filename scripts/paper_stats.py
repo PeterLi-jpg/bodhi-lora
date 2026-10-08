@@ -1048,12 +1048,24 @@ def rebuttal_section(rdir: Path, out, macros):
         res["interference_mechanism"] = d
         for cfg in CONDITIONS:
             macros.add(f"LeakagePct{COND_TOKEN[cfg]}", fmt(100 * d["configs"][cfg]["leaked_rate"], 1),
-                       "rebuttal/results/interference_mechanism.json: share of scored responses with >=2 Pass-1 headers")
+                       "rebuttal/results/interference_mechanism.json: share of scored responses with >=2 of "
+                       "9 analysis-format markers (7 Pass-1 headers, DIFFERENTIAL, SCOPE OF/BOUNDAR)")
+            macros.add(f"LeakagePassOnePct{COND_TOKEN[cfg]}",
+                       fmt(100 * d["configs"][cfg]["leaked_rate_pass1_headers"], 1),
+                       "same rule with the 7 Pass-1 headers only")
         dec = d["decisive"]
         macros.add("LeakageNLoRACoT", fmt_int(dec["n_leaked"]), "leaked LoRA+CoT responses")
         macros.add("LeakageNCleanLoRACoT", fmt_int(dec["n_clean"]), "non-leaked LoRA+CoT responses")
         macros.add("RedFlagLeaked", fmt(dec["lora_bodhi_leaked_red_flag"], 2), "red-flag (0-2), leaked LoRA+CoT")
         macros.add("RedFlagClean", fmt(dec["lora_bodhi_clean_red_flag"], 2), "red-flag (0-2), non-leaked LoRA+CoT")
+        dp1 = d["decisive_pass1_headers"]
+        macros.add("LeakagePassOneNLoRACoT", fmt_int(dp1["n_leaked"]), "leaked LoRA+CoT responses, 7 Pass-1 headers only")
+        macros.add("LeakagePassOneNCleanLoRACoT", fmt_int(dp1["n_clean"]),
+                   "non-leaked LoRA+CoT responses, 7 Pass-1 headers only")
+        macros.add("RedFlagLeakedPassOne", fmt(dp1["lora_bodhi_leaked_red_flag"], 2),
+                   "red-flag (0-2), leaked LoRA+CoT, 7 Pass-1 headers only")
+        macros.add("RedFlagCleanPassOne", fmt(dp1["lora_bodhi_clean_red_flag"], 2),
+                   "red-flag (0-2), non-leaked LoRA+CoT, 7 Pass-1 headers only")
     ms = rdir / "mimicry_split.json"
     if ms.is_file():
         d = json.load(open(ms))

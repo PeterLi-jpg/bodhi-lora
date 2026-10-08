@@ -35,8 +35,12 @@ CONFIG_DISPLAY = {
 }
 CONFIG_ORDER = ["base_no_wrapper", "base_bodhi", "lora_no_wrapper", "lora_bodhi"]
 
-# Canonical BODHI Pass-1 analysis-format section headers. The internal analysis
-# pass emits these numbered/structured sections; a patient-facing answer does not.
+# Analysis-format markers. The first seven are the seven Pass-1 section headers of
+# bodhi-llm 0.1.4 (bodhi/prompts.py, render_analysis_prompt). The last two are not
+# Pass-1 headers: "differential" appears in the Pass-2 instructions, and both appear in
+# the SOAP-note drafts that leaked responses often continue into. The posted 54.6%
+# used all nine. PASS1_RE gives the same rule with the seven headers only (audit
+# NUM-4), reported next to it.
 LEAK_MARKERS = [
     r"TASK TYPE",
     r"KEY UNCERTAINT",
@@ -49,16 +53,17 @@ LEAK_MARKERS = [
     r"SCOPE (OF|BOUNDAR)",
 ]
 LEAK_RE = [re.compile(m, re.IGNORECASE) for m in LEAK_MARKERS]
+PASS1_RE = LEAK_RE[:7]
 
 
-def count_leak_markers(text):
-    return sum(1 for r in LEAK_RE if r.search(text or ""))
+def count_leak_markers(text, patterns=LEAK_RE):
+    return sum(1 for r in patterns if r.search(text or ""))
 
 
-def is_leaked(text, threshold=2):
-    """A response 'leaks' the Pass-1 analysis format if >= threshold canonical
-    analysis-section headers appear (a patient-facing answer has ~0)."""
-    return count_leak_markers(text) >= threshold
+def is_leaked(text, threshold=2, patterns=LEAK_RE):
+    """A response 'leaks' the analysis format if >= threshold markers appear
+    (a patient-facing answer has ~0)."""
+    return count_leak_markers(text, patterns) >= threshold
 
 
 def load(config_name):
@@ -91,6 +96,7 @@ def load(config_name):
                     "red_flag": rf,
                     "len": len(resp),
                     "leaked": is_leaked(resp),
+                    "leaked_pass1": is_leaked(resp, patterns=PASS1_RE),
                     "n_markers": count_leak_markers(resp),
                 })
     return rows
@@ -121,7 +127,9 @@ def main():
         lens = sorted(r["len"] for r in rows)
         med = lens[len(lens)//2] if lens else 0
         print(f"{CONFIG_DISPLAY[c]:14s} {n:5d} {100*leak:7.1f}% {rf:12.3f} {med:8d}")
-        out["configs"][c] = {"n": n, "leaked_rate": leak, "red_flag_mean": rf, "len_median": med}
+        out["configs"][c] = {"n": n, "leaked_rate": leak, "red_flag_mean": rf, "len_median": med,
+                             "leaked_rate_pass1_headers": mean([1.0 if r["leaked_pass1"] else 0.0
+                                                                for r in rows])}
     print()
 
     # --- The decisive cut: within LoRA+Wrapper, split leaked vs non-leaked ---
@@ -147,6 +155,17 @@ def main():
         "n_clean": len(clean), "n_leaked": len(leaked),
         "len_median_clean": med_len(clean), "len_median_leaked": med_len(leaked),
     }
+    # The same split with the seven Pass-1 headers only.
+    leaked1 = [r for r in lb if r["leaked_pass1"]]
+    clean1 = [r for r in lb if not r["leaked_pass1"]]
+    out["decisive_pass1_headers"] = {
+        "lora_bodhi_clean_red_flag": mean([r["red_flag"] for r in clean1]),
+        "lora_bodhi_leaked_red_flag": mean([r["red_flag"] for r in leaked1]),
+        "n_clean": len(clean1), "n_leaked": len(leaked1),
+    }
+    print(f"  Pass-1 headers only: leaked {out['decisive_pass1_headers']['lora_bodhi_leaked_red_flag']:.3f} "
+          f"(n={len(leaked1)}), non-leaked {out['decisive_pass1_headers']['lora_bodhi_clean_red_flag']:.3f} "
+          f"(n={len(clean1)})")
     print()
 
     # --- Length control: does red-flag fall with length WITHIN non-leaked? ---
@@ -176,7 +195,7 @@ def main():
     if leaked and clean and l_rf < c_rf - 0.2 and abs(c_rf - lora_rf) < 0.25:
         print("  Red-flag collapses on the LEAKED (Pass-1-format) responses and stays ~LoRA-level")
         print("  on the NON-leaked ones. The drop tracks FORMAT LEAKAGE, not length/truncation.")
-        print("  -> supports the paper's competition mechanism; refutes attention-dilution as the cause.")
+        print("  -> fits the format-leakage account (post hoc); attention dilution does not explain it.")
     else:
         print("  Pattern is weaker than expected on this cut; report the numbers as-is.")
 

@@ -4,25 +4,29 @@
       "n": 998,
       "leaked_rate": 0.002004008016032064,
       "red_flag_mean": 1.5220440881763526,
-      "len_median": 3574
+      "len_median": 3574,
+      "leaked_rate_pass1_headers": 0.0
     },
     "base_bodhi": {
       "n": 947,
       "leaked_rate": 0.029567053854276663,
       "red_flag_mean": 1.6599788806758184,
-      "len_median": 3629
+      "len_median": 3629,
+      "leaked_rate_pass1_headers": 0.008447729672650475
     },
     "lora_no_wrapper": {
       "n": 985,
       "leaked_rate": 0.018274111675126905,
       "red_flag_mean": 1.6720812182741116,
-      "len_median": 3647
+      "len_median": 3647,
+      "leaked_rate_pass1_headers": 0.008121827411167513
     },
     "lora_bodhi": {
       "n": 928,
       "leaked_rate": 0.5463362068965517,
       "red_flag_mean": 1.511853448275862,
-      "len_median": 6217
+      "len_median": 6217,
+      "leaked_rate_pass1_headers": 0.5323275862068966
     }
   },
   "decisive": {
@@ -33,6 +37,12 @@
     "n_leaked": 507,
     "len_median_clean": 3457,
     "len_median_leaked": 8564
+  },
+  "decisive_pass1_headers": {
+    "lora_bodhi_clean_red_flag": 1.728110599078341,
+    "lora_bodhi_leaked_red_flag": 1.3218623481781377,
+    "n_clean": 434,
+    "n_leaked": 494
   },
   "length_control_clean": [
     {

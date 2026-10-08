@@ -1166,14 +1166,22 @@
 \newcommand{\statKappaRowsTotal}{662} % criterion rows in the grading sheet
 \newcommand{\statKappaRowsEval}{532} % criterion rows from Llama-graded eval responses
 \newcommand{\statKappaUnsureEval}{23} % eval rows graded unsure, excluded from kappa
-\newcommand{\statLeakagePctBase}{\ensuremath{0.2}} % rebuttal/results/interference_mechanism.json: share of scored responses with >=2 Pass-1 headers
-\newcommand{\statLeakagePctBaseCoT}{\ensuremath{3.0}} % rebuttal/results/interference_mechanism.json: share of scored responses with >=2 Pass-1 headers
-\newcommand{\statLeakagePctLoRA}{\ensuremath{1.8}} % rebuttal/results/interference_mechanism.json: share of scored responses with >=2 Pass-1 headers
-\newcommand{\statLeakagePctLoRACoT}{\ensuremath{54.6}} % rebuttal/results/interference_mechanism.json: share of scored responses with >=2 Pass-1 headers
+\newcommand{\statLeakagePctBase}{\ensuremath{0.2}} % rebuttal/results/interference_mechanism.json: share of scored responses with >=2 of 9 analysis-format markers (7 Pass-1 headers, DIFFERENTIAL, SCOPE OF/BOUNDAR)
+\newcommand{\statLeakagePassOnePctBase}{\ensuremath{0.0}} % same rule with the 7 Pass-1 headers only
+\newcommand{\statLeakagePctBaseCoT}{\ensuremath{3.0}} % rebuttal/results/interference_mechanism.json: share of scored responses with >=2 of 9 analysis-format markers (7 Pass-1 headers, DIFFERENTIAL, SCOPE OF/BOUNDAR)
+\newcommand{\statLeakagePassOnePctBaseCoT}{\ensuremath{0.8}} % same rule with the 7 Pass-1 headers only
+\newcommand{\statLeakagePctLoRA}{\ensuremath{1.8}} % rebuttal/results/interference_mechanism.json: share of scored responses with >=2 of 9 analysis-format markers (7 Pass-1 headers, DIFFERENTIAL, SCOPE OF/BOUNDAR)
+\newcommand{\statLeakagePassOnePctLoRA}{\ensuremath{0.8}} % same rule with the 7 Pass-1 headers only
+\newcommand{\statLeakagePctLoRACoT}{\ensuremath{54.6}} % rebuttal/results/interference_mechanism.json: share of scored responses with >=2 of 9 analysis-format markers (7 Pass-1 headers, DIFFERENTIAL, SCOPE OF/BOUNDAR)
+\newcommand{\statLeakagePassOnePctLoRACoT}{\ensuremath{53.2}} % same rule with the 7 Pass-1 headers only
 \newcommand{\statLeakageNLoRACoT}{507} % leaked LoRA+CoT responses
 \newcommand{\statLeakageNCleanLoRACoT}{421} % non-leaked LoRA+CoT responses
 \newcommand{\statRedFlagLeaked}{\ensuremath{1.33}} % red-flag (0-2), leaked LoRA+CoT
 \newcommand{\statRedFlagClean}{\ensuremath{1.73}} % red-flag (0-2), non-leaked LoRA+CoT
+\newcommand{\statLeakagePassOneNLoRACoT}{494} % leaked LoRA+CoT responses, 7 Pass-1 headers only
+\newcommand{\statLeakagePassOneNCleanLoRACoT}{434} % non-leaked LoRA+CoT responses, 7 Pass-1 headers only
+\newcommand{\statRedFlagLeakedPassOne}{\ensuremath{1.32}} % red-flag (0-2), leaked LoRA+CoT, 7 Pass-1 headers only
+\newcommand{\statRedFlagCleanPassOne}{\ensuremath{1.73}} % red-flag (0-2), non-leaked LoRA+CoT, 7 Pass-1 headers only
 \newcommand{\statDiscriminationPrimaryLoRAvsBase}{\ensuremath{+8.4}} % rebuttal/results/mimicry_split.json [primary_theme_or_rubric]: LoRA minus Base discrimination (pp)
 \newcommand{\statDiscriminationPrimaryLoRAvsBaseCI}{\ensuremath{[-1.2,\,+17.9]}} % prompt-clustered bootstrap 95% CI (pp)
 \newcommand{\statAskOddsRatioPrimaryBase}{\ensuremath{1.16}} % [primary_theme_or_rubric] odds ratio of asking, context-dependent vs self-contained

@@ -55,3 +55,16 @@ def test_golden_values_on_committed_results(tmp_path, monkeypatch):
               for c in ("base_no_wrapper", "base_bodhi", "lora_no_wrapper")]
     assert others == [0.2, 3.0, 1.8]
     assert [q["n"] for q in d["length_control_clean"]] == [105, 105, 105, 106]
+    # The seven Pass-1 headers alone (audit NUM-4): nearly the same split.
+    assert round(100 * lb["leaked_rate_pass1_headers"], 1) == 53.2
+    p1 = d["decisive_pass1_headers"]
+    assert (p1["n_leaked"], p1["n_clean"]) == (494, 434)
+    assert round(p1["lora_bodhi_leaked_red_flag"], 2) == 1.32
+    assert round(p1["lora_bodhi_clean_red_flag"], 2) == 1.73
+
+
+def test_pass1_rule_ignores_the_two_extra_markers():
+    im = _load()
+    soap = "DIFFERENTIAL DIAGNOSIS: flu vs cold. SCOPE OF this advice: general."
+    assert im.is_leaked(soap)
+    assert not im.is_leaked(soap, patterns=im.PASS1_RE)
