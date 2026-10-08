@@ -371,7 +371,7 @@ def main():
         if dup:
             fail(report, args.json_out,
                  f"DATA LEAKAGE: {len(dup)} training prompts repeat a Hard prompt's text")
-        print(f"leakage (Hard text):  clean — 0 training prompts repeat a Hard prompt's text")
+        print("leakage (Hard text):  clean, 0 training prompts repeat a Hard prompt's text")
 
     errors = []
 

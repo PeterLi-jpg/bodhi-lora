@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# run_baselines.sh — inference-time prompt baselines for one cell (EVAL-8).
+# run_baselines.sh: inference-time prompt baselines for one cell (EVAL-8).
 #
 # Runs each baseline of scripts/baselines/prompts.py on the unchanged base
 # model: base_clarify (a clarifying-question system prompt) and
