@@ -393,3 +393,17 @@ paper lanes must decide on each one.
   claim cannot be checked until the raw outputs are synced (PROV-1).
 - **Second-person questions, 18.4% against 39.6%.** `FzpA_2_followup.md:13`. No script or
   output exists. A simple regex gives 17.9% and 37.2% (audit PROV-7).
+- **What the physician check covers.** `FzpA_1_rebuttal.md:40` reports kappa = 0.35 right after
+  the dimension anchors, as if the physician check graded the seven dimensions. It grades
+  HealthBench rubric criteria (`scripts/make_irr_excel.py`, `scripts/compute_irr_kappa.py`).
+  The paper now says that no physician graded the seven dimensions (a59cb82).
+- **The antidepressant example.** `FzpA_2_followup.md:21` says the adapter asks about "current
+  medications and conditions". The answer in `results_modal/seed_99/lora_no_wrapper.json`
+  (prompt `2c915b71`) does not. The paper lists only the questions it asks (5c2e9b0).
+- **The hedging scale.** `FzpA_2_followup.md:27` says the grader's scale is "0 for a bare
+  referral". The grader prompt gives the two ends but ties no score to them, and the grader
+  scored most flagged blanket disclaimers 2 on hedging. The paper says so (a59cb82).
+- **Context-seeking needs a question for a 2.** The paper's earlier text, and the grader
+  prompt, say a 2 needs a direct question. The grader gave 2 with no direct question to most
+  Base answers it scored 2 (`\statContextSeekingTwoNoQuestionPctBase`). The paper reports
+  the rate (a59cb82).
