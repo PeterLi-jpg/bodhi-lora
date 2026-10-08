@@ -14,6 +14,12 @@ swap in #163; filter_traces.py uses Qwen-14B). No OpenAI API.
 
 Operates on already-generated response files. Does not re-run inference.
 
+Grader settings are flags with the submitted eval's values as defaults
+(max_model_len 4096, max_num_seqs 32, 32 client threads, 900 s timeout,
+meta-llama/Llama-3.1-8B-Instruct at its pinned revision). The output JSON
+carries them under run_metadata, and <output stem>.manifest.json holds the
+full record. --dry-run stubs the grader and writes <output stem>.dryrun.json.
+
 Usage:
     python scripts/eval_epistemic.py \
         --response-files results/seed_42/eval/base_no_wrapper.json \
@@ -39,8 +45,9 @@ from tqdm import tqdm
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from _vllm_engine import VLLMEngine
+from _vllm_engine import DryRunEngine, VLLMEngine
 from scripts.filter_traces import LocalGrader, parse_json_response
+import run_manifest as rmf
 
 DATA_DIR = Path("data/raw")
 HEALTHBENCH_HARD_URL = (
@@ -146,7 +153,18 @@ def ensure_healthbench_hard(path: Path) -> Path:
     return path
 
 
-def load_prompts_by_id(healthbench_path: Path) -> dict:
+# Dry-run grader reply: a complete, valid grade so the parse and aggregate code runs.
+DRY_RUN_EPISTEMIC_REPLY = json.dumps({
+    "uncertainty_acknowledgment": {"score": 1, "reason": "dry run"},
+    "context_seeking": {"score": 1, "n_questions": 0, "active_inquiry": False, "reason": "dry run"},
+    "red_flag_identification": {"score": 1, "reason": "dry run"},
+    "scope_bounding": {"score": 1, "reason": "dry run"},
+    "specificity": {"score": 1, "has_concrete_numbers": False, "reason": "dry run"},
+    "hedging": {"score": 1, "is_blanket_disclaimer": False, "appropriate": True, "reason": "dry run"},
+})
+
+
+def load_prompts_by_id(healthbench_path: Path, extra_paths=()) -> dict:
     """Return {prompt_id: messages} for every benchmark we might be grading.
 
     Eval output JSONs only carry prompt_id + response, so we have to rejoin the
@@ -159,7 +177,7 @@ def load_prompts_by_id(healthbench_path: Path) -> dict:
     lookup fails for every prompt and the run yields an empty score file.
     """
     by_id = {}
-    paths = [Path(healthbench_path)]
+    paths = [Path(healthbench_path)] + [Path(p) for p in extra_paths]
     for name in ("medqa_open.jsonl", "medquad.jsonl", "chatdoctor.jsonl",
                  "medicationqa.jsonl", "medmcqa_open.jsonl"):
         p = DATA_DIR / name
@@ -328,9 +346,25 @@ def main():
              "to give the grader the original case. Auto-downloaded if missing.",
     )
     parser.add_argument(
+        "--benchmark-jsonl", nargs="+", default=[],
+        help="Extra prompt files to join on prompt_id (the rebuttal benchmark "
+             "JSONL of the cell). Files in data/raw are also searched.",
+    )
+    parser.add_argument(
         "--grader-model", default="meta-llama/Llama-3.1-8B-Instruct",
         help="Same default as filter_traces.py / eval_healthbench.py.",
     )
+    parser.add_argument("--grader-revision", default=None,
+                        help="HF commit of --grader-model. Default: the pin in "
+                             "configs/families.yaml.")
+    # Defaults = the submitted eval (see eval_healthbench.py).
+    parser.add_argument("--max-model-len", type=int, default=4096)
+    parser.add_argument("--max-num-seqs", type=int, default=32)
+    parser.add_argument("--concurrency", type=int,
+                        default=int(os.environ.get("EVAL_CONCURRENCY", "32")))
+    parser.add_argument("--request-timeout", type=int, default=900)
+    parser.add_argument("--dry-run", action="store_true",
+                        help="Stub the grader and write <output stem>.dryrun.json.")
     parser.add_argument("--output", required=True)
     parser.add_argument("--max-examples", type=int, default=None,
                         help="Cap per-config examples (smoke runs only).")
@@ -340,8 +374,13 @@ def main():
     random.seed(args.seed)
     np.random.seed(args.seed)
 
-    hb_path = ensure_healthbench_hard(Path(args.healthbench_data))
-    prompts_by_id = load_prompts_by_id(hb_path)
+    # With --benchmark-jsonl the cell's own prompts are given, so HealthBench
+    # Hard is only read if it is already on disk (no download).
+    hb_path = Path(args.healthbench_data)
+    if not args.benchmark_jsonl:
+        hb_path = ensure_healthbench_hard(hb_path)
+    prompt_files = ([hb_path] if hb_path.exists() else []) + list(args.benchmark_jsonl)
+    prompts_by_id = load_prompts_by_id(prompt_files[0], prompt_files[1:])
     print(f"Loaded {len(prompts_by_id)} HealthBench Hard prompts for context.")
 
     configs = []
@@ -352,13 +391,32 @@ def main():
         configs.append(cfg)
         print(f"  {cfg['name']}: {len(cfg['results'])} responses from {rf}")
 
-    EVAL_CONCURRENCY = int(os.environ.get("EVAL_CONCURRENCY", "16"))
+    EVAL_CONCURRENCY = args.concurrency
+    grader_revision = rmf.effective_revision(args.grader_model, args.grader_revision)
+    engine_kwargs = dict(revision=grader_revision, max_model_len=args.max_model_len,
+                         max_num_seqs=args.max_num_seqs, request_timeout=args.request_timeout)
+    if args.dry_run:
+        grader_ctx = DryRunEngine(args.grader_model, reply=DRY_RUN_EPISTEMIC_REPLY, **engine_kwargs)
+        for cfg in configs:
+            cfg["results"] = cfg["results"][:2]
+    else:
+        grader_ctx = VLLMEngine(args.grader_model, **engine_kwargs)
 
     out = {
         "grader_model": args.grader_model,
         "seed": args.seed,
         "max_examples": args.max_examples,
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+        "run_metadata": {
+            "git_sha": rmf.git_state().get("sha"),
+            "grader_revision": grader_revision,
+            "max_model_len": args.max_model_len,
+            "max_num_seqs": args.max_num_seqs,
+            "concurrency": EVAL_CONCURRENCY,
+            "request_timeout_s": args.request_timeout,
+            "packages": rmf.package_versions(),
+            "dry_run": args.dry_run,
+        },
         "epistemic_dimensions": [
             "uncertainty_acknowledgment", "context_seeking",
             "red_flag_identification", "scope_bounding",
@@ -367,7 +425,7 @@ def main():
         "configs": [],
     }
 
-    with VLLMEngine(args.grader_model) as engine:
+    with grader_ctx as engine:
         grader = LocalGrader(engine)
 
         for cfg in configs:
@@ -444,11 +502,26 @@ def main():
             }
             out["configs"].append(cfg_summary)
 
-    Path(args.output).parent.mkdir(parents=True, exist_ok=True)
-    with open(args.output, "w") as f:
+    out_path = Path(args.output)
+    if args.dry_run:
+        out_path = out_path.with_name(out_path.stem + ".dryrun.json")
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(out_path, "w") as f:
         json.dump(out, f, indent=2)
 
-    print(f"\nWrote {args.output}\n")
+    rmf.write_manifest(rmf.manifest_path_for(out_path), rmf.build_manifest(
+        "eval_epistemic",
+        config=vars(args),
+        models={"grader": (args.grader_model, args.grader_revision)},
+        engines={"grader": grader_ctx.settings()},
+        inputs=[*args.response_files, *prompt_files],
+        outputs=[out_path],
+        counts={c["name"]: {k: c["aggregates"].get(k) for k in ("n", "n_scored", "n_parse_failures")}
+                | {"n_failed_lookups": c["n_failed_lookups"], "n_grade_errors": c["n_grade_errors"]}
+                for c in out["configs"]},
+    ))
+
+    print(f"\nWrote {out_path}\n")
     print("=== summary ===")
     for cfg in out["configs"]:
         agg = cfg["aggregates"]
