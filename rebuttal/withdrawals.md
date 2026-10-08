@@ -476,10 +476,17 @@ uses the seed as the unit. Done in Section 3.4 of `paper/main.tex`.
 
 **Claim as made.** Posted `HomM_1_rebuttal.md:57`: "released code and adapters".
 
-**Correction.** The code is public. The five MedGemma-27B adapters are in cloud storage and are
-not released.
+**Correction.** The code is public. No adapter is released. The five MedGemma-27B adapters were
+in `gs://bohdi-runs-tokyo-micron/prod-v39-tunix-27b-neurips/`, and that bucket returned 404 on
+2026-10-08. The only other copy that the code names is the Modal volume `bohdi-data-cache`
+(`legacy/modal_eval.py:119,435-447`), and nobody has listed it yet (BLOCKED.md item 3). So these
+adapters may no longer exist. The added-cell adapters are a separate case: the sync of
+2026-10-08 copied their configs and trainer states, not their weights, which stay on the GPU host.
 
-**The paper must say.** The adapters are not yet released (Code availability, `paper/main.tex`).
+**The paper must say.** No adapter is released. The bucket that held the five MedGemma-27B
+adapters no longer exists, and their release depends on a second copy that is not yet checked.
+Done in Code availability (`paper/main.tex`) and checklist items 4, 5, 11 and 13
+(`paper/checklist.tex`).
 
 ---
 

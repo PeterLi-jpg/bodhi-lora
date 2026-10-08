@@ -109,7 +109,12 @@ Section 3.3 and above Table F.1, and drop the "not confirmed" lines in
 `REPRODUCIBILITY.md` and `KNOWN_ISSUES.md`. If a filter log turns up, replace the hand
 constant `FILTER_KEPT, FILTER_POOL = 3129, 4000` in `scripts/paper_stats.py` with a value
 read from it. If they do not match, correct Table F.1 and Section 3.3 instead. If no copy
-exists, nothing changes: the paper already says what it cannot check.
+exists, the configuration text stays: the paper already says what it cannot check.
+
+The same copy decides the adapter release (item 12). If `seed_<N>/checkpoints/best/` also
+holds the adapter weights, the five adapters can be released. If no copy exists, change
+the Code availability paragraph and checklist items 4, 5, 11 and 13 to say that the five
+adapters are lost.
 
 ## 4. Sync the added cells (done) and freeze the host environments
 
@@ -352,7 +357,9 @@ Why: none of this ran, because D16 forbids remote changes in the cleanup.
 - **LLM-usage statement.** `paper/checklist.tex` (LLM-usage item) says the authors used
   AI assistants for editing and drafting. That disclosure is your decision.
 - **Adapter release.** The paper (Code availability) and checklist items 4, 5, 11 and 13
-  say the adapters are not yet released. If you release them, update that paragraph and
+  say that no adapter is released, that the cloud storage of the five MedGemma-27B
+  adapters no longer exists, and that their release depends on a second copy (item 3).
+  If you release any adapter, or if item 3 finds no copy, update that paragraph and
   those items.
 - **Posted replies against OpenReview.** Compare the 7 files in
   `rebuttal/responses/posted/` with the threads of submission 32818, including the
