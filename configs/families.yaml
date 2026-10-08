@@ -1,0 +1,96 @@
+# Model registry: the family, the pinned HF revision and the chat-template facts
+# for every model that a launcher or a config can name.
+#
+# family
+#   The pretraining lineage of the model. rebuttal/launch/run_cell.sh refuses a
+#   cell whose base model is in the same family as the trace filter or the
+#   evaluator, unless --allow-same-family is passed (the manifest records it).
+#   scripts/regrade_cross_family.py refuses a judge from the filter family, the
+#   evaluator family or the family of the graded base model.
+#
+# revision
+#   The HF commit that a run loads. scripts/run_manifest.py:pinned_revision()
+#   reads it, and every entry point passes it to vLLM (--revision) and to
+#   from_pretrained(revision=...). A --*-revision flag or a config
+#   model.revision overrides it.
+#   Each value is the repo HEAD read from https://huggingface.co/api/models/<id>
+#   on 2026-10-07. last_modified is the date of that commit. Every date is
+#   earlier than the first run that used the model (submitted MedGemma cell:
+#   2026-05-01 to 2026-05-04; rebuttal cells: 2026-07-23 to 2026-08-25). A run
+#   that loaded the repo at HEAD therefore loaded this commit, because a hub
+#   repo only moves forward with new commits.
+#   null means the revision could not be read (gated or private repo). Such a
+#   run loads HEAD, and its manifest records the revision as unpinned.
+#
+# system_role
+#   false when the chat template raises on a system message. The prompt
+#   baselines then put their instructions at the top of the first user turn.
+#
+# A model that is not listed here has no family, so the guard refuses it.
+# Add the model here first.
+
+roles:
+  filter: Qwen/Qwen2.5-14B-Instruct
+  evaluator: meta-llama/Llama-3.1-8B-Instruct
+  # Default judge for scripts/regrade_cross_family.py. It is outside the filter
+  # and evaluator families, and outside the Llama-3 family of the Med42 cells.
+  cross_family_judge: google/gemma-2-27b-it
+
+models:
+  # --- Gemma lineage ---
+  google/medgemma-27b-text-it:
+    family: gemma
+    revision: 5b667cf2ddcf064085bc90952edb35a0edbfb79c
+    last_modified: "2025-09-16"
+  google/medgemma-27b-it:
+    family: gemma
+    revision: 2d3e00ea38b50018bf5dd3aa1009457cd2d5a48f
+    last_modified: "2025-07-10"
+  google/gemma-2-27b-it:
+    family: gemma
+    revision: aaf20e6b9f4c0fcf043f6fb2a2068419086d77b0
+    last_modified: "2024-08-27"
+    system_role: false
+  google/gemma-3n-E4B-it:
+    family: gemma
+    revision: c1221e9c62e34a43ab7ffacd1be0ea71f126ef10
+    last_modified: "2025-07-14"
+
+  # --- Llama-3 lineage (the evaluator family) ---
+  meta-llama/Llama-3.1-8B-Instruct:
+    family: llama3
+    revision: 0e9e39f249a16976918f6564b8830bc894c89659
+    last_modified: "2024-09-25"
+  # Ungated mirror that the posted rebuttal cells used as the evaluator.
+  NousResearch/Meta-Llama-3.1-8B-Instruct:
+    family: llama3
+    revision: d10aef7999a2b5ba950ab3974312feeedbfe0b77
+    last_modified: "2024-07-24"
+  m42-health/Llama3-Med42-8B:
+    family: llama3
+    revision: ceab7e7ee4b9dbde7ba82867f34274db51487d83
+    last_modified: "2024-08-20"
+  OpenMeditron/Meditron3-8B:
+    family: llama3
+    revision: null
+
+  # --- Qwen lineage (the filter family) ---
+  Qwen/Qwen2.5-14B-Instruct:
+    family: qwen2
+    revision: cf98f3b3bbb457ad9e2bb7baf9a0125b6b88caa8
+    last_modified: "2024-09-25"
+
+  # --- Mistral lineage ---
+  mistralai/Mistral-Small-24B-Instruct-2501:
+    family: mistral
+    revision: 9527884be6e5616bdd54de542f9ae13384489724
+    last_modified: "2025-07-28"
+  mistralai/Mistral-7B-Instruct-v0.3:
+    family: mistral
+    revision: c170c708c41dac9275d15a8fff4eca08d52bab71
+    last_modified: "2025-12-03"
+  BioMistral/BioMistral-7B:
+    family: mistral
+    revision: 9a11e1ffa817c211cbb52ee1fb312dc6b61b40a5
+    last_modified: "2024-02-21"
+    system_role: false
