@@ -1,114 +1,105 @@
-# Known Issues
+# Known issues
 
-Triage of issues raised against this repo, with status for each.
+Open problems first, then the fixed ones, then a short history. IDs such as PROV-1 refer
+to the audit of 2026-10-07; D-numbers refer to [docs/DECISIONS.md](docs/DECISIONS.md).
+Issue numbers such as #5 are GitHub issues on `PeterLi-jpg/bohdi-lora`.
 
-Issue numbers below match GitHub issues on `REDACTED-FOR-ANONYMOUS-REVIEW/bohdi-lora`.
+## Open
 
-## (resolved) Custom MaxText LoRA glue replaced with tunix + qwix
+### Blocked on data outside the repo
 
-History: Stage 3 LoRA SFT was implemented as ~1500 lines of custom JAX/Optax
-glue (`scripts/train_lora_maxtext.py`, `scripts/maxtext_lora/*`) on top of
-MaxText. Every TPU bug between v18-v27 was at an integration seam we authored
-ourselves: injector ToLinen wrapping, FSDP assertion mismatches, init batch
-shape, HBM OOM. PR #169 had bypassed tunix because v6e TPU VMs ship Python 3.10
-and tunix requires 3.11; the py3.11 upgrade in PRs #181-188 made tunix usable.
+- **Added-cell raw outputs are not synced (PROV-1).** The added cells exist only on the
+  shared H100 host. Until the sync in [REPRODUCIBILITY.md](REPRODUCIBILITY.md) section 7
+  runs, their numbers come from `data/rebuttal_cells/posted_values.json` and carry the
+  "transcribed from posted values" footnote. The per-cell tau (PROV-3) and the MedQA
+  preamble version are in the same logs.
+- **The submitted adapter config is not confirmed (HYG-4, D1).** Repo evidence says
+  r=8, alpha=16. The `adapter_config.json` of the five submitted seeds on GCS must
+  confirm it before the paper's hyperparameter table is final.
+- **Returned physician grades are not in the repo (PROV-5, EVAL-5).** One of three
+  raters returned. The agreement value cannot be recomputed until the de-identified
+  grades (grading_id to pass, fail or unsure) are committed and
+  `scripts/compute_irr_kappa.py` is rerun. Rater identities stay out of git.
 
-Current path (since PR #196-#203, the 8-unit migration batch): the MaxText
-trainer + custom LoRA injector are replaced by `tunix.sft.peft_trainer.PeftTrainer`
-+ `qwix.apply_lora_to_model`. See `contributions/tunix-migration.md`.
+### Measurement and design
+
+- **Physician validation is incomplete (D5).** Agreement is below the pre-registered
+  0.6 target, so every epistemic-behavior result is labeled LLM-graded.
+- **Med42-8B shares the evaluator's family (EVAL-7, D6).** The cells are marked † and
+  kept out of cross-model statements. `scripts/regrade_cross_family.py` is not run yet;
+  it needs the synced outputs and a GPU.
+- **No prior-work baseline has run (EVAL-8).** `scripts/baselines/` holds the prompt
+  baselines; they need GPU inference on the existing eval sets.
+- **The two pipelines differ (REPRO-3).** Context length, server batch size, grader
+  mirror, eval-prompt policy, trainer and hardware all differ between the submitted
+  and added cells. REPRODUCIBILITY.md section 3 lists each one.
+- **Mistral-Small-24B trains on 4-bit and serves on bf16 (REPRO-12).**
+- **Seeds do not vary the teacher traces (REPRO-8).** Each cell generates its traces
+  once. What a seed changes also differs between the two pipelines. The submitted
+  cell has 667 unique eval prompts across its five draws (CLAIM-10).
+- **Grader parse failures differ by condition (EVAL-9, D13).** The paper reports the
+  rate per condition for both graders and a worst-case sensitivity.
+- **HealthBench's context-awareness axis disagrees with our context-seeking score.**
+  On the three added HealthBench cells the adapter meets fewer of the rubric items
+  that reward asking, while our grader scores context-seeking up. The working
+  hypothesis is that rubric items are prompt-specific and our grader scores generic
+  asking. It is untested (`rebuttal/analyses/FINDINGS_quality_drop.md`, section 5).
+- **The discrimination labels were defined after the results (EVAL-10, D9).** Both
+  labelings are reported, both marked post hoc and exploratory.
+- **Calibration is not measured (#1, D3).** The eval JSON has Brier and ECE fields from
+  a token-probability proxy. The paper does not report them.
+
+### Reproducibility gaps
+
+- **Dependency pins (REPRO-10).** The `.venv-infer` env for vLLM is not written down,
+  vLLM is pinned only to `>=0.9.0,<0.10`, and no model or grader has a Hugging Face
+  revision pin.
+- **Benchmark data is not pinned (REPRO-11).** `scripts/build_benchmark_jsonl.py` reads
+  the latest revision of each Hugging Face dataset, and the eval holdout is the first
+  200 rows, not a seeded draw.
+- **No leakage gate in the added-cell launcher (EVAL-12).** Generation excludes eval ids
+  with `--exclude-ids`, but `rebuttal/launch/run_cell.sh` does not run
+  `scripts/check_dataset_overlap.py`, and no overlap or contamination output is
+  committed.
+- **`rebuttal/launch/run_grid.sh` predates the final grid.** It has no Med42-8B or
+  ChatDoctor cells. Use the cell table in REPRODUCIBILITY.md section 5.
+
+### Repo state
+
+- **Rater names, the author block and two tool trailers remain in public history
+  (EVAL-6, HYG-1, HYG-12).** The current tree is clean. The purge is prepared in
+  `scripts/maintenance/purge_history.md` and not run (D16).
+- **Scratch and temp branches remain on the remote (HYG-12, HYG-15, HYG-11).** This
+  includes `results-temp`, which holds MedGemma adapter weights and optimizer state.
+  `scripts/maintenance/prune_branches.sh` lists them; `--apply` deletes them (D16).
+- **The remote slug misspells the name (`bohdi-lora`, D15).** Renaming is a remote
+  action and is deferred.
 
 ## Fixed
 
-### [#2] `format_example` batching bug — FIXED
-TRL probes `formatting_func` on a single example first to decide whether it returns str or list[str]. The previous code unconditionally zipped `batch["messages"]` and `batch["response"]`, which on a single-example call silently zipped message dicts with *characters* of the response string — producing malformed training text. `format_example` now handles both shapes explicitly (`scripts/train_lora.py`).
+- **#2** `format_example` mis-zipped single examples in TRL's probe call. It now handles
+  both shapes (`scripts/train_lora.py`).
+- **#4** Filtering and eval use one normalized score,
+  `(earned - negative) / (positive - negative)`. The old fields stay for comparison.
+- **#5** Rubric-grader parse failures are counted per trace and reported, not dropped
+  silently. The epistemic grader still drops them from its means (EVAL-9, above).
+- **#6, #7** `generate_traces.py --resume-from` refuses rows made with other settings.
+- **#23** Training checkpoints on step intervals and resumes from the latest one.
+- **#65** `scripts/_vllm_engine.py` sets `--enforce-eager` the same way in Docker and
+  subprocess mode. Eager mode stays the default, because CUDA-graph capture with LoRA
+  hangs in vLLM 0.9.
+- **#3** The filter grader (Qwen2.5-14B) and the evaluator (Llama-3.1-8B) come from
+  different families. Med42-8B breaks this rule for its own cells (see above).
+- **Train/eval separation (CLAIM-11).** Older docs said training used Hard prompts. It
+  did not: all 1,000 HealthBench-Hard prompts are excluded from training, and the
+  seed-7 training set of the submitted cell has no Hard prompt.
 
-### [#5] Silent grader parse failures — FIXED
-`grade_trace` now returns a `parse_failures` count per trace. Both `filter_traces.py` and `eval_healthbench.py` surface the aggregate parse-failure rate in their summary output. Raw failed grader outputs are attached as `raw_parse_failures` for inspection.
+## History
 
-### [#6, #7] Resume logic mixing settings — FIXED
-`generate_traces.py --resume-from` now validates that existing rows in the target file were produced with the same `--model` and `--use-bodhi` settings. Mismatch aborts with a clear error. Override with `--force-resume` only when intentionally mixing is desired.
-
-### [#23] Mid-epoch checkpoint resume — FIXED
-Training now checkpoints on aligned step intervals instead of epoch boundaries. The default config uses matching `save_strategy: steps` and `eval_strategy: steps` values so `load_best_model_at_end=True` remains valid, and `scripts/train_lora.py` auto-resumes from the latest `checkpoint-*` directory under `--output-dir` when one is present.
-
-## Open / blocked
-
-### Stage 3b (MaxText LoRA training) — STRUCTURALLY BROKEN
-
-`scripts/train_lora_maxtext.py` was committed as the Stage 3 training entry but has **never run end-to-end on a TPU VM**. Smoke runs v9–v11 each died in `setup_tpu.sh` before the trainer was reached, masking the issues below until the v167 setup hardening let setup pass. Confirmed against the vendored `third_party/maxtext` source.
-
-**Bugs in `scripts/train_lora_maxtext.py`:**
-
-| Line | Issue | Reality |
-|---|---|---|
-| 102 | `sys.path.insert(0, third_party/maxtext)` | should be `third_party/maxtext/src` (matches `scripts/convert_medgemma_to_maxtext.py:73`) |
-| 107 | `from MaxText import pyconfig` | package is lowercase `maxtext`; pyconfig lives at `maxtext.configs.pyconfig` |
-| 108 | `from MaxText.experimental.sft import sft_trainer` | no such module; SFT lives at `maxtext.trainers.post_train.sft.train_sft` |
-| 219 | `dataset_loader.build_iterators(...)` | function does not exist anywhere — the `dataset_loader` alias in `scripts/maxtext_lora/__init__.py` resolves to `scripts/convert_traces_to_maxtext.py`, which is the offline JSONL writer, not an iterator builder |
-| 252 | `sft_trainer.train(config=, model=, params=, train_iter=, eval_iter=, trainable_param_filter=, on_first_step=, ...)` | the actual upstream API is `train_sft.train(mt_config, goodput_recorder=None)` — takes one config object and constructs everything internally; none of these kwargs exist |
-| 282 | `export_peft.write_adapter(orbax_checkpoint=, base_model_name=, rank=, alpha=, dropout=, variant=)` | function is `write_peft_adapter` with a different signature (takes pre-extracted `weights` dict). There is an `export(orbax_path, output_dir, base_model, settings)` end-to-end helper — call site must use either |
-
-**Underlying architectural blocker — Python version mismatch — RESOLVED by PR #182:**
-
-History: MaxText's SFT path delegates to **Tunix** (`from tunix.sft import peft_trainer` inside `train_sft.py`). `google-tunix` on PyPI requires **Python 3.11+**, while TPU v6e VMs ship **Python 3.10** by default. So with the stock image, the import `from maxtext.trainers.post_train.sft import train_sft` failed at module load with a missing-Tunix error.
-
-Resolution: `tpu/setup_tpu.sh` (PR #182) now installs `python3.11` via apt on the v6e VM and creates a project venv at `~/.venv-py311` containing the full bohdi-llm + MaxText + Tunix stack. PR #185 routed every TPU launcher's `python` / `python -u` invocation through that venv, so launchers no longer pick up the system py3.10. The py3.11 wall is closed.
-
-**Why we can't fall back to torch_xla (kept for historical context):**
-
-Per `docs/maxtext_migration.md` and commit `2460ac9`, Stage 3 on torch_xla 2.7 + FSDPv2 + Gemma-3-27B hangs on the first `xm.mark_step()` for 30+ min on v6e with no progress and no useful stderr. That's the whole reason MaxText was forked. Switching the launcher back to `tpu/launch_5seeds.sh` would replace "fast AttributeError" with "30+ min silent hang then nothing."
-
-## Documented, deferred to discussion
-
-### [#1] Brier / ECE do not measure model calibration — PARTIALLY ADDRESSED
-The old implementation used the evaluator's rubric score as "confidence" and compared it against rubric outcomes from the same grading pass. That was grader-internal consistency, not model calibration. **Action taken**: eval output now includes `brier_model_calibration` / `ece_model_calibration`, using the geometric mean next-token probability of the emitted response as a model-derived confidence proxy, while keeping the legacy `brier_grader_consistency` / `ece_grader_consistency` fields for backward comparison. **Still open for discussion**: whether the response-level logprob proxy is strong enough for the paper, or whether the final claim should move to a richer confidence protocol (verbalized confidence, abstention head, or similar).
-
-### [#3] Same grader for filtering and final evaluation — ADDRESSED (asymmetric default)
-The pipeline now ships an **asymmetric grader default**: `filter_traces.py` uses `Qwen/Qwen2.5-14B-Instruct` and `eval_healthbench.py` / `eval_epistemic.py` use `meta-llama/Llama-3.1-8B-Instruct`. Training-data selection and reported metrics are graded by **different model families**, so the "graded by your own evaluator" critique no longer applies to the headline numbers.
-
-For an additional bias-control sweep, set `SECOND_GRADER_MODEL=...` (any family different from Llama, e.g. `Qwen/Qwen2.5-14B-Instruct`) — the launcher re-grades the four eval configs with the second grader and runs `scripts/grader_correlation.py` to report Spearman ρ vs. the primary Llama grader.
-
-Both gated models need HF access:
-- https://huggingface.co/Qwen/Qwen2.5-14B-Instruct (filter)
-- https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct (eval)
-
-### [#4] Inconsistent filtering-score normalization — FIXED
-Filtering and eval now use a normalized rubric score that accounts for both the positive ceiling and the negative penalty floor:
-
-`normalized_score = (earned_points - negative_points) / (positive_points - negative_points)`
-
-This makes a fixed threshold such as `--min-score 0.4` comparable across prompts with different penalty structure. The previous positive-only score is still emitted as `positive_score` for analysis. The alternate audit views (`absolute_point_score`, `positive_criteria_rate`) plus `--score-field` are still available in `filter_traces.py` so the old default can be re-derived without silently changing the new default.
-
-### [#65] enforce-eager flag now opt-in for graph mode — RESOLVED
-`scripts/_vllm_engine.py` previously hard-coded `--enforce-eager` in `_build_docker_cmd` while `_build_subprocess_cmd` silently omitted it, so the same code path produced different vLLM runtime modes depending on whether the host had a Docker daemon. Both builders now derive the flag from a new `enforce_eager: bool = True` kwarg on `VLLMEngine`, so the two run-modes stay in sync.
-
-`enforce_eager=True` remains the production-eval default — turning it off triggers the ~130 min CUDA-graph capture hang on LoRA in vllm 0.9, which is still unresolved upstream. The new `scripts/latency_benchmark.py` defaults to `--enforce-eager` for all 4 configs (`base_no_wrapper`, `base_bodhi`, `lora_no_wrapper`, `lora_bodhi`) so the paper's base-vs-LoRA latency comparison stays apples-to-apples. Pass `--no-enforce-eager` only after the graph-capture hang is fixed; until then it pays the full capture cost on every config.
-
-## Infrastructure for reporting and robustness
-
-These aren't issues per se, but directly support the reviewer concerns that drive #1, #3, #4 and the paper overall.
-
-### Bootstrap 95% CIs on every reported metric
-`scripts/eval_ushape.py --bootstrap 1000` nonparametrically resamples the 200-prompt holdout 1000 times and reports 2.5th / 97.5th percentile CIs for mean and fail rate, stratified by tier and theme. Deterministic via `--bootstrap-seed` (default 42). `scripts/plot_ushape.py` renders the CIs as shaded bands and error bars.
-
-### Multi-seed variance
-`scripts/run_multi_seed.sh` reuses one set of generated traces and varies seed across filter split, LoRA init, and training order. `scripts/aggregate_seeds.py` combines per-seed eval JSONs into across-seed mean ± std (plus percentile CIs when `N >= 5`). Default seeds: `42 7 13 99 101`. Override with `SEEDS="..." bash scripts/run_multi_seed.sh`.
-
-### HealthBench-only generalization experiment
-Confirmed via `scripts/check_dataset_overlap.py` that HealthBench Hard is a strict subset of HealthBench full. To train on HealthBench without any Hard leakage, pass both the eval holdout and the full Hard JSONL to `--exclude-ids`:
-
-```
-python scripts/generate_traces.py \
-    --datasets healthbench \
-    --exclude-ids data/raw/healthbench_hard.jsonl data/raw/hard_200_sample_ids.json \
-    ...
-```
-
-This produces ~4,000 training prompts from the Full set, with the 1,000 Hard prompts fully excluded. Compare against the main run (~4,800 prompts from Full + Hard minus the 200 eval).
-
-### Optional QLoRA / DoRA / rsLoRA
-`configs/*.yaml` now accept `model.quantization` in `{null, "4bit", "8bit"}` and `lora.variant` in `{"standard", "dora", "rslora"}`. DoRA is incompatible with quantization and is guarded with an upfront error. Existing configs leave both on defaults, so current runs behave identically.
-
-## Process note
-
-Fixes landing in `main` happen behind commits signed by the original authors. Deferred items (#1, #3, #4) should be resolved in a short methodology write-up before the paper eval is considered final.
+The submitted MedGemma-27B cell trained on TPU. Stage 3 first used custom MaxText LoRA
+code, which never ran end to end on a TPU. It was replaced by tunix and qwix, which
+produced the submitted adapters. The rebuttal moved to one GPU pipeline
+(`scripts/train_lora.py`) and deleted the TPU code from this branch. The TPU tree is
+still in history, for example `c4b8e6f:tpu/launch_5seeds_tunix.sh` (the tip of
+`origin/main` on 2026-10-07). The launchers that produced the submitted cell are kept in
+`legacy/`. Issues that only concerned the MaxText or TPU path are closed as obsolete.
