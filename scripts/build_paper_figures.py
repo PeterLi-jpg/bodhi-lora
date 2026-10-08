@@ -2,11 +2,19 @@
 
 This script consolidates the paper figure pipeline so the manuscript figure
 directory can be regenerated from the checked-in results in one command.
+
+Every step runs with SOURCE_DATE_EPOCH and PYTHONHASHSEED fixed (0 unless the
+caller sets them). matplotlib and tectonic stamp PDFs with the build time
+otherwise, and plot_postprocessing.py bins prompts by iterating a set of
+prompt ids, whose order (and so the U-shape bootstrap band) changes with the
+string hash seed. With both fixed, two builds of the same data are
+byte-identical.
 """
 
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import shutil
 import subprocess
@@ -46,9 +54,16 @@ def parse_referenced_figures(tex_path: Path) -> list[str]:
     return sorted(set(figures))
 
 
+def _build_env() -> dict[str, str]:
+    env = dict(os.environ)
+    env.setdefault("SOURCE_DATE_EPOCH", "0")
+    env.setdefault("PYTHONHASHSEED", "0")
+    return env
+
+
 def run_step(cmd: list[str], root: Path) -> None:
     print(f"$ {' '.join(cmd)}")
-    subprocess.run(cmd, check=True, cwd=root)
+    subprocess.run(cmd, check=True, cwd=root, env=_build_env())
 
 
 def build_pipeline_figure(root: Path, out_dir: Path) -> None:

@@ -106,9 +106,11 @@ def plot_epistemic_bar(ep, out_path):
     fig.legend(handles=handles, loc="upper center", ncol=4,
                fontsize=9, frameon=False, bbox_to_anchor=(0.5, 0.99))
 
-    fig.savefig(out_path, dpi=200, bbox_inches="tight")
+    # No creation date in the PDF, so a rebuild from the same data is byte-identical.
+    fig.savefig(out_path, dpi=200, bbox_inches="tight", metadata={"CreationDate": None})
     plt.close(fig)
     print(f"Saved -> {out_path}")
+    return fig
 
 
 # ── Per-seed dot plot ────────────────────────────────────────────────────────
@@ -164,7 +166,7 @@ def plot_seed_consistency(ep, seeds, out_path):
     fig.suptitle("Per-seed consistency (dots = individual seeds, bar = mean)",
                  fontsize=11)
     fig.tight_layout()
-    fig.savefig(out_path, dpi=200, bbox_inches="tight")
+    fig.savefig(out_path, dpi=200, bbox_inches="tight", metadata={"CreationDate": None})
     plt.close(fig)
     print(f"Saved -> {out_path}")
 
