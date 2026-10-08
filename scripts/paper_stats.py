@@ -1062,6 +1062,9 @@ def kappa_section(path: Path, out, macros):
     macros.add("KappaRowsEval", fmt_int(k["rows"]["eval_llama"]), "criterion rows from Llama-graded eval responses")
     macros.add("KappaUnsureEval", fmt_int(k["unsure_consensus"]["eval_llama"]),
                "eval rows graded unsure, excluded from kappa")
+    macros.add("KappaRowsFilter", fmt_int(k["rows"]["filter_qwen"]), "criterion rows from Qwen-graded filter traces")
+    macros.add("KappaUnsureFilter", fmt_int(k["unsure_consensus"]["filter_qwen"]),
+               "filter-trace rows graded unsure, excluded from kappa")
 
 
 def rebuttal_section(rdir: Path, out, macros):
