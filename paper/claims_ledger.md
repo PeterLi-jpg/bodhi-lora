@@ -35,9 +35,10 @@ Inputs: `RM` is `results_modal/seed_*/` (the four `<condition>.json` files and
 | No detected change in aggregate score, +0.004 [-0.011, +0.020] | `\statHealthBenchLoRAvsBaseDiff`, `...CI` | `compare_conditions` | RM | computed |
 | In 4 added cells outside the evaluator's family, active inquiry rises in 3 | `\statCellsAddedCompared`, `\statCellsAddedAIRose` | `generality_section` | PV | posted |
 | Aggregate falls in all 4, by 0.014 to 0.086 | `\statCellsAddedWithAggregate`, `\statCellsAddedDropMin`, `\statCellsAddedDropMax` | `generality_section` | PV | posted |
-| Adding CoT to the adapter changes the red-flag rate by -20.6 points [-29.8, -11.4] | `\statRedFlagRateLoRACoTvsLoRADiff`, `...CI` | `compare_conditions` | RM | computed |
+| Adding CoT to the adapter changes red-flag identification by -0.161 [-0.262, -0.059] on the 0-2 score, Holm-adjusted p = 0.058 (the rate, -20.6 points, is a secondary measure stated in section 4.3) | `\statRedFlagLoRACoTvsLoRADiff`, `...CI`, `...PHolm` | `compare_conditions` | RM | computed |
 | Format leakage in 54.6% of LoRA+BODHI answers | `\statLeakagePctLoRACoT` | `rebuttal_section` | `rebuttal/results/interference_mechanism.json` | computed |
-| Physician agreement kappa 0.35, target 0.6, on rubric criteria only; no physician graded the seven dimensions | `\statKappaAll`; 0.6 is the pre-registered target | `kappa_section` | `results_modal/irr/kappa_results.json`; row design in `scripts/make_irr_excel.py` | computed (target: design) |
+| A fifth added cell outside the evaluator's family, MedQA, has no values; the replies said its aggregate rose | none | | `rebuttal/responses/posted/HomM_2_followup_part1.md:11`, `HomM_4_consolidation.md:3` | posted, no number (commitments C24 to-do) |
+| Physician agreement kappa 0.35, target 0.6 set in advance for the filter grader, on rubric criteria only; no physician graded the seven dimensions | `\statKappaAll`; 0.6 is the target in the plan of 2026-04-29 | `kappa_section` | `results_modal/irr/kappa_results.json`, computed by `make kappa` from the returned rater file, which carries a name and is kept outside the repo; row design in `scripts/make_irr_excel.py` | computed from an input outside the repo (audit NUM-2): the committed `IRR-clinicians/` sheets are blank, so the value cannot be recomputed from the repo |
 | BioMistral-7B is a null result | none in the abstract | | PV (see section 4.2 rows) | posted |
 
 ## Introduction
@@ -62,7 +63,7 @@ Inputs: `RM` is `results_modal/seed_*/` (the four `<condition>.json` files and
 | 1,000 draws per condition cover 667 unique prompts; 271 repeat | `\statPromptEvaluations`, `\statUniquePrompts`, `\statRepeatedPrompts` | `counts_and_failures` | RM | computed |
 | Epistemic parse failures 0.20% to 1.49% per condition | `\statEpistemicParseFailPctBase`, `\statEpistemicParseFailPctMax` | `counts_and_failures` | RM | computed |
 | HealthBench criterion failures at most 0.087% per run | `\statHealthBenchParseFailPctMaxRun` | `counts_and_failures` | RM | computed |
-| 1 of 3 physicians; kappa 0.35 [0.28, 0.43] on 509 rows from 10 prompts | `\statKappaRaters`, `\statKappaAll`, `\statKappaAllCI`, `\statKappaAllN`, `\statKappaPrompts` | `kappa_section` | `results_modal/irr/kappa_results.json` | computed |
+| 1 of 3 physicians; kappa 0.35 [0.28, 0.43] on 509 rows from 10 prompts | `\statKappaRaters`, `\statKappaAll`, `\statKappaAllCI`, `\statKappaAllN`, `\statKappaPrompts` | `kappa_section` | `results_modal/irr/kappa_results.json` | computed from an input outside the repo (see the abstract row) |
 | 4,096-token evaluation context, greedy decoding, A100-80GB | none | | `legacy/modal_eval.py` (max_model_len patch, GPU type) | design |
 | Context-seeking 2 without a direct question: 74.4% of Base 2s, 47.2% of LoRA 2s | `\statContextSeekingTwoNoQuestionPctBase`, `\statContextSeekingTwoNoQuestionPctLoRA` | `context_seeking_anchor` | RM | computed |
 | Mapping of the seven dimensions to the BODHI components (Table bodhi-map) | none | | names in the cited BMJ paper; Pass 1 fields in bodhi-llm 0.1.4 | design (our reading) |
@@ -79,7 +80,7 @@ Inputs: `RM` is `results_modal/seed_*/` (the four `<condition>.json` files and
 | Active inquiry, context-seeking, red flag, scope: diff, CI, Holm p | `\stat<Dim>LoRAvsBaseDiff`, `...CI`, `...PHolm` | `compare_conditions` | RM | computed |
 | Questions per response 0.45 to 1.16 | `\statQuestionsBase`, `\statQuestionsLoRA` | `describe_conditions` | RM | computed |
 | Hedging and specificity significant before but not after Holm | `\statHedgingQualityLoRAvsBaseDiff`, `\statSpecificityLoRAvsBaseDiff`, `...PHolm` | `compare_conditions` | RM | computed |
-| Uncertainty acknowledgment unchanged | `\statUncertaintyAckLoRAvsBaseDiff`, `...CI` | `compare_conditions` | RM | computed |
+| No detected change in uncertainty acknowledgment | `\statUncertaintyAckLoRAvsBaseDiff`, `...CI` | `compare_conditions` | RM | computed |
 | Pooled d 0.63, 0.44, 0.20, 0.22 (descriptive) | `\stat<Dim>LoRAvsBaseD` | `compare_conditions` | RM | computed |
 | Worst case keeps the four effects at p <= 0.035 | `\statScopeBoundingLoRAvsBaseWorstCaseP` (the largest of the four) | `worst_case` | RM | computed |
 | LoRA vs teacher on active inquiry: -2.4 [-5.7, +1.0] | `\statActiveInquiryLoRAvsBaseCoTDiff`, `...CI`, `...CILow` | `compare_conditions` | RM | computed |
@@ -112,7 +113,7 @@ Inputs: `RM` is `results_modal/seed_*/` (the four `<condition>.json` files and
 | Active inquiry 80.0% under LoRA+BODHI | `\statActiveInquiryLoRACoT` | `describe_conditions` | RM | computed |
 | Red flag 1.67 to 1.51, -0.161 [-0.262, -0.059], p = 0.012, Holm 0.058 | `\statRedFlagLoRA`, `\statRedFlagLoRACoT`, `\statRedFlagLoRACoTvsLoRADiff`, `...CI`, `...P`, `...PHolm` | `describe_conditions`, `compare_conditions` | RM | computed |
 | Red-flag rate -20.6 points [-29.8, -11.4], p = 0.0034 | `\statRedFlagRateLoRACoTvsLoRADiff`, `...CI`, `...P` | `compare_conditions` | RM | computed |
-| Against Base: level on the score, lower on the rate | `\statRedFlagLoRACoTvsBaseDiff`, `...CI`, `\statRedFlagRateLoRACoTvsBaseDiff`, `...CI` | `compare_conditions` | RM | computed |
+| Against Base: no detected difference on the score, lower on the rate | `\statRedFlagLoRACoTvsBaseDiff`, `...CI`, `\statRedFlagRateLoRACoTvsBaseDiff`, `...CI` | `compare_conditions` | RM | computed |
 | Aggregate LoRA+BODHI minus LoRA -0.008 [-0.020, +0.004] | `\statHealthBenchLoRACoTvsLoRADiff`, `...CI` | `compare_conditions` | RM | computed |
 | Leakage 54.6% against 0.2% to 3.0%: at least 2 of 9 analysis-format markers (the 7 Pass 1 headers, "differential", "scope of") | `\statLeakagePct<Cond>` | `rebuttal_section` | `rebuttal/results/interference_mechanism.json` | computed |
 | Seven Pass 1 headers only (Appendix H): 53.2% against 0.0% to 0.8%; red flag 1.32 (n = 494) and 1.73 (n = 434) | `\statLeakagePassOnePct<Cond>`, `\statRedFlagLeakedPassOne`, `\statRedFlagCleanPassOne`, `\statLeakagePassOneN...` | `rebuttal_section` | `rebuttal/results/interference_mechanism.json` | computed |
@@ -127,6 +128,8 @@ Inputs: `RM` is `results_modal/seed_*/` (the four `<condition>.json` files and
 | Antidepressant example: Base asks nothing, LoRA asks about duration, intensity, sleep, appetite, energy, concentration and self-harm, and gives a crisis line | none (qualitative) | | `results_modal/seed_99/{base,lora}_no_wrapper.json` and `epistemic_scores.json`, prompt `2c915b71` | computed (read by hand; quoted in Appendix K) |
 | Table 4: prior approaches compared on what they change, inference cost, what they need and their target | none | | the cited papers | design (positioning, not a measurement) |
 | Second protocol implemented, not run | none | | `scripts/baselines/ask_first.py` | design |
+| The adapter also asks more on self-contained prompts (15.9% to 37.5%; 17.0% to 43.2%); its gain in discrimination over Base includes zero (+8.4 [-1.2, +17.9]; +10.0 [-0.5, +20.1]); posted selectivity claim withdrawn | `\statAskSelfContained<Labeling><Cond>`, `\statDiscrimination<Labeling>LoRAvsBase`, `...CI`, `\statDiscrimination<Labeling><Cond>`, `...CI` | `rebuttal_section` | `rebuttal/results/mimicry_split.json` | computed (post hoc labelings; withdrawals W15) |
+| Prior work compared: MediQ, CRAFT-MD, AMIE, R-Tuning, linguistic calibration (section 2, Table 4) | none | | the cited papers; venues checked against Crossref and arXiv on 2026-10-08 | design (positioning) |
 
 ## Appendix numbers that are not computed here
 
@@ -134,5 +137,7 @@ Inputs: `RM` is `results_modal/seed_*/` (the four `<condition>.json` files and
 |---|---|---|---|
 | Contamination probe: 200 sampled, 105 long enough, 0 exact matches, 0 overlap | Appendix A | unverified | Re-run `scripts/contamination_probe.py` on the base model (GPU) and commit the output |
 | Filter kept 3,129 of 4,000 traces (tau table pool column) | Table tau-calibration | unverified (constant `FILTER_KEPT`) | The filter logs of the submitted run (PROV-11) |
+| Figure 1 labels: 4,000 prompts, 2,816 train in seed 7, r = 8, 250 to 300 steps, 200 of 1,000 prompts | Figure 1 | computed for the counts (`paper/figures/pipeline_standalone.tex` inputs `generated/numbers.tex`); design for r and steps | `make figures` rebuilds the PDF |
+| MedQuAD on every dimension: specificity 1.71 (Base), 1.47 (teacher), 1.33 (LoRA) | Appendix J, `tab_cell_dimensions.tex` | posted (`\statCellMedQuADMistral<Cond><Dim>`; withdrawals W20) | the sync and `make cells` |
 | Second grader on seed 42 (r = 0.42, rho = 0.35, 43 shared prompts) | Appendix H | computed (`data/derived/seed_42_qwen_grader_scores.json`, scores copied from the ignored `results/seed_42/eval/`) | Settled: `make derived` rebuilds the copy from the source files |
-| Pre-registration date 2026-04-29, grader switch 2026-05-01 | Appendix B | design | commits aa7eec4 and 1376aec |
+| Plan specified in the repository on 2026-04-29 (not an outside registry), grader switch 2026-05-01 | Abstract, section 3.4, Appendix B | design | commits aa7eec4 (`RESULTS.md` 7.B) and 1376aec; the paper omits the hashes because they find the public repo (withdrawals W19) |

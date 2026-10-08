@@ -32,15 +32,15 @@ Kinds:
 | C12 | No claim that the recipe is protocol-agnostic. Only one CoT protocol was tested. | text | `HomM_1_rebuttal.md:27` | done (99d97ec) | |
 | C13 | The grader design as a limitation. The cross-family split removes the most direct route to circularity. It does not rule out correlated grading preferences, and it gives no clinical validity. Also state why the graders are not clinically tuned. | text | `HomM_3_followup_part2.md:22`, `HomM_1_rebuttal.md:35` | done (a59cb82) | withdrawals W13. The paper gives the reason as posted in `HomM_3_followup_part2.md:22`: the design rule was family separation, general models as in HealthBench, and a clinically tuned judge is untested. It does not repeat the posted argument that the clinical judges are all Llama-derived, because that argument does not bear on separation from the Qwen filter. |
 | C14 | The missing empirical prior-work comparison stated plainly as a limitation and named as the next experiment, not folded into a claim. | text | `HomM_3_followup_part2.md:26`, `HomM_1_rebuttal.md:49` | done (99d97ec) | See C27. |
-| C15 | A Discussion subsection, "Comparison to Prior Calibration Approaches". It covers uncertainty prompting (Lin et al., 2022; Tian et al., 2023), STaR (Zelikman et al., 2022) and Constitutional AI (Bai et al., 2022). It has a table that compares inference cost, teacher requirement, behavioural against factual focus, and generality. | text + table | `HomM_1_rebuttal.md:47` | done (5c2e9b0) | Section 5.1, Table 4. Generality is in the text (what each approach was tested on), not a column. No candidate from `rebuttal/prior_work_candidates.bib` was needed. |
+| C15 | A Discussion subsection, "Comparison to Prior Calibration Approaches". It covers uncertainty prompting (Lin et al., 2022; Tian et al., 2023), STaR (Zelikman et al., 2022) and Constitutional AI (Bai et al., 2022). It has a table that compares inference cost, teacher requirement, behavioural against factual focus, and generality. | text + table | `HomM_1_rebuttal.md:47` | done (5c2e9b0) | Section 5.1, Table 4. Generality is in the text (what each approach was tested on), not a column. Table 4 and Section 2 now also cover MediQ, AMIE, R-Tuning and linguistic calibration, and Section 2 cites CRAFT-MD, from `rebuttal/prior_work_candidates.bib` (meta-review W6, HomM W4). |
 
 ## Figures and tables
 
 | ID | The camera-ready must carry | Kind | Source | Status | Note |
 |---|---|---|---|---|---|
 | C16 | Figure 2 in two panels. Panel A has the 0 to 2 dimensions (uncertainty, context-seeking, red-flag, scope, hedging, specificity). Panel B has the rates (active inquiry, red-flag, scope-bounded, blanket disclaimer). Each panel has its own labelled axis. | figure | `FzpA_1_rebuttal.md:24`, `LxMF_1_rebuttal.md:54` | done (99d97ec) | The two-panel figure moved to the per-seed appendix in 1508893 to keep the body at nine pages, where it is now Figure E.1; Table 2 carries the same values in the body. |
-| C17 | A direction arrow on every row of Table 2. Blanket disclaimer is the only row where lower is better, so it is the only down arrow. Red-flag identification is labelled higher-is-better. | table | `FzpA_1_rebuttal.md:22`, `FzpA_1_rebuttal.md:28` | done (43937ed) | |
-| C18 | A Table 2 caption note that the red-flag rate does not capture false positives, so a model that flags everything would also score high. | text | `FzpA_1_rebuttal.md:28` | done (43937ed) | |
+| C17 | A direction arrow on every row of Table 2. Blanket disclaimer is the only row where lower is better, so it is the only down arrow. Red-flag identification is labelled higher-is-better. | table | `FzpA_1_rebuttal.md:22`, `FzpA_1_rebuttal.md:28` | done (43937ed) | Questions per response now carries a circle for "no better direction", because asking helps only where facts are missing (the Discussion says so); every other row keeps its arrow. |
+| C18 | A Table 2 caption note that the red-flag rate does not capture false positives, so a model that flags everything would also score high. | text | `FzpA_1_rebuttal.md:28` | done (43937ed) | Reworded: the grader anchor credits only red flags relevant to the case (Appendix D), so the caption now says that over-flagging has no labelled test, not that flagging everything scores high. |
 | C19 | A Table 1 caption that says only the CoT conditions lose prompts. The LoRA row is 200. | text | `LxMF_1_rebuttal.md:7` | done (43937ed) | Use the corrected n (withdrawals W10). |
 
 ## Dimensions and grading
@@ -56,7 +56,7 @@ Kinds:
 
 | ID | The camera-ready must carry | Kind | Source | Status | Note |
 |---|---|---|---|---|---|
-| C24 | All seven added cells in the main evaluation, including the BioMistral null and the set-aside MedQA cell. | table | `HomM_4_consolidation.md:3` | done (99d97ec) | Table 3 holds all seven added cells. Values are transcribed from the posts until the sync; the MedQA run is still to be named (withdrawals W12). |
+| C24 | All seven added cells in the main evaluation, including the BioMistral null and the set-aside MedQA cell. | table | `HomM_4_consolidation.md:3` | to-do | Table 3 holds six added cells with transcribed values. The MedQA row has no values: none were posted, and the raw outputs are on the GPU host (PROV-1). The paper says in Section 4.2, the abstract and the Limitations that this promise is unmet. Unblock: sync `results_rebuttal/`, run `make cells`, name the MedQA run (withdrawals W12). |
 | C25 | Training and inference cost for each configuration, from per-stage timings measured in isolation. Do not use the shared-node timings. | experiment | `FzpA_1_rebuttal.md:64` | to-do | GPU time |
 
 ## Experiments still owed
@@ -66,12 +66,12 @@ data access.
 
 | ID | Commitment | Kind | Source | Status | Note |
 |---|---|---|---|---|---|
-| C26 | A clinical judge as an extra robustness panel next to the primary grader. It does not replace the primary grader. | experiment | `LxMF_1_rebuttal.md:34`, `HomM_1_rebuttal.md:35` | to-do | For the Med42 cells the judge must be neither Llama nor Qwen (audit EVAL-7). `scripts/regrade_cross_family.py` re-grades stored outputs with such a judge (an LLM, not a clinician). Not run. |
+| C26 | A clinical judge as an extra robustness panel next to the primary grader. It does not replace the primary grader. | experiment | `LxMF_1_rebuttal.md:34`, `HomM_1_rebuttal.md:35` | to-do | Named in the Limitations as promised and not run. | For the Med42 cells the judge must be neither Llama nor Qwen (audit EVAL-7). `scripts/regrade_cross_family.py` re-grades stored outputs with such a judge (an LLM, not a clinician). Not run. |
 | C27 | An empirical head-to-head against an inference-time calibration baseline (Tian et al., 2023, is named). | experiment | `HomM_1_rebuttal.md:49`, `HomM_1_rebuttal.md:59`, `HomM_4_consolidation.md:5`, `LxMF_1_rebuttal.md:82` | to-do | Inference only (audit EVAL-8). Code: `scripts/baselines/prompts.py`, `rebuttal/launch/run_baselines.sh`. Dry-run tested, not run. |
 | C28 | Complete the three-physician validation: consensus kappa against the pre-registered 0.6 target. | experiment | `HomM_1_rebuttal.md:59`, `HomM_4_consolidation.md:5`, `FzpA_2_followup.md:11`, `LxMF_1_rebuttal.md:82` | to-do | People (audit EVAL-5, PROV-5) |
 | C29 | A second CoT protocol. | experiment | `HomM_1_rebuttal.md:59`, `HomM_4_consolidation.md:5` | to-do | GPU time. Code: `scripts/baselines/ask_first.py`, `PROTOCOL=ask_first` in `rebuttal/launch/run_cell.sh`. Dry-run tested, not run. |
 | C30 | A labelled set of prompts with no genuine red flag, to measure over-flagging (the false-positive check on red-flag identification). | experiment | `FzpA_1_rebuttal.md:28`, `FzpA_2_followup.md:23` | to-do | Labelling, then inference |
-| C31 | Surface red flags early in the protocol, before the extended reasoning, and test whether this recovers the LoRA+CoT red-flag gap. | experiment | `LxMF_1_rebuttal.md:50` | to-do | Inference |
+| C31 | Surface red flags early in the protocol, before the extended reasoning, and test whether this recovers the LoRA+CoT red-flag gap. | experiment | `LxMF_1_rebuttal.md:50` | to-do | Inference. Named in the Limitations as promised and not run. |
 | C32 | A clinician-posed benchmark (MIMIC or eICU). | experiment | `FzpA_1_rebuttal.md:48` | to-do | Needs credentialed PhysioNet access |
 | C33 | The Appendix C harm grading. | experiment | `FzpA_2_followup.md:23` | to-do | Named as outstanding before patient-facing use, not promised for the camera-ready. |
 

@@ -401,6 +401,104 @@ Appendix H, macros `\statHardHealthProfessional`, `\statHardSpeakerTagged`).
 
 ---
 
+## W15. "The adapter asks selectively" (corrected after the discussion)
+
+**Claim as made.**
+- Posted `LxMF_1_rebuttal.md:3`: "the adapter distinguishes information-withholding prompts from
+  self-contained ones (+10.5pp, CI excluding zero) while the base model does not (+2.1pp, CI
+  including zero)". `LxMF_1_rebuttal.md:24`: "the opposite of what surface mimicry predicts".
+- Posted `HomM_1_rebuttal.md:39,53` and `FzpA_1_rebuttal.md:48`: "the adapter's is selective".
+
+**Correction.** Not corrected in the discussion. The posted numbers compare each condition's
+discrimination index with zero. The test of a change is LoRA minus Base: +8.4 points
+[-1.2, +17.9] with the rubric-based labeling and +10.0 [-0.5, +20.1] with the theme-only one
+(`rebuttal/results/mimicry_split.json`). Both intervals include zero. The adapter also asks more
+on self-contained prompts (15.9% to 37.5%, and 17.0% to 43.2%).
+
+**The paper must say.** We do not show that the adapter learned when to ask, and template
+imitation remains possible. Done in `paper/main.tex`: the Discussion, the Limitations item
+"Selectivity" and Appendix H, which names the posted claim as withdrawn.
+
+---
+
+## W16. The BODHI expansion and the dimension mapping (changed after the discussion)
+
+**Claim as made.**
+- Submitted `main.tex:50` and posted `FzpA_1_rebuttal.md:34`: BODHI is "Bridging, Open,
+  Discerning, Humble, Inquiring", and scope bounding maps to Open and Bridging.
+
+**Correction.** The paper cites the BMJ Health & Care Informatics paper (DOI
+10.1136/bmjhci-2025-101877), which expands BODHI as "Balanced, Open-minded, Diagnostic, Humble,
+Inquisitive" (`docs/DECISIONS.md`, D15 notes). The Bridging expansion comes from the bodhi-llm
+0.1.4 package, which cites the PLOS Digital Health paper (DOI 10.1371/journal.pdig.0001013).
+
+**The paper must say.** The submission and the replies used the package's expansion and mapping.
+This version uses the cited BMJ expansion, so the mapping changed (scope bounding now maps to
+Humble). Cite the PLOS Digital Health paper as the source of the bodhi-llm protocol. Done in
+Appendix D of `paper/main.tex` (`bodhiplos2026` in `paper/references.bib`).
+
+---
+
+## W17. "All p < 1e-5" over pooled responses (changed after the discussion)
+
+**Claim as made.**
+- Submitted `main.tex:218`, `:222`: "$p < 10^{-5}$" for scope bounding and red-flag
+  identification, from tests that treat each response as independent.
+- Posted `FzpA_2_followup.md:15`: "all at p below 0.00001".
+
+**Correction.** The seed is now the unit of inference (D7). At seed level the LoRA minus Base
+p-values of the four dimensions that rise are 5.1e-5 to 1.6e-3 before Holm correction, and
+hedging quality and specificity are not significant after it (`paper/generated/numbers.json`).
+
+**The paper must say.** The submitted version treated responses as independent; this version
+uses the seed as the unit. Done in Section 3.4 of `paper/main.tex`.
+
+---
+
+## W18. "Released code and adapters" (corrected after the discussion)
+
+**Claim as made.** Posted `HomM_1_rebuttal.md:57`: "released code and adapters".
+
+**Correction.** The code is public. The five MedGemma-27B adapters are in cloud storage and are
+not released.
+
+**The paper must say.** The adapters are not yet released (Code availability, `paper/main.tex`).
+
+---
+
+## W19. How the physician check was specified (corrected after the discussion)
+
+**Claim as made.**
+- Paper and abstract: "pre-registered".
+- Posted `FzpA_2_followup.md:11`: "quadratic-weighted kappa against a three-physician consensus".
+
+**Correction.** The plan was written into the repository on 2026-04-29 (commit aa7eec4,
+`RESULTS.md` section 7.B), not registered with an outside registry. It specifies Cohen's kappa
+between the Qwen2.5-14B filter grader and the consensus of at least two physicians, with a target
+of 0.6.
+
+**The paper must say.** "Specified in advance in the repository", the plan as written, and that
+the 0.6 target was set for the filter grader. Done in the abstract, Section 3.4 and Appendix B of
+`paper/main.tex`. The paper does not give the commit hash, because the hash would find the public
+repository during double-blind review.
+
+---
+
+## W20. MedQuAD specificity left out (admitted in the discussion)
+
+**Claim as made.** Posted `LxMF_1_rebuttal.md:76` and `HomM_1_rebuttal.md:25` quoted scope bounding
+and hedging on MedQuAD, where the adapter moves away from its teacher, and concluded that the
+adapter does not copy its teacher.
+
+**Correction posted.** `HomM_2_followup_part1.md:25`: "We did not quote specificity, which goes the
+other way, 1.71 to 1.33, and belonged next to them."
+
+**The paper must say.** Give specificity next to the other two: Base 1.71, teacher 1.47, LoRA 1.33,
+so the adapter lowers specificity on MedQuAD. Done in Appendix J of `paper/main.tex`, with every
+dimension of the cell in a generated table (`paper/generated/tab_cell_dimensions.tex`).
+
+---
+
 ## Posted claims that the discussion never corrected
 
 The discussion did not withdraw the claims below, but the evidence does not support them. The
