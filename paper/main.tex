@@ -95,19 +95,20 @@ without CoT raises active inquiry from \statActiveInquiryBase\% to \statActiveIn
 context-seeking from \statContextSeekingBase{} to \statContextSeekingLoRA{} on a 0--2 scale. In this
 cell we detect no change in the aggregate rubric score (\statHealthBenchLoRAvsBaseDiff, 95\% CI
 \statHealthBenchLoRAvsBaseCI). In the \statCellsAddedCompared{} added cells whose base model is
-outside the evaluator's family, active inquiry rises in \statCellsAddedAIRose{}, and the aggregate
-score falls in all \statCellsAddedWithAggregate{}, by \statCellsAddedDropMin{} to
-\statCellsAddedDropMax{} (values transcribed from posted results; raw outputs pending sync). The
-behavior gain therefore comes with an aggregate cost. Adding the CoT protocol to the adapted model
-changes the red-flag rate by \statRedFlagRateLoRACoTvsLoRADiff{} points (95\% CI
-\statRedFlagRateLoRACoTvsLoRACI); a post hoc analysis links the drop to the protocol's analysis
-format leaking into \statLeakagePctLoRACoT\% of the answers. All behavior scores are LLM-graded: the one
-physician who returned grades agrees with the grader at $\kappa = \statKappaAll$, below our
-pre-registered target of 0.6.
+outside the evaluator's family, active inquiry rises in \statCellsAddedAIRose{}; BioMistral-7B is a
+null result. The aggregate score falls in all \statCellsAddedWithAggregate{}, by
+\statCellsAddedDropMin{} to \statCellsAddedDropMax{} (values transcribed from posted results; raw
+outputs pending sync). The behavior gain therefore comes with an aggregate cost. Adding the CoT
+protocol to the adapted model changes the red-flag rate by \statRedFlagRateLoRACoTvsLoRADiff{}
+points (95\% CI \statRedFlagRateLoRACoTvsLoRACI); a post hoc analysis links the drop to the
+protocol's analysis format leaking into \statLeakagePctLoRACoT\% of the answers. All scores are
+LLM-graded. Physicians checked the grader only on the rubric criteria behind the aggregate score:
+the one physician who returned grades agrees with it at $\kappa = \statKappaAll$, below our
+pre-registered target of 0.6. No physician has checked the seven behavior grades.
 \end{abstract}
 
 \smallskip
-\noindent\textbf{Keywords:} clinical language models; epistemic behaviors; behavioral evaluation; LoRA fine-tuning; chain-of-thought distillation; epistemic uncertainty; active inquiry; medical AI safety; HealthBench; self-distillation.
+\noindent\textbf{Keywords:} clinical language models; epistemic behaviors; behavioral evaluation; LoRA fine-tuning; chain-of-thought distillation; patient-facing question answering; active inquiry; medical AI safety; HealthBench; self-distillation.
 
 %======================================================================
 \section{Introduction}
@@ -119,18 +120,18 @@ patient's question without asking for the facts it needs. Careful clinicians ask
 advise, hedge where the evidence is thin, name danger signs, and say when the patient needs an
 examination. Medical education treats tolerance of uncertainty as part of expert judgment
 \citep{simpkin2016tolerating}, and safety-netting (telling a patient what to watch for and when to
-return) as a core clinical skill \citep{jones2019safety}. Language models trained with RLHF tend
-toward confident outputs \citep{kadavath2022language, lin2022teaching}, in part because human
-raters prefer decisive answers \citep{xiong2024can}, and current clinical models inherit this
-tendency \citep{ouyang2022training, wornow2023shaky}. Aggregate clinical scores also mix
-\emph{what} a model knows with \emph{how} it communicates, so a response that omits a warning sign
-can score as well as one that names it.
+return) as a core clinical skill \citep{jones2019safety}. Language models tuned with human feedback
+give poorly calibrated token probabilities \citep{tian2023just}, and when they state their
+confidence in words they tend to be overconfident \citep{xiong2024can}. Clinical models are mostly
+evaluated on narrow tasks that say little about their use in care \citep{wornow2023shaky}, and
+aggregate clinical scores mix \emph{what} a model knows with \emph{how} it communicates, so a
+response that omits a warning sign can score as well as one that names it.
 
 Our starting point is the \bodhi{} protocol (\textbf{B}alanced, \textbf{O}pen-minded,
 \textbf{D}iagnostic, \textbf{H}umble, \textbf{I}nquisitive) \citep{bodhi2026}, a two-pass
-chain-of-thought (CoT) protocol. Pass~1 writes an internal analysis (clinical assessment,
-differentials, evidence quality, key uncertainties, questions to ask, scope boundaries, safe
-recommendations). Pass~2 writes the answer from that analysis. The protocol elicits the target
+chain-of-thought (CoT) protocol. Pass~1 writes an internal analysis with seven fields: task type,
+audience, best assessment, key uncertainties, questions to ask, red flags and safe recommendations.
+Pass~2 writes the answer from that analysis. The protocol elicits the target
 behaviors at inference time, but it needs two generation passes, and in our evaluation the two
 passes overran the context window on \statCompletionDropPctBaseCoT\% of prompts. We use the
 protocol as a source of demonstrations instead, and ask whether a LoRA adapter can learn the
@@ -161,6 +162,11 @@ Our contributions:
     red-flag rate. A post hoc analysis ties the drop to the protocol's analysis format leaking into
     the answer (\S\ref{sec:interference}).
 \end{enumerate}
+
+\noindent What we show is limited to one CoT protocol, one fine-tuning method and patient-facing
+questions where facts can be missing. We conjecture that other structured protocols that elicit
+gradable behaviors, and other parameter-efficient methods, can fill the same two roles. We have
+not tested this conjecture.
 
 %======================================================================
 \section{Related Work}
