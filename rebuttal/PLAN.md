@@ -45,9 +45,11 @@ still on the shared GPU host (audit PROV-1).
 - The MediQ paired complete-against-incomplete probe.
 - MedicationQA, MedDialog and MedMCQA.
 - MedGemma and BioMistral on MedQA or MedQuAD.
-- A second CoT protocol, or a BODHI ablation variant (C29).
+- A second CoT protocol, or a BODHI ablation variant (C29). Code for an ask-first protocol
+  now exists (`PROTOCOL=ask_first` in `launch/run_cell.sh`).
 - The clinical-judge re-grade (C26).
-- `analyses/prior_work_baseline.py`, the inference-time calibration baseline (C27).
+- The inference-time calibration baseline (C27), planned as `analyses/prior_work_baseline.py`.
+  The code now lives in `scripts/baselines/` and `launch/run_baselines.sh`.
 - The cost table from `scripts/latency_benchmark.py` (C25).
 
 ## Rules that still hold
@@ -55,5 +57,7 @@ still on the shared GPU host (audit PROV-1).
 - **Grader families.** The filter is Qwen and the evaluator is Llama-3. A new base model must
   avoid both families, or the asymmetric-grading argument breaks. The Med42-8B cells break
   this rule (Llama-3 base, Llama-3 evaluator). A re-grade of those cells needs a judge from
-  neither family (audit EVAL-7).
+  neither family (audit EVAL-7). `scripts/regrade_cross_family.py` does that re-grade. It has
+  not run. `launch/run_cell.sh` now refuses a same-family cell unless `--allow-same-family`
+  is passed.
 - **Seeds.** 42, 7, 13, 99 and 101, the same as the paper.

@@ -10,7 +10,7 @@ withdrew, and what we promised. The ledgers are the files that the resubmission 
 |---|---|
 | `withdrawals.md` | Every claim that we withdrew or corrected in the discussion, plus two posted claims that the audit found wrong. Each entry has the claim as made, the correction and the statement that the paper must carry. |
 | `commitments.md` | Every promise in the posted replies (C1 to C33), with its source line and a status column for the paper lanes. |
-| `../data/rebuttal_cells/posted_values.json` | Every number that we posted about the rebuttal cells, transcribed with source lines. Its README says how to replace it with generated values. |
+| `../data/rebuttal_cells/posted_values.json` | Every number that we posted about the rebuttal cells, transcribed with source lines. Its README says how `make cells` checks it against generated values. |
 
 ## Posted replies
 
@@ -32,8 +32,8 @@ How we know these are the posted versions, and where we are not sure:
 - **The HomM follow-up, parts 1 and 2.** A rendered copy (`HomM_response_final.docx`) says
   "Two comments, posted in order", with comment 1 at 4,864 characters and comment 2 at
   4,812. The two files have exactly those lengths, and every paragraph and table cell
-  matches the copy. The .docx is untracked in the main worktree and is not committed. Its
-  text adds nothing to the two files.
+  matches the copy. The .docx is not in the repo. It is archived in `BODHI/_archive/rebuttal/`
+  on the first author's machine. Its text adds nothing to the two files.
 - **LxMF and HomM rebuttals.** Git history has an earlier version of each (before commit
   0100b3c) that writes math as MathJax (`$\kappa = 0.35$`, `$n \approx 985$–$998$`). The
   versions here are the later edit (2026-07-29), which writes the same math as plain text
@@ -66,8 +66,13 @@ them.
 |---|---|
 | `configs/` | LoRA configs for the added base models (Mistral-Small-24B with QLoRA, Med42-8B, BioMistral-7B). |
 | `launch/run_cell.sh`, `launch/run_grid.sh` | Driver for one cell, and for the grid on the shared GPU host. |
-| `analyses/mimicry_split.py` | The discrimination index posted to LxMF. Outputs go to `rebuttal/results/`, which is gitignored. |
+| `launch/run_baselines.sh` | Runs the two prompt baselines (clarifying questions, verbalized confidence) for a cell (C27). Not run yet. |
+| `analyses/mimicry_split.py` | The discrimination index and the asking odds ratios posted to LxMF. |
 | `analyses/interference_mechanism.py` | The format-leakage analysis posted to LxMF. |
+| `analyses/second_person_questions.py` | The second-person question count posted to FzpA. |
+| `analyses/quality_drop.py` | The paired t and Holm test behind "all six drops p < 0.02". Needs the synced cells. |
+| `analyses/cell_values.py` | Computes the posted cell values from the synced cells and diffs them against `posted_values.json` (`make cells`). |
+| `results/` | Outputs of the analyses above (`make rebuttal`). |
 | `analyses/peek_results.py` | Quick look at per-seed results on the host. |
 | `analyses/FINDINGS_quality_drop.md` | Internal analysis of the aggregate drop (paired t, rubric test). Never posted. |
 | `prior_work_candidates.bib` | Candidate references for the prior-work subsection (C15). |
@@ -78,12 +83,12 @@ them.
 
 - **Raw outputs of the added cells.** They exist only on the shared GPU host, under
   `/data/PROJECTS/bohdi/results_rebuttal/`. Until they are synced, no number for an added
-  cell can be checked (audit PROV-1). After the sync, generate the cell values and diff them
-  against `posted_values.json`.
-- **Scripts for posted numbers.** The paired t and Holm test behind "all six drops p < 0.02"
-  has no committed script (PROV-2). The second-person question rate (18.4% against 39.6%)
-  has no script either (PROV-7). The odds ratios 1.16, 1.54 and 1.56 were computed by hand
-  (PROV-10). These belong to the stats lane.
+  cell can be checked (audit PROV-1). After the sync, run `make cells`. It diffs the cell
+  values against `posted_values.json` and runs the paired t (PROV-2).
+- **Scripts for posted numbers.** Each posted analysis now has a script. Two results differ
+  from the posts. The second-person count gives 17.9% against 36.7%, not the posted 18.4%
+  against 39.6% (PROV-7). The odds ratios reproduce 1.16, 1.54 and 1.56, but their 95% CIs
+  overlap (PROV-10). See `results/`.
 - **Settings for each cell.** The tau that each cell used, the retention and the holdout IDs
   are in the filter logs on the host (PROV-3). `withdrawals.md` W11 depends on them.
 - **The MedQA cell.** Two posted reasons for setting it aside disagree. HomM_4 promised that
@@ -93,4 +98,5 @@ them.
   `responses/posted/` as `AC_1_part1.md` and `AC_2_part2.md` with `git mv`, and add them to
   the table above. Their withdrawals and promises repeat ones that are already in the ledgers.
 - **Promised experiments.** C25 to C33 in `commitments.md` need GPU time, people or data
-  access.
+  access. Code for C27 (`launch/run_baselines.sh`) and C29 (`PROTOCOL=ask_first` in
+  `launch/run_cell.sh`) exists and passes its dry-run tests. Neither has run.

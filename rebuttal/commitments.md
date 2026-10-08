@@ -66,10 +66,10 @@ data access.
 
 | ID | Commitment | Kind | Source | Status | Note |
 |---|---|---|---|---|---|
-| C26 | A clinical judge as an extra robustness panel next to the primary grader. It does not replace the primary grader. | experiment | `LxMF_1_rebuttal.md:34`, `HomM_1_rebuttal.md:35` | to-do | For the Med42 cells the judge must be neither Llama nor Qwen (audit EVAL-7). |
-| C27 | An empirical head-to-head against an inference-time calibration baseline (Tian et al., 2023, is named). | experiment | `HomM_1_rebuttal.md:49`, `HomM_1_rebuttal.md:59`, `HomM_4_consolidation.md:5`, `LxMF_1_rebuttal.md:82` | to-do | Inference only (audit EVAL-8) |
+| C26 | A clinical judge as an extra robustness panel next to the primary grader. It does not replace the primary grader. | experiment | `LxMF_1_rebuttal.md:34`, `HomM_1_rebuttal.md:35` | to-do | For the Med42 cells the judge must be neither Llama nor Qwen (audit EVAL-7). `scripts/regrade_cross_family.py` re-grades stored outputs with such a judge (an LLM, not a clinician). Not run. |
+| C27 | An empirical head-to-head against an inference-time calibration baseline (Tian et al., 2023, is named). | experiment | `HomM_1_rebuttal.md:49`, `HomM_1_rebuttal.md:59`, `HomM_4_consolidation.md:5`, `LxMF_1_rebuttal.md:82` | to-do | Inference only (audit EVAL-8). Code: `scripts/baselines/prompts.py`, `rebuttal/launch/run_baselines.sh`. Dry-run tested, not run. |
 | C28 | Complete the three-physician validation: consensus kappa against the pre-registered 0.6 target. | experiment | `HomM_1_rebuttal.md:59`, `HomM_4_consolidation.md:5`, `FzpA_2_followup.md:11`, `LxMF_1_rebuttal.md:82` | to-do | People (audit EVAL-5, PROV-5) |
-| C29 | A second CoT protocol. | experiment | `HomM_1_rebuttal.md:59`, `HomM_4_consolidation.md:5` | to-do | GPU time |
+| C29 | A second CoT protocol. | experiment | `HomM_1_rebuttal.md:59`, `HomM_4_consolidation.md:5` | to-do | GPU time. Code: `scripts/baselines/ask_first.py`, `PROTOCOL=ask_first` in `rebuttal/launch/run_cell.sh`. Dry-run tested, not run. |
 | C30 | A labelled set of prompts with no genuine red flag, to measure over-flagging (the false-positive check on red-flag identification). | experiment | `FzpA_1_rebuttal.md:28`, `FzpA_2_followup.md:23` | to-do | Labelling, then inference |
 | C31 | Surface red flags early in the protocol, before the extended reasoning, and test whether this recovers the LoRA+CoT red-flag gap. | experiment | `LxMF_1_rebuttal.md:50` | to-do | Inference |
 | C32 | A clinician-posed benchmark (MIMIC or eICU). | experiment | `FzpA_1_rebuttal.md:48` | to-do | Needs credentialed PhysioNet access |
