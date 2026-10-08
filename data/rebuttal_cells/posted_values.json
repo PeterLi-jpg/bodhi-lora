@@ -1,0 +1,994 @@
+{
+  "_provenance": "transcribed from posted OpenReview replies; raw outputs on mit-critical-data-1:/data/PROJECTS/bohdi/results_rebuttal/ pending sync",
+  "cells": [
+    {
+      "id": "healthbench__medgemma-27b",
+      "benchmark": "HealthBench-Hard",
+      "base_model": "MedGemma-27B",
+      "base_family": "Gemma",
+      "same_family_as_evaluator": false,
+      "n_seeds": 5,
+      "set_aside": false,
+      "set_aside_reason": null,
+      "teacher_active_inquiry_pct": 47.9,
+      "filter_clearance_pct": 78,
+      "conditions": {
+        "base": {
+          "active_inquiry_pct": {
+            "mean": 17.5,
+            "sd": null
+          },
+          "context_seeking": {
+            "mean": 1.4,
+            "sd": null
+          },
+          "aggregate": {
+            "mean": 0.459,
+            "sd": null
+          }
+        },
+        "base_cot": {
+          "active_inquiry_pct": {
+            "mean": 47.9,
+            "sd": null
+          }
+        },
+        "lora": {
+          "active_inquiry_pct": {
+            "mean": 45.6,
+            "sd": null
+          },
+          "context_seeking": {
+            "mean": 1.75,
+            "sd": null
+          },
+          "red_flag": {
+            "mean": 1.67,
+            "sd": null
+          },
+          "aggregate": {
+            "mean": 0.463,
+            "sd": null
+          }
+        },
+        "lora_cot": {}
+      },
+      "sources": [
+        "rebuttal/responses/posted/FzpA_1_rebuttal.md:15",
+        "rebuttal/responses/posted/FzpA_1_rebuttal.md:54",
+        "rebuttal/responses/posted/FzpA_2_followup.md:15",
+        "rebuttal/responses/posted/FzpA_2_followup.md:23",
+        "rebuttal/responses/posted/LxMF_1_rebuttal.md:45",
+        "rebuttal/responses/posted/LxMF_1_rebuttal.md:64",
+        "rebuttal/responses/posted/HomM_1_rebuttal.md:15",
+        "rebuttal/responses/posted/HomM_1_rebuttal.md:23",
+        "rebuttal/responses/posted/HomM_2_followup_part1.md:9",
+        "rebuttal/responses/posted/HomM_2_followup_part1.md:27",
+        "rebuttal/responses/posted/HomM_2_followup_part1.md:31",
+        "rebuttal/responses/posted/HomM_2_followup_part1.md:39",
+        "rebuttal/responses/posted/HomM_3_followup_part2.md:14",
+        "rebuttal/responses/posted/HomM_3_followup_part2.md:18"
+      ],
+      "notes": [
+        "Submitted cell. Its raw outputs are in results_modal/ in this repo, not on the remote host.",
+        "filter_clearance_pct is approximate: posted as '~78', from the paper's ~3,100 of 4,000 traces kept (HomM_2_followup_part1.md:27).",
+        "lora.red_flag is the LoRA-alone value quoted in the interference analysis (LxMF_1_rebuttal.md:45)."
+      ]
+    },
+    {
+      "id": "healthbench__mistral-small-24b",
+      "benchmark": "HealthBench-Hard",
+      "base_model": "Mistral-Small-24B",
+      "base_family": "Mistral",
+      "same_family_as_evaluator": false,
+      "n_seeds": 5,
+      "set_aside": false,
+      "set_aside_reason": null,
+      "teacher_active_inquiry_pct": 54.2,
+      "filter_clearance_pct": 62.1,
+      "conditions": {
+        "base": {
+          "active_inquiry_pct": {
+            "mean": 25.6,
+            "sd": null
+          },
+          "context_seeking": {
+            "mean": 1.05,
+            "sd": null
+          },
+          "aggregate": {
+            "mean": 0.425,
+            "sd": 0.004
+          }
+        },
+        "base_cot": {
+          "active_inquiry_pct": {
+            "mean": 54.2,
+            "sd": null
+          },
+          "aggregate": {
+            "mean": 0.416,
+            "sd": 0.001
+          }
+        },
+        "lora": {
+          "active_inquiry_pct": {
+            "mean": 56.6,
+            "sd": null
+          },
+          "context_seeking": {
+            "mean": 1.76,
+            "sd": null
+          },
+          "aggregate": {
+            "mean": 0.411,
+            "sd": 0.006
+          }
+        },
+        "lora_cot": {
+          "aggregate": {
+            "mean": 0.404,
+            "sd": 0.011
+          }
+        }
+      },
+      "sources": [
+        "rebuttal/responses/posted/FzpA_1_rebuttal.md:15",
+        "rebuttal/responses/posted/FzpA_1_rebuttal.md:55",
+        "rebuttal/responses/posted/LxMF_1_rebuttal.md:65",
+        "rebuttal/responses/posted/LxMF_1_rebuttal.md:78",
+        "rebuttal/responses/posted/HomM_1_rebuttal.md:16",
+        "rebuttal/responses/posted/HomM_1_rebuttal.md:23",
+        "rebuttal/responses/posted/HomM_1_rebuttal.md:25",
+        "rebuttal/responses/posted/HomM_1_rebuttal.md:29",
+        "rebuttal/responses/posted/HomM_2_followup_part1.md:9",
+        "rebuttal/responses/posted/HomM_2_followup_part1.md:32",
+        "rebuttal/responses/posted/HomM_3_followup_part2.md:7"
+      ],
+      "notes": [
+        "filter_clearance_pct 62.1 is from Table 2; LxMF_1_rebuttal.md:78 and HomM_1_rebuttal.md:25 round it to 62%."
+      ]
+    },
+    {
+      "id": "healthbench__med42-8b",
+      "benchmark": "HealthBench-Hard",
+      "base_model": "Med42-8B",
+      "base_family": "Llama-3",
+      "same_family_as_evaluator": true,
+      "n_seeds": 5,
+      "set_aside": false,
+      "set_aside_reason": null,
+      "teacher_active_inquiry_pct": 57.1,
+      "filter_clearance_pct": 50.8,
+      "conditions": {
+        "base": {
+          "active_inquiry_pct": {
+            "mean": 11.8,
+            "sd": null
+          },
+          "context_seeking": {
+            "mean": 0.52,
+            "sd": null
+          },
+          "aggregate": {
+            "mean": 0.405,
+            "sd": 0.003
+          }
+        },
+        "base_cot": {
+          "active_inquiry_pct": {
+            "mean": 57.1,
+            "sd": null
+          },
+          "aggregate": {
+            "mean": 0.391,
+            "sd": 0.006
+          }
+        },
+        "lora": {
+          "active_inquiry_pct": {
+            "mean": 52.5,
+            "sd": null
+          },
+          "context_seeking": {
+            "mean": 1.4,
+            "sd": null
+          },
+          "aggregate": {
+            "mean": 0.392,
+            "sd": 0.004
+          }
+        },
+        "lora_cot": {
+          "aggregate": {
+            "mean": 0.382,
+            "sd": 0.007
+          }
+        }
+      },
+      "sources": [
+        "rebuttal/responses/posted/FzpA_1_rebuttal.md:15",
+        "rebuttal/responses/posted/FzpA_1_rebuttal.md:56",
+        "rebuttal/responses/posted/LxMF_1_rebuttal.md:66",
+        "rebuttal/responses/posted/HomM_1_rebuttal.md:17",
+        "rebuttal/responses/posted/HomM_1_rebuttal.md:23",
+        "rebuttal/responses/posted/HomM_1_rebuttal.md:29",
+        "rebuttal/responses/posted/HomM_2_followup_part1.md:9",
+        "rebuttal/responses/posted/HomM_2_followup_part1.md:33",
+        "rebuttal/responses/posted/HomM_2_followup_part1.md:39",
+        "rebuttal/responses/posted/HomM_3_followup_part2.md:8"
+      ],
+      "notes": [
+        "Llama-3 family, the same family as the Llama-3.1-8B evaluator."
+      ]
+    },
+    {
+      "id": "healthbench__biomistral-7b",
+      "benchmark": "HealthBench-Hard",
+      "base_model": "BioMistral-7B",
+      "base_family": "Mistral",
+      "same_family_as_evaluator": false,
+      "n_seeds": 5,
+      "set_aside": false,
+      "set_aside_reason": null,
+      "teacher_active_inquiry_pct": 14.5,
+      "filter_clearance_pct": 20.4,
+      "conditions": {
+        "base": {
+          "active_inquiry_pct": {
+            "mean": 11.7,
+            "sd": null
+          },
+          "context_seeking": {
+            "mean": 0.27,
+            "sd": null
+          },
+          "aggregate": {
+            "mean": 0.378,
+            "sd": 0.003
+          }
+        },
+        "base_cot": {
+          "active_inquiry_pct": {
+            "mean": 14.5,
+            "sd": null
+          },
+          "aggregate": {
+            "mean": 0.363,
+            "sd": 0.001
+          }
+        },
+        "lora": {
+          "active_inquiry_pct": {
+            "mean": 10.1,
+            "sd": null
+          },
+          "context_seeking": {
+            "mean": 0.28,
+            "sd": null
+          },
+          "aggregate": {
+            "mean": 0.363,
+            "sd": 0.007
+          }
+        },
+        "lora_cot": {
+          "aggregate": {
+            "mean": 0.362,
+            "sd": 0.003
+          }
+        }
+      },
+      "sources": [
+        "rebuttal/responses/posted/FzpA_1_rebuttal.md:60",
+        "rebuttal/responses/posted/LxMF_1_rebuttal.md:70",
+        "rebuttal/responses/posted/LxMF_1_rebuttal.md:78",
+        "rebuttal/responses/posted/HomM_1_rebuttal.md:21",
+        "rebuttal/responses/posted/HomM_1_rebuttal.md:25",
+        "rebuttal/responses/posted/HomM_2_followup_part1.md:5",
+        "rebuttal/responses/posted/HomM_2_followup_part1.md:7",
+        "rebuttal/responses/posted/HomM_2_followup_part1.md:9",
+        "rebuttal/responses/posted/HomM_2_followup_part1.md:34",
+        "rebuttal/responses/posted/HomM_2_followup_part1.md:39",
+        "rebuttal/responses/posted/HomM_3_followup_part2.md:9",
+        "rebuttal/responses/posted/HomM_3_followup_part2.md:14",
+        "rebuttal/responses/posted/HomM_3_followup_part2.md:16"
+      ],
+      "notes": [
+        "The posted null cell. filter_clearance_pct 20.4 is from Table 2; LxMF_1_rebuttal.md:78 and HomM_1_rebuttal.md:25 round it to 20%."
+      ]
+    },
+    {
+      "id": "chatdoctor__mistral-small-24b",
+      "benchmark": "ChatDoctor",
+      "base_model": "Mistral-Small-24B",
+      "base_family": "Mistral",
+      "same_family_as_evaluator": false,
+      "n_seeds": 5,
+      "set_aside": false,
+      "set_aside_reason": null,
+      "teacher_active_inquiry_pct": 54.5,
+      "filter_clearance_pct": 97.6,
+      "conditions": {
+        "base": {
+          "active_inquiry_pct": {
+            "mean": 7.8,
+            "sd": null
+          },
+          "context_seeking": {
+            "mean": 0.83,
+            "sd": null
+          },
+          "aggregate": {
+            "mean": 0.557,
+            "sd": 0.004
+          }
+        },
+        "base_cot": {
+          "active_inquiry_pct": {
+            "mean": 54.5,
+            "sd": null
+          },
+          "aggregate": {
+            "mean": 0.55,
+            "sd": 0.006
+          }
+        },
+        "lora": {
+          "active_inquiry_pct": {
+            "mean": 58.6,
+            "sd": null
+          },
+          "context_seeking": {
+            "mean": 1.49,
+            "sd": null
+          },
+          "aggregate": {
+            "mean": 0.541,
+            "sd": 0.006
+          }
+        },
+        "lora_cot": {
+          "aggregate": {
+            "mean": 0.448,
+            "sd": 0.015
+          }
+        }
+      },
+      "sources": [
+        "rebuttal/responses/posted/FzpA_1_rebuttal.md:7",
+        "rebuttal/responses/posted/FzpA_1_rebuttal.md:57",
+        "rebuttal/responses/posted/LxMF_1_rebuttal.md:67",
+        "rebuttal/responses/posted/LxMF_1_rebuttal.md:74",
+        "rebuttal/responses/posted/HomM_1_rebuttal.md:18",
+        "rebuttal/responses/posted/HomM_2_followup_part1.md:35",
+        "rebuttal/responses/posted/HomM_3_followup_part2.md:10"
+      ],
+      "notes": []
+    },
+    {
+      "id": "chatdoctor__med42-8b",
+      "benchmark": "ChatDoctor",
+      "base_model": "Med42-8B",
+      "base_family": "Llama-3",
+      "same_family_as_evaluator": true,
+      "n_seeds": 5,
+      "set_aside": false,
+      "set_aside_reason": null,
+      "teacher_active_inquiry_pct": 83.4,
+      "filter_clearance_pct": 96.0,
+      "conditions": {
+        "base": {
+          "active_inquiry_pct": {
+            "mean": 2.9,
+            "sd": null
+          },
+          "context_seeking": {
+            "mean": 0.71,
+            "sd": null
+          },
+          "aggregate": {
+            "mean": 0.498,
+            "sd": 0.003
+          }
+        },
+        "base_cot": {
+          "active_inquiry_pct": {
+            "mean": 83.4,
+            "sd": null
+          },
+          "aggregate": {
+            "mean": 0.497,
+            "sd": 0.004
+          }
+        },
+        "lora": {
+          "active_inquiry_pct": {
+            "mean": 86.4,
+            "sd": null
+          },
+          "context_seeking": {
+            "mean": 1.81,
+            "sd": null
+          },
+          "aggregate": {
+            "mean": 0.457,
+            "sd": 0.007
+          }
+        },
+        "lora_cot": {
+          "aggregate": {
+            "mean": 0.461,
+            "sd": 0.005
+          }
+        }
+      },
+      "sources": [
+        "rebuttal/responses/posted/FzpA_1_rebuttal.md:58",
+        "rebuttal/responses/posted/LxMF_1_rebuttal.md:68",
+        "rebuttal/responses/posted/HomM_1_rebuttal.md:19",
+        "rebuttal/responses/posted/HomM_2_followup_part1.md:36",
+        "rebuttal/responses/posted/HomM_3_followup_part2.md:11"
+      ],
+      "notes": [
+        "Llama-3 family, the same family as the Llama-3.1-8B evaluator."
+      ]
+    },
+    {
+      "id": "medquad__mistral-small-24b",
+      "benchmark": "MedQuAD",
+      "base_model": "Mistral-Small-24B",
+      "base_family": "Mistral",
+      "same_family_as_evaluator": false,
+      "n_seeds": 5,
+      "set_aside": false,
+      "set_aside_reason": null,
+      "teacher_active_inquiry_pct": 23.1,
+      "filter_clearance_pct": 78.4,
+      "conditions": {
+        "base": {
+          "scope_bounding": {
+            "mean": 1.85,
+            "sd": 0.02
+          },
+          "hedging_quality": {
+            "mean": 1.46,
+            "sd": 0.01
+          },
+          "context_seeking": {
+            "mean": 0.32,
+            "sd": 0.02
+          },
+          "red_flag": {
+            "mean": 0.57,
+            "sd": 0.02
+          },
+          "uncertainty_ack": {
+            "mean": 1.87,
+            "sd": 0.01
+          },
+          "specificity": {
+            "mean": 1.71,
+            "sd": 0.01
+          },
+          "active_inquiry_pct": {
+            "mean": 6.5,
+            "sd": 1.6
+          },
+          "aggregate": {
+            "mean": 0.672,
+            "sd": 0.003
+          }
+        },
+        "base_cot": {
+          "scope_bounding": {
+            "mean": 1.61,
+            "sd": 0.03
+          },
+          "hedging_quality": {
+            "mean": 1.4,
+            "sd": 0.03
+          },
+          "context_seeking": {
+            "mean": 0.87,
+            "sd": 0.02
+          },
+          "red_flag": {
+            "mean": 0.74,
+            "sd": 0.02
+          },
+          "uncertainty_ack": {
+            "mean": 1.78,
+            "sd": 0.02
+          },
+          "specificity": {
+            "mean": 1.47,
+            "sd": 0.03
+          },
+          "active_inquiry_pct": {
+            "mean": 23.1,
+            "sd": 1.2
+          },
+          "aggregate": {
+            "mean": 0.542,
+            "sd": 0.005
+          }
+        },
+        "lora": {
+          "scope_bounding": {
+            "mean": 1.89,
+            "sd": 0.02
+          },
+          "hedging_quality": {
+            "mean": 1.78,
+            "sd": 0.03
+          },
+          "context_seeking": {
+            "mean": 1.23,
+            "sd": 0.05
+          },
+          "red_flag": {
+            "mean": 0.68,
+            "sd": 0.03
+          },
+          "uncertainty_ack": {
+            "mean": 1.98,
+            "sd": 0.0
+          },
+          "specificity": {
+            "mean": 1.33,
+            "sd": 0.03
+          },
+          "active_inquiry_pct": {
+            "mean": 26.5,
+            "sd": 2.3
+          },
+          "aggregate": {
+            "mean": 0.586,
+            "sd": 0.022
+          }
+        },
+        "lora_cot": {
+          "aggregate": {
+            "mean": 0.505,
+            "sd": 0.017
+          }
+        }
+      },
+      "sources": [
+        "rebuttal/responses/posted/FzpA_1_rebuttal.md:7",
+        "rebuttal/responses/posted/FzpA_1_rebuttal.md:59",
+        "rebuttal/responses/posted/LxMF_1_rebuttal.md:69",
+        "rebuttal/responses/posted/LxMF_1_rebuttal.md:74",
+        "rebuttal/responses/posted/LxMF_1_rebuttal.md:76",
+        "rebuttal/responses/posted/LxMF_1_rebuttal.md:80",
+        "rebuttal/responses/posted/HomM_1_rebuttal.md:20",
+        "rebuttal/responses/posted/HomM_1_rebuttal.md:25",
+        "rebuttal/responses/posted/HomM_1_rebuttal.md:29",
+        "rebuttal/responses/posted/HomM_2_followup_part1.md:17",
+        "rebuttal/responses/posted/HomM_2_followup_part1.md:18",
+        "rebuttal/responses/posted/HomM_2_followup_part1.md:19",
+        "rebuttal/responses/posted/HomM_2_followup_part1.md:20",
+        "rebuttal/responses/posted/HomM_2_followup_part1.md:21",
+        "rebuttal/responses/posted/HomM_2_followup_part1.md:22",
+        "rebuttal/responses/posted/HomM_2_followup_part1.md:23",
+        "rebuttal/responses/posted/HomM_2_followup_part1.md:25",
+        "rebuttal/responses/posted/HomM_2_followup_part1.md:37",
+        "rebuttal/responses/posted/HomM_3_followup_part2.md:12",
+        "rebuttal/responses/posted/HomM_3_followup_part2.md:18"
+      ],
+      "notes": [
+        "base.hedging_quality: Table 1 gives 1.46 +/- 0.01 (HomM_2_followup_part1.md:18); LxMF_1_rebuttal.md:76 and HomM_1_rebuttal.md:25 posted 1.45. Recorded 1.46."
+      ]
+    },
+    {
+      "id": "medqa__mistral-small-24b",
+      "benchmark": "MedQA",
+      "base_model": "Mistral-Small-24B",
+      "base_family": "Mistral",
+      "same_family_as_evaluator": false,
+      "n_seeds": null,
+      "set_aside": true,
+      "set_aside_reason": "a single-best-answer exam benchmark whose rubric grades agreement with a keyed answer, which is a different task from the open-ended setting the recipe targets",
+      "teacher_active_inquiry_pct": null,
+      "filter_clearance_pct": null,
+      "conditions": {
+        "base": {},
+        "base_cot": {},
+        "lora": {},
+        "lora_cot": {}
+      },
+      "sources": [
+        "rebuttal/responses/posted/FzpA_1_rebuttal.md:48",
+        "rebuttal/responses/posted/HomM_2_followup_part1.md:11",
+        "rebuttal/responses/posted/HomM_4_consolidation.md:3"
+      ],
+      "notes": [
+        "Set aside. The posted reasons differ: FzpA_1_rebuttal.md:48 says a reframing preamble drove base-model active inquiry to 99% (base model not named; see analyses id medqa_preamble_run); HomM_2_followup_part1.md:11 gives the exam-task reason recorded in set_aside_reason.",
+        "HomM_2_followup_part1.md:11 says aggregate score rises in this cell. No value was posted.",
+        "n_seeds is not stated in the posted text.",
+        "HomM_4_consolidation.md:3 commits to moving this cell into the main evaluation."
+      ]
+    }
+  ],
+  "analyses_note": "Posted numbers that are not per-cell condition means: analyses of the submitted cell, and counts or ranges computed across cells. Each value is as posted.",
+  "analyses": [
+    {
+      "id": "discrimination_index",
+      "cell": "healthbench__medgemma-27b",
+      "values": {
+        "n_prompts": 667,
+        "n_withholding": 508,
+        "n_self_contained": 158,
+        "bootstrap_resamples": 5000,
+        "index_pp": {
+          "base": {
+            "estimate": 2.1,
+            "ci95": [
+              -5.0,
+              8.7
+            ]
+          },
+          "base_cot": {
+            "estimate": 11.0,
+            "ci95": [
+              2.1,
+              19.9
+            ]
+          },
+          "lora": {
+            "estimate": 10.5,
+            "ci95": [
+              1.7,
+              18.9
+            ]
+          },
+          "lora_cot": {
+            "estimate": -3.5,
+            "ci95": [
+              -10.1,
+              3.2
+            ]
+          }
+        },
+        "lora_minus_base_pp": {
+          "estimate": 8.4,
+          "ci95": [
+            -1.2,
+            17.9
+          ]
+        },
+        "theme_only_n_withholding": 127,
+        "theme_only_lora_pp": {
+          "estimate": 13.2,
+          "ci95": [
+            4.1,
+            21.7
+          ]
+        },
+        "ask_rate_self_contained_pct": {
+          "base": 15.9,
+          "lora": 37.5
+        },
+        "odds_ratio": {
+          "base": 1.16,
+          "lora": 1.54,
+          "base_cot": 1.56
+        }
+      },
+      "sources": [
+        "rebuttal/responses/posted/FzpA_1_rebuttal.md:48",
+        "rebuttal/responses/posted/LxMF_1_rebuttal.md:3",
+        "rebuttal/responses/posted/LxMF_1_rebuttal.md:13",
+        "rebuttal/responses/posted/LxMF_1_rebuttal.md:19",
+        "rebuttal/responses/posted/LxMF_1_rebuttal.md:20",
+        "rebuttal/responses/posted/LxMF_1_rebuttal.md:21",
+        "rebuttal/responses/posted/LxMF_1_rebuttal.md:22",
+        "rebuttal/responses/posted/LxMF_1_rebuttal.md:26",
+        "rebuttal/responses/posted/LxMF_1_rebuttal.md:28",
+        "rebuttal/responses/posted/HomM_1_rebuttal.md:39"
+      ]
+    },
+    {
+      "id": "format_leakage",
+      "cell": "healthbench__medgemma-27b",
+      "values": {
+        "lora_cot_leaked_pct": 54.6,
+        "other_conditions_leaked_pct_range": [
+          0.2,
+          3.0
+        ],
+        "red_flag_lora_cot_leaked": {
+          "mean": 1.33,
+          "n": 507
+        },
+        "red_flag_lora_cot_not_leaked": {
+          "mean": 1.73,
+          "n": 421
+        },
+        "red_flag_lora": 1.67,
+        "not_leaked_length_quartile_1": {
+          "red_flag": 1.44,
+          "median_chars": 1508
+        },
+        "not_leaked_length_quartile_4": {
+          "red_flag": 1.87,
+          "median_chars": 5395
+        },
+        "median_chars_leaked": 8564,
+        "median_chars_not_leaked": 3457
+      },
+      "sources": [
+        "rebuttal/responses/posted/LxMF_1_rebuttal.md:44",
+        "rebuttal/responses/posted/LxMF_1_rebuttal.md:45",
+        "rebuttal/responses/posted/LxMF_1_rebuttal.md:46",
+        "rebuttal/responses/posted/LxMF_1_rebuttal.md:48"
+      ]
+    },
+    {
+      "id": "second_person_questions",
+      "cell": "healthbench__medgemma-27b",
+      "values": {
+        "base_pct": 18.4,
+        "lora_pct": 39.6,
+        "gap_points": 21,
+        "grader_gap_points": 28
+      },
+      "sources": [
+        "rebuttal/responses/posted/FzpA_2_followup.md:13"
+      ]
+    },
+    {
+      "id": "medqa_preamble_run",
+      "cell": null,
+      "values": {
+        "base_active_inquiry_pct": 99
+      },
+      "sources": [
+        "rebuttal/responses/posted/FzpA_1_rebuttal.md:48"
+      ]
+    },
+    {
+      "id": "aggregate_drop_tests",
+      "cell": null,
+      "values": {
+        "n_cells": 6,
+        "drop_range_healthbench": [
+          0.013,
+          0.015
+        ],
+        "drop_range_chatdoctor_medquad": [
+          0.016,
+          0.086
+        ],
+        "paired_t_two_sided_p_below": 0.02,
+        "holm_all_survive": true,
+        "biomistral_p": 0.016,
+        "biomistral_drop": 0.015
+      },
+      "sources": [
+        "rebuttal/responses/posted/HomM_3_followup_part2.md:14",
+        "rebuttal/responses/posted/HomM_3_followup_part2.md:16",
+        "rebuttal/responses/posted/HomM_3_followup_part2.md:18"
+      ]
+    },
+    {
+      "id": "askers_minus_non_askers",
+      "cell": null,
+      "values": {
+        "positive_cells": 3,
+        "negative_cells": 3,
+        "near_zero_cells": 1,
+        "near_zero_abs_within": 0.002
+      },
+      "sources": [
+        "rebuttal/responses/posted/HomM_3_followup_part2.md:16"
+      ]
+    },
+    {
+      "id": "adapter_vs_wrapper_aggregate",
+      "cell": null,
+      "values": {
+        "lower": 3,
+        "level": 2,
+        "higher": 1,
+        "medquad_higher_by": 0.044,
+        "wrapper_below_base_cells": 6
+      },
+      "sources": [
+        "rebuttal/responses/posted/HomM_3_followup_part2.md:18"
+      ]
+    },
+    {
+      "id": "stacking_aggregate",
+      "cell": null,
+      "values": {
+        "lora_cot_below_lora_cells": 5,
+        "of": 6
+      },
+      "sources": [
+        "rebuttal/responses/posted/HomM_3_followup_part2.md:14"
+      ]
+    },
+    {
+      "id": "adapter_vs_teacher_active_inquiry",
+      "cell": null,
+      "values": {
+        "ahead_in_transferring_added_cells": 4,
+        "transferring_added_cells": 5,
+        "ahead_in_all_rows": 4,
+        "all_rows": 7,
+        "exception": "healthbench__med42-8b"
+      },
+      "sources": [
+        "rebuttal/responses/posted/HomM_1_rebuttal.md:23",
+        "rebuttal/responses/posted/HomM_2_followup_part1.md:41"
+      ]
+    },
+    {
+      "id": "active_inquiry_rise_vs_submitted",
+      "cell": null,
+      "values": {
+        "added_cells_rising_more_than_submitted": 4,
+        "of": 6,
+        "added_cells_rising": 5,
+        "added_cells_rising_every_seed": 5
+      },
+      "sources": [
+        "rebuttal/responses/posted/FzpA_2_followup.md:15",
+        "rebuttal/responses/posted/HomM_3_followup_part2.md:18"
+      ]
+    },
+    {
+      "id": "convergence_withdrawn",
+      "cell": null,
+      "values": {
+        "three_bases_base_pct": [
+          11.8,
+          17.5,
+          25.6
+        ],
+        "three_bases_lora_pct": [
+          45.6,
+          52.5,
+          56.6
+        ],
+        "three_bases_base_spread_points": 13.8,
+        "three_bases_lora_spread_points": 11.0,
+        "four_bases_base_range_pct": [
+          11.7,
+          25.6
+        ],
+        "four_bases_lora_range_pct": [
+          10.1,
+          56.6
+        ]
+      },
+      "sources": [
+        "rebuttal/responses/posted/FzpA_1_rebuttal.md:15",
+        "rebuttal/responses/posted/HomM_1_rebuttal.md:23",
+        "rebuttal/responses/posted/HomM_2_followup_part1.md:7"
+      ]
+    },
+    {
+      "id": "clinician_identified_prompts",
+      "cell": null,
+      "values": {
+        "count": 14,
+        "of": 1000,
+        "pct": 1.4
+      },
+      "sources": [
+        "rebuttal/responses/posted/FzpA_1_rebuttal.md:46",
+        "rebuttal/responses/posted/FzpA_2_followup.md:5"
+      ]
+    },
+    {
+      "id": "physician_kappa",
+      "cell": "healthbench__medgemma-27b",
+      "values": {
+        "kappa": 0.35,
+        "target": 0.6,
+        "raters_returned": 1,
+        "raters_planned": 3
+      },
+      "sources": [
+        "rebuttal/responses/posted/FzpA_1_rebuttal.md:40",
+        "rebuttal/responses/posted/FzpA_2_followup.md:11",
+        "rebuttal/responses/posted/LxMF_1_rebuttal.md:38",
+        "rebuttal/responses/posted/HomM_1_rebuttal.md:37"
+      ]
+    },
+    {
+      "id": "submitted_cell_axes",
+      "cell": "healthbench__medgemma-27b",
+      "values": {
+        "accuracy": [
+          0.117,
+          0.121
+        ],
+        "completeness": [
+          0.168,
+          0.169
+        ]
+      },
+      "sources": [
+        "rebuttal/responses/posted/FzpA_1_rebuttal.md:21"
+      ]
+    },
+    {
+      "id": "submitted_cell_effects",
+      "cell": "healthbench__medgemma-27b",
+      "values": {
+        "d_active_inquiry": 0.63,
+        "d_red_flag": 0.2,
+        "p_below": 1e-05,
+        "aggregate_d": 0.03,
+        "aggregate_p": 0.57
+      },
+      "sources": [
+        "rebuttal/responses/posted/FzpA_2_followup.md:15"
+      ]
+    },
+    {
+      "id": "sample_sizes",
+      "cell": "healthbench__medgemma-27b",
+      "values": {
+        "table1_n_per_seed": [
+          200,
+          191,
+          192
+        ],
+        "pooled_n_range": [
+          985,
+          998
+        ],
+        "cot_attrition_pct": 5,
+        "context_window_tokens": 4096
+      },
+      "sources": [
+        "rebuttal/responses/posted/LxMF_1_rebuttal.md:5",
+        "rebuttal/responses/posted/LxMF_1_rebuttal.md:7",
+        "rebuttal/responses/posted/LxMF_1_rebuttal.md:48"
+      ]
+    },
+    {
+      "id": "cost",
+      "cell": "healthbench__medgemma-27b",
+      "values": {
+        "cot_inference_multiplier": 2,
+        "cot_response_loss_pct": 5,
+        "adapter_fewer_output_tokens_pct": 58,
+        "lora_minus_wrapper_active_inquiry_ci95": [
+          -0.069,
+          0.021
+        ],
+        "hours_per_24b_seed_one_h100": 2
+      },
+      "sources": [
+        "rebuttal/responses/posted/FzpA_1_rebuttal.md:64",
+        "rebuttal/responses/posted/FzpA_2_followup.md:19",
+        "rebuttal/responses/posted/HomM_3_followup_part2.md:18"
+      ]
+    },
+    {
+      "id": "posted_recipe_settings",
+      "cell": null,
+      "values": {
+        "lora_r": 16,
+        "lora_alpha": 32,
+        "effective_batch": 16,
+        "epochs": 3,
+        "tau": 0.4,
+        "traces_kept": 3100,
+        "traces_generated": 4000,
+        "prompts_per_seed_per_condition": 200,
+        "n_seeds": 5
+      },
+      "sources": [
+        "rebuttal/responses/posted/FzpA_2_followup.md:23",
+        "rebuttal/responses/posted/HomM_1_rebuttal.md:9"
+      ]
+    }
+  ]
+}
