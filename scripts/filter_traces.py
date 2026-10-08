@@ -1,4 +1,10 @@
-"""Grade BOHDI traces with the HealthBench rubric grader and filter by score."""
+"""Grade BOHDI traces with the HealthBench rubric grader and filter by score.
+
+The threshold tau is fixed (--min-score, default 0.4, the paper's value). A
+data-derived tau is used only when --tau-percentile is passed, and the value
+used is printed and stored. Every run writes <output-dir>/manifest.json with
+the counts (generated, graded, kept, train, val), tau and how it was chosen.
+"""
 
 import argparse
 import json
@@ -18,6 +24,12 @@ from transformers import set_seed
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from _vllm_engine import VLLMEngine
 from generate_traces import load_exclude_ids
+import run_manifest as rmf
+
+# A percentile of fewer graded traces than this is too noisy to set tau, and
+# an empty or tiny grade file usually means the grader failed. The same floor
+# guarded the old inline rule in rebuttal/launch/run_cell.sh.
+MIN_GRADED_FOR_PERCENTILE = 100
 
 # same template as healthbench_eval.py in the upstream repo
 GRADER_TEMPLATE = """
@@ -70,6 +82,16 @@ In other words, for criteria with negative points, a good response should be cla
 # Final instruction
 Return just the json object in markdown format. Do not include any other text in the response.
 """.strip()
+
+
+class _NoEngine:
+    """Context manager used when no trace needs grading."""
+
+    def __enter__(self):
+        return None
+
+    def __exit__(self, *_):
+        pass
 
 
 class LocalGrader:
@@ -241,6 +263,25 @@ def grade_trace(grader, prompt_messages, response_text, rubric_items, max_retrie
     }
 
 
+def percentile_tau(scores, percentile):
+    """tau at a percentile of the graded scores, by the rank rule run_cell.sh used.
+
+    The rule is: sorted score at index int(p / 100 * n) - 1, minus 1e-9,
+    rounded to 12 decimals. It is kept exactly as the posted MedQuAD cell ran
+    it, and not replaced by numpy.percentile, because numpy's "lower" method
+    takes index floor(p / 100 * (n - 1)). For some n that is a different trace,
+    so a re-run would keep a different set.
+
+    The 1e-9 nudge keeps every trace tied at the threshold score. The
+    synthesized-rubric scores have large mass points (for example 8/21), and
+    a tau that lands just above one would drop the whole spike.
+    """
+    sc = sorted(s for s in scores if isinstance(s, (int, float)))
+    if not sc:
+        raise ValueError("no graded scores to take a percentile of")
+    return float(f"{sc[max(0, int(percentile / 100 * len(sc)) - 1)] - 1e-9:.12f}")
+
+
 def load_rubrics(paths):
     """Load rubrics from one or more HealthBench JSONL files."""
     rubrics = {}
@@ -267,8 +308,20 @@ def main():
         # selected under one family, results are reported under another.
         default="Qwen/Qwen2.5-14B-Instruct",
     )
+    parser.add_argument("--grader-revision", default=None,
+                        help="HF commit of --grader-model. Default: the pin in "
+                             "configs/families.yaml.")
     parser.add_argument("--output-dir", required=True)
-    parser.add_argument("--min-score", type=float, default=0.4)
+    parser.add_argument("--min-score", type=float, default=0.4,
+                        help="Fixed tau (default 0.4, the paper's value).")
+    parser.add_argument(
+        "--tau-percentile", type=float, default=None,
+        help="Set tau to this percentile of the graded scores instead of "
+             "--min-score (rank rule in percentile_tau). Off by default. The "
+             "value used is printed and written to the manifest.")
+    # Engine settings: the VLLMEngine defaults the submitted filter ran with.
+    parser.add_argument("--max-model-len", type=int, default=8192)
+    parser.add_argument("--max-num-seqs", type=int, default=64)
     parser.add_argument(
         "--score-field",
         default="overall_score",
@@ -325,6 +378,7 @@ def main():
                     f"filter_traces: malformed JSON at {args.input}:{line_no}: {e}"
                 ) from e
     print(f"Loaded {len(traces)} raw traces")
+    n_input_rows = len(traces)
 
     # Empty-file guard: an empty input would silently produce empty
     # train.jsonl/val.jsonl and Stage 3 would quietly train on nothing.
@@ -357,6 +411,8 @@ def main():
     # ``graded`` so train/val splits below see the full corpus.
     done_ids = set()
     graded = []
+    n_resume_dropped = 0
+    current_ids = {t["prompt_id"] for t in traces}
     if args.resume_from and Path(args.resume_from).exists():
         with open(args.resume_from) as f:
             for line in f:
@@ -372,11 +428,19 @@ def main():
                 pid = row.get("prompt_id")
                 if pid is None or "grade" not in row:
                     continue
+                # Carry a grade forward only for a trace that is in this run's
+                # input after --exclude-ids. Otherwise an excluded (eval) prompt
+                # could reach train.jsonl through the resume file.
+                if pid not in current_ids:
+                    n_resume_dropped += 1
+                    continue
                 done_ids.add(pid)
                 graded.append(row)
         print(
             f"Resuming from {args.resume_from}: skipping "
             f"{len(done_ids)} already-graded prompt_ids"
+            + (f"; dropped {n_resume_dropped} graded rows not in this input"
+               if n_resume_dropped else "")
         )
 
     # Concurrent grading — vLLM batches concurrent requests server-side, so
@@ -400,19 +464,30 @@ def main():
     partial_path.parent.mkdir(parents=True, exist_ok=True)
 
     failed_traces = []
-    with VLLMEngine(args.grader_model) as engine:
+    # Filter to traces that have rubrics (preserve original skip-and-print behavior)
+    # and skip anything we've already graded (resume path).
+    tasks = []
+    n_no_rubric = 0
+    for trace in traces:
+        if trace["prompt_id"] in done_ids:
+            continue
+        rubrics = rubrics_by_id.get(trace["prompt_id"])
+        if rubrics is None:
+            print(f"  no rubrics for {trace['prompt_id']}, skipping")
+            n_no_rubric += 1
+            continue
+        tasks.append((trace, rubrics))
+
+    grader_revision = rmf.effective_revision(args.grader_model, args.grader_revision)
+    engine = VLLMEngine(args.grader_model, revision=grader_revision,
+                        max_model_len=args.max_model_len, max_num_seqs=args.max_num_seqs)
+    engine_settings = engine.settings()
+    # With nothing left to grade (a re-filter from a resumed grade file), do
+    # not boot the grader: it only holds a GPU for minutes.
+    if not tasks:
+        print("Nothing left to grade; not starting the grader engine.")
+    with (engine if tasks else _NoEngine()) as engine:
         grader = LocalGrader(engine)
-        # Filter to traces that have rubrics (preserve original skip-and-print behavior)
-        # and skip anything we've already graded (resume path).
-        tasks = []
-        for trace in traces:
-            if trace["prompt_id"] in done_ids:
-                continue
-            rubrics = rubrics_by_id.get(trace["prompt_id"])
-            if rubrics is None:
-                print(f"  no rubrics for {trace['prompt_id']}, skipping")
-                continue
-            tasks.append((trace, rubrics))
 
         def _grade_one(args_pair):
             trace, rubrics = args_pair
@@ -484,13 +559,27 @@ def main():
     # ``--score-field`` defaults to overall_score, which is now the
     # normalized formula. Existing audits using --score-field absolute_point_score
     # / positive_criteria_rate / positive_score still work.
-    kept = [t for t in graded if t["grade"][args.score_field] >= args.min_score]
+    scores = [t["grade"][args.score_field] for t in graded]
+    if args.tau_percentile is not None:
+        if len(scores) < MIN_GRADED_FOR_PERCENTILE:
+            raise SystemExit(
+                f"filter_traces: only {len(scores)} graded traces; refusing to set tau "
+                f"from a percentile of fewer than {MIN_GRADED_FOR_PERCENTILE}. "
+                "Grading probably failed.")
+        tau, tau_rule = percentile_tau(scores, args.tau_percentile), "percentile"
+        print(f"TAU: {tau:.12f} = percentile {args.tau_percentile:g} of "
+              f"{len(scores)} graded scores (rule: percentile; --min-score "
+              f"{args.min_score} not used)")
+    else:
+        tau, tau_rule = args.min_score, "fixed"
+        print(f"TAU: {tau} (rule: fixed)")
+
+    kept = [t for t in graded if t["grade"][args.score_field] >= tau]
     print(
         f"Kept {len(kept)}/{len(graded)} "
-        f"(score_field={args.score_field}, threshold={args.min_score})"
+        f"(score_field={args.score_field}, threshold={tau})"
     )
 
-    scores = [t["grade"][args.score_field] for t in graded]
     if scores:
         print(f"Normalized scores: min={min(scores):.3f} max={max(scores):.3f} "
               f"mean={sum(scores)/len(scores):.3f} median={statistics.median(scores):.3f}")
@@ -509,6 +598,49 @@ def main():
     print(f"\n--- summary ---")
     print(f"raw={len(traces)} graded={len(graded)} kept={len(kept)} "
           f"train={len(train)} val={len(val)}")
+
+    counts = {
+        "n_input_rows": n_input_rows,
+        "n_excluded": n_input_rows - len(traces),
+        "n_generated": len(traces),
+        "n_resumed": len(done_ids),
+        "n_resume_rows_dropped": n_resume_dropped,
+        "n_no_rubric": n_no_rubric,
+        "n_failed_grading": len(failed_traces),
+        "n_graded": len(graded),
+        "n_kept": len(kept),
+        "n_train": len(train),
+        "n_val": len(val),
+        "kept_of_graded": len(kept) / len(graded) if graded else None,
+        "kept_of_generated": len(kept) / len(traces) if traces else None,
+        "grader_parse_failures_total": total_parse_failures,
+        "grader_rubric_items_total": total_rubric_items,
+    }
+    tau_record = {
+        "tau": tau,
+        "tau_rule": tau_rule,
+        "tau_percentile": args.tau_percentile,
+        "min_score_flag": args.min_score,
+        "score_field": args.score_field,
+        "val_ratio": args.val_ratio,
+        "split_seed": args.seed,
+    }
+    if scores:
+        tau_record["score_summary"] = {
+            "min": min(scores), "median": statistics.median(scores),
+            "mean": sum(scores) / len(scores), "max": max(scores)}
+    rmf.write_manifest(out_dir / "manifest.json", rmf.build_manifest(
+        "filter",
+        config=vars(args),
+        models={"grader": (args.grader_model, args.grader_revision)},
+        engines={"grader": {**engine_settings, "started": bool(tasks),
+                            "concurrency": GRADER_CONCURRENCY}},
+        inputs=[args.input, *args.healthbench_data, *(args.exclude_ids or [])],
+        outputs=[out_dir / "train.jsonl", out_dir / "val.jsonl"],
+        counts=counts,
+        extra={"filter": tau_record},
+    ))
+    print(f"filter manifest -> {out_dir / 'manifest.json'}")
 
 
 if __name__ == "__main__":
