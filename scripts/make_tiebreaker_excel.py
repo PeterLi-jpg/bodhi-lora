@@ -29,6 +29,7 @@ Output
 """
 from __future__ import annotations
 
+import argparse
 import json
 from pathlib import Path
 
@@ -216,7 +217,13 @@ def write_tiebreaker_workbook(disputes: pd.DataFrame, out_path: Path) -> None:
 
 
 def main() -> None:
-    files = find_reviewer_files()
+    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    # Returned files can carry rater names, so they may stay outside the repo, as
+    # compute_irr_kappa.py --rater-files expects. Without the flag, read this folder.
+    ap.add_argument("--rater-files", type=Path, nargs="+", default=None,
+                    help="the three returned Grading-*.xlsx files, read in place")
+    args = ap.parse_args()
+    files = args.rater_files or find_reviewer_files()
     if len(files) != 3:
         raise SystemExit(
             f"Found {len(files)} reviewer files in {IRR_DIR}, expected exactly 3 "

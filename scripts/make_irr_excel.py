@@ -370,13 +370,16 @@ answer_key.xlsx           DO NOT SEND. Maps grading_id → source/config/llm_sco
                           for downstream κ analysis.
 ```
 
-After all 3 reviewers return their `Grading-*.xlsx` files, drop them in this
-directory and run:
+Returned `Grading-*.xlsx` files can carry rater names. Keep them outside the
+repo and pass their paths. The scripts read them in place and never copy them:
 
 ```
-python scripts/make_tiebreaker_excel.py    # → tiebreaker_disputes.xlsx
-python scripts/compute_irr_kappa.py        # → kappa_results.{{json,md}}
+python scripts/make_tiebreaker_excel.py --rater-files <r1.xlsx> <r2.xlsx> <r3.xlsx>   # → Grading-tiebreaker.xlsx
+make kappa RATER_FILES="<r1.xlsx> ..."     # → kappa_results.json
 ```
+
+`kappa_results.json` names raters only as rater_A, rater_B, ... So far one rater
+has returned grades, and `kappa_results.json` holds the result for that rater.
 
 ## Sample design
 
