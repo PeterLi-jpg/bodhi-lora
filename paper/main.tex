@@ -229,22 +229,14 @@ The blanket-disclaimer rate is the key diagnostic for the ``hedging trap'': a mo
 
 \begin{table}[t]
 \centering
-\caption{\hbhard{} normalized rubric scores (Eq.~\ref{eq:score}). 5-seed repeated subsampling, 200 prompts per seed. Grader: Llama-3.1-8B-Instruct. Mean and 95\% CI across seeds. No pairwise comparison reaches significance ($\alpha=0.05$).
-$n$/seed is the number of completions successfully produced out of 200: the two \bodhi{} conditions
-lose ${\sim}4$--5\% of prompts because the two-pass protocol exceeds the 4{,}096-token context
-window, whereas LoRA needs a single pass and has a 100\% response rate. All comparisons use the
-available completions ($n\approx985$--998 pooled across seeds).}
+\caption{\hbhard{} aggregate rubric score (Eq.~\ref{eq:score}), graded by Llama-3.1-8B-Instruct.
+Score is the mean of the five seed means, with a 95\% $t$ interval over seeds (4 df). $n$ (pooled)
+counts completions over the five seeds of 200 drawn prompts each; $n$/seed gives the range per
+seed. Only the two \bodhi{} conditions lose prompts: their two passes can exceed the 4{,}096-token
+context of the evaluation server, so \statCompletionDropPctBaseCoT\% and
+\statCompletionDropPctLoRACoT\% of drawn prompts get no answer. Base and LoRA answer every prompt.}
 \label{tab:main}
-\begin{tabular}{lccc}
-\toprule
-Config & Score (mean) & 95\% CI & $n$/seed \\
-\midrule
-Base & 0.459 & [0.445,\;0.473] & 200 \\
-Base + \bodhi{} & 0.463 & [0.450,\;0.476] & 191 \\
-LoRA (no CoT) & 0.463 & [0.451,\;0.475] & 200 \\
-LoRA + \bodhi{} & 0.455 & [0.453,\;0.457] & 192 \\
-\bottomrule
-\end{tabular}
+\input{generated/tab_main_healthbench}
 \end{table}
 
 Table~\ref{tab:main} presents aggregate scores. Our claim about this table is a specific one: the
@@ -268,34 +260,17 @@ clinical content it is able to supply.
 
 \begin{table}[t]
 \centering
-\caption{Epistemic virtue scores (5-seed mean $\pm$ std). Top: graded on 0--2 scale (cross-seed std
-omitted; all ${\leq}0.03$). Bottom: rates with cross-seed std as subscript. Arrows give the
-desirable direction for every row: $\uparrow$ higher is better, $\downarrow$ lower is better.
-Blanket disclaimer is the only $\downarrow$ row. Red-flag identification and red-flag rate are
-$\uparrow$ because they measure sensitivity to warning signs that need escalation. Neither captures
-\emph{false positives}: a model that flagged every prompt would also score high. Measuring
-over-flagging needs a labelled set of prompts with no true red flag, which we leave to future work.}
+\caption{Epistemic behavior scores, graded by Llama-3.1-8B-Instruct (LLM-graded; see
+\S\ref{sec:eval} for the physician check). Each value is the mean of the five seed means, with the
+cross-seed SD as subscript. Top: dimensions graded 0--2. Bottom: rates (\%) and questions per
+response. Arrows give the desirable direction for every row: $\uparrow$ higher is better,
+$\downarrow$ lower is better. Blanket disclaimer is the only $\downarrow$ row. Red-flag
+identification and red-flag rate are $\uparrow$ because they measure sensitivity to warning signs
+that need escalation. Neither captures \emph{false positives}: a model that flagged every prompt
+would also score high. Measuring over-flagging needs a labelled set of prompts with no true red
+flag, which we leave to future work. The last row gives the responses with a parsed grade.}
 \label{tab:epistemic}
-\begin{tabular}{lcccc}
-\toprule
-Dimension & Base & +\bodhi{} & LoRA & LoRA+\bodhi{} \\
-\midrule
-Uncertainty ack.\ (0--2) $\uparrow$ & 1.94 & 1.90 & 1.94 & 1.95 \\
-Context-seeking (0--2) $\uparrow$ & 1.40 & 1.77 & 1.75 & 1.90 \\
-Red-flag identification (0--2) $\uparrow$ & 1.52 & 1.66 & 1.67 & 1.51 \\
-Scope bounding (0--2) $\uparrow$ & 1.91 & 1.94 & 1.97 & 1.98 \\
-Hedging quality (0--2) $\uparrow$ & 1.86 & 1.85 & 1.91 & 1.91 \\
-Specificity (0--2) $\uparrow$ & 1.88 & 1.88 & 1.92 & 1.92 \\
-\midrule
-Questions / response $\uparrow$ & $0.45_{\pm.11}$ & $1.25_{\pm.08}$ & $1.16_{\pm.14}$ & $1.71_{\pm.12}$ \\
-Active inquiry rate $\uparrow$ & $17.5_{\pm3.3}$\% & $47.9_{\pm2.9}$\% & $45.6_{\pm3.9}$\% & $80.0_{\pm6.7}$\% \\
-Red-flag rate $\uparrow$ & $72.4_{\pm0.8}$\% & $78.8_{\pm2.1}$\% & $78.3_{\pm2.0}$\% & $57.7_{\pm8.0}$\% \\
-Scope bounded rate $\uparrow$ & $92.7_{\pm1.1}$\% & $95.4_{\pm1.5}$\% & $97.6_{\pm0.7}$\% & $98.1_{\pm1.5}$\% \\
-Specificity rate $\uparrow$ & $61.2_{\pm3.9}$\% & $61.4_{\pm4.0}$\% & $61.2_{\pm4.3}$\% & $65.0_{\pm2.3}$\% \\
-Blanket disclaimer $\downarrow$ & $0.5_{\pm0.4}$\% & 0.0\% & 0.0\% & 0.0\% \\
-Appropriate hedging $\uparrow$ & $90.6_{\pm1.7}$\% & $91.7_{\pm1.7}$\% & $94.2_{\pm1.6}$\% & $94.9_{\pm1.5}$\% \\
-\bottomrule
-\end{tabular}
+\input{generated/tab_epistemic}
 \end{table}
 
 \begin{figure}[t]
@@ -464,22 +439,12 @@ Of 200 Hard prompts sampled, 105 met the minimum-length requirement (prompt $\ge
 
 \begin{table}[h]
 \centering
-\caption{Preliminary physician--LLM inter-rater $\kappa$ (one physician, $n{=}509$ criterion rows). Positive criteria: the model \emph{should} do the thing; negative criteria: the model \emph{should not}. Pass rates compare physician and LLM.}
+\caption{Agreement between one physician and the Llama-3.1-8B-Instruct grader, Cohen's
+$\kappa$ on pass/fail per rubric criterion (``unsure'' excluded). The 95\% CI comes from a bootstrap
+over the \statKappaPrompts{} prompts. Positive criteria: the response \emph{should} do the thing;
+negative criteria: it \emph{should not}. Pass rates compare the physician and the LLM.}
 \label{tab:kappa}
-\begin{tabular}{lccccc}
-\toprule
-Subset & $\kappa$ & Agree & $n$ & Phys.\ pass & LLM pass \\
-\midrule
-All criteria     & 0.35 & 67\% & 509 & 55\% & 48\% \\
-Positive (meet)  & 0.35 & 69\% & 321 & 46\% & 23\% \\
-Negative (avoid) & $-$0.08 & 64\% & 188 & 71\% & 90\% \\
-\midrule
-Base             & 0.22 & 61\% & 127 & 58\% & 47\% \\
-Base+\bodhi{}    & 0.36 & 68\% & 128 & 58\% & 51\% \\
-LoRA             & 0.40 & 70\% & 127 & 50\% & 49\% \\
-LoRA+\bodhi{}    & 0.41 & 70\% & 127 & 53\% & 45\% \\
-\bottomrule
-\end{tabular}
+\input{generated/tab_kappa}
 \end{table}
 
 \textbf{Interpretation.} The overall $\kappa{=}0.35$ (fair agreement) falls short of the pre-registered $\kappa{\geq}0.6$ target, confirming that the aggregate-quality claims in Table~\ref{tab:main} should be read as provisional. The systematic pattern is instructive: for positive criteria, the LLM is more strict than the physician (23\% vs.\ 46\% pass rate), suggesting the absolute HealthBench scores understate clinical quality; for negative criteria, the LLM is more lenient (90\% vs.\ 71\% pass), suggesting the model may exhibit more avoid-criterion failures than the LLM detects. However, because all four conditions in Table~\ref{tab:main} are graded by the same LLM with the same calibration, the \emph{relative} comparisons between conditions---including the non-inferiority result ($d{=}0.03$, $p{=}0.57$) and the LoRA+\bodhi{} red-flag regression ($d{=}-0.25$)---are not affected by this systematic bias. Two physicians' grades remain pending; the adjudicated consensus $\kappa$ will supersede these preliminary figures.
@@ -494,17 +459,10 @@ Clinician review of high-stakes prompts is not yet completed and remains a pre-r
 
 \begin{table}[t]
 \centering
-\caption{Per-seed \hbhard{} scores (Eq.~\ref{eq:score}).}
-\begin{tabular}{lccccc}
-\toprule
-Config & Seed 7 & Seed 13 & Seed 42 & Seed 99 & Seed 101 \\
-\midrule
-Base & 0.459 & 0.453 & 0.472 & 0.443 & 0.467 \\
-Base + \bodhi{} & 0.479 & 0.457 & 0.460 & 0.467 & 0.452 \\
-LoRA & 0.475 & 0.449 & 0.468 & 0.463 & 0.461 \\
-LoRA + \bodhi{} & 0.456 & 0.457 & 0.457 & 0.456 & 0.452 \\
-\bottomrule
-\end{tabular}
+\caption{Per-seed \hbhard{} aggregate scores (Eq.~\ref{eq:score}). Each seed draws its own
+200 prompts, shared by its four conditions.}
+\label{tab:perseed}
+\input{generated/tab_healthbench_per_seed}
 \end{table}
 
 \begin{figure}[!ht]
@@ -678,17 +636,13 @@ This appendix supports the robustness claims in \S\ref{sec:discussion}. All anal
 \begin{table}[!ht]
 \centering
 \small
-\caption{Bootstrap 95\% CIs for headline behavioral comparisons.}
+\caption{Headline comparisons. Effect is the mean of the five per-seed differences, with a
+95\% $t$ interval over seeds and, for comparison, a bootstrap interval that resamples prompt ids
+(5{,}000 resamples). Rates in percentage points.}
 \label{tab:bootstrap}
-\begin{tabular}{lrr}
-\toprule
-Comparison & Effect & 95\% CI \\
-\midrule
-LoRA $-$ Base, active\_inquiry rate & $+0.280$ & $[+0.242, +0.321]$ \\
-LoRA $-$ Wrapper, active\_inquiry rate & $-0.024$ & $[-0.069, +0.021]$ \\
-LoRA+\bodhi{} $-$ LoRA, red\_flag (0--2 mean) & $-0.160$ & $[-0.217, -0.101]$ \\
-\bottomrule
-\end{tabular}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\input{generated/tab_bootstrap}
 \end{table}
 
 \paragraph{Length-stratified active inquiry.} Quartile boundaries computed from the Base condition's response-length distribution and applied to all four conditions ($n\approx245$ responses per condition per quartile, pooled across seeds). The LoRA effect is present in every length quartile, including the shortest---incompatible with a verbosity explanation.
@@ -696,18 +650,12 @@ LoRA+\bodhi{} $-$ LoRA, red\_flag (0--2 mean) & $-0.160$ & $[-0.217, -0.101]$ \\
 \begin{table}[!ht]
 \centering
 \small
-\caption{Active-inquiry rate (\%) by response-length quartile. Q1: $<2{,}106$ chars; Q2: 2,106--3,574; Q3: 3,574--4,316; Q4: $>4{,}316$.}
+\caption{Active-inquiry rate (\%) by response-length quartile, pooled scored responses.
+Quartile edges come from the Base condition: Q1 $<\statLengthQuartileBoundA$ characters, Q2 up to
+\statLengthQuartileBoundB, Q3 up to \statLengthQuartileBoundC, Q4 above. The lower block gives the
+responses in each cell.}
 \label{tab:length}
-\begin{tabular}{lrrrrr}
-\toprule
-Condition & Q1 & Q2 & Q3 & Q4 & Overall \\
-\midrule
-Base & 25.3 & 22.0 & 12.5 & 10.4 & 17.5 \\
-Wrapper (Base+\bodhi{}) & 28.8 & 72.9 & 61.7 & 31.1 & 47.9 \\
-LoRA & 35.5 & 68.8 & 39.6 & 28.5 & 45.6 \\
-LoRA+\bodhi{} & 16.7 & 87.7 & 70.5 & 86.7 & 80.1 \\
-\bottomrule
-\end{tabular}
+\input{generated/tab_length_quartiles}
 \end{table}
 
 \paragraph{Cross-grader sanity check (aggregate scores).} A parallel evaluation on seed~42 graded the same conditions with a different model family (Qwen-2.5-14B-Instruct, in addition to the primary Llama-3.1-8B-Instruct grader). The two runs sampled different 200-prompt draws from \hbhard{}, so only 43 prompts overlap per condition. On those paired samples, Pearson $r = 0.42$ pooled across conditions ($r = 0.35, 0.37, 0.51$ for Base, Wrapper, LoRA respectively); Spearman $\rho = 0.34$. The two graders disagree on absolute scale (Qwen mean ${\approx} 0.15$, Llama mean ${\approx} 0.47$) but agree on direction: LoRA${-}$Base is ${\approx} 0$ in both graders ($-0.008$ Qwen, $-0.004$ Llama), and Wrapper${-}$Base is slightly negative in both ($-0.036$ Qwen, $-0.012$ Llama). This supports the paper's framing on aggregate scores (both graders agree the adapter does not change them) but does not speak to the behavioral decomposition, which is graded only by Llama; the closed loop on 0--2 dimensions remains pending physician validation.
@@ -719,19 +667,10 @@ LoRA+\bodhi{} & 16.7 & 87.7 & 70.5 & 86.7 & 80.1 \\
 \begin{table}[!ht]
 \centering
 \small
-\caption{Active-inquiry rate (\%) by HealthBench theme tag, all 5 seeds pooled.}
+\caption{Active-inquiry rate (\%) by HealthBench theme tag, pooled over the five seeds. $n$
+prompts counts the unique evaluated prompts with that theme.}
 \label{tab:theme}
-\begin{tabular}{lrrrrr}
-\toprule
-Theme & $n$ prompts & Base & Wrapper & LoRA & LoRA+\bodhi{} \\
-\midrule
-\texttt{global\_health} & 280 & 13.1 & 53.4 & 53.2 & 85.1 \\
-\texttt{context\_seeking} & 179 & 20.1 & 57.2 & 56.4 & 78.5 \\
-\texttt{hedging} & 167 & 26.3 & 56.4 & 58.6 & 85.9 \\
-\texttt{health\_data\_tasks} & 115 & 11.1 & 22.1 & 20.5 & 67.6 \\
-\texttt{communication} & 111 & 17.4 & 41.3 & 34.5 & 91.3 \\
-\bottomrule
-\end{tabular}
+\input{generated/tab_theme}
 \end{table}
 
 \paragraph{Filter threshold ($\tau$) calibration.} A full ablation over $\tau$ would require retraining at multiple $\tau$ values; we report it as an open question (\S\ref{sec:discussion}, Limitations). As a partial substitute we report the retention curve: the fraction of the 4,000-prompt pre-filter pool that would enter training under different $\tau$ values, computed from the seed-7 grader scores (full distribution in Figure~\ref{fig:scoredist}). The score distribution is broadly continuous over $[0.4, 0.7]$ (unimodal histogram with no sharp regime boundaries within this range), so $\tau$ values in $[0.3, 0.5]$ would produce qualitatively similar training sets that differ in size but not composition. $\tau = 0.4$ corresponds to the 22nd percentile of the pre-filter distribution, consistent with the design rationale of removing the lowest-quality CoT failures rather than selecting only top-quality traces.
@@ -739,20 +678,12 @@ Theme & $n$ prompts & Base & Wrapper & LoRA & LoRA+\bodhi{} \\
 \begin{table}[!ht]
 \centering
 \small
-\caption{Filter retention at varying $\tau$ (seed~7 grader scores; ``\% of current'' relative to the $\tau=0.4$ training set, ``\% of pre-filter'' relative to the 4,000-prompt generation pool).}
+\caption{Filter retention at higher $\tau$, from the filter scores in the seed-7 training split
+(\statFilterTrainNSeedSeven{} traces, all with $s \geq 0.4$). The last column estimates the share
+of the \statFilterPool{} generated traces, assuming \statFilterKeptReported{} passed $\tau = 0.4$.
+That count comes from the original filter log, which is not in the repository.}
 \label{tab:tau-calibration}
-\begin{tabular}{ccc}
-\toprule
-$\tau$ & \% of current ($\tau{=}0.4$) set & \% of pre-filter pool \\
-\midrule
-0.4 & 100.0 & 78.2 \\
-0.5 & 77.1 & 60.3 \\
-0.6 & 46.7 & 36.5 \\
-0.7 & 25.8 & 20.2 \\
-0.8 & 12.0 & 9.4 \\
-0.9 & 6.7 & 5.2 \\
-\bottomrule
-\end{tabular}
+\input{generated/tab_tau_calibration}
 \end{table}
 
 \paragraph{HealthBench rubric-axis breakdown.} HealthBench rubrics tag each criterion with one of five axes (accuracy, communication\_quality, completeness, context\_awareness, instruction\_following). Table~\ref{tab:axis} reports the mean tag score per axis, pooled across all 5 seeds. Two patterns are notable. First, LoRA preserves accuracy and completeness while improving \emph{instruction\_following} ($+0.073$ vs.\ Base) and \emph{context\_awareness} ($+0.014$)---consistent with the active-inquiry / context-seeking shifts in Table~\ref{tab:epistemic}. Second, both the wrapper ($-0.085$) and LoRA ($-0.054$) reduce \emph{communication\_quality} relative to Base; LoRA reduces it less than the wrapper does. This is consistent with the CoT protocol's behavioral target: asking clarifying questions trades short-term directness (lower communication\_quality score) for the safety-relevant behaviors the rubric does not score directly (e.g., not committing to a diagnosis without enough context). LoRA+\bodhi{} drops to $0.246$ because the response is the internal Pass~1 analysis format rather than patient-facing text---the same interference mechanism visible in Figure~\ref{fig:interference}.
@@ -760,19 +691,9 @@ $\tau$ & \% of current ($\tau{=}0.4$) set & \% of pre-filter pool \\
 \begin{table}[!ht]
 \centering
 \small
-\caption{HealthBench rubric-axis tag score (mean across pooled prompts, 5 seeds).}
+\caption{HealthBench rubric-axis tag score, mean over the pooled completions of the five seeds.}
 \label{tab:axis}
-\begin{tabular}{lrrrr}
-\toprule
-Axis & Base & Wrapper & LoRA & LoRA+\bodhi{} \\
-\midrule
-accuracy & 0.117 & 0.124 & 0.121 & 0.102 \\
-communication\_quality & 0.426 & 0.341 & 0.372 & 0.246 \\
-completeness & 0.168 & 0.149 & 0.169 & 0.155 \\
-context\_awareness & 0.144 & 0.172 & 0.158 & 0.155 \\
-instruction\_following & 0.213 & 0.300 & 0.286 & 0.263 \\
-\bottomrule
-\end{tabular}
+\input{generated/tab_axis}
 \end{table}
 
 \paragraph{Internalization gap.} For each behavioral dimension, the cross-seed mean across all four conditions and the absolute gap between LoRA alone and the wrapper. The gap is consistently small relative to the LoRA${-}$Base improvement on dimensions where the adapter changes behavior (active inquiry, context seeking, red-flag identification), supporting the claim that the adapter has internalized the wrapper's behavior. On dimensions where the LoRA${-}$Base change is small (e.g., specificity), the gap is small in absolute terms but a larger fraction of the change.
@@ -780,21 +701,13 @@ instruction\_following & 0.213 & 0.300 & 0.286 & 0.263 \\
 \begin{table}[!ht]
 \centering
 \small
-\caption{Per-dimension means across the four conditions, with the LoRA${-}$Wrapper gap and the LoRA${-}$Base change. Active inquiry and appropriate hedging are reported as proportions ($\in[0,1]$); other dimensions are means on the 0--2 scale.}
+\caption{Per-dimension means across the four conditions (mean of seed means), with the absolute
+gap between LoRA and Base+\bodhi{} and the change from Base to LoRA. Active inquiry and appropriate
+hedging are proportions; the other dimensions are 0--2 means.}
 \label{tab:gap}
-\begin{tabular}{lrrrrrr}
-\toprule
-Dimension & Base & Wrapper & LoRA & LoRA+\bodhi{} & $|$LoRA$-$Wrap$|$ & LoRA$-$Base \\
-\midrule
-active\_inquiry (rate) & 0.175 & 0.479 & 0.456 & 0.801 & 0.024 & $+0.280$ \\
-red\_flag (0--2) & 1.522 & 1.660 & 1.672 & 1.512 & 0.012 & $+0.150$ \\
-context\_seeking (0--2) & 1.404 & 1.767 & 1.750 & 1.898 & 0.016 & $+0.346$ \\
-scope\_bounding (0--2) & 1.915 & 1.943 & 1.972 & 1.975 & 0.029 & $+0.057$ \\
-specificity (0--2) & 1.880 & 1.883 & 1.921 & 1.916 & 0.038 & $+0.041$ \\
-uncertainty\_ack (0--2) & 1.940 & 1.895 & 1.940 & 1.950 & 0.045 & $+0.000$ \\
-appropriate\_hedging (rate) & 0.906 & 0.917 & 0.942 & 0.949 & 0.026 & $+0.036$ \\
-\bottomrule
-\end{tabular}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\input{generated/tab_gap}
 \end{table}
 
 \section{Effect Size Forest Plot}
