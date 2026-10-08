@@ -258,10 +258,10 @@ clinical content it is able to supply.
 \caption{Epistemic virtue scores (5-seed mean $\pm$ std). Top: graded on 0--2 scale (cross-seed std
 omitted; all ${\leq}0.03$). Bottom: rates with cross-seed std as subscript. Arrows give the
 desirable direction for every row: $\uparrow$ higher is better, $\downarrow$ lower is better.
-Red-flag identification is $\uparrow$ because it measures sensitivity to warning signs that warrant
-escalation; note that this metric does not capture \emph{false positives}, so a model that flagged
-indiscriminately would also score highly. Measuring over-flagging requires a labelled set of
-prompts with no genuine red flag and is left to future work.}
+Blanket disclaimer is the only $\downarrow$ row. Red-flag identification and red-flag rate are
+$\uparrow$ because they measure sensitivity to warning signs that need escalation. Neither captures
+\emph{false positives}: a model that flagged every prompt would also score high. Measuring
+over-flagging needs a labelled set of prompts with no true red flag, which we leave to future work.}
 \label{tab:epistemic}
 \begin{tabular}{lcccc}
 \toprule
