@@ -3,6 +3,9 @@
 \usepackage{tikz}
 \usepackage{xcolor}
 \usetikzlibrary{arrows.meta, positioning, fit, backgrounds, matrix, calc}
+% Counts come from the same generated macros as the paper (make numbers), so the
+% figure cannot drift from the data.
+\input{../generated/numbers}
 
 % ── Palette (Tol bright, matches every other figure in the paper) ────────────
 \definecolor{colBlue}{HTML}{0077BB}
@@ -48,15 +51,15 @@
 %% ── Training pipeline: one straight left-to-right chain ────────────────────
 \node[pA]                 (s1) {%
   \textbf{1 · Generate}\\[1pt] BODHI CoT on\\ MedGemma-27B\\
-  {\footnotesize 4,000 prompts, greedy}};
+  {\footnotesize \statFilterPool{} prompts, greedy}};
 \node[pB, right=9mm of s1] (s2) {%
-  \textbf{2 · Grade}\\[1pt] Qwen-14B rubric\\ per-criterion\\
+  \textbf{2 · Grade}\\[1pt] Qwen2.5-14B filter\\ grader, per criterion\\
   {\footnotesize score $s\!\in\![0,1]$}};
 \node[pC, right=9mm of s2] (s3) {%
   \textbf{3 · Filter}\\[1pt] Retain $s \geq 0.4$\\ 90/10 train--val\\
-  {\footnotesize $\sim$3,100 kept (seed 7)}};
+  {\footnotesize \statFilterTrainNSeedSeven{} train (seed 7)}};
 \node[pD, right=9mm of s3] (s4) {%
-  \textbf{4 · Distill}\\[1pt] LoRA SFT\\ $r{=}8$, 300 steps\\
+  \textbf{4 · Distill}\\[1pt] LoRA SFT\\ $r{=}8$, 250--300 steps\\
   {\footnotesize 5 seeds}};
 
 \draw[arr] (s1) -- (s2);
@@ -96,7 +99,7 @@
 \coordinate (cellsmid) at ($(elora)!0.5!(elcot)$);
 \node[holdout] (hb) at ($(cellsmid |- m.south)+(0,-15mm)$) {%
   \textbf{HealthBench-Hard} (held-out)\\
-  {\footnotesize 200 of 1,000 prompts per seed · Llama-3.1-8B-Instruct grader}};
+  {\footnotesize 200 of \statHardPrompts{} prompts per seed · Llama-3.1-8B-Instruct evaluator}};
 
 \draw[arr] ($(cellsmid |- m.south)+(0,-1mm)$) -- (hb.north);
 
