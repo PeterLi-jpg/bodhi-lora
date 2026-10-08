@@ -95,9 +95,16 @@ Resolve before camera-ready.
 Section 1 (paired t over seeds, Holm over the six cells) is now
 `rebuttal/analyses/quality_drop.py`. It reads `results_rebuttal/` in the layout
 `rebuttal/launch/run_cell.sh` writes and writes `rebuttal/results/quality_drop.json`.
-It has not been run against the real cells yet: they are still only on the
-shared H100 box (PROV-1). Until then the t values above are unchecked
-transcriptions.
+On 2026-10-08 it ran against the cells synced from the host, and its six t values match
+the table above. Its Holm family also holds the MedQA cell, so its adjusted p values differ
+from the paper's, which runs Holm over the six cells that are not set aside.
+
+The askers-minus-non-askers gap of section 2 is now recomputed by
+`rebuttal/analyses/cell_values.py` (`lora_askers_minus_non_askers` in
+`data/rebuttal_cells/generated_values.json`), on LoRA responses with a parsed grade, pooled
+over seeds. It gives the same signs in all six cells. The values differ in the three
+Mistral-Small-24B cells (HealthBench +0.004, ChatDoctor +0.083, MedQuAD +0.044), so the ad
+hoc code above used another definition or other grade files; the paper uses the script.
 
 Sections 2 to 5 were computed with ad hoc code that is not in the repo. The pattern is: join
 `seed_*/eval/<config>.json` (`results[].score`, `criteria_results[]` with

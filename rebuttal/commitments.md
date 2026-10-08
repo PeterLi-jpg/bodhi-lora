@@ -26,7 +26,7 @@ Kinds:
 | C6 | Name the scope as patient-facing clinical Q&A. The setup section says that the prompts are mostly patient-facing (14 of 1,000 HealthBench-Hard prompts identify a clinician; corrected to the HealthBench tag count, 40 of 1,000, withdrawals W14). | text | `FzpA_2_followup.md:5`, `HomM_4_consolidation.md:3` | done (99d97ec) | withdrawals W2 |
 | C7 | The argument that every rubric anchor addresses the person who asks, so no dimension assumes a clinician reader. | text | `FzpA_2_followup.md:9` | done (8a737f9) | |
 | C8 | The aggregate-quality trade-off in the abstract, next to the behavioural gain, in place of "quality preserved". | text | `HomM_4_consolidation.md:3` | done (99d97ec) | withdrawals W8 |
-| C9 | The behavioural gain and the aggregate cost stated together for every cell. | table | `HomM_4_consolidation.md:3` | done (99d97ec) | Table 3. Intervals for the added cells stay pending until the sync (PROV-1). |
+| C9 | The behavioural gain and the aggregate cost stated together for every cell. | table | `HomM_4_consolidation.md:3` | done (99d97ec, 60c1a54, 38b800e) | Table 3. Each added cell has a paired t(4) interval computed from its raw outputs, synced on 2026-10-08. |
 | C10 | A Discussion criterion for when the behavioural gain is worth the aggregate cost, framed by deployment risk. | text | `HomM_4_consolidation.md:3` | done (99d97ec) | |
 | C11 | Each interpretation corrected in the discussion appears in its corrected form. The convergence sentence is removed everywhere. | text | `HomM_4_consolidation.md:3`, `HomM_2_followup_part1.md:7` | done (99d97ec) | All of `withdrawals.md` |
 | C12 | No claim that the recipe is protocol-agnostic. Only one CoT protocol was tested. | text | `HomM_1_rebuttal.md:27` | done (99d97ec) | |
@@ -56,7 +56,7 @@ Kinds:
 
 | ID | The camera-ready must carry | Kind | Source | Status | Note |
 |---|---|---|---|---|---|
-| C24 | All seven added cells in the main evaluation, including the BioMistral null and the set-aside MedQA cell. | table | `HomM_4_consolidation.md:3` | to-do | Table 3 holds six added cells with transcribed values. The MedQA row has no values: none were posted, and the raw outputs are on the GPU host (PROV-1). The paper says in Section 4.2, the abstract and the Limitations that this promise is unmet. Unblock: sync `results_rebuttal/`, run `make cells`, name the MedQA run (withdrawals W12). |
+| C24 | All seven added cells in the main evaluation, including the BioMistral null and the set-aside MedQA cell. | table | `HomM_4_consolidation.md:3` | done (60c1a54, 38b800e) | Table 3 holds all seven added cells, computed from the raw outputs synced on 2026-10-08. The MedQA row has its aggregate score and interval. Its seven dimensions stay out of the table: seed 42's epistemic grading found none of the MedQA prompts, so only 4 of 5 seeds have them. The MedQA run is the preamble run (withdrawals W12), so the cell stays set aside, and Section 4.2, the abstract, the Limitations and Appendix J say why. |
 | C25 | Training and inference cost for each configuration, from per-stage timings measured in isolation. Do not use the shared-node timings. | experiment | `FzpA_1_rebuttal.md:64` | to-do | GPU time |
 
 ## Experiments still owed
@@ -78,5 +78,7 @@ data access.
 ## Offered, not promised for the paper
 
 - An anonymized link to the code and per-cell outputs for the AC, on request
-  (`HomM_3_followup_part2.md:32`). This needs the raw outputs in a versioned place first
-  (PROV-1).
+  (`HomM_3_followup_part2.md:32`). The repo now tracks the per-seed values
+  (`data/rebuttal_cells/generated_values.json`), adapter configs and trainer states. The per-seed
+  eval JSON with full responses (about 370 MB) is copied from the host but gitignored, so sharing
+  it needs a versioned archive first.

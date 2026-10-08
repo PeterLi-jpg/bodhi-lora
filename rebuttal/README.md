@@ -8,9 +8,10 @@ withdrew, and what we promised. The ledgers are the files that the resubmission 
 
 | File | What it holds |
 |---|---|
-| `withdrawals.md` | Every claim that we withdrew or corrected in the discussion, plus two posted claims that the audit found wrong. Each entry has the claim as made, the correction and the statement that the paper must carry. |
+| `withdrawals.md` | Every claim that we withdrew or corrected in the discussion, plus posted claims that the audit or a later check found wrong. Each entry has the claim as made, the correction and the statement that the paper must carry. |
 | `commitments.md` | Every promise in the posted replies (C1 to C33), with its source line and a status column for the paper lanes. |
-| `../data/rebuttal_cells/posted_values.json` | Every number that we posted about the rebuttal cells, transcribed with source lines. Its README says how `make cells` checks it against generated values. |
+| `../data/rebuttal_cells/posted_values.json` | Every number that we posted about the rebuttal cells, transcribed with source lines. It is the record of what was posted. |
+| `../data/rebuttal_cells/generated_values.json` | The same numbers computed from the raw outputs (`make cells`); the paper uses these. Its README lists the one posted value they do not match (W21). |
 
 ## Posted replies
 
@@ -81,18 +82,17 @@ them.
 
 ## Open
 
-- **Raw outputs of the added cells.** They exist only on the shared GPU host, under
-  `/data/PROJECTS/bohdi/results_rebuttal/`. Until they are synced, no number for an added
-  cell can be checked (audit PROV-1). After the sync, run `make cells`. It diffs the cell
-  values against `posted_values.json` and runs the paired t (PROV-2).
+- **Raw outputs of the added cells.** Synced on 2026-10-08 (PROV-1). `make cells` diffs the
+  cell values against `posted_values.json` (one mismatch, W21), runs the paired t (PROV-2;
+  every posted test holds) and reads the per-cell tau and recipe from the host logs (PROV-3).
+  The full responses stay gitignored; versioning them is open (KNOWN_ISSUES).
 - **Scripts for posted numbers.** Each posted analysis now has a script. Two results differ
   from the posts. The second-person count gives 17.9% against 36.7%, not the posted 18.4%
   against 39.6% (PROV-7). The odds ratios reproduce 1.16, 1.54 and 1.56, but their 95% CIs
   overlap (PROV-10). See `results/`.
-- **Settings for each cell.** The tau that each cell used, the retention and the holdout IDs
-  are in the filter logs on the host (PROV-3). `withdrawals.md` W11 depends on them.
-- **The MedQA cell.** Two posted reasons for setting it aside disagree. HomM_4 promised that
-  the cell would move into the main evaluation (W12, C24).
+- **The MedQA cell.** Settled by the sync: the only run is the preamble run, so the cell
+  measures instruction following and stays set aside. Table 3 reports its aggregate score
+  (W12, C24 done).
 - **The meta-review reply.** Confirm on OpenReview whether `meta_review_part1.md` and
   `meta_review_part2.md` were posted to the AC. If they were, move them to
   `responses/posted/` as `AC_1_part1.md` and `AC_2_part2.md` with `git mv`, and add them to

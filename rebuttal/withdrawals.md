@@ -2,7 +2,8 @@
 
 This file lists every claim that the authors corrected or withdrew during the NeurIPS 2026
 discussion of submission 32818. It also lists posted claims that the discussion never
-corrected but that the audit or a later check found wrong (W10, W11, and W14 onward). Each
+corrected but that the audit or a later check found wrong (W10, W11, and W14 onward; W21 came
+from the raw outputs synced on 2026-10-08). Each
 entry gives the claim as made, the correction with its source, and the statement the paper
 must carry.
 
@@ -320,14 +321,19 @@ prompts repeat across seeds (audit CLAIM-10).
 **The paper must say.** State what ran in each cell, not "unchanged":
 - The added cells used `rebuttal/configs/*.yaml`: r = 16, alpha = 32, effective batch 16 and
   3 epochs. Mistral-Small-24B was trained with 4-bit QLoRA and served on a bf16 base.
-- The submitted MedGemma adapters very likely used r = 8 and alpha = 16 (tunix path). This is
-  pending the GCS check in HYG-4.
+- The submitted MedGemma adapters very likely used r = 8 and alpha = 16 (tunix path). The GCS
+  check in HYG-4 cannot run: the bucket returned 404 on 2026-10-08. The paper says the values come
+  from the code and could not be checked against the saved files (BLOCKED.md item 3).
 - The eval settings differ from the submitted cell: context window 8,192 against 4,096 tokens,
   64 against 32 concurrent sequences, one fixed set of 200 HealthBench prompts for all seeds
   against a new draw per seed, grader weights from a mirror repo, and H100 against A100.
-- tau was 0.4 on HealthBench. The clearance suggests 0.4 on ChatDoctor too. MedQuAD very
-  likely used a tau taken from the score distribution (22nd percentile). The filter logs on
-  the remote host will settle this (PROV-3).
+- tau was 0.4 in every added cell, MedQuAD included. Each filter log prints `threshold=0.4`,
+  and no host log has the 22nd-percentile re-filter line (`rebuttal/results/cell_recipe.json`,
+  commit 5d5890e; PROV-3). The earlier reading that MedQuAD used a percentile cut came from its
+  clearance, 78.4%, which a 22nd-percentile cut would also give. Done in Appendix J (Table J.1)
+  of `paper/main.tex`, commit 38b800e. The synced `adapter_config.json` files confirm r = 16,
+  alpha = 32, dropout 0.05 and seven target modules in all 35 adapters, and the trainer states
+  confirm 3 epochs and an effective batch of 16 (Table F.2 now reads them).
 
 ---
 
@@ -349,8 +355,19 @@ main evaluation.
 prompt set had a preamble that told the model to ask for missing information. Base active
 inquiry reached 99%, so that run measured instruction-following. Commit 035d85f removed the
 preamble. The cell in the main evaluation must name which run it reports. It must also say
-that MedQA is a single-best-answer exam task, scored against a keyed answer. Pending sync:
-confirm that the HomM numbers come from the run without the preamble.
+that MedQA is a single-best-answer exam task, scored against a keyed answer.
+
+**Checked against the raw outputs (2026-10-08).** The host holds one MedQA run, and it is the
+preamble run. Its traces were generated on 2026-07-27, and its eval files were written between
+2026-07-27 and 2026-07-28 01:23 (Pacific); 035d85f, on another machine, removed the preamble at
+01:04 that night. Base active inquiry is 99.0% to 100.0% in each of the four seeds with an
+epistemic grade (seed 42's grading found none of the MedQA prompts), as posted for the preamble
+run. Its aggregate score rises from 0.665 to 0.683
+(+0.018, 95% t interval [+0.003, +0.033], paired over five seeds), the values in the unposted
+drafts (`data/rebuttal_cells/README.md`, "Not in this file"). So the posted "aggregate score
+rises" (`HomM_2_followup_part1.md:11`) describes the preamble run, which measures instruction
+following. No run without the preamble exists. Done in section 4.2, the abstract, the Limitations
+and Appendix J of `paper/main.tex` (commit 38b800e), with every number from `make numbers`.
 
 ---
 
@@ -499,6 +516,26 @@ dimension of the cell in a generated table (`paper/generated/tab_cell_dimensions
 
 ---
 
+## W21. MedQuAD base hedging quality posted as 1.46 (found in the raw outputs)
+
+**Claim as made.** Posted Table 1, `HomM_2_followup_part1.md:18`: MedQuAD with Mistral-Small-24B,
+Base hedging quality 1.46 ± 0.01. Two earlier posts (`LxMF_1_rebuttal.md:76`,
+`HomM_1_rebuttal.md:25`) gave the same value as 1.45.
+
+**Correction posted.** None.
+
+**What the raw outputs give.** `make cells` (`rebuttal/analyses/cell_values.py`) computes 1.4548
+from the per-seed eval files, which rounds to 1.45. It is the only posted value of the added cells
+that differs from the raw outputs at the posted precision
+(`data/rebuttal_cells/generated_values.json`, `mismatches`). So 1.45 was right and Table 1's 1.46
+was not.
+
+**The paper must say.** 1.45, from the generated values. Done: Appendix J and
+`paper/generated/tab_cell_dimensions.tex` print the generated value, and
+`data/rebuttal_cells/posted_values.json` keeps 1.46 as the record of what was posted.
+
+---
+
 ## Posted claims that the discussion never corrected
 
 The discussion did not withdraw the claims below, but the evidence does not support them. The
@@ -510,10 +547,12 @@ paper lanes must decide on each one.
   post (`HomM_2_followup_part1.md:25`) leaves out the causal clause but does not withdraw it.
 - **"blanket disclaimers eliminated"** Submitted `main.tex:36`, live `paper/main.tex:78`,
   `:103`. This rests on 5 of 998 against 0 of 985 responses (Fisher p = 0.062, audit CLAIM-8).
-- **MedQuAD base hedging posted as 1.45.** `LxMF_1_rebuttal.md:76`, `HomM_1_rebuttal.md:25`,
-  live paper `paper/main.tex:776`. Table 1 (`HomM_2_followup_part1.md:18`) gives 1.46 ± 0.01.
-- **"in five of the six added cells at every seed"** `FzpA_2_followup.md:15`. The per-seed
-  claim cannot be checked until the raw outputs are synced (PROV-1).
+- **MedQuAD base hedging, 1.45 against 1.46.** Settled by the raw outputs; see W21.
+- **"in five of the six added cells at every seed"** `FzpA_2_followup.md:15`. Checked against
+  the raw outputs on 2026-10-08 (`data/rebuttal_cells/generated_values.json`, per_seed): LoRA
+  active inquiry is above Base in all five seeds of five added cells, and in one of five seeds of
+  BioMistral-7B. The claim holds as posted. It counts the two Med42-8B cells, which the paper
+  leaves out of cross-model statements (D6).
 - **Second-person questions, 18.4% against 39.6%.** `FzpA_2_followup.md:13`. No script or
   output exists. A simple regex gives 17.9% and 37.2% (audit PROV-7).
 - **What the physician check covers.** `FzpA_1_rebuttal.md:40` reports kappa = 0.35 right after
