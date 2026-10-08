@@ -8,10 +8,10 @@ finding named in brackets.
 To change a decision, add a new dated entry below it that says what changed and why.
 Do not edit the text of an old entry.
 
-**Status (2026-10-08).** The first author has not yet confirmed D1 to D16 in this file.
-Until a dated entry from him confirms or amends them, every audit item closed on one of
-these decisions is provisional, including the title (D3), the scope (D4), the Med42-8B
-handling (D6), the canonical paper (D8) and the statistical unit (D7).
+**Status (2026-10-08).** The first author delegated D1 to D16 on 2026-10-07 and asked
+that they be applied. They are applied under that delegation, and the audit items closed
+on them are closed. The first author may still revise any decision with a dated entry
+below it.
 
 ## 2026-10-07
 
@@ -99,3 +99,25 @@ Why: a history rewrite and remote branch deletion change public state, which is 
   of their own (`paper/main.tex`, Table bodhi-map). The installed bodhi-llm 0.1.4 package
   still expands the acronym the other way in its docstrings and cites the PLOS Digital Health
   paper.
+- D12, after the sync (2026-10-08). The added cells' raw outputs were copied from the GPU
+  host (commit 60c1a54). Their numbers now come from `data/rebuttal_cells/generated_values.json`,
+  which `make cells` computes from those outputs, with a paired t(4) interval for every cell.
+  The "transcribed from posted values; raw outputs pending sync" footnote is gone from the
+  paper (38b800e). `data/rebuttal_cells/posted_values.json` stays as the record of what was
+  posted; one posted value differs from the raw outputs (`rebuttal/withdrawals.md` W21). The
+  MedQA cell is in Table 3 with its aggregate score and interval. Its only run is the
+  preamble run, so it stays set aside with that reason, and its seven dimensions stay out of
+  the table because seed 42 has no epistemic grades (W12).
+- D1, the GCS check (2026-10-08). The bucket `gs://bohdi-runs-tokyo-micron` returns 404, and
+  its project has no buckets, so the submitted adapter configs cannot be read there. The
+  MedGemma-27B recipe stays as derived from the code in `legacy/`, and the paper now says it
+  could not be checked against the saved files instead of "pending". The evidence left: the
+  launcher, config and exporter in `legacy/`, the early committed adapter at 607440e (an
+  HF-path run, not an evaluated adapter), and possibly the Modal volume `bohdi-data-cache`,
+  into which `legacy/modal_eval.py` (lines 119 and 435-447) copied each seed's `checkpoints/best/` and
+  `train.jsonl`/`val.jsonl` (BLOCKED.md item 3). The added cells' recipe is now read from
+  their synced adapter and trainer files (`rebuttal/results/cell_recipe.json`, Table F.2).
+- D6, after the sync (2026-10-08). The askers-minus-non-askers count is now made without
+  the Med42-8B cells (Appendix J). The Med42-8B cells stay in the Holm family of the
+  aggregate tests (the six added cells that are not set aside), as in the posted tests; that
+  family is a correction, not a cross-model statement.
