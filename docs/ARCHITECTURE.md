@@ -445,7 +445,7 @@ class StageContext:                # what a stage reads: registry, project, cell
 # Each stage is also a module: python -m bodhi_lora.pipeline.<stage> --cell <id> [--seed n]
 
 # bodhi_lora.analysis (project and report config default to configs/)
-def extract(reg, cell_id: str, proj=None, cfg=None) -> dict   # raw outputs -> each seed's table.csv
+def extract_cell(reg, cell_id: str, proj=None, cfg=None) -> dict   # raw outputs -> each seed's table.csv
 def analyze_cell(reg, cell_id: str, proj=None, cfg=None) -> dict   # tables -> the cell's stats.json
 def analyze_cross(reg, report_cfg=None, proj=None) -> dict    # every cell's stats.json -> the cross-cell one
 

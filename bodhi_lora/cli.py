@@ -159,7 +159,7 @@ def cmd_analyze(args, reg: Registry) -> int:
     for cid in cells:
         try:
             if args.extract:
-                analysis.extract(reg, cid, proj, cfg)
+                analysis.extract_cell(reg, cid, proj, cfg)
             analysis.analyze_cell(reg, cid, proj, cfg)
             print(f"{cid}: {proj.rel(proj.cell(cid).analysis() / 'stats.json')}")
         except (ExtractError, FileNotFoundError) as e:

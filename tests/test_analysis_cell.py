@@ -138,3 +138,14 @@ def test_analyze_takes_cells_or_all():
         cli.main(["analyze"])
     with pytest.raises(SystemExit, match="no cells"):
         cli.main(["analyze", "no-such__cell__id"])
+
+
+def test_extract_runs_through_the_command_line():
+    """analyze --extract reaches extract_cell. Importing the submodule
+    bodhi_lora.analysis.extract once hid a package function of the same name, and
+    make extract stopped with a TypeError; a cell without outputs must instead stop
+    with the reason."""
+    from bodhi_lora import cli
+
+    with pytest.raises(SystemExit, match="no eval outputs"):
+        cli.main(["analyze", "--extract", SMOKE])
