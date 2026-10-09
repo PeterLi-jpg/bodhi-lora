@@ -13,9 +13,9 @@ read them at the source before you redistribute anything.
 
 | Component | Source | License | Used by |
 |---|---|---|---|
-| BODHI prompt (`bodhi-llm`) | https://github.com/sebasmos/bodhi-llms | see upstream | stage 1, `scripts/generate_traces.py` |
+| BODHI prompt (`bodhi-llm`) | https://github.com/sebasmos/bodhi-llms | see upstream | stage 1, `bodhi_lora/pipeline/traces.py` |
 | HealthBench grader code | https://github.com/sebasmos/humbleai-healthbench | see upstream | stages 2 and 4 |
-| transformers, peft, trl, accelerate | Hugging Face | Apache-2.0 | stage 3 on GPU, `scripts/train_lora.py` |
+| transformers, peft, trl, accelerate | Hugging Face | Apache-2.0 | stage 3 on GPU, `bodhi_lora/pipeline/train.py` |
 | bitsandbytes | https://github.com/bitsandbytes-foundation/bitsandbytes | MIT | 4-bit QLoRA |
 | vLLM | https://github.com/vllm-project/vllm | Apache-2.0 | generation, grading, eval |
 | tunix, qwix | Google | Apache-2.0 | stage 3 of the submitted cell (`legacy/`) |
@@ -46,4 +46,4 @@ read them at the source before you redistribute anything.
 The filter grader (Qwen) and the evaluator (Llama) come from different families, so
 the model that picks the training data does not score the results. Med42-8B is a Llama-3
 model, so its cells break this rule. They are marked †, and
-`scripts/regrade_cross_family.py` regrades them with a judge from neither family.
+`bodhi_lora/pipeline/grade.py` regrades them with a judge from neither family.

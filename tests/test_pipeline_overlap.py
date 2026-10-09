@@ -1,4 +1,4 @@
-"""Tests for the leakage gate in scripts/check_dataset_overlap.py."""
+"""Tests for the leakage gate in bodhi_lora/data/leakage.py."""
 
 import json
 import subprocess
@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 REPO = Path(__file__).resolve().parent.parent
-SCRIPT = REPO / "scripts" / "check_dataset_overlap.py"
+MODULE = "bodhi_lora.data.leakage"
 
 
 def _jsonl(path, rows):
@@ -25,7 +25,7 @@ def _train_row(pid, text):
 
 
 def _run(*args):
-    return subprocess.run([sys.executable, str(SCRIPT), *map(str, args)],
+    return subprocess.run([sys.executable, "-m", MODULE, *map(str, args)], cwd=REPO,
                           capture_output=True, text=True)
 
 

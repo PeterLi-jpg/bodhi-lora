@@ -10,7 +10,7 @@ flatten this U: lift the tails, especially the high-acuity failures where
 overconfident wrong answers are most harmful.
 
 This script does NO model inference. It re-aggregates existing eval
-outputs from scripts/eval_healthbench.py against HealthBench metadata,
+outputs from bodhi_lora/pipeline/eval.py against HealthBench metadata,
 producing per-tier and per-theme stats for plotting.
 
 Two difficulty axes:
@@ -218,7 +218,7 @@ def print_table(summary, fail_threshold):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--eval-jsons", nargs="+", required=True,
-                        help="eval outputs from scripts/eval_healthbench.py")
+                        help="eval outputs from bodhi_lora/pipeline/eval.py")
     parser.add_argument("--healthbench", nargs="+", required=True,
                         help="HealthBench JSONL files with metadata")
     parser.add_argument("--output", required=True, help="where to write aggregated JSON")

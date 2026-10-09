@@ -185,7 +185,7 @@ run_gpu_py() {
 family_guard() {
     local flag=()
     [ "$ALLOW_SAME_FAMILY" = 1 ] && flag=(--allow-same-family)
-    "$INFER_PY" scripts/run_manifest.py check-family --base "$MODEL" \
+    "$INFER_PY" -m bodhi_lora.manifest check-family --base "$MODEL" \
         --filter "$FILTER_MODEL" --evaluator "$GRADER_MODEL" \
         ${flag[@]+"${flag[@]}"} --json-out "${WORK}/family_check.json" \
         || { echo "=== refused by the grader-family guard; see above ==="; exit 3; }
@@ -233,11 +233,11 @@ prepare_data() {
             HOLDOUT_IDS="${BENCH_JSONL%.jsonl}_holdout${HOLDOUT_N}_h${HOLDOUT_SEED}.json"
         fi
         if [ ! -s "$BENCH_JSONL" ]; then
-            "$INFER_PY" scripts/build_benchmark_jsonl.py --benchmark "$BENCH" \
+            "$INFER_PY" -m bodhi_lora.data.loaders --benchmark "$BENCH" \
                 --out "$BENCH_JSONL" --max "$n_total" --select "$SELECT" --select-seed "$SELECT_SEED"
         fi
         if [ ! -s "$HOLDOUT_IDS" ]; then
-            "$INFER_PY" scripts/build_benchmark_jsonl.py --benchmark "$BENCH" \
+            "$INFER_PY" -m bodhi_lora.data.loaders --benchmark "$BENCH" \
                 --out "$BENCH_JSONL" --holdout-only --holdout-n "$HOLDOUT_N" \
                 --holdout-method "$HOLDOUT_METHOD" --holdout-seed "$HOLDOUT_SEED" \
                 --holdout-out "$HOLDOUT_IDS"
@@ -252,17 +252,17 @@ prepare_data() {
     [ "$BENCH" = "healthbench" ] && EPI_DATA=(--healthbench-data "$BENCH_JSONL")
 
     # Per-seed eval ids. per-seed: a separate Random(seed).sample(EVAL_N) of the
-    # pool (scripts/make_bootstrap_eval_ids.py, the submitted cell's rule).
+    # pool (bodhi_lora/data/splits.py, the submitted cell's rule).
     # fixed: one set for every seed (the posted cells).
     mkdir -p "${WORK}/eval_ids"
     local s
     for s in $SEEDS; do
         if [ "$EVAL_IDS_POLICY" = per-seed ]; then
             if [ "$BENCH" = "healthbench" ]; then
-                "$INFER_PY" scripts/make_bootstrap_eval_ids.py --healthbench-jsonl "$BENCH_JSONL" \
+                "$INFER_PY" -m bodhi_lora.data.splits --healthbench-jsonl "$BENCH_JSONL" \
                     --seed "$s" --size "$EVAL_N" --output "$(eval_ids_for_seed "$s")"
             else
-                "$INFER_PY" scripts/make_bootstrap_eval_ids.py --pool-ids "$HOLDOUT_IDS" \
+                "$INFER_PY" -m bodhi_lora.data.splits --pool-ids "$HOLDOUT_IDS" \
                     --seed "$s" --size "$EVAL_N" --output "$(eval_ids_for_seed "$s")"
             fi
         fi

@@ -847,7 +847,7 @@ def dimension_correlations(df, out, macros):
 def context_seeking_anchor(df, out, macros):
     """How often a context-seeking grade of 2 comes with no direct question.
 
-    The grader prompt (scripts/eval_epistemic.py) says: score 2 only if at least
+    The grader prompt (bodhi_lora/grading/epistemic.py) says: score 2 only if at least
     one direct question is asked. The same grade carries the active-inquiry flag
     (a direct question was asked), so a 2 without the flag breaks the anchor.
     """

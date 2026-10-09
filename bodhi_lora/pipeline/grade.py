@@ -18,10 +18,10 @@ Families come from configs/families.yaml. The default judge is the registry's
 cross_family_judge (google/gemma-2-27b-it).
 
 Usage:
-    python scripts/regrade_cross_family.py \\
+    python -m bodhi_lora.pipeline.grade \\
         --cell results_rebuttal/healthbench__m42-health_Llama3-Med42-8B \\
         --benchmark-jsonl data/raw/healthbench_hard.jsonl [--dry-run]
-    python scripts/regrade_cross_family.py --response-files <seed>/eval/base_no_wrapper.json ...
+    python -m bodhi_lora.pipeline.grade --response-files <seed>/eval/base_no_wrapper.json ...
 
 Output, per eval directory: regrade_<judge>.json and regrade_<judge>.manifest.json.
 """
@@ -37,13 +37,10 @@ from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
-from _vllm_engine import DryRunEngine, VLLMEngine  # noqa: E402
-import run_manifest as rmf  # noqa: E402
-from scripts.filter_traces import LocalGrader, grade_trace  # noqa: E402
-from scripts.eval_epistemic import (  # noqa: E402
+from bodhi_lora import manifest as rmf
+from bodhi_lora.engine.vllm import DryRunEngine, VLLMEngine
+from bodhi_lora.pipeline.filter import LocalGrader, grade_trace
+from bodhi_lora.grading.epistemic import (
     DRY_RUN_EPISTEMIC_REPLY, aggregate, flatten_grade, grade_response, messages_to_text,
 )
 

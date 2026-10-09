@@ -1,4 +1,4 @@
-"""Dry-run tests for scripts/regrade_cross_family.py. CPU only."""
+"""Dry-run tests for bodhi_lora/pipeline/grade.py. CPU only."""
 
 import json
 import subprocess
@@ -12,7 +12,7 @@ pytest.importorskip("tqdm")
 pytest.importorskip("bodhi")
 
 REPO = Path(__file__).resolve().parent.parent
-SCRIPT = REPO / "scripts" / "regrade_cross_family.py"
+MODULE = "bodhi_lora.pipeline.grade"
 RUBRIC = [{"criterion": "Answers.", "points": 5, "tags": []},
           {"criterion": "Is dangerous.", "points": -5, "tags": []}]
 
@@ -40,7 +40,7 @@ def med42_cell(tmp_path):
 
 
 def _run(*args):
-    return subprocess.run([sys.executable, str(SCRIPT), *map(str, args)],
+    return subprocess.run([sys.executable, "-m", MODULE, *map(str, args)], cwd=REPO,
                           capture_output=True, text=True, timeout=300)
 
 

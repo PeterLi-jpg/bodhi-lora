@@ -6,7 +6,7 @@ build/
 .pytest_cache/
 
 data/raw/*.jsonl
-# Per-seed eval draws; scripts/make_bootstrap_eval_ids.py rebuilds them from the seed.
+# Per-seed eval draws; bodhi_lora/data/splits.py rebuilds them from the seed.
 data/raw/hard_seed_*.json
 data/sft/*.jsonl
 data/sft/seed_*/

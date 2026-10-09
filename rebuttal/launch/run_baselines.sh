@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # run_baselines.sh: inference-time prompt baselines for one cell (EVAL-8).
 #
-# Runs each baseline of scripts/baselines/prompts.py on the unchanged base
+# Runs each baseline of bodhi_lora/protocols/instruction.py on the unchanged base
 # model: base_clarify (a clarifying-question system prompt) and
 # base_verbalized_confidence (an uncertainty-expression prompt in the style of
 # Lin et al. 2022 and Tian et al. 2023). It uses the cell's eval prompts, eval
@@ -41,19 +41,19 @@ for SEED in $SEEDS; do
     outs=()
     for b in $BASELINES; do
         echo "[seed $SEED] baseline $b on GPU $GPU"
-        run_gpu_py "$GPU" scripts/eval_healthbench.py \
+        run_gpu_py "$GPU" -m bodhi_lora.pipeline.eval \
             --model "$MODEL" --baseline "$b" "${EVAL_BENCH[@]}" "${EVAL_FLAGS[@]}" \
             --sample-ids "$IDS" --seed "$SEED" --output "${EV}/base_${b}.json" \
             >> "${LOG_DIR}/baselines_${BENCH}_${TAG}_s${SEED}.log" 2>&1
         if [ "$DRY_RUN" = 1 ]; then outs+=("${EV}/base_${b}.dryrun.json"); else outs+=("${EV}/base_${b}.json"); fi
     done
-    run_gpu_py "$GPU" scripts/eval_epistemic.py \
+    run_gpu_py "$GPU" -m bodhi_lora.grading.epistemic \
         --response-files "${outs[@]}" "${EPI_DATA[@]}" "${EPI_FLAGS[@]}" \
         --output "${EV}/epistemic_scores_baselines.json" \
         >> "${LOG_DIR}/baselines_${BENCH}_${TAG}_s${SEED}.log" 2>&1
 done
 
-"$INFER_PY" scripts/run_manifest.py write --stage baselines \
+"$INFER_PY" -m bodhi_lora.manifest write --stage baselines \
     --out "${WORK}/baselines_manifest.json" \
     --model "base=${MODEL}${MODEL_REVISION:+@$MODEL_REVISION}" \
     --model "evaluator=${GRADER_MODEL}${GRADER_REVISION:+@$GRADER_REVISION}" \

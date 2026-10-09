@@ -167,7 +167,7 @@ HomM-W3. Re-grade the stored outputs of `healthbench__med42-8b__bodhi__2026-07` 
 family (Gemma-2-27B by default; MedGemma-27B is the clinical choice). Report per-criterion
 kappa against the evaluator and the LoRA minus Base contrasts under the judge. The dagger
 stays. GPU: yes, about 2 to 5 H100-hours per cell, under 1 with the dimensions only
-(BLOCKED.md item 7). Code: `scripts/regrade_cross_family.py`, dry-run tested. Status: to
+(BLOCKED.md item 7). Code: `bodhi_lora/pipeline/grade.py`, dry-run tested. Status: to
 run.
 
 **E10. Clinical-judge robustness panel.** Answers C26, LxMF-3, HomM-Q4, HomM-W3,
@@ -184,7 +184,7 @@ and every new one. GPU: yes, about 1 to 5 H100-hours per judge and cell. Status:
 
 **E11. Contamination probe for every base model and benchmark.** Answers EVAL-12,
 NUM-7. Does the base complete benchmark prompts verbatim more often than a control text?
-`scripts/contamination_probe.py` exists for HealthBench and the 2026-05 base; its output
+`bodhi_lora/pipeline/probe.py` exists for HealthBench and the 2026-05 base; its output
 was never kept. Generalize the control text per benchmark, run it for Mistral-Small-24B,
 Med42-8B, BioMistral-7B, Mistral-7B-Instruct and MedGemma-27B on each benchmark they are
 evaluated on, and keep the JSON. GPU: yes, about 1 H100-hour per model and benchmark.
@@ -193,7 +193,7 @@ Status: to build, then to run.
 **E12. Prior-work baselines.** Answers MR-W6, HomM-W4, HomM-Q3, HomM-F5, C27, C14, and
 the open item the LxMF rebuttal named. Three inference-time baselines on the unchanged
 base, on each cell's eval prompts, graded like every other condition:
-- `base+clarify`: a clarifying-question instruction. Exists (`scripts/baselines/prompts.py`).
+- `base+clarify`: a clarifying-question instruction. Exists (`bodhi_lora/protocols/instruction.py`).
 - `base+verbalized-confidence`: state confidence in words and as a number, and what
   would change the answer (Lin et al., 2022; Tian et al., 2023). Exists.
 - `base+mediq-abstain`: a MediQ-style abstention step (Li et al., NeurIPS 2024). Pass 1
@@ -313,7 +313,7 @@ accuracy measure. GPU: yes, about 10 H100-hours. Status: to run (benchmark recor
 build).
 
 **E16. Second teaching protocol.** Answers HomM-W1, HomM-final, MR-F (narrow protocols),
-C29, C12. Ask-first (`scripts/baselines/ask_first.py`): one call, a three-question plan,
+C29, C12. Ask-first (`bodhi_lora/protocols/ask_first.py`): one call, a three-question plan,
 then a reply that asks first. Cell: `healthbench__mistral-small-24b__ask-first` with
 `base`, `base+ask-first`, `lora`, `lora+ask-first`, and `base+bodhi` to compare the two
 teachers on the same prompts; the E14 probe on its adapters. If budget allows, the same
@@ -398,7 +398,7 @@ wall-clock time, GPU model and tokens per stage. The `bench` stage times a fixed
 of 50 prompts per condition on an otherwise idle GPU, so shared-node queueing does not
 enter the figures. Report training time per seed, and time and tokens per response per
 condition. GPU: yes, inside E13 and E16. Status: to build (timers, `bench` stage from
-`scripts/latency_benchmark.py`), then to run.
+`bodhi_lora/pipeline/bench.py`), then to run.
 
 **E21. BioMistral null: teacher or student?** Answers HomM-F1, withdrawals W5. One null
 cannot separate teacher strength from model size, instruction tuning or recipe.
@@ -441,7 +441,7 @@ holdout of 1,000 in place of the first rows in source order (REPRO-11). GPU: yes
 
 **E26. BODHI component ablations.** The submitted paper named them as beyond its budget.
 Protocols `bodhi-no-calibration`, `bodhi-no-questions`, `bodhi-no-abstention` as teachers
-(`scripts/_bodhi_ablation.py` builds them, with a prompt-drift check). GPU: yes, about 10
+(`bodhi_lora/protocols/bodhi_llm.py` builds them, with a prompt-drift check). GPU: yes, about 10
 H100-hours per protocol. Status: exists (code), to run. Optional; no reviewer asked.
 
 ### People

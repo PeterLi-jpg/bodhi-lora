@@ -2,7 +2,7 @@
 
 The real inputs are the host logs (gitignored) and the tracked adapter files. The test
 builds a small tree in the same layout, with log lines in the format
-scripts/filter_traces.py prints.
+bodhi_lora/pipeline/filter.py prints.
 """
 
 import importlib.util

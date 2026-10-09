@@ -1,6 +1,6 @@
 """Score model responses on BODHI epistemic-virtue dimensions.
 
-Existing eval (scripts/eval_healthbench.py) measures HealthBench rubric scores —
+Existing eval (bodhi_lora/pipeline/eval.py) measures HealthBench rubric scores —
 which reward confident, complete answers. That's the OPPOSITE of what BODHI
 training is supposed to instill: appropriate uncertainty acknowledgment,
 active context-seeking, scope bounding, calibrated hedging.
@@ -21,7 +21,7 @@ carries them under run_metadata, and <output stem>.manifest.json holds the
 full record. --dry-run stubs the grader and writes <output stem>.dryrun.json.
 
 Usage:
-    python scripts/eval_epistemic.py \
+    python -m bodhi_lora.grading.epistemic \
         --response-files results/seed_42/eval/base_no_wrapper.json \
                          results/seed_42/eval/base_bodhi.json \
                          results/seed_42/eval/lora_no_wrapper.json \
@@ -41,13 +41,9 @@ from pathlib import Path
 import numpy as np
 from tqdm import tqdm
 
-# scripts/ on sys.path so _vllm_engine and filter_traces import as bare names.
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
-from _vllm_engine import DryRunEngine, VLLMEngine
-from scripts.filter_traces import LocalGrader, parse_json_response
-import run_manifest as rmf
+from bodhi_lora import manifest as rmf
+from bodhi_lora.engine.vllm import DryRunEngine, VLLMEngine
+from bodhi_lora.pipeline.filter import LocalGrader, parse_json_response
 
 DATA_DIR = Path("data/raw")
 HEALTHBENCH_HARD_URL = (

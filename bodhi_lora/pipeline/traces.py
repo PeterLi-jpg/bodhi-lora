@@ -2,8 +2,8 @@
 
 --protocol picks the teaching protocol: bodhi (the paper's two-pass wrapper,
 same as --use-bodhi), ask_first (a second, single-pass protocol in
-scripts/baselines/ask_first.py) or none (bare inference). Every run writes
-<output stem>.manifest.json (scripts/run_manifest.py). --dry-run stubs the
+bodhi_lora/protocols/ask_first.py) or none (bare inference). Every run writes
+<output stem>.manifest.json (bodhi_lora/manifest.py). --dry-run stubs the
 engine and writes <output stem>.dryrun.jsonl for a few prompts on a CPU.
 """
 
@@ -15,20 +15,16 @@ import traceback
 from pathlib import Path
 
 import sys
-import os
-# Insert scripts/ dir so _vllm_engine can be imported as a bare module name,
-# regardless of CWD or whether the project root is on sys.path.
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import numpy as np
 import torch
 from tqdm import tqdm
 from transformers import set_seed
 
-from _vllm_engine import DryRunEngine, VLLMEngine
-from _bodhi_ablation import make_ablated_bodhi_config
-from baselines.ask_first import AskFirstProtocol
-import run_manifest as rmf
+from bodhi_lora import manifest as rmf
+from bodhi_lora.engine.vllm import DryRunEngine, VLLMEngine
+from bodhi_lora.protocols.ask_first import AskFirstProtocol
+from bodhi_lora.protocols.bodhi_llm import make_ablated_bodhi_config
 
 PROTOCOLS = ("none", "bodhi", "ask_first")
 DRY_RUN_REPLY = "<plan>dry run plan</plan>\nREPLY:\nDRY RUN RESPONSE"
@@ -216,7 +212,7 @@ def main():
         default=None,
         help="Local HealthBench-format JSONL files to draw prompts from directly "
              "(each line an example with prompt_id/prompt/rubrics). Use for the "
-             "rebuttal benchmarks built by scripts/build_benchmark_jsonl.py "
+             "rebuttal benchmarks built by bodhi_lora/data/loaders.py "
              "(data/raw/medqa_open.jsonl, data/raw/medquad.jsonl). Combines with "
              "--datasets if both are passed.",
     )
@@ -247,7 +243,7 @@ def main():
         choices=PROTOCOLS,
         default=None,
         help="Teaching protocol: bodhi (= --use-bodhi), ask_first "
-             "(scripts/baselines/ask_first.py) or none. Default none.",
+             "(bodhi_lora/protocols/ask_first.py) or none. Default none.",
     )
     parser.add_argument(
         "--model-revision",

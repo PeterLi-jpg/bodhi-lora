@@ -109,7 +109,7 @@ Inputs: `RM` is `results_modal/seed_*/` (the four `<condition>.json` files and
 | Largest p of the four drops 0.016; each survives Holm over the 6 added cells not set aside (largest p_Holm 0.016), as posted | `\statCellsAddedDropPMax`, `\statCellsAddedDropPHolmMax`, `\statCellsHolmFamily` | `generality_section` | GV | computed (`rebuttal/results/quality_drop.json` gives the same tests with Holm over 7 cells) |
 | MedQA: Base asked in 99.0% to 100.0% of responses per graded seed; aggregate +0.018 [+0.003, +0.033]; the posted rise | `\statCellMedQAMistralBaseActiveInquirySeedMin`, `...SeedMax`, `\statCellMedQAMistralAggregateDiff`, `...DiffCI` | `generality_section` | GV | computed |
 | MedQA dimensions graded in 4 of 5 seeds | `\statCellMedQAMistralEpistemicSeeds`, `\statCellMedQAMistralSeeds` | `generality_section` | GV (`per_seed`) | computed |
-| Recipe and evaluation differences of the added cells | none | | `rebuttal/configs/*.yaml`, `rebuttal/launch/run_cell.sh`, `scripts/_vllm_engine.py` (comments above Table hparams-cells) | design |
+| Recipe and evaluation differences of the added cells | none | | `rebuttal/configs/*.yaml`, `rebuttal/launch/run_cell.sh`, `bodhi_lora/engine/vllm.py` (comments above Table hparams-cells) | design |
 
 ## Results: CoT on the adapted model (section 4.3)
 
@@ -129,10 +129,10 @@ Inputs: `RM` is `results_modal/seed_*/` (the four `<condition>.json` files and
 | Claim | Macro(s) | Function | Source | Kind |
 |---|---|---|---|---|
 | Aggregate falls by 0.014 to 0.086 in the added cells outside the family | `\statCellsAddedDropMin`, `\statCellsAddedDropMax` | `generality_section` | GV | computed |
-| Baseline code exists and has not run | none | | `scripts/baselines/`, `rebuttal/launch/run_baselines.sh` | design |
+| Baseline code exists and has not run | none | | `bodhi_lora/protocols/`, `rebuttal/launch/run_baselines.sh` | design |
 | Antidepressant example: Base asks nothing, LoRA asks about duration, intensity, sleep, appetite, energy, concentration and self-harm, and gives a crisis line | none (qualitative) | | `results_modal/seed_99/{base,lora}_no_wrapper.json` and `epistemic_scores.json`, prompt `2c915b71` | computed (read by hand; quoted in Appendix K) |
 | Table 4: prior approaches compared on what they change, inference cost, what they need and their target | none | | the cited papers | design (positioning, not a measurement) |
-| Second protocol implemented, not run | none | | `scripts/baselines/ask_first.py` | design |
+| Second protocol implemented, not run | none | | `bodhi_lora/protocols/ask_first.py` | design |
 | The adapter also asks more on self-contained prompts (15.9% to 37.5%; 17.0% to 43.2%); its gain in discrimination over Base includes zero (+8.4 [-1.2, +17.9]; +10.0 [-0.5, +20.1]); posted selectivity claim withdrawn | `\statAskSelfContained<Labeling><Cond>`, `\statDiscrimination<Labeling>LoRAvsBase`, `...CI`, `\statDiscrimination<Labeling><Cond>`, `...CI` | `rebuttal_section` | `rebuttal/results/mimicry_split.json` | computed (post hoc labelings; withdrawals W15) |
 | Prior work compared: MediQ, CRAFT-MD, AMIE, R-Tuning, linguistic calibration (section 2, Table 4) | none | | the cited papers; venues checked against Crossref and arXiv on 2026-10-08 | design (positioning) |
 
@@ -140,7 +140,7 @@ Inputs: `RM` is `results_modal/seed_*/` (the four `<condition>.json` files and
 
 | Claim | Where | Kind | What would settle it |
 |---|---|---|---|
-| Contamination probe: 200 sampled, 105 long enough, 0 exact matches, 0 overlap | Appendix A | unverified | Re-run `scripts/contamination_probe.py` on the base model (GPU) and commit the output |
+| Contamination probe: 200 sampled, 105 long enough, 0 exact matches, 0 overlap | Appendix A | unverified | Re-run `bodhi_lora/pipeline/probe.py` on the base model (GPU) and commit the output |
 | Filter kept 3,129 of 4,000 traces (tau table pool column) | Table tau-calibration | unverified (constant `FILTER_KEPT`) | The filter logs of the submitted run (PROV-11) |
 | Figure 1 labels: 4,000 prompts, 2,816 train in seed 7, r = 8, 250 to 300 steps, 200 of 1,000 prompts | Figure 1 | computed for the counts (`paper/figures/pipeline_standalone.tex` inputs `generated/numbers.tex`); design for r and steps | `make figures` rebuilds the PDF |
 | Every added cell on every dimension (Table J.3), MedQuAD specificity 1.71, 1.47, 1.33 | Appendix J, `tab_cell_dimensions.tex` | computed (GV; `\statCellMedQuADMistral<Cond><Dim>`; withdrawals W20, W21) | Settled by the sync |

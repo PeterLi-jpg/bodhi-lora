@@ -20,7 +20,7 @@
 #     eval prompts per seed from a held-out pool. rebuttal-posted reproduces the
 #     settings the posted rebuttal cells ran with; legacy/README.md lists them.
 #   PROTOCOL=bodhi (default) | ask_first. ask_first is the second CoT protocol
-#     (scripts/baselines/ask_first.py); its cell goes to <cell>__ask_first.
+#     (bodhi_lora/protocols/ask_first.py); its cell goes to <cell>__ask_first.
 #   TAU_RULE=fixed (default, tau = MIN_SCORE = 0.4) | percentile (tau =
 #     TAU_PERCENTILE of the graded scores) | legacy-auto (the posted rule:
 #     fixed, then the 22nd percentile when a non-HealthBench cell keeps < 40%).
@@ -35,7 +35,7 @@
 #
 # Every cell writes <cell>/manifest.json (settings, family check, filter counts
 # and tau, overlap check, per-seed manifests), and each stage writes its own
-# manifest next to its output (scripts/run_manifest.py).
+# manifest next to its output (bodhi_lora/manifest.py).
 set -euo pipefail
 : "${CONFIG:?set CONFIG}"
 source "$(dirname "$0")/_common.sh"
@@ -52,7 +52,7 @@ write_cell_manifest() {   # $1 = status
                --include "overlap=${WORK}/overlap_check.json")
     local s
     for s in $SEEDS; do inc+=(--include "seed_${s}=${WORK}/seed_${s}/manifest.json"); done
-    "$INFER_PY" scripts/run_manifest.py write --stage cell --out "${WORK}/manifest.json" \
+    "$INFER_PY" -m bodhi_lora.manifest write --stage cell --out "${WORK}/manifest.json" \
         --config "$CONFIG" --model "base=${MODEL}${MODEL_REVISION:+@$MODEL_REVISION}" \
         --model "filter=${FILTER_MODEL}${FILTER_REVISION:+@$FILTER_REVISION}" \
         --model "evaluator=${GRADER_MODEL}${GRADER_REVISION:+@$GRADER_REVISION}" \
@@ -70,7 +70,7 @@ write_cell_manifest started
 if [ "$BENCH" = "healthbench" ] && [ "$CONTAMINATION_PROBE" = 1 ] \
         && [ ! -s "${WORK}/contamination_probe.json" ]; then
     GPU="$(idle_gpus | head -1)"; : "${GPU:?no idle GPU for the contamination probe}"
-    run_gpu "$GPU" "$INFER_PY" scripts/contamination_probe.py --model "$MODEL" \
+    run_gpu "$GPU" "$INFER_PY" -m bodhi_lora.pipeline.probe --model "$MODEL" \
         ${MODEL_REVISION:+--model-revision "$MODEL_REVISION"} \
         --healthbench-data "$BENCH_JSONL" --output "${WORK}/contamination_probe.json" \
         2>&1 | tee -a "${LOG_DIR}/probe_${BENCH}_${TAG}.log"
@@ -86,7 +86,7 @@ GEN_RESUME=()
 [ -s "$RAW" ] && GEN_RESUME=(--resume-from "$RAW")
 GPU="$(idle_gpus | head -1)"; : "${GPU:?no idle GPU for generation}"
 echo "[gen] GPU $GPU$([ -s "$RAW" ] && echo " (resuming $(wc -l < "$RAW") traces)")"
-run_gpu_py "$GPU" scripts/generate_traces.py \
+run_gpu_py "$GPU" -m bodhi_lora.pipeline.traces \
     --model "$MODEL" ${MODEL_REVISION:+--model-revision "$MODEL_REVISION"} \
     "${GEN_SRC[@]}" --protocol "$PROTOCOL" ${GEN_RESUME[@]+"${GEN_RESUME[@]}"} \
     --output "$RAW" --max-examples "$GEN_MAX" 2>&1 | tee -a "${LOG_DIR}/gen_${BENCH}_${TAG}.log"
@@ -113,7 +113,7 @@ if [ ! -s "${SFT}/train.jsonl" ] || [ ! -s "${SFT}/val.jsonl" ]; then
     FILTER_RESUME=()
     [ -s "${SFT}/graded.jsonl" ] && FILTER_RESUME=(--resume-from "${SFT}/graded.jsonl")
     # shellcheck disable=SC2046  # tau_flags is two words on purpose
-    run_gpu "$GPU" "$INFER_PY" scripts/filter_traces.py "${FILTER_COMMON[@]}" \
+    run_gpu "$GPU" "$INFER_PY" -m bodhi_lora.pipeline.filter "${FILTER_COMMON[@]}" \
         ${FILTER_RESUME[@]+"${FILTER_RESUME[@]}"} $(tau_flags) \
         --output-dir "$SFT" --graded-output "${SFT}/graded.jsonl" \
         2>&1 | tee "${LOG_DIR}/filter_${BENCH}_${TAG}.log"
@@ -130,7 +130,7 @@ if [ ! -s "${SFT}/train.jsonl" ] || [ ! -s "${SFT}/val.jsonl" ]; then
             echo "[filter] train $FIRST_PASS_KEPT/$FIRST_PASS_RAW < 40% at tau=$MIN_SCORE;" \
                  "re-filtering at the ${TAU_PERCENTILE}th-percentile tau (legacy-auto)"
             cp "${SFT}/manifest.json" "${SFT}/manifest_first_pass.json"
-            "$INFER_PY" scripts/filter_traces.py "${FILTER_COMMON[@]}" \
+            "$INFER_PY" -m bodhi_lora.pipeline.filter "${FILTER_COMMON[@]}" \
                 --resume-from "${SFT}/graded.jsonl" --tau-percentile "$TAU_PERCENTILE" \
                 --output-dir "$SFT" --graded-output "${SFT}/graded.jsonl" \
                 2>&1 | tail -12 | tee -a "${LOG_DIR}/filter_${BENCH}_${TAG}.log"
@@ -143,14 +143,14 @@ fi
 # text. graded.jsonl holds every trace any seed can train on.
 if [ -s "${SFT}/graded.jsonl" ]; then
     if [ "$BENCH" = "healthbench" ]; then
-        "$INFER_PY" scripts/check_dataset_overlap.py \
+        "$INFER_PY" -m bodhi_lora.data.leakage \
             --healthbench "${DATA_RAW}/healthbench.jsonl" --healthbench-hard "$BENCH_JSONL" \
             --eval-ids "${DATA_RAW}/hard_200_sample_ids.json" \
             --train-jsonl "${SFT}/graded.jsonl" --json-out "${WORK}/overlap_check.json"
     else
         SEED_ID_FILES=()
         for s in $SEEDS; do SEED_ID_FILES+=("$(eval_ids_for_seed "$s")"); done
-        "$INFER_PY" scripts/check_dataset_overlap.py --benchmark-jsonl "$BENCH_JSONL" \
+        "$INFER_PY" -m bodhi_lora.data.leakage --benchmark-jsonl "$BENCH_JSONL" \
             --holdout-ids "$HOLDOUT_IDS" --train-jsonl "${SFT}/graded.jsonl" \
             --eval-ids-files "${SEED_ID_FILES[@]}" --json-out "${WORK}/overlap_check.json"
     fi
@@ -173,7 +173,7 @@ if [ "$SPLIT_POLICY" = per-seed ]; then
         fi
         [ -s "${d}/train.jsonl" ] && continue
         # shellcheck disable=SC2086  # TAU_NOW is two words on purpose
-        "$INFER_PY" scripts/filter_traces.py "${FILTER_COMMON[@]}" \
+        "$INFER_PY" -m bodhi_lora.pipeline.filter "${FILTER_COMMON[@]}" \
             --resume-from "${SFT}/graded.jsonl" $TAU_NOW --seed "$s" \
             --output-dir "$d" > "${LOG_DIR}/split_${BENCH}_${TAG}_s${s}.log" 2>&1
     done
@@ -189,7 +189,7 @@ run_seed() {   # $1=seed  $2=gpu
     IDS="$(eval_ids_for_seed "$SEED")"
     mkdir -p "$CK" "$EV"
     echo "[seed $SEED] train on GPU $GPU"
-    run_gpu "$GPU" "$TRAIN_PY" scripts/train_lora.py \
+    run_gpu "$GPU" "$TRAIN_PY" -m bodhi_lora.pipeline.train \
         --config "$CONFIG" --seed "$SEED" --output-dir "$CK" \
         ${MODEL_REVISION:+--model-revision "$MODEL_REVISION"} \
         --train-file "${DATA_DIR}/train.jsonl" --val-file "${DATA_DIR}/val.jsonl" \
@@ -202,17 +202,17 @@ run_seed() {   # $1=seed  $2=gpu
         wrap="${rest%%:*}"
         lora="${rest#*:}"
         # shellcheck disable=SC2086  # wrap and lora are flag pairs on purpose
-        run_gpu_py "$GPU" scripts/eval_healthbench.py \
+        run_gpu_py "$GPU" -m bodhi_lora.pipeline.eval \
             --model "$MODEL" ${wrap} ${lora} "${EVAL_BENCH[@]}" "${EVAL_FLAGS[@]}" \
             --sample-ids "$IDS" --seed "$SEED" \
             --output "${EV}/${name}.json" >> "${LOG_DIR}/eval_${BENCH}_${TAG}_s${SEED}.log" 2>&1
         if [ "$DRY_RUN" = 1 ]; then outs+=("${EV}/${name}.dryrun.json"); else outs+=("${EV}/${name}.json"); fi
     done
     # epistemic 7-dim grade (benchmark-agnostic)
-    run_gpu_py "$GPU" scripts/eval_epistemic.py \
+    run_gpu_py "$GPU" -m bodhi_lora.grading.epistemic \
         --response-files "${outs[@]}" "${EPI_DATA[@]}" "${EPI_FLAGS[@]}" \
         --output "${EV}/epistemic_scores.json" >> "${LOG_DIR}/eval_${BENCH}_${TAG}_s${SEED}.log" 2>&1
-    "$INFER_PY" scripts/run_manifest.py write --stage seed --out "${SD}/manifest.json" \
+    "$INFER_PY" -m bodhi_lora.manifest write --stage seed --out "${SD}/manifest.json" \
         --config "$CONFIG" --model "base=${MODEL}${MODEL_REVISION:+@$MODEL_REVISION}" \
         --adapter "$LORA" --eval-ids "$IDS" --input "${DATA_DIR}/train.jsonl" \
         --input "${DATA_DIR}/val.jsonl" "${SETTINGS_ARGS[@]}" --set "SEED=$SEED" \

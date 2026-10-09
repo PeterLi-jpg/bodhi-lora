@@ -30,7 +30,7 @@ class FakeTokenizer:
 
 def test_format_example_single_example(monkeypatch):
     train_lora = import_with_mocks(
-        "scripts.train_lora",
+        "bodhi_lora.pipeline.train",
         ["torch", "datasets", "transformers", "trl", "peft"],
         monkeypatch,
     )
@@ -48,7 +48,7 @@ def test_format_example_single_example(monkeypatch):
 
 def test_format_example_batched_examples(monkeypatch):
     train_lora = import_with_mocks(
-        "scripts.train_lora",
+        "bodhi_lora.pipeline.train",
         ["torch", "datasets", "transformers", "trl", "peft"],
         monkeypatch,
     )
@@ -75,7 +75,7 @@ def test_load_exclude_ids_accepts_json_and_jsonl(monkeypatch, tmp_path):
     # installed in CI. The real ablation logic is exercised by
     # tests/test_bodhi_ablation.py (which skips on CI via importorskip).
     generate_traces = import_with_mocks(
-        "scripts.generate_traces",
+        "bodhi_lora.pipeline.traces",
         ["torch", "transformers", "tqdm", "_bodhi_ablation"],
         monkeypatch,
     )
@@ -182,8 +182,7 @@ def test_vllm_engine_enforce_eager_flag():
     Both docker and subprocess builds must agree, otherwise the run-mode
     silently changes the eval profile.
     """
-    sys.path.insert(0, str(ROOT / "scripts"))
-    from _vllm_engine import VLLMEngine
+    from bodhi_lora.engine.vllm import VLLMEngine
 
     eng_default = VLLMEngine(model="google/gemma-3-4b-it", tp_size=1)
     assert eng_default._enforce_eager is True
@@ -200,8 +199,7 @@ def test_vllm_engine_lora_on_tpu_raises_fast(monkeypatch):
     """vllm/vllm-tpu doesn't implement add_lora; we must not let the caller
     spin up a doomed engine and poll a dead container for 45 minutes.
     """
-    sys.path.insert(0, str(ROOT / "scripts"))
-    import _vllm_engine
+    from bodhi_lora.engine import vllm as _vllm_engine
 
     monkeypatch.setattr(_vllm_engine, "_detect_accelerator", lambda: "tpu")
 
@@ -220,7 +218,7 @@ def test_vllm_engine_lora_on_tpu_raises_fast(monkeypatch):
 
 def _import_contamination_probe(monkeypatch):
     return import_with_mocks(
-        "scripts.contamination_probe",
+        "bodhi_lora.pipeline.probe",
         ["transformers", "tqdm"],
         monkeypatch,
     )
@@ -301,8 +299,8 @@ def _import_eval_epistemic(monkeypatch):
     # things eval_epistemic doesn't actually call from these helpers,
     # so we mock them out the same way the other module tests do.
     return import_with_mocks(
-        "scripts.eval_epistemic",
-        ["tqdm", "_vllm_engine", "scripts.filter_traces"],
+        "bodhi_lora.grading.epistemic",
+        ["tqdm", "bodhi_lora.engine.vllm", "bodhi_lora.pipeline.filter"],
         monkeypatch,
     )
 
@@ -444,8 +442,8 @@ def test_aggregate_computes_means_and_rates(monkeypatch):
 # flips silently, the pipeline starts shipping memorization scores again.
 
 def _import_check_dataset_overlap():
-    sys.modules.pop("scripts.check_dataset_overlap", None)
-    return importlib.import_module("scripts.check_dataset_overlap")
+    sys.modules.pop("bodhi_lora.data.leakage", None)
+    return importlib.import_module("bodhi_lora.data.leakage")
 
 
 def _write_jsonl(path, rows):

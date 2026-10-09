@@ -35,7 +35,7 @@ test, the correction family and any margin.
 - Why: the evaluation and its reading changed during the rebuttal, and labels were
   defined together with their results (EVAL-10).
 - Enforced by: review step. The plan's commit must be older than the first commit of
-  the results it covers. `scripts/run_manifest.py` records the commit of each run, so
+  the results it covers. `bodhi_lora/manifest.py` records the commit of each run, so
   the order can be checked.
 
 ## 4. Inferential language
@@ -61,8 +61,8 @@ with the evaluator.
 
 - Why: the prior-work baseline was promised and never built, and Med42-8B shares the
   evaluator's family (EVAL-8, EVAL-7).
-- Enforced by: `scripts/baselines/` holds the baseline set. Cells that break the family
-  rule are marked † and regraded with `scripts/regrade_cross_family.py` (D6). Review
+- Enforced by: `bodhi_lora/protocols/` holds the baseline set. Cells that break the family
+  rule are marked † and regraded with `bodhi_lora/pipeline/grade.py` (D6). Review
   step until the launcher checks this itself: a new base model's family is compared
   with Llama and Qwen before its cell runs (KNOWN_ISSUES).
 
@@ -83,7 +83,7 @@ number is posted from a file that exists only on a remote machine.
 
 - Why: the added cells exist only on the GPU host, and the recorded settings did not
   describe what ran (PROV-1, HYG-4, REPRO-7).
-- Enforced by: `scripts/run_manifest.py` writes the manifest. `.gitignore` admits
+- Enforced by: `bodhi_lora/manifest.py` writes the manifest. `.gitignore` admits
   per-seed eval JSON and summaries under `results_rebuttal/` and keeps raw generations
   and weights out. Review step: a reply or paper number cites a file that is in git.
 

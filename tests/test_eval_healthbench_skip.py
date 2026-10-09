@@ -1,4 +1,4 @@
-"""Tests that scripts/eval_healthbench.py is idempotent on existing --output.
+"""Tests that bodhi_lora/pipeline/eval.py is idempotent on existing --output.
 
 The pipeline's stage-4 wrapper run_eval() in tpu/run_pipeline.sh already
 short-circuits when the output JSON exists, but a recent preempt-resume
@@ -30,7 +30,7 @@ import pytest
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SCRIPT = REPO_ROOT / "scripts" / "eval_healthbench.py"
+MODULE = "bodhi_lora.pipeline.eval"
 
 
 def _write_stub_pkg(root: Path, name: str, body: str = "") -> None:
@@ -89,7 +89,7 @@ def _run_script(output_path: Path, *, stub_path: Path) -> subprocess.CompletedPr
 
     cmd = [
         sys.executable,
-        str(SCRIPT),
+        "-m", MODULE,
         "--model", "google/gemma-3-4b-it",
         "--output", str(output_path),
         "--sample-ids", "/tmp/does-not-need-to-exist.json",

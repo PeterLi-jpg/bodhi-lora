@@ -35,12 +35,12 @@ Pinning and selection (REPRO-11):
   a JSONL built earlier gets a holdout without a new download.
 
 Usage:
-    python scripts/build_benchmark_jsonl.py --benchmark medquad --out data/raw/medquad_s0.jsonl \
+    python -m bodhi_lora.data.loaders --benchmark medquad --out data/raw/medquad_s0.jsonl \
         --max 5700 --holdout-n 1000 --holdout-out data/raw/medquad_s0_holdout_ids.json
     # The posted cells (legacy head-of-file selection and holdout):
-    python scripts/build_benchmark_jsonl.py --benchmark chatdoctor --out data/raw/chatdoctor.jsonl \
+    python -m bodhi_lora.data.loaders --benchmark chatdoctor --out data/raw/chatdoctor.jsonl \
         --max 4900 --select head
-    python scripts/build_benchmark_jsonl.py --benchmark chatdoctor --out data/raw/chatdoctor.jsonl \
+    python -m bodhi_lora.data.loaders --benchmark chatdoctor --out data/raw/chatdoctor.jsonl \
         --holdout-only --holdout-n 200 --holdout-method head --holdout-out <cell>/eval_ids.json
 """
 
@@ -52,8 +52,7 @@ import random
 import sys
 from pathlib import Path
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import run_manifest as rmf
+from bodhi_lora import manifest as rmf
 
 # Default HF dataset ids (overridable). Chosen for stable, widely-used schemas.
 DEFAULT_IDS = {

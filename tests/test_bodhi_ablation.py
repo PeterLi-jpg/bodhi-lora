@@ -19,7 +19,7 @@ pytest.importorskip("bodhi")
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from scripts._bodhi_ablation import make_ablated_bodhi_config
+from bodhi_lora.protocols.bodhi_llm import make_ablated_bodhi_config
 
 
 def test_none_returns_medical_default():

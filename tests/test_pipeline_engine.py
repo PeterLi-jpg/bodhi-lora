@@ -1,4 +1,4 @@
-"""Serve-command tests for scripts/_vllm_engine.py. Nothing is started."""
+"""Serve-command tests for bodhi_lora/engine/vllm.py. Nothing is started."""
 
 import sys
 from pathlib import Path
@@ -6,9 +6,8 @@ from pathlib import Path
 import pytest
 
 REPO = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(REPO / "scripts"))
 
-import _vllm_engine as ve  # noqa: E402
+from bodhi_lora.engine import vllm as ve  # noqa: E402
 
 
 @pytest.fixture(autouse=True)

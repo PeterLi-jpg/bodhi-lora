@@ -19,7 +19,7 @@ was a TPU XLA-recompile workaround and wastes GPU compute).
 The base model loads at model.revision, else at the pin in configs/families.yaml.
 Every run writes <output-dir>/manifest.json: the resolved config and its sha256,
 the effective batch, the train and val file hashes, the adapter sha256 and the
-trainer's step, epoch and loss record (scripts/run_manifest.py).
+trainer's step, epoch and loss record (bodhi_lora/manifest.py).
 
 This trainer is not the one behind the submitted MedGemma numbers. Those came
 from the TPU tunix path in legacy/ (r=8, alpha=16); see legacy/README.md.
@@ -40,8 +40,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, set_seed
 from trl import SFTTrainer, SFTConfig, DataCollatorForCompletionOnlyLM
 from peft import LoraConfig
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import run_manifest as rmf
+from bodhi_lora import manifest as rmf
 
 # TF32 matmuls on Ampere+ (H100): large SFT throughput win, negligible precision
 # cost for LoRA fine-tuning. Safe to enable unconditionally on CUDA.

@@ -26,12 +26,12 @@ results folder and its own analysis. The result is not general:
 - **Names and paths are literals in code.** The cell table in
   `rebuttal/launch/run_grid.sh`, the benchmark case statement in
   `rebuttal/launch/_common.sh`, the model tokens in `scripts/paper_stats.py`, the
-  dataset-keyed row builders in `scripts/build_benchmark_jsonl.py`, and
+  dataset-keyed row builders in `02ac9a3:scripts/build_benchmark_jsonl.py`, and
   `DATA_DIR = Path("data/raw")` in three scripts.
 - **Settings live in four places.** `configs/*.yaml`, `rebuttal/configs/*.yaml`, the
   `PROFILE` blocks of `rebuttal/launch/_common.sh`, and script flag defaults.
 - **A name collision.** The installed `bodhi-llm` package imports as `bodhi`
-  (`scripts/_bodhi_ablation.py` does `from bodhi import BODHIConfig`). A repo-root
+  (`02ac9a3:scripts/_bodhi_ablation.py` does `from bodhi import BODHIConfig`). A repo-root
   package named bodhi would hide it. The package is therefore `bodhi_lora/`, after
   the repository.
 
@@ -189,7 +189,7 @@ instructions: >-
   advice that depends on those facts. If you can give safe general advice now, give it,
   and say how the answers to your questions would change it. If no key facts are
   missing, answer directly and do not ask questions.
-reference: Clarifying-question prompting baseline (scripts/baselines/prompts.py)
+reference: Clarifying-question prompting baseline (02ac9a3:scripts/baselines/prompts.py)
 ```
 
 ```yaml
@@ -262,12 +262,12 @@ bodhi_lora/
   __main__.py      python -m bodhi_lora
   cli.py           subcommands run, analyze, report, list
   paths.py         results and data roots from configs/project.yaml; CellPaths
-  manifest.py      run manifests                       <- scripts/run_manifest.py
+  manifest.py      run manifests                       <- 02ac9a3:scripts/run_manifest.py
   registry/
     schema.py      records, validate_registry, load_registry   (in the repo now)
   engine/
-    vllm.py        vLLM OpenAI server as a subprocess  <- scripts/_vllm_engine.py
-    stub.py        the CPU stub engine for dry runs     <- scripts/_vllm_engine.py
+    vllm.py        vLLM OpenAI server as a subprocess  <- 02ac9a3:scripts/_vllm_engine.py
+    stub.py        the CPU stub engine for dry runs     <- 02ac9a3:scripts/_vllm_engine.py
   data/
     loaders.py     loader registry: rubric_jsonl, hf_qa, mediq_paired, cqc_xml
     rubric.py      the synthesized multi-criterion rubric  <- build_benchmark_jsonl.py
@@ -277,24 +277,24 @@ bodhi_lora/
   protocols/
     base.py        Protocol interface and Output record
     bodhi_llm.py   BODHI via bodhi-llm, section ablations, red-flags-first order
-                                                        <- scripts/_bodhi_ablation.py
-    ask_first.py                                        <- scripts/baselines/ask_first.py
-    instruction.py prompt protocols                     <- scripts/baselines/prompts.py
+                                                        <- 02ac9a3:scripts/_bodhi_ablation.py
+    ask_first.py                                        <- 02ac9a3:scripts/baselines/ask_first.py
+    instruction.py prompt protocols                     <- 02ac9a3:scripts/baselines/prompts.py
     mediq_abstain.py  confidence check, then ask or answer (new)
   grading/
-    rubric.py      rubric grader prompt, parse, retries <- scripts/filter_traces.py
-    epistemic.py   seven-dimension grader               <- scripts/eval_epistemic.py
+    rubric.py      rubric grader prompt, parse, retries <- 02ac9a3:scripts/filter_traces.py
+    epistemic.py   seven-dimension grader               <- 02ac9a3:scripts/eval_epistemic.py
   pipeline/
     runner.py      stage order, seeds, GPU assignment, resume, manifests
-    probe.py       contamination probe                  <- scripts/contamination_probe.py
-    traces.py      teacher traces                       <- scripts/generate_traces.py
-    filter.py      grade, tau, train and val split      <- scripts/filter_traces.py
-    train.py       LoRA and QLoRA with PEFT and TRL      <- scripts/train_lora.py
+    probe.py       contamination probe                  <- 02ac9a3:scripts/contamination_probe.py
+    traces.py      teacher traces                       <- 02ac9a3:scripts/generate_traces.py
+    filter.py      grade, tau, train and val split      <- 02ac9a3:scripts/filter_traces.py
+    train.py       LoRA and QLoRA with PEFT and TRL      <- 02ac9a3:scripts/train_lora.py
     eval.py        responses and rubric grades per condition
-                                                        <- scripts/eval_healthbench.py
+                                                        <- 02ac9a3:scripts/eval_healthbench.py
     grade.py       evaluator dimensions and judges over stored responses
                                                         <- eval_epistemic.py, regrade_cross_family.py
-    bench.py       measured time and tokens per condition  <- scripts/latency_benchmark.py
+    bench.py       measured time and tokens per condition  <- 02ac9a3:scripts/latency_benchmark.py
   analysis/
     extract.py     raw stage outputs to the per-seed response table
     stats.py       t interval, paired t, Holm, Fisher, clustered bootstrap, Cohen's d
@@ -310,7 +310,7 @@ bodhi_lora/
 
 The arrows name the existing file whose logic each module reuses. Each lane moves the
 file with `git mv` and then edits it, so `git log --follow` keeps the history. The TPU
-docker modes of `scripts/_vllm_engine.py` are not carried over; the TPU path stays in
+docker modes of `02ac9a3:scripts/_vllm_engine.py` are not carried over; the TPU path stays in
 `legacy/` as the record of the 2026-05 cell.
 
 ### 4.1 Interfaces between modules
@@ -381,10 +381,10 @@ def report(reg: Registry, report_cfg: dict, out_dir: Path) -> None  # -> paper/g
 ```
 
 Stage output formats stay compatible with the files that exist: `eval/<condition>.json`
-keeps the fields `scripts/eval_healthbench.py` writes (`results[]` with `prompt_id`,
+keeps the fields `02ac9a3:scripts/eval_healthbench.py` writes (`results[]` with `prompt_id`,
 `response`, `score`, `criteria_results`, `parse_failures`, `response_token_count`), and
 `results/<cell_id>/seed_<n>/grade/epistemic__<grader>.json` keeps the fields of
-`scripts/eval_epistemic.py` (`configs[].examples[]`). New runs add `condition`, `protocol`, and per response
+`02ac9a3:scripts/eval_epistemic.py` (`configs[].examples[]`). New runs add `condition`, `protocol`, and per response
 `calls`, `completion_tokens_total` and `finish_length`. Fields are added, never renamed,
 so one reader serves the migrated files and the new ones. Inside migrated files the old
 condition names (`base_no_wrapper`, `lora_bodhi`) map to the new ones by one rule:
@@ -497,7 +497,7 @@ definition). Columns:
 A value a legacy file does not have (for example `finish_length`) is empty, and the
 analysis reports it as not measured for that cell.
 
-**Manifests.** `bodhi_lora/manifest.py` keeps what `scripts/run_manifest.py` records
+**Manifests.** `bodhi_lora/manifest.py` keeps what `02ac9a3:scripts/run_manifest.py` records
 today (resolved config and sha256, git commit and dirty diff hash, package versions,
 model ids with family and revision, adapter and id-list hashes, stage counts, hashed
 host name) and adds wall-clock time, GPU model and count, and token totals per stage.
@@ -693,10 +693,10 @@ a path it does not own asks the integrate lane.
 
 | Lane | Owns (writes) | Removes (git rm or git mv out) | Tests it owns |
 |---|---|---|---|
-| foundation (first, serial) | `bodhi_lora/{__init__,__main__,cli,paths,manifest}.py`, `bodhi_lora/registry/`, `bodhi_lora/engine/`, `configs/project.yaml`, `configs/models/`, the first version of `configs/benchmarks/`, `configs/protocols/` and `configs/cells/`, `requirements*.txt`, `tests/conftest.py` | `scripts/run_manifest.py`, `scripts/_vllm_engine.py`, `configs/families.yaml`, `configs/lora_*.yaml`, `rebuttal/configs/` | `tests/test_registry_*.py`, `tests/test_no_hardcode.py`, `tests/test_engine_*.py`, `tests/test_manifest_*.py` (from `test_pipeline_engine.py`, `test_pipeline_manifest.py`) |
-| data | `bodhi_lora/data/`, `configs/benchmarks/` (after foundation), `tests/fixtures/data/` | `scripts/build_benchmark_jsonl.py`, `scripts/download_data.py`, `scripts/make_bootstrap_eval_ids.py`, `scripts/check_dataset_overlap.py` | `tests/test_data_*.py` (from `test_pipeline_benchmark.py`, `test_pipeline_overlap.py`, `test_make_bootstrap_eval_ids.py`) |
-| protocols | `bodhi_lora/protocols/`, `configs/protocols/` (after foundation), `tests/fixtures/protocols/` | `scripts/baselines/`, `scripts/_bodhi_ablation.py` | `tests/test_protocols_*.py` (from `test_bodhi_ablation.py`, `test_pipeline_baselines.py`) |
-| pipeline | `bodhi_lora/pipeline/`, `bodhi_lora/grading/`, `configs/cells/tiny-rubric__*.yaml`, `tests/fixtures/pipeline/` | `scripts/{generate_traces,filter_traces,train_lora,eval_healthbench,eval_epistemic,regrade_cross_family,contamination_probe,latency_benchmark}.py`, `rebuttal/launch/`; the unused launchers and tools (`02ac9a3:gpu/`, `02ac9a3:slurm/`, `02ac9a3:scripts/preflight.py` and the others named in `scripts/README.md`) went on 2026-10-08 | `tests/test_pipeline_*.py`, `tests/test_grading_*.py` (from `test_filter_traces.py`, `test_eval_healthbench_skip.py`, `test_pure_logic.py`, `test_pipeline_{generate,filter,eval_dry_run,launch,regrade,train_manifest}.py`) |
+| foundation (first, serial) | `bodhi_lora/{__init__,__main__,cli,paths,manifest}.py`, `bodhi_lora/registry/`, `bodhi_lora/engine/`, `configs/project.yaml`, `configs/models/`, the first version of `configs/benchmarks/`, `configs/protocols/` and `configs/cells/`, `requirements*.txt`, `tests/conftest.py` | `02ac9a3:scripts/run_manifest.py`, `02ac9a3:scripts/_vllm_engine.py`, `configs/families.yaml`, `configs/lora_*.yaml`, `rebuttal/configs/` | `tests/test_registry_*.py`, `tests/test_no_hardcode.py`, `tests/test_engine_*.py`, `tests/test_manifest_*.py` (from `test_pipeline_engine.py`, `test_pipeline_manifest.py`) |
+| data | `bodhi_lora/data/`, `configs/benchmarks/` (after foundation), `tests/fixtures/data/` | `02ac9a3:scripts/build_benchmark_jsonl.py`, `scripts/download_data.py`, `02ac9a3:scripts/make_bootstrap_eval_ids.py`, `02ac9a3:scripts/check_dataset_overlap.py` | `tests/test_data_*.py` (from `test_pipeline_benchmark.py`, `test_pipeline_overlap.py`, `test_make_bootstrap_eval_ids.py`) |
+| protocols | `bodhi_lora/protocols/`, `configs/protocols/` (after foundation), `tests/fixtures/protocols/` | `02ac9a3:scripts/baselines/`, `02ac9a3:scripts/_bodhi_ablation.py` | `tests/test_protocols_*.py` (from `test_bodhi_ablation.py`, `test_pipeline_baselines.py`) |
+| pipeline | `bodhi_lora/pipeline/`, `bodhi_lora/grading/`, `configs/cells/tiny-rubric__*.yaml`, `tests/fixtures/pipeline/` | the stage scripts (moved into `bodhi_lora/pipeline/` and `bodhi_lora/grading/` on 2026-10-08), `rebuttal/launch/`; the unused launchers and tools (`02ac9a3:gpu/`, `02ac9a3:slurm/`, `02ac9a3:scripts/preflight.py` and the others named in `scripts/README.md`) went on 2026-10-08 | `tests/test_pipeline_*.py`, `tests/test_grading_*.py` (from `test_filter_traces.py`, `test_eval_healthbench_skip.py`, `test_pure_logic.py`, `test_pipeline_{generate,filter,eval_dry_run,launch,regrade,train_manifest}.py`) |
 | analysis | `bodhi_lora/analysis/`, `bodhi_lora/report/`, `configs/report.yaml`, `paper/generated/`, macro names in `paper/main.tex` and `paper/checklist.tex`, `scripts/check_paper_macros.py`, `tests/fixtures/analysis/` | `scripts/{paper_stats,aggregate_seeds,aggregate_cross_seed,build_paper_figures,plot_epistemic_figures,plot_postprocessing,plot_training,plot_ushape,eval_ushape,rubric_diff,analyze_hedge_rate,_hedging_metric,grader_correlation,compute_irr_kappa,export_derived_inputs}.py`, `rebuttal/analyses/*.py` | `tests/test_analysis_*.py`, `tests/test_report_*.py` (from `test_stats_*.py`, `test_analyses_*.py`, `test_aggregate_seeds.py`, `test_plot_training.py`); removes `test_eval_ushape.py`, `test_rubric_diff.py`, `test_hedging_metric.py`, `test_analyze_hedge_rate.py` with their scripts |
 | migrate | `results/` (moves, `PROVENANCE.md`, `provenance.json`, historical manifests), `scripts/migrate_results.py`, `.gitignore`, `configs/cells/*__2026-*.yaml` (after foundation), `legacy/`, `rebuttal/README.md`, `rebuttal/posted_values.json`, `tests/fixtures/migrate/` | `results_modal/`, `results_rebuttal/`, `rebuttal/results/`, `data/derived/`, `data/rebuttal_cells/`, `data/irr_instructions/`, `data/raw/hard_200_sample_ids.json`, `data/raw/high_stakes_prompts.jsonl`; moves `rebuttal/analyses/FINDINGS_quality_drop.md`, `rebuttal/prior_work_candidates.bib`, `scripts/prefetch_gemma_safetensors.py` | `tests/test_migration_*.py` |
 | integrate (last, serial) | `Makefile`, `.github/workflows/`, `scripts/check_doc_paths.py`, `scripts/README.md`, `setup.sh`, `README.md`, `REPRODUCIBILITY.md`, `RESULTS.md`, `KNOWN_ISSUES.md`, `BLOCKED.md`, `contributions/`, `docs/` | `scripts/__init__.py` once `scripts/` holds tools only | runs every test; owns no new test file |

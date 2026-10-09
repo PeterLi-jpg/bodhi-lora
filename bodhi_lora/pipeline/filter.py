@@ -21,10 +21,9 @@ import numpy as np
 from tqdm import tqdm
 from transformers import set_seed
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from _vllm_engine import VLLMEngine
-from generate_traces import load_exclude_ids
-import run_manifest as rmf
+from bodhi_lora import manifest as rmf
+from bodhi_lora.engine.vllm import VLLMEngine
+from bodhi_lora.pipeline.traces import load_exclude_ids
 
 # A percentile of fewer graded traces than this is too noisy to set tau, and
 # an empty or tiny grade file usually means the grader failed. The same floor
@@ -302,7 +301,7 @@ def main():
     parser.add_argument(
         "--grader-model",
         # Asymmetric design: filter uses Qwen2.5-14B-Instruct, eval uses
-        # Llama-3.1-8B-Instruct (see scripts/eval_healthbench.py default).
+        # Llama-3.1-8B-Instruct (see bodhi_lora/pipeline/eval.py default).
         # Decoupling the filter grader from the eval grader breaks the
         # "graded by your own evaluator" critique — training data is
         # selected under one family, results are reported under another.
@@ -338,7 +337,7 @@ def main():
         help="Path to a previous graded JSONL (e.g. an earlier --graded-output "
              "file or graded_partial.jsonl). prompt_ids found there will be "
              "skipped and their grades carried forward, mirroring the resume "
-             "logic in scripts/generate_traces.py.",
+             "logic in bodhi_lora/pipeline/traces.py.",
     )
     # Belt-and-suspenders: even if a stale raw_traces.jsonl resumed past
     # the Stage-1 --exclude-ids change, this drops contaminated rows here
@@ -346,7 +345,7 @@ def main():
     parser.add_argument(
         "--exclude-ids", nargs="+", default=None,
         help="One or more .json/.jsonl files of prompt_ids to drop from the "
-             "input traces. Same format as scripts/generate_traces.py.",
+             "input traces. Same format as bodhi_lora/pipeline/traces.py.",
     )
     args = parser.parse_args()
 

@@ -13,11 +13,11 @@ pool written by build_benchmark_jsonl.py (its <stem>_holdout_ids.json) in place
 of a JSONL, so every cell draws its per-seed eval set the same way.
 
 Usage:
-    python scripts/make_bootstrap_eval_ids.py \\
+    python -m bodhi_lora.data.splits \\
         --healthbench-jsonl data/raw/healthbench_hard.jsonl \\
         --seed 42 \\
         --output data/raw/hard_seed_42.json
-    python scripts/make_bootstrap_eval_ids.py \\
+    python -m bodhi_lora.data.splits \\
         --pool-ids data/raw/chatdoctor_s0_holdout_ids.json --seed 42 --output <cell>/eval_ids/seed_42.json
 """
 

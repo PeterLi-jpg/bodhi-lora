@@ -1,4 +1,4 @@
-"""Tests for scripts/make_bootstrap_eval_ids.py (audit finding B9).
+"""Tests for bodhi_lora/data/splits.py (audit finding B9).
 
 The script generates a deterministic per-seed 200-prompt subset of the
 HealthBench Hard pool for the multi-seed bootstrap eval protocol (issue #60).
@@ -21,8 +21,8 @@ sys.path.insert(0, str(ROOT))
 
 def _import_module():
     # Re-import each time so a previous test's argparse state doesn't leak.
-    sys.modules.pop("scripts.make_bootstrap_eval_ids", None)
-    return importlib.import_module("scripts.make_bootstrap_eval_ids")
+    sys.modules.pop("bodhi_lora.data.splits", None)
+    return importlib.import_module("bodhi_lora.data.splits")
 
 
 def _write_pool(path: Path, n: int) -> None:

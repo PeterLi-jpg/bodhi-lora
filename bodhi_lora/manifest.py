@@ -18,13 +18,13 @@ The model registry (family, pinned revision, system-role support) is
 configs/families.yaml.
 
 CLI:
-    python scripts/run_manifest.py write --stage cell --out <dir>/manifest.json \\
+    python -m bodhi_lora.manifest write --stage cell --out <dir>/manifest.json \\
         --config rebuttal/configs/x.yaml --model base=<repo>[@<rev>] \\
         --eval-ids ids.json --set BENCH=healthbench --include filter=<dir>/sft/manifest.json
-    python scripts/run_manifest.py check-family --base <repo> --filter <repo> \\
+    python -m bodhi_lora.manifest check-family --base <repo> --filter <repo> \\
         --evaluator <repo> [--allow-same-family] [--json-out f.json]
-    python scripts/run_manifest.py revision <repo>       # prints the pinned revision
-    python scripts/run_manifest.py system-role <repo>    # prints true or false
+    python -m bodhi_lora.manifest revision <repo>       # prints the pinned revision
+    python -m bodhi_lora.manifest system-role <repo>    # prints true or false
 """
 
 import argparse

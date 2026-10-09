@@ -49,7 +49,7 @@ whitespace, large-file and secret checks on each commit.
 
 - Commit result summaries and per-seed eval JSON. Do not commit raw generations,
   adapter weights, optimizer states or tokenizers; `.gitignore` keeps them out.
-- Record each run with `scripts/run_manifest.py`.
+- Record each run with `bodhi_lora/manifest.py`.
 - Never put a rater's name in a tracked file, a file name or a commit message. Raters
   are AnonClinician1-4. The key from number to person stays with the study coordinator.
 

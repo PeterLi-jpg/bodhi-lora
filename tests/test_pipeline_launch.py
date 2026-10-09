@@ -19,9 +19,8 @@ pytest.importorskip("bodhi")
 pytest.importorskip("yaml")
 
 REPO = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(REPO / "scripts"))
 
-from build_benchmark_jsonl import chatdoctor_row, stable_id  # noqa: E402
+from bodhi_lora.data.loaders import chatdoctor_row, stable_id  # noqa: E402
 
 MISTRAL = ("mistralai/Mistral-Small-24B-Instruct-2501",
            "rebuttal/configs/lora_mistral_small_24b_qlora.yaml")
@@ -100,8 +99,8 @@ def test_default_cell_dry_run_writes_manifests_and_submitted_settings(env):
     assert (ev / "epistemic_scores.dryrun.json").exists()
     # Training and filtering are GPU stages: printed, not run.
     train_log = (tmp / "logs" / f"train_chatdoctor_{TAG[MISTRAL[0]]}_s42.log").read_text()
-    assert train_log.startswith("DRY-RUN [gpu 0]:") and "train_lora.py" in train_log
-    assert "DRY-RUN [gpu 0]:" in res.stdout and "filter_traces.py" in res.stdout
+    assert train_log.startswith("DRY-RUN [gpu 0]:") and "bodhi_lora.pipeline.train" in train_log
+    assert "DRY-RUN [gpu 0]:" in res.stdout and "bodhi_lora.pipeline.filter" in res.stdout
 
 
 def test_family_guard_refuses_med42_unless_waived(env):

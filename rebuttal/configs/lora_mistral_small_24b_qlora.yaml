@@ -3,7 +3,7 @@
 # clinical one, matching HealthBench's patient-facing use). Clean family vs the
 # Qwen filter / Llama evaluator, so the paper's asymmetric-grading claim holds.
 #
-# Runs on ONE H100 80GB via the GPU/PEFT path (scripts/train_lora.py), queued.
+# Runs on ONE H100 80GB via the GPU/PEFT path (bodhi_lora/pipeline/train.py), queued.
 # 24B in 4-bit NF4 (QLoRA) is ~13-15 GB weights -> tons of headroom on 80GB, so
 # we can push batch to keep utilization high while matching the paper's effective
 # batch of 16 for comparability.

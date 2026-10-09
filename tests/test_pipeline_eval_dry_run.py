@@ -6,6 +6,7 @@ metadata and the manifest on a CPU, with no model download.
 """
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -35,11 +36,11 @@ def _eval(tmp_path, bench, *extra):
     path, ids = bench
     out = tmp_path / "eval" / "result.json"
     res = subprocess.run(
-        [sys.executable, str(REPO / "scripts" / "eval_healthbench.py"),
+        [sys.executable, "-m", "bodhi_lora.pipeline.eval",
          "--model", "mistralai/Mistral-Small-24B-Instruct-2501",
          "--benchmark-jsonl", str(path), "--sample-ids", str(ids),
          "--output", str(out), "--dry-run", *extra],
-        capture_output=True, text=True, cwd=tmp_path, timeout=300)
+        capture_output=True, text=True, cwd=tmp_path, env={**os.environ, "PYTHONPATH": str(REPO)}, timeout=300)
     assert res.returncode == 0, res.stderr[-2000:]
     return out
 
@@ -100,11 +101,11 @@ def test_quantized_base_and_lora_reach_the_engine_settings(tmp_path, bench):
 def test_wrapper_and_baseline_conflict_is_refused(tmp_path, bench):
     path, ids = bench
     res = subprocess.run(
-        [sys.executable, str(REPO / "scripts" / "eval_healthbench.py"), "--model", "m",
+        [sys.executable, "-m", "bodhi_lora.pipeline.eval", "--model", "m",
          "--benchmark-jsonl", str(path), "--sample-ids", str(ids),
          "--output", str(tmp_path / "o.json"), "--dry-run",
          "--use-bodhi", "--baseline", "clarify"],
-        capture_output=True, text=True, cwd=tmp_path, timeout=300)
+        capture_output=True, text=True, cwd=tmp_path, env={**os.environ, "PYTHONPATH": str(REPO)}, timeout=300)
     assert res.returncode != 0 and "--baseline" in res.stderr
 
 
@@ -116,11 +117,11 @@ def test_epistemic_dry_run_uses_the_cell_prompts(tmp_path, bench):
         {"prompt_id": "bench-1", "response": "Drink water."}]}))
     out = tmp_path / "epistemic_scores.json"
     res = subprocess.run(
-        [sys.executable, str(REPO / "scripts" / "eval_epistemic.py"),
+        [sys.executable, "-m", "bodhi_lora.grading.epistemic",
          "--response-files", str(responses), "--benchmark-jsonl", str(path),
          "--healthbench-data", str(tmp_path / "absent.jsonl"),
          "--output", str(out), "--dry-run"],
-        capture_output=True, text=True, cwd=tmp_path, timeout=300)
+        capture_output=True, text=True, cwd=tmp_path, env={**os.environ, "PYTHONPATH": str(REPO)}, timeout=300)
     assert res.returncode == 0, res.stderr[-2000:]
     result = json.loads((tmp_path / "epistemic_scores.dryrun.json").read_text())
     assert result["configs"][0]["aggregates"]["n_scored"] == 2

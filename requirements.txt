@@ -1,4 +1,4 @@
-# Training env (.venv): scripts/train_lora.py and the CPU analysis scripts.
+# Training env (.venv): bodhi_lora/pipeline/train.py and the CPU analysis scripts.
 # vLLM serving (generate, filter, eval, re-grade) runs in a second env built
 # from requirements-infer.txt, because vLLM 0.9.2 fails at import with the
 # transformers version pinned here (see that file). setup.sh installs from

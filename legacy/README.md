@@ -117,8 +117,8 @@ certainly ran vLLM 0.9.2 with torch 2.7.0. No log records it. The paper's "vLLM
 0.6.x series" is not supported.
 
 The current eval scripts take these settings as flags, and their defaults equal
-this table (`scripts/eval_healthbench.py`, `scripts/eval_epistemic.py`). The
-per-seed draw of `scripts/make_bootstrap_eval_ids.py` gives exactly the prompt
+this table (`bodhi_lora/pipeline/eval.py`, `bodhi_lora/grading/epistemic.py`). The
+per-seed draw of `bodhi_lora/data/splits.py` gives exactly the prompt
 set of each submitted `base_no_wrapper.json`; this was checked for all 5 seeds.
 
 ## 5. Running the submitted cell again
@@ -170,7 +170,7 @@ restores its settings, so these cells stay describable:
 
 The Med42-8B base is in the evaluator's family (Llama-3). The launcher now
 refuses such a cell unless `--allow-same-family` is passed.
-`scripts/regrade_cross_family.py` re-grades a cell with a judge from a third
+`bodhi_lora/pipeline/grade.py` re-grades a cell with a judge from a third
 family.
 
 ## Blocked: what only remote files can settle

@@ -16,7 +16,7 @@ throughput, but be aware that LoRA + CUDA-graph capture currently takes
 that capture-time regression is fixed upstream.
 
 Usage on a GPU pod:
-    python scripts/latency_benchmark.py \
+    python -m bodhi_lora.pipeline.bench \
         --model google/medgemma-27b-text-it \
         --lora-path checkpoints/seed_42/best \
         --sample-ids data/raw/hard_200_sample_ids.json \
@@ -37,11 +37,7 @@ from pathlib import Path
 
 import numpy as np
 
-# Mirror the import shim used by other scripts so `_vllm_engine` resolves
-# regardless of CWD.
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
-from _vllm_engine import VLLMEngine
+from bodhi_lora.engine.vllm import VLLMEngine
 
 HEALTHBENCH_HARD_URL = "https://openaipublic.blob.core.windows.net/simple-evals/healthbench/hard_2025-05-08-21-00-10.jsonl"
 DATA_DIR = Path("data/raw")

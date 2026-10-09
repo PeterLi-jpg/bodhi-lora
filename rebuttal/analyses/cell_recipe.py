@@ -188,7 +188,7 @@ def cell(cell_dir: Path, logs: Path) -> dict:
     spe = first["max_steps"] / first["num_train_epochs"]
     rec["adapter"]["steps_per_epoch"] = int(spe) if spe == int(spe) else spe
     # The evaluated adapter is the epoch checkpoint with the lowest validation loss
-    # (scripts/train_lora.py: load_best_model_at_end on eval_loss, one eval per epoch).
+    # (bodhi_lora/pipeline/train.py: load_best_model_at_end on eval_loss, one eval per epoch).
     rec["best_epoch"] = {s: (r["best_global_step"] / spe if r["best_global_step"] else None)
                          for s, r in per_seed.items()}
     f = rec["filter"]

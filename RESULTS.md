@@ -49,7 +49,7 @@ All cells are in the main evaluation of the paper (D12), including these two:
   single-best-answer exam: each vignette is complete and the rubric grades agreement
   with the keyed answer, so asking is not the right behavior there. An earlier version
   of the cell used a preamble that told the model to ask for missing information, which
-  cued the behavior under test. The preamble in `scripts/build_benchmark_jsonl.py` is
+  cued the behavior under test. The preamble in `bodhi_lora/data/loaders.py` is
   now neutral. The synced MedQA outputs are that earlier run: they predate the fix
   (035d85f), and Base asks in nearly every response. No run without the preamble exists.
   Seed 42's epistemic grading found none of the MedQA prompts, so the seven dimensions
@@ -88,8 +88,8 @@ python -c "import json,glob; print(len({r['prompt_id'] for f in glob.glob('resul
 | Discrimination (asks when information is missing, holds back when it is not) | `rebuttal/analyses/mimicry_split.py`, output in `rebuttal/results/` | raw | rubric-based and theme-only labelings side by side, both post hoc and exploratory (D9) |
 | Red-flag drop with LoRA plus the BODHI prompt | `rebuttal/analyses/interference_mechanism.py`, output in `rebuttal/results/` | raw | format leakage, a post hoc diagnosis (D11) |
 | Where the aggregate drop comes from | `rebuttal/analyses/FINDINGS_quality_drop.md`; the paired tests are `rebuttal/analyses/quality_drop.py` | tests raw; per-axis analysis from ad hoc code, not in the repo | per-axis analysis on the added cells; one open problem (KNOWN_ISSUES) |
-| Prior-work prompt baselines | `scripts/baselines/` | not run (needs GPU inference) | same eval sets and grader as the cells |
-| Med42-8B regrade outside the Llama and Qwen families | `scripts/regrade_cross_family.py` | not run (needs a GPU; the outputs are in the local copy and on the host) | D6 |
+| Prior-work prompt baselines | `bodhi_lora/protocols/` | not run (needs GPU inference) | same eval sets and grader as the cells |
+| Med42-8B regrade outside the Llama and Qwen families | `bodhi_lora/pipeline/grade.py` | not run (needs a GPU; the outputs are in the local copy and on the host) | D6 |
 | Per-cell tau, trace counts and adapter recipe | `rebuttal/analyses/cell_recipe.py` (`make cells`), output `rebuttal/results/cell_recipe.json` | raw (host logs and synced adapter files) | PROV-3 |
 | Training-loss figure | none | removed from the paper | it came from an early run on 838 traces, not the reported adapters (D14) |
 | Calibration (Brier, ECE) | fields in `results_modal/seed_*/*.json` | not reported | calibration is not a measured property (D3) |

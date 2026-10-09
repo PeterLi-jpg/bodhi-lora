@@ -1,4 +1,4 @@
-"""Tests for parse_json_response in scripts/filter_traces.py — pure Python, no GPU."""
+"""Tests for parse_json_response in bodhi_lora/pipeline/filter.py — pure Python, no GPU."""
 
 import sys
 from pathlib import Path
@@ -27,7 +27,7 @@ for mod in [
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from scripts.filter_traces import parse_json_response
+from bodhi_lora.pipeline.filter import parse_json_response
 
 
 # ---------------------------------------------------------------------------

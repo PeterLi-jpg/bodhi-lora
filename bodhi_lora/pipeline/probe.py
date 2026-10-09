@@ -8,7 +8,7 @@ than the PubMedQA rate (Fisher exact test).
 
 Usage (TPU/GPU pod, after merge):
 
-    python scripts/contamination_probe.py \
+    python -m bodhi_lora.pipeline.probe \
         --model google/medgemma-27b-text-it \
         --n-prompts 100 \
         --output eval/contamination_probe.json
@@ -30,11 +30,8 @@ import numpy as np
 from tqdm import tqdm
 from transformers import AutoTokenizer, set_seed
 
-# Same import dance as eval_healthbench.py: scripts/ on path for the
-# bare _vllm_engine import.
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from _vllm_engine import VLLMEngine  # noqa: E402
-import run_manifest as rmf  # noqa: E402
+from bodhi_lora import manifest as rmf
+from bodhi_lora.engine.vllm import VLLMEngine
 
 HEALTHBENCH_HARD_URL = (
     "https://openaipublic.blob.core.windows.net/simple-evals/healthbench/"

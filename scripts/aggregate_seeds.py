@@ -4,7 +4,7 @@ Inputs
 ------
 For each seed there is one directory matching the ``--seed-dirs`` glob (e.g.
 ``eval/seed_42``). Each directory holds the per-config outputs of
-``scripts/eval_healthbench.py``::
+``bodhi_lora/pipeline/eval.py``::
 
     eval/seed_42/{base_no_wrapper,base_bodhi,lora_no_wrapper,lora_bodhi}.json
     eval/seed_7/{...}

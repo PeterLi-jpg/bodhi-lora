@@ -15,10 +15,10 @@ Checks (in order):
      than eval or vice versa.
 
 Run (basic):
-    python scripts/check_dataset_overlap.py
+    python -m bodhi_lora.data.leakage
 
 Run (full pre-training check):
-    python scripts/check_dataset_overlap.py \
+    python -m bodhi_lora.data.leakage \
         --train-jsonl data/sft/train.jsonl \
         --seeds 5 \
         --tag-overlap
@@ -29,7 +29,7 @@ training prompt has the same text as a held-out prompt after lowercasing and
 collapsing whitespace (a near-duplicate under a different id). With --eval-ids
 it also checks that each per-seed eval file lies inside the pool.
 
-    python scripts/check_dataset_overlap.py --benchmark-jsonl data/raw/chatdoctor_s0.jsonl \
+    python -m bodhi_lora.data.leakage --benchmark-jsonl data/raw/chatdoctor_s0.jsonl \
         --holdout-ids data/raw/chatdoctor_s0_holdout_ids.json \
         --train-jsonl <cell>/sft/train.jsonl --eval-ids <cell>/eval_ids/seed_*.json \
         --json-out <cell>/overlap_check.json

@@ -1,4 +1,4 @@
-"""Tests for scripts/run_manifest.py and configs/families.yaml. CPU only."""
+"""Tests for bodhi_lora/manifest.py and configs/families.yaml. CPU only."""
 
 import json
 import re
@@ -11,7 +11,7 @@ import pytest
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
-from scripts import run_manifest as rm  # noqa: E402
+from bodhi_lora import manifest as rm  # noqa: E402
 
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 
@@ -120,7 +120,7 @@ def test_system_role_flags():
 
 
 def _cli(*args):
-    return subprocess.run([sys.executable, str(REPO / "scripts" / "run_manifest.py"), *args],
+    return subprocess.run([sys.executable, "-m", "bodhi_lora.manifest", *args], cwd=REPO,
                           capture_output=True, text=True)
 
 

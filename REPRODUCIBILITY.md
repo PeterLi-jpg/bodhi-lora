@@ -18,7 +18,7 @@ The grid matches the paper's evaluation. Seeds are 42, 7, 13, 99 and 101 in ever
 
 † Med42-8B shares the evaluator's Llama-3 family, which breaks the paper's
 grader-separation rule. Its cells are marked in every table and are not used in any
-cross-model statement. `scripts/regrade_cross_family.py` regrades them with a judge
+cross-model statement. `bodhi_lora/pipeline/grade.py` regrades them with a judge
 outside the Llama and Qwen families.
 
 MedQA-USMLE was run and set aside: it is a single-best-answer exam with complete
@@ -58,7 +58,7 @@ and maximum sequence length 4,096. The synced `adapter_config.json` and
 `trainer_state.json` of all 35 adapters of the seven cells confirm rank, alpha, dropout,
 target modules, epochs and the effective batch (`rebuttal/results/cell_recipe.json`). The
 evaluated adapter in `ckpt/best/` is the epoch checkpoint with the lowest validation loss
-(`load_best_model_at_end` in `scripts/train_lora.py`): epoch 1, 2 or 3, depending on the
+(`load_best_model_at_end` in `bodhi_lora/pipeline/train.py`): epoch 1, 2 or 3, depending on the
 cell and seed.
 
 | Config | Base model | Training precision | Eval precision | Batch per device x accumulation |
@@ -74,7 +74,7 @@ The MedGemma cell has no such mismatch.
 
 | Setting | Submitted cell | Added cells |
 |---|---|---|
-| Trainer | tunix on TPU v6e | `scripts/train_lora.py` (transformers, peft, trl) on H100 |
+| Trainer | tunix on TPU v6e | `bodhi_lora/pipeline/train.py` (transformers, peft, trl) on H100 |
 | LoRA | r=8, alpha=16 (from the code; the saved adapters could not be checked) | r=16, alpha=32 (from the saved adapter configs) |
 | Eval server | vLLM on Modal A100-80GB, `max_model_len` 4096, `--max-num-seqs` 32 | vLLM 0.9 subprocess on H100, `max_model_len` 8192, `--max-num-seqs` 64 |
 | Eval grader | `meta-llama/Llama-3.1-8B-Instruct` | `NousResearch/Meta-Llama-3.1-8B-Instruct`, a mirror of the same model |
@@ -118,7 +118,7 @@ bash rebuttal/launch/run_cell.sh
 `run_cell.sh` builds the benchmark JSONL if needed, generates and filters once, trains
 and evaluates each seed on a free GPU, and aggregates. Output goes to
 `results_rebuttal/<bench>__<model>/`. `rebuttal/launch/run_grid.sh` lists every cell of
-the table above. After each run, `scripts/run_manifest.py` records the resolved config, git commit
+the table above. After each run, `bodhi_lora/manifest.py` records the resolved config, git commit
 and dirty flag, library versions, model revisions and adapter hash.
 
 Check on the first run of a new base model:
@@ -128,7 +128,7 @@ Check on the first run of a new base model:
   prompt tokens.
 - BioMistral chat template: `apply_chat_template` must work. If not, take the template
   from `mistralai/Mistral-7B-Instruct-v0.1`.
-- New benchmarks: `scripts/build_benchmark_jsonl.py` stops if it writes 0 rows.
+- New benchmarks: `bodhi_lora/data/loaders.py` stops if it writes 0 rows.
 
 The submitted cell needs TPU quota, a GCS bucket and a Modal account, and costs money.
 Its launchers in `legacy/` are kept to document what ran, not as the path to use.
@@ -137,11 +137,11 @@ Its launchers in `legacy/` are kept to document what ran, not as the path to use
 
 | Stage | Script | Output |
 |---|---|---|
-| 1 Generate | `scripts/generate_traces.py` | `raw_traces.jsonl`: prompt_id, messages, response, tags, model |
-| 2 Grade and filter | `scripts/filter_traces.py` | `train.jsonl`, `val.jsonl`, `graded.jsonl` with a `grade` field per trace |
-| 3 Train | `scripts/train_lora.py` | adapter in `ckpt/best/`, `trainer_state.json` |
-| 4 Eval | `scripts/eval_healthbench.py` | one JSON per condition: per-prompt score, rubric results, parse failures |
-| 5 Epistemic grade | `scripts/eval_epistemic.py` | `epistemic_scores.json`: per-prompt scores on the seven behaviors |
+| 1 Generate | `bodhi_lora/pipeline/traces.py` | `raw_traces.jsonl`: prompt_id, messages, response, tags, model |
+| 2 Grade and filter | `bodhi_lora/pipeline/filter.py` | `train.jsonl`, `val.jsonl`, `graded.jsonl` with a `grade` field per trace |
+| 3 Train | `bodhi_lora/pipeline/train.py` | adapter in `ckpt/best/`, `trainer_state.json` |
+| 4 Eval | `bodhi_lora/pipeline/eval.py` | one JSON per condition: per-prompt score, rubric results, parse failures |
+| 5 Epistemic grade | `bodhi_lora/grading/epistemic.py` | `epistemic_scores.json`: per-prompt scores on the seven behaviors |
 | Aggregate | `scripts/aggregate_seeds.py` | `multi_seed_summary.json`. The copies from the GPU host predate 55f6c7c: they list the seeds as `["eval"]` (a wrong glob) and hold one seed. They are gitignored and unused; `make cells` recomputes from the per-seed files |
 
 The normalized rubric score is `(earned - negative) / (positive - negative)`, so it is
@@ -152,7 +152,7 @@ comparable across prompts with different penalty items.
 | Data | Where | How to get it |
 |---|---|---|
 | HealthBench JSONL | `data/raw/` (ignored) | `bash setup.sh` |
-| ChatDoctor, MedQuAD, MedQA JSONL | `data/raw/` (ignored) | `scripts/build_benchmark_jsonl.py`, at the pinned dataset revisions; its manifest records the sha256 of each file |
+| ChatDoctor, MedQuAD, MedQA JSONL | `data/raw/` (ignored) | `bodhi_lora/data/loaders.py`, at the pinned dataset revisions; its manifest records the sha256 of each file |
 | Filtered training traces of the submitted cell | `data/sft_qwen_graded/` (ignored) | regenerate with stages 1 and 2 |
 | Submitted adapters and trainer states | were at `gs://bohdi-runs-tokyo-micron/prod-v39-tunix-27b-neurips/`; that bucket returned 404 on 2026-10-08, and the project has no buckets | `legacy/modal_eval.py` copied each seed's `checkpoints/best/` and `train.jsonl`/`val.jsonl` into the Modal volume `bohdi-data-cache` (`/data/seed_<N>/`); that volume may still hold them (BLOCKED.md item 3) |
 | Added-cell outputs | `/data/PROJECTS/bohdi/results_rebuttal/` on the shared H100 host; copied on 2026-10-08 to `results_rebuttal/` here and to a local archive outside the repo | the sync command below |
@@ -184,7 +184,7 @@ make cells
 Trace generation and eval use greedy decoding. Training seeds `random`, `numpy` and
 `torch`, and passes the seed to the trainer. Results still change across GPU models,
 CUDA or PyTorch versions, and GPU counts. To compare runs exactly, fix all three and
-record them, which `scripts/run_manifest.py` does.
+record them, which `bodhi_lora/manifest.py` does.
 
 ## 9. Troubleshooting
 

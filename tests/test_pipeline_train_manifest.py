@@ -1,4 +1,4 @@
-"""Tests for the manifest that scripts/train_lora.py writes. No training runs."""
+"""Tests for the manifest that bodhi_lora/pipeline/train.py writes. No training runs."""
 
 import json
 import sys
@@ -16,7 +16,7 @@ sys.path.insert(0, str(REPO))
 
 
 def test_train_manifest_records_config_batch_adapter_and_losses(tmp_path, monkeypatch):
-    from scripts import train_lora
+    from bodhi_lora.pipeline import train as train_lora
 
     monkeypatch.delenv("WORLD_SIZE", raising=False)
     cfg_path = REPO / "rebuttal" / "configs" / "lora_mistral_small_24b_qlora.yaml"
@@ -50,7 +50,7 @@ def test_train_manifest_records_config_batch_adapter_and_losses(tmp_path, monkey
 
 
 def test_effective_batch_counts_processes():
-    from scripts import train_lora
+    from bodhi_lora.pipeline import train as train_lora
     cfg = {"per_device_train_batch_size": 2, "gradient_accumulation_steps": 8}
     assert train_lora.effective_batch(cfg, world_size=1) == 16
     assert train_lora.effective_batch(cfg, world_size=4) == 64

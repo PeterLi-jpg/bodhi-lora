@@ -655,7 +655,7 @@ Funding: None declared.
 \label{app:contamination}
 
 We tested whether MedGemma-27B had memorized \hbhard{} prompts in pretraining. The probe
-(\texttt{scripts/contamination\_probe.py}) gives the base model the first 15 tokens of an
+(\texttt{bodhi\_lora/pipeline/probe.py}) gives the base model the first 15 tokens of an
 \hbhard{} prompt and asks for a 25-token continuation. It then measures the exact-completion rate
 and the mean prefix overlap in tokens. Of 200 sampled \hbhard{} prompts, 105 met the minimum
 length of 40 tokens. On those 105, the model produced no exact completion, and the mean prefix
@@ -761,7 +761,7 @@ Scope bounding & risk management & Humble & safe recommendations \\
 \end{tabular}
 \end{table}
 
-The evaluator's prompt (\texttt{scripts/eval\_epistemic.py}) defines each dimension. We quote its
+The evaluator's prompt (\texttt{bodhi\_lora/grading/epistemic.py}) defines each dimension. We quote its
 anchors and give one example for each dimension.
 
 \begin{itemize}[leftmargin=*,itemsep=1pt]

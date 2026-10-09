@@ -63,7 +63,7 @@ jobs:
             "bodhi-llm[all]==0.1.4"
 
       - name: Compile Python sources
-        run: python -m py_compile scripts/*.py scripts/maintenance/*.py
+        run: python -m compileall -q bodhi_lora scripts
 
       - name: Check repo hygiene
         run: |

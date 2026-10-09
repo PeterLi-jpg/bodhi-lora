@@ -1,4 +1,4 @@
-"""Tests for the tau rule and the filter manifest in scripts/filter_traces.py.
+"""Tests for the tau rule and the filter manifest in bodhi_lora/pipeline/filter.py.
 
 The end-to-end tests resume from a fully graded file, so the grader engine
 is never started and the run needs no GPU.
@@ -31,7 +31,7 @@ def _percentile_tau():
     pytest.importorskip("tqdm")
     pytest.importorskip("bodhi")
     sys.path.insert(0, str(REPO))
-    from scripts.filter_traces import percentile_tau
+    from bodhi_lora.pipeline.filter import percentile_tau
     return percentile_tau
 
 
@@ -82,10 +82,10 @@ def _filter(tmp, *extra):
     pytest.importorskip("transformers")
     pytest.importorskip("bodhi")
     env = {**os.environ, "BODHI_VLLM_MODE": "subprocess", "BODHI_VLLM_ACCEL": "gpu",
-           "BODHI_VLLM_TP": "1"}
+           "BODHI_VLLM_TP": "1", "PYTHONPATH": str(REPO)}
     out = tmp / "sft"
     res = subprocess.run(
-        [sys.executable, str(REPO / "scripts" / "filter_traces.py"),
+        [sys.executable, "-m", "bodhi_lora.pipeline.filter",
          "--input", str(tmp / "raw.jsonl"), "--healthbench-data", str(tmp / "bench.jsonl"),
          "--resume-from", str(tmp / "graded.jsonl"), "--output-dir", str(out), *extra],
         capture_output=True, text=True, env=env, timeout=300)

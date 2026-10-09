@@ -45,9 +45,7 @@ PENDING = {
 # block once the lanes have merged and the check passes without it.
 _ARCHITECTURE = "planned in docs/ARCHITECTURE.md; a build lane writes it"
 PENDING.update({k: _ARCHITECTURE for k in (
-    "bodhi_lora/manifest.py",
-    "bodhi_lora/engine/", "bodhi_lora/data/", "bodhi_lora/protocols/", "bodhi_lora/grading/",
-    "bodhi_lora/pipeline/", "bodhi_lora/analysis/", "bodhi_lora/report/",
+    "bodhi_lora/analysis/", "bodhi_lora/report/",
     "configs/report.yaml",
     "rebuttal/posted_values.json", "scripts/migrate_results.py",
     "tests/fixtures/data/", "tests/fixtures/protocols/",

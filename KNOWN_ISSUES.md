@@ -34,9 +34,9 @@ Issue numbers such as #5 are GitHub issues on `PeterLi-jpg/bohdi-lora`.
   disclaimers (`context_seeking_anchor` and `blanket_disclaimers` in
   `paper/generated/numbers.json`).
 - **Med42-8B shares the evaluator's family (EVAL-7, D6).** The cells are marked † and
-  kept out of cross-model statements. `scripts/regrade_cross_family.py` is not run yet;
+  kept out of cross-model statements. `bodhi_lora/pipeline/grade.py` is not run yet;
   it needs a GPU.
-- **No prior-work baseline has run (EVAL-8).** `scripts/baselines/` holds the prompt
+- **No prior-work baseline has run (EVAL-8).** `bodhi_lora/protocols/` holds the prompt
   baselines; they need GPU inference on the existing eval sets.
 - **The MedQA cell has only the preamble run.** Its one run used the old prompt that told
   the model to ask (Base asks in nearly every response), so it measures instruction
@@ -74,7 +74,7 @@ Issue numbers such as #5 are GitHub issues on `PeterLi-jpg/bohdi-lora`.
   transformers and bodhi-llm versions) and an overlap-check output (the gate came after
   these runs). The eval ids are synced: each non-HealthBench cell has its `eval_ids.json`,
   and the HealthBench cells used `data/raw/hard_200_sample_ids.json`. New runs record all
-  of this in their manifests (`scripts/run_manifest.py`).
+  of this in their manifests (`bodhi_lora/manifest.py`).
 - **The host's `multi_seed_summary.json` files are wrong.** They predate 55f6c7c and list
   their seeds as `["eval"]`, so each holds one seed. They are gitignored and unused;
   `make cells` recomputes from the per-seed files.
@@ -99,14 +99,14 @@ Issue numbers such as #5 are GitHub issues on `PeterLi-jpg/bohdi-lora`.
   from there. One posted value was wrong (MedQuAD Base hedging, withdrawals W21). Every
   cell used tau = 0.4.
 - **#2** `format_example` mis-zipped single examples in TRL's probe call. It now handles
-  both shapes (`scripts/train_lora.py`).
+  both shapes (`bodhi_lora/pipeline/train.py`).
 - **#4** Filtering and eval use one normalized score,
   `(earned - negative) / (positive - negative)`. The old fields stay for comparison.
 - **#5** Rubric-grader parse failures are counted per trace and reported, not dropped
   silently. The epistemic grader still drops them from its means (EVAL-9, above).
 - **#6, #7** `generate_traces.py --resume-from` refuses rows made with other settings.
 - **#23** Training checkpoints on step intervals and resumes from the latest one.
-- **#65** `scripts/_vllm_engine.py` sets `--enforce-eager` the same way in Docker and
+- **#65** `bodhi_lora/engine/vllm.py` sets `--enforce-eager` the same way in Docker and
   subprocess mode. Eager mode stays the default, because CUDA-graph capture with LoRA
   hangs in vLLM 0.9.
 - **#3** The filter grader (Qwen2.5-14B) and the evaluator (Llama-3.1-8B) come from
@@ -115,12 +115,12 @@ Issue numbers such as #5 are GitHub issues on `PeterLi-jpg/bohdi-lora`.
   `vllm==0.9.2` and `torch==2.7.0` and bounds transformers below 4.54, and
   `configs/families.yaml` pins a Hugging Face revision for each model and grader
   (e6e1f2d). Every run manifest records the package versions it ran with.
-- **Benchmark data pinning (REPRO-11, 92aed30).** `scripts/build_benchmark_jsonl.py`
+- **Benchmark data pinning (REPRO-11, 92aed30).** `bodhi_lora/data/loaders.py`
   loads each dataset at a pinned revision (`DEFAULT_REVISIONS`), draws the pool and the
   holdout with a seed, and writes a manifest with the sha256 of each output. The
   head-of-file mode that the posted cells used stays available as `--select head`.
 - **Leakage gate in the added-cell launcher (EVAL-12, 838e0a9).**
-  `rebuttal/launch/run_cell.sh` runs `scripts/check_dataset_overlap.py` on the graded
+  `rebuttal/launch/run_cell.sh` runs `bodhi_lora/data/leakage.py` on the graded
   traces before training and writes `overlap_check.json` into the cell folder.
 - **`rebuttal/launch/run_grid.sh`** now lists every cell of the final grid, with the
   Med42-8B and ChatDoctor cells.
@@ -133,7 +133,7 @@ Issue numbers such as #5 are GitHub issues on `PeterLi-jpg/bohdi-lora`.
 The submitted MedGemma-27B cell trained on TPU. Stage 3 first used custom MaxText LoRA
 code, which never ran end to end on a TPU. It was replaced by tunix and qwix, which
 produced the submitted adapters. The rebuttal moved to one GPU pipeline
-(`scripts/train_lora.py`) and deleted the TPU code from this branch. The TPU tree is
+(`bodhi_lora/pipeline/train.py`) and deleted the TPU code from this branch. The TPU tree is
 still in history, for example `c4b8e6f:tpu/launch_5seeds_tunix.sh` (the tip of
 `origin/main` on 2026-10-07). The launchers that produced the submitted cell are kept in
 `legacy/`. Issues that only concerned the MaxText or TPU path are closed as obsolete.

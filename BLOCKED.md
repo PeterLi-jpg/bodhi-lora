@@ -164,7 +164,7 @@ cleanup proposed these defaults; none is adopted:
 ## 6. Run the prompt baselines (C27, EVAL-8)
 
 Why: reviewers asked for a head-to-head against an inference-time baseline. The code is
-in `scripts/baselines/` and `rebuttal/launch/run_baselines.sh`, tested with stub
+in `bodhi_lora/protocols/` and `rebuttal/launch/run_baselines.sh`, tested with stub
 engines only.
 
 Action, on the GPU host after `bash setup.sh` has built `.venv` and `.venv-infer`:
@@ -203,13 +203,13 @@ Action, on the GPU host, where the outputs already are (accept the Gemma 2 licen
 Hugging Face first):
 
 ```bash
-.venv-infer/bin/python scripts/regrade_cross_family.py --dry-run \
+.venv-infer/bin/python -m bodhi_lora.pipeline.grade --dry-run \
     --cell results_rebuttal/healthbench__m42-health_Llama3-Med42-8B \
     --benchmark-jsonl data/raw/healthbench_hard.jsonl
-.venv-infer/bin/python scripts/regrade_cross_family.py \
+.venv-infer/bin/python -m bodhi_lora.pipeline.grade \
     --cell results_rebuttal/healthbench__m42-health_Llama3-Med42-8B \
     --benchmark-jsonl data/raw/healthbench_hard.jsonl
-.venv-infer/bin/python scripts/regrade_cross_family.py \
+.venv-infer/bin/python -m bodhi_lora.pipeline.grade \
     --cell results_rebuttal/chatdoctor__m42-health_Llama3-Med42-8B \
     --benchmark-jsonl data/raw/chatdoctor.jsonl
 ```
@@ -262,7 +262,7 @@ After: update Appendix B, Table B.1, the abstract sentence on kappa, checklist i
 
 ## 9. Run the second teaching protocol (C29, HomM-W1)
 
-Why: the posted replies promised a second CoT protocol. `scripts/baselines/ask_first.py`
+Why: the posted replies promised a second CoT protocol. `bodhi_lora/protocols/ask_first.py`
 implements a one-pass ask-first protocol; `run_cell.sh` runs it with `PROTOCOL=ask_first`.
 It has run only with stub engines.
 
@@ -335,7 +335,7 @@ Why: none of this ran, because D16 forbids remote changes in the cleanup.
 - **Contamination probe (NUM-7).** Appendix A types its numbers by hand and says the
   output was not kept. Run it on a GPU, commit the JSON, and add an emitter to
   `scripts/paper_stats.py`:
-  `.venv-infer/bin/python scripts/contamination_probe.py --n-prompts 200 --prefix-tokens 15 --continuation-tokens 25 --output results_modal/contamination_probe.json`.
+  `.venv-infer/bin/python -m bodhi_lora.pipeline.probe --n-prompts 200 --prefix-tokens 15 --continuation-tokens 25 --output results_modal/contamination_probe.json`.
   About one H100-hour (rough estimate).
 - **Red flags early in the protocol (C31).** Promised to LxMF. No code exists yet. It
   needs a protocol variant that writes red flags before the extended reasoning, a cell

@@ -70,7 +70,7 @@ tests/              pytest suite, no GPU needed
 | Set | Cells | Pipeline | Raw outputs |
 |---|---|---|---|
 | Submitted | MedGemma-27B on HealthBench-Hard | tunix LoRA on 8x TPU v6e; eval on one A100 (Modal). Launchers in `legacy/` | `results_modal/`, committed |
-| Added | Mistral-Small-24B, Med42-8B†, BioMistral-7B on HealthBench-Hard; Mistral-Small-24B and Med42-8B† on ChatDoctor; Mistral-Small-24B on MedQuAD; Mistral-Small-24B on MedQA (set aside) | GPU path: `scripts/train_lora.py` through `rebuttal/launch/run_cell.sh`, on H100 | copied from the GPU host into `results_rebuttal/` (eval JSON gitignored; per-seed values in `data/rebuttal_cells/generated_values.json`) |
+| Added | Mistral-Small-24B, Med42-8B†, BioMistral-7B on HealthBench-Hard; Mistral-Small-24B and Med42-8B† on ChatDoctor; Mistral-Small-24B on MedQuAD; Mistral-Small-24B on MedQA (set aside) | GPU path: `bodhi_lora/pipeline/train.py` through `rebuttal/launch/run_cell.sh`, on H100 | copied from the GPU host into `results_rebuttal/` (eval JSON gitignored; per-seed values in `data/rebuttal_cells/generated_values.json`) |
 
 The paper takes the added-cell numbers from `data/rebuttal_cells/generated_values.json`,
 which `make cells` computes from the synced raw outputs.
@@ -125,11 +125,11 @@ BENCH=healthbench SEEDS="42 7 13 99 101" \
 bash rebuttal/launch/run_cell.sh
 ```
 
-The cell writes to `results_rebuttal/<bench>__<model>/`. `scripts/run_manifest.py` records
+The cell writes to `results_rebuttal/<bench>__<model>/`. `bodhi_lora/manifest.py` records
 what ran: resolved config, git commit and dirty flag, library versions, model revisions
-and adapter hash. Prior-work prompt baselines live in `scripts/baselines/`. The Med42-8B
+and adapter hash. Prior-work prompt baselines live in `bodhi_lora/protocols/`. The Med42-8B
 regrade with a judge outside the Llama, Qwen and base-model families is
-`scripts/regrade_cross_family.py`.
+`bodhi_lora/pipeline/grade.py`.
 
 ## Where results live
 
@@ -152,11 +152,11 @@ regrade with a judge outside the Llama, Qwen and base-model families is
 `setup.sh` downloads HealthBench into `data/raw/`. HealthBench-Hard (1,000 prompts) is a
 subset of HealthBench (5,000). All 1,000 Hard prompts are excluded from training by
 `prompt_id` (`--exclude-ids`), so about 4,000 prompts feed trace generation. The
-submitted-cell launcher ran `scripts/check_dataset_overlap.py` as a gate before
+submitted-cell launcher ran `bodhi_lora/data/leakage.py` as a gate before
 training, and `rebuttal/launch/run_cell.sh` runs the same gate on every cell.
 On 2026-10-07 the seed-7 training set of the submitted cell had 0 Hard prompts among its
 2,816 prompts and 0 overlap with the 667 eval prompts. ChatDoctor, MedQuAD and MedQA are
-converted to the same format by `scripts/build_benchmark_jsonl.py`.
+converted to the same format by `bodhi_lora/data/loaders.py`.
 
 ## Contributing
 

@@ -201,7 +201,7 @@ class VLLMEngine:
         # NF4 with double quantization while loading (vLLM 0.9.2
         # bitsandbytes_loader.py calls quantize_4bit(compress_statistics=True,
         # quant_type="nf4")), which matches the QLoRA training base in
-        # scripts/train_lora.py.
+        # bodhi_lora/pipeline/train.py.
         if quantization not in (None, "bitsandbytes"):
             raise ValueError(f"quantization={quantization!r}: use None or 'bitsandbytes'")
         self.quantization = quantization

@@ -6,10 +6,9 @@ from pathlib import Path
 import pytest
 
 REPO = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(REPO / "scripts"))
 
-from baselines.ask_first import AskFirstProtocol, parse_reply, render_conversation  # noqa: E402
-from baselines.prompts import BASELINE_PROMPTS, apply_instructions  # noqa: E402
+from bodhi_lora.protocols.ask_first import AskFirstProtocol, parse_reply, render_conversation  # noqa: E402
+from bodhi_lora.protocols.instruction import BASELINE_PROMPTS, apply_instructions  # noqa: E402
 
 CONVO = [
     {"role": "user", "content": "I have a headache."},

@@ -11,7 +11,7 @@
 #    granted (also Llama-3.1-8B based, so this config transfers unchanged).
 #
 # Llama-3 is the eval grader's family, so run_cell.sh refuses this cell unless
-# --allow-same-family is passed (configs/families.yaml). scripts/regrade_cross_family.py
+# --allow-same-family is passed (configs/families.yaml). bodhi_lora/pipeline/grade.py
 # re-grades it with a judge from a third family (default google/gemma-2-27b-it).
 #
 # 8B bf16 (~16 GB) -> full-precision LoRA fits easily on one H100 80GB.

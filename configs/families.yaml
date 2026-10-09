@@ -5,11 +5,11 @@
 #   The pretraining lineage of the model. rebuttal/launch/run_cell.sh refuses a
 #   cell whose base model is in the same family as the trace filter or the
 #   evaluator, unless --allow-same-family is passed (the manifest records it).
-#   scripts/regrade_cross_family.py refuses a judge from the filter family, the
+#   bodhi_lora/pipeline/grade.py refuses a judge from the filter family, the
 #   evaluator family or the family of the graded base model.
 #
 # revision
-#   The HF commit that a run loads. scripts/run_manifest.py:pinned_revision()
+#   The HF commit that a run loads. bodhi_lora/manifest.py:pinned_revision()
 #   reads it, and every entry point passes it to vLLM (--revision) and to
 #   from_pretrained(revision=...). A --*-revision flag or a config
 #   model.revision overrides it.
@@ -32,7 +32,7 @@
 roles:
   filter: Qwen/Qwen2.5-14B-Instruct
   evaluator: meta-llama/Llama-3.1-8B-Instruct
-  # Default judge for scripts/regrade_cross_family.py. It is outside the filter
+  # Default judge for bodhi_lora/pipeline/grade.py. It is outside the filter
   # and evaluator families, and outside the Llama-3 family of the Med42 cells.
   cross_family_judge: google/gemma-2-27b-it
 

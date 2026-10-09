@@ -1,4 +1,4 @@
-"""Dry-run and resume-guard tests for scripts/generate_traces.py. CPU only."""
+"""Dry-run and resume-guard tests for bodhi_lora/pipeline/traces.py. CPU only."""
 
 import json
 import os
@@ -25,9 +25,9 @@ def prompts(tmp_path):
 
 
 def _gen(tmp_path, prompts, *extra):
-    env = {**os.environ, "BODHI_VLLM_MODE": "subprocess", "BODHI_VLLM_TP": "1"}
+    env = {**os.environ, "BODHI_VLLM_MODE": "subprocess", "BODHI_VLLM_TP": "1", "PYTHONPATH": str(REPO)}
     return subprocess.run(
-        [sys.executable, str(REPO / "scripts" / "generate_traces.py"),
+        [sys.executable, "-m", "bodhi_lora.pipeline.traces",
          "--model", "mistralai/Mistral-Small-24B-Instruct-2501",
          "--dataset-files", str(prompts), "--output", str(tmp_path / "raw.jsonl"), *extra],
         capture_output=True, text=True, cwd=tmp_path, env=env, timeout=300)

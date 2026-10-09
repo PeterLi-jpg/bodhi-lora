@@ -18,12 +18,12 @@ section 5.
 Evaluate an adapter that already exists:
 
 ```bash
-python scripts/eval_healthbench.py \
+python -m bodhi_lora.pipeline.eval \
     --model google/medgemma-27b-text-it \
     --lora-path checkpoints/best \
     --sample-ids data/raw/hard_200_sample_ids.json \
     --output eval/lora_no_wrapper.json
 ```
 
-Resume an interrupted generation with `scripts/generate_traces.py --resume-from <file>`;
+Resume an interrupted generation with `bodhi_lora/pipeline/traces.py --resume-from <file>`;
 it skips the prompt ids it already wrote.

@@ -4,16 +4,16 @@ Conditions (the "config" tag in the output JSON):
   base_no_wrapper / lora_no_wrapper    the model as is
   base_bodhi / lora_bodhi              --use-bodhi (same as --wrapper bodhi)
   base_ask_first / lora_ask_first      --wrapper ask_first, the second CoT
-                                       protocol (scripts/baselines/ask_first.py)
+                                       protocol (bodhi_lora/protocols/ask_first.py)
   base_clarify                         --baseline clarify
   base_verbalized_confidence           --baseline verbalized_confidence
-The prompt baselines are in scripts/baselines/prompts.py.
+The prompt baselines are in bodhi_lora/protocols/instruction.py.
 
 Eval settings are flags, so no run patches this file. The defaults equal the
 submitted MedGemma eval (legacy/modal_eval.py): max_model_len 4096,
 max_num_seqs 32, 32 client threads, a 900 s request timeout and the
 meta-llama/Llama-3.1-8B-Instruct grader at its pinned revision. Every run
-writes <output stem>.manifest.json next to the output (scripts/run_manifest.py).
+writes <output stem>.manifest.json next to the output (bodhi_lora/manifest.py).
 
 --dry-run replaces both vLLM engines with stubs, runs the prompt, wrapper and
 grading code on --dry-run-examples prompts on a CPU, and writes
@@ -38,15 +38,11 @@ import numpy as np
 from tqdm import tqdm
 from transformers import set_seed
 
-# Add scripts/ dir for bare-name imports and project root for package imports.
-import os as _os
-sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from _vllm_engine import DryRunEngine, VLLMEngine
-from scripts.filter_traces import GRADER_TEMPLATE, LocalGrader, parse_json_response, grade_trace
-import run_manifest as rmf
-from baselines.ask_first import AskFirstProtocol
-from baselines.prompts import BASELINE_PROMPTS, apply_instructions
+from bodhi_lora import manifest as rmf
+from bodhi_lora.engine.vllm import DryRunEngine, VLLMEngine
+from bodhi_lora.pipeline.filter import GRADER_TEMPLATE, LocalGrader, parse_json_response, grade_trace
+from bodhi_lora.protocols.ask_first import AskFirstProtocol
+from bodhi_lora.protocols.instruction import BASELINE_PROMPTS, apply_instructions
 
 HEALTHBENCH_HARD_URL = "https://openaipublic.blob.core.windows.net/simple-evals/healthbench/hard_2025-05-08-21-00-10.jsonl"
 DATA_DIR = Path("data/raw")
@@ -357,14 +353,14 @@ def main():
         choices=WRAPPERS,
         default=None,
         help="CoT wrapper for the '+CoT' conditions: bodhi or ask_first "
-             "(scripts/baselines/ask_first.py). Default none.",
+             "(bodhi_lora/protocols/ask_first.py). Default none.",
     )
     parser.add_argument(
         "--baseline",
         choices=sorted(BASELINE_PROMPTS),
         default=None,
         help="Inference-time prompt baseline on the bare model "
-             "(scripts/baselines/prompts.py). Writes the config tag "
+             "(bodhi_lora/protocols/instruction.py). Writes the config tag "
              "base_<baseline>.",
     )
     parser.add_argument(

@@ -12,7 +12,7 @@ import pytest
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
-from scripts import build_benchmark_jsonl as bb  # noqa: E402
+from bodhi_lora.data import loaders as bb  # noqa: E402
 
 
 def fake_chatdoctor(n=50):
@@ -79,7 +79,7 @@ def _run_main(monkeypatch, argv, ds):
 
     monkeypatch.setitem(sys.modules, "datasets", types.SimpleNamespace(load_dataset=load_dataset))
     monkeypatch.setattr(sys, "argv", ["build_benchmark_jsonl.py", *argv])
-    runpy.run_path(str(REPO / "scripts" / "build_benchmark_jsonl.py"), run_name="__main__")
+    runpy.run_module("bodhi_lora.data.loaders", run_name="__main__")
     return calls
 
 
@@ -120,9 +120,9 @@ def test_bootstrap_draw_from_a_pool(tmp_path):
     outs = []
     for name in ("a.json", "b.json"):
         res = subprocess.run(
-            [sys.executable, str(REPO / "scripts" / "make_bootstrap_eval_ids.py"),
+            [sys.executable, "-m", "bodhi_lora.data.splits",
              "--pool-ids", str(pool), "--seed", "42", "--size", "20",
-             "--output", str(tmp_path / name)], capture_output=True, text=True)
+             "--output", str(tmp_path / name)], capture_output=True, text=True, cwd=REPO)
         assert res.returncode == 0, res.stderr
         outs.append(json.loads((tmp_path / name).read_text()))
     assert outs[0]["prompt_ids"] == outs[1]["prompt_ids"]
