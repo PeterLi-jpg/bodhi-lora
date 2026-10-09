@@ -6,11 +6,13 @@
     fetch <benchmark> ...
         Download or build a benchmark's rows into the data root, checked against the
         record's pins.
-    run <cell> [--stages traces,filter,...] [--seeds 42 7] [--gpus 0,1]
+    run <cell> [--stages traces,filter,...] [--seeds 42 7] [--gpus 0,1] [--judges a,b]
                [--stub-engine | --dry-run] [--results-root DIR] [--force]
         Run a cell (bodhi_lora/pipeline/runner.py). --stub-engine runs every stage on the
-        CPU with the stub engine and trains for real; --dry-run also prints the GPU
-        commands and skips training.
+        CPU with the stub engine and trains for real; --dry-run first prints the GPU
+        command of every step, then runs like --stub-engine without training. Both
+        write under the scratch root (configs/project.yaml), never the results root.
+        --judges runs only these judges of grading.judges in the grade stage.
     analyze, report
         The uniform analysis and the paper report; the analysis lane builds them.
 
@@ -120,10 +122,12 @@ def cmd_run(args, reg: Registry) -> int:
 
     stages = tuple(args.stages.split(",")) if args.stages else STAGES
     gpus = [int(g) for g in args.gpus.split(",")] if args.gpus else []
+    judges = args.judges.split(",") if args.judges else None
     mode = "dry_run" if args.dry_run else "stub" if args.stub_engine else "gpu"
     try:
         run_cell(reg, project(args.configs), args.cell, stages=stages, seeds=args.seeds, gpus=gpus,
-                 mode=mode, configs_dir=args.configs, results_root=args.results_root, force=args.force)
+                 mode=mode, configs_dir=args.configs, results_root=args.results_root, force=args.force,
+                 judges=judges)
     except RunError as e:
         print(f"run refused or failed: {e}", flush=True)
         return 1
@@ -164,6 +168,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--stages", default=None, help="comma list; default every stage")
     p.add_argument("--seeds", type=int, nargs="+", default=None, help="default every seed of the cell")
     p.add_argument("--gpus", default=None, help="comma list of GPU indices, e.g. 0,1")
+    p.add_argument("--judges", default=None, help="comma list; default every judge of the cell")
     mode = p.add_mutually_exclusive_group()
     mode.add_argument("--stub-engine", action="store_true")
     mode.add_argument("--dry-run", action="store_true")

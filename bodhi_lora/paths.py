@@ -11,6 +11,7 @@ derived here, so no other module builds a results or data path by hand:
         validation/           physician grading sheets and agreement, where a cell has them
         logs/                 stage logs (ignored by git)
     <data_root>/<benchmark_id>/   downloaded and built benchmark files
+    <scratch_root>/<mode>/        stub and dry runs, laid out like the results root
 """
 from __future__ import annotations
 
@@ -32,6 +33,7 @@ class Project:
     repo_root: Path
     results_root: Path
     data_root: Path
+    scratch_root: Path
     python_train: Path
     python_infer: Path
     vllm_port_base: int
@@ -58,7 +60,8 @@ def project(configs_dir: Path = CONFIGS_DIR) -> Project:
     cfg = ProjectConfig.model_validate(
         yaml.safe_load((configs_dir / "project.yaml").read_text(encoding="utf-8")))
     return Project(repo_root=root, results_root=root / cfg.results_root,
-                   data_root=root / cfg.data_root, python_train=root / cfg.python.train,
+                   data_root=root / cfg.data_root, scratch_root=root / cfg.scratch_root,
+                   python_train=root / cfg.python.train,
                    python_infer=root / cfg.python.infer, vllm_port_base=cfg.vllm_port_base)
 
 

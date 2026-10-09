@@ -16,6 +16,7 @@ pytest.importorskip("bodhi")
 from bodhi_lora.paths import CONFIGS_DIR, project  # noqa: E402
 from bodhi_lora.pipeline.runner import RunError, run_cell  # noqa: E402
 from bodhi_lora.registry import load_registry  # noqa: E402
+from tests.fixtures.pipeline.registry import fixture_configs  # noqa: E402
 
 SMOKE = "tiny-rubric__tiny-random-llama__bodhi"
 
@@ -83,8 +84,61 @@ def test_dry_run_prints_gpu_commands_and_does_not_train(reg, tmp_path, capsys):
     # shlex quotes the interpreter path when the checkout path has a space.
     assert re.search(r"\.venv/bin/python'? -m bodhi_lora\.pipeline\.train --cell", out)
     assert re.search(r"\.venv-infer/bin/python'? -m bodhi_lora\.pipeline\.eval", out)
+    # The plan comes before any stub step runs.
+    assert out.index("DRY-RUN") < out.index("prepare:")
     assert not (tmp_path / SMOKE / "seed_1" / "train" / "adapter_config.json").exists()
     assert (tmp_path / SMOKE / "seed_1" / "eval" / "lora.json").is_file()
+
+
+def test_stub_and_dry_runs_never_write_under_the_results_root(reg, tmp_path, capsys):
+    """Their manifests say complete; under the results root a GPU run would skip those stages."""
+    proj = replace(project(CONFIGS_DIR), results_root=tmp_path / "results",
+                   scratch_root=tmp_path / "scratch")
+    run_cell(reg, proj, SMOKE, mode="dry_run", seeds=[1], gpus=[0, 3])
+    out = capsys.readouterr().out
+    assert not (tmp_path / "results").exists()
+    assert (tmp_path / "scratch" / "dry_run" / SMOKE / "seed_1" / "eval" / "base.json").is_file()
+    # The printed GPU commands are those of a GPU run: no scratch folder in them.
+    assert "--results-root" not in "".join(line for line in out.splitlines() if "DRY-RUN [gpu" in line)
+
+
+def test_judges_limits_the_judge_steps(reg, tmp_path):
+    with pytest.raises(RunError, match="not judges"):
+        run_cell(reg, project(CONFIGS_DIR), SMOKE, mode="stub", results_root=tmp_path, judges=["phi-9"])
+
+
+RECORDED = "tiny-rubric__tiny-random-llama__bodhi__2026-01"
+
+
+def test_a_recorded_cell_only_gets_judge_regrades_that_read_its_stored_replies(tmp_path, capsys):
+    configs = fixture_configs(tmp_path)
+    reg, proj = load_registry(configs), project(configs)
+    cell = reg.cells[RECORDED]
+    stored = proj.cell(RECORDED)
+    rows = [json.loads(line) for line in (CONFIGS_DIR.parent / "tests/fixtures/pipeline/tiny_rubric.jsonl")
+            .read_text().splitlines()]
+    for seed in cell.seeds:
+        for condition in cell.eval.conditions:
+            path = stored.eval_file(seed, condition)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            results = [{"prompt_id": r["prompt_id"], "response": f"stored reply {seed} {condition}",
+                        "score": 0.5, "criteria_results": [
+                            {"criterion": c["criterion"], "points": c["points"], "tags": c["tags"],
+                             "criteria_met": c["points"] > 0} for c in r["rubrics"]]}
+                       for r in rows[:4]]
+            path.write_text(json.dumps({"config": condition, "results": results}))
+    before = sorted(str(p) for p in stored.root.rglob("*"))
+    with pytest.raises(RunError, match="records a past run"):
+        run_cell(reg, proj, RECORDED, mode="dry_run", configs_dir=configs)
+    run_cell(reg, proj, RECORDED, mode="dry_run", stages=("grade",), configs_dir=configs)
+    out = capsys.readouterr().out
+    assert "--judge medgemma-27b-text" in out
+    assert sorted(str(p) for p in stored.root.rglob("*")) == before
+    scratch = proj.scratch_root / "dry_run" / RECORDED
+    judged = json.loads((scratch / "seed_2" / "grade" / "judge__medgemma-27b-text.json").read_text())
+    assert [c["name"] for c in judged["configs"]] == cell.eval.conditions
+    assert judged["configs"][0]["examples"][0]["original_score"] == 0.5
+    assert not (scratch / "seed_2" / "grade" / "epistemic__llama-3.1-8b.json").exists()
 
 
 def test_recorded_and_external_cells_are_refused(reg, tmp_path):

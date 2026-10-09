@@ -657,6 +657,9 @@ class Interpreters(_Record):
 class ProjectConfig(_Record):
     results_root: RepoPath
     data_root: RepoPath
+    # Stub and dry runs write here, never under results_root: their stage manifests say
+    # complete, and a GPU run under results_root would skip those stages.
+    scratch_root: RepoPath = "outputs"
     python: Interpreters
     # Each GPU stage serves on port vllm_port_base + its GPU index, so stages on
     # different GPUs never collide.
