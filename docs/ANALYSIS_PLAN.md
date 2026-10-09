@@ -496,3 +496,20 @@ output of any planned cell existed then: no folder of a planned cell is under
   MedGemma cell and its NLM cell, the Gemma-3 cell); `medgemma-27b-text` on the other
   recorded cells and the other training and NLM cells. The labelled, MediQ, E22, E23
   and E26 cells have no judge. Section 8 holds for each judge a record lists.
+
+**2026-10-09, analysis lane, merged by the integrate step. A record of post hoc work; no
+method changed, and this is not the adoption.** `make extract` and `make analyze` ran on
+every recorded cell with outputs: the 2026-04 pilot, the 2026-05 cell and the 2026-07
+cells. Their outputs existed then. They computed the items of section 10 that need no new
+run (E01, E03, E04, E05, E06 and E08) and the discrimination index under the two post hoc
+labelings `needs-info-theme-or-rubric` and `needs-info-theme`. Under the "Other" row of
+section 10, the lane also defined, after the outputs existed, the label
+`red-flag-at-stake` (the HealthBench theme tag and a keyword rule over rubric text,
+`configs/benchmarks/healthbench.yaml`) and a grader-free escalation mention rule
+(`configs/report.yaml`), and computed the escalation rate in each label group: the
+over-flagging check of C30. No physician label was read, so the label analyses of H3, H7
+and H11 stay unseen. None of these decides a claim (section 10), and the new label and
+rule are marked post hoc in every table. The paper cites none of the values that only
+this run produced (format leakage, token counts and the discrimination index of the
+2026-04 and 2026-07 cells, and every over-flagging rate) until the first author accepts
+or changes the label and the rule (BLOCKED.md item 1).
