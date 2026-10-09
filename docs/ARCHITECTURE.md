@@ -912,12 +912,12 @@ O6). A record of status `planned` changes no number in the paper.
   cell's raw files are in the tree and the others' are not.
 - **O3. A versioned archive of all raw outputs** (about 450 MB with the submitted cell),
   so reviewers can check any table. Publishing it is a remote action.
-- **O4. The dated analysis plan** (BLOCKED.md item 5) before any new run, and before the
+- **O4. The dated analysis plan** (BLOCKED.md item 1) before any new run, and before the
   physician-label discrimination index is computed on existing outputs.
 - **O5. Margins for the deployment-risk criterion** (EXPERIMENTS.md E07). Without them
   the criterion reports intervals only.
-- **O6. GPU priorities.** EXPERIMENTS.md section 4 groups the runs in tiers with rough
-  costs. No GPU runs until you say so.
+- **O6. GPU priorities.** EXPERIMENTS.md section 4 groups the runs in tiers, and
+  RUN_PLAN.md costs each one. No GPU runs until you say so.
 - **O7. The MedGemma-27B rerun.** Its adapters are treated as not retained, so every new
   experiment on it needs a rerun. On one H100 that means QLoRA (4-bit), which is not the
   bf16 TPU recipe of the 2026-05 cell. The rerun is then a new cell, and the 2026-05

@@ -508,15 +508,12 @@ H100-hour figures are rough estimates (section 1).
 | C | `chatdoctor__mistral-small-24b__bodhi`, `medquad__mistral-small-24b__bodhi` | train | E25 | 10-15 each |
 | C | `healthbench__mistral-small-24b__bodhi-no-calibration`, `-no-questions`, `-no-abstention` | train | E26 | 10 each |
 
-Summed from the rows, Tier A comes to roughly 65 to 115 H100-hours, and Tiers A and B
-to roughly 115 to 170. On the shared host this has no meter; at an on-demand rate of 2 to
-4 dollars per H100-hour, Tier A is roughly 130 to 460 dollars. Nothing runs before the
-first author's go-ahead (open decision O6).
-
-[RUN_PLAN.md](RUN_PLAN.md) orders these runs and estimates each one again from the
-measured stage times of the 2026-07 cells. Where its figures differ from the rows above,
-RUN_PLAN.md holds. The largest difference is the labelled cells, which evaluate 775
-prompts per seed.
+The rows above are the first rough estimates. They do not hold any more: the cell records
+now have more conditions, judges on more cells and a harm call per judge. Use
+[RUN_PLAN.md](RUN_PLAN.md) for cost. It orders these runs and costs each cell record as it
+stands, from the measured stage times of the 2026-07 cells: Tier A about 159 to 249
+H100-hours, Tiers A and B about 229 to 342, all tiers about 315 to 448 (its section 6).
+Nothing runs before the first author's go-ahead (open decision O6).
 
 ## 5. Coverage
 
