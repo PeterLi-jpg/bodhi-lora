@@ -50,8 +50,9 @@ def _stub_reply(messages):
     return STUB_HARM_REPLY if HARM_PROMPT_MARKER in prompt else STUB_RUBRIC_REPLY
 
 
-def graded_criteria(item: dict, row) -> tuple[list, list | None]:
-    """The criteria the evaluator graded for one reply, and its verdicts.
+def graded_criteria(item: dict, row) -> tuple[list, list | None, list | None]:
+    """The criteria the evaluator graded for one reply, its verdicts, and which verdicts
+    are parse failures (scored not met, so agreement can leave them out).
 
     Read from the eval file, so a judge grades exactly what the evaluator graded even if
     a benchmark's rows were rebuilt since. A file without criteria_results falls back
@@ -60,8 +61,9 @@ def graded_criteria(item: dict, row) -> tuple[list, list | None]:
     stored = item.get("criteria_results")
     if stored:
         return ([{"criterion": c["criterion"], "points": c["points"], "tags": c.get("tags", [])}
-                 for c in stored], [bool(c["criteria_met"]) for c in stored])
-    return row.rubrics, None
+                 for c in stored], [bool(c["criteria_met"]) for c in stored],
+                [bool(c.get("parse_failed", False)) for c in stored])
+    return row.rubrics, None, None
 
 
 def load_condition_files(ctx: StageContext, seed: int) -> dict[str, dict]:
@@ -141,7 +143,7 @@ def judge_of(ctx: StageContext, seed: int, files: dict, judge_id: str) -> tuple:
             def one(item):
                 pid = item["prompt_id"]
                 row = rows[pid]
-                criteria, evaluator_met = graded_criteria(item, row)
+                criteria, evaluator_met, evaluator_failed = graded_criteria(item, row)
                 text = messages_to_text(row.messages)
                 try:
                     rub = grade_rubric(grader, row.messages, item["response"], criteria) if criteria else None
@@ -153,7 +155,9 @@ def judge_of(ctx: StageContext, seed: int, files: dict, judge_id: str) -> tuple:
                       "judge_score": rub["overall_score"] if rub else None,
                       "judge_parse_failures": rub["parse_failures"] if rub else 0,
                       "judge_criteria_met": [c["criteria_met"] for c in rub["criteria_results"]] if rub else [],
+                      "judge_criteria_parse_failed": [c["parse_failed"] for c in rub["criteria_results"]] if rub else [],
                       "evaluator_criteria_met": evaluator_met,
+                      "evaluator_criteria_parse_failed": evaluator_failed,
                       "criteria_points": [c["points"] for c in criteria],
                       "epistemic_parse_failure": parsed is None,
                       "scores": flatten_grade(parsed) if parsed is not None else None,
