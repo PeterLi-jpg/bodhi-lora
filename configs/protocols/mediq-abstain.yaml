@@ -1,0 +1,39 @@
+# Inference-time abstention baseline on the unchanged base (EXPERIMENTS.md E12). Pass 1
+# rates on MediQ's five-label scale, with a reason, whether the information is enough to
+# answer safely; below the threshold, pass 2 asks the one most important question,
+# otherwise it answers the conversation as given. This is MediQ's Scale variant with a
+# rationale, without self-consistency, so it costs two calls like BODHI. The labels,
+# their scores (5 to 1) and the threshold are MediQ's (bodhi_lora/protocols/abstain.py
+# cites the source files). MediQ asks about picking the correct option of a
+# multiple-choice question; these prompts ask about a safe answer to an open question.
+# No run has used it yet.
+id: mediq-abstain
+title: MediQ-style abstention, a confidence rating and then one question or the answer
+kind: wrapper
+impl: abstain
+passes: 2
+params:
+  threshold: 4.0
+  rating_prompt: |-
+    Below is a conversation with a person who asks a health question.
+
+    {conversation}
+
+    How confident are you that you have the information you need to give a safe and correct answer now? Reply in exactly this form:
+    REASON: one sentence on why you are or are not confident, and what other information you need.
+    DECISION: one of "Very Confident", "Somewhat Confident", "Neither Confident or Unconfident", "Somewhat Unconfident", "Very Unconfident".
+  question_prompt: |-
+    Below is a conversation with a person who asks a health question.
+
+    {conversation}
+
+    You do not have the information you need to answer safely yet. Ask the person one short, specific question about the most important missing fact. Write only the question.
+leak_rules:
+  rating-format:
+    description: both lines of the pass-1 rating form, REASON and DECISION
+    markers:
+    - 'REASON\s*:'
+    - 'DECISION\s*:'
+    threshold: 2
+reference: 'Li et al. (2024), MediQ: Question-Asking LLMs and a Benchmark for Reliable
+  Interactive Clinical Reasoning, NeurIPS; Scale variant with a rationale (github.com/stellalisy/mediQ)'

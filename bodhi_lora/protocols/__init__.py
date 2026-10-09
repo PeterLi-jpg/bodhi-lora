@@ -4,20 +4,23 @@
     out = proto.respond(engine, messages, decoding_for(proto, ...))
 
 IMPLS maps a record's impl key to its class:
-  bodhi_llm    BODHI through the bodhi-llm package, with its component ablations
+  bodhi_llm    BODHI through the bodhi-llm package, with its component ablations and
+               section order (red flags first)
   ask_first    a three-question plan, then a reply that asks first
   instruction  one instruction block added to the conversation (the prompt baselines)
+  abstain      a confidence rating, then one question or the answer (MediQ-style)
 build(None, model) is the identity protocol of the plain conditions "base" and "lora".
 """
 from typing import Optional
 
+from bodhi_lora.protocols.abstain import Abstain
 from bodhi_lora.protocols.ask_first import AskFirst
 from bodhi_lora.protocols.base import CallLog, Decoding, Identity, Output, Protocol
 from bodhi_lora.protocols.bodhi_llm import BodhiLLM
 from bodhi_lora.protocols.instruction import Instruction
 from bodhi_lora.registry.schema import ModelConfig, ProtocolConfig
 
-IMPLS = {"bodhi_llm": BodhiLLM, "ask_first": AskFirst, "instruction": Instruction}
+IMPLS = {"bodhi_llm": BodhiLLM, "ask_first": AskFirst, "instruction": Instruction, "abstain": Abstain}
 
 __all__ = ["CallLog", "Decoding", "IMPLS", "Identity", "Output", "Protocol", "build", "decoding_for"]
 
