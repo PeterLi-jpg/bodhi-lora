@@ -13,6 +13,11 @@ Columns:
 - **Paper commit**: the commit that brought `paper/main.tex` in line with the status.
   "pending" means the paper text has not been changed yet.
 
+New runs can change these rows. [ANALYSIS_PLAN.md](ANALYSIS_PLAN.md) section 11 says, before
+any result exists, which result changes which claim and how. When a planned result lands,
+the row changes by that rule, with the commit of the result in the Evidence column, and
+the paper follows in the same pull request.
+
 | # | Claim as first made | Status | Evidence | Basis | Paper commit |
 |---|---|---|---|---|---|
 | 1 | The adapter raises active inquiry and context-seeking without the prompt at inference | live, LLM-graded | `results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_*/grade/epistemic__llama-3.1-8b.json`, `make numbers` | D5, D7 | 99d97ec |
