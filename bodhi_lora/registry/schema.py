@@ -71,7 +71,7 @@ def condition_from_legacy(name: str) -> str:
 
     Those runs (2026-04 to 2026-07) wrote ``<weights>_no_wrapper`` and
     ``<weights>_<protocol>``. Their files were renamed when they moved into the results
-    root (results/PROVENANCE.md), but the rows inside keep the old names, so every
+    root (see its provenance note), but the rows inside keep the old names, so every
     reader of a migrated file maps them with this one rule. A protocol id has hyphens
     where the old names had underscores.
     """

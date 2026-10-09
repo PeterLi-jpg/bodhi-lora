@@ -594,9 +594,9 @@ constants, docstrings and f-string parts. It fails on any of these:
 1. A model `id` or `hf_id` from `configs/models/`, matched case-insensitively as a whole
    token.
 2. A benchmark `id`, an HF dataset id or a source URL from `configs/benchmarks/`.
-3. A results or data path: `results_<word>`, or the `results_root` or `data_root` value
-   of `configs/project.yaml` followed by `/` (so `results/` and `data/raw` fail, while the
-   word "data" in a docstring does not).
+3. A results or data path: `results_<word>` (the config key `results_root` aside), or
+   the `results_root` or `data_root` value of `configs/project.yaml` followed by `/` (so
+   `results/` and `data/raw` fail, while the word "data" in a docstring does not).
 4. A file or folder name under `bodhi_lora/` that contains `modal`, `tpu`, `gcs`,
    `rebuttal`, `submitted`, `posted`, `neurips` or `reviewer`.
 5. A list or tuple literal whose elements are the seed list `42, 7, 13, 99, 101` in any

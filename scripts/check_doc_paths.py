@@ -48,7 +48,7 @@ PENDING.update({k: _ARCHITECTURE for k in (
     "configs/report.yaml",
     "results/*/seed_*/table.csv", "results/*/analysis/stats.json", "results/cross_cell/stats.json",
     "tests/fixtures/protocols/", "tests/fixtures/analysis/", "tests/fixtures/migrate/",
-    "tests/test_no_hardcode.py", "tests/test_manifest_*.py",
+    "tests/test_manifest_*.py",
     "tests/test_analysis_*.py", "tests/test_report_*.py", "tests/test_migration_*.py",
 )})
 # Planned cell records of docs/EXPERIMENTS.md, written when the first author fixes their
