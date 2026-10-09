@@ -1,0 +1,50 @@
+{
+  "cell": "healthbench__medgemma-27b-text__bodhi__2026-05",
+  "completions": {
+    "base": 200,
+    "base+bodhi": 191,
+    "lora": 200,
+    "lora+bodhi": 192
+  },
+  "grade": {
+    "counts": {
+      "base": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "base+bodhi": {
+        "examples": 191,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "lora": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "lora+bodhi": {
+        "examples": 188,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 4
+      }
+    },
+    "file": "results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_7/grade/epistemic__llama-3.1-8b.json",
+    "present": true
+  },
+  "n_examples": {
+    "base": 200,
+    "base+bodhi": 200,
+    "lora": 200,
+    "lora+bodhi": 200
+  },
+  "seed": 7,
+  "sources": {
+    "results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_7/eval/base+bodhi.json": "cc0d270a7df2a432742fc4a1eaaf634a36329f230d19c438c5625e6724db2e60",
+    "results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_7/eval/base.json": "5dedef1d3311171e0c5eaa211b53e9ca6548135a9a7f4a0825607868a699cbaa",
+    "results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_7/eval/lora+bodhi.json": "4dec889386fd326c0793d915e296af5d83ca8a72cfb4147b4b2fdaff08c55a9d",
+    "results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_7/eval/lora.json": "bd3857c610dfe16bc43028029fb6f64a2ea4f27b80d3f940f17ddb2da0260ca8",
+    "results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_7/grade/epistemic__llama-3.1-8b.json": "bdeb9aacdbd6accf12a36bda9516160c98e1509abe72c7d41e00053d044141bc"
+  },
+  "tokenizer": "tokenizer.json of google/medgemma-27b-text-it at 5b667cf2ddcf064085bc90952edb35a0edbfb79c is not in the local Hugging Face cache (fetch it with: huggingface-cli download google/medgemma-27b-text-it tokenizer.json --revision 5b667cf2ddcf064085bc90952edb35a0edbfb79c)"
+}

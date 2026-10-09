@@ -8,6 +8,9 @@
 #   make rebuttal  the submitted cell's analysis/*.json (discrimination, leakage, questions)
 #   make cells     results/cross_cell/*.json: added-cell values, paired tests, tau and recipe
 #                  (needs the ignored host copies in the 2026-07 cells)
+#   make extract   each analyzed cell's seed_*/table.csv from its raw outputs, then make analyze
+#   make analyze   results/<cell>/analysis/stats.json for every cell with tables, and the
+#                  cross-cell statistics once every cell they need has its stats
 #   make kappa     $(MAIN_CELL)/validation/kappa_results.json (needs RATER_FILES)
 #   make derived   the tracked score copies, from the large ignored files they copy
 
@@ -23,7 +26,7 @@ MAIN_CELL ?= results/healthbench__medgemma-27b-text__bodhi__2026-05
 FILTER_TRAIN ?= $(MAIN_CELL)/seed_7/filter/train.jsonl
 POSTED_VALUES ?= rebuttal/posted_values.json
 
-.PHONY: numbers figures paper test smoke check rebuttal cells kappa derived
+.PHONY: numbers figures paper test smoke check rebuttal cells kappa derived extract analyze
 
 numbers: $(HB_HARD)
 	$(PYTHON) scripts/paper_stats.py --healthbench "$(HB_HARD)" --posted-values "$(POSTED_VALUES)"
@@ -56,6 +59,16 @@ check:
 	bash scripts/check_no_secrets.sh
 	$(PYTHON) scripts/check_doc_paths.py
 	$(PYTHON) -m bodhi_lora list cells > /dev/null
+
+# The uniform analysis (docs/ARCHITECTURE.md section 7). extract reads the raw stage
+# outputs, which git ignores except for the 2026-05 cell; analyze reads only the tracked
+# tables, so it runs in CI. Until python -m bodhi_lora report exists, make numbers still
+# writes the paper's numbers.
+extract:
+	$(PYTHON) -m bodhi_lora analyze --all --extract
+
+analyze:
+	$(PYTHON) -m bodhi_lora analyze --all
 
 rebuttal: $(HB_HARD)
 	$(PYTHON) rebuttal/analyses/mimicry_split.py --healthbench "$(HB_HARD)"

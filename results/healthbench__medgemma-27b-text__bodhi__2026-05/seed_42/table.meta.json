@@ -1,0 +1,50 @@
+{
+  "cell": "healthbench__medgemma-27b-text__bodhi__2026-05",
+  "completions": {
+    "base": 200,
+    "base+bodhi": 193,
+    "lora": 200,
+    "lora+bodhi": 189
+  },
+  "grade": {
+    "counts": {
+      "base": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "base+bodhi": {
+        "examples": 193,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "lora": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "lora+bodhi": {
+        "examples": 185,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 4
+      }
+    },
+    "file": "results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_42/grade/epistemic__llama-3.1-8b.json",
+    "present": true
+  },
+  "n_examples": {
+    "base": 200,
+    "base+bodhi": 200,
+    "lora": 200,
+    "lora+bodhi": 200
+  },
+  "seed": 42,
+  "sources": {
+    "results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_42/eval/base+bodhi.json": "55ad888942a6f42aa37acfaba817400b711a60a63669a0ccf57056a6db03995e",
+    "results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_42/eval/base.json": "f05c14929c5a9f4b7ce70928098475e015c64dd3327bac35d60d3e804c1af573",
+    "results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_42/eval/lora+bodhi.json": "9e4b8c407f8de0524454a5591be58180d3b3ff8e9cfea745004d3c603c32f680",
+    "results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_42/eval/lora.json": "617c2ba108c136b690a5949892fc7f73e730bfc5185c9c5239451e153b382c45",
+    "results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_42/grade/epistemic__llama-3.1-8b.json": "f08a54b316b996d3534a06c71314f1edba33dfa88e2d7b065b9b14b6cd4fa2a7"
+  },
+  "tokenizer": "tokenizer.json of google/medgemma-27b-text-it at 5b667cf2ddcf064085bc90952edb35a0edbfb79c is not in the local Hugging Face cache (fetch it with: huggingface-cli download google/medgemma-27b-text-it tokenizer.json --revision 5b667cf2ddcf064085bc90952edb35a0edbfb79c)"
+}
