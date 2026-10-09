@@ -47,10 +47,14 @@ def test_stub_run_writes_every_stage_and_manifest(reg, smoke_run):
     assert json.loads((smoke_run / "shared" / "inputs" / "leakage.json").read_text())["passed"]
     for seed in cell.seeds:
         sd = smoke_run / f"seed_{seed}"
-        for stage in ("traces", "filter", "train", "eval", "grade", "bench"):
+        for stage in ("traces", "filter", "train", "eval", "grade"):
             assert _manifest(sd / stage / "manifest.json")["status"] == "complete", (seed, stage)
-        bench = json.loads((sd / "bench" / "bench.json").read_text())
-        assert set(bench["conditions"]) == set(cell.eval.conditions)
+        if seed in cell.bench.seeds:
+            bench = json.loads((sd / "bench" / "bench.json").read_text())
+            assert set(bench["conditions"]) == set(cell.eval.conditions)
+            assert bench["max_new_tokens"] == cell.eval.max_new_tokens
+        else:
+            assert not (sd / "bench").exists()
         assert (sd / "train" / "adapter_config.json").is_file()
         assert (sd / "train" / "adapter_model.safetensors").is_file()
         assert _manifest(sd / "train" / "manifest.json")["counts"]["global_step"] == 2

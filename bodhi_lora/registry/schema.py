@@ -584,10 +584,14 @@ class Probe(_Record):
 
 
 class Bench(_Record):
-    """Measured time and tokens per condition on a fixed batch of eval prompts."""
+    """Measured time and tokens per condition on a fixed batch of eval prompts. The token
+    limits are the eval's (eval.max_new_tokens, eval.max_new_tokens_per_pass), so the bench
+    times the replies the eval makes."""
 
     n_prompts: PosInt = 50
-    max_new_tokens: PosInt = 512
+    # The seeds whose adapters are timed. Serial timing of every condition is costly, and
+    # a reply's time hardly depends on the training seed, so one seed is the usual choice.
+    seeds: Annotated[list[int], Field(min_length=1)]
     # Skip CUDA-graph capture, as the eval does, so the conditions compare like for like.
     enforce_eager: bool = True
     serving: Serving
@@ -635,6 +639,8 @@ class CellConfig(_Record):
             raise ValueError(f"id {self.id} must start with {self.benchmark}__{self.model}__{self.protocol}")
         if len(set(self.seeds)) != len(self.seeds):
             raise ValueError("seeds repeat")
+        if self.bench is not None and not set(self.bench.seeds) <= set(self.seeds):
+            raise ValueError("bench.seeds must be seeds of the cell")
         uses_lora = any(parse_condition(c)[0] == "lora" for c in self.eval.conditions)
         if self.adapters_from:
             if self.traces or self.filter or self.train or self.traces_from:

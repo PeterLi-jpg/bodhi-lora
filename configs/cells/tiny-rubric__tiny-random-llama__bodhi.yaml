@@ -55,7 +55,7 @@ probe:
   serving: {max_model_len: 1024, max_num_seqs: 4, concurrency: 4, request_timeout_s: 60}
 bench:
   n_prompts: 2
-  max_new_tokens: 32
+  seeds: [1]
   serving: {max_model_len: 1024, max_num_seqs: 1, concurrency: 1, request_timeout_s: 60}
 report:
   label: Smoke test

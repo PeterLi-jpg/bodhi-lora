@@ -227,7 +227,7 @@ def plan(ctx: StageContext, stages: Sequence[str], seeds: Sequence[int],
         if "grade" in stages:
             steps.append(Step("grade", s, done=p.stage(s, "grade") / "epistemic.manifest.json"))
             steps += [judge_step(ctx, s, j) for j in judges]
-        if "bench" in stages and cell.bench:
+        if "bench" in stages and cell.bench and s in cell.bench.seeds:
             steps.append(Step("bench", s, done=p.stage(s, "bench") / "manifest.json"))
     return shared, per_seed
 
