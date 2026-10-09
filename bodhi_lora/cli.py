@@ -11,8 +11,15 @@
         Run a cell (bodhi_lora/pipeline/runner.py). --stub-engine runs every stage on the
         CPU with the stub engine and trains for real; --dry-run also prints the GPU
         commands and skips training.
-    analyze, report
-        The uniform analysis and the paper report; the analysis lane builds them.
+    analyze (<cell> ... | --all) [--extract]
+        The uniform analysis (bodhi_lora/analysis/). --extract first writes each seed's
+        response table from the raw stage outputs (local, ignored by git); without it,
+        analyze reads only the tracked tables. Each cell gets analysis/stats.json; with
+        --all, the cells configs/report.yaml analyzes, then the cross-cell statistics
+        when every cell they need has its stats.json.
+    report
+        The paper report; not built yet. make numbers and make figures write the paper's
+        outputs.
 
 Every command first loads and checks the whole registry, so a broken config fails here
 with every problem listed.
@@ -130,19 +137,46 @@ def cmd_run(args, reg: Registry) -> int:
     return 0
 
 
-def cmd_analysis_lane(args, reg: Registry) -> int:
-    from bodhi_lora import analysis, report
+def cmd_analyze(args, reg: Registry) -> int:
+    from bodhi_lora import analysis
+    from bodhi_lora.analysis.extract import ExtractError
 
-    try:
-        if args.command == "analyze":
-            analysis.analyze_cell(reg, "")
+    if bool(args.cells) == args.all:
+        raise SystemExit("name the cells to analyze, or pass --all")
+    cfg = analysis.report_config(args.configs)
+    proj = project(args.configs)
+    cells = analysis.analyzable(reg, cfg) if args.all else args.cells
+    unknown = sorted(set(cells) - set(reg.cells))
+    if unknown:
+        raise SystemExit(f"no cells {unknown}")
+    skipped = {}
+    for cid in cells:
+        try:
+            if args.extract:
+                analysis.extract(reg, cid, proj, cfg)
+            analysis.analyze_cell(reg, cid, proj, cfg)
+            print(f"{cid}: {proj.rel(proj.cell(cid).analysis() / 'stats.json')}")
+        except (ExtractError, FileNotFoundError) as e:
+            # --all covers cells whose outputs are not in this checkout; a named cell must work.
+            if not args.all:
+                raise SystemExit(f"{cid}: {e}")
+            skipped[cid] = str(e)
+    for cid, why in skipped.items():
+        print(f"{cid}: not analyzed: {why}")
+    if args.all:
+        missing = [c for c in cfg.cross_cells if not (proj.cell(c).analysis() / "stats.json").is_file()]
+        if missing:
+            print(f"cross-cell statistics not run: no stats.json for {missing}")
         else:
-            report.report(reg, {}, Path("paper/generated"))
-    except NotImplementedError as e:
-        print(f"python -m bodhi_lora {args.command}: {e}. Until then, make numbers and "
-              "make figures write the paper's outputs.")
-        return 2
+            analysis.analyze_cross(reg, cfg, proj)
+            print(f"cross-cell: {proj.rel(proj.results_root / 'cross_cell' / 'stats.json')}")
     return 0
+
+
+def cmd_report(args, reg: Registry) -> int:
+    print("python -m bodhi_lora report is not built yet. make numbers and make figures write the "
+          "paper's outputs.")
+    return 2
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -171,9 +205,15 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--force", action="store_true", help="rerun stages whose manifest says complete")
     p.set_defaults(func=cmd_run)
 
-    for name in ("analyze", "report"):
-        p = sub.add_parser(name, help="built by the analysis lane")
-        p.set_defaults(func=cmd_analysis_lane)
+    p = sub.add_parser("analyze", help="the uniform analysis of cells")
+    p.add_argument("cells", nargs="*", help="cell ids")
+    p.add_argument("--all", action="store_true", help="every cell configs/report.yaml analyzes")
+    p.add_argument("--extract", action="store_true",
+                   help="first write the response tables from the raw stage outputs")
+    p.set_defaults(func=cmd_analyze)
+
+    p = sub.add_parser("report", help="the paper report (not built yet)")
+    p.set_defaults(func=cmd_report)
     return ap
 
 
