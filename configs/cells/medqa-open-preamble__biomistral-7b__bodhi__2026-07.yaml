@@ -1,0 +1,56 @@
+# A one-seed smoke run of the 2026-07 launcher at 61dada9 (logs/host/cell_*.log).
+id: medqa-open-preamble__biomistral-7b__bodhi__2026-07
+benchmark: medqa-open-preamble
+split: head-10
+model: biomistral-7b
+protocol: bodhi
+seeds: [42]
+grading:
+  filter: qwen2.5-14b
+  evaluator: llama-3.1-8b-nous
+traces:
+  max_prompts: 40
+  max_new_tokens_per_pass: 2048
+  serving: {max_model_len: 8192, max_num_seqs: 64, concurrency: 32, request_timeout_s: 180}
+filter:
+  # The launcher's rule for non-HealthBench cells: tau 0.4, then the 22nd-percentile tau
+  # when the train split kept less than 40% of the raw traces. No cell met it
+  # (rebuttal/results/cell_recipe.json).
+  tau: {rule: fixed_then_percentile, value: 0.4, percentile: 22, min_kept_share: 0.4}
+  val_ratio: 0.1
+  # One train/val split for every seed.
+  split_policy: once
+  split_seed: 42
+  serving: {max_model_len: 8192, max_num_seqs: 64, concurrency: 16, request_timeout_s: 180}
+train:
+  engine: peft
+  r: 16
+  alpha: 32
+  dropout: 0.05
+  target_modules: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]
+  epochs: 3
+  per_device_batch: 4
+  grad_accum: 4
+  effective_batch: 16
+  lr: 1.0e-4
+  scheduler: cosine
+  warmup_ratio: 0.05
+  max_seq_length: 4096
+  gradient_checkpointing: true
+  checkpoint: best_val_loss
+  eval_every: epoch
+  logging_steps: 10
+  hardware: 1x H100 80GB
+eval:
+  conditions: [base, base+bodhi, lora, lora+bodhi]
+  # The eval pool of the split, one fixed set for every seed, in shared/inputs.
+  ids: {policy: fixed_file, n: 10, file: eval_ids.json}
+  base_precision: model
+  max_new_tokens: 1024
+  max_new_tokens_per_pass: 2048
+  serving: {max_model_len: 8192, max_num_seqs: 64, concurrency: 16, request_timeout_s: 180, drain_s: 30}
+report:
+  label: MedQA with the asking preamble, BioMistral-7B
+  token: MedQAPreBioMistralJul
+  status: partial
+  notes: A one-seed smoke run on the GPU host, with 40 traces, 3 kept, 3 optimizer steps and 10 eval prompts.

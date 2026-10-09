@@ -1,0 +1,9 @@
+# Clinical Llama-3 base of two 2026-07 cells. It shares the evaluator's family (D6).
+id: med42-8b
+hf_id: m42-health/Llama3-Med42-8B
+revision: ceab7e7ee4b9dbde7ba82867f34274db51487d83
+last_modified: "2024-08-20"
+family: llama3
+domain: clinical
+params_b: 8
+license: llama3

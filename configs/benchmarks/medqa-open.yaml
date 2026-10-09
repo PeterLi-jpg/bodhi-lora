@@ -1,0 +1,29 @@
+id: medqa-open
+title: MedQA-USMLE, open-ended (Jin et al., 2021)
+loader: hf_qa
+source:
+  kind: hf
+  dataset: GBaker/MedQA-USMLE-4-options
+  revision: 0fb93dd23a7339b6dcd27e241cb9b5eca62d4d18
+  split: train
+license: see upstream
+audience: clinician
+task: single_best_answer
+rubric: synthesized
+fields:
+  question: [question, sent1, query]
+  answer: [answer, answer_idx, correct, output]
+loader_params:
+  id_text: raw
+  options_field: options
+  reference_max_chars: 400
+  reference_newlines: keep
+# Same prefix as medqa-open-preamble: the ids hash the question only, so the two
+# templates give the same prompt ids.
+id_prefix: medqa
+# The template from 035d85f on: the clinician framing and the question, no cue to ask.
+prompt_template: "You are advising a clinician colleague. Answer the following clinical question.\n\n{question}"
+reference_criterion: "The assistant's final clinical conclusion is consistent with the correct answer: \"{reference}\"."
+tags: ["theme:medqa", "persona:clinician"]
+splits:
+  default: {method: holdout, pool: {select: seeded, size: 5700, seed: 0}, holdout: {select: seeded, size: 1000, seed: 0}}

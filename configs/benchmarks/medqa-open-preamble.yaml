@@ -1,0 +1,34 @@
+id: medqa-open-preamble
+title: MedQA-USMLE, open-ended, with the preamble that cued asking (Jin et al., 2021)
+loader: hf_qa
+source:
+  kind: hf
+  dataset: GBaker/MedQA-USMLE-4-options
+  # HEAD on 2026-10-07, last modified 2023-01-24, before any run.
+  revision: 0fb93dd23a7339b6dcd27e241cb9b5eca62d4d18
+  split: train
+license: see upstream
+audience: clinician
+task: single_best_answer
+rubric: synthesized
+fields:
+  question: [question, sent1, query]
+  answer: [answer, answer_idx, correct, output]
+loader_params:
+  id_text: raw
+  # A mirror may store the answer as an option key; the option text replaces it.
+  options_field: options
+  reference_max_chars: 400
+  reference_newlines: keep
+id_prefix: medqa
+# The template before 035d85f. It told the model to ask, so base active inquiry reached
+# 99% and the cell measured instruction-following (withdrawals W12). Kept to describe
+# the 2026-07 cells; new cells use medqa-open.
+prompt_template: "You are advising a clinician colleague. Answer the following clinical question. Ask for any information you would need before committing, and state your reasoning.\n\n{question}"
+reference_criterion: "The assistant's final clinical conclusion is consistent with the correct answer: \"{reference}\"."
+tags: ["theme:medqa", "persona:clinician"]
+splits:
+  head: {method: holdout, pool: {select: head, size: 4700}, holdout: {select: head, size: 200}}
+  # The one-seed run on BioMistral-7B held out the first 10 rows only.
+  head-10: {method: holdout, pool: {select: head, size: 4700}, holdout: {select: head, size: 10}}
+  default: {method: holdout, pool: {select: seeded, size: 5700, seed: 0}, holdout: {select: seeded, size: 1000, seed: 0}}

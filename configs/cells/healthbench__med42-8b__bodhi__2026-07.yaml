@@ -1,0 +1,56 @@
+# A cell added in the 2026-07 discussion. It ran rebuttal/launch/run_cell.sh at 61dada9;
+# legacy/README.md section 7 lists how its settings differ from the 2026-05 cell.
+id: healthbench__med42-8b__bodhi__2026-07
+benchmark: healthbench
+split: hard
+model: med42-8b
+protocol: bodhi
+seeds: [42, 7, 13, 99, 101]
+grading:
+  filter: qwen2.5-14b
+  evaluator: llama-3.1-8b-nous
+  judges: [gemma-2-27b]
+  same_family_waiver: Run before the family rule existed; the base shares the evaluator's Llama-3 family (D6).
+traces:
+  max_prompts: 4200
+  max_new_tokens_per_pass: 2048
+  serving: {max_model_len: 8192, max_num_seqs: 64, concurrency: 32, request_timeout_s: 180}
+filter:
+  tau: {rule: fixed, value: 0.4}
+  val_ratio: 0.1
+  # One train/val split for every seed.
+  split_policy: once
+  split_seed: 42
+  serving: {max_model_len: 8192, max_num_seqs: 64, concurrency: 16, request_timeout_s: 180}
+train:
+  engine: peft
+  r: 16
+  alpha: 32
+  dropout: 0.05
+  target_modules: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]
+  epochs: 3
+  per_device_batch: 4
+  grad_accum: 4
+  effective_batch: 16
+  lr: 1.0e-4
+  scheduler: cosine
+  warmup_ratio: 0.05
+  max_seq_length: 4096
+  gradient_checkpointing: true
+  checkpoint: best_val_loss
+  eval_every: epoch
+  logging_steps: 10
+  hardware: 1x H100 80GB
+eval:
+  conditions: [base, base+bodhi, lora, lora+bodhi]
+  # data/raw/hard_200_sample_ids.json, one fixed set for every seed, now in the cell's
+  # shared/inputs folder.
+  ids: {policy: fixed_file, n: 200, file: eval_ids.json}
+  base_precision: model
+  max_new_tokens: 1024
+  max_new_tokens_per_pass: 2048
+  serving: {max_model_len: 8192, max_num_seqs: 64, concurrency: 16, request_timeout_s: 180, drain_s: 30}
+report:
+  label: HealthBench-Hard, Med42-8B
+  token: HBMedFortyTwoJul
+  status: complete

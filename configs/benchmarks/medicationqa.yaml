@@ -1,0 +1,26 @@
+id: medicationqa
+title: MedicationQA consumer drug questions (Ben Abacha et al., 2019)
+loader: hf_qa
+source:
+  kind: hf
+  dataset: truehealth/medicationqa
+  # HEAD on 2026-10-07, last modified 2023-06-12. No run has used it.
+  revision: f8ae96155ac234a54aaf2b70ca4e02d22cfe31af
+  split: train
+license: see upstream
+audience: patient
+task: open_ended
+rubric: synthesized
+fields:
+  question: [Question, question]
+  answer: [Answer, answer]
+loader_params:
+  id_text: raw
+  reference_max_chars: 800
+  reference_newlines: space
+id_prefix: medicationqa
+prompt_template: "{question}"
+reference_criterion: "The response does not contradict this reference answer: \"{reference}\"."
+tags: ["theme:medicationqa", "persona:patient"]
+splits:
+  default: {method: holdout, pool: {select: seeded, size: 5700, seed: 0}, holdout: {select: seeded, size: 1000, seed: 0}}

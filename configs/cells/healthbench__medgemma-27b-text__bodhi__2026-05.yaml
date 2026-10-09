@@ -1,0 +1,60 @@
+# The submitted cell. Stages 1 to 3 ran on TPU and stages 4 and 5 on Modal, from the code
+# in legacy/; legacy/README.md sections 2 to 4 give every value below with its source.
+id: healthbench__medgemma-27b-text__bodhi__2026-05
+benchmark: healthbench
+split: hard
+model: medgemma-27b-text
+protocol: bodhi
+seeds: [42, 7, 13, 99, 101]
+grading:
+  filter: qwen2.5-14b
+  evaluator: llama-3.1-8b
+traces:
+  # The launcher set no cap, so all 4,000 prompts of the train pool.
+  max_prompts: 4000
+  max_new_tokens_per_pass: 2048
+  serving: {max_model_len: 8192, max_num_seqs: 64, concurrency: 32, request_timeout_s: 180}
+filter:
+  tau: {rule: fixed, value: 0.4}
+  val_ratio: 0.1
+  # The filter ran once per seed with --seed, so each seed had its own 90/10 split.
+  split_policy: per_seed
+  serving: {max_model_len: 8192, max_num_seqs: 64, concurrency: 16, request_timeout_s: 180}
+train:
+  # tunix on TPU, exported to a PEFT adapter. The adapters were not retained.
+  engine: external
+  record: legacy/README.md section 3
+  r: 8
+  alpha: 16
+  dropout: 0.05
+  # q_einsum and kv_einsum, exported as q, k and v; k and v share one lora_A.
+  target_modules: [q_proj, k_proj, v_proj]
+  max_steps: 300
+  per_device_batch: 1
+  grad_accum: 8
+  # 8 rows per loader yield and 8 yields per update; legacy/README.md section 3 explains
+  # why 64 rests on a config comment.
+  effective_batch: 64
+  lr: 1.0e-4
+  scheduler: constant
+  warmup_ratio: 0.0
+  max_seq_length: 2048
+  gradient_checkpointing: true
+  # The newest complete orbax checkpoint: step 300, or 250 on seeds 7, 99 and 101.
+  checkpoint: last
+  eval_every: steps
+  eval_steps: 50
+  hardware: 1x TPU v6e-8 per seed
+eval:
+  conditions: [base, base+bodhi, lora, lora+bodhi]
+  # random.Random(seed).sample(200) of the 1,000 Hard prompts, per seed.
+  ids: {policy: per_seed_draw, n: 200}
+  base_precision: model
+  max_new_tokens: 1024
+  max_new_tokens_per_pass: 2048
+  serving: {max_model_len: 4096, max_num_seqs: 32, concurrency: 32, request_timeout_s: 900, drain_s: 0}
+report:
+  label: HealthBench-Hard, MedGemma-27B
+  token: HBMedGemmaMay
+  status: complete
+  notes: The adapters were trained on TPU and not retained, so new experiments on this base need a new cell.

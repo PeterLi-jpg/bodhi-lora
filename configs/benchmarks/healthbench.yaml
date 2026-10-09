@@ -1,0 +1,68 @@
+id: healthbench
+title: HealthBench (Arora et al., 2025)
+loader: rubric_jsonl
+source:
+  kind: url
+  # sha256 of the copies setup.sh downloaded; the loader refuses a file that differs.
+  files:
+    full:
+      url: "https://openaipublic.blob.core.windows.net/simple-evals/healthbench/2025-05-07-06-14-12_oss_eval.jsonl"
+      sha256: e99dd3c6372c10d6fcc5e385c5fae69d0dd40392dae56836ef9493ae324ecd2f
+    hard:
+      url: "https://openaipublic.blob.core.windows.net/simple-evals/healthbench/hard_2025-05-08-21-00-10.jsonl"
+      sha256: b0320430e5cd974e746585594c1dd10b5a3fc2aff9c72b26106c2c4a069d74e9
+license: MIT
+audience: mixed
+task: open_ended
+rubric: native
+splits:
+  # The split of the 2026-05 and 2026-07 cells: evaluate on Hard (1,000 rows), train on
+  # the other 4,000 rows of the full set. Hard is a subset of the full set.
+  hard: {method: named_files, eval_file: hard, train_file: full}
+  # The 2026-04 pilot ran before Hard was held out: only its 200 eval ids left the
+  # train pool, so it trained on 800 Hard prompts.
+  pilot: {method: eval_ids_only, eval_file: hard, train_file: full}
+  # Proposed for new cells (EXPERIMENTS.md E13, to fix in the analysis plan). The
+  # emergency-labelled prompts (both groups) and the clinician-user prompts leave the
+  # train pool (397 + 282 of its 4,000 rows) and form the probe pool. Cells still draw
+  # eval ids from Hard unless eval.ids.only says so.
+  default:
+    method: named_files
+    eval_file: hard
+    train_file: full
+    hold_out:
+      - {label: emergent-physician}
+      - {label: clinician-user, groups: [positive]}
+labels:
+  needs-info-physician:
+    description: HealthBench physicians agreed that the prompt lacks the context or information a safe reply needs
+    source: HealthBench physician-agreed categories
+    timing: pre_specified
+    positive_tags: ["physician_agreed_category:not-enough-context", "physician_agreed_category:not-enough-info-to-complete-task", "physician_agreed_category:context-matters-but-unclear"]
+    negative_tags: ["physician_agreed_category:enough-context", "physician_agreed_category:enough-info-to-complete-task", "physician_agreed_category:context-matters-is-clear", "physician_agreed_category:context-does-not-matter"]
+  emergent-physician:
+    description: HealthBench physicians agreed that the case is emergent or conditionally emergent (positive) or not emergent (negative)
+    source: HealthBench physician-agreed categories
+    timing: pre_specified
+    positive_tags: ["physician_agreed_category:emergent", "physician_agreed_category:conditionally-emergent"]
+    negative_tags: ["physician_agreed_category:non-emergent"]
+  clinician-user:
+    description: HealthBench physicians agreed that the user is a health professional
+    source: HealthBench physician-agreed categories
+    timing: pre_specified
+    positive_tags: ["physician_agreed_category:health-professional"]
+    negative_tags: ["physician_agreed_category:not-health-professional"]
+  needs-info-theme:
+    description: the context_seeking theme tag only (the theme-only labelling of the 2026-07 discussion)
+    source: HealthBench theme tags
+    timing: post_hoc
+    positive_tags: ["theme:context_seeking"]
+  needs-info-theme-or-rubric:
+    description: >-
+      the context_seeking theme tag, or a rubric criterion that rewards asking for more
+      information (the primary labelling of the 2026-07 discussion,
+      rebuttal/analyses/mimicry_split.py)
+    source: HealthBench theme tags and the authors' keyword rule over rubric text
+    timing: post_hoc
+    positive_tags: ["theme:context_seeking"]
+    rubric_pattern: "(?i)\\b(ask(s|ing)?|clarif\\w*|follow[- ]?up|more (information|context|detail)|additional (information|context|detail)|missing (information|context)|request(s|ing)? (more|additional)|gather\\w* (more|additional|context)|what (information|else)|need(s|ed)? (more|additional|to know))\\b"

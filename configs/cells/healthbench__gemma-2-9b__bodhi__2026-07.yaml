@@ -1,0 +1,28 @@
+# A 2026-07 run that stopped in trace generation and left no folder.
+id: healthbench__gemma-2-9b__bodhi__2026-07
+benchmark: healthbench
+split: hard
+model: gemma-2-9b
+protocol: bodhi
+seeds: [42, 7, 13, 99, 101]
+grading:
+  filter: qwen2.5-14b
+  evaluator: llama-3.1-8b-nous
+traces:
+  max_prompts: 4200
+  max_new_tokens_per_pass: 2048
+  serving: {max_model_len: 8192, max_num_seqs: 64, concurrency: 32, request_timeout_s: 180}
+eval:
+  conditions: [base, base+bodhi, lora, lora+bodhi]
+  # data/raw/hard_200_sample_ids.json, one fixed set for every seed, now in the cell's
+  # shared/inputs folder.
+  ids: {policy: fixed_file, n: 200, file: eval_ids.json}
+  base_precision: model
+  max_new_tokens: 1024
+  max_new_tokens_per_pass: 2048
+  serving: {max_model_len: 8192, max_num_seqs: 64, concurrency: 16, request_timeout_s: 180, drain_s: 30}
+report:
+  label: HealthBench-Hard, Gemma-2-9B
+  token: HBGemmaTwoNineJul
+  status: not_run
+  notes: Killed while vLLM was starting in trace generation; it left logs and no results folder. No training config was recorded.

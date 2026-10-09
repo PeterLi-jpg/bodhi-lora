@@ -1,0 +1,8 @@
+# A second teaching protocol. No run has used it yet.
+id: ask-first
+title: 'Ask-first: a three-question plan, then a reply that asks first'
+kind: wrapper
+impl: ask_first
+passes: 1
+reference: 'Second teaching protocol of this repo (EXPERIMENTS.md E16); one call, the reply
+  after a REPLY: line'

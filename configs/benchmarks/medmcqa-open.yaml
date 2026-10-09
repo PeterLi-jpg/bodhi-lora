@@ -1,0 +1,28 @@
+id: medmcqa-open
+title: MedMCQA, open-ended (Pal et al., 2022)
+loader: hf_qa
+source:
+  kind: hf
+  dataset: openlifescienceai/medmcqa
+  # HEAD on 2026-10-07, last modified 2024-01-04. No run has used it.
+  revision: 91c6572c454088bf71b679ad90aa8dffcd0d5868
+  split: train
+license: see upstream
+audience: clinician
+task: single_best_answer
+rubric: synthesized
+fields:
+  question: [question]
+loader_params:
+  id_text: raw
+  # The answer is choice_fields[int(row[choice_index_field])].
+  choice_fields: [opa, opb, opc, opd]
+  choice_index_field: cop
+  reference_max_chars: 300
+  reference_newlines: keep
+id_prefix: medmcqa
+prompt_template: "You are advising a clinician colleague. Answer the following clinical question.\n\n{question}"
+reference_criterion: "The assistant's final conclusion is consistent with the correct answer: \"{reference}\"."
+tags: ["theme:medmcqa", "persona:clinician"]
+splits:
+  default: {method: holdout, pool: {select: seeded, size: 5700, seed: 0}, holdout: {select: seeded, size: 1000, seed: 0}}

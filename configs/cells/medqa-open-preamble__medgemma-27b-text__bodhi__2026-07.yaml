@@ -1,0 +1,60 @@
+# A 2026-07 cell that never ran past trace generation. Its settings are what the launcher
+# would have used.
+id: medqa-open-preamble__medgemma-27b-text__bodhi__2026-07
+benchmark: medqa-open-preamble
+split: head
+model: medgemma-27b-text
+protocol: bodhi
+seeds: [42, 7, 13, 99, 101]
+grading:
+  filter: qwen2.5-14b
+  evaluator: llama-3.1-8b-nous
+traces:
+  max_prompts: 4200
+  max_new_tokens_per_pass: 2048
+  serving: {max_model_len: 8192, max_num_seqs: 64, concurrency: 32, request_timeout_s: 180}
+filter:
+  # The launcher's rule for non-HealthBench cells: tau 0.4, then the 22nd-percentile tau
+  # when the train split kept less than 40% of the raw traces. No cell met it
+  # (rebuttal/results/cell_recipe.json).
+  tau: {rule: fixed_then_percentile, value: 0.4, percentile: 22, min_kept_share: 0.4}
+  val_ratio: 0.1
+  # One train/val split for every seed.
+  split_policy: once
+  split_seed: 42
+  serving: {max_model_len: 8192, max_num_seqs: 64, concurrency: 16, request_timeout_s: 180}
+train:
+  # configs/lora_medgemma27b_qlora.yaml, which run_grid.sh passed for MedGemma.
+  engine: peft
+  quantization: 4bit
+  r: 16
+  alpha: 32
+  dropout: 0.05
+  target_modules: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]
+  epochs: 3
+  per_device_batch: 1
+  grad_accum: 16
+  effective_batch: 16
+  lr: 1.0e-4
+  scheduler: cosine
+  warmup_ratio: 0.05
+  max_seq_length: 4096
+  gradient_checkpointing: true
+  checkpoint: best_val_loss
+  eval_every: epoch
+  logging_steps: 10
+  hardware: 1x H100 80GB
+eval:
+  conditions: [base, base+bodhi, lora, lora+bodhi]
+  # The eval pool of the split, one fixed set for every seed, in shared/inputs.
+  ids: {policy: fixed_file, n: 200, file: eval_ids.json}
+  base_precision: model
+  base_precision_reason: The launcher served every base in bf16; the run stopped before training, so no adapter met it.
+  max_new_tokens: 1024
+  max_new_tokens_per_pass: 2048
+  serving: {max_model_len: 8192, max_num_seqs: 64, concurrency: 16, request_timeout_s: 180, drain_s: 30}
+report:
+  label: MedQA with the asking preamble, MedGemma-27B
+  token: MedQAPreMedGemmaJul
+  status: not_run
+  notes: vLLM did not start within 2,700 s in trace generation; only eval_ids.json was written.

@@ -1,0 +1,11 @@
+# The old GPU smoke model (configs/lora_gemma_smoke.yaml). No reported number uses it.
+id: gemma-3n-e4b
+hf_id: google/gemma-3n-E4B-it
+revision: c1221e9c62e34a43ab7ffacd1be0ea71f126ef10
+last_modified: "2025-07-14"
+family: gemma
+domain: general
+# Effective parameters; the checkpoint holds about 8B.
+params_b: 4
+gated: true
+license: gemma

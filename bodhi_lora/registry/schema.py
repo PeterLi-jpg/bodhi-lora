@@ -142,7 +142,26 @@ class UrlSource(_Record):
     files: dict[RegistryId, UrlFile]
 
 
-Source = Annotated[Union[HfSource, UrlSource], Field(discriminator="kind")]
+class LocalFile(_Record):
+    # Relative to the repository root, so a fixture benchmark works in any checkout.
+    path: Annotated[str, StringConstraints(pattern=r"^[A-Za-z0-9._/-]+$")]
+    sha256: Sha256
+
+    @model_validator(mode="after")
+    def _relative(self) -> "LocalFile":
+        if self.path.startswith("/") or ".." in self.path.split("/"):
+            raise ValueError("path must be relative to the repository root and stay inside it")
+        return self
+
+
+class LocalSource(_Record):
+    """Files in the repository, for test and smoke benchmarks."""
+
+    kind: Literal["local"]
+    files: dict[RegistryId, LocalFile]
+
+
+Source = Annotated[Union[HfSource, UrlSource, LocalSource], Field(discriminator="kind")]
 
 
 class Draw(_Record):
@@ -173,6 +192,9 @@ class SplitRule(_Record):
 
     named_files: the eval pool is every row of source file `eval_file`, and the train
         pool is every row of `train_file` that is not in the eval pool.
+    eval_ids_only: the eval pool is the cell's fixed eval ids, and the train pool is
+        every other row of `train_file` and `eval_file`. It records a run made before
+        the eval file was held out of training; no new cell should use it.
     holdout: `pool` draws rows from the source, `holdout` draws the eval pool from
         those rows, and the rest of the pool is the train pool.
     With either method, the rows of the label groups listed in `hold_out` leave the
@@ -181,7 +203,7 @@ class SplitRule(_Record):
     eval ids name label groups (EvalIds.only).
     """
 
-    method: Literal["named_files", "holdout"]
+    method: Literal["named_files", "eval_ids_only", "holdout"]
     eval_file: Optional[RegistryId] = None
     train_file: Optional[RegistryId] = None
     pool: Optional[Draw] = None
@@ -192,8 +214,9 @@ class SplitRule(_Record):
     def _fields_match_method(self) -> "SplitRule":
         named = self.eval_file is not None and self.train_file is not None
         drawn = self.pool is not None and self.holdout is not None
-        if self.method == "named_files" and not (named and self.pool is None and self.holdout is None):
-            raise ValueError("method named_files needs eval_file and train_file, and no pool or holdout")
+        if self.method in ("named_files", "eval_ids_only") and not (
+                named and self.pool is None and self.holdout is None):
+            raise ValueError(f"method {self.method} needs eval_file and train_file, and no pool or holdout")
         if self.method == "holdout" and not (drawn and self.eval_file is None and self.train_file is None):
             raise ValueError("method holdout needs pool and holdout, and no eval_file or train_file")
         return self
@@ -283,7 +306,7 @@ class BenchmarkConfig(_Record):
             missing = [h.label for h in rule.hold_out if h.label not in self.labels]
             if missing:
                 raise ValueError(f"split {name}: hold_out labels not defined in labels: {missing}")
-            if isinstance(self.source, UrlSource) and rule.method == "named_files":
+            if isinstance(self.source, (UrlSource, LocalSource)) and rule.eval_file is not None:
                 unknown = {rule.eval_file, rule.train_file} - set(self.source.files)
                 if unknown:
                     raise ValueError(f"split {name}: files not in source.files: {sorted(unknown)}")
@@ -345,9 +368,22 @@ class Grading(_Record):
     # Extra graders over the stored eval responses (robustness panel, cross-family
     # re-grade). They never change the evaluator's scores.
     judges: list[RegistryId] = Field(default_factory=list)
-    # Reason for running a cell that breaks the family rule. The cell is then
-    # marked in every table and needs a judge from a fourth family.
+    # Reason for a cell that breaks the family rule (R1 or R2). The cell is then marked in
+    # every table, and a cell with outputs to judge needs a judge from a fourth family.
     same_family_waiver: Optional[str] = None
+
+
+class Serving(_Record):
+    """vLLM serving settings of one engine: the model under test or a grader."""
+
+    max_model_len: PosInt
+    # Scheduler slots on the server.
+    max_num_seqs: PosInt
+    # Client threads that send requests to it.
+    concurrency: PosInt
+    request_timeout_s: PosInt
+    # Pause between two engines. Only the old TPU runtime needed one.
+    drain_s: Annotated[float, Field(ge=0)] = 0.0
 
 
 class Traces(_Record):
@@ -356,9 +392,9 @@ class Traces(_Record):
     temperature: Annotated[float, Field(ge=0)] = 0.0
     top_p: Share = 1.0
     seed: int = 0
-    max_model_len: PosInt
-    max_num_seqs: PosInt
     max_new_tokens_per_pass: PosInt
+    # The teacher's engine.
+    serving: Serving
 
     @model_validator(mode="after")
     def _decoding(self) -> "Traces":
@@ -403,6 +439,8 @@ class Filter(_Record):
     # once: one train/val split shared by every seed. per_seed: the seed shuffles it.
     split_policy: Literal["once", "per_seed"]
     split_seed: Optional[int] = None
+    # The filter grader's engine.
+    serving: Serving
 
     @model_validator(mode="after")
     def _split_seed(self) -> "Filter":
@@ -434,6 +472,11 @@ class Train(_Record):
     gradient_checkpointing: bool = False
     # Which checkpoint becomes the seed's adapter.
     checkpoint: Literal["best_val_loss", "last"]
+    # When validation loss is measured and a checkpoint saved: each epoch, or every
+    # eval_steps optimizer steps.
+    eval_every: Literal["epoch", "steps"] = "epoch"
+    eval_steps: Optional[PosInt] = None
+    logging_steps: PosInt = 10
     hardware: str
 
     @model_validator(mode="after")
@@ -446,6 +489,8 @@ class Train(_Record):
             raise ValueError("effective_batch must equal per_device_batch * grad_accum on one GPU")
         if self.method == "dora" and self.quantization:
             raise ValueError("DoRA does not work on a quantized base")
+        if (self.eval_every == "steps") != (self.eval_steps is not None):
+            raise ValueError("eval_every steps needs eval_steps; epoch takes none")
         return self
 
 
@@ -468,16 +513,6 @@ class EvalIds(_Record):
         return self
 
 
-class Serving(_Record):
-    """vLLM serving settings, shared by the model under test and the graders."""
-
-    max_model_len: PosInt
-    max_num_seqs: PosInt
-    concurrency: PosInt
-    request_timeout_s: PosInt
-    drain_s: Annotated[float, Field(ge=0)] = 0.0
-
-
 class Eval(_Record):
     conditions: Annotated[list[str], Field(min_length=1)]
     ids: EvalIds
@@ -496,6 +531,34 @@ class Eval(_Record):
         if len(set(self.conditions)) != len(self.conditions):
             raise ValueError("conditions repeat")
         return self
+
+
+class Probe(_Record):
+    """Contamination probe: does the base complete benchmark prompts verbatim more often
+    than control text it should not have memorised?"""
+
+    # The benchmark whose rows give the control text.
+    control: RegistryId
+    n_prompts: PosInt = 100
+    prefix_tokens: PosInt = 30
+    continuation_tokens: PosInt = 50
+    seed: int = 0
+    serving: Serving
+
+
+class Bench(_Record):
+    """Measured time and tokens per condition on a fixed batch of eval prompts."""
+
+    n_prompts: PosInt = 50
+    max_new_tokens: PosInt = 512
+    # Skip CUDA-graph capture, as the eval does, so the conditions compare like for like.
+    enforce_eager: bool = True
+    serving: Serving
+
+
+# Statuses of a cell that records a past run. `run` refuses them: a new run of the same
+# design is a new cell with its own tag, so outputs never mix.
+RECORD_STATUSES = ("complete", "partial", "not_run", "pilot")
 
 
 class Report(_Record):
@@ -524,6 +587,8 @@ class CellConfig(_Record):
     filter: Optional[Filter] = None
     train: Optional[Train] = None
     eval: Eval
+    probe: Optional[Probe] = None
+    bench: Optional[Bench] = None
     report: Report
 
     @model_validator(mode="after")
@@ -537,7 +602,9 @@ class CellConfig(_Record):
         if self.adapters_from:
             if self.traces or self.filter or self.train or self.traces_from:
                 raise ValueError("an adapters_from cell takes no traces, traces_from, filter or train")
-        elif uses_lora:
+        elif uses_lora and self.report.status not in ("not_run", "pilot"):
+            # A run that stopped early, or a pilot whose settings were not kept, may leave
+            # out the blocks it never ran or never recorded.
             if self.train is None or self.filter is None:
                 raise ValueError("lora conditions need train and filter")
             if (self.traces is None) == (self.traces_from is None):
@@ -548,6 +615,35 @@ class CellConfig(_Record):
             # full-precision one (audit REPRO-12). Allowed only with a stated reason.
             raise ValueError("train.quantization with eval.base_precision model needs base_precision_reason")
         return self
+
+
+# ---------------------------------------------------------------------------
+# Project settings (configs/project.yaml)
+# ---------------------------------------------------------------------------
+
+# A path inside the repository, written relative to its root.
+RepoPath = Annotated[str, StringConstraints(pattern=r"^[A-Za-z0-9_.][A-Za-z0-9_./-]*$")]
+
+
+class Interpreters(_Record):
+    """The Python of each environment.
+
+    Training needs a newer transformers than the vLLM release that serves the models
+    allows, so training and inference run in two environments (requirements.txt and
+    requirements-infer.txt). CPU dry runs use the current interpreter instead.
+    """
+
+    train: RepoPath
+    infer: RepoPath
+
+
+class ProjectConfig(_Record):
+    results_root: RepoPath
+    data_root: RepoPath
+    python: Interpreters
+    # Each GPU stage serves on port vllm_port_base + its GPU index, so stages on
+    # different GPUs never collide.
+    vllm_port_base: PosInt = 8000
 
 
 # ---------------------------------------------------------------------------
@@ -576,8 +672,10 @@ def family_problems(cell: CellConfig, reg: Registry) -> list[str]:
 
     R1  the filter and the evaluator come from different families;
     R2  neither the base model nor the teacher shares a family with the filter or the
-        evaluator, unless grading.same_family_waiver gives a reason, and then
-    R2b at least one judge comes from a family outside all four;
+        evaluator;
+        grading.same_family_waiver can waive R1 and R2 with a reason, and then
+    R2b a planned, complete or partial cell lists a judge from a family outside all four
+        (a pilot or a run that stopped early enters no table, so it needs none);
     R3  no judge shares a family with the base model, the teacher or the filter, and
         no judge is the evaluator itself.
     Assumes every referenced model exists; validate_registry checks that first.
@@ -587,13 +685,15 @@ def family_problems(cell: CellConfig, reg: Registry) -> list[str]:
     base, teacher = fam[cell.model], reg.teacher(cell).family
     filt, ev = fam[g.filter], fam[g.evaluator]
     out = []
-    if filt == ev:
-        out.append(f"R1: filter {g.filter} and evaluator {g.evaluator} share family {filt}")
+    if filt == ev and not g.same_family_waiver:
+        out.append(f"R1: filter {g.filter} and evaluator {g.evaluator} share family {filt}; "
+                   "add grading.same_family_waiver with a reason, or change the cell")
     shared = sorted({base, teacher} & {filt, ev})
     if shared and not g.same_family_waiver:
         out.append(f"R2: base or teacher shares family {shared} with a grader; "
                    "add grading.same_family_waiver with a reason, or change the cell")
-    if shared and g.same_family_waiver:
+    has_outputs = cell.report.status in ("planned", "complete", "partial")
+    if (shared or filt == ev) and g.same_family_waiver and has_outputs:
         outside = {base, teacher, filt, ev}
         if not any(fam[j] not in outside for j in g.judges):
             out.append("R2b: same_family_waiver needs a judge from a family outside "
@@ -621,6 +721,8 @@ def validate_registry(reg: Registry) -> None:
                  for c in cell.eval.conditions for p in [parse_condition(c)[1]] if p]
         refs += [(name, other, reg.cells) for name, other in
                  (("adapters_from", cell.adapters_from), ("traces_from", cell.traces_from)) if other]
+        if cell.probe:
+            refs.append(("probe.control", cell.probe.control, reg.benchmarks))
         missing = [f"{what} {ref!r} has no record" for what, ref, table in refs if ref not in table]
         for m in missing:
             bad(m)
@@ -629,6 +731,8 @@ def validate_registry(reg: Registry) -> None:
         bench = reg.benchmarks[cell.benchmark]
         if cell.split not in bench.splits:
             bad(f"split {cell.split!r} is not a split of benchmark {cell.benchmark}")
+        elif bench.splits[cell.split].method == "eval_ids_only" and cell.eval.ids.policy != "fixed_file":
+            bad(f"split {cell.split} takes its eval pool from the eval ids, so eval.ids.policy must be fixed_file")
         for g in cell.eval.ids.only:
             if g.label not in bench.labels:
                 bad(f"eval.ids.only label {g.label!r} is not a label of benchmark {cell.benchmark}")

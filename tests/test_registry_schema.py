@@ -61,15 +61,16 @@ PROTOCOLS = [
 ]
 
 SERVING = {"max_model_len": 4096, "max_num_seqs": 32, "concurrency": 32, "request_timeout_s": 900}
+GRADER_SERVING = {"max_model_len": 8192, "max_num_seqs": 64, "concurrency": 16, "request_timeout_s": 180}
 
 CELL = {
     "id": "rubric-bench__base-24b__bodhi",
     "benchmark": "rubric-bench", "model": "base-24b", "protocol": "bodhi",
     "seeds": [42, 7, 13, 99, 101],
     "grading": {"filter": "filter-14b", "evaluator": "eval-8b", "judges": ["judge-27b"]},
-    "traces": {"max_prompts": 4200, "max_model_len": 8192, "max_num_seqs": 64,
-               "max_new_tokens_per_pass": 2048},
-    "filter": {"tau": {"rule": "fixed", "value": 0.4}, "split_policy": "per_seed"},
+    "traces": {"max_prompts": 4200, "max_new_tokens_per_pass": 2048, "serving": GRADER_SERVING},
+    "filter": {"tau": {"rule": "fixed", "value": 0.4}, "split_policy": "per_seed",
+               "serving": GRADER_SERVING},
     "train": {"engine": "peft", "quantization": "4bit", "r": 16, "alpha": 32, "dropout": 0.05,
               "target_modules": ["q_proj", "k_proj", "v_proj"], "epochs": 3, "per_device_batch": 2,
               "grad_accum": 8, "effective_batch": 16, "lr": 1.0e-4, "scheduler": "cosine",
@@ -123,6 +124,8 @@ def test_parse_condition():
     ({"filter.tau": {"rule": "fixed"}}, "takes exactly"),
     ({"train.grad_accum": 4}, "effective_batch"),
     ({"eval.ids": {"policy": "fixed_file", "n": 200}}, "needs file"),
+    ({"train.eval_every": "steps"}, "needs eval_steps"),
+    ({"filter.serving": None}, "filter.serving"),
 ])
 def test_cell_record_refuses(changes, message):
     with pytest.raises(pydantic.ValidationError, match=message):
@@ -141,6 +144,47 @@ def test_family_rule_same_family_base_needs_waiver():
         validate_registry(registry([waived], models))
     regraded = edited(waived, **{"grading.judges": ["judge-27b"]})
     validate_registry(registry([regraded], models))
+
+
+def test_family_rule_waiver_covers_r1_and_records_without_outputs():
+    # A filter and evaluator from one family break R1. A waiver records the reason; a
+    # pilot needs no judge because it enters no table, but a complete cell does.
+    models = MODELS + [model("qwen-eval-14b", "qwen2")]
+    cell = edited(CELL, **{"grading.evaluator": "qwen-eval-14b", "grading.judges": []})
+    with pytest.raises(RegistryError, match="R1"):
+        validate_registry(registry([cell], models))
+    waived = edited(cell, **{"grading.same_family_waiver": "pilot before the design"})
+    with pytest.raises(RegistryError, match="R2b"):
+        validate_registry(registry([edited(waived, **{"report.status": "complete"})], models))
+    validate_registry(registry([edited(waived, **{"report.status": "pilot"})], models))
+
+
+def test_records_that_stopped_early_may_omit_stage_blocks():
+    stopped = edited(CELL, train=None, filter=None, **{"report.status": "not_run"})
+    validate_registry(registry([stopped]))
+    with pytest.raises(pydantic.ValidationError, match="lora conditions need train"):
+        CellConfig.model_validate(edited(stopped, **{"report.status": "complete"}))
+
+
+def test_eval_ids_only_split_needs_fixed_eval_ids():
+    bench = edited(BENCHMARK, **{"splits.pilot": {"method": "eval_ids_only", "eval_file": "hard",
+                                                  "train_file": "full"}})
+    cell = edited(CELL, split="pilot")
+    reg = Registry(models=registry().models, protocols=registry().protocols,
+                   benchmarks={"rubric-bench": BenchmarkConfig.model_validate(bench)},
+                   cells={cell["id"]: CellConfig.model_validate(cell)})
+    with pytest.raises(RegistryError, match="fixed_file"):
+        validate_registry(reg)
+
+
+def test_local_source_paths_stay_in_the_repo():
+    local = {"kind": "local", "files": {"rows": {"path": "tests/fixtures/x.jsonl", "sha256": "c" * 64}}}
+    bench = edited(BENCHMARK, source=local, splits={"default": {
+        "method": "holdout", "pool": {"select": "all"}, "holdout": {"select": "head", "size": 2}}})
+    BenchmarkConfig.model_validate(bench)
+    for bad in ("/etc/passwd", "../outside.jsonl"):
+        with pytest.raises(pydantic.ValidationError):
+            BenchmarkConfig.model_validate(edited(bench, **{"source.files.rows.path": bad}))
 
 
 def test_family_rule_judges():

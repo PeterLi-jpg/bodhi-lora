@@ -265,10 +265,14 @@ grading:
   filter: qwen2.5-14b
   evaluator: llama-3.1-8b
   judges: [medgemma-27b-text, meditron3-8b]
-traces: {max_prompts: 4200, max_model_len: 8192, max_num_seqs: 64, max_new_tokens_per_pass: 2048}
+traces:
+  max_prompts: 4200
+  max_new_tokens_per_pass: 2048
+  serving: {max_model_len: 8192, max_num_seqs: 64, concurrency: 32, request_timeout_s: 180}
 filter:
   tau: {rule: fixed, value: 0.4}
   split_policy: per_seed
+  serving: {max_model_len: 8192, max_num_seqs: 64, concurrency: 16, request_timeout_s: 180}
 train:
   engine: peft
   quantization: 4bit

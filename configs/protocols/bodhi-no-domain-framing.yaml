@@ -1,0 +1,40 @@
+# A BODHI component ablation. No run has used it.
+id: bodhi-no-domain-framing
+title: BODHI with the general-domain prompt in place of the medical one
+kind: wrapper
+impl: bodhi_llm
+package: bodhi-llm==0.1.4
+passes: 2
+params:
+  # Which component to remove from the medical prompt (bodhi_llm.ABLATIONS); none is the
+  # full protocol.
+  ablate: no_domain_framing
+leak_rules:
+  analysis-format:
+    description: 'two or more of the nine analysis-format markers: the seven pass-1 section
+      headers of bodhi-llm 0.1.4, plus DIFFERENTIAL and SCOPE OF/BOUNDAR, which leaked replies
+      often continue into (the posted 54.6% used all nine)'
+    markers:
+    - TASK TYPE
+    - KEY UNCERTAINT
+    - SAFE RECOMMENDATION
+    - 'RED FLAGS?\s*:'
+    - WHAT I THINK
+    - QUESTIONS TO ASK
+    - 'AUDIENCE\s*:'
+    - DIFFERENTIAL
+    - SCOPE (OF|BOUNDAR)
+    threshold: 2
+  pass1-headers:
+    description: two or more of the seven pass-1 section headers only (audit NUM-4)
+    markers:
+    - TASK TYPE
+    - KEY UNCERTAINT
+    - SAFE RECOMMENDATION
+    - 'RED FLAGS?\s*:'
+    - WHAT I THINK
+    - QUESTIONS TO ASK
+    - 'AUDIENCE\s*:'
+    threshold: 2
+reference: 'BODHI (bodhi-llm 0.1.4, https://github.com/sebasmos/bodhi-llms): pass 1 writes
+  an analysis, pass 2 writes the reply from it; component ablation (EXPERIMENTS.md E26)'

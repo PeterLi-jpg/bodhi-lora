@@ -1,0 +1,12 @@
+# The default cross-family judge for the Med42-8B cells (decision D6).
+id: gemma-2-27b
+hf_id: google/gemma-2-27b-it
+revision: aaf20e6b9f4c0fcf043f6fb2a2068419086d77b0
+last_modified: "2024-08-27"
+family: gemma
+domain: general
+params_b: 27
+chat_template:
+  system_role: false
+gated: true
+license: gemma

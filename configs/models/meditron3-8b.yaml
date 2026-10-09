@@ -1,0 +1,12 @@
+# Clinical judge candidate (EXPERIMENTS.md E10).
+id: meditron3-8b
+hf_id: OpenMeditron/Meditron3-8B
+revision: null
+unpinned_reason: >-
+  Gated repo; the token in use had no access, so the revision could not be read
+  (BLOCKED.md item 12).
+family: llama3
+domain: clinical
+params_b: 8
+gated: true
+license: see upstream

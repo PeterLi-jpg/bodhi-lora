@@ -1,0 +1,9 @@
+# The general twin of BioMistral-7B (EXPERIMENTS.md E21). No run has used it.
+id: mistral-7b-instruct
+hf_id: mistralai/Mistral-7B-Instruct-v0.3
+revision: c170c708c41dac9275d15a8fff4eca08d52bab71
+last_modified: "2025-12-03"
+family: mistral
+domain: general
+params_b: 7
+license: apache-2.0

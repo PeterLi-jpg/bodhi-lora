@@ -1,0 +1,14 @@
+id: mistral-small-24b
+hf_id: mistralai/Mistral-Small-24B-Instruct-2501
+revision: 9527884be6e5616bdd54de542f9ae13384489724
+last_modified: "2025-07-28"
+family: mistral
+domain: general
+params_b: 24
+chat_template:
+  # The [INST] ... [/INST] template has no assistant header to detect.
+  response_template: "[/INST]"
+  # The model card asks for it; without it the tekken tokenizer warns of, and
+  # applies, incorrect tokenization.
+  tokenizer_kwargs: {fix_mistral_regex: true}
+license: apache-2.0

@@ -1,0 +1,14 @@
+# Clinical Mistral base of a 2026-07 cell (continued pretraining of Mistral-7B-Instruct
+# on PubMed Central).
+id: biomistral-7b
+hf_id: BioMistral/BioMistral-7B
+revision: 9a11e1ffa817c211cbb52ee1fb312dc6b61b40a5
+last_modified: "2024-02-21"
+family: mistral
+domain: clinical
+params_b: 7
+chat_template:
+  # The template raises on a system message.
+  system_role: false
+  response_template: "[/INST]"
+license: apache-2.0

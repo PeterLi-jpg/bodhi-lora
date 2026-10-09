@@ -1,0 +1,29 @@
+id: medquad
+title: MedQuAD consumer health questions (Ben Abacha and Demner-Fushman, 2019)
+loader: hf_qa
+source:
+  kind: hf
+  dataset: lavita/MedQuAD
+  # HEAD on 2026-10-07, last modified 2023-12-22, before any run.
+  revision: 84ea67f83cec9692ad254eaa02c9731b24ecfe4c
+  split: train
+license: not stated on the Hugging Face copy; research use only, not redistributed
+audience: patient
+task: open_ended
+rubric: synthesized
+fields:
+  question: [question, Question, query]
+  # About 31,000 answers were removed from the release for licensing; such rows are skipped.
+  answer: [answer, Answer, long_answer]
+loader_params:
+  id_text: raw
+  reference_max_chars: 800
+  reference_newlines: space
+id_prefix: medquad
+prompt_template: "{question}"
+reference_criterion: "The response does not contradict this reference answer: \"{reference}\"."
+tags: ["theme:medquad", "persona:patient"]
+splits:
+  # The 2026-07 cell: first 4,700 usable rows in source order, the first 200 held out.
+  head: {method: holdout, pool: {select: head, size: 4700}, holdout: {select: head, size: 200}}
+  default: {method: holdout, pool: {select: seeded, size: 5700, seed: 0}, holdout: {select: seeded, size: 1000, seed: 0}}

@@ -1,0 +1,10 @@
+# Base model of the 2026-05 cell and of the two 2026-07 cells that never ran.
+id: medgemma-27b-text
+hf_id: google/medgemma-27b-text-it
+revision: 5b667cf2ddcf064085bc90952edb35a0edbfb79c
+last_modified: "2025-09-16"
+family: gemma
+domain: clinical
+params_b: 27
+gated: true
+license: health-ai-developer-foundations

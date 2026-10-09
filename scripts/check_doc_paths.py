@@ -45,17 +45,22 @@ PENDING = {
 # block once the lanes have merged and the check passes without it.
 _ARCHITECTURE = "planned in docs/ARCHITECTURE.md; a build lane writes it"
 PENDING.update({k: _ARCHITECTURE for k in (
-    "bodhi_lora/__main__.py", "bodhi_lora/cli.py", "bodhi_lora/paths.py", "bodhi_lora/manifest.py",
+    "bodhi_lora/manifest.py",
     "bodhi_lora/engine/", "bodhi_lora/data/", "bodhi_lora/protocols/", "bodhi_lora/grading/",
     "bodhi_lora/pipeline/", "bodhi_lora/analysis/", "bodhi_lora/report/",
-    "configs/models/", "configs/benchmarks/", "configs/protocols/", "configs/cells/",
-    "configs/project.yaml", "configs/report.yaml",
+    "configs/report.yaml",
     "rebuttal/posted_values.json", "scripts/migrate_results.py",
-    "tests/fixtures/data/", "tests/fixtures/protocols/", "tests/fixtures/pipeline/",
+    "tests/fixtures/data/", "tests/fixtures/protocols/",
     "tests/fixtures/analysis/", "tests/fixtures/migrate/",
     "tests/test_no_hardcode.py", "tests/test_engine_*.py", "tests/test_manifest_*.py",
     "tests/test_data_*.py", "tests/test_protocols_*.py", "tests/test_grading_*.py",
     "tests/test_analysis_*.py", "tests/test_report_*.py", "tests/test_migration_*.py",
+)})
+# Planned cell records of docs/EXPERIMENTS.md, written when the first author fixes their
+# settings in the analysis plan.
+PENDING.update({k: "planned in docs/EXPERIMENTS.md" for k in (
+    "configs/cells/healthbench__mistral-small-24b__bodhi.yaml",
+    "configs/cells/healthbench__mistral-small-24b__bodhi__labelled.yaml",
 )})
 
 TOP_FILES_EXT = (".sh", ".md", ".txt", ".py", ".toml", ".cfg", ".yaml", ".yml")

@@ -1,0 +1,10 @@
+# The evaluator of the 2026-05 cell.
+id: llama-3.1-8b
+hf_id: meta-llama/Llama-3.1-8B-Instruct
+revision: 0e9e39f249a16976918f6564b8830bc894c89659
+last_modified: "2024-09-25"
+family: llama3
+domain: general
+params_b: 8
+gated: true
+license: llama3.1
