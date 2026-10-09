@@ -1,0 +1,90 @@
+{
+  "cell": "healthbench__mistral-small-24b__bodhi__2026-07",
+  "leak_rules": {
+    "leak_bodhi__analysis-format": "75153a7c575625e3e377462ace16e18e0232f14198d287fb2ea6ae17c5bc7423",
+    "leak_bodhi__pass1-headers": "3a1a44ba2b4cace7b868d280fb9c7cbf0dc150cf147e9c0100fa264c6f57a4a3"
+  },
+  "prompts": {
+    "benchmark": "healthbench",
+    "draw_check": {
+      "101": {
+        "drawn": 200,
+        "evaluated": 200,
+        "evaluated_not_drawn": 0
+      },
+      "13": {
+        "drawn": 200,
+        "evaluated": 200,
+        "evaluated_not_drawn": 0
+      },
+      "42": {
+        "drawn": 200,
+        "evaluated": 200,
+        "evaluated_not_drawn": 0
+      },
+      "7": {
+        "drawn": 200,
+        "evaluated": 200,
+        "evaluated_not_drawn": 0
+      },
+      "99": {
+        "drawn": 200,
+        "evaluated": 200,
+        "evaluated_not_drawn": 0
+      }
+    },
+    "labels": {
+      "clinician-user": {
+        "definition_sha256": "67ef169e140c1d47c7885f7cbdf42d966a1e28980e020615a72204754961ec60",
+        "source": "HealthBench physician-agreed categories",
+        "timing": "pre_specified"
+      },
+      "emergent-physician": {
+        "definition_sha256": "34fcf73ac43b0647172e18bf2a8f11de2123030567187a8c5d3b44f2dceccc20",
+        "source": "HealthBench physician-agreed categories",
+        "timing": "pre_specified"
+      },
+      "needs-info-physician": {
+        "definition_sha256": "33e25aaf17f3eed7675e24509564ee30b059d654caf3dd4e87460bc07c6a7c99",
+        "source": "HealthBench physician-agreed categories",
+        "timing": "pre_specified"
+      },
+      "needs-info-theme": {
+        "definition_sha256": "bf1fbb9814ebbaa9c4bc75119d5a6509a6009523d09adda3d0b4231db57d74bc",
+        "source": "HealthBench theme tags",
+        "timing": "post_hoc"
+      },
+      "needs-info-theme-or-rubric": {
+        "definition_sha256": "e0a94d4eff2bf4e89b8e12929fbc5173b28b9876553aa23b002caf539215aa21",
+        "source": "HealthBench theme tags and the authors' keyword rule over rubric text",
+        "timing": "post_hoc"
+      },
+      "red-flag-at-stake": {
+        "definition_sha256": "0819d1df1554e4cb0ff4acd45516bb547558755fda40257e7ea0fb0e4a954801",
+        "source": "HealthBench theme tags and the authors' keyword rule over rubric text",
+        "timing": "post_hoc"
+      }
+    },
+    "n_population": 1000,
+    "rows": "loaded",
+    "split": "hard"
+  },
+  "seeds": [
+    42,
+    7,
+    13,
+    99,
+    101
+  ],
+  "text_features": {
+    "escalation": {
+      "definition_sha256": "cb6aaeca2c6727843a8dd268e3c2bb0a0789cdde8327105c6f5c74cb892bf38f",
+      "description": "the reply mentions emergency or urgent care (911, a call to 999 or 112, an emergency room, department, service or number, the ER (not ER/PR or a drug's extended-release ER), A&E, urgent care, an ambulance, or immediate, urgent or emergency medical attention)"
+    },
+    "second_person_q": {
+      "definition_sha256": "4a2474a4b3682a7668160c7634464238438ebd0690c91e1300280a26de31d393",
+      "description": "a question put to the reader (a sentence ending in \"?\" with you, your, yours, yourself or yourselves)"
+    }
+  },
+  "tokenizer": "mistralai/Mistral-Small-24B-Instruct-2501@9527884be6e5616bdd54de542f9ae13384489724"
+}

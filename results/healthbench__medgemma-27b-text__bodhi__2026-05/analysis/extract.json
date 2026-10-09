@@ -58,6 +58,11 @@
         "definition_sha256": "e0a94d4eff2bf4e89b8e12929fbc5173b28b9876553aa23b002caf539215aa21",
         "source": "HealthBench theme tags and the authors' keyword rule over rubric text",
         "timing": "post_hoc"
+      },
+      "red-flag-at-stake": {
+        "definition_sha256": "0819d1df1554e4cb0ff4acd45516bb547558755fda40257e7ea0fb0e4a954801",
+        "source": "HealthBench theme tags and the authors' keyword rule over rubric text",
+        "timing": "post_hoc"
       }
     },
     "n_population": 1000,
@@ -72,6 +77,10 @@
     101
   ],
   "text_features": {
+    "escalation": {
+      "definition_sha256": "cb6aaeca2c6727843a8dd268e3c2bb0a0789cdde8327105c6f5c74cb892bf38f",
+      "description": "the reply mentions emergency or urgent care (911, a call to 999 or 112, an emergency room, department, service or number, the ER (not ER/PR or a drug's extended-release ER), A&E, urgent care, an ambulance, or immediate, urgent or emergency medical attention)"
+    },
     "second_person_q": {
       "definition_sha256": "4a2474a4b3682a7668160c7634464238438ebd0690c91e1300280a26de31d393",
       "description": "a question put to the reader (a sentence ending in \"?\" with you, your, yours, yourself or yourselves)"

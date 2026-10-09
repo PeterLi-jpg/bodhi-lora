@@ -1,0 +1,4536 @@
+{
+ "askers_gap": {
+  "base": {
+   "gap": null,
+   "n_ask": 0,
+   "n_no_ask": 0,
+   "not_measured": "one of the two groups is empty"
+  },
+  "base+bodhi": {
+   "gap": null,
+   "n_ask": 0,
+   "n_no_ask": 0,
+   "not_measured": "one of the two groups is empty"
+  },
+  "lora": {
+   "gap": null,
+   "n_ask": 0,
+   "n_no_ask": 0,
+   "not_measured": "one of the two groups is empty"
+  },
+  "lora+bodhi": {
+   "gap": null,
+   "n_ask": 0,
+   "n_no_ask": 0,
+   "not_measured": "one of the two groups is empty"
+  }
+ },
+ "axis_scores": {
+  "accuracy": {
+   "base": -0.16,
+   "base+bodhi": 0.1,
+   "lora": 0.2,
+   "lora+bodhi": 0.02
+  },
+  "context_awareness": {
+   "base": 0.3,
+   "base+bodhi": 0.0,
+   "lora": 0.0,
+   "lora+bodhi": 0.0
+  }
+ },
+ "blanket_disclaimers": {
+  "all_conditions": {
+   "flagged": 0,
+   "flagged_hedging_2": 0
+  },
+  "base": {
+   "count": 0,
+   "n": 0
+  },
+  "base+bodhi": {
+   "count": 0,
+   "n": 0
+  },
+  "lora": {
+   "count": 0,
+   "n": 0
+  },
+  "lora+bodhi": {
+   "count": 0,
+   "n": 0
+  }
+ },
+ "bootstrap": {
+  "cluster": "prompt_id",
+  "interval": "percentile",
+  "resamples": 5000,
+  "seed": 0
+ },
+ "cell": "medqa-open-preamble__biomistral-7b__bodhi__2026-07",
+ "conditions": {
+  "active_inquiry": {
+   "base": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   },
+   "base+bodhi": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   },
+   "lora": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   },
+   "lora+bodhi": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   }
+  },
+  "appropriate_hedging": {
+   "base": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   },
+   "base+bodhi": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   },
+   "lora": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   },
+   "lora+bodhi": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   }
+  },
+  "axis_accuracy": {
+   "base": {
+    "n_pooled": 10,
+    "n_seeds": 1,
+    "per_seed": {
+     "42": -0.16
+    },
+    "pooled_mean": -0.16,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": -0.16,
+    "seed_sd": null,
+    "seeds_missing": []
+   },
+   "base+bodhi": {
+    "n_pooled": 10,
+    "n_seeds": 1,
+    "per_seed": {
+     "42": 0.1
+    },
+    "pooled_mean": 0.1,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": 0.1,
+    "seed_sd": null,
+    "seeds_missing": []
+   },
+   "lora": {
+    "n_pooled": 10,
+    "n_seeds": 1,
+    "per_seed": {
+     "42": 0.2
+    },
+    "pooled_mean": 0.2,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": 0.2,
+    "seed_sd": null,
+    "seeds_missing": []
+   },
+   "lora+bodhi": {
+    "n_pooled": 10,
+    "n_seeds": 1,
+    "per_seed": {
+     "42": 0.02
+    },
+    "pooled_mean": 0.02,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": 0.02,
+    "seed_sd": null,
+    "seeds_missing": []
+   }
+  },
+  "axis_context_awareness": {
+   "base": {
+    "n_pooled": 10,
+    "n_seeds": 1,
+    "per_seed": {
+     "42": 0.3
+    },
+    "pooled_mean": 0.3,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": 0.3,
+    "seed_sd": null,
+    "seeds_missing": []
+   },
+   "base+bodhi": {
+    "n_pooled": 10,
+    "n_seeds": 1,
+    "per_seed": {
+     "42": 0.0
+    },
+    "pooled_mean": 0.0,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": 0.0,
+    "seed_sd": null,
+    "seeds_missing": []
+   },
+   "lora": {
+    "n_pooled": 10,
+    "n_seeds": 1,
+    "per_seed": {
+     "42": 0.0
+    },
+    "pooled_mean": 0.0,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": 0.0,
+    "seed_sd": null,
+    "seeds_missing": []
+   },
+   "lora+bodhi": {
+    "n_pooled": 10,
+    "n_seeds": 1,
+    "per_seed": {
+     "42": 0.0
+    },
+    "pooled_mean": 0.0,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": 0.0,
+    "seed_sd": null,
+    "seeds_missing": []
+   }
+  },
+  "blanket_disclaimer": {
+   "base": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   },
+   "base+bodhi": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   },
+   "lora": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   },
+   "lora+bodhi": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   }
+  },
+  "chars": {
+   "base": {
+    "n_pooled": 10,
+    "n_seeds": 1,
+    "per_seed": {
+     "42": 648.2
+    },
+    "pooled_mean": 648.2,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": 648.2,
+    "seed_sd": null,
+    "seeds_missing": []
+   },
+   "base+bodhi": {
+    "n_pooled": 10,
+    "n_seeds": 1,
+    "per_seed": {
+     "42": 438.8
+    },
+    "pooled_mean": 438.8,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": 438.8,
+    "seed_sd": null,
+    "seeds_missing": []
+   },
+   "lora": {
+    "n_pooled": 10,
+    "n_seeds": 1,
+    "per_seed": {
+     "42": 717.0
+    },
+    "pooled_mean": 717.0,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": 717.0,
+    "seed_sd": null,
+    "seeds_missing": []
+   },
+   "lora+bodhi": {
+    "n_pooled": 10,
+    "n_seeds": 1,
+    "per_seed": {
+     "42": 650.0
+    },
+    "pooled_mean": 650.0,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": 650.0,
+    "seed_sd": null,
+    "seeds_missing": []
+   }
+  },
+  "context_seeking": {
+   "base": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   },
+   "base+bodhi": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   },
+   "lora": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   },
+   "lora+bodhi": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   }
+  },
+  "escalation": {
+   "base": {
+    "n_pooled": 10,
+    "n_seeds": 1,
+    "per_seed": {
+     "42": 0.0
+    },
+    "pooled_mean": 0.0,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": 0.0,
+    "seed_sd": null,
+    "seeds_missing": []
+   },
+   "base+bodhi": {
+    "n_pooled": 10,
+    "n_seeds": 1,
+    "per_seed": {
+     "42": 0.1
+    },
+    "pooled_mean": 0.1,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": 0.1,
+    "seed_sd": null,
+    "seeds_missing": []
+   },
+   "lora": {
+    "n_pooled": 10,
+    "n_seeds": 1,
+    "per_seed": {
+     "42": 0.0
+    },
+    "pooled_mean": 0.0,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": 0.0,
+    "seed_sd": null,
+    "seeds_missing": []
+   },
+   "lora+bodhi": {
+    "n_pooled": 10,
+    "n_seeds": 1,
+    "per_seed": {
+     "42": 0.2
+    },
+    "pooled_mean": 0.2,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": 0.2,
+    "seed_sd": null,
+    "seeds_missing": []
+   }
+  },
+  "hedging_quality": {
+   "base": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   },
+   "base+bodhi": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   },
+   "lora": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   },
+   "lora+bodhi": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   }
+  },
+  "neg_any": {
+   "base": {
+    "n_pooled": 10,
+    "n_seeds": 1,
+    "per_seed": {
+     "42": 0.2
+    },
+    "pooled_mean": 0.2,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": 0.2,
+    "seed_sd": null,
+    "seeds_missing": []
+   },
+   "base+bodhi": {
+    "n_pooled": 10,
+    "n_seeds": 1,
+    "per_seed": {
+     "42": 0.0
+    },
+    "pooled_mean": 0.0,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": 0.0,
+    "seed_sd": null,
+    "seeds_missing": []
+   },
+   "lora": {
+    "n_pooled": 10,
+    "n_seeds": 1,
+    "per_seed": {
+     "42": 0.0
+    },
+    "pooled_mean": 0.0,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": 0.0,
+    "seed_sd": null,
+    "seeds_missing": []
+   },
+   "lora+bodhi": {
+    "n_pooled": 10,
+    "n_seeds": 1,
+    "per_seed": {
+     "42": 0.1
+    },
+    "pooled_mean": 0.1,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": 0.1,
+    "seed_sd": null,
+    "seeds_missing": []
+   }
+  },
+  "neg_points_lost": {
+   "base": {
+    "n_pooled": 10,
+    "n_seeds": 1,
+    "per_seed": {
+     "42": 1.6
+    },
+    "pooled_mean": 1.6,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": 1.6,
+    "seed_sd": null,
+    "seeds_missing": []
+   },
+   "base+bodhi": {
+    "n_pooled": 10,
+    "n_seeds": 1,
+    "per_seed": {
+     "42": 0.0
+    },
+    "pooled_mean": 0.0,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": 0.0,
+    "seed_sd": null,
+    "seeds_missing": []
+   },
+   "lora": {
+    "n_pooled": 10,
+    "n_seeds": 1,
+    "per_seed": {
+     "42": 0.0
+    },
+    "pooled_mean": 0.0,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": 0.0,
+    "seed_sd": null,
+    "seeds_missing": []
+   },
+   "lora+bodhi": {
+    "n_pooled": 10,
+    "n_seeds": 1,
+    "per_seed": {
+     "42": 0.8
+    },
+    "pooled_mean": 0.8,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": 0.8,
+    "seed_sd": null,
+    "seeds_missing": []
+   }
+  },
+  "questions": {
+   "base": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   },
+   "base+bodhi": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   },
+   "lora": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   },
+   "lora+bodhi": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   }
+  },
+  "red_flag": {
+   "base": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   },
+   "base+bodhi": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   },
+   "lora": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   },
+   "lora+bodhi": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   }
+  },
+  "red_flag_rate": {
+   "base": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   },
+   "base+bodhi": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   },
+   "lora": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   },
+   "lora+bodhi": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   }
+  },
+  "rubric_score": {
+   "base": {
+    "n_pooled": 10,
+    "n_seeds": 1,
+    "per_seed": {
+     "42": 0.347619
+    },
+    "pooled_mean": 0.347619,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": 0.347619,
+    "seed_sd": null,
+    "seeds_missing": []
+   },
+   "base+bodhi": {
+    "n_pooled": 10,
+    "n_seeds": 1,
+    "per_seed": {
+     "42": 0.428571
+    },
+    "pooled_mean": 0.428571,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": 0.428571,
+    "seed_sd": null,
+    "seeds_missing": []
+   },
+   "lora": {
+    "n_pooled": 10,
+    "n_seeds": 1,
+    "per_seed": {
+     "42": 0.47619
+    },
+    "pooled_mean": 0.47619,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": 0.47619,
+    "seed_sd": null,
+    "seeds_missing": []
+   },
+   "lora+bodhi": {
+    "n_pooled": 10,
+    "n_seeds": 1,
+    "per_seed": {
+     "42": 0.390476
+    },
+    "pooled_mean": 0.390476,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": 0.390476,
+    "seed_sd": null,
+    "seeds_missing": []
+   }
+  },
+  "scope_bounded_rate": {
+   "base": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   },
+   "base+bodhi": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   },
+   "lora": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   },
+   "lora+bodhi": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   }
+  },
+  "scope_bounding": {
+   "base": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   },
+   "base+bodhi": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   },
+   "lora": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   },
+   "lora+bodhi": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   }
+  },
+  "second_person_q": {
+   "base": {
+    "n_pooled": 10,
+    "n_seeds": 1,
+    "per_seed": {
+     "42": 0.0
+    },
+    "pooled_mean": 0.0,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": 0.0,
+    "seed_sd": null,
+    "seeds_missing": []
+   },
+   "base+bodhi": {
+    "n_pooled": 10,
+    "n_seeds": 1,
+    "per_seed": {
+     "42": 0.0
+    },
+    "pooled_mean": 0.0,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": 0.0,
+    "seed_sd": null,
+    "seeds_missing": []
+   },
+   "lora": {
+    "n_pooled": 10,
+    "n_seeds": 1,
+    "per_seed": {
+     "42": 0.0
+    },
+    "pooled_mean": 0.0,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": 0.0,
+    "seed_sd": null,
+    "seeds_missing": []
+   },
+   "lora+bodhi": {
+    "n_pooled": 10,
+    "n_seeds": 1,
+    "per_seed": {
+     "42": 0.0
+    },
+    "pooled_mean": 0.0,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": 0.0,
+    "seed_sd": null,
+    "seeds_missing": []
+   }
+  },
+  "specificity": {
+   "base": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   },
+   "base+bodhi": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   },
+   "lora": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   },
+   "lora+bodhi": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   }
+  },
+  "specificity_rate": {
+   "base": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   },
+   "base+bodhi": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   },
+   "lora": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   },
+   "lora+bodhi": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   }
+  },
+  "tokens": {
+   "base": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   },
+   "base+bodhi": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   },
+   "lora": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   },
+   "lora+bodhi": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   }
+  },
+  "uncertainty_ack": {
+   "base": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   },
+   "base+bodhi": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   },
+   "lora": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   },
+   "lora+bodhi": {
+    "n_pooled": 0,
+    "n_seeds": 0,
+    "not_measured": "no value in seed(s) [42]",
+    "per_seed": {
+     "42": null
+    },
+    "pooled_mean": null,
+    "seed_ci95_t": [
+     null,
+     null
+    ],
+    "seed_mean": null,
+    "seed_sd": null,
+    "seeds_missing": [
+     42
+    ]
+   }
+  }
+ },
+ "conditions_order": [
+  "base",
+  "base+bodhi",
+  "lora",
+  "lora+bodhi"
+ ],
+ "context_seeking_anchor": {
+  "base": {
+   "n_score_2": 0,
+   "n_score_2_no_question": 0,
+   "share_no_question": null
+  },
+  "base+bodhi": {
+   "n_score_2": 0,
+   "n_score_2_no_question": 0,
+   "share_no_question": null
+  },
+  "lora": {
+   "n_score_2": 0,
+   "n_score_2_no_question": 0,
+   "share_no_question": null
+  },
+  "lora+bodhi": {
+   "n_score_2": 0,
+   "n_score_2_no_question": 0,
+   "share_no_question": null
+  }
+ },
+ "contrasts": {
+  "base+bodhi - base": {
+   "a": "base+bodhi",
+   "b": "base",
+   "metrics": {
+    "active_inquiry": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "p_holm_all_contrasts": null,
+     "p_holm_within_contrast": null,
+     "seeds_missing": [
+      42
+     ]
+    },
+    "appropriate_hedging": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "axis_accuracy": {
+     "ci90": [
+      null,
+      null
+     ],
+     "ci95": [
+      null,
+      null
+     ],
+     "df": 0,
+     "diff": 0.26,
+     "n_seeds": 1,
+     "not_measured_test": "one seed: no interval and no test",
+     "p": null,
+     "per_seed_diff": [
+      0.26
+     ],
+     "seeds_missing": [],
+     "t": null
+    },
+    "axis_context_awareness": {
+     "ci90": [
+      null,
+      null
+     ],
+     "ci95": [
+      null,
+      null
+     ],
+     "df": 0,
+     "diff": -0.3,
+     "n_seeds": 1,
+     "not_measured_test": "one seed: no interval and no test",
+     "p": null,
+     "per_seed_diff": [
+      -0.3
+     ],
+     "seeds_missing": [],
+     "t": null
+    },
+    "blanket_disclaimer": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "chars": {
+     "ci90": [
+      null,
+      null
+     ],
+     "ci95": [
+      null,
+      null
+     ],
+     "d_ci95": [
+      -1.04199,
+      1.25093
+     ],
+     "df": 0,
+     "diff": -209.4,
+     "diff_ci95": [
+      -708.04,
+      209.1
+     ],
+     "n_seeds": 1,
+     "not_measured_test": "one seed: no interval and no test",
+     "p": null,
+     "per_seed_diff": [
+      -209.4
+     ],
+     "pooled_d": -0.378538,
+     "pooled_diff": -209.4,
+     "pooled_welch_p": 0.415915,
+     "seeds_missing": [],
+     "t": null
+    },
+    "context_seeking": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "p_holm_all_contrasts": null,
+     "p_holm_within_contrast": null,
+     "seeds_missing": [
+      42
+     ]
+    },
+    "escalation": {
+     "ci90": [
+      null,
+      null
+     ],
+     "ci95": [
+      null,
+      null
+     ],
+     "df": 0,
+     "diff": 0.1,
+     "n_seeds": 1,
+     "not_measured_test": "one seed: no interval and no test",
+     "p": null,
+     "per_seed_diff": [
+      0.1
+     ],
+     "seeds_missing": [],
+     "t": null
+    },
+    "hedging_quality": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "p_holm_all_contrasts": null,
+     "p_holm_within_contrast": null,
+     "seeds_missing": [
+      42
+     ]
+    },
+    "neg_any": {
+     "ci90": [
+      null,
+      null
+     ],
+     "ci95": [
+      null,
+      null
+     ],
+     "df": 0,
+     "diff": -0.2,
+     "n_seeds": 1,
+     "not_measured_test": "one seed: no interval and no test",
+     "p": null,
+     "per_seed_diff": [
+      -0.2
+     ],
+     "seeds_missing": [],
+     "t": null
+    },
+    "neg_points_lost": {
+     "ci90": [
+      null,
+      null
+     ],
+     "ci95": [
+      null,
+      null
+     ],
+     "df": 0,
+     "diff": -1.6,
+     "n_seeds": 1,
+     "not_measured_test": "one seed: no interval and no test",
+     "p": null,
+     "per_seed_diff": [
+      -1.6
+     ],
+     "seeds_missing": [],
+     "t": null
+    },
+    "questions": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "red_flag": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "p_holm_all_contrasts": null,
+     "p_holm_within_contrast": null,
+     "seeds_missing": [
+      42
+     ]
+    },
+    "red_flag_rate": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "rubric_score": {
+     "ci90": [
+      null,
+      null
+     ],
+     "ci95": [
+      null,
+      null
+     ],
+     "d_ci95": [
+      -0.87831,
+      1.24542
+     ],
+     "df": 0,
+     "diff": 0.0809524,
+     "diff_ci95": [
+      -0.0428571,
+      0.252381
+     ],
+     "n_seeds": 1,
+     "not_measured_test": "one seed: no interval and no test",
+     "p": null,
+     "per_seed_diff": [
+      0.0809524
+     ],
+     "pooled_d": 0.520381,
+     "pooled_diff": 0.0809524,
+     "pooled_welch_p": 0.259836,
+     "seeds_missing": [],
+     "t": null
+    },
+    "scope_bounded_rate": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "scope_bounding": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "p_holm_all_contrasts": null,
+     "p_holm_within_contrast": null,
+     "seeds_missing": [
+      42
+     ]
+    },
+    "second_person_q": {
+     "ci90": [
+      null,
+      null
+     ],
+     "ci95": [
+      null,
+      null
+     ],
+     "df": 0,
+     "diff": 0.0,
+     "n_seeds": 1,
+     "not_measured_test": "one seed: no interval and no test",
+     "p": null,
+     "per_seed_diff": [
+      0.0
+     ],
+     "seeds_missing": [],
+     "t": null
+    },
+    "specificity": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "p_holm_all_contrasts": null,
+     "p_holm_within_contrast": null,
+     "seeds_missing": [
+      42
+     ]
+    },
+    "specificity_rate": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "tokens": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "uncertainty_ack": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "p_holm_all_contrasts": null,
+     "p_holm_within_contrast": null,
+     "seeds_missing": [
+      42
+     ]
+    }
+   }
+  },
+  "lora - base": {
+   "a": "lora",
+   "b": "base",
+   "metrics": {
+    "active_inquiry": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "p_holm_all_contrasts": null,
+     "p_holm_within_contrast": null,
+     "seeds_missing": [
+      42
+     ]
+    },
+    "appropriate_hedging": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "axis_accuracy": {
+     "ci90": [
+      null,
+      null
+     ],
+     "ci95": [
+      null,
+      null
+     ],
+     "df": 0,
+     "diff": 0.36,
+     "n_seeds": 1,
+     "not_measured_test": "one seed: no interval and no test",
+     "p": null,
+     "per_seed_diff": [
+      0.36
+     ],
+     "seeds_missing": [],
+     "t": null
+    },
+    "axis_context_awareness": {
+     "ci90": [
+      null,
+      null
+     ],
+     "ci95": [
+      null,
+      null
+     ],
+     "df": 0,
+     "diff": -0.3,
+     "n_seeds": 1,
+     "not_measured_test": "one seed: no interval and no test",
+     "p": null,
+     "per_seed_diff": [
+      -0.3
+     ],
+     "seeds_missing": [],
+     "t": null
+    },
+    "blanket_disclaimer": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "chars": {
+     "ci90": [
+      null,
+      null
+     ],
+     "ci95": [
+      null,
+      null
+     ],
+     "d_ci95": [
+      -0.525548,
+      2.33317
+     ],
+     "df": 0,
+     "diff": 68.8,
+     "diff_ci95": [
+      -378.617,
+      412.915
+     ],
+     "n_seeds": 1,
+     "not_measured_test": "one seed: no interval and no test",
+     "p": null,
+     "per_seed_diff": [
+      68.8
+     ],
+     "pooled_d": 0.121619,
+     "pooled_diff": 68.8,
+     "pooled_welch_p": 0.790474,
+     "seeds_missing": [],
+     "t": null
+    },
+    "context_seeking": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "p_holm_all_contrasts": null,
+     "p_holm_within_contrast": null,
+     "seeds_missing": [
+      42
+     ]
+    },
+    "escalation": {
+     "ci90": [
+      null,
+      null
+     ],
+     "ci95": [
+      null,
+      null
+     ],
+     "df": 0,
+     "diff": 0.0,
+     "n_seeds": 1,
+     "not_measured_test": "one seed: no interval and no test",
+     "p": null,
+     "per_seed_diff": [
+      0.0
+     ],
+     "seeds_missing": [],
+     "t": null
+    },
+    "hedging_quality": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "p_holm_all_contrasts": null,
+     "p_holm_within_contrast": null,
+     "seeds_missing": [
+      42
+     ]
+    },
+    "neg_any": {
+     "ci90": [
+      null,
+      null
+     ],
+     "ci95": [
+      null,
+      null
+     ],
+     "df": 0,
+     "diff": -0.2,
+     "n_seeds": 1,
+     "not_measured_test": "one seed: no interval and no test",
+     "p": null,
+     "per_seed_diff": [
+      -0.2
+     ],
+     "seeds_missing": [],
+     "t": null
+    },
+    "neg_points_lost": {
+     "ci90": [
+      null,
+      null
+     ],
+     "ci95": [
+      null,
+      null
+     ],
+     "df": 0,
+     "diff": -1.6,
+     "n_seeds": 1,
+     "not_measured_test": "one seed: no interval and no test",
+     "p": null,
+     "per_seed_diff": [
+      -1.6
+     ],
+     "seeds_missing": [],
+     "t": null
+    },
+    "questions": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "red_flag": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "p_holm_all_contrasts": null,
+     "p_holm_within_contrast": null,
+     "seeds_missing": [
+      42
+     ]
+    },
+    "red_flag_rate": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "rubric_score": {
+     "ci90": [
+      null,
+      null
+     ],
+     "ci95": [
+      null,
+      null
+     ],
+     "d_ci95": [
+      -0.329984,
+      1.48014
+     ],
+     "df": 0,
+     "diff": 0.128571,
+     "diff_ci95": [
+      -0.0238095,
+      0.309524
+     ],
+     "n_seeds": 1,
+     "not_measured_test": "one seed: no interval and no test",
+     "p": null,
+     "per_seed_diff": [
+      0.128571
+     ],
+     "pooled_d": 0.707565,
+     "pooled_diff": 0.128571,
+     "pooled_welch_p": 0.131865,
+     "seeds_missing": [],
+     "t": null
+    },
+    "scope_bounded_rate": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "scope_bounding": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "p_holm_all_contrasts": null,
+     "p_holm_within_contrast": null,
+     "seeds_missing": [
+      42
+     ]
+    },
+    "second_person_q": {
+     "ci90": [
+      null,
+      null
+     ],
+     "ci95": [
+      null,
+      null
+     ],
+     "df": 0,
+     "diff": 0.0,
+     "n_seeds": 1,
+     "not_measured_test": "one seed: no interval and no test",
+     "p": null,
+     "per_seed_diff": [
+      0.0
+     ],
+     "seeds_missing": [],
+     "t": null
+    },
+    "specificity": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "p_holm_all_contrasts": null,
+     "p_holm_within_contrast": null,
+     "seeds_missing": [
+      42
+     ]
+    },
+    "specificity_rate": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "tokens": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "uncertainty_ack": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "p_holm_all_contrasts": null,
+     "p_holm_within_contrast": null,
+     "seeds_missing": [
+      42
+     ]
+    }
+   }
+  },
+  "lora - base+bodhi": {
+   "a": "lora",
+   "b": "base+bodhi",
+   "metrics": {
+    "active_inquiry": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "p_holm_all_contrasts": null,
+     "p_holm_within_contrast": null,
+     "seeds_missing": [
+      42
+     ]
+    },
+    "appropriate_hedging": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "axis_accuracy": {
+     "ci90": [
+      null,
+      null
+     ],
+     "ci95": [
+      null,
+      null
+     ],
+     "df": 0,
+     "diff": 0.1,
+     "n_seeds": 1,
+     "not_measured_test": "one seed: no interval and no test",
+     "p": null,
+     "per_seed_diff": [
+      0.1
+     ],
+     "seeds_missing": [],
+     "t": null
+    },
+    "axis_context_awareness": {
+     "ci90": [
+      null,
+      null
+     ],
+     "ci95": [
+      null,
+      null
+     ],
+     "df": 0,
+     "diff": 0.0,
+     "n_seeds": 1,
+     "not_measured_test": "one seed: no interval and no test",
+     "p": null,
+     "per_seed_diff": [
+      0.0
+     ],
+     "seeds_missing": [],
+     "t": null
+    },
+    "blanket_disclaimer": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "chars": {
+     "ci90": [
+      null,
+      null
+     ],
+     "ci95": [
+      null,
+      null
+     ],
+     "d_ci95": [
+      0.0992888,
+      2.27166
+     ],
+     "df": 0,
+     "diff": 278.2,
+     "diff_ci95": [
+      18.695,
+      546.715
+     ],
+     "n_seeds": 1,
+     "not_measured_test": "one seed: no interval and no test",
+     "p": null,
+     "per_seed_diff": [
+      278.2
+     ],
+     "pooled_d": 1.08341,
+     "pooled_diff": 278.2,
+     "pooled_welch_p": 0.0267091,
+     "seeds_missing": [],
+     "t": null
+    },
+    "context_seeking": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "p_holm_all_contrasts": null,
+     "p_holm_within_contrast": null,
+     "seeds_missing": [
+      42
+     ]
+    },
+    "escalation": {
+     "ci90": [
+      null,
+      null
+     ],
+     "ci95": [
+      null,
+      null
+     ],
+     "df": 0,
+     "diff": -0.1,
+     "n_seeds": 1,
+     "not_measured_test": "one seed: no interval and no test",
+     "p": null,
+     "per_seed_diff": [
+      -0.1
+     ],
+     "seeds_missing": [],
+     "t": null
+    },
+    "hedging_quality": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "p_holm_all_contrasts": null,
+     "p_holm_within_contrast": null,
+     "seeds_missing": [
+      42
+     ]
+    },
+    "neg_any": {
+     "ci90": [
+      null,
+      null
+     ],
+     "ci95": [
+      null,
+      null
+     ],
+     "df": 0,
+     "diff": 0.0,
+     "n_seeds": 1,
+     "not_measured_test": "one seed: no interval and no test",
+     "p": null,
+     "per_seed_diff": [
+      0.0
+     ],
+     "seeds_missing": [],
+     "t": null
+    },
+    "neg_points_lost": {
+     "ci90": [
+      null,
+      null
+     ],
+     "ci95": [
+      null,
+      null
+     ],
+     "df": 0,
+     "diff": 0.0,
+     "n_seeds": 1,
+     "not_measured_test": "one seed: no interval and no test",
+     "p": null,
+     "per_seed_diff": [
+      0.0
+     ],
+     "seeds_missing": [],
+     "t": null
+    },
+    "questions": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "red_flag": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "p_holm_all_contrasts": null,
+     "p_holm_within_contrast": null,
+     "seeds_missing": [
+      42
+     ]
+    },
+    "red_flag_rate": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "rubric_score": {
+     "ci90": [
+      null,
+      null
+     ],
+     "ci95": [
+      null,
+      null
+     ],
+     "d_ci95": [
+      0.0,
+      0.87831
+     ],
+     "df": 0,
+     "diff": 0.047619,
+     "diff_ci95": [
+      0.0,
+      0.142857
+     ],
+     "n_seeds": 1,
+     "not_measured_test": "one seed: no interval and no test",
+     "p": null,
+     "per_seed_diff": [
+      0.047619
+     ],
+     "pooled_d": 0.268328,
+     "pooled_diff": 0.047619,
+     "pooled_welch_p": 0.556565,
+     "seeds_missing": [],
+     "t": null
+    },
+    "scope_bounded_rate": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "scope_bounding": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "p_holm_all_contrasts": null,
+     "p_holm_within_contrast": null,
+     "seeds_missing": [
+      42
+     ]
+    },
+    "second_person_q": {
+     "ci90": [
+      null,
+      null
+     ],
+     "ci95": [
+      null,
+      null
+     ],
+     "df": 0,
+     "diff": 0.0,
+     "n_seeds": 1,
+     "not_measured_test": "one seed: no interval and no test",
+     "p": null,
+     "per_seed_diff": [
+      0.0
+     ],
+     "seeds_missing": [],
+     "t": null
+    },
+    "specificity": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "p_holm_all_contrasts": null,
+     "p_holm_within_contrast": null,
+     "seeds_missing": [
+      42
+     ]
+    },
+    "specificity_rate": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "tokens": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "uncertainty_ack": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "p_holm_all_contrasts": null,
+     "p_holm_within_contrast": null,
+     "seeds_missing": [
+      42
+     ]
+    }
+   }
+  },
+  "lora+bodhi - base": {
+   "a": "lora+bodhi",
+   "b": "base",
+   "metrics": {
+    "active_inquiry": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "p_holm_all_contrasts": null,
+     "p_holm_within_contrast": null,
+     "seeds_missing": [
+      42
+     ]
+    },
+    "appropriate_hedging": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "axis_accuracy": {
+     "ci90": [
+      null,
+      null
+     ],
+     "ci95": [
+      null,
+      null
+     ],
+     "df": 0,
+     "diff": 0.18,
+     "n_seeds": 1,
+     "not_measured_test": "one seed: no interval and no test",
+     "p": null,
+     "per_seed_diff": [
+      0.18
+     ],
+     "seeds_missing": [],
+     "t": null
+    },
+    "axis_context_awareness": {
+     "ci90": [
+      null,
+      null
+     ],
+     "ci95": [
+      null,
+      null
+     ],
+     "df": 0,
+     "diff": -0.3,
+     "n_seeds": 1,
+     "not_measured_test": "one seed: no interval and no test",
+     "p": null,
+     "per_seed_diff": [
+      -0.3
+     ],
+     "seeds_missing": [],
+     "t": null
+    },
+    "blanket_disclaimer": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "chars": {
+     "ci90": [
+      null,
+      null
+     ],
+     "ci95": [
+      null,
+      null
+     ],
+     "d_ci95": [
+      -0.676042,
+      1.79657
+     ],
+     "df": 0,
+     "diff": 1.8,
+     "diff_ci95": [
+      -504.188,
+      355.905
+     ],
+     "n_seeds": 1,
+     "not_measured_test": "one seed: no interval and no test",
+     "p": null,
+     "per_seed_diff": [
+      1.8
+     ],
+     "pooled_d": 0.00300437,
+     "pooled_diff": 1.8,
+     "pooled_welch_p": 0.994737,
+     "seeds_missing": [],
+     "t": null
+    },
+    "context_seeking": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "p_holm_all_contrasts": null,
+     "p_holm_within_contrast": null,
+     "seeds_missing": [
+      42
+     ]
+    },
+    "escalation": {
+     "ci90": [
+      null,
+      null
+     ],
+     "ci95": [
+      null,
+      null
+     ],
+     "df": 0,
+     "diff": 0.2,
+     "n_seeds": 1,
+     "not_measured_test": "one seed: no interval and no test",
+     "p": null,
+     "per_seed_diff": [
+      0.2
+     ],
+     "seeds_missing": [],
+     "t": null
+    },
+    "hedging_quality": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "p_holm_all_contrasts": null,
+     "p_holm_within_contrast": null,
+     "seeds_missing": [
+      42
+     ]
+    },
+    "neg_any": {
+     "ci90": [
+      null,
+      null
+     ],
+     "ci95": [
+      null,
+      null
+     ],
+     "df": 0,
+     "diff": -0.1,
+     "n_seeds": 1,
+     "not_measured_test": "one seed: no interval and no test",
+     "p": null,
+     "per_seed_diff": [
+      -0.1
+     ],
+     "seeds_missing": [],
+     "t": null
+    },
+    "neg_points_lost": {
+     "ci90": [
+      null,
+      null
+     ],
+     "ci95": [
+      null,
+      null
+     ],
+     "df": 0,
+     "diff": -0.8,
+     "n_seeds": 1,
+     "not_measured_test": "one seed: no interval and no test",
+     "p": null,
+     "per_seed_diff": [
+      -0.8
+     ],
+     "seeds_missing": [],
+     "t": null
+    },
+    "questions": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "red_flag": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "p_holm_all_contrasts": null,
+     "p_holm_within_contrast": null,
+     "seeds_missing": [
+      42
+     ]
+    },
+    "red_flag_rate": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "rubric_score": {
+     "ci90": [
+      null,
+      null
+     ],
+     "ci95": [
+      null,
+      null
+     ],
+     "d_ci95": [
+      -0.963043,
+      1.18958
+     ],
+     "df": 0,
+     "diff": 0.0428571,
+     "diff_ci95": [
+      -0.133333,
+      0.238095
+     ],
+     "n_seeds": 1,
+     "not_measured_test": "one seed: no interval and no test",
+     "p": null,
+     "per_seed_diff": [
+      0.0428571
+     ],
+     "pooled_d": 0.234252,
+     "pooled_diff": 0.0428571,
+     "pooled_welch_p": 0.607144,
+     "seeds_missing": [],
+     "t": null
+    },
+    "scope_bounded_rate": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "scope_bounding": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "p_holm_all_contrasts": null,
+     "p_holm_within_contrast": null,
+     "seeds_missing": [
+      42
+     ]
+    },
+    "second_person_q": {
+     "ci90": [
+      null,
+      null
+     ],
+     "ci95": [
+      null,
+      null
+     ],
+     "df": 0,
+     "diff": 0.0,
+     "n_seeds": 1,
+     "not_measured_test": "one seed: no interval and no test",
+     "p": null,
+     "per_seed_diff": [
+      0.0
+     ],
+     "seeds_missing": [],
+     "t": null
+    },
+    "specificity": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "p_holm_all_contrasts": null,
+     "p_holm_within_contrast": null,
+     "seeds_missing": [
+      42
+     ]
+    },
+    "specificity_rate": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "tokens": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "uncertainty_ack": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "p_holm_all_contrasts": null,
+     "p_holm_within_contrast": null,
+     "seeds_missing": [
+      42
+     ]
+    }
+   }
+  },
+  "lora+bodhi - lora": {
+   "a": "lora+bodhi",
+   "b": "lora",
+   "metrics": {
+    "active_inquiry": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "p_holm_all_contrasts": null,
+     "p_holm_within_contrast": null,
+     "seeds_missing": [
+      42
+     ]
+    },
+    "appropriate_hedging": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "axis_accuracy": {
+     "ci90": [
+      null,
+      null
+     ],
+     "ci95": [
+      null,
+      null
+     ],
+     "df": 0,
+     "diff": -0.18,
+     "n_seeds": 1,
+     "not_measured_test": "one seed: no interval and no test",
+     "p": null,
+     "per_seed_diff": [
+      -0.18
+     ],
+     "seeds_missing": [],
+     "t": null
+    },
+    "axis_context_awareness": {
+     "ci90": [
+      null,
+      null
+     ],
+     "ci95": [
+      null,
+      null
+     ],
+     "df": 0,
+     "diff": 0.0,
+     "n_seeds": 1,
+     "not_measured_test": "one seed: no interval and no test",
+     "p": null,
+     "per_seed_diff": [
+      0.0
+     ],
+     "seeds_missing": [],
+     "t": null
+    },
+    "blanket_disclaimer": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "chars": {
+     "ci90": [
+      null,
+      null
+     ],
+     "ci95": [
+      null,
+      null
+     ],
+     "d_ci95": [
+      -1.02972,
+      0.277274
+     ],
+     "df": 0,
+     "diff": -67.0,
+     "diff_ci95": [
+      -224.815,
+      100.907
+     ],
+     "n_seeds": 1,
+     "not_measured_test": "one seed: no interval and no test",
+     "p": null,
+     "per_seed_diff": [
+      -67.0
+     ],
+     "pooled_d": -0.194321,
+     "pooled_diff": -67.0,
+     "pooled_welch_p": 0.669627,
+     "seeds_missing": [],
+     "t": null
+    },
+    "context_seeking": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "p_holm_all_contrasts": null,
+     "p_holm_within_contrast": null,
+     "seeds_missing": [
+      42
+     ]
+    },
+    "escalation": {
+     "ci90": [
+      null,
+      null
+     ],
+     "ci95": [
+      null,
+      null
+     ],
+     "df": 0,
+     "diff": 0.2,
+     "n_seeds": 1,
+     "not_measured_test": "one seed: no interval and no test",
+     "p": null,
+     "per_seed_diff": [
+      0.2
+     ],
+     "seeds_missing": [],
+     "t": null
+    },
+    "hedging_quality": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "p_holm_all_contrasts": null,
+     "p_holm_within_contrast": null,
+     "seeds_missing": [
+      42
+     ]
+    },
+    "neg_any": {
+     "ci90": [
+      null,
+      null
+     ],
+     "ci95": [
+      null,
+      null
+     ],
+     "df": 0,
+     "diff": 0.1,
+     "n_seeds": 1,
+     "not_measured_test": "one seed: no interval and no test",
+     "p": null,
+     "per_seed_diff": [
+      0.1
+     ],
+     "seeds_missing": [],
+     "t": null
+    },
+    "neg_points_lost": {
+     "ci90": [
+      null,
+      null
+     ],
+     "ci95": [
+      null,
+      null
+     ],
+     "df": 0,
+     "diff": 0.8,
+     "n_seeds": 1,
+     "not_measured_test": "one seed: no interval and no test",
+     "p": null,
+     "per_seed_diff": [
+      0.8
+     ],
+     "seeds_missing": [],
+     "t": null
+    },
+    "questions": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "red_flag": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "p_holm_all_contrasts": null,
+     "p_holm_within_contrast": null,
+     "seeds_missing": [
+      42
+     ]
+    },
+    "red_flag_rate": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "rubric_score": {
+     "ci90": [
+      null,
+      null
+     ],
+     "ci95": [
+      null,
+      null
+     ],
+     "d_ci95": [
+      -0.985546,
+      0.0
+     ],
+     "df": 0,
+     "diff": -0.0857143,
+     "diff_ci95": [
+      -0.2,
+      0.0
+     ],
+     "n_seeds": 1,
+     "not_measured_test": "one seed: no interval and no test",
+     "p": null,
+     "per_seed_diff": [
+      -0.0857143
+     ],
+     "pooled_d": -0.424526,
+     "pooled_diff": -0.0857143,
+     "pooled_welch_p": 0.355057,
+     "seeds_missing": [],
+     "t": null
+    },
+    "scope_bounded_rate": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "scope_bounding": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "p_holm_all_contrasts": null,
+     "p_holm_within_contrast": null,
+     "seeds_missing": [
+      42
+     ]
+    },
+    "second_person_q": {
+     "ci90": [
+      null,
+      null
+     ],
+     "ci95": [
+      null,
+      null
+     ],
+     "df": 0,
+     "diff": 0.0,
+     "n_seeds": 1,
+     "not_measured_test": "one seed: no interval and no test",
+     "p": null,
+     "per_seed_diff": [
+      0.0
+     ],
+     "seeds_missing": [],
+     "t": null
+    },
+    "specificity": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "p_holm_all_contrasts": null,
+     "p_holm_within_contrast": null,
+     "seeds_missing": [
+      42
+     ]
+    },
+    "specificity_rate": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "tokens": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "uncertainty_ack": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "p_holm_all_contrasts": null,
+     "p_holm_within_contrast": null,
+     "seeds_missing": [
+      42
+     ]
+    }
+   }
+  }
+ },
+ "contrasts_order": [
+  "base+bodhi - base",
+  "lora - base",
+  "lora+bodhi - base",
+  "lora - base+bodhi",
+  "lora+bodhi - lora"
+ ],
+ "cost": {
+  "conditions": {
+   "base": {
+    "calls_design": 1,
+    "calls_mean": null,
+    "calls_n": 0,
+    "chars_mean": 648.2,
+    "chars_mean_scored": null,
+    "n": 10,
+    "tokens_engine_mean": 160.1,
+    "tokens_engine_n": 10,
+    "tokens_mean": null,
+    "tokens_n": 0,
+    "tokens_total_mean": null,
+    "tokens_total_n": 0
+   },
+   "base+bodhi": {
+    "calls_design": 2,
+    "calls_mean": null,
+    "calls_n": 0,
+    "chars_mean": 438.8,
+    "chars_mean_scored": null,
+    "n": 10,
+    "tokens_engine_mean": null,
+    "tokens_engine_n": 0,
+    "tokens_mean": null,
+    "tokens_n": 0,
+    "tokens_total_mean": null,
+    "tokens_total_n": 0
+   },
+   "lora": {
+    "calls_design": 1,
+    "calls_mean": null,
+    "calls_n": 0,
+    "chars_mean": 717.0,
+    "chars_mean_scored": null,
+    "n": 10,
+    "tokens_engine_mean": 181.7,
+    "tokens_engine_n": 10,
+    "tokens_mean": null,
+    "tokens_n": 0,
+    "tokens_total_mean": null,
+    "tokens_total_n": 0
+   },
+   "lora+bodhi": {
+    "calls_design": 2,
+    "calls_mean": null,
+    "calls_n": 0,
+    "chars_mean": 650.0,
+    "chars_mean_scored": null,
+    "n": 10,
+    "tokens_engine_mean": null,
+    "tokens_engine_n": 0,
+    "tokens_mean": null,
+    "tokens_n": 0,
+    "tokens_total_mean": null,
+    "tokens_total_n": 0
+   }
+  },
+  "contrasts": {
+   "base+bodhi - base": {
+    "chars_diff": -209.4,
+    "chars_pct": -32.3048,
+    "tokens_diff": null,
+    "tokens_pct": null,
+    "tokens_total_diff": null,
+    "tokens_total_pct": null
+   },
+   "lora - base": {
+    "chars_diff": 68.8,
+    "chars_pct": 10.614,
+    "tokens_diff": null,
+    "tokens_pct": null,
+    "tokens_total_diff": null,
+    "tokens_total_pct": null
+   },
+   "lora - base+bodhi": {
+    "chars_diff": 278.2,
+    "chars_pct": 63.4002,
+    "tokens_diff": null,
+    "tokens_pct": null,
+    "tokens_total_diff": null,
+    "tokens_total_pct": null
+   },
+   "lora+bodhi - base": {
+    "chars_diff": 1.8,
+    "chars_pct": 0.277692,
+    "tokens_diff": null,
+    "tokens_pct": null,
+    "tokens_total_diff": null,
+    "tokens_total_pct": null
+   },
+   "lora+bodhi - lora": {
+    "chars_diff": -67.0,
+    "chars_pct": -9.34449,
+    "tokens_diff": null,
+    "tokens_pct": null,
+    "tokens_total_diff": null,
+    "tokens_total_pct": null
+   }
+  },
+  "not_measured_calls": "calls and total tokens per reply are not in these eval files; the first pass of a multi-pass protocol was not stored",
+  "not_measured_tokens": "no tokenizer count: the tokenizer was not in the local cache at extract",
+  "tokenizer": [
+   "tokenizer.json of BioMistral/BioMistral-7B at 9a11e1ffa817c211cbb52ee1fb312dc6b61b40a5 is not in the local Hugging Face cache (fetch it with: huggingface-cli download BioMistral/BioMistral-7B tokenizer.json --revision 9a11e1ffa817c211cbb52ee1fb312dc6b61b40a5)"
+  ],
+  "tokenizer_check": {
+   "n": 0
+  }
+ },
+ "counts": {
+  "epistemic_parse_failure_rate_max": null,
+  "per_condition": {
+   "base": {
+    "completion_drop_rate": 0.0,
+    "completions": 10,
+    "completions_per_seed": {
+     "42": 10
+    },
+    "drawn": 10,
+    "epistemic_missing": 0,
+    "epistemic_not_graded": 10,
+    "epistemic_parse_failure_rate": null,
+    "epistemic_parse_failures": 0,
+    "epistemic_rows": 0,
+    "epistemic_scored": 0,
+    "epistemic_unscored_rate": 1.0,
+    "rubric_items": 30,
+    "rubric_parse_failure_rate": 0.0,
+    "rubric_parse_failure_rate_max_run": 0.0,
+    "rubric_parse_failures": 0
+   },
+   "base+bodhi": {
+    "completion_drop_rate": 0.0,
+    "completions": 10,
+    "completions_per_seed": {
+     "42": 10
+    },
+    "drawn": 10,
+    "epistemic_missing": 0,
+    "epistemic_not_graded": 10,
+    "epistemic_parse_failure_rate": null,
+    "epistemic_parse_failures": 0,
+    "epistemic_rows": 0,
+    "epistemic_scored": 0,
+    "epistemic_unscored_rate": 1.0,
+    "rubric_items": 30,
+    "rubric_parse_failure_rate": 0.0666667,
+    "rubric_parse_failure_rate_max_run": 0.0666667,
+    "rubric_parse_failures": 2
+   },
+   "lora": {
+    "completion_drop_rate": 0.0,
+    "completions": 10,
+    "completions_per_seed": {
+     "42": 10
+    },
+    "drawn": 10,
+    "epistemic_missing": 0,
+    "epistemic_not_graded": 10,
+    "epistemic_parse_failure_rate": null,
+    "epistemic_parse_failures": 0,
+    "epistemic_rows": 0,
+    "epistemic_scored": 0,
+    "epistemic_unscored_rate": 1.0,
+    "rubric_items": 30,
+    "rubric_parse_failure_rate": 0.0,
+    "rubric_parse_failure_rate_max_run": 0.0,
+    "rubric_parse_failures": 0
+   },
+   "lora+bodhi": {
+    "completion_drop_rate": 0.0,
+    "completions": 10,
+    "completions_per_seed": {
+     "42": 10
+    },
+    "drawn": 10,
+    "epistemic_missing": 0,
+    "epistemic_not_graded": 10,
+    "epistemic_parse_failure_rate": null,
+    "epistemic_parse_failures": 0,
+    "epistemic_rows": 0,
+    "epistemic_scored": 0,
+    "epistemic_unscored_rate": 1.0,
+    "rubric_items": 30,
+    "rubric_parse_failure_rate": 0.0333333,
+    "rubric_parse_failure_rate_max_run": 0.0333333,
+    "rubric_parse_failures": 1
+   }
+  },
+  "prompt_draws_per_condition": 10,
+  "prompt_seed_multiplicity": {
+   "1": 10
+  },
+  "prompts_in_more_than_one_seed": 0,
+  "rubric_parse_failure_rate_max_run": 0.0666667,
+  "seeds": [
+   42
+  ],
+  "seeds_graded": [],
+  "unique_prompts": 10
+ },
+ "discrimination": {
+  "active_inquiry": {
+   "needs-info-theme": {
+    "not_measured": "benchmark medqa-open-preamble has no label needs-info-theme"
+   },
+   "needs-info-theme-or-rubric": {
+    "not_measured": "benchmark medqa-open-preamble has no label needs-info-theme-or-rubric"
+   }
+  },
+  "escalation": {
+   "red-flag-at-stake": {
+    "not_measured": "benchmark medqa-open-preamble has no label red-flag-at-stake"
+   }
+  }
+ },
+ "evaluator": "llama-3.1-8b-nous",
+ "filter": {
+  "kept_share_of_graded": 0.075,
+  "recorded": {
+   "graded": 40,
+   "kept": 3,
+   "n_filter_passes": 1,
+   "raw": 40,
+   "rubric_parse_failures": [
+    0,
+    120
+   ],
+   "score_field": "overall_score",
+   "tau": 0.4,
+   "train": 2,
+   "val": 1
+  },
+  "recorded_source": "results/cross_cell/cell_recipe.json",
+  "tau_rule": {
+   "min_kept_share": 0.4,
+   "percentile": 22.0,
+   "rule": "fixed_then_percentile",
+   "seed": 0,
+   "value": 0.4
+  }
+ },
+ "judges": {},
+ "leakage": {
+  "leak_bodhi__analysis-format": {
+   "conditions": {
+    "base": {
+     "chars_median_clean": null,
+     "chars_median_leaked": null,
+     "dimensions_clean": null,
+     "dimensions_leaked": null,
+     "leaked_share": null,
+     "n_clean": 0,
+     "n_completions": 10,
+     "n_leaked": 0,
+     "n_leaked_completions": 0,
+     "n_scored": 0
+    },
+    "base+bodhi": {
+     "chars_median_clean": null,
+     "chars_median_leaked": null,
+     "dimensions_clean": null,
+     "dimensions_leaked": null,
+     "leaked_share": null,
+     "n_clean": 0,
+     "n_completions": 10,
+     "n_leaked": 0,
+     "n_leaked_completions": 0,
+     "n_scored": 0
+    },
+    "lora": {
+     "chars_median_clean": null,
+     "chars_median_leaked": null,
+     "dimensions_clean": null,
+     "dimensions_leaked": null,
+     "leaked_share": null,
+     "n_clean": 0,
+     "n_completions": 10,
+     "n_leaked": 0,
+     "n_leaked_completions": 0,
+     "n_scored": 0
+    },
+    "lora+bodhi": {
+     "chars_median_clean": null,
+     "chars_median_leaked": null,
+     "dimensions_clean": null,
+     "dimensions_leaked": null,
+     "leaked_share": null,
+     "n_clean": 0,
+     "n_completions": 10,
+     "n_leaked": 0,
+     "n_leaked_completions": 0,
+     "n_scored": 0
+    }
+   },
+   "protocol": "bodhi",
+   "rule": "analysis-format",
+   "threshold": 2
+  },
+  "leak_bodhi__pass1-headers": {
+   "conditions": {
+    "base": {
+     "chars_median_clean": null,
+     "chars_median_leaked": null,
+     "dimensions_clean": null,
+     "dimensions_leaked": null,
+     "leaked_share": null,
+     "n_clean": 0,
+     "n_completions": 10,
+     "n_leaked": 0,
+     "n_leaked_completions": 0,
+     "n_scored": 0
+    },
+    "base+bodhi": {
+     "chars_median_clean": null,
+     "chars_median_leaked": null,
+     "dimensions_clean": null,
+     "dimensions_leaked": null,
+     "leaked_share": null,
+     "n_clean": 0,
+     "n_completions": 10,
+     "n_leaked": 0,
+     "n_leaked_completions": 0,
+     "n_scored": 0
+    },
+    "lora": {
+     "chars_median_clean": null,
+     "chars_median_leaked": null,
+     "dimensions_clean": null,
+     "dimensions_leaked": null,
+     "leaked_share": null,
+     "n_clean": 0,
+     "n_completions": 10,
+     "n_leaked": 0,
+     "n_leaked_completions": 0,
+     "n_scored": 0
+    },
+    "lora+bodhi": {
+     "chars_median_clean": null,
+     "chars_median_leaked": null,
+     "dimensions_clean": null,
+     "dimensions_leaked": null,
+     "leaked_share": null,
+     "n_clean": 0,
+     "n_completions": 10,
+     "n_leaked": 0,
+     "n_leaked_completions": 0,
+     "n_scored": 0
+    }
+   },
+   "protocol": "bodhi",
+   "rule": "pass1-headers",
+   "threshold": 2
+  }
+ },
+ "length_quartiles": {
+  "not_measured": "no scored replies of base"
+ },
+ "marks": {
+  "family_waiver": null,
+  "set_aside": null
+ },
+ "metrics": {
+  "active_inquiry": {
+   "kind": "rate",
+   "secondary": false,
+   "source": "epistemic"
+  },
+  "appropriate_hedging": {
+   "kind": "rate",
+   "secondary": false,
+   "source": "epistemic"
+  },
+  "axis_accuracy": {
+   "kind": "score",
+   "secondary": true,
+   "source": "response"
+  },
+  "axis_context_awareness": {
+   "kind": "score",
+   "secondary": true,
+   "source": "response"
+  },
+  "blanket_disclaimer": {
+   "kind": "rate",
+   "secondary": false,
+   "source": "epistemic"
+  },
+  "chars": {
+   "kind": "chars",
+   "secondary": false,
+   "source": "response"
+  },
+  "context_seeking": {
+   "kind": "score02",
+   "secondary": false,
+   "source": "epistemic"
+  },
+  "escalation": {
+   "kind": "rate",
+   "secondary": true,
+   "source": "response"
+  },
+  "hedging_quality": {
+   "kind": "score02",
+   "secondary": false,
+   "source": "epistemic"
+  },
+  "neg_any": {
+   "kind": "rate",
+   "secondary": true,
+   "source": "response"
+  },
+  "neg_points_lost": {
+   "kind": "count",
+   "secondary": true,
+   "source": "response"
+  },
+  "questions": {
+   "kind": "count",
+   "secondary": false,
+   "source": "epistemic"
+  },
+  "red_flag": {
+   "kind": "score02",
+   "secondary": false,
+   "source": "epistemic"
+  },
+  "red_flag_rate": {
+   "kind": "rate",
+   "secondary": false,
+   "source": "epistemic"
+  },
+  "rubric_score": {
+   "kind": "score",
+   "secondary": false,
+   "source": "response"
+  },
+  "scope_bounded_rate": {
+   "kind": "rate",
+   "secondary": false,
+   "source": "epistemic"
+  },
+  "scope_bounding": {
+   "kind": "score02",
+   "secondary": false,
+   "source": "epistemic"
+  },
+  "second_person_q": {
+   "kind": "rate",
+   "secondary": true,
+   "source": "response"
+  },
+  "specificity": {
+   "kind": "score02",
+   "secondary": false,
+   "source": "epistemic"
+  },
+  "specificity_rate": {
+   "kind": "rate",
+   "secondary": false,
+   "source": "epistemic"
+  },
+  "tokens": {
+   "kind": "tokens",
+   "secondary": true,
+   "source": "response"
+  },
+  "uncertainty_ack": {
+   "kind": "score02",
+   "secondary": false,
+   "source": "epistemic"
+  }
+ },
+ "prompts": {
+  "labels": {},
+  "n_evaluated": 10,
+  "n_population": null,
+  "rubric_points_pos_max": 13.0,
+  "rubric_points_pos_min": 13.0
+ },
+ "recipe": {
+  "best_epoch": {
+   "42": 3.0
+  },
+  "best_epoch_max": 3.0,
+  "best_epoch_min": 3.0,
+  "effective_batch_consistent": [
+   4,
+   8,
+   12,
+   16,
+   20,
+   24,
+   28,
+   32,
+   36,
+   40,
+   44,
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88,
+   92,
+   96,
+   100,
+   104,
+   108,
+   112,
+   116,
+   120,
+   124,
+   128,
+   132,
+   136,
+   140,
+   144,
+   148,
+   152,
+   156,
+   160,
+   164,
+   168,
+   172,
+   176,
+   180,
+   184,
+   188,
+   192,
+   196,
+   200,
+   204,
+   208,
+   212,
+   216,
+   220,
+   224,
+   228,
+   232,
+   236,
+   240,
+   244,
+   248,
+   252,
+   256
+  ],
+  "grad_accumulation_consistent": [
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8,
+   9,
+   10,
+   11,
+   12,
+   13,
+   14,
+   15,
+   16,
+   17,
+   18,
+   19,
+   20,
+   21,
+   22,
+   23,
+   24,
+   25,
+   26,
+   27,
+   28,
+   29,
+   30,
+   31,
+   32,
+   33,
+   34,
+   35,
+   36,
+   37,
+   38,
+   39,
+   40,
+   41,
+   42,
+   43,
+   44,
+   45,
+   46,
+   47,
+   48,
+   49,
+   50,
+   51,
+   52,
+   53,
+   54,
+   55,
+   56,
+   57,
+   58,
+   59,
+   60,
+   61,
+   62,
+   63,
+   64
+  ],
+  "lora_alpha": 32,
+  "lora_dropout": 0.05,
+  "max_steps": 3,
+  "num_train_epochs": 3,
+  "r": 16,
+  "seeds_trained": [
+   42
+  ],
+  "steps_per_epoch": 1,
+  "target_modules": [
+   "down_proj",
+   "gate_proj",
+   "k_proj",
+   "o_proj",
+   "q_proj",
+   "up_proj",
+   "v_proj"
+  ],
+  "train_batch_size": 4
+ },
+ "seeds": [
+  42
+ ],
+ "shift_correlations": {
+  "base+bodhi - base": {
+   "n_pairs": 0,
+   "pearson_r_with_active_inquiry": {
+    "context_seeking": null,
+    "red_flag": null,
+    "scope_bounding": null,
+    "specificity": null
+   }
+  },
+  "lora - base": {
+   "n_pairs": 0,
+   "pearson_r_with_active_inquiry": {
+    "context_seeking": null,
+    "red_flag": null,
+    "scope_bounding": null,
+    "specificity": null
+   }
+  },
+  "lora - base+bodhi": {
+   "n_pairs": 0,
+   "pearson_r_with_active_inquiry": {
+    "context_seeking": null,
+    "red_flag": null,
+    "scope_bounding": null,
+    "specificity": null
+   }
+  },
+  "lora+bodhi - base": {
+   "n_pairs": 0,
+   "pearson_r_with_active_inquiry": {
+    "context_seeking": null,
+    "red_flag": null,
+    "scope_bounding": null,
+    "specificity": null
+   }
+  },
+  "lora+bodhi - lora": {
+   "n_pairs": 0,
+   "pearson_r_with_active_inquiry": {
+    "context_seeking": null,
+    "red_flag": null,
+    "scope_bounding": null,
+    "specificity": null
+   }
+  }
+ },
+ "status": "partial",
+ "themes": {
+  "not_measured": "no theme tags: the benchmark rows were not read at extract"
+ },
+ "validation": {
+  "not_measured": "no physician agreement file"
+ },
+ "worst_case": {
+  "active_inquiry": {
+   "conditions": {
+    "base": null,
+    "base+bodhi": null,
+    "lora": null,
+    "lora+bodhi": null
+   },
+   "contrasts": {
+    "base+bodhi - base": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora - base": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora - base+bodhi": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora+bodhi - base": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora+bodhi - lora": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    }
+   }
+  },
+  "appropriate_hedging": {
+   "conditions": {
+    "base": null,
+    "base+bodhi": null,
+    "lora": null,
+    "lora+bodhi": null
+   },
+   "contrasts": {
+    "base+bodhi - base": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora - base": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora - base+bodhi": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora+bodhi - base": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora+bodhi - lora": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    }
+   }
+  },
+  "blanket_disclaimer": {
+   "conditions": {
+    "base": null,
+    "base+bodhi": null,
+    "lora": null,
+    "lora+bodhi": null
+   },
+   "contrasts": {
+    "base+bodhi - base": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora - base": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora - base+bodhi": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora+bodhi - base": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora+bodhi - lora": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    }
+   }
+  },
+  "context_seeking": {
+   "conditions": {
+    "base": null,
+    "base+bodhi": null,
+    "lora": null,
+    "lora+bodhi": null
+   },
+   "contrasts": {
+    "base+bodhi - base": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora - base": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora - base+bodhi": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora+bodhi - base": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora+bodhi - lora": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    }
+   }
+  },
+  "hedging_quality": {
+   "conditions": {
+    "base": null,
+    "base+bodhi": null,
+    "lora": null,
+    "lora+bodhi": null
+   },
+   "contrasts": {
+    "base+bodhi - base": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora - base": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora - base+bodhi": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora+bodhi - base": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora+bodhi - lora": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    }
+   }
+  },
+  "questions": {
+   "conditions": {
+    "base": null,
+    "base+bodhi": null,
+    "lora": null,
+    "lora+bodhi": null
+   },
+   "contrasts": {
+    "base+bodhi - base": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora - base": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora - base+bodhi": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora+bodhi - base": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora+bodhi - lora": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    }
+   }
+  },
+  "red_flag": {
+   "conditions": {
+    "base": null,
+    "base+bodhi": null,
+    "lora": null,
+    "lora+bodhi": null
+   },
+   "contrasts": {
+    "base+bodhi - base": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora - base": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora - base+bodhi": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora+bodhi - base": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora+bodhi - lora": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    }
+   }
+  },
+  "red_flag_rate": {
+   "conditions": {
+    "base": null,
+    "base+bodhi": null,
+    "lora": null,
+    "lora+bodhi": null
+   },
+   "contrasts": {
+    "base+bodhi - base": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora - base": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora - base+bodhi": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora+bodhi - base": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora+bodhi - lora": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    }
+   }
+  },
+  "rubric_score": {
+   "conditions": {
+    "base": 0.347619,
+    "base+bodhi": 0.428571,
+    "lora": 0.47619,
+    "lora+bodhi": 0.390476
+   },
+   "contrasts": {
+    "base+bodhi - base": {
+     "ci90": [
+      null,
+      null
+     ],
+     "ci95": [
+      null,
+      null
+     ],
+     "df": 0,
+     "diff": 0.0809524,
+     "n_seeds": 1,
+     "not_measured_test": "one seed: no interval and no test",
+     "p": null,
+     "per_seed_diff": [
+      0.0809524
+     ],
+     "seeds_missing": [],
+     "t": null
+    },
+    "lora - base": {
+     "ci90": [
+      null,
+      null
+     ],
+     "ci95": [
+      null,
+      null
+     ],
+     "df": 0,
+     "diff": 0.128571,
+     "n_seeds": 1,
+     "not_measured_test": "one seed: no interval and no test",
+     "p": null,
+     "per_seed_diff": [
+      0.128571
+     ],
+     "seeds_missing": [],
+     "t": null
+    },
+    "lora - base+bodhi": {
+     "ci90": [
+      null,
+      null
+     ],
+     "ci95": [
+      null,
+      null
+     ],
+     "df": 0,
+     "diff": 0.047619,
+     "n_seeds": 1,
+     "not_measured_test": "one seed: no interval and no test",
+     "p": null,
+     "per_seed_diff": [
+      0.047619
+     ],
+     "seeds_missing": [],
+     "t": null
+    },
+    "lora+bodhi - base": {
+     "ci90": [
+      null,
+      null
+     ],
+     "ci95": [
+      null,
+      null
+     ],
+     "df": 0,
+     "diff": 0.0428571,
+     "n_seeds": 1,
+     "not_measured_test": "one seed: no interval and no test",
+     "p": null,
+     "per_seed_diff": [
+      0.0428571
+     ],
+     "seeds_missing": [],
+     "t": null
+    },
+    "lora+bodhi - lora": {
+     "ci90": [
+      null,
+      null
+     ],
+     "ci95": [
+      null,
+      null
+     ],
+     "df": 0,
+     "diff": -0.0857143,
+     "n_seeds": 1,
+     "not_measured_test": "one seed: no interval and no test",
+     "p": null,
+     "per_seed_diff": [
+      -0.0857143
+     ],
+     "seeds_missing": [],
+     "t": null
+    }
+   }
+  },
+  "scope_bounded_rate": {
+   "conditions": {
+    "base": null,
+    "base+bodhi": null,
+    "lora": null,
+    "lora+bodhi": null
+   },
+   "contrasts": {
+    "base+bodhi - base": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora - base": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora - base+bodhi": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora+bodhi - base": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora+bodhi - lora": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    }
+   }
+  },
+  "scope_bounding": {
+   "conditions": {
+    "base": null,
+    "base+bodhi": null,
+    "lora": null,
+    "lora+bodhi": null
+   },
+   "contrasts": {
+    "base+bodhi - base": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora - base": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora - base+bodhi": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora+bodhi - base": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora+bodhi - lora": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    }
+   }
+  },
+  "specificity": {
+   "conditions": {
+    "base": null,
+    "base+bodhi": null,
+    "lora": null,
+    "lora+bodhi": null
+   },
+   "contrasts": {
+    "base+bodhi - base": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora - base": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora - base+bodhi": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora+bodhi - base": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora+bodhi - lora": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    }
+   }
+  },
+  "specificity_rate": {
+   "conditions": {
+    "base": null,
+    "base+bodhi": null,
+    "lora": null,
+    "lora+bodhi": null
+   },
+   "contrasts": {
+    "base+bodhi - base": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora - base": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora - base+bodhi": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora+bodhi - base": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora+bodhi - lora": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    }
+   }
+  },
+  "uncertainty_ack": {
+   "conditions": {
+    "base": null,
+    "base+bodhi": null,
+    "lora": null,
+    "lora+bodhi": null
+   },
+   "contrasts": {
+    "base+bodhi - base": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora - base": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora - base+bodhi": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora+bodhi - base": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora+bodhi - lora": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    }
+   }
+  }
+ }
+}
