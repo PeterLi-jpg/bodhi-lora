@@ -1,8 +1,9 @@
 # scripts/
 
-The pipeline lives in the `bodhi_lora` package (`python -m bodhi_lora`). The scripts here
-are repository tools and the analysis scripts that `make` runs until the analysis lane
-moves them into the package. The TPU-era weight prefetch tool moved to `legacy/scripts/`
+The pipeline and the uniform analysis live in the `bodhi_lora` package
+(`python -m bodhi_lora run` and `analyze`). The scripts here are repository tools and the
+paper scripts that `make numbers`, `make figures` and `make cells` run until
+`python -m bodhi_lora report` reproduces their outputs. The TPU-era weight prefetch tool moved to `legacy/scripts/`
 on 2026-10-09.
 
 On 2026-10-08 the shell launchers that no reported number came from (`gpu/`, `slurm/`,

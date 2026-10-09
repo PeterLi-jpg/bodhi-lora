@@ -31,9 +31,31 @@ Action:
    new QLoRA cell).
 3. Read D17 to D22 in [docs/DECISIONS.md](docs/DECISIONS.md). To revise one, add a dated
    entry below it.
+4. Decide the choices the experiments lane made in the cell records (2026-10-09). Each
+   is in the records now; change a record before its cell runs, because the runner
+   freezes it then.
+   - Judges (E10): `medgemma-27b-text` for every base outside Gemma, `phi-4` (general)
+     for the Gemma bases. The earlier candidates (Med42-8B, Meditron3-8B, Aloe-Beta-8B)
+     are in no record.
+   - No judge on the labelled, MediQ, filter-ablation, trace-seed and component-ablation
+     cells, to save cost.
+   - The labelled cells evaluate five conditions; RUN_PLAN.md R4 proposes three and
+     costs three.
+   - The probe (E11) continues raw token ids with no chat template, unlike the chat-mode
+     probe of the paper's Appendix A; its control is HealthBench for the older
+     benchmarks and ChatDoctor for HealthBench, 100 to 200 prompts each.
+   - The judges' harm axes (extent and likelihood from Singhal et al. 2023, plus delayed
+     care) are an LLM proxy for C33, not physician review.
+   - `mediq-abstain` adapts MediQ's multiple-choice wording to open questions.
+     `red-flags-first` moves the red-flag section first and skips its pass-2 line on
+     TECHNICAL and HYBRID tasks.
 
 After: record the adoption as a dated entry in ANALYSIS_PLAN.md section 12 and commit it.
-Then E02 may run on the existing outputs (`make analyze`), and RUN_PLAN.md may start.
+Then run the uniform analysis on the existing outputs: `make extract` (it reads the raw
+outputs of the 2026-07 cells, which are on this machine and ignored by git) and
+`make analyze`, and commit the tables and statistics it writes. For E02, add
+`needs-info-physician` to `discrimination.labels` in `configs/report.yaml` first. Then
+RUN_PLAN.md may start.
 
 ## 2. Go-ahead for GPU runs
 
@@ -50,19 +72,31 @@ Action: say which runs may start, where, and when.
 - Where: the shared H100 host or a paid cloud. Not Modal (D19).
 - Before the first run: `bash setup.sh` on the GPU machine, an `HF_TOKEN` with access to
   MedGemma and Llama-3.1, and the Gemma 2 licence accepted for the Med42-8B judge.
-- The new cell records and two protocols (`mediq-abstain`, `red-flags-first`) come from
-  the experiments lane; RUN_PLAN.md section 1 lists what must exist first.
+- The new cell records and the two protocols (`mediq-abstain`, `red-flags-first`) exist.
+  Before R3 and R10, `python -m bodhi_lora fetch mediq-paired` and
+  `python -m bodhi_lora fetch nlm-clinical-questions` download the MediQ file (2.6 MB) and
+  the four NLM XML files and print their sha256 values; put them in the benchmark
+  records and commit.
+- Two estimates exist. RUN_PLAN.md (measured 2026-07 stage times, three conditions on the
+  labelled cells) gives Tier A at 93 to 132 H100-hours. The experiments lane estimated the
+  records as they stand at about 215 to 265: a judge at 3x the evaluator's time on
+  every judged cell, 4-bit serving at 1.5 to 2x, five conditions on the labelled cells,
+  and two vLLM starts per condition and seed. Its model is not in the repo; the run
+  manifests of the first batch replace both.
 
 After: each finished cell lands in `results/<cell_id>/`. RUN_PLAN.md section 7 says how to
 copy it back, analyze it and commit it.
 
 ## 3. Hugging Face facts
 
-Why: two model facts need a token with access to gated repositories. The first blocks
-the runs that use Meditron3-8B as a judge.
+Why: two model facts need a token with access to gated repositories. Neither blocks a
+planned run.
 
-1. Read the revision of `OpenMeditron/Meditron3-8B` and put it in
-   `configs/models/meditron3-8b.yaml` (its `revision` is null today).
+1. `configs/models/meditron3-8b.yaml` is stale, and no cell uses it. On 2026-10-09 the
+   HF API listed the model as `EPFLiGHT/Meditron3-8B` (sha
+   783c241b18b84692689e0336170b345e5732e48e, gated, licence llama3.1), and the
+   OpenMeditron organisation listed only Meditron-CHUV. Update the record if E10 should
+   use it again; otherwise it can go.
 2. Compare the LFS sha256 of the weight files of `NousResearch/Meta-Llama-3.1-8B-Instruct`
    (the evaluator of the 2026-07 cells) with `meta-llama/Llama-3.1-8B-Instruct` (the
    evaluator of the 2026-05 cell and the new cells). If they match, KNOWN_ISSUES.md can

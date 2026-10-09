@@ -98,8 +98,14 @@ Issue numbers such as #5 are GitHub issues on `PeterLi-jpg/bohdi-lora`.
   (docs/ANALYSIS_PLAN.md section 2.5) therefore depends on the operator reading
   manifests, not logs.
 - **No automatic check orders the plan before the results.** Convention 3 relies on a
-  review step and the commits that the run manifests record; no test checks that each
-  planned cell is named in docs/ANALYSIS_PLAN.md.
+  review step and the commits that the run manifests record. `tests/test_plan_coverage.py`
+  checks only that each planned cell is named in docs/ANALYSIS_PLAN.md and that the plans
+  name no cell without a record.
+- **`analyze` does not compute every planned statistic yet.** The weighted kappa and the
+  dimension contrasts under a judge (H8), the judges' harm grades (C33), the probe and
+  bench outputs (E11, E20), stage times from the manifests, contrasts between cells (H9,
+  H10, E24), the paired-probe statistics (E14) and the H6 contrast are missing
+  (docs/ARCHITECTURE.md section 7). Each is needed only once its cell has run.
 
 ### Repo state
 
@@ -116,14 +122,27 @@ Issue numbers such as #5 are GitHub issues on `PeterLi-jpg/bohdi-lora`.
   deletes them after the first author's yes (D16, BLOCKED.md item 4).
 - **The remote slug misspells the name (`bohdi-lora`, D15).** Renaming is a remote
   action and is deferred.
+- **`make smoke` stops after the smoke record changes.** The runner freezes a cell's
+  record at its first run, in the scratch root too, so a changed smoke record fails
+  against the old `outputs/smoke/` folder. Move that folder away and run again.
 
 ## Fixed
+
+- **A request longer than a server's context window was retried forever (2026-10-09).**
+  Traces, filter and grade counted it as a failed request, marked the stage incomplete
+  and asked for a rerun, which failed the same way. The engine now raises
+  `ContextLengthError` on vLLM's refusal, and the stages list such items in their
+  manifests and skip them (`tests/test_pipeline_runner.py`, `tests/test_engine_vllm.py`).
+- **A stub run could still write under `results/` (2026-10-09).** The runner kept stub
+  and dry runs in the scratch root, but `--results-root results` got around it. It now
+  refuses a results root inside the project's.
 
 - **The code was not general (D22).** One registry (`configs/`), one runner
   (`python -m bodhi_lora run`), one results root (`results/<cell_id>/`) and no model,
   benchmark or path names in package code, each checked by a test or `make check`
-  (docs/CONVENTIONS.md rules 7 and 11 to 13). The uniform analysis (rule 14) is the
-  analysis lane's work.
+  (docs/CONVENTIONS.md rules 7 and 11 to 13). The uniform analysis (rule 14) is
+  `python -m bodhi_lora analyze`; the paper report on top of it is not built yet, so
+  `make numbers` still writes the paper's numbers.
 - **Added-cell raw outputs synced (PROV-1, PROV-2, PROV-3; 60c1a54, 5d5890e).** The
   outputs were copied read-only from the GPU host on 2026-10-08. `make cells` computes
   every added-cell value, the paired tests of the aggregate drop and the per-cell tau,

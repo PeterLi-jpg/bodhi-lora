@@ -117,14 +117,18 @@ author fixes it when he adopts docs/ANALYSIS_PLAN.md.
 
 Every cell is a record in `configs/cells/`, and `python -m bodhi_lora run` runs it
 (`bodhi_lora/pipeline/runner.py`). The runner writes the cell's pools and per-seed eval
-ids, then runs the stages in order: traces, filter (grading), the leakage gate, and per
-seed the filter split, training, the eval of each condition and the grading. A stage
-whose manifest says complete is skipped, so a run resumes where it stopped.
+ids, then runs the stages in order: the contamination probe, traces, filter (grading),
+the leakage gate, and per seed the filter split, training, the eval of each condition,
+the grading (the evaluator, then each judge) and, on the seeds in `bench.seeds`, the
+timing bench. A stage whose manifest says complete is skipped, so a run resumes where it
+stopped. A request too long for a server's context is listed in the stage's manifest
+and skipped, since a rerun would fail the same way.
 
 ```bash
 python -m bodhi_lora run <cell_id> --gpus 0,1,2,3,4              # one seed per GPU
 python -m bodhi_lora run <cell_id> --dry-run                     # print the GPU commands; CPU stub for the rest
 python -m bodhi_lora run <cell_id> --stages grade --gpus 0       # judge re-grades only, also on a recorded cell
+python -m bodhi_lora run <cell_id> --stages grade --judges gemma-2-27b --gpus 0   # one judge of the record
 python -m bodhi_lora run <cell_id> --stages bench --seeds 42 --gpus 0   # timing on an idle GPU
 python -m bodhi_lora analyze <cell_id> --extract                 # the response tables and statistics
 ```

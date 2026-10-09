@@ -99,10 +99,11 @@ Every number in the paper comes from code, and none is typed by hand
 ```bash
 python -m bodhi_lora fetch healthbench   # the public HealthBench files, checked against their pins
 make test        # pytest suite
-make analyze     # every statistic of every cell, from the tracked response tables
-make report      # paper/generated/: numbers.tex, numbers.json, tables, figures
-make paper       # make report, the macro check, then the LaTeX build
-make extract     # the response tables from the raw outputs (needs the gitignored files)
+make numbers     # paper/generated/: numbers.tex, numbers.json, tables
+make figures     # paper/figures/
+make paper       # make numbers and make figures, the macro check, then the LaTeX build
+make analyze     # every statistic of every cell that has tracked response tables
+make extract     # the response tables from the raw outputs (needs the gitignored files), then the statistics
 ```
 
 | Output | Made from | Notes |
@@ -110,12 +111,14 @@ make extract     # the response tables from the raw outputs (needs the gitignore
 | `results/<cell_id>/seed_<n>/table.csv` | the raw eval and grade files of the seed (`make extract`) | one row per condition and prompt; the analysis reads nothing else |
 | `results/<cell_id>/analysis/stats.json` | the cell's response tables (`make analyze`) | the seed is the unit: paired t over seeds, Holm over the seven behaviors within each contrast; prompt-level d is descriptive (D7) |
 | `results/cross_cell/stats.json` | every cell's statistics | the cross-cell families of `configs/report.yaml` |
-| `paper/generated/` | the two files above (`make report`) | macro names follow one rule; `scripts/check_paper_macros.py` checks that the paper uses only defined ones |
+| `paper/generated/` | today `make numbers` (`scripts/paper_stats.py`); the two files above once `python -m bodhi_lora report` is built | `scripts/check_paper_macros.py` checks that the paper uses only defined macros |
 | `results/healthbench__medgemma-27b-text__bodhi__2026-05/validation/kappa_results.json` | `make kappa` on the returned rater file, kept outside the repo | per-row grades are not committed (KNOWN_ISSUES) |
 
-Until the analysis lane lands `make analyze` and `make report`, `make numbers`,
-`make figures` and `make cells` write the same outputs with the older scripts
-(docs/ARCHITECTURE.md section 5).
+`make analyze` exists and reproduces the 2026-05 cell's values
+(`tests/test_analysis_equivalence.py`); only that cell has tracked tables so far. The
+paper's numbers still come from `make numbers`, `make figures` and `make cells`, the
+older scripts, until `python -m bodhi_lora report` is built (docs/ARCHITECTURE.md
+section 5).
 
 ## Run the pipeline
 
@@ -128,14 +131,14 @@ python -m bodhi_lora list cells --settings      # what differs between the cells
 python -m bodhi_lora fetch healthbench          # download a benchmark, checked against its pins
 python -m bodhi_lora run <cell_id> --dry-run    # print the GPU commands, run the rest on the CPU stub
 python -m bodhi_lora run <cell_id> --gpus 0,1   # every stage, one seed per GPU
-python -m bodhi_lora analyze <cell_id>          # the cell's statistics
-python -m bodhi_lora report                     # the paper's numbers, tables and figures
+python -m bodhi_lora analyze <cell_id>          # the cell's statistics, from its tables
+python -m bodhi_lora analyze <cell_id> --extract  # first the tables, from the raw outputs
 make smoke                                      # the smoke cell on the CPU, training included
 ```
 
 Setup, once per machine: `bash setup.sh` builds the training environment (`.venv`,
 `requirements.txt`) and the vLLM environment (`.venv-infer`, `requirements-infer.txt`),
-and `export HF_TOKEN=...` gives access to the gated models (MedGemma, Llama-3.1).
+and `export HF_TOKEN=...` gives access to the gated models (MedGemma, Llama-3.1, Gemma).
 
 A run writes `results/<cell_id>/`, with a manifest in every stage folder
 (`bodhi_lora/manifest.py`): resolved settings, git commit and dirty flag, library
