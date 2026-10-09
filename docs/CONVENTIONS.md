@@ -1,9 +1,12 @@
 # Lab conventions for this repo
 
-Adopted on 2026-10-07. These ten rules come from section 4 of the audit of that date,
-which traced most of the review's complaints to missing conventions. Each rule says why
-it exists and how this repo enforces it: a script, a hook, a make target, or a review
-step that a person must do before merging or posting.
+Rules 1 to 10 were adopted on 2026-10-07. They come from section 4 of the audit of that
+date, which traced most of the review's complaints to missing conventions. Rules 11 to 14
+were adopted on 2026-10-08 with the architecture (D22): they keep the code general, so
+that a new model, benchmark or protocol is a new record and not new code. Each rule says
+why it exists and how this repo enforces it: a test, a hook, a make target, or a review
+step that a person must do before merging or posting. Where a rule has no automatic
+check yet, it says so.
 
 ## 1. Claims ledger
 
@@ -30,13 +33,17 @@ hand.
 ## 3. Dated analysis plan before results
 
 Before a new run, commit a dated plan that fixes the metrics, the statistical unit, the
-test, the correction family and any margin.
+test, the correction family, the decision rule and any margin. The plan is
+[ANALYSIS_PLAN.md](ANALYSIS_PLAN.md). A change to it is a dated entry in its section 12,
+never an edit.
 
 - Why: the evaluation and its reading changed during the rebuttal, and labels were
   defined together with their results (EVAL-10).
 - Enforced by: review step. The plan's commit must be older than the first commit of
   the results it covers. `bodhi_lora/manifest.py` records the commit of each run, so
-  the order can be checked.
+  the order can be checked. While a cell runs, progress checks read its manifests only,
+  never its scores (ANALYSIS_PLAN.md section 2.5). Not automatic yet: a test that every
+  cell record with status `planned` is named in ANALYSIS_PLAN.md.
 
 ## 4. Inferential language
 
@@ -61,10 +68,14 @@ with the evaluator.
 
 - Why: the prior-work baseline was promised and never built, and Med42-8B shares the
   evaluator's family (EVAL-8, EVAL-7).
-- Enforced by: `bodhi_lora/protocols/` holds the baseline set. Cells that break the family
-  rule are marked † and regraded with `bodhi_lora/pipeline/grade.py` (D6). Review
-  step until the launcher checks this itself: a new base model's family is compared
-  with Llama and Qwen before its cell runs (KNOWN_ISSUES).
+- Enforced by: the registry. Every model record names its family, and
+  `validate_registry()` in `bodhi_lora/registry/schema.py` applies the family rule (R1 to
+  R3, ARCHITECTURE.md section 3.1) to every cell whenever the registry loads. So
+  `make check`, `tests/test_registry_configs.py` and every `python -m bodhi_lora` command
+  fail on a cell that breaks the rule without a stated `same_family_waiver`, and the
+  runner refuses it. A waived cell is marked † in every table and needs a judge from a
+  fourth family (D6). The baseline set is the protocol records in `configs/protocols/`
+  that ANALYSIS_PLAN.md names (H4); a new baseline after outputs exist is exploratory.
 
 ## 6. Validation gates are blocking
 
@@ -78,16 +89,23 @@ depends on it.
 
 ## 7. One results root, a manifest per run, synced before posting
 
-Every result lives under one results root in the repo, each run has a manifest, and no
-number is posted from a file that exists only on a remote machine.
+Every result lives under one results root, `results/<cell_id>/seed_<n>/<stage>/`, set in
+`configs/project.yaml`. Each stage has a manifest, and no number is posted from a file
+that exists only on a remote machine.
 
-- Why: the added cells existed only on the GPU host, and the recorded settings did not
-  describe what ran (PROV-1, HYG-4, REPRO-7).
-- Enforced by: `bodhi_lora/manifest.py` writes the manifest. `.gitignore` decides by the
-  kind of file under `results/`: manifests, cell records, id lists, adapter configs,
-  trainer states, analysis and validation files are tracked; traces, raw eval and grade
-  JSON, adapter weights and logs stay out (results/PROVENANCE.md). Review step: a reply or
-  paper number cites a file that is in git.
+- Why: the added cells existed only on the GPU host, the code wrote to six result
+  locations, and the recorded settings did not describe what ran (PROV-1, HYG-4,
+  REPRO-7).
+- Enforced by: `bodhi_lora/paths.py` builds every path from `configs/project.yaml`, and
+  `tests/test_no_hardcode.py` (rule 3) fails when package code names a results folder or
+  the root itself. `bodhi_lora/manifest.py` writes the manifests.
+  `tests/test_migration_provenance.py` checks that every file of the old locations has an
+  entry in `results/provenance.json`. `.gitignore` decides by the kind of file under
+  `results/`: manifests, cell records, id lists, adapter configs, trainer states, response
+  tables, analysis and validation files are tracked; traces, raw eval and grade JSON,
+  adapter weights and logs stay out (results/PROVENANCE.md).
+  `scripts/check_doc_paths.py` (`make check`) fails when a doc names a path that does not
+  exist. Review step: a reply or paper number cites a file that is in git.
 
 ## 8. One canonical paper source
 
@@ -126,10 +144,84 @@ tracked files.
   `paper/AUTHORS.md` and `CONTRIBUTORS.md` out of git. Review step: before sharing a
   review link, run the export and keep its gate output.
 
+## 11. One registry
+
+Every model, benchmark, protocol and cell is one YAML record in `configs/`, in a file
+named after its id. Project settings are in `configs/project.yaml`. No setting lives in a
+script default, a shell profile or a second config folder.
+
+- Why: settings lived in four places (`configs/`, a rebuttal config folder, the profile
+  blocks of a launcher and script flag defaults), so the recorded settings did not match
+  what ran (ARCHITECTURE.md section 1, REPRO-3).
+- Enforced by: the pydantic schema in `bodhi_lora/registry/schema.py` forbids unknown
+  keys and checks each record; `load_registry()` checks file names and references.
+  `make check` loads the whole registry, and CI runs it. `tests/test_registry_configs.py`
+  checks that every record loads, that each file is named after its id, and that the
+  example records in ARCHITECTURE.md and EXPERIMENTS.md match the schema.
+  `python -m bodhi_lora list cells --settings` prints every setting that differs between
+  cells.
+
+## 12. One runner
+
+Every stage of every cell runs through `python -m bodhi_lora run <cell_id>`
+(`bodhi_lora/pipeline/runner.py`). The Makefile calls the command line, the repository
+tools in `scripts/` and the LaTeX build, and nothing else. There are no shell launchers
+and no shims. A record of a past run is frozen: the runner refuses to run it again,
+except to add judge re-grades, so a new run of the same design is a new cell.
+
+- Why: the 2026-05 cell ran through one launcher and the 2026-07 cells through another,
+  so neither path could reproduce both (HYG-5).
+- Enforced by: `tests/test_pipeline_runner.py` (a stub run of the smoke cell through every
+  stage, resume, refusal of recorded and external cells, the dry run). `make smoke` runs
+  the smoke cell on the CPU, training included. Review step: a new file in `scripts/` is
+  a repository tool, not a pipeline step, and `legacy/` stays frozen.
+
+## 13. No names in code
+
+The package names no model, benchmark, results path, run word or seed list. Each comes
+from a record.
+
+- Why: model names, benchmark case statements, seed lists and data paths were literals
+  in code, so a new cell meant editing code (ARCHITECTURE.md section 1).
+- Enforced by: `tests/test_no_hardcode.py` reads every string in `bodhi_lora/` with `ast`
+  and fails on any model or benchmark id from the registry, a results or data path, a
+  file or folder name with a run word (`modal`, `tpu`, `rebuttal`, `submitted` and
+  others), or the five seeds as a literal (ARCHITECTURE.md section 9). It has no allow-list; an exception
+  is a design change.
+
+## 14. Uniform analysis
+
+The same code computes every statistic for every cell, from the per-seed response tables.
+A statistic is absent only when its input is absent, and then the output says "not
+measured" and why. Contrasts and correction families come from the cell's conditions by
+rule, not from a list in code.
+
+- Why: the full statistics existed for one cell only, the added cells had a subset, and
+  condition names were code, so a cell with a new protocol could not be analyzed
+  (ARCHITECTURE.md section 1).
+- Enforced by: `tests/test_no_hardcode.py` covers `bodhi_lora/analysis/` and
+  `bodhi_lora/report/` like the rest of the package. The analysis lane adds
+  `tests/test_analysis_*.py` and an equivalence test against every superseded output
+  (ARCHITECTURE.md section 10.3). Until that lane lands, `scripts/paper_stats.py` still
+  computes the full set for the 2026-05 cell only; that is a known gap, not a rule.
+
+## Generality rules at a glance
+
+| Rule | Where | Automatic check |
+|---|---|---|
+| One registry | rule 11 | `make check`, `tests/test_registry_configs.py` |
+| One runner | rule 12 | `tests/test_pipeline_runner.py`, `make smoke` |
+| One results root | rule 7 | `tests/test_no_hardcode.py`, `tests/test_migration_provenance.py`, `make check` |
+| No names in code | rule 13 | `tests/test_no_hardcode.py` |
+| Uniform analysis | rule 14 | the analysis lane's tests (planned) |
+| Analysis plan before runs | rule 3 | none yet; review step and the run manifests |
+
 ## Also checked on every pull request
 
-- `python scripts/check_doc_paths.py`: every repo path a doc names exists (HYG-14).
-- `bash scripts/check_no_secrets.sh`: no token shapes in tracked files.
-- `pytest tests/`.
+- `make check`: `scripts/check_no_secrets.sh` (no token shapes in tracked files),
+  `scripts/check_doc_paths.py` (every repo path a doc names exists, HYG-14), and a load
+  of the whole registry with the family rule.
+- `pytest tests/` (`make test`).
+- A rebuild of `paper/generated/` from the checkout, diffed against the committed files.
 
-CI runs all three.
+CI runs all of these.
