@@ -204,9 +204,12 @@ rule, not from a list in code.
   `bodhi_lora/report/` like the rest of the package. `tests/test_analysis_cell.py` checks
   the contrast rule, the seed-level tests and "not measured" on synthetic tables, and
   `tests/test_analysis_equivalence.py` checks that the 2026-05 cell's statistics match
-  the outputs they supersede (ARCHITECTURE.md section 10.3). Known gap: the paper's
-  numbers still come from `scripts/paper_stats.py` (`make numbers`) until
-  `python -m bodhi_lora report` is built.
+  the outputs they supersede (ARCHITECTURE.md section 10.3), and
+  `tests/test_analysis_committed.py` checks that each committed `stats.json` is what
+  `make analyze` writes. Known gap: the paper's numbers still come from
+  `scripts/paper_stats.py` (`make numbers`). It runs `bodhi_lora.report` for the per-cell
+  tables, but its cross-cell tables read `results/cross_cell/generated_values.json`, not
+  the cells' `stats.json`, and `make report` is not a target yet.
 
 ## Generality rules at a glance
 
