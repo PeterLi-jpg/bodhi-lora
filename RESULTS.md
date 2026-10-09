@@ -59,8 +59,8 @@ All cells are in the main evaluation of the paper (D12), including these two:
   now neutral. The synced MedQA outputs are that earlier run: they predate the fix
   (035d85f), and Base asks in nearly every response. No run without the preamble exists.
   Seed 42's epistemic grading found none of the MedQA prompts, so the seven dimensions
-  have four seeds; the paper reports the cell's aggregate score and leaves the dimensions
-  out of Table 3 (withdrawals W12).
+  have four seeds. The paper's Table 1 gives the cell's dimensions from those four seeds
+  and its aggregate score from all five, set aside (withdrawals W12).
 
 ## Planned cells
 

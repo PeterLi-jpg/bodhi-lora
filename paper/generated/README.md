@@ -82,7 +82,8 @@ D6). The counts (`\statCellsOutside*`, `\statCells*`) leave those cells and the
 set-aside MedQA cell out, and include the submitted cell.
 
 `tab_generality`, `tab_generality_aggregate` and `tab_cell_dimensions` are the older
-cross-cell tables, kept until the paper stops using them. Their rows come from the same
+cross-cell tables. The paper stopped using them in ab58ee5; they are still written, and their
+tests cover the fallback to posted values, until they are removed. Their rows come from the same
 file, with the submitted cell's first row from its raw outputs. Without
 `generated_values.json` they fall back to the posted values of
 `rebuttal/posted_values.json`, marked with an asterisk.

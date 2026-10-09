@@ -3,7 +3,7 @@
 This file lists every claim that the authors corrected or withdrew during the NeurIPS 2026
 discussion of submission 32818. It also lists posted claims that the discussion never
 corrected but that the audit or a later check found wrong (W10, W11, and W14 onward; W21 came
-from the raw outputs synced on 2026-10-08). Each
+from the raw outputs synced on 2026-10-08, W22 from the stored outputs on 2026-10-09). Each
 entry gives the claim as made, the correction with its source, and the statement the paper
 must carry.
 
@@ -367,7 +367,8 @@ run. Its aggregate score rises from 0.665 to 0.683
 drafts (`data/rebuttal_cells/README.md`, "Not in this file"). So the posted "aggregate score
 rises" (`HomM_2_followup_part1.md:11`) describes the preamble run, which measures instruction
 following. No run without the preamble exists. Done in section 4.2, the abstract, the Limitations
-and Appendix J of `paper/main.tex` (commit 38b800e), with every number from `make numbers`.
+and Appendix J of `paper/main.tex` (commit 38b800e), with every number from `make numbers`. Since
+ab58ee5 this is section 4.1, where the cell sits last in Table 1, set aside.
 
 ---
 
@@ -479,14 +480,14 @@ uses the seed as the unit. Done in Section 3.4 of `paper/main.tex`.
 **Correction.** The code is public. No adapter is released. The five MedGemma-27B adapters were
 in `gs://bohdi-runs-tokyo-micron/prod-v39-tunix-27b-neurips/`, and that bucket returned 404 on
 2026-10-08. The only other copy that the code names is the Modal volume `bohdi-data-cache`
-(`legacy/modal_eval.py:119,435-447`), and nobody has listed it yet (BLOCKED.md item 3). So these
-adapters may no longer exist. The added-cell adapters are a separate case: the sync of
-2026-10-08 copied their configs and trainer states, not their weights, which stay on the GPU host.
+(`legacy/modal_eval.py:119,435-447`). The first author decided on 2026-10-08 not to use Modal
+and to treat these adapters as not retained (DECISIONS.md D19), so nobody will check it. The
+added-cell adapters are a separate case: the sync of 2026-10-08 copied their configs and trainer
+states, not their weights, which stay on the GPU host.
 
-**The paper must say.** No adapter is released. The bucket that held the five MedGemma-27B
-adapters no longer exists, and their release depends on a second copy that is not yet checked.
-Done in Code availability (`paper/main.tex`) and checklist items 4, 5, 11 and 13
-(`paper/checklist.tex`).
+**The paper must say.** No adapter is released, because the five MedGemma-27B adapters were not
+retained. Done in Code availability (`paper/main.tex`, ab58ee5) and in the checklist
+(`paper/checklist.tex`, faf8579).
 
 ---
 
@@ -519,7 +520,8 @@ other way, 1.71 to 1.33, and belonged next to them."
 
 **The paper must say.** Give specificity next to the other two: Base 1.71, teacher 1.47, LoRA 1.33,
 so the adapter lowers specificity on MedQuAD. Done in Appendix J of `paper/main.tex`, with every
-dimension of the cell in a generated table (`paper/generated/tab_cell_dimensions.tex`).
+dimension of every cell in the generated tables of Appendix E (`paper/generated/tab_cell_detail_1.tex`
+and `tab_cell_detail_2.tex`; before ab58ee5, `tab_cell_dimensions.tex`).
 
 ---
 
@@ -538,8 +540,26 @@ that differs from the raw outputs at the posted precision
 was not.
 
 **The paper must say.** 1.45, from the generated values. Done: Appendix J and
-`paper/generated/tab_cell_dimensions.tex` print the generated value, and
+`paper/generated/tab_cell_detail_2.tex` print the generated value, and
 `data/rebuttal_cells/posted_values.json` keeps 1.46 as the record of what was posted.
+
+---
+
+## W22. "About 58% fewer output tokens" (found in the outputs)
+
+**Claim as made.** Posted `FzpA_2_followup.md:19`: the adapter "needs one call where the protocol
+takes two, at about 58% fewer output tokens".
+
+**Correction posted.** None.
+
+**What the outputs give.** The serving engine stored output token counts for the one-pass
+conditions, Base and LoRA. The two-pass conditions stored only their final response, so no file
+counts the protocol's tokens, and no script or output gives 58%
+(`results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/stats.json`, `cost`).
+
+**The paper must say.** The engine's counts for Base and LoRA, that the two-pass conditions cannot
+be counted, and that the posted 58% is withdrawn. Done in section 4.2 and Appendix H of
+`paper/main.tex` (ab58ee5), with the posted value from `rebuttal/posted_values.json`.
 
 ---
 

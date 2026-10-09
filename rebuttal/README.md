@@ -86,8 +86,8 @@ Some drafts hold numbers that we never posted. The last section below lists them
   against 39.6% (PROV-7). The odds ratios reproduce 1.16, 1.54 and 1.56, but their 95% CIs
   overlap (PROV-10). The outputs are in `results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/`.
 - **The MedQA cell.** Settled by the sync: the only run is the preamble run, so the cell
-  measures instruction following and stays set aside. Table 3 reports its aggregate score
-  (W12, C24 done).
+  measures instruction following and stays set aside. Table 1 of the paper reports it last,
+  set aside (W12, C24 done).
 - **The meta-review reply.** Confirm on OpenReview whether `meta_review_part1.md` and
   `meta_review_part2.md` were posted to the AC. If they were, move them to
   `responses/posted/` as `AC_1_part1.md` and `AC_2_part2.md` with `git mv`, and add them to
@@ -174,7 +174,7 @@ every count and range posted across cells recomputes from the cell values; the s
 cell matches its `analysis/cross_seed_aggregate.json` (8 values); the discrimination index
 and the leakage numbers match its `analysis/mimicry_split.json` and
 `analysis/interference_mechanism.json` (41 values, 0 mismatches); the Base and LoRA
-aggregate means in Table 3 match the 4-decimal table in
+aggregate means in the paper's cross-cell table match the 4-decimal table in
 `responses/drafts/FINDINGS_quality_drop.md`. These checks show that the transcription matches the
 posts and that the posts agree with each other. Only the raw outputs can show that the
 posted numbers are correct, and `make cells` now does: one mismatch (W21).
