@@ -167,11 +167,13 @@ Each stage writes into `results/<cell id>/` (docs/ARCHITECTURE.md section 6), wi
 | Stage | Module | Output |
 |---|---|---|
 | Prepare | `bodhi_lora/pipeline/runner.py` | `shared/inputs/`: pools, eval ids per seed, leakage report |
+| Probe | `bodhi_lora/pipeline/probe.py` | `shared/probe/`: one JSON file with the exact-match rates of the continuations on benchmark and control text, and the Fisher test |
 | Traces | `bodhi_lora/pipeline/traces.py` | `results/<cell>/shared/traces/traces.jsonl`: prompt_id, messages, reply, protocol, calls, tokens |
 | Filter | `bodhi_lora/pipeline/filter.py` | `results/<cell>/shared/filter/graded.jsonl` (a `grade` per trace), `kept.jsonl`, and the train/val split (shared or per seed) |
 | Train | `bodhi_lora/pipeline/train.py` | `seed_<n>/train/`: adapter, `trainer_state.json`, `checkpoint-<k>/` |
 | Eval | `bodhi_lora/pipeline/eval.py` | `results/<cell>/seed_<n>/eval/<condition>.json`: per-prompt reply, rubric score and results, parse failures, calls, tokens |
-| Grade | `bodhi_lora/pipeline/grade.py` | `results/<cell>/seed_<n>/grade/epistemic__<evaluator>.json`, and `judge__<judge>.json` per judge |
+| Grade | `bodhi_lora/pipeline/grade.py` | `results/<cell>/seed_<n>/grade/epistemic__<evaluator>.json`, and `judge__<judge>.json` per judge (rubric, dimensions and harm) |
+| Bench | `bodhi_lora/pipeline/bench.py` | `seed_<n>/bench/`: one JSON file with the time and tokens per condition on the seeds in `bench.seeds` |
 
 The normalized rubric score is `(earned - negative) / (positive - negative)`, so it is
 comparable across prompts with different penalty items.
@@ -180,9 +182,8 @@ comparable across prompts with different penalty items.
 
 | Data | Where | How to get it |
 |---|---|---|
-| HealthBench JSONL | `data/raw/` (ignored) | `bash setup.sh` |
-| ChatDoctor, MedQuAD, MedQA JSONL | `data/raw/` (ignored) | `bodhi_lora/data/loaders.py`, at the pinned dataset revisions; its manifest records the sha256 of each file |
-| Filtered training traces of the submitted cell | the seed-7 split only, `results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_7/filter/train.jsonl` (ignored); the other seeds' traces were on a bucket that returned 404 (results/PROVENANCE.md) | regenerate with stages 1 and 2 |
+| Benchmark files: HealthBench, ChatDoctor, MedQuAD, MedQA, MediQ, NLM Clinical Questions | `data/raw/<benchmark>/` (ignored) | `python -m bodhi_lora fetch <benchmark>` downloads or builds them and checks each against the pins of its record (`bash setup.sh` fetches HealthBench). The MediQ and NLM records are not pinned yet (BLOCKED.md item 2) |
+| Filtered training traces of the submitted cell | the seed-7 split only, `results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_7/filter/train.jsonl` (ignored); the other seeds' traces were on a bucket that returned 404 (results/PROVENANCE.md) | regenerate with the traces and filter stages of a new cell |
 | Submitted adapters and trainer states | were at `gs://bohdi-runs-tokyo-micron/prod-v39-tunix-27b-neurips/`; that bucket returned 404 on 2026-10-08, and the project has no buckets | not retained (D19); rerun as a new cell to evaluate MedGemma-27B again |
 | Added-cell outputs | `/data/PROJECTS/bohdi/results_rebuttal/` on the shared H100 host; copied on 2026-10-08 and moved into the `results/*__2026-07/` cells (eval JSON gitignored), and to a local archive outside the repo | the sync record below |
 | Added-cell host logs | `/data/PROJECTS/bohdi/logs/` on the host; copied on 2026-10-08 into each cell's `logs/` folder (gitignored) | the sync record below |
