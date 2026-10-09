@@ -11,8 +11,11 @@ in two places:
                                           and the counts.
   logs/host/*.log                         any "re-filtering at 22nd-pct tau" line. The
                                           launcher that made the posted cells cut again at
-                                          the 22nd percentile when a non-HealthBench cell
-                                          kept under 40% (1262448:rebuttal/launch/run_cell.sh:160-200).
+                                          the 22nd percentile when train.jsonl of a
+                                          non-HealthBench cell held under 40% of the raw
+                                          traces (1262448:rebuttal/launch/run_cell.sh:160-200).
+                                          The launcher overwrites the filter log on each
+                                          pass, so the log is the cell's last pass.
   results_rebuttal/<cell>/seed_<N>/ckpt/best/{adapter_config,trainer_state}.json
                                           tracked; r, alpha, dropout and target modules,
                                           and the steps, epochs and best checkpoint.
@@ -26,7 +29,13 @@ rebuttal/results/cell_recipe.json, which scripts/paper_stats.py reads.
 Every folder under results_rebuttal/ is listed, including runs that did not finish, with
 a status: "complete" (5 seeds trained), "partial" (fewer seeds) or "not run" (no
 adapter; the last error line of the generation log is kept). n_eval_ids is the size of
-the cell's eval_ids.json.
+the cell's eval_ids.json. refilter_rule_met says whether the filter log's counts meet the
+launcher's re-filter condition above.
+
+A run can also stop before it writes a folder. runs_without_folder lists every
+gen_<bench>_<tag>.log with no matching folder, with the last line of that log and any
+"Killed" line in the launcher's section for the run (the lines after its
+"=== cell: <bench> x <model>" header in any log).
 
 Usage:
     python3 rebuttal/analyses/cell_recipe.py [--cells-root results_rebuttal] [--logs logs/host]
@@ -45,7 +54,11 @@ KEPT = re.compile(r"^Kept (\d+)/(\d+) \(score_field=(\S+), threshold=([0-9.eE+-]
 SUMMARY = re.compile(r"^raw=(\d+) graded=(\d+) kept=(\d+) train=(\d+) val=(\d+)", re.M)
 PARSE = re.compile(r"parse failures: (\d+)/(\d+)")
 REFILTER = re.compile(r"re-filtering at")
+HEADER = re.compile(r"^=== cell: (\S+) x (\S+)", re.M)
 N_SEEDS = 5
+# The launcher re-filters a non-HealthBench cell when train.jsonl holds fewer than this
+# percent of the raw traces, in shell integer arithmetic (1262448:rebuttal/launch/run_cell.sh:162-164).
+REFILTER_RULE_PCT = 40
 
 
 def _sha256(path: Path) -> str:
@@ -80,8 +93,47 @@ def filter_log(path: Path) -> dict | None:
     return {"path": _rel(path), "sha256": _sha256(path), "parsed": True,
             "tau": float(tau), "score_field": field, "n_filter_passes": len(kept),
             "raw": raw, "graded": graded, "kept": k2, "train": train, "val": val,
-            "kept_pct": 100.0 * k2 / graded,
+            "kept_pct": 100.0 * k2 / graded, "train_pct_of_raw": 100.0 * train / raw if raw else None,
             "rubric_parse_failures": [int(pf[-1][0]), int(pf[-1][1])] if pf else None}
+
+
+def refilter_rule_met(bench: str, f: dict | None) -> bool | None:
+    """Whether the launcher's re-filter condition holds for these filter-log counts."""
+    if not f or not f.get("parsed"):
+        return None
+    return bench != "healthbench" and f["raw"] > 0 and f["train"] * 100 // f["raw"] < REFILTER_RULE_PCT
+
+
+def _tag(model: str) -> str:
+    # The launcher's TAG: tr '/:.' '___' (1262448:rebuttal/launch/run_cell.sh:39).
+    return model.translate(str.maketrans("/:.", "___"))
+
+
+def run_sections(text: str):
+    """(benchmark, tag, text) for each "=== cell:" section of a launcher log."""
+    heads = list(HEADER.finditer(text))
+    for i, m in enumerate(heads):
+        end = heads[i + 1].start() if i + 1 < len(heads) else len(text)
+        yield m.group(1), _tag(m.group(2)), text[m.start():end]
+
+
+def runs_without_folder(cells_root: Path, logs: Path) -> dict:
+    """Runs that started trace generation but left no folder under results_rebuttal/."""
+    texts = {p.name: _text(p) for p in sorted(logs.glob("*.log"))}
+    res = {}
+    for p in sorted(logs.glob("gen_*.log")):
+        bench, _, tag = p.stem.removeprefix("gen_").partition("_")
+        name = f"{bench}__{tag}"
+        if (cells_root / name).is_dir():
+            continue
+        lines = [ln.strip() for ln in texts[p.name].splitlines() if ln.strip()]
+        killed = [f"{log}: {ln.strip()}" for log, text in texts.items()
+                  for b, t, sec in run_sections(text) if (b, t) == (bench, tag)
+                  for ln in sec.splitlines() if "Killed" in ln]
+        res[name] = {"benchmark": bench, "model_tag": tag, "status": "no folder",
+                     "gen_log": _rel(p), "gen_log_last_line": lines[-1] if lines else None,
+                     "killed_lines": killed}
+    return res
 
 
 def last_error(path: Path) -> str | None:
@@ -116,6 +168,7 @@ def cell(cell_dir: Path, logs: Path) -> dict:
            "seeds": [s for s, _ in seeds],
            "n_eval_ids": len(json.loads(ids.read_text())["prompt_ids"]) if ids.is_file() else None,
            "filter": filter_log(logs / f"filter_{bench}_{tag}.log")}
+    rec["refilter_rule_met"] = refilter_rule_met(bench, rec["filter"])
     if not seeds:
         rec["status"] = "not run"
         # Why it never trained. A finished cell's log also holds retried errors, so
@@ -155,7 +208,8 @@ def run(cells_root: Path, logs: Path, out: Path) -> dict:
     res = {"_provenance": "generated by rebuttal/analyses/cell_recipe.py from logs/host/ "
                           "(copied from the GPU host) and results_rebuttal/*/seed_*/ckpt/best/",
            "refilter_lines": refilter,
-           "cells": {p.name: cell(p, logs) for p in sorted(cells_root.iterdir()) if p.is_dir()}}
+           "cells": {p.name: cell(p, logs) for p in sorted(cells_root.iterdir()) if p.is_dir()},
+           "runs_without_folder": runs_without_folder(cells_root, logs)}
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(res, indent=2, sort_keys=True) + "\n")
     for name, c in res["cells"].items():
@@ -165,7 +219,11 @@ def run(cells_root: Path, logs: Path, out: Path) -> dict:
                  if f.get("parsed") else "")
               + (f", accumulation {c['grad_accumulation_consistent']}"
                  if "grad_accumulation_consistent" in c and c["status"] == "complete" else ""))
-    print(f"  re-filter lines in the logs: {len(refilter)}")
+    for name, r in res["runs_without_folder"].items():
+        print(f"  {name}: {r['status']}, gen log ends {r['gen_log_last_line']!r}, "
+              f"{len(r['killed_lines'])} Killed line(s)")
+    met = [n for n, c in res["cells"].items() if c["refilter_rule_met"]]
+    print(f"  re-filter lines in the logs: {len(refilter)}; re-filter condition met by: {met or 'none'}")
     print(f"wrote {_rel(out)}")
     return res
 

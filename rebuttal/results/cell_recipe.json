@@ -50,6 +50,7 @@
         "sha256": "2db7f8e318955a20fcdc625b6a4ef1d37d912954b6036a434d0cd3f49c76b5be",
         "tau": 0.4,
         "train": 3629,
+        "train_pct_of_raw": 86.4047619047619,
         "val": 403
       },
       "grad_accumulation_consistent": [
@@ -57,6 +58,7 @@
       ],
       "model_tag": "m42-health_Llama3-Med42-8B",
       "n_eval_ids": 200,
+      "refilter_rule_met": false,
       "seeds": [
         7,
         13,
@@ -115,6 +117,7 @@
         "sha256": "22eac3850d310ee3e5b39886f9fbda073e88d17f45482201794b38a30e7f9e6e",
         "tau": 0.4,
         "train": 3690,
+        "train_pct_of_raw": 87.85714285714286,
         "val": 409
       },
       "grad_accumulation_consistent": [
@@ -122,6 +125,7 @@
       ],
       "model_tag": "mistralai_Mistral-Small-24B-Instruct-2501",
       "n_eval_ids": 200,
+      "refilter_rule_met": false,
       "seeds": [
         7,
         13,
@@ -180,6 +184,7 @@
         "sha256": "f90614d386def0a6ab1942d08733f63a6fe957563552862301de4ee9e976d9c7",
         "tau": 0.4,
         "train": 733,
+        "train_pct_of_raw": 18.325,
         "val": 81
       },
       "grad_accumulation_consistent": [
@@ -187,6 +192,7 @@
       ],
       "model_tag": "BioMistral_BioMistral-7B",
       "n_eval_ids": null,
+      "refilter_rule_met": false,
       "seeds": [
         7,
         13,
@@ -245,6 +251,7 @@
         "sha256": "dcc26981ca813555114fcbcf90ed3b315cc9ae21fd20907024dcdb2b85a7bac9",
         "tau": 0.4,
         "train": 1827,
+        "train_pct_of_raw": 45.675,
         "val": 203
       },
       "grad_accumulation_consistent": [
@@ -252,6 +259,7 @@
       ],
       "model_tag": "m42-health_Llama3-Med42-8B",
       "n_eval_ids": null,
+      "refilter_rule_met": false,
       "seeds": [
         7,
         13,
@@ -310,6 +318,7 @@
         "sha256": "29e4c028df9e0ef75cb0e0979adce4ceab6484c450e04f5d91cadbc8f4b568b4",
         "tau": 0.4,
         "train": 2238,
+        "train_pct_of_raw": 55.95,
         "val": 248
       },
       "grad_accumulation_consistent": [
@@ -317,6 +326,7 @@
       ],
       "model_tag": "mistralai_Mistral-Small-24B-Instruct-2501",
       "n_eval_ids": null,
+      "refilter_rule_met": false,
       "seeds": [
         7,
         13,
@@ -434,6 +444,7 @@
         "sha256": "1271a03b2b728fd52c405224c340a554bbbbb28dad64fbd48fe8d2224acd3118",
         "tau": 0.4,
         "train": 2,
+        "train_pct_of_raw": 5.0,
         "val": 1
       },
       "grad_accumulation_consistent": [
@@ -504,6 +515,7 @@
       ],
       "model_tag": "BioMistral_BioMistral-7B",
       "n_eval_ids": 10,
+      "refilter_rule_met": true,
       "seeds": [
         42
       ],
@@ -516,6 +528,7 @@
       "generation_error": "RuntimeError: vllm serve did not become healthy within 2700s",
       "model_tag": "google_medgemma-27b-text-it",
       "n_eval_ids": 200,
+      "refilter_rule_met": null,
       "seeds": [],
       "status": "not run"
     },
@@ -568,6 +581,7 @@
         "sha256": "ee34525bb0da244870ada63a2372cc86076065e3d48600282693706ff34daaec",
         "tau": 0.4,
         "train": 3776,
+        "train_pct_of_raw": 89.9047619047619,
         "val": 419
       },
       "grad_accumulation_consistent": [
@@ -575,6 +589,7 @@
       ],
       "model_tag": "mistralai_Mistral-Small-24B-Instruct-2501",
       "n_eval_ids": 200,
+      "refilter_rule_met": false,
       "seeds": [
         7,
         13,
@@ -591,6 +606,7 @@
       "generation_error": "RuntimeError: vllm serve did not become healthy within 2700s",
       "model_tag": "google_medgemma-27b-text-it",
       "n_eval_ids": 200,
+      "refilter_rule_met": null,
       "seeds": [],
       "status": "not run"
     },
@@ -643,6 +659,7 @@
         "sha256": "fde8a4d247e39e99c857daca3db5f642d5de1a55b2038fd54c279b80b92facf2",
         "tau": 0.4,
         "train": 2965,
+        "train_pct_of_raw": 70.5952380952381,
         "val": 329
       },
       "grad_accumulation_consistent": [
@@ -650,6 +667,7 @@
       ],
       "model_tag": "mistralai_Mistral-Small-24B-Instruct-2501",
       "n_eval_ids": 200,
+      "refilter_rule_met": false,
       "seeds": [
         7,
         13,
@@ -660,5 +678,17 @@
       "status": "complete"
     }
   },
-  "refilter_lines": []
+  "refilter_lines": [],
+  "runs_without_folder": {
+    "healthbench__google_gemma-2-9b-it": {
+      "benchmark": "healthbench",
+      "gen_log": "logs/host/gen_healthbench_google_gemma-2-9b-it.log",
+      "gen_log_last_line": "waiting for vllm serve [starting]... (300s)",
+      "killed_lines": [
+        "gemma2_9b_hb.log: rebuttal/launch/run_cell.sh: line 103: 166795 Killed                  CUDA_VISIBLE_DEVICES=\"$GPU\" BODHI_VLLM_PORT=\"$((8000 + GPU))\" \"$INFER_PY\" scripts/generate_traces.py --model \"$MODEL\" \"${GEN_SRC[@]}\" --use-bodhi --output \"$RAW\" --max-examples \"$GEN_MAX\" 2>&1"
+      ],
+      "model_tag": "google_gemma-2-9b-it",
+      "status": "no folder"
+    }
+  }
 }

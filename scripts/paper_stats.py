@@ -1278,7 +1278,9 @@ def recipe_macros(recipe: dict, cells: list[dict], out, macros):
            "epochs": _one([a["num_train_epochs"] for a in ad], "epochs"),
            "effective_batch": _one([r["effective_batch_consistent"] for r in rs], "effective batch"),
            "adapters": sum(len(r["seeds"]) for r in rs),
-           "refilter_lines": len(recipe.get("refilter_lines", []))}
+           "refilter_lines": len(recipe.get("refilter_lines", [])),
+           # Appendix J says no cell met the launcher's re-filter condition.
+           "refilter_rule_met": [c["id"] for c in done if c["recipe"].get("refilter_rule_met")]}
     if len(res["effective_batch"]) != 1:
         raise SystemExit(f"paper_stats: effective batch not determined: {res['effective_batch']}")
     best = [e for r in rs for e in r["best_epoch"].values()]
@@ -1316,6 +1318,8 @@ def recipe_macros(recipe: dict, cells: list[dict], out, macros):
     # Host folders that hold no finished cell (run history in Appendix J).
     incomplete = {name: c for name, c in recipe["cells"].items() if c["status"] != "complete"}
     res["incomplete"] = {name: c["status"] for name, c in incomplete.items()}
+    # Runs stopped before they wrote a folder (Appendix J names them too).
+    res["incomplete"].update({name: r["status"] for name, r in recipe.get("runs_without_folder", {}).items()})
     macros.add("CellsNotRun", fmt_int(sum(c["status"] == "not run" for c in incomplete.values())),
                f"{src}: host folders with eval ids only (trace generation failed)")
     for name, c in sorted(incomplete.items()):

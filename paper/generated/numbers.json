@@ -58,7 +58,7 @@
       "data/derived/seed_7_filter_scores.json": "3e3e688090c0de5df809d6df0bf18ccdcf64dec49ab0b25ba9a80253c653b9a0",
       "data/derived/seed_42_qwen_grader_scores.json": "cd6dadc8be1fef7c6d2e01d62b71cca1f418784893633d461262a3d0c416bc15",
       "results_modal/irr/kappa_results.json": "194b39fe7522dcffdce270bcf59bd9f2d094e57c08b570c3c5fcd08cb86d8535",
-      "rebuttal/results/cell_recipe.json": "ba8727f3265633232c3ca4c4ab2eab7b8cfa07c62869ba8d24331992aa2a5a93",
+      "rebuttal/results/cell_recipe.json": "197039221cd0595918d1b29154a4fdcf775d326fae2acace9d2c679ba7407a63",
       "rebuttal/results/interference_mechanism.json": "b85713aab71610aec4f3c0e95077db6319a1ff2895eb9796a5b94df369a4af81",
       "rebuttal/results/mimicry_split.json": "0d62757fb6ca4409fb1797004daf13170d1939700a7f9f3ed59374521ab6e769",
       "rebuttal/results/quality_drop.json": "9fea3707877b0cdb48ceff3c1c5a7419e28dc68064f1162bdc0e073cdf113f69",
@@ -6212,6 +6212,7 @@
     ],
     "adapters": 35,
     "refilter_lines": 0,
+    "refilter_rule_met": [],
     "best_epoch_min": 1.0,
     "best_epoch_max": 3.0,
     "per_model": {
@@ -6237,7 +6238,8 @@
     "incomplete": {
       "medqa__BioMistral_BioMistral-7B": "partial",
       "medqa__google_medgemma-27b-text-it": "not run",
-      "medquad__google_medgemma-27b-text-it": "not run"
+      "medquad__google_medgemma-27b-text-it": "not run",
+      "healthbench__google_gemma-2-9b-it": "no folder"
     }
   },
   "generality": {
@@ -6483,6 +6485,7 @@
             "sha256": "29e4c028df9e0ef75cb0e0979adce4ceab6484c450e04f5d91cadbc8f4b568b4",
             "tau": 0.4,
             "train": 2238,
+            "train_pct_of_raw": 55.95,
             "val": 248
           },
           "grad_accumulation_consistent": [
@@ -6490,6 +6493,7 @@
           ],
           "model_tag": "mistralai_Mistral-Small-24B-Instruct-2501",
           "n_eval_ids": null,
+          "refilter_rule_met": false,
           "seeds": [
             7,
             13,
@@ -6740,6 +6744,7 @@
             "sha256": "dcc26981ca813555114fcbcf90ed3b315cc9ae21fd20907024dcdb2b85a7bac9",
             "tau": 0.4,
             "train": 1827,
+            "train_pct_of_raw": 45.675,
             "val": 203
           },
           "grad_accumulation_consistent": [
@@ -6747,6 +6752,7 @@
           ],
           "model_tag": "m42-health_Llama3-Med42-8B",
           "n_eval_ids": null,
+          "refilter_rule_met": false,
           "seeds": [
             7,
             13,
@@ -6997,6 +7003,7 @@
             "sha256": "f90614d386def0a6ab1942d08733f63a6fe957563552862301de4ee9e976d9c7",
             "tau": 0.4,
             "train": 733,
+            "train_pct_of_raw": 18.325,
             "val": 81
           },
           "grad_accumulation_consistent": [
@@ -7004,6 +7011,7 @@
           ],
           "model_tag": "BioMistral_BioMistral-7B",
           "n_eval_ids": null,
+          "refilter_rule_met": false,
           "seeds": [
             7,
             13,
@@ -7254,6 +7262,7 @@
             "sha256": "22eac3850d310ee3e5b39886f9fbda073e88d17f45482201794b38a30e7f9e6e",
             "tau": 0.4,
             "train": 3690,
+            "train_pct_of_raw": 87.8571,
             "val": 409
           },
           "grad_accumulation_consistent": [
@@ -7261,6 +7270,7 @@
           ],
           "model_tag": "mistralai_Mistral-Small-24B-Instruct-2501",
           "n_eval_ids": 200,
+          "refilter_rule_met": false,
           "seeds": [
             7,
             13,
@@ -7511,6 +7521,7 @@
             "sha256": "2db7f8e318955a20fcdc625b6a4ef1d37d912954b6036a434d0cd3f49c76b5be",
             "tau": 0.4,
             "train": 3629,
+            "train_pct_of_raw": 86.4048,
             "val": 403
           },
           "grad_accumulation_consistent": [
@@ -7518,6 +7529,7 @@
           ],
           "model_tag": "m42-health_Llama3-Med42-8B",
           "n_eval_ids": 200,
+          "refilter_rule_met": false,
           "seeds": [
             7,
             13,
@@ -7768,6 +7780,7 @@
             "sha256": "fde8a4d247e39e99c857daca3db5f642d5de1a55b2038fd54c279b80b92facf2",
             "tau": 0.4,
             "train": 2965,
+            "train_pct_of_raw": 70.5952,
             "val": 329
           },
           "grad_accumulation_consistent": [
@@ -7775,6 +7788,7 @@
           ],
           "model_tag": "mistralai_Mistral-Small-24B-Instruct-2501",
           "n_eval_ids": 200,
+          "refilter_rule_met": false,
           "seeds": [
             7,
             13,
@@ -8312,6 +8326,7 @@
             "sha256": "ee34525bb0da244870ada63a2372cc86076065e3d48600282693706ff34daaec",
             "tau": 0.4,
             "train": 3776,
+            "train_pct_of_raw": 89.9048,
             "val": 419
           },
           "grad_accumulation_consistent": [
@@ -8319,6 +8334,7 @@
           ],
           "model_tag": "mistralai_Mistral-Small-24B-Instruct-2501",
           "n_eval_ids": 200,
+          "refilter_rule_met": false,
           "seeds": [
             7,
             13,

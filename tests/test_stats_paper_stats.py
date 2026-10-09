@@ -327,6 +327,12 @@ def test_committed_cells_give_tests_recipe_and_filter_table(tmp_path):
     r = out["cell_recipe"]
     assert (r["tau"], r["r"], r["lora_alpha"], r["lora_dropout"], r["epochs"]) == (0.4, 16, 32, 0.05, 3)
     assert r["effective_batch"] == [16] and r["adapters"] == 35 and r["refilter_lines"] == 0
+    assert r["refilter_rule_met"] == []
+    # Four host runs did not finish; Appendix J names each one.
+    assert r["incomplete"] == {"medqa__BioMistral_BioMistral-7B": "partial",
+                               "medqa__google_medgemma-27b-text-it": "not run",
+                               "medquad__google_medgemma-27b-text-it": "not run",
+                               "healthbench__google_gemma-2-9b-it": "no folder"}
     assert _macro(tmp_path, "CellsLoRATargets") == "q, k, v, o, gate, up, down"
     assert _macro(tmp_path, "CellMedQuADMistralFilterClearance") == "78.4"
     tab = (tmp_path / "tab_cell_filter.tex").read_text()

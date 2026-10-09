@@ -55,6 +55,13 @@ def test_tau_counts_and_recipe_are_read_and_checked(tmp_path):
     # A run that never trained: only eval ids and a failed generation log.
     (cells / "medqa__g").mkdir(parents=True)
     (logs / "gen_medqa_g.log").write_text("RuntimeError: vllm serve did not become healthy\n")
+    # A run stopped before it wrote a folder: only its generation log and the launcher's
+    # log, which holds this run's section and then another run's.
+    (logs / "gen_healthbench_org_m-9b.log").write_text("Generating 4000 traces\n  waiting (300s)\n\n")
+    (logs / "launch.log").write_text(
+        "=== cell: healthbench x org/m-9b  (seeds: 42 7) ===\n  waiting (300s)\n"
+        "run_cell.sh: line 103: 1 Killed   generate_traces.py\n"
+        "=== cell: medquad x m  (seeds: 42) ===\nrun_cell.sh: line 103: 2 Killed   other\n")
 
     res = cr.run(cells, logs, tmp_path / "out.json")
     c = res["cells"]["medquad__m"]
@@ -70,7 +77,25 @@ def test_tau_counts_and_recipe_are_read_and_checked(tmp_path):
     assert g["status"] == "not run" and g["filter"] is None
     assert g["generation_error"].startswith("RuntimeError")
     assert res["refilter_lines"] == []
+    # 2,965 of 4,200 raw traces in train is 70%, above the launcher's 40% re-filter mark.
+    assert c["filter"]["train_pct_of_raw"] == pytest.approx(70.595, abs=1e-3)
+    assert c["refilter_rule_met"] is False and g["refilter_rule_met"] is None
+    assert list(res["runs_without_folder"]) == ["healthbench__org_m-9b"]
+    w = res["runs_without_folder"]["healthbench__org_m-9b"]
+    assert w["status"] == "no folder" and w["gen_log_last_line"] == "waiting (300s)"
+    assert w["killed_lines"] == ["launch.log: run_cell.sh: line 103: 1 Killed   generate_traces.py"]
     assert json.loads((tmp_path / "out.json").read_text()) == res
+
+
+def test_refilter_rule_follows_the_launcher(tmp_path):
+    cr = _load()
+    f = {"parsed": True, "raw": 4200, "train": 1679}
+    # Shell integer arithmetic: 1,679 * 100 / 4,200 = 39 (rule met), 1,680 gives 40 (not met).
+    assert cr.refilter_rule_met("chatdoctor", f) is True
+    assert cr.refilter_rule_met("chatdoctor", {**f, "train": 1680}) is False
+    # The launcher never re-filters HealthBench.
+    assert cr.refilter_rule_met("healthbench", f) is False
+    assert cr.refilter_rule_met("medqa", None) is None
 
 
 def test_seeds_that_disagree_on_the_recipe_stop_the_run(tmp_path):
