@@ -18,6 +18,9 @@ accelerate==1.13.0
 timm>=1.0.0,<2.0.0
 pillow>=10.0,<12.0
 pyyaml>=6.0,<7.0
+# The registry schema (bodhi_lora/registry/schema.py). vLLM 0.9.2 needs pydantic>=2.10,
+# so both envs share the floor.
+pydantic>=2.10,<3
 # trl pulls rich via a runtime import but doesn't declare it in its setup deps
 # at the versions we pin; without this, trl.SFTTrainer import fails on a clean env.
 rich>=13.0,<15.0
