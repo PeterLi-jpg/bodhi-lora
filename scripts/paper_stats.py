@@ -1190,7 +1190,7 @@ def posted_aggregate_diff(cell: dict) -> dict:
     per-seed differences, so the point estimate is valid whenever both means
     were posted. A CI or test is not: it needs the SD of the per-seed
     differences, and the posted SDs are per condition. The posted paired t
-    (rebuttal/analyses/FINDINGS_quality_drop.md) stays the test.
+    (rebuttal/responses/drafts/FINDINGS_quality_drop.md) stays the test.
     """
     base = cell["conditions"]["base"].get("aggregate")
     lora = cell["conditions"]["lora"].get("aggregate")

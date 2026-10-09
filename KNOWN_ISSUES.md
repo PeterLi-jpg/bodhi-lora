@@ -59,7 +59,7 @@ Issue numbers such as #5 are GitHub issues on `PeterLi-jpg/bohdi-lora`.
   On the three added HealthBench cells the adapter meets fewer of the rubric items
   that reward asking, while our grader scores context-seeking up. The working
   hypothesis is that rubric items are prompt-specific and our grader scores generic
-  asking. It is untested (`rebuttal/analyses/FINDINGS_quality_drop.md`, section 5).
+  asking. It is untested (`rebuttal/responses/drafts/FINDINGS_quality_drop.md`, section 5).
 - **The discrimination labels were defined after the results (EVAL-10, D9).** Both
   labelings are reported, both marked post hoc and exploratory.
 - **Calibration is not measured (#1, D3).** The eval JSON has Brier and ECE fields from

@@ -3,7 +3,7 @@
 The replies (posted/HomM_3_followup_part2.md:14, drafts/meta_review_part2.md:7) say
 the aggregate score falls in all six rebuttal cells, with paired t-tests over five
 seeds putting all six below p = 0.02 and all six surviving Holm correction. The
-numbers sit in rebuttal/analyses/FINDINGS_quality_drop.md, but the code was run
+numbers sit in rebuttal/responses/drafts/FINDINGS_quality_drop.md, but the code was run
 interactively on the remote host and never committed. This is that test as a script.
 
 For each run of the GPU host (host_runs.py), keyed by the run name the host gave it:

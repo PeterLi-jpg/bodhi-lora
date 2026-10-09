@@ -208,7 +208,7 @@ explained that way. Within the adapter's outputs, prompts where it asks do not s
 consistently lower than prompts where it answers directly. The gap is positive in three cells
 and negative in three. In BioMistral, active inquiry did not change, yet the aggregate score
 still fell by 0.015. Delete the "property of the rubric" paragraph, or restate it as tested
-and rejected. The internal analysis in `rebuttal/analyses/FINDINGS_quality_drop.md` (section
+and rejected. The internal analysis in `rebuttal/responses/drafts/FINDINGS_quality_drop.md` (section
 2) reaches the same result.
 
 ---

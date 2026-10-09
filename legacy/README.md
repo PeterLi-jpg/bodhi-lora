@@ -30,6 +30,7 @@ Modal eval cloned main at that commit. `modal_eval.py` was committed later
 | `scripts/export_tunix_lora_to_peft.py` | 9ee6cd5 | Converts the orbax LoRA checkpoint to a PEFT adapter. |
 | `scripts/convert_traces_to_maxtext.py` | 72d05e7 | Tokenizes train/val and masks the prompt tokens. The tunix trainer reads its output. |
 | `scripts/maxtext_lora/dataset_loader.py` | 37dafdc | Batches the tokenized data for the trainer. |
+| `scripts/prefetch_gemma_safetensors.py` | 3d21545 | Pre-downloads the MedGemma weights into a TPU host's HF cache. The launcher does not call it; `train_lora_tunix.py` downloads the weights itself. Moved here from `scripts/` on 2026-10-09. |
 | `requirements.lock.txt` | (moved) | Formerly at the repo root. See section 6. |
 
 The launcher also needs `tpu/setup_tpu.sh` and the rest of main at 8262d49.

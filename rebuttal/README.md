@@ -71,8 +71,7 @@ Some drafts hold numbers that we never posted. The last section below lists them
 | `analyses/quality_drop.py` | The paired t and Holm test behind "all six drops p < 0.02". Needs the synced cells. |
 | `analyses/cell_values.py` | Computes the posted cell values from the synced cells and diffs them against `posted_values.json` (`make cells`). |
 | `analyses/peek_results.py` | Quick look at per-seed results on the host. |
-| `analyses/FINDINGS_quality_drop.md` | Internal analysis of the aggregate drop (paired t, rubric test). Never posted. |
-| `prior_work_candidates.bib` | Candidate references for the prior-work subsection (C15). |
+| `responses/drafts/FINDINGS_quality_drop.md` | Internal analysis of the aggregate drop (paired t, rubric test). Never posted. |
 | `PLAN.md` | The rebuttal plan, now closed. It records what ran and what did not. |
 | `COVERAGE.md` | Each reviewer concern, how we answered it, and the open item that remains. |
 
@@ -174,7 +173,7 @@ cell matches its `analysis/cross_seed_aggregate.json` (8 values); the discrimina
 and the leakage numbers match its `analysis/mimicry_split.json` and
 `analysis/interference_mechanism.json` (41 values, 0 mismatches); the Base and LoRA
 aggregate means in Table 3 match the 4-decimal table in
-`analyses/FINDINGS_quality_drop.md`. These checks show that the transcription matches the
+`responses/drafts/FINDINGS_quality_drop.md`. These checks show that the transcription matches the
 posts and that the posts agree with each other. Only the raw outputs can show that the
 posted numbers are correct, and `make cells` now does: one mismatch (W21).
 

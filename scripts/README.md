@@ -2,13 +2,8 @@
 
 The pipeline lives in the `bodhi_lora` package (`python -m bodhi_lora`). The scripts here
 are repository tools and the analysis scripts that `make` runs until the analysis lane
-moves them into the package. The tools below run from no `make` target or test. They are kept for manual use,
-and no number in the paper comes from them. Check one before you use it: some describe
-an earlier state of the project.
-
-| Script | What it does | Status |
-|---|---|---|
-| `prefetch_gemma_safetensors.py` | Pre-downloads MedGemma weights to a TPU host's cache | TPU path of the submitted cell; the TPU launcher is in `legacy/` |
+moves them into the package. The TPU-era weight prefetch tool moved to `legacy/scripts/`
+on 2026-10-09.
 
 On 2026-10-08 the shell launchers that no reported number came from (`gpu/`, `slurm/`,
 `run_all.sh`, `smoke.sh`, `run_multi_seed.sh`, `launch_gpu.sh`, `run_ablation_seeds.sh`,
