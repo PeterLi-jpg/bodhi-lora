@@ -121,3 +121,67 @@ Why: a history rewrite and remote branch deletion change public state, which is 
   the Med42-8B cells (Appendix J). The Med42-8B cells stay in the Holm family of the
   aggregate tests (the six added cells that are not set aside), as in the posted tests; that
   family is a correction, not a cross-model statement.
+
+## 2026-10-08
+
+Facts and decisions that the first author gave on 2026-10-08. They are recorded as given,
+not quoted. Each one says which earlier entry or item it changes. D17 to D21 are his;
+D22 records the design that answers his request of the same day.
+
+**D17** The physician raters gave consent.
+
+Changes: the step "ask the raters what they consent to" (old BLOCKED.md item 1) is done,
+and consent no longer drives a history purge (D18). The cleanup still writes no rater
+name into a tracked file: raters stay AnonClinician1 to 4 (convention 10).
+
+**D18** The repository stays public. There is no privacy purge of history. A purge is
+optional, and if it runs it removes only the AI-tool traces (the two trailers of
+`cf72766` and `72a428b`).
+
+Changes: the steps to make the repository private and to purge rater names and the author
+block (old BLOCKED.md items 1 and 10.2) are dropped. D16 still holds: nothing remote
+changes without the first author's yes.
+
+**D19** No Modal. The submitted MedGemma-27B adapters are treated as not retained.
+History and docs may still say where the submitted evaluation ran.
+
+Changes: the check of the Modal volume `bohdi-data-cache` (old BLOCKED.md item 3) is
+dropped. The MedGemma-27B recipe of D1 stays as derived from the code in `legacy/`, now
+for good: no saved adapter will confirm it. The paper's Code availability paragraph and
+checklist items 4, 5, 11 and 13 must say that the adapters are not retained, instead of
+"we have not yet checked a second copy". Every new experiment on MedGemma-27B needs a
+rerun, which is a new cell (open decision O7 in ARCHITECTURE.md).
+
+**D20** The two remaining physician raters are deferred.
+
+Changes: D5 stands as written: one of three raters, kappa 0.35, below the 0.6 target, and
+every dimension result is LLM-graded. C28 and the physician harm review (C33, E28) wait
+for the first author.
+
+**D21** No GPU use until the first author says so.
+
+Changes: every run of EXPERIMENTS.md waits, listed with its command and cost in
+[RUN_PLAN.md](RUN_PLAN.md). CPU dry runs with tiny public models stay allowed.
+
+**D22** Architecture. On 2026-10-08 the first author asked that the code be made general
+and its conventions fixed. The design of [ARCHITECTURE.md](ARCHITECTURE.md) does that:
+
+- one registry: every model, benchmark, protocol and cell is one YAML record in
+  `configs/`, checked by a schema;
+- one runner: `python -m bodhi_lora run <cell id>` runs every stage of every cell, and the
+  Makefile calls only the command line and the repository tools;
+- one results root: `results/<cell id>/seed_<n>/<stage>/`, with a manifest in every stage
+  folder;
+- no names in code: the package names no model, benchmark, results path or seed list;
+- uniform analysis: the same code computes every statistic for every cell;
+- a dated analysis plan before any new run ([ANALYSIS_PLAN.md](ANALYSIS_PLAN.md)).
+
+A record of a past run is frozen: the runner refuses to run it again, except to add judge
+re-grades. `legacy/` keeps the launchers of the 2026-05 cell as the record of what ran.
+CONVENTIONS.md rules 3, 7 and 11 to 14 say how each part is enforced. The open choices O1 to O7 in
+ARCHITECTURE.md section 12 stay the first author's.
+
+Why: the code had two launch paths, six result locations, analysis that special-cased
+one cell, condition names in code and settings in four places (ARCHITECTURE.md section
+1). Each review phase added its own copy, which is how the evaluation became hard to
+check. [HYG-5, REPRO-3, REPRO-6, REPRO-7]
