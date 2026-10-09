@@ -34,8 +34,11 @@ paper's grader-separation rule, so its cells are not used in any cross-model sta
 
 Three more folders came from the host and are not cells of the paper: MedGemma-27B on
 MedQA and on MedQuAD (eval ids only; trace generation failed on 2026-07-27) and
-BioMistral-7B on MedQA (a one-seed smoke run). `rebuttal/results/cell_recipe.json` records
-their status, and Appendix J of the paper names them.
+BioMistral-7B on MedQA (a one-seed smoke run). A fourth run left no folder: Gemma-2-9B on
+HealthBench-Hard was stopped in trace generation on 2026-07-27, while its vLLM server was
+starting (`logs/host/gemma2_9b_hb.log`). `rebuttal/results/cell_recipe.json` records the
+status of all four (the last under `runs_without_folder`), and Appendix J of the paper
+names them.
 
 All cells are in the main evaluation of the paper (D12), including these two:
 

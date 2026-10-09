@@ -1276,10 +1276,13 @@ comparison with clinician-posed questions. For benchmarks without expert rubrics
 rubrics synthesized from the reference answer. The same filter grader, Qwen2.5-14B-Instruct,
 grades the traces against these rubrics. Other runs on the GPU host did not finish, and we report
 none of them. MedGemma-27B on MedQA and on MedQuAD stopped in trace generation because the
-inference server did not start, and BioMistral-7B on MedQA was a smoke test
+inference server did not start. Gemma-2-9B on \hbhard{} was stopped in trace generation while its
+inference server was starting, and it left no outputs. BioMistral-7B on MedQA was a smoke test
 (\statRunMedQABioMistralSeeds{} seed, \statRunMedQABioMistralTraces{} traces,
 \statRunMedQABioMistralSteps{} optimizer steps, \statRunMedQABioMistralEvalPrompts{} evaluation
 prompts).
+% Run history: rebuttal/results/cell_recipe.json ("cells" for the host folders,
+% "runs_without_folder" for the Gemma-2-9B run, from logs/host/gemma2_9b_hb.log).
 
 \paragraph{What differs from the MedGemma-27B cell.} The training code differs: PyTorch with PEFT
 and TRL on one H100 GPU, against JAX (tunix) on a TPU v6e-8 host. The training recipe differs

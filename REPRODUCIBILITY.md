@@ -26,11 +26,12 @@ vignettes, so nothing is withheld and asking is not the target behavior. Its onl
 the old prompt preamble that told the model to ask (removed in 035d85f), and seed 42's
 epistemic grading found none of its prompts. See [RESULTS.md](RESULTS.md).
 
-Three runs on the GPU host did not finish and are not in the grid: MedGemma-27B on MedQA
+Four runs on the GPU host did not finish and are not in the grid: MedGemma-27B on MedQA
 and on MedQuAD (folders with `eval_ids.json` only; trace generation failed on 2026-07-27
-because the vLLM server did not become healthy) and BioMistral-7B on MedQA (a smoke run:
-one seed, 40 traces, 3 kept, 3 optimizer steps, 10 eval prompts).
-`rebuttal/results/cell_recipe.json` records each one's status.
+because the vLLM server did not become healthy), BioMistral-7B on MedQA (a smoke run:
+one seed, 40 traces, 3 kept, 3 optimizer steps, 10 eval prompts) and Gemma-2-9B on
+HealthBench-Hard (stopped in trace generation on 2026-07-27 while its vLLM server was
+starting; it left no folder). `rebuttal/results/cell_recipe.json` records each one's status.
 
 ## 2. Per-cell training configs
 

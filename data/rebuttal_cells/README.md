@@ -134,7 +134,13 @@ The host also holds three folders that are not cells of the paper:
 `medqa__google_medgemma-27b-text-it` and `medquad__google_medgemma-27b-text-it` hold only
 `eval_ids.json` (trace generation failed on 2026-07-27: the vLLM server did not start), and
 `medqa__BioMistral_BioMistral-7B` is a smoke run (one seed, 40 traces, 3 kept, 3 optimizer
-steps, 10 eval prompts). `rebuttal/results/cell_recipe.json` records their status.
+steps, 10 eval prompts). Its train split held 2 of its 40 traces, which meets the
+launcher's re-filter condition, but it ran on 2026-07-23, before the launcher had that rule
+(912782d, 2026-07-27). A fourth run left no folder: Gemma-2-9B on HealthBench-Hard was
+stopped in trace generation on 2026-07-27, while its vLLM server was starting
+(`logs/host/gemma2_9b_hb.log`, `logs/host/gen_healthbench_google_gemma-2-9b-it.log`).
+`rebuttal/results/cell_recipe.json` records the status of all four (the last under
+`runs_without_folder`).
 
 The filter and eval logs (`filter_<bench>_<tag>.log`, `eval_<bench>_<tag>_s<seed>.log`)
 are in `logs/host/`. `rebuttal/analyses/cell_recipe.py` (`make cells`) reads the tau, the
