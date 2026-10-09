@@ -16,8 +16,8 @@ results_root when the caller names one, and never under the project's results ro
 its stage manifests say complete, so a GPU run there would skip those stages and keep
 stub outputs.
 
-Order: prepare (pools, eval ids, cell.yaml), probe, traces, filter (grading), the
-leakage gate, then per seed: filter (split), train, eval (each condition), grade (the
+Order: prepare (pools, eval ids, cell.yaml), for an eval-only cell the adapter leakage
+gate, then probe, traces, filter (grading), the leakage gate, then per seed: filter (split), train, eval (each condition), grade (the
 evaluator, then each judge), bench. A stage whose manifest says complete is skipped, so
 a run resumes where it stopped; prepare refuses inputs that differ from an earlier run.
 `judges` limits the judge steps to some of grading.judges, so one judge panel can run
@@ -47,7 +47,8 @@ import yaml
 
 from bodhi_lora import manifest as mf
 from bodhi_lora.data import check_leakage, eval_ids, eval_population, load_rows, read_id_list, row_text, split_rows
-from bodhi_lora.data.leakage import LeakageError
+from bodhi_lora.data.leakage import NGRAM, LeakageError, check_adapter_leakage
+from bodhi_lora.data.loaders import source_hashes
 from bodhi_lora.paths import CONFIGS_DIR, REPO_ROOT, CellPaths, Project
 from bodhi_lora.pipeline import filter as filter_stage
 from bodhi_lora.pipeline.context import POOLS_FILE, StageContext, eval_ids_file
@@ -128,8 +129,11 @@ def prepare(ctx: StageContext, fetch: bool = True) -> dict:
     ids = {}
     for seed in cell.seeds:
         ids[seed] = eval_ids(cell, split, by_id, seed, inputs)
-        _write_once(inputs / eval_ids_file(seed), {"seed": seed, "policy": cell.eval.ids.policy,
-                                                   "n": cell.eval.ids.n, "prompt_ids": ids[seed]},
+        record = {"seed": seed, "policy": cell.eval.ids.policy, "n": cell.eval.ids.n}
+        if cell.eval.ids.unit != "row":
+            # Only then, so the files of row-unit runs keep the form they had.
+            record["unit"] = cell.eval.ids.unit
+        _write_once(inputs / eval_ids_file(seed), {**record, "prompt_ids": ids[seed]},
                     f"eval ids of seed {seed}")
     ctx._rows = by_id
     counts = {"n_rows": len(rows), "n_train_pool": len(split.train), "n_eval_pool": len(split.eval),
@@ -137,7 +141,8 @@ def prepare(ctx: StageContext, fetch: bool = True) -> dict:
     ctx.write_manifest(inputs, "inputs", counts=counts,
                        config={"benchmark": bench.id, "split": cell.split, "eval_ids": cell.eval.ids.model_dump()},
                        outputs=[inputs / POOLS_FILE] + [inputs / eval_ids_file(s) for s in cell.seeds],
-                       extra={"status": "complete", "source": bench.source.model_dump(mode="json")})
+                       extra={"status": "complete", "source": bench.source.model_dump(mode="json"),
+                              "source_read": source_hashes(bench, ctx.project.data_root)})
     print(f"prepare: {counts['n_rows']} rows; pools train {counts['n_train_pool']}, eval "
           f"{counts['n_eval_pool']}, probe {counts['n_probe_pool']}", flush=True)
     return counts
@@ -166,6 +171,32 @@ def leakage_gate(ctx: StageContext) -> dict:
     path.write_text(json.dumps(report, indent=2) + "\n")
     print(f"leakage gate passed: {report['n_trained_prompts']} traced prompts, "
           f"{report['n_held_out']} held out", flush=True)
+    return report
+
+
+def adapter_leakage_gate(ctx: StageContext) -> dict:
+    """An eval-only cell's eval prompts against what its adapters trained on; report in
+    shared/inputs/leakage.json."""
+    kept = ctx.project.cell(ctx.cell.adapters_from).shared("filter") / "kept.jsonl"
+    if not kept.is_file():
+        raise RunError(f"{kept} is missing: run {ctx.cell.adapters_from} (at least its filter stage) "
+                       "first; its kept traces are what the adapters trained on")
+    trained = {}
+    for g in filter_stage.read_jsonl(kept):
+        users = [m for m in g["messages"] if m.get("role") == "user"]
+        trained[g["prompt_id"]] = str(users[-1]["content"]) if users else ""
+    rows = ctx.rows_by_id()
+    eval_texts = {pid: row_text(rows[pid]) for s in ctx.cell.seeds for pid in ctx.eval_ids(s)}
+    path = ctx.paths.inputs() / "leakage.json"
+    try:
+        report = check_adapter_leakage(trained, eval_texts)
+    except LeakageError as e:
+        path.write_text(json.dumps(e.report, indent=2) + "\n")
+        raise RunError(str(e)) from e
+    path.write_text(json.dumps(report, indent=2) + "\n")
+    print(f"adapter leakage gate passed: {report['n_eval_prompts']} eval prompts against "
+          f"{report['n_trained_prompts']} trained prompts of {ctx.cell.adapters_from}; largest "
+          f"{NGRAM}-word share {report['max_share']}", flush=True)
     return report
 
 
@@ -420,6 +451,8 @@ def run_cell(reg: Registry, proj: Project, cell_id: str, *, stages: Sequence[str
     fetch_benchmarks(ctx, stages)
     write_cell_manifest("started")
     try:
+        if cell.adapters_from and "eval" in stages:
+            adapter_leakage_gate(ctx)
         for step in shared:
             runner.run_step(step, gpus[0])
             if step.stage == "filter":

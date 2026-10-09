@@ -107,6 +107,18 @@ def eval_population(cell: CellConfig, split: Split, rows_by_id: dict[str, Row]) 
             if any(in_groups(rows_by_id[pid].labels.get(g.label), g.groups) for g in only)]
 
 
+def _whole_pairs(population: list[str], rows_by_id: dict[str, Row]) -> list[str]:
+    """The sorted pair ids whose rows are all in the population."""
+    members: dict[str, set] = {}
+    for pid, row in rows_by_id.items():
+        if row.pair_id is not None:
+            members.setdefault(row.pair_id, set()).add(pid)
+    if not members:
+        raise SplitError("eval.ids.unit is pair, but the rows carry no pair ids")
+    inside = set(population)
+    return sorted(pair for pair, rows in members.items() if rows <= inside)
+
+
 def read_id_list(path: Path) -> list[str]:
     """Prompt ids from a JSON list or a {"prompt_ids": [...]} file."""
     data = json.loads(Path(path).read_text(encoding="utf-8"))
@@ -121,22 +133,31 @@ def eval_ids(cell: CellConfig, split: Split, rows_by_id: dict[str, Row], seed: i
         (the per-seed draw of the 2026-05 cell).
     fixed_pool: the whole population, which must hold n ids.
     fixed_file: the ids in <inputs_dir>/<file>, the same for every seed.
+    With unit pair the same rules apply to the pair ids, sorted, and each drawn pair
+    brings both of its rows; a pair with a row outside the population is left out.
     """
     ids = cell.eval.ids
     if ids.policy == "fixed_file":
         out = read_id_list(Path(inputs_dir) / ids.file)
         allowed = set(eval_population(cell, split, rows_by_id))
+        units = out
     else:
         population = eval_population(cell, split, rows_by_id)
         allowed = set(population)
+        units = _whole_pairs(population, rows_by_id) if ids.unit == "pair" else population
         if ids.policy == "fixed_pool":
-            out = population
+            out = units
         else:
-            if len(population) < ids.n:
-                raise SplitError(f"cannot draw {ids.n} eval ids from {len(population)}")
-            out = sorted(random.Random(seed).sample(population, ids.n))
+            if len(units) < ids.n:
+                raise SplitError(f"cannot draw {ids.n} eval {ids.unit}s from {len(units)}")
+            out = sorted(random.Random(seed).sample(units, ids.n))
     if len(out) != ids.n:
-        raise SplitError(f"eval.ids.n is {ids.n}, but the {ids.policy} ids number {len(out)}")
+        raise SplitError(f"eval.ids.n is {ids.n}, but the {ids.policy} {ids.unit}s number {len(out)}")
+    if ids.unit == "pair":
+        members: dict[str, list[str]] = {}
+        for pid in sorted(allowed):
+            members.setdefault(rows_by_id[pid].pair_id, []).append(pid)
+        out = [pid for pair in out for pid in members[pair]]
     outside = set(out) - allowed
     if outside:
         raise SplitError(f"{len(outside)} eval ids are outside the eval population, e.g. {sorted(outside)[0]}")

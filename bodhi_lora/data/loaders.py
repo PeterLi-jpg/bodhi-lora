@@ -11,18 +11,26 @@ way. In memory it is a Row, which also carries the row's labels and where it sit
 each source file.
 
 Loaders are named by source format, not by dataset (LOADERS):
-  rubric_jsonl  rows as given in one or more JSONL files (a url or local source)
-  hf_qa         question-answer rows of a Hugging Face dataset at a pinned commit; the
-                record's `fields` map the loader's fields to source columns, and every
-                row gets the synthesized rubric (bodhi_lora/data/rubric.py)
+  rubric_jsonl          rows as given in one or more JSONL files (a url or local source)
+  hf_qa                 question-answer rows of a Hugging Face dataset at a pinned commit;
+                        the record's `fields` map the loader's fields to source columns,
+                        and every row gets the synthesized rubric (bodhi_lora/data/rubric.py)
+  paired_context_jsonl  JSONL cases whose context is a list of sentences; each case gives
+                        a pair of rows, one with every sentence and one with the first few
+                        only, so whether information is missing is known by construction
+  xml_records           XML records, one per row, fields read by element path; a file may
+                        hold one document or many documents one after another
 """
 from __future__ import annotations
 
 import hashlib
 import json
 import os
+import re
 import shutil
 import urllib.request
+from urllib.parse import urlparse
+import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Literal, Optional
@@ -67,10 +75,13 @@ def sha256_file(path: Path) -> str:
 
 
 def _with_labels(bench: BenchmarkConfig, row: dict, positions: dict) -> Row:
+    """A Row from a row dict. Field labels read the dict's own keys (e.g. "variant"), and
+    a paired loader's "pair_id" key becomes Row.pair_id."""
     labels = {name: label_value(rule, row.get("example_tags", []), row.get("rubrics", []), row)
               for name, rule in bench.labels.items()}
     return Row(prompt_id=row["prompt_id"], messages=row["prompt"], rubrics=row["rubrics"],
-               tags=list(row.get("example_tags", [])), labels=labels, positions=positions)
+               tags=list(row.get("example_tags", [])), labels=labels, pair_id=row.get("pair_id"),
+               positions=positions)
 
 
 # -- rubric JSONL sources --------------------------------------------------------------
@@ -78,8 +89,8 @@ def _with_labels(bench: BenchmarkConfig, row: dict, positions: dict) -> Row:
 def source_file(bench: BenchmarkConfig, key: str, data_root: Path, fetch: bool = True) -> Path:
     """The local copy of one source file, checked against its sha256.
 
-    A url file is downloaded to <data_root>/<benchmark>/<key>.jsonl when it is missing
-    and fetch is true. A local file is read from the repository.
+    A url file is downloaded to <data_root>/<benchmark>/<key><suffix of the url> when it
+    is missing and fetch is true. A local file is read from the repository.
     """
     src = bench.source
     if isinstance(src, LocalSource):
@@ -87,7 +98,8 @@ def source_file(bench: BenchmarkConfig, key: str, data_root: Path, fetch: bool =
         path = REPO_ROOT / f.path
     elif isinstance(src, UrlSource):
         f = src.files[key]
-        path = Path(data_root) / bench.id / f"{key}.jsonl"
+        # The URL's own suffix (.jsonl, .xml), so the local copy says what it holds.
+        path = Path(data_root) / bench.id / f"{key}{Path(urlparse(f.url).path).suffix or '.jsonl'}"
         if not path.is_file():
             if not fetch:
                 raise DataError(f"{path} is missing; run python -m bodhi_lora fetch {bench.id}")
@@ -100,9 +112,22 @@ def source_file(bench: BenchmarkConfig, key: str, data_root: Path, fetch: bool =
     else:
         raise DataError(f"{bench.id}: source kind {src.kind} has no files")
     got = sha256_file(path)
-    if got != f.sha256:
+    if getattr(f, "sha256", None) is None:
+        # An unpinned file (UrlFile.unpinned_reason): say what to pin; the run's inputs
+        # manifest records the hash it read (source_hashes).
+        print(f"{bench.id} {key}: unpinned; its sha256 is {got}. Pin it in "
+              f"configs/benchmarks/{bench.id}.yaml.", flush=True)
+    elif got != f.sha256:
         raise DataError(f"{path}: sha256 {got} is not the pinned {f.sha256}; the source changed")
     return path
+
+
+def source_hashes(bench: BenchmarkConfig, data_root: Path) -> dict:
+    """What a run read: the sha256 of each local copy of a file source, or the pinned
+    revision of a Hugging Face source."""
+    if isinstance(bench.source, HfSource):
+        return {"revision": bench.source.revision}
+    return {key: sha256_file(source_file(bench, key, data_root, fetch=False)) for key in bench.source.files}
 
 
 def load_rubric_jsonl(bench: BenchmarkConfig, data_root: Path, fetch: bool = True) -> list[Row]:
@@ -258,9 +283,159 @@ def load_hf_qa(bench: BenchmarkConfig, data_root: Path, fetch: bool = True,
     return out
 
 
+# -- paired cases: every context sentence against the first few ----------------------------
+
+class PairedContextParams(BaseModel):
+    """loader_params of a paired_context_jsonl benchmark."""
+
+    model_config = ConfigDict(extra="forbid")
+    # Sentences the incomplete row keeps from the start of the context. MediQ's initial
+    # information is the first sentence (src/patient.py: initial_info = context[0]).
+    initial_sentences: int = Field(default=1, gt=0)
+    reference_max_chars: int = Field(gt=0)
+
+
+VARIANTS = ("complete", "incomplete")
+
+
+def build_paired_rows(bench: BenchmarkConfig, cases) -> tuple[list[dict], dict]:
+    """Two rows per case, in the rubric JSONL format plus "pair_id" and "variant".
+
+    The complete row's prompt has every context sentence, the incomplete row's the first
+    initial_sentences; both end with the case's question. The pair id hashes the complete
+    prompt, so it does not depend on the source order. A case without a question, an
+    answer, or more context than the incomplete row keeps is counted and left out: its
+    two rows would not differ in what they leave out.
+    """
+    p = PairedContextParams.model_validate(bench.loader_params)
+    fields = bench.fields
+    rows, seen = [], set()
+    counts = {"n_source_rows": 0, "n_unusable": 0, "n_too_little_context": 0, "n_duplicates": 0}
+    for case in cases:
+        counts["n_source_rows"] += 1
+        question, answer = _first(case, fields["question"]), _first(case, fields["answer"])
+        context = _first(case, fields["context"], default=[])
+        if isinstance(context, str):
+            context = [context]
+        context = [str(c).strip() for c in context if str(c).strip()]
+        if not question or not answer:
+            counts["n_unusable"] += 1
+            continue
+        if len(context) <= p.initial_sentences:
+            counts["n_too_little_context"] += 1
+            continue
+        texts = {"complete": " ".join(context), "incomplete": " ".join(context[:p.initial_sentences])}
+        prompts = {v: bench.prompt_template.format(context=t, question=str(question).strip())
+                   for v, t in texts.items()}
+        pair_id = stable_id(bench.id_prefix, prompts["complete"])
+        if pair_id in seen:
+            counts["n_duplicates"] += 1
+            continue
+        seen.add(pair_id)
+        rubric = synthesized_rubric(bench.reference_criterion.format(
+            reference=str(answer).strip()[:p.reference_max_chars]))
+        for variant in VARIANTS:
+            rows.append({"prompt_id": f"{pair_id}-{variant}", "pair_id": pair_id, "variant": variant,
+                         "prompt": [{"role": "user", "content": prompts[variant]}],
+                         "rubrics": [dict(c, tags=list(c["tags"])) for c in rubric],
+                         "example_tags": list(bench.tags) + [f"variant:{variant}"]})
+    counts["n_pairs"] = len(seen)
+    return rows, counts
+
+
+def _jsonl_records(bench: BenchmarkConfig, data_root: Path, fetch: bool):
+    for key in bench.source.files:
+        path = source_file(bench, key, data_root, fetch)
+        with open(path, encoding="utf-8") as fh:
+            for lineno, line in enumerate(fh, start=1):
+                if line.strip():
+                    try:
+                        yield json.loads(line)
+                    except json.JSONDecodeError as e:
+                        raise DataError(f"{path}:{lineno}: malformed JSON") from e
+
+
+def load_paired_context_jsonl(bench: BenchmarkConfig, data_root: Path, fetch: bool = True) -> list[Row]:
+    rows, counts = build_paired_rows(bench, _jsonl_records(bench, data_root, fetch))
+    if not rows:
+        raise DataError(f"{bench.id}: no usable pairs ({counts}); check the record's fields")
+    return [_with_labels(bench, row, {SOURCE: i}) for i, row in enumerate(rows)]
+
+
+# -- XML records -------------------------------------------------------------------------
+
+class XmlParams(BaseModel):
+    """loader_params of an xml_records benchmark. Paths are ElementTree paths below a record."""
+
+    model_config = ConfigDict(extra="forbid")
+    record_tag: str
+    id_path: str
+    # Tag name -> element path; each non-empty value becomes the row tag "<name>:<value>".
+    tag_paths: dict[str, str] = Field(default_factory=dict)
+
+
+_XML_DECLARATION = re.compile(r"<\?xml[^>]*\?>")
+
+
+def parse_xml_records(text: str, record_tag: str) -> list:
+    """The record elements of a file that holds one XML document or many in a row.
+
+    Some sources write each record as its own document, each with an XML declaration.
+    The declarations go, and the rest is parsed inside one root element. The sources are
+    pinned by sha256; the expat parser that ElementTree uses (2.4 and later) also limits
+    entity expansion.
+    """
+    body = _XML_DECLARATION.sub("", text)
+    root = ET.fromstring(f"<records>{body}</records>")
+    return root.iter(record_tag)
+
+
+def _text(record, path: str) -> str:
+    node = record.find(path)
+    return " ".join("".join(node.itertext()).split()) if node is not None else ""
+
+
+def build_xml_rows(bench: BenchmarkConfig, records) -> tuple[list[dict], dict]:
+    """Rows in the rubric JSONL format, with no rubric (rubric: none)."""
+    p = XmlParams.model_validate(bench.loader_params)
+    rows, seen = [], set()
+    counts = {"n_source_rows": 0, "n_unusable": 0, "n_duplicates": 0}
+    for rec in records:
+        counts["n_source_rows"] += 1
+        question = next((t for t in (_text(rec, path) for path in bench.fields["question"]) if t), "")
+        rid = _text(rec, p.id_path)
+        if not question or not rid:
+            counts["n_unusable"] += 1
+            continue
+        if rid in seen:
+            counts["n_duplicates"] += 1
+            continue
+        seen.add(rid)
+        tags = list(bench.tags) + [f"{name}:{v}" for name, path in p.tag_paths.items()
+                                   for v in [_text(rec, path)] if v]
+        rows.append({"prompt_id": rid, "rubrics": [], "example_tags": tags,
+                     "prompt": [{"role": "user", "content": bench.prompt_template.format(question=question)}]})
+    counts["n_written"] = len(rows)
+    return rows, counts
+
+
+def load_xml_records(bench: BenchmarkConfig, data_root: Path, fetch: bool = True) -> list[Row]:
+    p = XmlParams.model_validate(bench.loader_params)
+    records = []
+    for key in bench.source.files:
+        path = source_file(bench, key, data_root, fetch)
+        records += list(parse_xml_records(path.read_text(encoding="utf-8"), p.record_tag))
+    rows, counts = build_xml_rows(bench, records)
+    if not rows:
+        raise DataError(f"{bench.id}: no usable records ({counts}); check record_tag, id_path and fields")
+    return [_with_labels(bench, row, {SOURCE: i}) for i, row in enumerate(rows)]
+
+
 LOADERS: dict[str, Callable[..., list[Row]]] = {
     "rubric_jsonl": load_rubric_jsonl,
     "hf_qa": load_hf_qa,
+    "paired_context_jsonl": load_paired_context_jsonl,
+    "xml_records": load_xml_records,
 }
 
 
