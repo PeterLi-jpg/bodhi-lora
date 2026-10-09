@@ -311,7 +311,7 @@ def length_quartiles_section(d: CellData, reference: str) -> dict:
     return res
 
 
-def cost_section(d: CellData, reg: Registry, pairs) -> dict:
+def cost_section(d: CellData, reg: Registry, pairs, meta: list[dict]) -> dict:
     """Reply length and token cost per condition, from the stored replies.
 
     tokens: the model's tokenizer on the final reply. tokens_engine: the count the
@@ -321,7 +321,8 @@ def cost_section(d: CellData, reg: Registry, pairs) -> dict:
     protocol was not stored, so its tokens are not in tokens.
     """
     t = d.table
-    res = {"conditions": {}, "contrasts": {}}
+    # What counted the tokens column, or why nothing did (extract.local_tokenizer).
+    res = {"conditions": {}, "contrasts": {}, "tokenizer": sorted({m["tokenizer"] for m in meta if "tokenizer" in m})}
     for c in d.conditions:
         sub = t[t["condition"] == c]
         _, proto = parse_condition(c)
@@ -730,7 +731,7 @@ def analyze_tables(reg: Registry, cell: CellConfig, table: pd.DataFrame, prompts
         "worst_case": worst_case_section(d, metrics, pairs),
         "blanket_disclaimers": disclaimers_section(d),
         "length_quartiles": length_quartiles_section(d, cfg.length_reference),
-        "cost": cost_section(d, reg, pairs),
+        "cost": cost_section(d, reg, pairs, meta),
         "shift_correlations": shift_correlations_section(d, pairs),
         "context_seeking_anchor": context_seeking_anchor_section(d),
         "axis_scores": axis_section(d),
