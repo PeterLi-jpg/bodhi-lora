@@ -10,6 +10,8 @@ import importlib.util
 import json
 from pathlib import Path
 
+from scipy import stats
+
 ROOT = Path(__file__).resolve().parent.parent
 POSTED = ROOT / "data" / "rebuttal_cells" / "posted_values.json"
 CONFIGS = ("base_no_wrapper", "base_bodhi", "lora_no_wrapper", "lora_bodhi")
@@ -79,4 +81,13 @@ def test_synced_cell_layout_is_read_and_a_wrong_posted_value_is_flagged(tmp_path
     assert gap["n_ask"] + gap["n_no_ask"] == 985
     assert gap["seeds_with_grades"] == [7, 13, 42, 99, 101]
     assert abs(gap["gap"]) < 0.05
+    # The paired LoRA - Base test runs on the unrounded seed means, before the output
+    # rounds them to 6 significant digits.
+    agg = cell["conditions"]
+    seeds = [str(s) for s in cell["seeds"]]
+    lora = [agg["lora"]["aggregate"]["per_seed"][s] for s in seeds]
+    base = [agg["base"]["aggregate"]["per_seed"][s] for s in seeds]
+    assert cell["aggregate_lora_minus_base"]["p"] == stats.ttest_rel(lora, base).pvalue
+    written = json.loads((tmp_path / "gv.json").read_text())["cells"][0]["aggregate_lora_minus_base"]
+    assert written["p"] == float(f"{cell['aggregate_lora_minus_base']['p']:.6g}")
 

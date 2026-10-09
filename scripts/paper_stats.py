@@ -1353,7 +1353,8 @@ def resolve_cells(posted: dict, generated: dict | None, recipe: dict | None = No
 
     ``generated`` is data/rebuttal_cells/generated_values.json, which make cells
     writes from the synced results_rebuttal/ (PROV-1). A synced cell has per-seed
-    values, so its aggregate LoRA - Base difference gets a paired t(n-1) interval.
+    values, so its aggregate LoRA - Base difference gets a paired t(n-1) interval;
+    cell_values.py computes it from the unrounded seed means and stores it there.
     A posted cell has means only: the difference is a point estimate (see
     posted_aggregate_diff) and the interval stays pending.
 
@@ -1379,11 +1380,8 @@ def resolve_cells(posted: dict, generated: dict | None, recipe: dict | None = No
                                  for pc, ms in g["conditions"].items()}
             rec["partial"] = _partial(g)
             rec["askers_gap"] = g.get("lora_askers_minus_non_askers")
-            base = g["conditions"]["base"]["aggregate"]["per_seed"]
-            lora = g["conditions"]["lora"]["aggregate"]["per_seed"]
-            common = sorted(set(base) & set(lora), key=int)
-            rec["aggregate_lora_minus_base"] = paired_seed_test(
-                np.array([lora[s] for s in common]), np.array([base[s] for s in common]))
+            # make cells ran the test on the unrounded seed means (cell_values.py).
+            rec["aggregate_lora_minus_base"] = dict(g["aggregate_lora_minus_base"])
             r = recipes.get(Path(g["dir"]).name)
             if r is not None:
                 rec["recipe"] = r

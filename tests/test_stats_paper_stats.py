@@ -296,9 +296,11 @@ def test_synced_cell_replaces_posted_values_and_gets_a_t_interval(tmp_path):
     m = cells["healthbench__mistral-small-24b"]
     assert m["source"] == "synced"
     main = out["contrasts"]["LoRAvsBase"]["metrics"]["healthbench"]
-    # generated_values.json keeps 6 significant digits, hence the tolerance.
-    assert m["aggregate_lora_minus_base"]["diff"] == pytest.approx(main["diff"], abs=1e-5)
-    assert m["aggregate_lora_minus_base"]["ci95"] == pytest.approx(main["ci95"], abs=1e-5)
+    # cell_values.py runs the test on the unrounded seed means and stores it at 6
+    # significant digits, hence the tolerance.
+    assert m["aggregate_lora_minus_base"]["diff"] == pytest.approx(main["diff"], rel=1e-5)
+    assert m["aggregate_lora_minus_base"]["ci95"] == pytest.approx(main["ci95"], rel=1e-5)
+    assert m["aggregate_lora_minus_base"]["p"] == pytest.approx(main["p"], rel=1e-5)
     assert cells["healthbench__med42-8b"]["source"] == "posted"
     # Mixed sources: the provenance names both, and the posted fallback keeps its mark.
     assert out["generality"]["provenance"] == f"{ps.SRC_SYNCED} when synced, else {ps.SRC_POSTED}, marked *"

@@ -104,7 +104,14 @@ def cell_values(cell_dir: Path) -> dict:
             sm = ps.seed_means(ps.metric_frame(df, key), seeds)[cfg].to_numpy(dtype=float) * mult
             conditions[pcond][pmetric] = {"mean": float(np.mean(sm)), "sd": float(np.std(sm, ddof=1)),
                                           "per_seed": {str(s): float(v) for s, v in zip(seeds, sm)}}
+    # Paired t over seeds, LoRA minus Base aggregate score, for Table J.2 and the drop tests.
+    # It runs here on the unrounded seed means: the output keeps 6 significant digits per
+    # seed, and a test on those moves p in its fourth digit.
+    lora, base = (conditions[c]["aggregate"]["per_seed"] for c in ("lora", "base"))
+    common = sorted(set(lora) & set(base), key=int)
+    test = ps.paired_seed_test(np.array([lora[s] for s in common]), np.array([base[s] for s in common]))
     return {"seeds": seeds, "eval_subdir": subdir, "conditions": conditions,
+            "aggregate_lora_minus_base": test,
             "lora_askers_minus_non_askers": askers_gap(df)}
 
 
