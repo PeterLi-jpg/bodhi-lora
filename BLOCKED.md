@@ -39,8 +39,9 @@ Action:
      are in no record.
    - No judge on the labelled, MediQ, filter-ablation, trace-seed and component-ablation
      cells, to save cost.
-   - The labelled cells evaluate five conditions; RUN_PLAN.md R4 proposes three and
-     costs three.
+   - The labelled cells evaluate five conditions and the paired cells seven.
+     RUN_PLAN.md section 4 costs them as they stand, and also with three and two
+     conditions, which the primary tests need.
    - The probe (E11) continues raw token ids with no chat template, unlike the chat-mode
      probe of the paper's Appendix A; its control is HealthBench for the older
      benchmarks and ChatDoctor for HealthBench, 100 to 200 prompts each.
@@ -65,24 +66,24 @@ points it answers.
 
 Action: say which runs may start, where, and when.
 
-- The minimal first batch (RUN_PLAN.md section 5) is about 23 to 29 H100-hours: the
+- The minimal first batch (RUN_PLAN.md section 5) is about 32 to 43 H100-hours: the
   Med42-8B judge re-grade, the uniform Mistral-Small-24B cell with the baselines, and the
-  MediQ paired probe on its adapters. Tier A is about 93 to 132; all tiers about 209 to
-  282.
+  MediQ paired probe on its adapters. With the paired record cut to `base` and `lora`, it
+  is 24 to 31. Tier A is about 159 to 249; all tiers about 315 to 448, of which the
+  judges are about 78. RUN_PLAN.md costs each cell record as it stands, and its section 4
+  lists the smaller records that would cost less.
 - Where: the shared H100 host or a paid cloud. Not Modal (D19).
 - Before the first run: `bash setup.sh` on the GPU machine, an `HF_TOKEN` with access to
-  MedGemma and Llama-3.1, and the Gemma 2 licence accepted for the Med42-8B judge.
+  MedGemma and Llama-3.1, and the Gemma 2 licence accepted for the Med42-8B judge (Gemma 3
+  too for R14).
 - The new cell records and the two protocols (`mediq-abstain`, `red-flags-first`) exist.
   Before R3 and R10, `python -m bodhi_lora fetch mediq-paired` and
   `python -m bodhi_lora fetch nlm-clinical-questions` download the MediQ file (2.6 MB) and
   the four NLM XML files and print their sha256 values; put them in the benchmark
   records and commit.
-- Two estimates exist. RUN_PLAN.md (measured 2026-07 stage times, three conditions on the
-  labelled cells) gives Tier A at 93 to 132 H100-hours. The experiments lane estimated the
-  records as they stand at about 215 to 265: a judge at 3x the evaluator's time on
-  every judged cell, 4-bit serving at 1.5 to 2x, five conditions on the labelled cells,
-  and two vLLM starts per condition and seed. Its model is not in the repo; the run
-  manifests of the first batch replace both.
+- The estimates scale the measured 2026-07 stage times (RUN_PLAN.md section 3). The
+  speed of a 4-bit base in vLLM and of the judges is not measured, so each run has a
+  range. The run manifests of the first batch replace the estimates.
 
 After: each finished cell lands in `results/<cell_id>/`. RUN_PLAN.md section 7 says how to
 copy it back, analyze it and commit it.

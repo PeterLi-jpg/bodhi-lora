@@ -1,7 +1,8 @@
 # Run plan
 
 **Needs the first author's go-ahead.** No GPU job runs until he says so (DECISIONS.md,
-2026-10-08). Nothing in this file has run. Dated 2026-10-08.
+2026-10-08). Nothing in this file has run. Dated 2026-10-08. On 2026-10-09 sections 3
+to 6 were updated to cost the cell records as they stand.
 
 This is the ordered list of GPU work from [EXPERIMENTS.md](EXPERIMENTS.md), with the
 command, the cells, the seeds, an H100-hour estimate and its basis for each run, and the
@@ -89,11 +90,24 @@ the four conditions with their rubric and dimension grading.
 the Med42-8B ChatDoctor filter time, the same benchmark size. (b) Three seeds; the other
 two trainer states come from resumed runs that took under a minute.
 
-Per condition, for 200 HealthBench prompts with Mistral-Small-24B: inference 1.7 minutes
-for `base`, 4.6 for `base+bodhi`, 6.7 for `lora` and 17.1 for `lora+bodhi`; rubric
-grading 2.2 and dimension grading 0.9 with the 8B evaluator; about 1.9 for the vLLM starts.
-The measured cell is 11.2 H100-hours, or 2.2 per seed. The posted reply gave about two
-per 24B seed (`rebuttal/responses/posted/FzpA_1_rebuttal.md`).
+Per condition and seed, for 200 prompts, from the same logs, in minutes. Inference makes
+the replies of one condition. Rubric and dimensions are the grading by the 8B evaluator.
+Each condition also needs about 1.9 minutes of vLLM starts.
+
+| Cell | Inference: `base`, `base+bodhi`, `lora`, `lora+bodhi` | Rubric | Dimensions |
+|---|---|---|---|
+| `healthbench__mistral-small-24b__bodhi__2026-07` | 1.7, 4.6, 6.7, 17.1 | 2.2 | 0.9 |
+| `chatdoctor__mistral-small-24b__bodhi__2026-07` | 1.6, 4.4, 4.2, 8.9 | 1.3 | 0.6 |
+| `medquad__mistral-small-24b__bodhi__2026-07` | 1.3, 3.0, 3.9, 10.0 | 1.2 | 0.4 |
+| `medqa-open-preamble__mistral-small-24b__bodhi__2026-07` | 2.2, 5.5, 6.5, 14.3 | 1.4 | 0.7 |
+| `healthbench__med42-8b__bodhi__2026-07` | 0.6, 1.3, 2.5, 7.2 | 1.9 | 0.7 |
+| `chatdoctor__med42-8b__bodhi__2026-07` | 0.8, 1.6, 2.2, 5.2 | 1.3 | 0.9 (c) |
+| `healthbench__biomistral-7b__bodhi__2026-07` | 0.5, 0.7, 5.2, 21.6 | 2.3 | 0.8 |
+
+(c) From the re-grade log of the cell; its eval logs hold no dimension grading.
+
+The measured Mistral-Small-24B HealthBench cell is 11.2 H100-hours, or 2.2 per seed. The
+posted reply gave about two per 24B seed (`rebuttal/responses/posted/FzpA_1_rebuttal.md`).
 
 The host was shared, so these times include other jobs on the machine. C25 promised
 times measured in isolation; those come from the `bench` stage, not from this table.
@@ -109,53 +123,80 @@ times measured in isolation; those come from the `bench` stage, not from this ta
   4-bit model more slowly than bf16 by an amount not measured here. The low figure
   assumes no slowdown; the high figure doubles the inference time.
 - **A4.** A 27B judge grades at one third of the speed of the 8B evaluator (parameter
-  ratio about 3.4). An 8B judge grades at the evaluator's speed. Not measured.
+  ratio about 3.4). Phi-4 (14.7B) grades at 1/1.8 of it. On a recorded cell, the
+  evaluator's speed is that cell's own (the table in 3.1); on a planned cell, that of the
+  2026-07 cell on the same benchmark. Each judge needs one vLLM start per seed. Not
+  measured.
 - **A5.** On the base model's stages, MedGemma-27B and Gemma-3-27B take 1.1 to 1.5 times
   as long as Mistral-Small-24B: parameter ratio 1.13, and Gemma 3's vocabulary of 262k
   tokens makes the output layer heavier. Not measured on an H100.
 - **A6.** The HealthBench `default` split leaves 3,321 train-pool prompts instead of
   4,000, so traces, filter and training take 0.83 of the 2026-07 times.
+- **A7.** A judge makes three calls per reply (`bodhi_lora/pipeline/grade.py`): the
+  rubric criteria that the evaluator graded, the seven dimensions, and the harm
+  questions. The harm call costs what a dimension call costs. On a benchmark with no
+  rubric (the NLM questions), a judge makes only the last two calls. Not measured.
+- **A8.** A contamination probe costs 0.25 to 0.5: 400 short greedy continuations and one
+  vLLM start. A timing bench with fewer conditions than R2 costs R2's bench times the
+  ratio of the condition counts.
 
 ## 4. Ordered run list
 
 Tier A answers the reasons for rejection. Tier B adds strength. Tier C is optional. The
 seeds are 42, 7, 13, 99 and 101 in every cell (three trace sets at one seed in R13).
 
-| Run | Items | Cells | Kind | Needs first | H100-h | Basis | Reviewer points |
-|---|---|---|---|---|---|---|---|
-| R1 (A) | E09 | `healthbench__med42-8b__bodhi__2026-07`, `chatdoctor__med42-8b__bodhi__2026-07`, judge `gemma-2-27b` | judges on recorded cells | the two cell folders with their eval files on the GPU machine | 5.1 | 4 conditions x 5 seeds, A4 | D6, EVAL-7, LxMF-3, HomM-W3, HomM-Q4, C26 (part) |
-| R2 (A) | E13, E12, E17, E20 | `healthbench__mistral-small-24b__bodhi`, nine conditions | train | none left | 14.6 to 19.6; bench 0.4 to 0.6; judge `medgemma-27b-text` 7.1 | the Mistral HealthBench cell of 3.1, A2, A3, A4, A6 | MR-W1, MR-W2, MR-W6, MR-F, FzpA-W2, FzpA-S, HomM-W1, HomM-W4, HomM-Q1 to Q3, HomM-F5, LxMF-4; C9, C25, C27, C31; REPRO-3, REPRO-8, REPRO-12, PROV-11 |
-| R3 (A) | E14 | `mediq-paired__mistral-small-24b__bodhi` on the R2 adapters | eval only | R2; the pinned MediQ file | 2.5 to 3.9 (`base`, `lora`); 4.8 to 7.5 with `base+bodhi` and `base+clarify` | 400 prompts per seed, MedQA-preamble cell times, A3 | MR-W4, LxMF-2 |
-| R4 (A) | E18, E19 (primary set) | `healthbench__mistral-small-24b__bodhi__labelled` on the R2 adapters, 775 prompts | eval only | R2 | 7.7 to 11.9 with `base`, `base+bodhi`, `lora`; 21.0 to 36.3 with the five conditions of EXPERIMENTS.md; a `medgemma-27b-text` judge adds 15.2 | A1 to A3 | C30, C18, FzpA-W3, C32, FzpA-Q3 |
-| R5 (A) | E16, E14 | `healthbench__mistral-small-24b__ask-first` and `mediq-paired__mistral-small-24b__ask-first` | train, then eval only | the cell records | 9.4 to 13.7, and 2.5 to 3.9 | one-call traces at 0.5 to 1 times the BODHI trace time, A2, A3 | HomM-W1, HomM-final, MR-F, C12, C29 |
-| R6 (A) | E10 | judge `medgemma-27b-text` on the Mistral HealthBench, BioMistral, Mistral ChatDoctor and Mistral MedQuAD cells of 2026-07; judge `phi-4` on the 2026-05 cell | judges on recorded cells | none left (the records list the judges) | 11.6 | 4 conditions x 5 seeds per cell, A4 | C26, LxMF-3, HomM-Q4, HomM-W3, HomM-F4, MR-W3 |
-| R7 (A) | E13, E12, E17, E20, E14, E18, E19 | `healthbench__medgemma-27b-text__bodhi` (QLoRA), its `__labelled` cell and `mediq-paired__medgemma-27b-text__bodhi` | train, then eval only | open decision O7 | 15.6 to 27.0; bench 0.5 to 0.9; an 8B judge 2.5; labelled 8.1 to 16.1; paired 2.6 to 5.4 | R2 to R4 with A5 | MR-W1 (the clinical base again), continuity with the 2026-05 cell |
-| R8 (B) | E15 | `medqa-open__mistral-small-24b__bodhi` | train | the `medqa-open` record | 15.6 to 18.0 | the MedQA-preamble cell of 3.1, A3 | W12, C1, C24 (follow-through), FzpA-Q3 |
-| R9 (B) | E21 | `healthbench__mistral-7b-instruct__bodhi`, `healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b` | train | R2 (traces) | 4.2 to 6.1, and 4.7 to 6.3 | the Med42-8B and BioMistral-7B HealthBench cells of 3.1, A6 | HomM-F1, withdrawals W5 |
-| R10 (B) | E19 (secondary set) | `nlm-clinical-questions__mistral-small-24b__bodhi`, `nlm-clinical-questions__medgemma-27b-text__bodhi` | eval only | R2, R7; the pinned NLM files | 1.8 to 2.9, and 1.9 to 3.9 | 200 questions per seed, three conditions, no rubric grading | FzpA-Q3, C32 |
-| R11 (B) | E11 | probes: Mistral-Small-24B on four benchmarks, Med42-8B on two, BioMistral-7B, Mistral-7B-Instruct and MedGemma-27B on HealthBench | probe | none left (`probe` blocks in the recorded cells; R9 and R14 probe in their own runs) | 2.2 to 4.5 | 0.25 to 0.5 each: 400 short greedy continuations and one vLLM start | EVAL-12, NUM-7 |
-| R12 (B) | E22 | `healthbench__mistral-small-24b__bodhi__unfiltered`, `__random-same-count` | train | R2 (traces) | 8.9 to 10.7, and 5.7 to 7.4 | training on 3,321 or the kept rows; `base` and `lora` only | MR-W4, LxMF-2, the filter claim |
-| R13 (C) | E23 | `healthbench__mistral-small-24b__bodhi__traces-s1`, `-s2`, `-s3` | traces, then train at one seed | sampled decoding | 10.1 to 11.6 | three trace and filter passes, three adapters | REPRO-8, HomM-final |
-| R14 (C) | E24 | `healthbench__gemma-3-27b__bodhi` | train | the model record and pin | 10.8 to 17.5 | four conditions, A5 | FzpA-W2, MR-W1 |
-| R15 (C) | E25 | `chatdoctor__mistral-small-24b__bodhi`, `medquad__mistral-small-24b__bodhi` | train | seeded pools in the records | 12.1 to 13.7, and 8.5 to 10.0 | the 2026-07 cells of 3.1, A3 | HomM-Q2, MR-W2, FzpA-Q3 |
-| R16 (C) | E26 | `healthbench__mistral-small-24b__bodhi-no-calibration`, `healthbench__mistral-small-24b__bodhi-no-questions`, `healthbench__mistral-small-24b__bodhi-no-abstention` | train | the cell records | 10.0 to 12.5 each | four conditions | none asked |
+Each figure costs the cell record as it stands on 2026-10-09: its conditions, prompts,
+seeds and probe. The judges that a record lists have their own column, because
+`--judges none` leaves them for later without a change to the record.
 
-The labelled cells (R4, R7) cost much more than EXPERIMENTS.md section 4 says, because
-they evaluate 775 prompts per seed. H7 and H11 need only `base` and `lora`, with
-`base+bodhi` as the teacher, so this plan proposes those three conditions and no judge.
+| Run | Items | Cells | Kind | Needs first | H100-h | Judges, H100-h | Basis | Reviewer points |
+|---|---|---|---|---|---|---|---|---|
+| R1 (A) | E09 | `healthbench__med42-8b__bodhi__2026-07`, `chatdoctor__med42-8b__bodhi__2026-07` | judge `gemma-2-27b` on recorded cells | the two cell folders with their eval files on the GPU machine | none | 6.7 | 4 conditions x 5 seeds at each cell's own grading times, A4, A7 | D6, EVAL-7, LxMF-3, HomM-W3, HomM-Q4, C26 (part) |
+| R2 (A) | E13, E12, E17, E20 | `healthbench__mistral-small-24b__bodhi`, nine conditions | train | none left | 14.6 to 19.6; bench 0.4 to 0.6 | 9.2 (`medgemma-27b-text`) | the Mistral HealthBench cell of 3.1, A2 to A4, A6, A7 | MR-W1, MR-W2, MR-W6, MR-F, FzpA-W2, FzpA-S, HomM-W1, HomM-W4, HomM-Q1 to Q3, HomM-F5, LxMF-4; C9, C25, C27, C31; REPRO-3, REPRO-8, REPRO-12, PROV-11 |
+| R3 (A) | E14 | `mediq-paired__mistral-small-24b__bodhi` on the R2 adapters, seven conditions | eval only | R2; the pinned MediQ file | 9.9 to 16.3 | none | 400 prompts per seed at the MedQA-preamble cell's times, A2, A3 | MR-W4, LxMF-2 |
+| R4 (A) | E18, E19 (primary set) | `healthbench__mistral-small-24b__bodhi__labelled` on the R2 adapters, 775 prompts, five conditions | eval only | R2 | 21.0 to 36.3 | none | A1 to A3 | C30, C18, FzpA-W3, C32, FzpA-Q3 |
+| R5 (A) | E16, E14 | `healthbench__mistral-small-24b__ask-first` (five conditions) and `mediq-paired__mistral-small-24b__ask-first` (four) | train, then eval only | the pinned MediQ file | 9.4 to 13.7; bench 0.2 to 0.3; paired 4.9 to 11.5 | 5.2 (`medgemma-27b-text`) | low: `ask-first` costs one call and its traces half of BODHI's; high: two calls and the full trace time; A2, A3, A8 | HomM-W1, HomM-final, MR-F, C12, C29 |
+| R6 (A) | E10 | judge `medgemma-27b-text` on six cells of 2026-07 (Mistral-Small-24B on HealthBench, ChatDoctor and MedQuAD, BioMistral-7B, both Med42-8B cells); judge `phi-4` on the 2026-05 cell | judges on recorded cells | none left (the records list the judges) | none | 22.4 | 4 conditions x 5 seeds per cell at each cell's own grading times, A4, A7 | C26, LxMF-3, HomM-Q4, HomM-W3, HomM-F4, MR-W3 |
+| R7 (A) | E13, E12, E17, E20, E14, E18, E19 | `healthbench__medgemma-27b-text__bodhi` (QLoRA, nine conditions), its `__labelled` cell (five) and `mediq-paired__medgemma-27b-text__bodhi` (seven) | train, then eval only | open decision O7; the pinned MediQ file | 15.6 to 27.0; bench 0.5 to 0.9; labelled 22.6 to 51.5; paired 10.6 to 22.7 | 5.6 (`phi-4`) | R2 to R4 with A5 | MR-W1 (the clinical base again), continuity with the 2026-05 cell |
+| R8 (B) | E15 | `medqa-open__mistral-small-24b__bodhi`, seven conditions | train | none left | 17.4 to 20.6 | 5.0 (`medgemma-27b-text`) | the MedQA-preamble cell of 3.1 and three baseline conditions, A2, A3 | W12, C1, C24 (follow-through), FzpA-Q3 |
+| R9 (B) | E21 | `healthbench__mistral-7b-instruct__bodhi` with its probe, `healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b` | train | R2 (traces) | 4.5 to 6.6, and 4.7 to 6.3 | 3.5 and 4.0 (`medgemma-27b-text`) | the Med42-8B and BioMistral-7B HealthBench cells of 3.1, A6, A8 | HomM-F1, withdrawals W5 |
+| R10 (B) | E19 (secondary set) | `nlm-clinical-questions__mistral-small-24b__bodhi`, `nlm-clinical-questions__medgemma-27b-text__bodhi`, seven conditions each | eval only | R2, R7; the pinned NLM files | 4.8 to 8.0, and 5.1 to 11.1 | 3.3 (`medgemma-27b-text`) and 2.1 (`phi-4`) | 200 questions per seed at the Mistral HealthBench times, no rubric grading, A2, A3, A5 | FzpA-Q3, C32 |
+| R11 (B) | E11 | probes on eight recorded cells: Mistral-Small-24B on four benchmarks, Med42-8B on two, BioMistral-7B and MedGemma-27B on HealthBench | probe | none left (`probe` blocks in the recorded cells; R9 and R14 probe in their own runs) | 2.0 to 4.0 | none | A8 | EVAL-12, NUM-7 |
+| R12 (B) | E22 | `healthbench__mistral-small-24b__bodhi__unfiltered`, `__random-same-count` | train | R2 (traces) | 8.9 to 10.7, and 5.7 to 7.4 | none | training on 3,321 or the kept rows; `base` and `lora` only | MR-W4, LxMF-2, the filter claim |
+| R13 (C) | E23 | `healthbench__mistral-small-24b__bodhi__traces-s1`, `-s2`, `-s3` | traces, then train at one seed | none left | 10.1 to 11.6 | none | three trace and filter passes, three adapters | REPRO-8, HomM-final |
+| R14 (C) | E24 | `healthbench__gemma-3-27b__bodhi` with its probe | train | none left | 11.1 to 18.0 | 2.6 (`phi-4`) | four conditions, A5, A8 | FzpA-W2, MR-W1 |
+| R15 (C) | E25 | `chatdoctor__mistral-small-24b__bodhi`, `medquad__mistral-small-24b__bodhi`, seven conditions each | train | none left | 13.7 to 15.9, and 9.9 to 11.8 | 4.6 and 3.8 (`medgemma-27b-text`) | the 2026-07 cells of 3.1 and three baseline conditions, A2, A3 | HomM-Q2, MR-W2, FzpA-Q3 |
+| R16 (C) | E26 | `healthbench__mistral-small-24b__bodhi-no-calibration`, `healthbench__mistral-small-24b__bodhi-no-questions`, `healthbench__mistral-small-24b__bodhi-no-abstention` | train | none left | 10.0 to 12.5 each | none | four conditions | none asked |
+
+**Smaller records.** Some records cost more than the primary tests of
+[ANALYSIS_PLAN.md](ANALYSIS_PLAN.md) need. A record can change only before its cell first
+runs, because the runner freezes it then. Each change below is the first author's
+(BLOCKED.md item 1):
+
+- The labelled cells evaluate five conditions on 775 prompts per seed. H7 and H11 need
+  only `base` and `lora`, with `base+bodhi` as the teacher. With those three conditions,
+  R4 costs 7.7 to 11.9 and the labelled cell of R7 costs 8.1 to 16.1.
+- The paired cells evaluate seven conditions. The primary test of H3 needs only `base`
+  and `lora`; the teacher and the prompt baselines feed its secondary analyses. With two
+  conditions, R3 costs 2.5 to 3.9 and the paired cell of R7 costs 2.6 to 5.4.
+- Judges need no change to a record: run with `--judges none`, and add them later with
+  `--stages grade`. The judges are about 78 of the H100-hours of all tiers.
+
 The runner also evaluates `base` again for every seed, although with fixed eval ids and
 greedy decoding its output is the same for each seed. A runner option to evaluate such a
 condition once would save nearly half of the time of a labelled cell with three conditions.
 
 ## 5. Minimal first batch
 
-If compute is tight, run these first, about **23 to 29 H100-hours**:
+If compute is tight, run these first: about **32 to 43 H100-hours** with the records as
+they stand, or **24 to 31** with the R3 record cut to `base` and `lora`:
 
-1. R1, the Med42-8B judge re-grade (5.1). It needs no training and closes the D6
+1. R1, the Med42-8B judge re-grade (6.7). It needs no training and closes the D6
    promise.
-2. R2, the uniform Mistral-Small-24B cell with the baselines and red flags first, judges
-   left for later (15.0 to 20.2 with the bench run).
-3. R3, the MediQ paired probe on the R2 adapters, `base` and `lora` only (2.5 to 3.9).
+2. R2, the uniform Mistral-Small-24B cell with the baselines and red flags first, with
+   `--judges none` (15.0 to 20.2 with the bench run).
+3. R3, the MediQ paired probe on the R2 adapters (9.9 to 16.3; 2.5 to 3.9 with `base`
+   and `lora` only, which gives the primary test of H3 and none of its secondary ones).
 
 Together with E02 on the existing outputs (no GPU), this answers the reasons for
 rejection that a run can answer: a widely used general base under one set of settings
@@ -164,19 +205,27 @@ against mimicry (MR-W4, LxMF-2), red flags first (C31), the Med42-8B grader over
 and measured cost (C25). It leaves the second protocol (R5), the clinical judge panel
 (R6), the labelled probes (R4) and the MedGemma rerun (R7) for the next batch.
 
-To leave the judge of R2 for later, run R2 with `--judges none`. When R2 is complete, its
-record gets `report.status: complete`, and
+To add the judge of R2 later: when R2 is complete, its record gets
+`report.status: complete`, and
 `python -m bodhi_lora run healthbench__mistral-small-24b__bodhi --stages grade --gpus 0`
-adds the judge (7.1 for `medgemma-27b-text`).
+adds the judge (9.2 for `medgemma-27b-text`).
 
 ## 6. Totals
 
 | Set | H100-hours | At 2 to 4 dollars per H100-hour |
 |---|---|---|
-| Minimal first batch | 22.6 to 29.2 | 45 to 117 dollars |
-| Tier A (labelled cells with three conditions, R2 judges included) | 92.7 to 131.8 | 185 to 527 dollars |
-| Tiers A and B | 137.7 to 191.6 | 275 to 766 dollars |
-| All tiers | 209.2 to 281.9 | 418 to 1,128 dollars |
+| Minimal first batch, as the records stand | 31.6 to 43.2 | 63 to 173 dollars |
+| Minimal first batch, R3 with `base` and `lora` only | 24.1 to 30.8 | 48 to 123 dollars |
+| Tier A | 158.6 to 249.4 | 317 to 998 dollars |
+| Tier A, labelled cells with three conditions | 130.7 to 189.5 | 261 to 758 dollars |
+| Tiers A and B | 229.4 to 341.9 | 459 to 1,368 dollars |
+| All tiers | 315.0 to 447.7 | 630 to 1,791 dollars |
+
+The minimal batch holds one judge, R1. Every other row includes every judge that its
+records list: 77.7 H100-hours over all tiers, 49.0 of them in Tier A. Most of the rise from the first
+version of this plan (2026-10-08) comes from what the records hold: the judges' harm
+call, seven conditions in the paired and NLM cells, five in the labelled cells, and the
+prompt baselines in the ChatDoctor, MedQuAD and MedQA cells.
 
 The dollar rate is the one EXPERIMENTS.md assumes; it was not checked against a current
 price list. The shared host has no meter, but each run holds a card for its hours.

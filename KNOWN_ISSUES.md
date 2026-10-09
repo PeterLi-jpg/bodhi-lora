@@ -88,9 +88,10 @@ Issue numbers such as #5 are GitHub issues on `PeterLi-jpg/bohdi-lora`.
 ### Planned runs
 
 - **The cost estimates rest on shared-host times.** docs/RUN_PLAN.md scales the stage
-  times of the 2026-07 cells, measured on a shared host. The speed of serving a 4-bit
-  base in vLLM, and of a 27B judge, is not measured; the plan gives a range for each. The
-  first run's manifests and its `bench` stage replace the estimates (E20, C25).
+  times of the 2026-07 cells, measured on a shared host, to each cell record. The speed
+  of serving a 4-bit base in vLLM, of a 14B or 27B judge, and of the judges' harm call is
+  not measured; the plan gives a range or states the assumption. The first run's
+  manifests and its `bench` stage replace the estimates (E20, C25).
 - **The runner evaluates seed-invariant conditions for every seed.** With fixed eval ids
   and greedy decoding, `base` and `base+bodhi` give the same outputs for each seed, but
   the runner runs them five times. In the labelled cells that is nearly half of the time.
