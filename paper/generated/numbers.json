@@ -6243,7 +6243,7 @@
     }
   },
   "generality": {
-    "provenance": "transcribed from posted OpenReview replies; raw outputs on mit-critical-data-1:/data/PROJECTS/bohdi/results_rebuttal/ pending sync",
+    "provenance": "data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py)",
     "cells": [
       {
         "id": "healthbench__mistral-small-24b",

@@ -1402,6 +1402,17 @@ def resolve_cells(posted: dict, generated: dict | None, recipe: dict | None = No
     return cells
 
 
+def cells_source(cells: list[dict]) -> str:
+    """Where the added-cell values come from, named by the sources the cells actually use.
+    Posted values are a fallback for a tree without the synced raw outputs."""
+    sources = {c["source"] for c in cells}
+    if sources == {"synced"}:
+        return SRC_SYNCED
+    if sources == {"posted"}:
+        return f"{SRC_POSTED}, marked *"
+    return f"{SRC_SYNCED} when synced, else {SRC_POSTED}, marked *"
+
+
 def _mean(cell: dict, cond: str, metric: str):
     v = cell["conditions"].get(cond, {}).get(metric)
     return None if v is None else v.get("mean")
@@ -1415,7 +1426,8 @@ def generality_section(posted: dict, generated: dict | None, out, macros, recipe
     whose values come from results_modal.
     """
     conditions_res = out["conditions"]
-    res = {"provenance": posted.get("_provenance"), "cells": resolve_cells(posted, generated, recipe)}
+    cells = resolve_cells(posted, generated, recipe)
+    res = {"provenance": cells_source(cells), "cells": cells}
     for c in posted["cells"]:
         if c["id"] == MAIN_CELL_ID:
             res["main_cell_check"] = check_main_cell(c, conditions_res)
@@ -1882,8 +1894,7 @@ def generality_table(out) -> str:
         ["Benchmark", "Base model", "Base", "Base+\\bodhi{}", "LoRA", "Base", "LoRA", "Base", "LoRA",
          "LoRA$-$Base [95\\% CI]"],
         _blocks(out, main, row),
-        "results_modal (first row) and data/rebuttal_cells/ (other rows: generated_values.json when "
-        "synced, else posted_values.json, marked *)")
+        f"results_modal (first row); other rows: {out['generality']['provenance']}")
 
 
 def generality_aggregate_table(out) -> str:
@@ -1899,8 +1910,7 @@ def generality_aggregate_table(out) -> str:
 
     return tabular("llrrrrr", ["Benchmark", "Base model", *(COND_LABEL[c] for c in CONDITIONS),
                                "LoRA $-$ Base"], _blocks(out, main, row),
-                   "results_modal (first row, seed means) and data/rebuttal_cells/ (other rows: "
-                   "generated_values.json when synced, else posted_values.json, marked *)")
+                   f"results_modal (first row, seed means); other rows: {out['generality']['provenance']}")
 
 
 def cell_dimensions_table(out) -> str | None:
@@ -1924,7 +1934,7 @@ def cell_dimensions_table(out) -> str | None:
                           _num(lo - b, dp, sign=True)])
         blocks.append(block)
     return tabular("lrrrr", ["Dimension", "Base", "Base+\\bodhi{}", "LoRA", "LoRA $-$ Base"], blocks,
-                   "data/rebuttal_cells/ (generated_values.json when synced, else posted_values.json, marked *)")
+                   out["generality"]["provenance"])
 
 
 def cell_filter_table(out) -> str | None:

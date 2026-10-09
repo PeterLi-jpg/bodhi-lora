@@ -300,6 +300,8 @@ def test_synced_cell_replaces_posted_values_and_gets_a_t_interval(tmp_path):
     assert m["aggregate_lora_minus_base"]["diff"] == pytest.approx(main["diff"], abs=1e-5)
     assert m["aggregate_lora_minus_base"]["ci95"] == pytest.approx(main["ci95"], abs=1e-5)
     assert cells["healthbench__med42-8b"]["source"] == "posted"
+    # Mixed sources: the provenance names both, and the posted fallback keeps its mark.
+    assert out["generality"]["provenance"] == f"{ps.SRC_SYNCED} when synced, else {ps.SRC_POSTED}, marked *"
     tab = (out_dir / "tab_generality.tex").read_text()
     row = next(line for line in tab.splitlines() if line.startswith("HB-Hard & Mistral-Small-24B"))
     assert "ast" not in row and "pending" not in row
@@ -339,6 +341,10 @@ def test_committed_cells_give_tests_recipe_and_filter_table(tmp_path):
     assert "MedQuAD & Mistral-Small-24B & \\ensuremath{0.4} & 4{,}200 & \\ensuremath{78.4} & 2{,}965" in tab
     assert "Med42-8B}$^{\\dagger}$" in (tmp_path / "tab_cell_dimensions.tex").read_text()
     assert "ast" not in (tmp_path / "tab_generality.tex").read_text()
+    # Every row is synced, so no output names the posted values as a source.
+    assert out["generality"]["provenance"] == ps.SRC_SYNCED
+    for name in ("tab_generality", "tab_generality_aggregate", "tab_cell_dimensions"):
+        assert "posted_values" not in (tmp_path / f"{name}.tex").read_text().splitlines()[0]
 
 
 def test_completion_drop_and_filter_macros(generated):
