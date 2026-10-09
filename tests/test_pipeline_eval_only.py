@@ -53,3 +53,22 @@ def test_paired_and_question_cells_run_after_the_adapter_cell(env):
     judged = json.loads((root / QUESTIONS / "seed_1" / "grade" / "judge__medgemma-27b-text.json").read_text())
     ex = judged["configs"][0]["examples"][0]
     assert ex["judge_score"] is None and ex["judge_criteria_met"] == [] and ex["harm"] is not None
+
+
+def test_a_traces_from_cell_reuses_the_source_grades_and_a_sampled_cell_records_its_decoding(env):
+    reg, proj, configs = env
+    root = proj.results_root
+    unfiltered = "tiny-rubric__tiny-random-llama__bodhi__unfiltered"
+    if not (root / SMOKE / "shared" / "filter" / "graded.jsonl").is_file():
+        run_cell(reg, proj, SMOKE, mode="stub", stages=("traces", "filter"), configs_dir=configs,
+                 results_root=root)
+    run_cell(reg, proj, unfiltered, mode="stub", stages=("traces", "filter"), configs_dir=configs,
+             results_root=root)
+    m = json.loads((root / unfiltered / "shared" / "filter" / "manifest.json").read_text())
+    assert m["grades_from"] == SMOKE and m["counts"]["n_grades_reused"] == m["counts"]["n_graded"] == 12
+    assert m["tau"]["rule"] == "none" and m["counts"]["n_kept"] == 12
+
+    sampled = "tiny-rubric__tiny-random-llama__bodhi__traces-s1"
+    run_cell(reg, proj, sampled, mode="stub", stages=("traces",), configs_dir=configs, results_root=root)
+    t = json.loads((root / sampled / "shared" / "traces" / "manifest.json").read_text())
+    assert t["config"]["traces"]["decoding"] == "sample" and t["config"]["traces"]["seed"] == 1
