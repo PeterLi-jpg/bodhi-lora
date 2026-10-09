@@ -1,0 +1,133 @@
+# The uniform analysis (docs/ARCHITECTURE.md section 7).
+#
+# python -m bodhi_lora analyze runs the same statistics on every cell; this file only
+# names what is not a property of one cell: the text rules, the labels the
+# discrimination index uses, the cell groups the paper counts over, and the posted
+# values to check. A new label or group is a change here, not in the code. The report
+# (python -m bodhi_lora report, not built yet) adds its display names and tables here.
+
+# Cells whose outputs are analyzed when they exist. A cell that never ran (not_run) or
+# is only planned has nothing to read.
+statuses: [complete, partial, pilot]
+
+# One prompt-clustered bootstrap per cell: every pooled interval of the cell comes from
+# the same resamples.
+bootstrap: {resamples: 5000, seed: 0}
+
+# Grader-free rules over the reply text. Each becomes a 0/1 column of the response table.
+#   question: the reply has a sentence that ends in "?" and matches `pattern`, after
+#             markdown emphasis and quote marks are removed (sentences split at
+#             whitespace after . ! ? and at line breaks).
+text_features:
+  second_person_q:
+    kind: question
+    description: a question put to the reader (a sentence ending in "?" with you, your, yours, yourself or yourselves)
+    pattern: '\b(you|your|yours|yourself|yourselves)\b'
+
+# The discrimination index: P(response asks | label positive) - P(asks | label negative),
+# for each listed label whose groups both occur among a cell's evaluated prompts. Only
+# labels listed here are computed. The physician labels of the benchmark records are left
+# out on purpose: computing a new statistic on outputs that exist needs the dated
+# analysis plan first (docs/CONVENTIONS.md, convention 3; docs/ARCHITECTURE.md O4).
+discrimination:
+  response: active_inquiry
+  labels: [needs-info-theme-or-rubric, needs-info-theme]
+
+# Response-length quartile edges come from this condition's scored replies.
+length_reference: base
+
+# The cells of the cross-cell statistics, in order.
+cross_cells:
+  - healthbench__medgemma-27b-text__bodhi__2026-05
+  - healthbench__mistral-small-24b__bodhi__2026-07
+  - healthbench__med42-8b__bodhi__2026-07
+  - healthbench__biomistral-7b__bodhi__2026-07
+  - chatdoctor__mistral-small-24b__bodhi__2026-07
+  - chatdoctor__med42-8b__bodhi__2026-07
+  - medquad__mistral-small-24b__bodhi__2026-07
+  - medqa-open-preamble__mistral-small-24b__bodhi__2026-07
+
+# Groups of cells that the paper counts over. A group is the cells of cross_cells that
+# match every `where` key, minus `exclude`, or the cells it lists. Keys of where: status
+# (list), model (list), family_waiver (true or false), set_aside (true or false). `token`
+# names the group in macros.
+groups:
+  submitted:
+    token: Submitted
+    description: the cell of the submitted paper
+    cells: [healthbench__medgemma-27b-text__bodhi__2026-05]
+  set-aside:
+    token: SetAside
+    description: cells set aside, with the reason in their record
+    where: {set_aside: true}
+  outside-family:
+    token: OutsideFamily
+    description: complete cells outside the evaluator's family that are not set aside
+    where: {status: [complete], family_waiver: false, set_aside: false}
+  added:
+    token: Added
+    description: the complete cells added in the 2026-07 discussion
+    where: {status: [complete]}
+    exclude: [healthbench__medgemma-27b-text__bodhi__2026-05]
+  added-kept:
+    token: AddedKept
+    description: the added cells that are not set aside (the Holm family of the aggregate tests)
+    where: {status: [complete], set_aside: false}
+    exclude: [healthbench__medgemma-27b-text__bodhi__2026-05]
+  added-outside-family:
+    token: AddedOutsideFamily
+    description: the added cells outside the evaluator's family that are not set aside
+    where: {status: [complete], family_waiver: false, set_aside: false}
+    exclude: [healthbench__medgemma-27b-text__bodhi__2026-05]
+  added-mistral:
+    token: AddedMistral
+    description: the added Mistral-Small-24B cells
+    where: {status: [complete], model: [mistral-small-24b]}
+  added-med42:
+    token: AddedMedFortyTwo
+    description: the added Med42-8B cells
+    where: {status: [complete], model: [med42-8b]}
+  added-biomistral:
+    token: AddedBioMistral
+    description: the added BioMistral-7B cells
+    where: {status: [complete], model: [biomistral-7b]}
+
+# For each group: per contrast and metric, how many cells move each way, the range of
+# the differences, and Holm over the group's cells of the seed-level p-values.
+group_contrasts:
+  - {contrast: lora - base, metrics: [active_inquiry, rubric_score]}
+  - {contrast: lora - base+bodhi, metrics: [active_inquiry]}
+  - {contrast: base+bodhi - base, metrics: [rubric_score]}
+
+# Two cells that graded the same base model on the same benchmark with different
+# evaluators: rubric scores on the prompts both drew in `seed`.
+grader_comparisons:
+  - token: PilotGrader
+    description: the 2026-04 pilot (rubric graded by the filter grader) against the 2026-05 cell (graded by the evaluator)
+    cells: [healthbench__medgemma-27b-text__bodhi__2026-04, healthbench__medgemma-27b-text__bodhi__2026-05]
+    seed: 42
+
+# The record of what the discussion posted. Each posted cell name maps to its cell, each
+# posted condition and metric to the package's names, and the report lists every posted
+# value that the outputs do not reproduce at the posted precision.
+posted:
+  file: rebuttal/posted_values.json
+  conditions: {base: base, base_cot: base+bodhi, lora: lora, lora_cot: lora+bodhi}
+  metrics:
+    active_inquiry_pct: {metric: active_inquiry, scale: 100, decimals: 1}
+    uncertainty_ack: {metric: uncertainty_ack, scale: 1, decimals: 2}
+    context_seeking: {metric: context_seeking, scale: 1, decimals: 2}
+    red_flag: {metric: red_flag, scale: 1, decimals: 2}
+    scope_bounding: {metric: scope_bounding, scale: 1, decimals: 2}
+    hedging_quality: {metric: hedging_quality, scale: 1, decimals: 2}
+    specificity: {metric: specificity, scale: 1, decimals: 2}
+    aggregate: {metric: rubric_score, scale: 1, decimals: 3}
+  cells:
+    healthbench__medgemma-27b: healthbench__medgemma-27b-text__bodhi__2026-05
+    healthbench__mistral-small-24b: healthbench__mistral-small-24b__bodhi__2026-07
+    healthbench__med42-8b: healthbench__med42-8b__bodhi__2026-07
+    healthbench__biomistral-7b: healthbench__biomistral-7b__bodhi__2026-07
+    chatdoctor__mistral-small-24b: chatdoctor__mistral-small-24b__bodhi__2026-07
+    chatdoctor__med42-8b: chatdoctor__med42-8b__bodhi__2026-07
+    medquad__mistral-small-24b: medquad__mistral-small-24b__bodhi__2026-07
+    medqa__mistral-small-24b: medqa-open-preamble__mistral-small-24b__bodhi__2026-07
