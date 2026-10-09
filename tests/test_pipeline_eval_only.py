@@ -28,12 +28,13 @@ def env(tmp_path_factory):
 def test_an_eval_only_cell_needs_its_adapter_cell_first(env):
     reg, proj, configs = env
     with pytest.raises(RunError, match="kept traces are what the adapters trained on"):
-        run_cell(reg, proj, QUESTIONS, mode="stub", configs_dir=configs, results_root=proj.results_root / "empty")
+        run_cell(reg, proj, QUESTIONS, mode="stub", configs_dir=configs, results_root=proj.scratch_root / "empty")
 
 
 def test_paired_and_question_cells_run_after_the_adapter_cell(env):
     reg, proj, configs = env
-    root = proj.results_root
+    # A stub run may not write under the results root (runner), so the cells share a scratch root.
+    root = proj.scratch_root / "stub"
     run_cell(reg, proj, SMOKE, mode="stub", stages=("traces", "filter"), configs_dir=configs, results_root=root)
     for cell_id in (PAIRED, QUESTIONS):
         run_cell(reg, proj, cell_id, mode="stub", stages=("eval", "grade"), configs_dir=configs,
@@ -57,7 +58,8 @@ def test_paired_and_question_cells_run_after_the_adapter_cell(env):
 
 def test_a_traces_from_cell_reuses_the_source_grades_and_a_sampled_cell_records_its_decoding(env):
     reg, proj, configs = env
-    root = proj.results_root
+    # A stub run may not write under the results root (runner), so the cells share a scratch root.
+    root = proj.scratch_root / "stub"
     unfiltered = "tiny-rubric__tiny-random-llama__bodhi__unfiltered"
     if not (root / SMOKE / "shared" / "filter" / "graded.jsonl").is_file():
         run_cell(reg, proj, SMOKE, mode="stub", stages=("traces", "filter"), configs_dir=configs,
