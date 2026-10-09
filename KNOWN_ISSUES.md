@@ -40,10 +40,11 @@ Issue numbers such as #5 are GitHub issues on `PeterLi-jpg/bohdi-lora`.
 - **Med42-8B shares the evaluator's family (EVAL-7, D6).** The cells are marked † and
   kept out of cross-model statements. The judge re-grade is built
   (`bodhi_lora/pipeline/grade.py`) and waits for the GPU go-ahead (docs/RUN_PLAN.md R1).
-- **No prior-work baseline has run (EVAL-8).** `bodhi_lora/protocols/` holds two of the
-  three prompt baselines; the third (`mediq-abstain`) is to build. They run inside the
-  new cells, so they share the grader and the prompts of the conditions they are
-  compared with (docs/RUN_PLAN.md R2, docs/ANALYSIS_PLAN.md H4).
+- **No prior-work baseline has run (EVAL-8).** The three prompt baselines (`clarify`,
+  `verbalized-confidence`, `mediq-abstain`) are protocol records in `configs/protocols/`,
+  run by `bodhi_lora/protocols/`, and pass their stub tests. They run inside the new
+  cells, so they share the grader and the prompts of the conditions they are compared
+  with (docs/RUN_PLAN.md R2, docs/ANALYSIS_PLAN.md H4).
 - **The MedQA cell has only the preamble run.** Its one run used the old prompt that told
   the model to ask (Base asks in nearly every response), so it measures instruction
   following. The fixed prompt (035d85f) was never run. The paper reports the cell's

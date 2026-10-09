@@ -21,9 +21,10 @@ methodology, so they are yours.
 Action:
 
 1. Read [docs/ANALYSIS_PLAN.md](docs/ANALYSIS_PLAN.md). Adopt it as it is, or change it
-   with a dated entry in its section 12. Its section 12 lists the four open choices: E14
-   or E02 as the primary test of calibration, the E07 margins (O5), whether the new cells
-   replace the old ones in the main tables, and the settings of the new cells.
+   with a dated entry in its section 12. Its section 12 lists five open choices: E14 or
+   E02 as the primary test of calibration, the E07 margins (O5), whether the new cells
+   replace the old ones in the main tables, the settings of the new cells, and the
+   choices in the cell records (step 4 below).
 2. Decide the open choices of [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) section 12
    that are still open: O1 (package name), O2 (raw outputs in git: the default stops
    tracking the 80 MB of the 2026-05 cell), O3 (a versioned archive of all raw outputs,
