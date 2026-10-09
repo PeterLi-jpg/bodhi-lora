@@ -101,7 +101,7 @@ def parse_json_response(text):
     return {}
 
 
-def _escape_grader_delimiters(text: str) -> str:
+def escape_grader_delimiters(text: str) -> str:
     """Defang grader-template delimiters in untrusted text.
 
     The grader prompt embeds the conversation between ``<<conversation>>``
@@ -136,16 +136,16 @@ def grade_rubric(grader, prompt_messages, response_text, rubric_items, max_retri
     / ``<<rubric_item>>`` as interpolation delimiters and ``# Final instruction``
     / ``# Example`` as section headers. Untrusted trace content (both the
     prompt messages and the assistant response) is run through
-    :func:`_escape_grader_delimiters` so a malicious trace cannot inject
+    :func:`escape_grader_delimiters` so a malicious trace cannot inject
     fake template sections that flip the grader's decision.
     """
     # Escape delimiters in BOTH the user-side messages and the assistant
     # response. Either side could contain attacker-controlled text.
     safe_messages = [
-        {"role": m["role"], "content": _escape_grader_delimiters(m.get("content", ""))}
+        {"role": m["role"], "content": escape_grader_delimiters(m.get("content", ""))}
         for m in prompt_messages
     ]
-    safe_response = _escape_grader_delimiters(response_text)
+    safe_response = escape_grader_delimiters(response_text)
     convo = safe_messages + [{"role": "assistant", "content": safe_response}]
     convo_str = "\n\n".join(f"{m['role']}: {m['content']}" for m in convo)
 

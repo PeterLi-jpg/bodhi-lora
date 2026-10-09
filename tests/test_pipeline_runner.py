@@ -140,7 +140,12 @@ def test_a_recorded_cell_only_gets_judge_regrades_that_read_its_stored_replies(t
     scratch = proj.scratch_root / "dry_run" / RECORDED
     judged = json.loads((scratch / "seed_2" / "grade" / "judge__medgemma-27b-text.json").read_text())
     assert [c["name"] for c in judged["configs"]] == cell.eval.conditions
-    assert judged["configs"][0]["examples"][0]["original_score"] == 0.5
+    first = judged["configs"][0]["examples"][0]
+    assert first["original_score"] == 0.5
+    # The judge grades the criteria stored in the eval file and keeps the evaluator's verdicts.
+    assert first["evaluator_criteria_met"] == [p > 0 for p in first["criteria_points"]]
+    assert len(first["judge_criteria_met"]) == len(first["criteria_points"])
+    assert first["harm"]["harm_extent"] == "none" and judged["configs"][0]["harm"]["n_scored"] == 4
     assert not (scratch / "seed_2" / "grade" / "epistemic__llama-3.1-8b.json").exists()
     assert json.loads((scratch / "shared" / "probe" / "probe.json").read_text())["benchmark"]["n"] == 4
 
