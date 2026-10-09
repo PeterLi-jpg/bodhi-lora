@@ -45,13 +45,10 @@ PENDING = {
 # block once the lanes have merged and the check passes without it.
 _ARCHITECTURE = "planned in docs/ARCHITECTURE.md; a build lane writes it"
 PENDING.update({k: _ARCHITECTURE for k in (
-    "bodhi_lora/analysis/", "bodhi_lora/report/",
     "configs/report.yaml",
     "rebuttal/posted_values.json", "scripts/migrate_results.py",
-    "tests/fixtures/data/", "tests/fixtures/protocols/",
-    "tests/fixtures/analysis/", "tests/fixtures/migrate/",
-    "tests/test_no_hardcode.py", "tests/test_engine_*.py", "tests/test_manifest_*.py",
-    "tests/test_data_*.py", "tests/test_protocols_*.py", "tests/test_grading_*.py",
+    "tests/fixtures/protocols/", "tests/fixtures/analysis/", "tests/fixtures/migrate/",
+    "tests/test_no_hardcode.py", "tests/test_manifest_*.py",
     "tests/test_analysis_*.py", "tests/test_report_*.py", "tests/test_migration_*.py",
 )})
 # Planned cell records of docs/EXPERIMENTS.md, written when the first author fixes their

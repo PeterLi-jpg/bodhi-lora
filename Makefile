@@ -3,6 +3,7 @@
 #   make figures   paper/figures/*.pdf
 #   make paper     both, then paper/build/main.pdf
 #   make test      the test suite
+#   make smoke     the smoke cell on the CPU: every stage, the tiny model trained for real
 #   make rebuttal  rebuttal/results/*.json from results_modal/
 #   make cells     rebuttal-cell values, paired tests, tau and recipe (needs the host copies)
 #   make kappa     results_modal/irr/kappa_results.json (needs RATER_FILES)
@@ -10,15 +11,15 @@
 
 PYTHON ?= python3
 # Inputs kept out of git; point these at the files if they live elsewhere.
-# HealthBench-Hard is public, and setup.sh downloads it. numbers and figures stop
+# HealthBench-Hard is public; python -m bodhi_lora fetch healthbench downloads it. numbers and figures stop
 # without it, because the paper uses its theme tags and rubric points.
-HB_HARD ?= data/raw/healthbench_hard.jsonl
+HB_HARD ?= data/raw/healthbench/hard.jsonl
 # The seed-7 training traces (49 MB). make numbers reads only their scores, from the
 # tracked data/derived/seed_7_filter_scores.json; kappa and derived need the file.
 FILTER_TRAIN ?= data/sft_qwen_graded/seed_7_train.jsonl
 POSTED_VALUES ?= data/rebuttal_cells/posted_values.json
 
-.PHONY: numbers figures paper test rebuttal cells kappa derived
+.PHONY: numbers figures paper test smoke rebuttal cells kappa derived
 
 numbers: $(HB_HARD)
 	$(PYTHON) scripts/paper_stats.py --healthbench "$(HB_HARD)" --posted-values "$(POSTED_VALUES)"
@@ -28,7 +29,7 @@ figures: $(HB_HARD)
 
 # Runs only when the file is missing: stop with the fix instead of a traceback.
 $(HB_HARD):
-	@echo "$(HB_HARD) not found. Run bash setup.sh (it downloads HealthBench), or pass HB_HARD=<path>."
+	@echo "$(HB_HARD) not found. Run python -m bodhi_lora fetch healthbench, or pass HB_HARD=<path>."
 	@exit 1
 
 paper: numbers figures
@@ -38,6 +39,12 @@ paper: numbers figures
 
 test:
 	$(PYTHON) -m pytest -q -p no:cacheprovider
+
+# Writes under SMOKE_ROOT, never under results/, so a smoke run leaves no trace in git.
+SMOKE_CELL ?= tiny-rubric__tiny-random-llama__bodhi
+SMOKE_ROOT ?= outputs/smoke
+smoke:
+	$(PYTHON) -m bodhi_lora run $(SMOKE_CELL) --stub-engine --results-root $(SMOKE_ROOT) --force
 
 rebuttal: $(HB_HARD)
 	$(PYTHON) rebuttal/analyses/mimicry_split.py --healthbench "$(HB_HARD)"

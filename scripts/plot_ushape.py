@@ -10,7 +10,7 @@ Two plotting modes:
 2. From raw eval JSONs + HealthBench (slower, gives a smooth U):
      python scripts/plot_ushape.py \\
          --eval-jsons eval/base_no_wrapper.json ... eval/lora_bodhi.json \\
-         --healthbench data/raw/healthbench_hard.jsonl data/raw/healthbench.jsonl \\
+         --healthbench data/raw/healthbench/hard.jsonl data/raw/healthbench/full.jsonl \\
          --out-dir eval/figures --n-bins 10
    Additionally produces u_curve_smooth.png (10-bin curve with quadratic
    overlay) and u_scatter.png (per-example scatter + smoother). These show

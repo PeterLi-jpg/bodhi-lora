@@ -163,27 +163,25 @@ cleanup proposed these defaults; none is adopted:
 
 ## 6. Run the prompt baselines (C27, EVAL-8)
 
-Why: reviewers asked for a head-to-head against an inference-time baseline. The code is
-in `bodhi_lora/protocols/` and `rebuttal/launch/run_baselines.sh`, tested with stub
-engines only.
+Why: reviewers asked for a head-to-head against an inference-time baseline. The prompt
+protocols `clarify` and `verbalized-confidence` are records in `configs/protocols/`
+(`bodhi_lora/protocols/instruction.py`), tested with the stub engine only.
 
 Action, on the GPU host after `bash setup.sh` has built `.venv` and `.venv-infer`:
 
-```bash
-# CPU check first
-MODEL=google/medgemma-27b-text-it BENCH=healthbench SEEDS="42 7 13 99 101" \
-    bash rebuttal/launch/run_baselines.sh --dry-run
-# the submitted cell (eval settings of the submitted profile)
-MODEL=google/medgemma-27b-text-it BENCH=healthbench SEEDS="42 7 13 99 101" \
-    bash rebuttal/launch/run_baselines.sh
-# an added cell (eval settings of the posted cells)
-PROFILE=rebuttal-posted MODEL=mistralai/Mistral-Small-24B-Instruct-2501 BENCH=healthbench \
-    SEEDS="42 7 13 99 101" bash rebuttal/launch/run_baselines.sh
-```
+1. Write the cell records with the baseline conditions (`base+clarify`,
+   `base+verbalized-confidence`), as EXPERIMENTS.md E12 describes. A recorded cell is
+   never run again, so a baseline for an existing cell is a new eval-only cell with the
+   same benchmark, model and eval settings.
+2. Check, then run:
 
-Outputs land in each cell's `seed_<N>/eval/` as `base_clarify.json`,
-`base_verbalized_confidence.json` and `epistemic_scores_baselines.json`. Sync them as
-in [REPRODUCIBILITY.md](REPRODUCIBILITY.md) section 7.
+   ```bash
+   python -m bodhi_lora run <cell id> --dry-run       # CPU: prints the GPU commands
+   python -m bodhi_lora run <cell id> --gpus 0,1,2,3,4
+   ```
+
+Outputs land in the cell's `seed_<n>/eval/` as `base+clarify.json` and
+`base+verbalized-confidence.json`, and the grade stage adds them to the evaluator's file.
 
 Compute cost (rough estimate, not measured): each seed runs two single-pass conditions
 of 200 prompts plus grading, about a third of a cell's evaluation. The posted replies
@@ -200,30 +198,22 @@ Why: Med42-8B is built on Llama-3, the evaluator's family. The cells carry a dag
 stay out of cross-model statements until a judge from another family checks them.
 
 Action, on the GPU host, where the outputs already are (accept the Gemma 2 license on
-Hugging Face first):
+Hugging Face first). The two cell records list `gemma-2-27b` as their judge, and the
+runner adds judge re-grades to a recorded cell without touching its outputs:
 
 ```bash
-.venv-infer/bin/python -m bodhi_lora.pipeline.grade --dry-run \
-    --cell results_rebuttal/healthbench__m42-health_Llama3-Med42-8B \
-    --benchmark-jsonl data/raw/healthbench_hard.jsonl
-.venv-infer/bin/python -m bodhi_lora.pipeline.grade \
-    --cell results_rebuttal/healthbench__m42-health_Llama3-Med42-8B \
-    --benchmark-jsonl data/raw/healthbench_hard.jsonl
-.venv-infer/bin/python -m bodhi_lora.pipeline.grade \
-    --cell results_rebuttal/chatdoctor__m42-health_Llama3-Med42-8B \
-    --benchmark-jsonl data/raw/chatdoctor.jsonl
+python -m bodhi_lora run healthbench__med42-8b__bodhi__2026-07 --stages grade --gpus 0
+python -m bodhi_lora run chatdoctor__med42-8b__bodhi__2026-07 --stages grade --gpus 0
 ```
 
-The default judge is `google/gemma-2-27b-it`. Each eval folder gets
-`regrade_<judge>.json` with the original and the judge score per example. Sync these
-files, then compute the agreement and the re-graded contrasts as the plan in item 5
-says.
+Each seed gets `results/<cell>/seed_<n>/grade/judge__gemma-2-27b.json` with the original and the judge score per
+example, on the rubric and on the seven dimensions. Sync these files, then compute the
+agreement and the re-graded contrasts as the plan in item 5 says.
 
 Compute cost (rough estimate, not measured): per cell, 5 seeds x 4 conditions x 200
 responses. That is about 48,000 rubric calls on HealthBench (12 criteria per prompt) or
 32,000 on ChatDoctor (8 criteria), plus 4,000 epistemic calls, on a 27B judge. Expect 2
-to 5 H100-hours per cell with both parts, so 4 to 10 for both cells. With
-`--parts epistemic` only, expect under one hour per cell.
+to 5 H100-hours per cell, so 4 to 10 for both cells.
 
 ## 8. Collect the two remaining physician raters (C28, EVAL-5, PROV-5, NUM-2)
 
@@ -263,23 +253,18 @@ After: update Appendix B, Table B.1, the abstract sentence on kappa, checklist i
 ## 9. Run the second teaching protocol (C29, HomM-W1)
 
 Why: the posted replies promised a second CoT protocol. `bodhi_lora/protocols/ask_first.py`
-implements a one-pass ask-first protocol; `run_cell.sh` runs it with `PROTOCOL=ask_first`.
-It has run only with stub engines.
+implements a one-pass ask-first protocol (the `ask-first` record). It has run only with
+the stub engine.
 
-Action, on the GPU host, after the plan in item 5:
+Action, on the GPU host, after the plan in item 5: write the cell record
+`healthbench__mistral-small-24b__ask-first` (EXPERIMENTS.md E16), then
 
 ```bash
-PROTOCOL=ask_first MODEL=mistralai/Mistral-Small-24B-Instruct-2501 \
-    CONFIG=rebuttal/configs/lora_mistral_small_24b_qlora.yaml BENCH=healthbench \
-    bash rebuttal/launch/run_cell.sh --dry-run
-PROTOCOL=ask_first MODEL=mistralai/Mistral-Small-24B-Instruct-2501 \
-    CONFIG=rebuttal/configs/lora_mistral_small_24b_qlora.yaml BENCH=healthbench \
-    bash rebuttal/launch/run_cell.sh
+python -m bodhi_lora run healthbench__mistral-small-24b__ask-first --dry-run
+python -m bodhi_lora run healthbench__mistral-small-24b__ask-first --gpus 0,1,2,3,4
 ```
 
-The cell lands in `results_rebuttal/healthbench__mistralai_Mistral-Small-24B-Instruct-2501__ask_first/`.
-Before the analysis, `scripts/aggregate_seeds.py` needs an option for the wrapper name:
-its condition names are fixed to the BODHI ones.
+The cell lands in `results/healthbench__mistral-small-24b__ask-first/`.
 
 Compute cost (rough estimate): a full 24B cell with trace generation, filtering, five
 trainings and evaluation. `rebuttal/PLAN.md` estimated 8 to 13 H100-hours for a 24-27B
@@ -329,9 +314,9 @@ Why: none of this ran, because D16 forbids remote changes in the cleanup.
 - **MedQA without the preamble (optional).** The only MedQA run used the prompt that told
   the model to ask, so the paper sets the cell aside. A run with the fixed prompt (035d85f)
   would test the recipe there:
-  `MODEL=mistralai/Mistral-Small-24B-Instruct-2501 CONFIG=rebuttal/configs/lora_mistral_small_24b_qlora.yaml BENCH=medqa bash rebuttal/launch/run_cell.sh`
-  (about one 24B cell, 8 to 13 H100-hours by `rebuttal/PLAN.md`). Rebuild the MedQA JSONL
-  first so the old preamble is gone. It needs a dated plan (item 5).
+  a cell record on the `medqa-open` benchmark (the template without the preamble, EXPERIMENTS.md
+  E15), run with `python -m bodhi_lora run` (about one 24B cell, 8 to 13 H100-hours by
+  `rebuttal/PLAN.md`). It needs a dated plan (item 5).
 - **Contamination probe (NUM-7).** Appendix A types its numbers by hand and says the
   output was not kept. Run it on a GPU, commit the JSON, and add an emitter to
   `scripts/paper_stats.py`:
@@ -371,7 +356,7 @@ Why: none of this ran, because D16 forbids remote changes in the cleanup.
   just before the NeurIPS deadline and diff it with
   `paper/submitted/neurips2026/main.tex`.
 - **Hugging Face pins.** With your token, read the revision of
-  `OpenMeditron/Meditron3-8B` and add it to `configs/families.yaml`; compare the LFS
+  `OpenMeditron/Meditron3-8B` and add it to `configs/models/meditron3-8b.yaml`; compare the LFS
   sha256 of `NousResearch/Meta-Llama-3.1-8B-Instruct` with `meta-llama/Llama-3.1-8B-Instruct`.
 - **Full responses of the added cells.** The per-seed eval JSON (about 370 MB) is in the
   gitignored `results_rebuttal/`, in a local archive outside the repo and on the host. The

@@ -7,7 +7,7 @@ Saves to paper/figures/:
   effect_size_forest.pdf     -- Cohen's d forest plot (reads paper/generated/numbers.json)
 
 Usage:
-    python scripts/plot_postprocessing.py [--data-dir results_modal] [--hb-hard data/raw/healthbench_hard.jsonl] [--out-dir paper/figures]
+    python scripts/plot_postprocessing.py [--data-dir results_modal] [--hb-hard data/raw/healthbench/hard.jsonl] [--out-dir paper/figures]
 """
 
 import argparse
@@ -329,7 +329,7 @@ def plot_effect_sizes(numbers_path, out_path):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--data-dir",  default="results_modal")
-    parser.add_argument("--hb-hard",   default="data/raw/healthbench_hard.jsonl")
+    parser.add_argument("--hb-hard",   default="data/raw/healthbench/hard.jsonl")
     parser.add_argument("--out-dir",   default="paper/figures")
     # Written by scripts/paper_stats.py (make numbers); the forest plot reads d and its CI.
     parser.add_argument("--numbers",   default="paper/generated/numbers.json")

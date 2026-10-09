@@ -1,252 +1,187 @@
-"""Re-grade stored eval outputs with a judge from a third model family.
+"""Stage grade: grade the stored replies of a seed, never changing them.
 
-The Med42-8B cells have a Llama-3 base and were graded by Llama-3.1-8B, so
-the evaluator shares the base model's family (audit EVAL-7). This script
-re-grades the stored responses of such a cell with a judge that is outside
-the evaluator family, the filter family and the family of each graded base
-model. It writes a separate scores file and never changes the original
-result files.
+    python -m bodhi_lora.pipeline.grade --cell <cell id> --seed N [--judge <model id>]
+                                        [--stub-engine]
 
-The judge uses the same rubric anchors as the original graders:
-  - HealthBench rubric items: filter_traces.GRADER_TEMPLATE through grade_trace()
-  - epistemic dimensions: eval_epistemic.EPISTEMIC_GRADER_TEMPLATE through
-    grade_response()
-Each example keeps the original score next to the judge score, so agreement
-can be computed later from this file alone.
+Without --judge, the evaluator scores every condition's replies on the seven epistemic
+dimensions into seed_<n>/grade/epistemic__<evaluator>.json (the format of the earlier
+epistemic_scores.json: configs[] with one entry per condition and its examples).
 
-Families come from configs/families.yaml. The default judge is the registry's
-cross_family_judge (google/gemma-2-27b-it).
+With --judge, a judge from grading.judges grades the same replies again, on the rubric
+and on the dimensions, into seed_<n>/grade/judge__<judge>.json. Each example keeps the
+evaluator's rubric score next to the judge's, so agreement is computed from this file
+alone. The registry's family rule (R3) has already checked that the judge shares no
+family with the base, the teacher or the filter.
 
-Usage:
-    python -m bodhi_lora.pipeline.grade \\
-        --cell results_rebuttal/healthbench__m42-health_Llama3-Med42-8B \\
-        --benchmark-jsonl data/raw/healthbench_hard.jsonl [--dry-run]
-    python -m bodhi_lora.pipeline.grade --response-files <seed>/eval/base_no_wrapper.json ...
-
-Output, per eval directory: regrade_<judge>.json and regrade_<judge>.manifest.json.
+A judge re-grade adds files only, so it also runs on recorded cells (the runner allows
+it there).
 """
+from __future__ import annotations
 
-import argparse
 import json
-import os
 import sys
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime, timezone
-from pathlib import Path
 
 import numpy as np
+from tqdm import tqdm
 
-from bodhi_lora import manifest as rmf
-from bodhi_lora.engine import StubEngine, VLLMEngine
-from bodhi_lora.pipeline.filter import LocalGrader, grade_trace
-from bodhi_lora.grading.epistemic import (
-    DRY_RUN_EPISTEMIC_REPLY, aggregate, flatten_grade, grade_response, messages_to_text,
-)
+from bodhi_lora import manifest as mf
+from bodhi_lora.engine import make_engine
+from bodhi_lora.grading.epistemic import (STUB_EPISTEMIC_REPLY, aggregate, flatten_grade,
+                                          grade_dimensions, messages_to_text)
+from bodhi_lora.grading.rubric import Grader, grade_rubric
+from bodhi_lora.pipeline.context import StageContext, context_from_args, stage_parser
 
-PARTS = ("rubric", "epistemic")
-DRY_RUN_RUBRIC_REPLY = '```json\n{"explanation": "dry run", "criteria_met": false}\n```'
-
-
-def find_response_files(cell_dir):
-    """The per-condition eval outputs under <cell>/seed_*/eval/.
-
-    A result file has a "config" tag and a "results" list. Manifests, dry-run
-    files, epistemic scores and earlier re-grades are skipped.
-    """
-    files = []
-    for path in sorted(Path(cell_dir).glob("seed_*/eval/*.json")):
-        name = path.name
-        if name.endswith(".manifest.json") or ".dryrun" in name or name.startswith(
-                ("epistemic_scores", "regrade_")):
-            continue
-        files.append(path)
-    return files
+STUB_RUBRIC_REPLY = '```json\n{"explanation": "stub", "criteria_met": false}\n```'
 
 
-def load_rows(paths):
-    """{prompt_id: benchmark row} from one or more HealthBench-format JSONL files."""
-    rows = {}
-    for path in paths:
-        with open(path) as f:
-            for line in f:
-                if line.strip():
-                    row = json.loads(line)
-                    rows[row["prompt_id"]] = row
-    return rows
+def _stub_reply(messages):
+    """A dimension grade for the dimension prompt, a rubric verdict otherwise."""
+    return STUB_EPISTEMIC_REPLY if "epistemic virtues" in messages[-1]["content"] else STUB_RUBRIC_REPLY
 
 
-def judge_family_check(judge, response_meta, allow_same_family=False):
-    """Refuse a judge that shares a family with any grader or base involved."""
-    judge_family = rmf.model_family(judge)
-    if judge_family is None:
-        raise rmf.FamilyError(f"no family in configs/families.yaml for judge {judge}")
-    involved = {"filter": rmf.role_default("filter"), "evaluator": rmf.role_default("evaluator")}
-    for meta in response_meta:
-        involved[f"base:{meta['model']}"] = meta["model"]
-        if meta.get("grader_model"):
-            involved[f"grader:{meta['grader_model']}"] = meta["grader_model"]
-    families = {role: rmf.model_family(m) for role, m in involved.items()}
-    unknown = [f"{role}={involved[role]}" for role, fam in families.items() if fam is None]
-    if unknown:
-        raise rmf.FamilyError("no family in configs/families.yaml for " + ", ".join(unknown))
-    clashes = sorted(role for role, fam in families.items() if fam == judge_family)
-    result = {"judge": judge, "judge_family": judge_family,
-              "families": {role: {"repo_id": involved[role], "family": fam}
-                           for role, fam in families.items()},
-              "clashes": clashes, "allow_same_family": allow_same_family,
-              "passed": not clashes}
-    if clashes and not allow_same_family:
-        raise rmf.FamilyError(
-            f"judge {judge} ({judge_family}) shares a family with: {', '.join(clashes)}. "
-            "Pick another judge or pass --allow-same-family.")
-    return result
+def load_condition_files(ctx: StageContext, seed: int) -> dict[str, dict]:
+    """The eval output of every condition of the seed, by condition."""
+    out = {}
+    for condition in ctx.cell.eval.conditions:
+        path = ctx.paths.eval_file(seed, condition)
+        if not path.is_file():
+            raise SystemExit(f"{path} is missing: run the eval stage for {condition} first")
+        out[condition] = json.loads(path.read_text())
+    return out
 
 
-def _dry_run_reply(messages):
-    text = messages[-1]["content"]
-    return DRY_RUN_EPISTEMIC_REPLY if "epistemic virtues" in text else DRY_RUN_RUBRIC_REPLY
-
-
-def regrade_file(grader, data, rows, parts, concurrency):
-    """Re-grade every stored response of one result file."""
-
-    def _one(item):
-        pid = item["prompt_id"]
-        row = rows.get(pid)
-        if row is None:
-            return None, ("lookup", pid)
-        out = {"prompt_id": pid, "original_score": item.get("score")}
-        try:
-            if "rubric" in parts:
-                grade = grade_trace(grader, row["prompt"], item["response"], row["rubrics"])
-                out["judge_score"] = grade["overall_score"]
-                out["judge_parse_failures"] = grade["parse_failures"]
-                out["judge_criteria_met"] = [c["criteria_met"] for c in grade["criteria_results"]]
-            if "epistemic" in parts:
-                parsed, raw = grade_response(grader, messages_to_text(row["prompt"]), item["response"])
-                out["epistemic_parse_failure"] = parsed is None
-                out["scores"] = flatten_grade(parsed) if parsed is not None else None
-                if parsed is None:
-                    out["raw_grade_text"] = raw
-        except Exception as e:  # one bad request must not stop the file
-            return None, ("grade_error", pid, repr(e))
-        return out, None
-
-    examples, errors = [], defaultdict(list)
+def _parallel(fn, items, concurrency, desc):
+    done, errors = [], []
     with ThreadPoolExecutor(max_workers=concurrency) as pool:
-        for fut in as_completed([pool.submit(_one, it) for it in data.get("results", [])]):
-            ex, err = fut.result()
-            if ex is not None:
-                examples.append(ex)
-            else:
-                errors[err[0]].append(err[1:])
-    examples.sort(key=lambda e: e["prompt_id"])
-
-    summary = {"n_results": len(data.get("results", [])), "n_regraded": len(examples),
-               "n_failed_lookups": len(errors["lookup"]), "n_grade_errors": len(errors["grade_error"])}
-    if "rubric" in parts:
-        judge = [e["judge_score"] for e in examples if e.get("judge_score") is not None]
-        orig = [e["original_score"] for e in examples if e.get("original_score") is not None]
-        summary["rubric"] = {
-            "judge_mean": float(np.mean(judge)) if judge else None,
-            "original_mean": float(np.mean(orig)) if orig else None,
-            "judge_parse_failures": sum(e.get("judge_parse_failures", 0) for e in examples),
-        }
-    if "epistemic" in parts:
-        summary["epistemic"] = aggregate(examples)
-    return summary, examples, dict(errors)
+        for fut in tqdm(as_completed([pool.submit(fn, it) for it in items]), total=len(items), desc=desc):
+            ok, err = fut.result()
+            (done.append(ok) if ok is not None else errors.append(err))
+    return done, errors
 
 
-def main(argv=None):
-    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    src = ap.add_mutually_exclusive_group(required=True)
-    src.add_argument("--cell", help="cell directory with seed_*/eval/*.json")
-    src.add_argument("--response-files", nargs="+")
-    ap.add_argument("--benchmark-jsonl", nargs="+", default=["data/raw/healthbench_hard.jsonl"],
-                    help="prompt and rubric source, joined on prompt_id")
-    ap.add_argument("--judge", default=None,
-                    help="judge model. Default: roles.cross_family_judge in configs/families.yaml")
-    ap.add_argument("--judge-revision", default=None)
-    ap.add_argument("--parts", nargs="+", choices=PARTS, default=list(PARTS))
-    ap.add_argument("--allow-same-family", action="store_true")
-    # Judge prompts carry the whole conversation and response, so the default
-    # context is the full 8192 that gemma-2-27b-it supports.
-    ap.add_argument("--max-model-len", type=int, default=8192)
-    ap.add_argument("--max-num-seqs", type=int, default=32)
-    ap.add_argument("--concurrency", type=int, default=int(os.environ.get("EVAL_CONCURRENCY", "16")))
-    ap.add_argument("--request-timeout", type=int, default=900)
-    ap.add_argument("--dry-run", action="store_true",
-                    help="stub the judge, re-grade 2 responses per file, write *.dryrun.json")
-    args = ap.parse_args(argv)
-
-    judge = args.judge or rmf.role_default("cross_family_judge")
-    files = ([Path(p) for p in args.response_files] if args.response_files
-             else find_response_files(args.cell))
-    if not files:
-        raise SystemExit(f"no result files found under {args.cell}/seed_*/eval/")
-    loaded = {}
-    for path in files:
-        with open(path) as f:
-            loaded[path] = json.load(f)
-    meta = [{"model": d.get("model"), "grader_model": (d.get("run_metadata") or {}).get("grader_model")}
-            for d in loaded.values()]
-    try:
-        family = judge_family_check(judge, meta, args.allow_same_family)
-    except rmf.FamilyError as e:
-        raise SystemExit(f"REFUSED: {e}")
-    print(f"judge {judge} ({family['judge_family']}); "
-          f"{'waived: ' + ', '.join(family['clashes']) if family['clashes'] else 'family check passed'}")
-
-    rows = load_rows(args.benchmark_jsonl)
-    revision = rmf.effective_revision(judge, args.judge_revision)
-    engine_kwargs = dict(revision=revision, max_model_len=args.max_model_len,
-                         max_num_seqs=args.max_num_seqs, request_timeout=args.request_timeout)
-    if args.dry_run:
-        engine = StubEngine(judge, reply=_dry_run_reply, **engine_kwargs)
-        for data in loaded.values():
-            data["results"] = data.get("results", [])[:2]
-    else:
-        engine = VLLMEngine(judge, **engine_kwargs)
-
-    by_dir = defaultdict(list)
-    for path in files:
-        by_dir[path.parent].append(path)
-    tag = judge.replace("/", "__")
-    written = []
+def grade_dimensions_of(ctx: StageContext, seed: int, files: dict) -> tuple:
+    """The evaluator's dimension grades of every condition."""
+    evaluator = ctx.reg.models[ctx.cell.grading.evaluator]
+    rows = ctx.rows_by_id()
+    serving = ctx.cell.eval.serving
+    engine = make_engine(evaluator, serving=serving, stub=ctx.stub, stub_reply=STUB_EPISTEMIC_REPLY,
+                         log_path=ctx.log_path(f"vllm_grade_s{seed}.log"))
+    out = {"grader_model": evaluator.hf_id, "grader_id": evaluator.id, "seed": seed,
+           "run_metadata": {"git_sha": mf.git_state().get("sha"), "grader_revision": evaluator.revision,
+                            "max_model_len": serving.max_model_len, "max_num_seqs": serving.max_num_seqs,
+                            "concurrency": serving.concurrency,
+                            "request_timeout_s": serving.request_timeout_s,
+                            "packages": mf.package_versions(), "stub": ctx.stub},
+           "epistemic_dimensions": ["uncertainty_acknowledgment", "context_seeking",
+                                    "red_flag_identification", "scope_bounding", "specificity", "hedging"],
+           "configs": []}
     with engine as eng:
-        grader = LocalGrader(eng)
-        for eval_dir, paths in sorted(by_dir.items()):
-            configs = []
-            for path in paths:
-                data = loaded[path]
-                summary, examples, errors = regrade_file(grader, data, rows, args.parts,
-                                                         args.concurrency)
-                configs.append({"name": data.get("config") or path.stem,
-                                "source_file": str(path),
-                                "source_sha256": rmf.sha256_file(path),
-                                "model": data.get("model"),
-                                "original_grader": (data.get("run_metadata") or {}).get("grader_model"),
-                                **summary, "errors": errors, "examples": examples})
-                print(f"  {path}: {summary}")
-            out = eval_dir / f"regrade_{tag}{'.dryrun' if args.dry_run else ''}.json"
-            with open(out, "w") as f:
-                json.dump({"judge_model": judge, "judge_revision": revision,
-                           "parts": args.parts, "family_check": family,
-                           "timestamp_utc": datetime.now(timezone.utc).isoformat(),
-                           "dry_run": args.dry_run, "configs": configs}, f, indent=2)
-            rmf.write_manifest(rmf.manifest_path_for(out), rmf.build_manifest(
-                "regrade_cross_family", config=vars(args),
-                models={"judge": (judge, args.judge_revision)},
-                engines={"judge": eng.settings()},
-                inputs=[*paths, *args.benchmark_jsonl], outputs=[out],
-                counts={c["name"]: {"n_results": c["n_results"], "n_regraded": c["n_regraded"]}
-                        for c in configs},
-                extra={"family_check": family}))
-            written.append(out)
-    for out in written:
-        print(f"wrote {out}")
+        grader = Grader(eng)
+        for condition, data in files.items():
+            def one(item):
+                pid = item["prompt_id"]
+                try:
+                    parsed, raw = grade_dimensions(grader, messages_to_text(rows[pid].messages),
+                                                   item["response"])
+                except Exception as e:      # one bad request must not stop the condition
+                    return None, (pid, repr(e))
+                if parsed is None:
+                    return {"prompt_id": pid, "response": item["response"], "parse_failure": True,
+                            "scores": None, "raw_grade_text": raw}, None
+                return {"prompt_id": pid, "response": item["response"], "parse_failure": False,
+                        "scores": flatten_grade(parsed), "raw_grade": parsed}, None
+
+            graded, errors = _parallel(one, data.get("results", []), serving.concurrency,
+                                       f"{condition} [dimensions]")
+            graded.sort(key=lambda g: g["prompt_id"])
+            out["configs"].append({"name": condition, "source_file": str(ctx.paths.eval_file(seed, condition)),
+                                   "aggregates": aggregate(graded), "n_failed_lookups": 0,
+                                   "n_grade_errors": len(errors), "examples": graded})
+    return out, engine.settings(), evaluator
+
+
+def judge_of(ctx: StageContext, seed: int, files: dict, judge_id: str) -> tuple:
+    """A judge's rubric and dimension grades of every condition."""
+    if judge_id not in ctx.cell.grading.judges:
+        raise SystemExit(f"{judge_id} is not a judge of {ctx.cell.id}: {ctx.cell.grading.judges}")
+    judge = ctx.reg.models[judge_id]
+    rows = ctx.rows_by_id()
+    serving = ctx.cell.eval.serving
+    engine = make_engine(judge, serving=serving, stub=ctx.stub, stub_reply=_stub_reply,
+                         log_path=ctx.log_path(f"vllm_judge_{judge_id}_s{seed}.log"))
+    configs = []
+    with engine as eng:
+        grader = Grader(eng)
+        for condition, data in files.items():
+            def one(item):
+                pid = item["prompt_id"]
+                row = rows[pid]
+                try:
+                    rub = grade_rubric(grader, row.messages, item["response"], row.rubrics)
+                    parsed, raw = grade_dimensions(grader, messages_to_text(row.messages), item["response"])
+                except Exception as e:      # one bad request must not stop the condition
+                    return None, (pid, repr(e))
+                ex = {"prompt_id": pid, "original_score": item.get("score"),
+                      "judge_score": rub["overall_score"], "judge_parse_failures": rub["parse_failures"],
+                      "judge_criteria_met": [c["criteria_met"] for c in rub["criteria_results"]],
+                      "epistemic_parse_failure": parsed is None,
+                      "scores": flatten_grade(parsed) if parsed is not None else None}
+                if parsed is None:
+                    ex["raw_grade_text"] = raw
+                return ex, None
+
+            examples, errors = _parallel(one, data.get("results", []), serving.concurrency,
+                                         f"{condition} [judge {judge_id}]")
+            examples.sort(key=lambda e: e["prompt_id"])
+            judge_scores = [e["judge_score"] for e in examples]
+            original = [e["original_score"] for e in examples if e["original_score"] is not None]
+            configs.append({"name": condition, "source_file": str(ctx.paths.eval_file(seed, condition)),
+                            "source_sha256": mf.sha256_file(ctx.paths.eval_file(seed, condition)),
+                            "n_results": len(data.get("results", [])), "n_regraded": len(examples),
+                            "n_grade_errors": len(errors),
+                            "rubric": {"judge_mean": float(np.mean(judge_scores)) if judge_scores else None,
+                                       "original_mean": float(np.mean(original)) if original else None,
+                                       "judge_parse_failures": sum(e["judge_parse_failures"] for e in examples)},
+                            "epistemic": aggregate(examples), "examples": examples})
+    out = {"judge_model": judge.hf_id, "judge_id": judge_id, "judge_revision": judge.revision,
+           "parts": ["rubric", "epistemic"], "seed": seed, "stub": ctx.stub, "configs": configs}
+    return out, engine.settings(), judge
+
+
+def run(ctx: StageContext, seed: int, judge_id: str | None = None) -> dict:
+    timer = mf.Timer()
+    files = load_condition_files(ctx, seed)
+    if judge_id is None:
+        out, settings, model = grade_dimensions_of(ctx, seed, files)
+        path, role, name = ctx.paths.grade_file(seed, model.id), "grader", "epistemic"
+    else:
+        out, settings, model = judge_of(ctx, seed, files, judge_id)
+        path, role, name = ctx.paths.judge_file(seed, judge_id), "judge", f"judge__{judge_id}"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".part")
+    tmp.write_text(json.dumps(out, indent=2))
+    tmp.replace(path)
+    errors = defaultdict(int)
+    for c in out["configs"]:
+        errors[c["name"]] = c["n_grade_errors"]
+    counts = {c["name"]: {"n": len(c["examples"]), "n_grade_errors": c["n_grade_errors"]} for c in out["configs"]}
+    ctx.write_manifest(path.parent, "grade", seed=seed, name=f"{name}.manifest.json", timer=timer,
+                       models={role: model}, engines={role: settings},
+                       inputs=[ctx.paths.eval_file(seed, c) for c in files], outputs=[path], counts=counts,
+                       extra={"status": "complete" if not any(errors.values()) else "incomplete"})
+    print(f"grade: {name} -> {path}", flush=True)
+    if any(errors.values()):
+        raise SystemExit(f"grade errors {dict(errors)}; run the stage again")
+    return counts
+
+
+def main(argv=None) -> int:
+    args = stage_parser(__doc__.splitlines()[0], seed="required", judge=True).parse_args(argv)
+    run(context_from_args(args), args.seed, args.judge)
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

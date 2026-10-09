@@ -1,31 +1,25 @@
-"""LoRA SFT on filtered BODHI traces — GPU-only, tuned for throughput.
+"""Stage train: LoRA or QLoRA on the seed's filtered traces, with PEFT and TRL.
 
-Rebuttal branch: this is the single, clean GPU training path. All TPU / MaxText /
-tunix / FSDPv2 / XLA code has been removed (that lives on `main`). One GPU per
-process: pin it with CUDA_VISIBLE_DEVICES and the run driver parallelizes seeds
-across idle GPUs. QLoRA (model.quantization: 4bit) fits a 24-27B base on one
-80GB H100 with room to spare; 7-8B bases train full-precision.
+    python -m bodhi_lora.pipeline.train --cell <cell id> --seed N
 
-Config knobs (see rebuttal/configs/*.yaml):
-- model.quantization: null (full-precision LoRA) or "4bit"/"8bit" (QLoRA, bitsandbytes).
-- lora.variant: "standard" (default), "dora" (full-precision only), or "rslora".
-- data.response_template: optional override for completion-only masking (e.g. "[/INST]"
-  for Mistral, whose [INST]...[/INST] template has no auto-detectable assistant header).
+Runs in the training environment (requirements.txt), on one GPU, or on the CPU for the
+smoke cell. The recipe is the cell's train block and the model record's chat-template
+facts; the resolved recipe goes into the manifest. The seed's adapter is saved in
+seed_<n>/train/ (adapter_config.json, the weights and trainer_state.json), with the
+intermediate checkpoints in seed_<n>/train/checkpoint-<k>/; a rerun resumes from the
+newest checkpoint.
 
-GPU throughput: FlashAttention-2 when available (else SDPA), TF32 matmuls, fused
-AdamW, and padding to the longest sequence in each batch (not a fixed 4096 — that
-was a TPU XLA-recompile workaround and wastes GPU compute).
+The loss covers the reply only (completion-only masking): the response template marks
+where the reply starts, from the model record or detected from the chat template.
 
-The base model loads at model.revision, else at the pin in configs/families.yaml.
-Every run writes <output-dir>/manifest.json: the resolved config and its sha256,
-the effective batch, the train and val file hashes, the adapter sha256 and the
-trainer's step, epoch and loss record (bodhi_lora/manifest.py).
-
-This trainer is not the one behind the submitted MedGemma numbers. Those came
-from the TPU tunix path in legacy/ (r=8, alpha=16); see legacy/README.md.
+API used: TRL 0.11.4 (SFTConfig, SFTTrainer with formatting_func and peft_config,
+DataCollatorForCompletionOnlyLM), per the TRL v0.11.4 SFT Trainer docs
+(huggingface.co/docs/trl/v0.11.4/en/sft_trainer); transformers 4.57.6
+(BitsAndBytesConfig, from_pretrained with revision); PEFT 0.19.1 (LoraConfig with
+use_dora and use_rslora, prepare_model_for_kbit_training).
 """
+from __future__ import annotations
 
-import argparse
 import json
 import os
 import random
@@ -34,21 +28,21 @@ from pathlib import Path
 
 import numpy as np
 import torch
-import yaml
 from datasets import Dataset
-from transformers import AutoModelForCausalLM, AutoTokenizer, set_seed
-from trl import SFTTrainer, SFTConfig, DataCollatorForCompletionOnlyLM
 from peft import LoraConfig
+from transformers import AutoModelForCausalLM, AutoTokenizer, set_seed
+from trl import DataCollatorForCompletionOnlyLM, SFTConfig, SFTTrainer
 
-from bodhi_lora import manifest as rmf
+from bodhi_lora import manifest as mf
+from bodhi_lora.pipeline.context import StageContext, context_from_args, stage_parser
+from bodhi_lora.pipeline.filter import split_files
 
-# TF32 matmuls on Ampere+ (H100): large SFT throughput win, negligible precision
-# cost for LoRA fine-tuning. Safe to enable unconditionally on CUDA.
+# TF32 matmuls on Ampere and newer GPUs: a large SFT throughput gain at negligible
+# precision cost for LoRA. It has no effect on the CPU.
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
 
 DTYPE_MAP = {"bfloat16": torch.bfloat16, "float16": torch.float16, "float32": torch.float32}
-LORA_VARIANTS = ("standard", "dora", "rslora")
 
 _tokenizer = None
 
@@ -56,9 +50,8 @@ _tokenizer = None
 def _pick_attn_impl():
     """FlashAttention-2 if the package is present, else PyTorch SDPA.
 
-    FA2 is a big throughput/memory win for long-sequence SFT; SDPA is the safe
-    fallback that ships with torch. We never hard-require FA2 so a box without
-    the flash-attn wheel still runs (just slower).
+    FA2 is a large throughput and memory gain for long-sequence SFT; SDPA ships with
+    torch, so a box without the flash-attn wheel still trains.
     """
     try:
         import flash_attn  # noqa: F401
@@ -68,11 +61,10 @@ def _pick_attn_impl():
 
 
 def load_sft_jsonl(path):
-    """Load graded SFT JSONL, keeping only what SFTTrainer needs.
+    """Load filtered traces, keeping only what SFTTrainer needs.
 
-    The graded files also include a ``grade`` field with per-example variable
-    rubric keys; HF datasets' schema inference trips over that when files differ.
-    Stripping to messages+response avoids the cast error.
+    The graded files also hold a ``grade`` field with per-example rubric keys; HF
+    datasets' schema inference trips over it when files differ, so it is dropped.
     """
     rows = []
     with open(path) as f:
@@ -83,33 +75,27 @@ def load_sft_jsonl(path):
 
 
 def format_example(batch):
-    """Format messages+response into a single training string via the tokenizer's
-    chat template (model-agnostic).
+    """Render messages and reply into one training string with the chat template.
 
-    TRL probes ``formatting_func`` on a single example first to decide str vs
-    list[str], so we handle both shapes explicitly (issue #2): on a single
-    example ``response`` is a str and ``messages`` is one conversation.
+    TRL probes ``formatting_func`` on a single example first to decide str or
+    list[str], so both shapes are handled (issue #2).
     """
     def _render(msgs, resp):
         msgs = list(msgs)
         msgs.append({"role": "assistant", "content": resp})
-        return _tokenizer.apply_chat_template(
-            msgs, tokenize=False, add_generation_prompt=False
-        )
+        return _tokenizer.apply_chat_template(msgs, tokenize=False, add_generation_prompt=False)
 
     if isinstance(batch["response"], str):
         return _render(batch["messages"], batch["response"])
-    return [_render(msgs, resp)
-            for msgs, resp in zip(batch["messages"], batch["response"])]
+    return [_render(msgs, resp) for msgs, resp in zip(batch["messages"], batch["response"])]
 
 
 def find_response_template(tokenizer):
-    """Detect the assistant-turn header by diffing chat templates with/without the
-    generation prompt (e.g. "<start_of_turn>model\\n" for Gemma,
-    "<|start_header_id|>assistant<|end_header_id|>\\n\\n" for Llama 3).
+    """Detect the assistant-turn header by diffing the chat template with and without
+    the generation prompt.
 
-    Some templates (Mistral [INST]...[/INST]) expose no such header; for those,
-    set data.response_template in the config instead of relying on this.
+    Some templates ([INST] ... [/INST]) expose no such header; their model record sets
+    chat_template.response_template instead.
     """
     dummy = [{"role": "user", "content": "hi"}]
     without_gen = tokenizer.apply_chat_template(dummy, tokenize=False, add_generation_prompt=False)
@@ -119,25 +105,18 @@ def find_response_template(tokenizer):
         if template.strip():
             return template
     raise ValueError(
-        "Could not auto-detect the response template. Set data.response_template "
-        "in the config (e.g. \"[/INST]\" for Mistral).\n"
-        f"without_gen = {without_gen!r}\nwith_gen = {with_gen!r}"
-    )
+        "Could not detect the response template. Set chat_template.response_template in the "
+        f"model record.\nwithout_gen = {without_gen!r}\nwith_gen = {with_gen!r}")
 
 
 def latest_checkpoint(output_dir):
-    root = Path(output_dir)
     checkpoints = []
-    for path in root.glob("checkpoint-*"):
+    for path in Path(output_dir).glob("checkpoint-*"):
         try:
-            step = int(path.name.split("-", 1)[1])
+            checkpoints.append((int(path.name.split("-", 1)[1]), path))
         except (IndexError, ValueError):
             continue
-        checkpoints.append((step, path))
-    if not checkpoints:
-        return None
-    checkpoints.sort()
-    return str(checkpoints[-1][1])
+    return str(sorted(checkpoints)[-1][1]) if checkpoints else None
 
 
 def effective_batch(train_cfg, world_size=None):
@@ -165,237 +144,159 @@ def trainer_record(state) -> dict:
     }
 
 
-def build_train_manifest(cfg, config_path, seed, train_file, val_file,
-                         output_dir, best_path, state):
-    """Manifest for one training run. Kept separate from main() for testing."""
-    model_cfg, train_cfg = cfg["model"], cfg["training"]
-    return rmf.build_manifest(
-        "train",
-        config=cfg,
-        config_path=config_path,
-        models={"base": (model_cfg["name"], model_cfg.get("revision"))},
-        adapter_dir=best_path,
-        inputs=[train_file, val_file],
-        counts={"seed": seed,
-                "effective_batch": effective_batch(train_cfg),
-                "world_size": int(os.environ.get("WORLD_SIZE", "1")),
-                **trainer_record(state)},
-        extra={"output_dir": str(output_dir),
-               "quantization": model_cfg.get("quantization")},
-    )
+def recipe(ctx: StageContext) -> dict:
+    """The resolved recipe: the cell's train block and the model record's template facts."""
+    t, m = ctx.cell.train, ctx.model
+    return {
+        "model": {"id": m.id, "hf_id": m.hf_id, "revision": m.revision, "dtype": m.dtype,
+                  "quantization": t.quantization,
+                  "tokenizer_kwargs": m.chat_template.tokenizer_kwargs,
+                  "response_template": m.chat_template.response_template},
+        "lora": {"method": t.method, "r": t.r, "alpha": t.alpha, "dropout": t.dropout,
+                 "target_modules": t.target_modules},
+        "training": {"epochs": t.epochs, "max_steps": t.max_steps,
+                     "per_device_train_batch_size": t.per_device_batch,
+                     "gradient_accumulation_steps": t.grad_accum, "learning_rate": t.lr,
+                     "lr_scheduler_type": t.scheduler, "warmup_ratio": t.warmup_ratio,
+                     "max_seq_length": t.max_seq_length,
+                     "gradient_checkpointing": t.gradient_checkpointing,
+                     "checkpoint": t.checkpoint, "eval_every": t.eval_every,
+                     "eval_steps": t.eval_steps, "logging_steps": t.logging_steps},
+    }
 
 
-def main():
+def build_train_manifest(ctx: StageContext, seed: int, cfg: dict, train_file, val_file,
+                         adapter_dir, state, timer) -> dict:
+    """Manifest for one training run. Kept apart from run() for testing."""
+    return mf.build_manifest(
+        "train", cell=ctx.cell.id, seed=seed, config=cfg, models={"base": ctx.model},
+        adapter_dir=adapter_dir, inputs=[train_file, val_file], timer=timer,
+        counts={"seed": seed, "effective_batch": effective_batch(cfg["training"]),
+                "world_size": int(os.environ.get("WORLD_SIZE", "1")), **trainer_record(state)},
+        extra={"status": "complete", "quantization": cfg["model"]["quantization"]})
+
+
+def run(ctx: StageContext, seed: int) -> dict:
     global _tokenizer
+    if ctx.cell.train is None or ctx.cell.train.engine != "peft":
+        raise SystemExit(f"{ctx.cell.id} has no train block this package can run")
+    cfg = recipe(ctx)
+    model_cfg, lora_cfg, train_cfg = cfg["model"], cfg["lora"], cfg["training"]
+    out_dir = ctx.paths.stage(seed, "train")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    timer = mf.Timer()
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    set_seed(seed)
+    on_gpu = torch.cuda.is_available()
+    if model_cfg["quantization"] and not on_gpu:
+        raise SystemExit("4-bit and 8-bit training need a GPU (bitsandbytes)")
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--config", required=True)
-    parser.add_argument("--seed", type=int, default=None,
-                        help="override the seed in the YAML (for multi-seed runs)")
-    parser.add_argument("--output-dir", default="checkpoints",
-                        help="checkpoints + final adapter go here; adapter -> <output-dir>/best")
-    parser.add_argument("--train-file", default=None, help="override data.train_file")
-    parser.add_argument("--val-file", default=None, help="override data.val_file")
-    parser.add_argument("--quantization", default=None, choices=["4bit", "8bit", "null"],
-                        help="override model.quantization ('null' = full precision)")
-    parser.add_argument("--lora-variant", default=None, choices=list(LORA_VARIANTS),
-                        help="override lora.variant")
-    parser.add_argument("--lora-r", type=int, default=None, help="override lora.r")
-    parser.add_argument("--model-revision", default=None,
-                        help="override model.revision (HF commit of the base model)")
-    args = parser.parse_args()
-
-    with open(args.config) as f:
-        cfg = yaml.safe_load(f)
-
-    if args.quantization is not None:
-        cfg["model"]["quantization"] = None if args.quantization == "null" else args.quantization
-    if args.lora_variant is not None:
-        cfg["lora"]["variant"] = args.lora_variant
-    if args.lora_r is not None:
-        cfg["lora"]["r"] = args.lora_r
-
-    model_cfg, lora_cfg, train_cfg, data_cfg = cfg["model"], cfg["lora"], cfg["training"], cfg["data"]
-    # Pin the base weights: flag, then config, then configs/families.yaml.
-    model_cfg["revision"] = rmf.effective_revision(
-        model_cfg["name"], args.model_revision or model_cfg.get("revision"))
-
-    seed = args.seed if args.seed is not None else int(cfg.get("seed", train_cfg.get("seed", 42)))
-    cfg["seed"] = seed
-    random.seed(seed); np.random.seed(seed); torch.manual_seed(seed); set_seed(seed)
-
-    # model.tokenizer_kwargs lets a config pass loader flags, e.g. Mistral-Small's
-    # fix_mistral_regex=True (its tekken tokenizer otherwise warns of incorrect
-    # tokenization). Default {} preserves prior behavior for every other model.
-    _tokenizer = AutoTokenizer.from_pretrained(
-        model_cfg["name"], revision=model_cfg["revision"],
-        **model_cfg.get("tokenizer_kwargs", {}))
+    _tokenizer = AutoTokenizer.from_pretrained(model_cfg["hf_id"], revision=model_cfg["revision"],
+                                               **model_cfg["tokenizer_kwargs"])
     if _tokenizer.pad_token is None:
         _tokenizer.pad_token = _tokenizer.eos_token
-    # Half-precision SFT overflows with left padding; force right.
+    # Half-precision SFT overflows with left padding.
     _tokenizer.padding_side = "right"
-    # The chat template already emits BOS; disable auto-prepend so we don't get
-    # "<bos><bos>..." (a distribution the model never trained on).
+    # The chat template already emits BOS; a second one would be a sequence the model
+    # never saw.
     _tokenizer.add_bos_token = False
 
-    if train_cfg.get("warmup_ratio", 0) > 0 and train_cfg.get("lr_scheduler_type") == "constant":
-        raise ValueError("lr_scheduler_type='constant' ignores warmup_ratio; use "
-                         "'cosine'/'linear'/'constant_with_warmup' or set warmup_ratio: 0.")
-
-    dtype = DTYPE_MAP.get(model_cfg.get("torch_dtype") or "bfloat16", torch.bfloat16)
-
-    # -------- optional QLoRA quantization --------
-    quant = model_cfg.get("quantization")
+    if train_cfg["warmup_ratio"] > 0 and train_cfg["lr_scheduler_type"] == "constant":
+        raise ValueError("a constant schedule ignores warmup_ratio; set warmup_ratio: 0")
+    dtype = DTYPE_MAP[model_cfg["dtype"]]
     quant_config = None
-    if quant in ("4bit", "8bit"):
+    if model_cfg["quantization"] == "4bit":
         from transformers import BitsAndBytesConfig
-        if quant == "4bit":
-            quant_config = BitsAndBytesConfig(
-                load_in_4bit=True, bnb_4bit_quant_type="nf4",
-                bnb_4bit_compute_dtype=dtype, bnb_4bit_use_double_quant=True,
-            )
-        else:
-            quant_config = BitsAndBytesConfig(load_in_8bit=True)
-        print(f"Loading {model_cfg['name']} ({quant} quantized, compute {dtype})...")
-    elif quant is not None:
-        raise ValueError(f"model.quantization={quant!r} not recognised (null / '4bit' / '8bit').")
-    else:
-        print(f"Loading {model_cfg['name']} ({dtype})...")
-
-    attn_impl = _pick_attn_impl()
-    print(f"Attention implementation: {attn_impl}")
+        quant_config = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4",
+                                          bnb_4bit_compute_dtype=dtype, bnb_4bit_use_double_quant=True)
+    elif model_cfg["quantization"] == "8bit":
+        from transformers import BitsAndBytesConfig
+        quant_config = BitsAndBytesConfig(load_in_8bit=True)
+    print(f"Loading {model_cfg['hf_id']} ({model_cfg['quantization'] or model_cfg['dtype']}, "
+          f"{'GPU' if on_gpu else 'CPU'})", flush=True)
     model = AutoModelForCausalLM.from_pretrained(
-        model_cfg["name"],
-        revision=model_cfg["revision"],
-        torch_dtype=dtype,
-        device_map="auto",              # single visible GPU -> whole model on it
-        quantization_config=quant_config,
-        attn_implementation=attn_impl,
-    )
-    model.config.use_cache = False      # incompatible with gradient checkpointing / training
-
+        model_cfg["hf_id"], revision=model_cfg["revision"], torch_dtype=dtype,
+        device_map="auto", quantization_config=quant_config, attn_implementation=_pick_attn_impl())
+    model.config.use_cache = False      # incompatible with gradient checkpointing
     if quant_config is not None:
         from peft import prepare_model_for_kbit_training
         model = prepare_model_for_kbit_training(
-            model, use_gradient_checkpointing=train_cfg.get("gradient_checkpointing", True)
-        )
-
-    # -------- LoRA config --------
-    variant = lora_cfg.get("variant", "standard").lower()
-    if variant not in LORA_VARIANTS:
-        raise ValueError(f"lora.variant={variant!r} not in {LORA_VARIANTS}.")
-    if variant == "dora" and quant_config is not None:
-        raise ValueError("DoRA needs full-precision weights; set model.quantization: null.")
+            model, use_gradient_checkpointing=train_cfg["gradient_checkpointing"])
     lora_config = LoraConfig(
-        r=lora_cfg["r"],
-        lora_alpha=lora_cfg["lora_alpha"],
-        lora_dropout=lora_cfg.get("lora_dropout", 0.05),
-        target_modules=lora_cfg["target_modules"],
-        task_type=lora_cfg["task_type"],
-        use_dora=(variant == "dora"),
-        use_rslora=(variant == "rslora"),
-    )
-    print(f"LoRA variant: {variant}")
+        r=lora_cfg["r"], lora_alpha=lora_cfg["alpha"], lora_dropout=lora_cfg["dropout"],
+        target_modules=lora_cfg["target_modules"], task_type="CAUSAL_LM",
+        use_dora=lora_cfg["method"] == "dora", use_rslora=lora_cfg["method"] == "rslora")
 
-    # -------- data --------
-    train_file = args.train_file or data_cfg["train_file"]
-    val_file = args.val_file or data_cfg["val_file"]
-    ds = {"train": load_sft_jsonl(train_file), "validation": load_sft_jsonl(val_file)}
-    train_size, val_size = len(ds["train"]), len(ds["validation"])
-    print(f"Train ({train_file}): {train_size}  Val ({val_file}): {val_size}")
-
-    eval_dataset = ds["validation"] if val_size > 0 else None
-    eval_strategy = train_cfg["eval_strategy"]
-    load_best = True
-    metric_for_best = "eval_loss"
-    if eval_dataset is None:
-        print("Empty validation split; disabling eval + best-model selection.")
-        eval_strategy, load_best, metric_for_best = "no", False, None
-
-    # Completion-only loss masking: allow an explicit response_template override
-    # (Mistral etc.), else auto-detect from the chat template.
-    response_template = data_cfg.get("response_template") or find_response_template(_tokenizer)
-    print(f"Response template for masking: {response_template!r}")
-    # Pad to the longest sequence IN EACH BATCH (GPU handles dynamic shapes fine).
-    # The old code padded every batch to max_seq_length for TPU XLA compile
-    # stability, which wasted 2-3x compute here since most traces are far shorter.
-    collator = DataCollatorForCompletionOnlyLM(
-        response_template=response_template, tokenizer=_tokenizer
-    )
-
-    use_bf16 = train_cfg.get("bf16", dtype == torch.bfloat16)
-    training_args = SFTConfig(
-        output_dir=args.output_dir,
-        num_train_epochs=train_cfg["num_epochs"],
+    train_file, val_file = split_files(ctx, seed)
+    ds_train, ds_val = load_sft_jsonl(train_file), load_sft_jsonl(val_file)
+    print(f"Train ({train_file}): {len(ds_train)}  Val ({val_file}): {len(ds_val)}", flush=True)
+    has_val = len(ds_val) > 0
+    response_template = model_cfg["response_template"] or find_response_template(_tokenizer)
+    print(f"Response template for masking: {response_template!r}", flush=True)
+    # Pad to the longest sequence in each batch, not to max_seq_length.
+    collator = DataCollatorForCompletionOnlyLM(response_template=response_template, tokenizer=_tokenizer)
+    every = train_cfg["eval_every"]
+    args = SFTConfig(
+        output_dir=str(out_dir),
+        num_train_epochs=train_cfg["epochs"] or 1,
+        max_steps=train_cfg["max_steps"] or -1,
         per_device_train_batch_size=train_cfg["per_device_train_batch_size"],
         gradient_accumulation_steps=train_cfg["gradient_accumulation_steps"],
         learning_rate=train_cfg["learning_rate"],
         warmup_ratio=train_cfg["warmup_ratio"],
         lr_scheduler_type=train_cfg["lr_scheduler_type"],
         logging_steps=train_cfg["logging_steps"],
-        save_strategy=train_cfg["save_strategy"],
-        save_steps=train_cfg.get("save_steps"),
-        eval_strategy=eval_strategy,
-        eval_steps=train_cfg.get("eval_steps"),
-        bf16=use_bf16,
-        tf32=True,
+        save_strategy=every,
+        # Read only when saving every eval_steps; 500 is the transformers default.
+        save_steps=train_cfg["eval_steps"] or 500,
+        eval_strategy=every if has_val else "no",
+        eval_steps=train_cfg["eval_steps"],
+        bf16=on_gpu and dtype == torch.bfloat16,
+        tf32=on_gpu,
         seed=seed,
         data_seed=seed,
         report_to="none",
-        load_best_model_at_end=load_best,
-        metric_for_best_model=metric_for_best,
+        load_best_model_at_end=has_val and train_cfg["checkpoint"] == "best_val_loss",
+        metric_for_best_model="eval_loss" if has_val else None,
         save_total_limit=2,
-        gradient_checkpointing=train_cfg.get("gradient_checkpointing", True),
-        gradient_checkpointing_kwargs=train_cfg.get(
-            "gradient_checkpointing_kwargs", {"use_reentrant": False}),
-        max_seq_length=train_cfg.get("max_seq_length", 4096),
-        # GPU throughput: group similar-length sequences to minimise padding,
-        # fused AdamW, and a couple of dataloader workers.
-        group_by_length=train_cfg.get("group_by_length", True),
-        optim=train_cfg.get("optim", "adamw_torch_fused"),
-        dataloader_num_workers=train_cfg.get("dataloader_num_workers", 4),
-        dataloader_pin_memory=True,
+        gradient_checkpointing=train_cfg["gradient_checkpointing"],
+        gradient_checkpointing_kwargs={"use_reentrant": False},
+        max_seq_length=train_cfg["max_seq_length"],
+        # Group similar lengths to cut padding.
+        group_by_length=True,
+        optim="adamw_torch_fused" if on_gpu else "adamw_torch",
+        dataloader_num_workers=4 if on_gpu else 0,
+        dataloader_pin_memory=on_gpu,
     )
-
-    trainer = SFTTrainer(
-        model=model,
-        args=training_args,
-        peft_config=lora_config,        # SFTTrainer applies PEFT itself (trl#3926-safe)
-        train_dataset=ds["train"],
-        eval_dataset=eval_dataset,
-        tokenizer=_tokenizer,
-        data_collator=collator,
-        formatting_func=format_example,
-    )
-
-    resume_path = latest_checkpoint(args.output_dir)
-    if resume_path:
-        print(f"Resuming from checkpoint: {resume_path}")
-        trainer.train(resume_from_checkpoint=resume_path)
-    else:
-        trainer.train()
-
-    trainer.save_state()
-    best_path = f"{args.output_dir.rstrip('/')}/best"
-    Path(best_path).mkdir(parents=True, exist_ok=True)
-    trainer.save_model(best_path)       # emits a valid PEFT adapter on GPU
-    _tokenizer.save_pretrained(best_path)
+    trainer = SFTTrainer(model=model, args=args, peft_config=lora_config, train_dataset=ds_train,
+                         eval_dataset=ds_val if has_val else None, tokenizer=_tokenizer,
+                         data_collator=collator, formatting_func=format_example)
+    resume = latest_checkpoint(out_dir)
+    if resume:
+        print(f"Resuming from checkpoint: {resume}", flush=True)
+    trainer.train(resume_from_checkpoint=resume)
+    trainer.save_model(str(out_dir))
     try:
-        trainer.state.save_to_json(str(Path(best_path) / "trainer_state.json"))
+        trainer.state.save_to_json(str(out_dir / "trainer_state.json"))
     except (ValueError, TypeError) as e:
-        print(f"trainer_state.json skipped ({e!r}) — NaN in eval metrics")
-    print(f"saved adapter to {best_path}")
-
+        print(f"trainer_state.json skipped ({e!r}): NaN in eval metrics", flush=True)
+    state = {k: getattr(trainer.state, k, None) for k in (
+        "global_step", "epoch", "max_steps", "num_train_epochs", "log_history",
+        "best_metric", "best_model_checkpoint")}
+    manifest = build_train_manifest(ctx, seed, cfg, train_file, val_file, out_dir, state, timer)
     if trainer.is_world_process_zero():
-        state = {k: getattr(trainer.state, k, None) for k in (
-            "global_step", "epoch", "max_steps", "num_train_epochs",
-            "log_history", "best_metric", "best_model_checkpoint")}
-        manifest_path = rmf.write_manifest(
-            Path(args.output_dir) / "manifest.json",
-            build_train_manifest(cfg, args.config, seed, train_file, val_file,
-                                 args.output_dir, best_path, state))
-        print(f"train manifest -> {manifest_path}")
+        mf.write_manifest(out_dir / "manifest.json", manifest)
+    print(f"adapter -> {out_dir}", flush=True)
+    return manifest["counts"]
+
+
+def main(argv=None) -> int:
+    args = stage_parser(__doc__.splitlines()[0], seed="required").parse_args(argv)
+    run(context_from_args(args), args.seed)
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

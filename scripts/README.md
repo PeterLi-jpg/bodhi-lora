@@ -1,7 +1,8 @@
 # scripts/
 
-Most scripts here run from a `make` target, a test or a launcher in
-`rebuttal/launch/`. The tools below run from none of them. They are kept for manual use,
+The pipeline lives in the `bodhi_lora` package (`python -m bodhi_lora`). The scripts here
+are repository tools and the analysis scripts that `make` runs until the analysis lane
+moves them into the package. The tools below run from no `make` target or test. They are kept for manual use,
 and no number in the paper comes from them. Check one before you use it: some describe
 an earlier state of the project.
 

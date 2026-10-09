@@ -319,3 +319,76 @@ def test_main_end_to_end_with_synthetic_files(monkeypatch, tmp_path):
     assert "by_tier" in base and "by_theme" in base
     # The fail_threshold rate at score=0.5 for baseline is 0 (none below 0.4).
     assert base["overall"]["fail_rate"] == 0.0
+
+
+# Moved from tests/test_pure_logic.py on 2026-10-08.
+
+def test_compute_tertile_cutoffs_and_tiers():
+    from scripts.eval_ushape import compute_tertile_cutoffs, tier_of
+
+    meta = {
+        "p1": {"pos_points": 1},
+        "p2": {"pos_points": 2},
+        "p3": {"pos_points": 3},
+        "p4": {"pos_points": 4},
+        "p5": {"pos_points": 5},
+        "p6": {"pos_points": 6},
+    }
+
+    q1, q2 = compute_tertile_cutoffs(meta)
+
+    assert q1 < q2
+    assert tier_of(1, q1, q2) == "easy"
+    assert tier_of(3, q1, q2) == "medium"
+    assert tier_of(6, q1, q2) == "hard"
+
+
+def test_compute_tertile_cutoffs_restricts_to_subset():
+    from scripts.eval_ushape import compute_tertile_cutoffs
+
+    meta = {
+        "p1": {"pos_points": 1},
+        "p2": {"pos_points": 2},
+        "p3": {"pos_points": 3},
+        "p4": {"pos_points": 100},
+    }
+
+    q1, q2 = compute_tertile_cutoffs(meta, restrict_to={"p1", "p2", "p3"})
+
+    assert q2 < 100
+
+
+def test_summarize_handles_empty_scores():
+    from scripts.eval_ushape import summarize
+
+    assert summarize([], fail_threshold=0.4) == {"n": 0}
+
+
+def test_summarize_handles_degenerate_scores():
+    from scripts.eval_ushape import summarize
+
+    summary = summarize([0.5, 0.5, 0.5], fail_threshold=0.4)
+
+    assert summary["mean"] == 0.5
+    assert summary["median"] == 0.5
+    assert summary["fail_rate"] == 0.0
+
+
+def test_summarize_bootstrap_is_seeded():
+    from scripts.eval_ushape import summarize
+
+    scores = [0.1, 0.4, 0.8, 0.9]
+    summary_a = summarize(
+        scores,
+        fail_threshold=0.4,
+        bootstrap=200,
+        rng=np.random.default_rng(42),
+    )
+    summary_b = summarize(
+        scores,
+        fail_threshold=0.4,
+        bootstrap=200,
+        rng=np.random.default_rng(42),
+    )
+
+    assert summary_a == summary_b

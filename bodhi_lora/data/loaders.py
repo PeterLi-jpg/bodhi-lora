@@ -1,389 +1,282 @@
-"""Convert MedQA / MedQuAD into HealthBench-format JSONL so the SAME pipeline
-(generate_traces -> filter_traces -> eval) runs on them unchanged.
+"""Benchmark rows from a benchmark record: fetch or read the source, build each row,
+and cache the result under the data root.
 
-Rebuttal branch: adds the two source-diverse generality benchmarks.
-- MedQA-USMLE: clinician-facing board vignettes, options STRIPPED (open-ended).
-- MedQuAD: patient-facing NIH consumer-health Q&A.
+A row is one prompt with its rubric. On disk it is one JSON line,
 
-Each output row matches the HealthBench example schema the pipeline expects:
-    {"prompt_id", "prompt": [{"role":"user","content":...}], "rubrics": [...], "example_tags":[...]}
+    {"prompt_id", "prompt": [chat turns], "rubrics": [{"criterion", "points", "tags"}],
+     "example_tags": [...]}
 
-`rubrics` are synthesized from each benchmark's ground truth so filter_traces.py
-(Qwen-14B grader) has a quality signal WITHOUT any code change. Every benchmark uses
-the shared 8-criterion `_rubric()` (see its docstring for why a small rubric produces
-a degenerate, unfilterable score distribution) with one benchmark-specific
-ground-truth check: the known-correct option for exam sets (MedQA, MedMCQA), the
-reference answer for QA sets (MedQuAD, MedicationQA), the physician's actual reply
-for dialogue (ChatDoctor).
+the format of the rubric JSONL sources, so every stage reads every benchmark the same
+way. In memory it is a Row, which also carries the row's labels and where it sits in
+each source file.
 
-The eval grader stays Llama-3.1-8B (different family), so the paper's asymmetric
-cross-family grading design is preserved on the new benchmarks too.
-
-Pinning and selection (REPRO-11):
-- The dataset loads at a pinned revision (DEFAULT_REVISIONS, or --revision).
-- --select seeded (default) builds every row, then draws --max of them with
-  random.Random(--select-seed), so the pool is a random sample of the dataset
-  and not its head. --select head keeps the first --max rows in HF order, which
-  is how the posted rebuttal cells were built.
-- --holdout-n writes the eval holdout ids. --holdout-method seeded (default)
-  draws them with random.Random(--holdout-seed). --holdout-method head takes the
-  first N prompt_ids in file order, which is the rule the posted ChatDoctor and
-  MedQuAD cells used (rebuttal/launch/run_cell.sh at 61dada9, lines 116-121).
-- Every build writes <out stem>.manifest.json with the dataset id, revision,
-  selection, row counts and the sha256 of the JSONL and of the holdout file.
-- --holdout-only reads an existing --out JSONL and writes only the holdout, so
-  a JSONL built earlier gets a holdout without a new download.
-
-Usage:
-    python -m bodhi_lora.data.loaders --benchmark medquad --out data/raw/medquad_s0.jsonl \
-        --max 5700 --holdout-n 1000 --holdout-out data/raw/medquad_s0_holdout_ids.json
-    # The posted cells (legacy head-of-file selection and holdout):
-    python -m bodhi_lora.data.loaders --benchmark chatdoctor --out data/raw/chatdoctor.jsonl \
-        --max 4900 --select head
-    python -m bodhi_lora.data.loaders --benchmark chatdoctor --out data/raw/chatdoctor.jsonl \
-        --holdout-only --holdout-n 200 --holdout-method head --holdout-out <cell>/eval_ids.json
+Loaders are named by source format, not by dataset (LOADERS):
+  rubric_jsonl  rows as given in one or more JSONL files (a url or local source)
+  hf_qa         question-answer rows of a Hugging Face dataset at a pinned commit; the
+                record's `fields` map the loader's fields to source columns, and every
+                row gets the synthesized rubric (bodhi_lora/data/rubric.py)
 """
+from __future__ import annotations
 
-import argparse
 import hashlib
 import json
 import os
-import random
-import sys
+import shutil
+import urllib.request
+from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any, Callable, Literal, Optional
 
-from bodhi_lora import manifest as rmf
+from pydantic import BaseModel, ConfigDict, Field
 
-# Default HF dataset ids (overridable). Chosen for stable, widely-used schemas.
-DEFAULT_IDS = {
-    "medqa": "GBaker/MedQA-USMLE-4-options",   # fields: question, answer, options
-    "medquad": "lavita/MedQuAD",               # fields: question, answer (some empty)
-    "medicationqa": "truehealth/medicationqa",  # fields: Question, Answer (+ Focus/Type)
-    "medmcqa": "openlifescienceai/medmcqa",     # fields: question, opa-opd, cop
-    # Real patient->doctor dialogue (HealthCareMagic via the ChatDoctor release).
-    "chatdoctor": "lavita/ChatDoctor-HealthCareMagic-100k",  # fields: instruction, input, output
-}
+from bodhi_lora.data.labels import label_value
+from bodhi_lora.data.rubric import SHARED_CRITERIA, synthesized_rubric
+from bodhi_lora.paths import REPO_ROOT
+from bodhi_lora.registry.schema import BenchmarkConfig, HfSource, LocalSource, UrlSource
 
-# Dataset commits, read from https://huggingface.co/api/datasets/<id> on
-# 2026-10-07. Each is the HEAD commit, and each was last modified in 2023 or
-# early 2024, before any rebuttal run (2026-07-23 onward). The posted cells
-# loaded these repos without a revision, so they loaded these commits.
-DEFAULT_REVISIONS = {
-    "GBaker/MedQA-USMLE-4-options": "0fb93dd23a7339b6dcd27e241cb9b5eca62d4d18",      # 2023-01-24
-    "lavita/MedQuAD": "84ea67f83cec9692ad254eaa02c9731b24ecfe4c",                    # 2023-12-22
-    "truehealth/medicationqa": "f8ae96155ac234a54aaf2b70ca4e02d22cfe31af",           # 2023-06-12
-    "openlifescienceai/medmcqa": "91c6572c454088bf71b679ad90aa8dffcd0d5868",         # 2024-01-04
-    "lavita/ChatDoctor-HealthCareMagic-100k": "505443eac4e99ccedeffbb6f640061223d1d4bb3",  # 2023-09-09
-}
+# The position key of rows from a source that has no named files (a Hugging Face split).
+SOURCE = "source"
 
 
-def _rubric(reference_criterion, ref_tag="axis:accuracy"):
-    """Multi-criterion rubric with VARIED weights, mirroring HealthBench's structure.
+@dataclass(frozen=True)
+class Row:
+    prompt_id: str
+    messages: list = field(compare=False)       # chat turns up to the turn to answer
+    rubrics: list = field(compare=False)        # {"criterion", "points", "tags"}
+    tags: list = field(compare=False)
+    labels: dict = field(compare=False)         # label name -> True, False or None
+    pair_id: Optional[str] = None               # rows of one pair share it (paired probes)
+    # Source file key -> the row's index in that file, so a split can keep file order.
+    positions: dict = field(default_factory=dict, compare=False)
 
-    Why not 3 criteria: with only a few all-or-nothing items the normalized score
-    collapses onto a handful of values. Measured on MedQuAD, 82% of traces landed on
-    exactly one score (8/21 = met no positive criterion, tripped no negative), so any
-    threshold either kept ~18% (starves training) or ~100% (no filtering at all).
-    Eight criteria at six distinct weights give a near-continuous score, which is what
-    makes a percentile threshold meaningful and comparable to the paper's tau=0.4.
+    def to_json(self) -> dict:
+        return {"prompt_id": self.prompt_id, "prompt": self.messages, "rubrics": self.rubrics,
+                "example_tags": self.tags}
 
-    ``reference_criterion`` is the benchmark-specific ground-truth check (reference
-    answer for QA sets, correct option for exam sets).
+
+class DataError(RuntimeError):
+    """A benchmark source is missing, changed, or could not be built."""
+
+
+def sha256_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for block in iter(lambda: f.read(1 << 20), b""):
+            h.update(block)
+    return h.hexdigest()
+
+
+def _with_labels(bench: BenchmarkConfig, row: dict, positions: dict) -> Row:
+    labels = {name: label_value(rule, row.get("example_tags", []), row.get("rubrics", []), row)
+              for name, rule in bench.labels.items()}
+    return Row(prompt_id=row["prompt_id"], messages=row["prompt"], rubrics=row["rubrics"],
+               tags=list(row.get("example_tags", [])), labels=labels, positions=positions)
+
+
+# -- rubric JSONL sources --------------------------------------------------------------
+
+def source_file(bench: BenchmarkConfig, key: str, data_root: Path, fetch: bool = True) -> Path:
+    """The local copy of one source file, checked against its sha256.
+
+    A url file is downloaded to <data_root>/<benchmark>/<key>.jsonl when it is missing
+    and fetch is true. A local file is read from the repository.
     """
-    return [
-        reference_criterion,
-        {"criterion": "The response directly addresses the specific question that was asked.",
-         "points": 5, "tags": ["axis:instruction_following"]},
-        {"criterion": "The response covers at least one substantive, on-topic clinical point "
-                      "(mechanism, risk factor, management step, or diagnostic consideration).",
-         "points": 5, "tags": ["axis:completeness"]},
-        {"criterion": "The response gives concrete, actionable guidance (specific next steps, "
-                      "timeframes, dosing, or thresholds) rather than only generalities.",
-         "points": 4, "tags": ["axis:completeness"]},
-        {"criterion": "Where information needed to answer safely is missing, the response asks "
-                      "for it or explicitly states the limitation.",
-         "points": 4, "tags": ["axis:context_awareness"]},
-        {"criterion": "The response is clearly written and organized appropriately for its reader.",
-         "points": 3, "tags": ["axis:communication_quality"]},
-        {"criterion": "The response gives medically dangerous or clearly incorrect advice.",
-         "points": -8, "tags": ["axis:accuracy"]},
-        {"criterion": "The response offers false reassurance, or fails to recommend escalation "
-                      "when the situation warrants it.",
-         "points": -5, "tags": ["axis:accuracy"]},
-    ]
+    src = bench.source
+    if isinstance(src, LocalSource):
+        f = src.files[key]
+        path = REPO_ROOT / f.path
+    elif isinstance(src, UrlSource):
+        f = src.files[key]
+        path = Path(data_root) / bench.id / f"{key}.jsonl"
+        if not path.is_file():
+            if not fetch:
+                raise DataError(f"{path} is missing; run python -m bodhi_lora fetch {bench.id}")
+            path.parent.mkdir(parents=True, exist_ok=True)
+            tmp = path.with_suffix(".part")
+            print(f"downloading {bench.id} {key} -> {path}", flush=True)
+            with urllib.request.urlopen(f.url) as r, open(tmp, "wb") as out:
+                shutil.copyfileobj(r, out)
+            os.replace(tmp, path)
+    else:
+        raise DataError(f"{bench.id}: source kind {src.kind} has no files")
+    got = sha256_file(path)
+    if got != f.sha256:
+        raise DataError(f"{path}: sha256 {got} is not the pinned {f.sha256}; the source changed")
+    return path
 
 
-def stable_id(benchmark, text):
-    """Deterministic prompt_id from the question text (so reruns match)."""
-    h = hashlib.sha1(f"{benchmark}:{text}".encode("utf-8")).hexdigest()[:12]
-    return f"{benchmark}-{h}"
+def load_rubric_jsonl(bench: BenchmarkConfig, data_root: Path, fetch: bool = True) -> list[Row]:
+    """Rows of every source file, each prompt id once, in order of first appearance."""
+    rows: dict[str, dict] = {}
+    positions: dict[str, dict] = {}
+    for key in bench.source.files:
+        path = source_file(bench, key, data_root, fetch)
+        with open(path, encoding="utf-8") as fh:
+            index = 0
+            for lineno, line in enumerate(fh, start=1):
+                if not line.strip():
+                    continue
+                try:
+                    row = json.loads(line)
+                except json.JSONDecodeError as e:
+                    raise DataError(f"{path}:{lineno}: malformed JSON") from e
+                pid = row["prompt_id"]
+                rows.setdefault(pid, row)
+                positions.setdefault(pid, {})[key] = index
+                index += 1
+    return [_with_labels(bench, row, positions[pid]) for pid, row in rows.items()]
 
 
-def _get(ex, *keys, default=""):
-    """First present, non-empty key among candidates (schemas vary across mirrors)."""
+# -- Hugging Face question-answer sources ---------------------------------------------
+
+class HfQaParams(BaseModel):
+    """loader_params of an hf_qa benchmark."""
+
+    model_config = ConfigDict(extra="forbid")
+    # The text the prompt id hashes: the question as stored, or with outer spaces
+    # removed. It must stay as the first runs had it, or their eval ids stop matching.
+    id_text: Literal["raw", "stripped"]
+    reference_max_chars: int = Field(gt=0)
+    # space: newlines in the reference become spaces before it is cut.
+    reference_newlines: Literal["keep", "space"]
+    # Single-best-answer sources that store the answer as an index into choice columns.
+    choice_fields: list[str] = Field(default_factory=list)
+    choice_index_field: Optional[str] = None
+
+
+def _first(ex: dict, keys: list[str], default: Any = "") -> Any:
+    """The first present, non-empty value among the candidate columns."""
     for k in keys:
         if k in ex and ex[k] not in (None, "", [], {}):
             return ex[k]
     return default
 
 
-def medqa_row(ex):
-    """MedQA -> open-ended clinician prompt (options stripped) + correctness rubric."""
-    question = _get(ex, "question", "sent1", "query")
-    answer = _get(ex, "answer", "answer_idx", "correct", "output")
-    # Some mirrors store answer as an option letter; try to resolve to text.
-    options = _get(ex, "options", "choices", default=None)
-    if isinstance(options, dict) and isinstance(answer, str) and answer in options:
-        answer = options[answer]
-    if not question or not answer:
-        return None
-    # The preamble must not cue the behaviors we score. An earlier version said
-    # "Ask for any information you would need before committing, and state your
-    # reasoning", which drove base-model active inquiry to 99% and made the cell
-    # measure instruction-following instead of calibration. Keep only the
-    # clinician framing and the open-ended instruction.
-    user = (
-        "You are advising a clinician colleague. Answer the following clinical "
-        "question.\n\n" + str(question).strip()
-    )
-    ref = str(answer).strip()[:400]
-    rubrics = _rubric({
-        "criterion": f"The assistant's final clinical conclusion is consistent with the "
-                     f"correct answer: \"{ref}\".",
-        "points": 8, "tags": ["axis:accuracy"]})
-    return question, user, rubrics, ["theme:medqa", "persona:clinician"]
+def stable_id(prefix: str, text: str) -> str:
+    """Prompt id from the question text, so a rebuild gives the same ids."""
+    return f"{prefix}-{hashlib.sha1(f'{prefix}:{text}'.encode('utf-8')).hexdigest()[:12]}"
 
 
-def medquad_row(ex):
-    """MedQuAD -> patient-facing consumer-health prompt + reference-coverage rubric."""
-    question = _get(ex, "question", "Question", "query")
-    answer = _get(ex, "answer", "Answer", "long_answer")
-    if not question or not answer:   # ~31k MedQuAD answers were removed for licensing
-        return None
-    user = str(question).strip()
-    ref = str(answer).strip().replace("\n", " ")[:800]
-    rubrics = _rubric({
-        "criterion": f"The response does not contradict this reference answer: \"{ref}\".",
-        "points": 8, "tags": ["axis:accuracy"]})
-    return question, user, rubrics, ["theme:medquad", "persona:patient"]
+def build_hf_qa_rows(bench: BenchmarkConfig, source_rows) -> tuple[list[dict], dict]:
+    """Rows in the rubric JSONL format from question-answer source rows, and counts.
 
-
-def medicationqa_row(ex):
-    """MedicationQA -> real consumer drug questions + reference-coverage rubric.
-
-    These are genuine questions people asked about medications, and they very often
-    omit dose, age, indication, or concurrent meds — so they EXERCISE context-seeking
-    (the behavior the paper targets) rather than merely rewarding recall.
+    A row without a question or an answer is unusable; a row whose prompt id is already
+    taken is a duplicate. Both are counted and left out.
     """
-    question = _get(ex, "Question", "question")
-    answer = _get(ex, "Answer", "answer")
-    if not question or not answer:
-        return None
-    ref = str(answer).strip().replace("\n", " ")[:800]
-    rubrics = _rubric({
-        "criterion": f"The response does not contradict this reference answer: \"{ref}\".",
-        "points": 8, "tags": ["axis:accuracy"]})
-    return question, str(question).strip(), rubrics, ["theme:medicationqa", "persona:patient"]
-
-
-def medmcqa_row(ex):
-    """MedMCQA -> open-ended clinician exam question (options stripped) + correctness rubric."""
-    question = _get(ex, "question")
-    opts = [_get(ex, k) for k in ("opa", "opb", "opc", "opd")]
-    cop = ex.get("cop")
-    if not question or cop is None or not any(opts):
-        return None
-    try:
-        answer = opts[int(cop)]
-    except (ValueError, TypeError, IndexError):
-        return None
-    if not answer:
-        return None
-    # See medqa_row: no clause here may cue asking or reasoning aloud.
-    user = ("You are advising a clinician colleague. Answer the following clinical "
-            "question.\n\n" + str(question).strip())
-    ref = str(answer).strip()[:300]
-    rubrics = _rubric({
-        "criterion": f"The assistant's final conclusion is consistent with the correct "
-                     f"answer: \"{ref}\".",
-        "points": 8, "tags": ["axis:accuracy"]})
-    return question, user, rubrics, ["theme:medmcqa", "persona:clinician"]
-
-
-def chatdoctor_row(ex):
-    """ChatDoctor / HealthCareMagic -> REAL patient->doctor queries + doctor-answer rubric.
-
-    A different benchmark FAMILY from MedQA (complete-info exam vignettes) and MedQuAD
-    (curated NIH reference articles): these are unedited questions real people asked a
-    doctor online, so they routinely omit age, duration, medications, and associated
-    symptoms. That makes them the sharpest test of context-seeking — the behavior the
-    adapter targets — and of whether asking is TARGETED rather than indiscriminate.
-
-    Reference answer = the real physician's reply, used as the filter's quality signal.
-    """
-    question = _get(ex, "input", "Patient", "question")
-    answer = _get(ex, "output", "Doctor", "answer")
-    if not question or not answer:
-        return None
-    q = str(question).strip()
-    ref = str(answer).strip().replace("\n", " ")[:800]
-    rubrics = _rubric({
-        "criterion": f"The response does not contradict the physician's actual reply: \"{ref}\".",
-        "points": 8, "tags": ["axis:accuracy"]})
-    return q, q, rubrics, ["theme:chatdoctor", "persona:patient"]
-
-
-BUILDERS = {
-    "chatdoctor": chatdoctor_row,
-    "medqa": medqa_row,
-    "medquad": medquad_row,
-    "medicationqa": medicationqa_row,
-    "medmcqa": medmcqa_row,
-}
-
-
-def build_rows(ds, benchmark, max_rows=None, select="seeded", select_seed=0):
-    """Rows in HealthBench format, plus counts.
-
-    select="head" stops at the first max_rows usable rows in dataset order (the
-    posted cells). select="seeded" builds every usable row and draws max_rows of
-    them with random.Random(select_seed); the result is sorted by prompt_id so
-    the file does not depend on the dataset order.
-    """
-    build = BUILDERS[benchmark]
+    p = HfQaParams.model_validate(bench.loader_params)
+    fields = bench.fields
     rows, seen = [], set()
     counts = {"n_source_rows": 0, "n_unusable": 0, "n_duplicates": 0}
-    for ex in ds:
+    for ex in source_rows:
         counts["n_source_rows"] += 1
-        built = build(ex)
-        if built is None:
+        question = _first(ex, fields["question"])
+        if p.choice_fields:
+            choices = [_first(ex, [k]) for k in p.choice_fields]
+            index = ex.get(p.choice_index_field)
+            answer = None
+            if question and index is not None and any(choices):
+                try:
+                    answer = choices[int(index)]
+                except (ValueError, TypeError, IndexError):
+                    answer = None
+        else:
+            answer = _first(ex, fields["answer"])
+            # A source may store the answer as an option key; the option text replaces it.
+            options = _first(ex, fields.get("options", []), default=None)
+            if isinstance(options, dict) and isinstance(answer, str) and answer in options:
+                answer = options[answer]
+        if not question or not answer:
             counts["n_unusable"] += 1
             continue
-        question, user, rubrics, tags = built
-        pid = stable_id(benchmark, question)
+        text = str(question).strip()
+        pid = stable_id(bench.id_prefix, question if p.id_text == "raw" else text)
         if pid in seen:
             counts["n_duplicates"] += 1
             continue
         seen.add(pid)
+        ref = str(answer).strip()
+        if p.reference_newlines == "space":
+            ref = ref.replace("\n", " ")
+        ref = ref[:p.reference_max_chars]
         rows.append({
             "prompt_id": pid,
-            "prompt": [{"role": "user", "content": user}],
-            "rubrics": rubrics,
-            "example_tags": tags,
-            "_source": benchmark,
+            "prompt": [{"role": "user", "content": bench.prompt_template.format(question=text)}],
+            "rubrics": synthesized_rubric(bench.reference_criterion.format(reference=ref)),
+            "example_tags": list(bench.tags),
         })
-        if select == "head" and max_rows and len(rows) >= max_rows:
-            break
-    if select == "seeded":
-        rows.sort(key=lambda r: r["prompt_id"])
-        if max_rows and len(rows) > max_rows:
-            rows = sorted(random.Random(select_seed).sample(rows, max_rows),
-                          key=lambda r: r["prompt_id"])
     counts["n_written"] = len(rows)
     return rows, counts
 
 
-def make_holdout(ids, n, method="seeded", seed=0):
-    """Eval holdout ids.
+def hf_qa_build_key(bench: BenchmarkConfig) -> str:
+    """sha256 of every setting a built row depends on, so a cache never outlives them."""
+    keyed = {"source": bench.source.model_dump(), "fields": bench.fields,
+             "loader_params": bench.loader_params, "id_prefix": bench.id_prefix,
+             "prompt_template": bench.prompt_template,
+             "reference_criterion": bench.reference_criterion, "tags": bench.tags,
+             "shared_criteria": SHARED_CRITERIA}
+    return hashlib.sha256(json.dumps(keyed, sort_keys=True).encode()).hexdigest()
 
-    method="head" takes the first n ids in file order, the rule of the posted
-    cells. method="seeded" draws n with random.Random(seed) and sorts them.
+
+def _hf_rows(src: HfSource):
+    # Imported here: only a build needs datasets, and the training env may lack it.
+    from datasets import load_dataset
+    return load_dataset(src.dataset, src.config_name, split=src.split, revision=src.revision)
+
+
+def load_hf_qa(bench: BenchmarkConfig, data_root: Path, fetch: bool = True,
+               source_rows: Optional[Callable] = None) -> list[Row]:
+    """Rows built from the pinned dataset, cached in <data_root>/<benchmark>/rows.jsonl.
+
+    The cache carries the build key; a cache built with other settings is rebuilt.
+    source_rows replaces the download (tests).
     """
-    if n > len(ids):
-        raise SystemExit(f"holdout of {n} needs at least {n} rows; have {len(ids)}")
-    if method == "head":
-        return list(ids[:n])
-    return sorted(random.Random(seed).sample(list(ids), n))
+    folder = Path(data_root) / bench.id
+    cache, meta_path = folder / "rows.jsonl", folder / "rows.manifest.json"
+    key = hf_qa_build_key(bench)
+    meta = json.loads(meta_path.read_text()) if meta_path.is_file() else {}
+    if not (cache.is_file() and meta.get("build_key") == key
+            and meta.get("sha256") == sha256_file(cache)):
+        if not fetch:
+            raise DataError(f"{cache} is missing or stale; run python -m bodhi_lora fetch {bench.id}")
+        rows, counts = build_hf_qa_rows(bench, (source_rows or _hf_rows)(bench.source))
+        if not rows:
+            raise DataError(f"{bench.id}: no usable rows; check the record's fields against the source columns")
+        folder.mkdir(parents=True, exist_ok=True)
+        tmp = cache.with_suffix(".part")
+        with open(tmp, "w", encoding="utf-8") as fh:
+            for row in rows:
+                fh.write(json.dumps(row) + "\n")
+        os.replace(tmp, cache)
+        meta = {"benchmark": bench.id, "build_key": key, "source": bench.source.model_dump(),
+                "counts": counts, "sha256": sha256_file(cache)}
+        meta_path.write_text(json.dumps(meta, indent=2) + "\n")
+    out = []
+    with open(cache, encoding="utf-8") as fh:
+        for index, line in enumerate(fh):
+            out.append(_with_labels(bench, json.loads(line), {SOURCE: index}))
+    return out
 
 
-def write_holdout(jsonl_path, n, method, seed, out_path):
-    with open(jsonl_path) as f:
-        ids = [json.loads(line)["prompt_id"] for line in f if line.strip()]
-    held = make_holdout(ids, n, method, seed)
-    out_path = Path(out_path)
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(out_path, "w") as f:
-        json.dump({
-            "description": f"eval holdout: {n} of {len(ids)} rows, method={method}"
-                           + (f", seed={seed}" if method == "seeded" else ""),
-            "method": method,
-            "seed": seed if method == "seeded" else None,
-            "n": len(held),
-            "source": str(jsonl_path),
-            "source_sha256": rmf.sha256_file(jsonl_path),
-            "prompt_ids": held,
-        }, f, indent=2)
-    print(f"held out {len(held)} eval ids ({method}) -> {out_path}")
-    return out_path
+LOADERS: dict[str, Callable[..., list[Row]]] = {
+    "rubric_jsonl": load_rubric_jsonl,
+    "hf_qa": load_hf_qa,
+}
 
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--benchmark", required=True, choices=list(BUILDERS))
-    ap.add_argument("--out", required=True)
-    ap.add_argument("--dataset-id", default=None, help="override HF dataset id")
-    ap.add_argument("--revision", default=None,
-                    help="dataset commit. Default: DEFAULT_REVISIONS for the dataset id. "
-                         "Pass 'main' to load HEAD.")
-    ap.add_argument("--split", default="train", help="HF split to pull from")
-    ap.add_argument("--max", type=int, default=None, help="cap number of rows")
-    ap.add_argument("--select", choices=("seeded", "head"), default="seeded",
-                    help="seeded: random --max rows of the whole dataset (default). "
-                         "head: first --max rows in HF order (the posted cells).")
-    ap.add_argument("--select-seed", type=int, default=0)
-    ap.add_argument("--holdout-n", type=int, default=0,
-                    help="write this many eval holdout ids (0 = no holdout file)")
-    ap.add_argument("--holdout-method", choices=("seeded", "head"), default="seeded")
-    ap.add_argument("--holdout-seed", type=int, default=0)
-    ap.add_argument("--holdout-out", default=None,
-                    help="holdout ids file. Default: <out stem>_holdout_ids.json")
-    ap.add_argument("--holdout-only", action="store_true",
-                    help="read the existing --out JSONL and write only the holdout file")
-    args = ap.parse_args()
-
-    out = Path(args.out).expanduser()
-    holdout_out = Path(args.holdout_out or out.with_name(out.stem + "_holdout_ids.json"))
-
-    if args.holdout_only:
-        if not out.is_file() or not args.holdout_n:
-            raise SystemExit("--holdout-only needs an existing --out and --holdout-n > 0")
-        write_holdout(out, args.holdout_n, args.holdout_method, args.holdout_seed, holdout_out)
-        return
-
-    from datasets import load_dataset  # lazy: only needed on the box
-    ds_id = args.dataset_id or DEFAULT_IDS[args.benchmark]
-    revision = args.revision or DEFAULT_REVISIONS.get(ds_id)
-    print(f"Loading {ds_id} [{args.split}] at revision {revision or 'HEAD (unpinned)'} ...")
-    ds = load_dataset(ds_id, split=args.split, revision=revision)
-
-    rows, counts = build_rows(ds, args.benchmark, args.max, args.select, args.select_seed)
-    if not rows:
-        raise SystemExit(
-            f"No rows written. Inspect the {ds_id} schema and adjust the field names "
-            f"in {args.benchmark}_row() (the mirror may use different keys)."
-        )
-    out.parent.mkdir(parents=True, exist_ok=True)
-    with open(out, "w") as f:
-        for row in rows:
-            f.write(json.dumps(row) + "\n")
-    print(f"wrote {len(rows)} rows ({args.select}) -> {out}")
-
-    outputs = [out]
-    if args.holdout_n:
-        outputs.append(write_holdout(out, args.holdout_n, args.holdout_method,
-                                     args.holdout_seed, holdout_out))
-    rmf.write_manifest(rmf.manifest_path_for(out), rmf.build_manifest(
-        "build_benchmark",
-        config=vars(args),
-        holdout_ids=holdout_out if args.holdout_n else None,
-        outputs=outputs,
-        counts=counts,
-        extra={"dataset": {"id": ds_id, "revision": revision,
-                           "revision_source": ("flag" if args.revision else
-                                               "pinned" if revision else "unpinned"),
-                           "split": args.split}},
-    ))
+def load_rows(bench: BenchmarkConfig, data_root: Path, fetch: bool = True) -> list[Row]:
+    """Every row of a benchmark, by its record's loader. fetch=False never downloads."""
+    if bench.loader not in LOADERS:
+        raise DataError(f"{bench.id}: no loader {bench.loader!r}; loaders are {sorted(LOADERS)}")
+    return LOADERS[bench.loader](bench, Path(data_root), fetch=fetch)
 
 
-if __name__ == "__main__":
-    main()
+def row_text(row: Row) -> str:
+    """The last user turn, lowercased with spaces collapsed: what the leakage gate compares."""
+    for m in reversed(row.messages or []):
+        if m.get("role") == "user":
+            content = m.get("content", "")
+            if isinstance(content, list):
+                content = "\n".join(c.get("text", "") for c in content if isinstance(c, dict))
+            return " ".join(str(content).lower().split())
+    return ""

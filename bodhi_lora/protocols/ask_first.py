@@ -1,9 +1,6 @@
-"""Ask-first: a second chain-of-thought teaching protocol, distinct from BODHI.
+"""Ask-first (impl key ask_first): a second teaching protocol, distinct from BODHI.
 
-Reviewer HomM (W1) asked whether the result depends on the one CoT protocol
-the paper used. This module gives a second protocol. A cell uses it in place
-of BODHI with one setting: generate_traces.py --protocol ask_first, or
-PROTOCOL=ask_first for rebuttal/launch/run_cell.sh.
+A cell uses it in place of BODHI by naming the ask-first protocol record.
 
 How it differs from BODHI (bodhi-llm 0.1.4, bodhi/core.py):
   - One model call, not two. BODHI makes one call for an analysis and a
@@ -21,8 +18,9 @@ message, so every chat template accepts it.
 """
 
 import re
-import time
-from dataclasses import dataclass, field
+
+from bodhi_lora.protocols.base import CallLog, Decoding, Output, Protocol
+from bodhi_lora.registry.schema import ModelConfig, ProtocolConfig
 
 ASK_FIRST_TEMPLATE = """\
 Below is a conversation with a person who asks a health question. Write the \
@@ -51,14 +49,6 @@ _PLAN_RE = re.compile(r"<plan>(.*?)</plan>", re.DOTALL | re.IGNORECASE)
 _REPLY_RE = re.compile(r"^\s*\**REPLY:\**\s*", re.MULTILINE)
 
 
-@dataclass
-class ProtocolResponse:
-    """Same fields as bodhi.BODHIResponse, so callers treat both alike."""
-    content: str
-    analysis: str
-    metadata: dict = field(default_factory=dict)
-
-
 def render_conversation(messages) -> str:
     """'user: ...' / 'assistant: ...' lines, one block per turn."""
     parts = []
@@ -85,29 +75,21 @@ def parse_reply(text):
     return _PLAN_RE.sub("", text).strip(), plan, False
 
 
-class AskFirstProtocol:
-    """Single-pass ask-first wrapper with the BODHI .complete() interface."""
+def build_prompt(messages) -> list:
+    """The one user message of the call: the template with the whole conversation."""
+    return [{"role": "user", "content": ASK_FIRST_TEMPLATE.format(conversation=render_conversation(messages))}]
 
-    name = "ask_first"
 
-    def __init__(self, chat_function):
-        self.chat = chat_function
+class AskFirst(Protocol):
+    """One call; the reply is the text after the REPLY: line."""
 
-    def build_prompt(self, messages) -> list:
-        return [{"role": "user",
-                 "content": ASK_FIRST_TEMPLATE.format(conversation=render_conversation(messages))}]
+    kind = "wrapper"
 
-    def complete(self, messages) -> ProtocolResponse:
-        start = time.time()
-        raw = self.chat(self.build_prompt(messages))
-        reply, plan, found = parse_reply(raw)
-        return ProtocolResponse(
-            content=reply,
-            analysis=plan,
-            metadata={
-                "protocol": self.name,
-                "mode": "single_pass",
-                "reply_marker_found": found,
-                "total_time": time.time() - start,
-            },
-        )
+    def __init__(self, protocol: ProtocolConfig, model: ModelConfig):
+        self.id = protocol.id
+
+    def respond(self, engine, messages: list, decoding: Decoding) -> Output:
+        log = CallLog(engine, decoding)
+        reply, plan, found = parse_reply(log.chat(build_prompt(messages)))
+        return log.output(reply, plan, {"protocol": self.id, "mode": "single_pass",
+                                        "reply_marker_found": found})

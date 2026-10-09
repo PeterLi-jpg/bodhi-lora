@@ -14,10 +14,10 @@ rubric: synthesized
 fields:
   question: [question, sent1, query]
   answer: [answer, answer_idx, correct, output]
+  # A source may store the answer as an option key; the option text replaces it.
+  options: [options, choices]
 loader_params:
   id_text: raw
-  # A mirror may store the answer as an option key; the option text replaces it.
-  options_field: options
   reference_max_chars: 400
   reference_newlines: keep
 id_prefix: medqa

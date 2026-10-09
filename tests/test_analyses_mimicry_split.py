@@ -2,7 +2,7 @@
 
 The unit tests run anywhere. The golden test reruns the script on the committed
 results_modal/ data and pins the values quoted to reviewer LxMF; it needs
-data/raw/healthbench_hard.jsonl (gitignored, fetched by scripts/download_data.py)
+data/raw/healthbench/hard.jsonl (gitignored, fetched by python -m bodhi_lora fetch healthbench)
 and skips without it.
 """
 
@@ -15,7 +15,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
-HARD = ROOT / "data" / "raw" / "healthbench_hard.jsonl"
+HARD = ROOT / "data" / "raw" / "healthbench" / "hard.jsonl"
 
 
 def _load():
@@ -71,7 +71,7 @@ def test_bootstrap_resamples_prompts_and_returns_or_ci():
     assert diff_ci == (0.0, 0.0)
 
 
-@pytest.mark.skipif(not HARD.is_file(), reason="data/raw/healthbench_hard.jsonl not present")
+@pytest.mark.skipif(not HARD.is_file(), reason="data/raw/healthbench/hard.jsonl not present")
 def test_golden_values_on_committed_results(tmp_path, monkeypatch):
     ms = _load()
     out = tmp_path / "mimicry_split.json"

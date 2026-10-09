@@ -46,8 +46,8 @@ from openpyxl.worksheet.datavalidation import DataValidation
 
 ROOT = Path(__file__).resolve().parent.parent
 RESULTS_DIR = ROOT / "results_modal"
-HEALTHBENCH_PATH = ROOT / "data" / "raw" / "healthbench_hard.jsonl"
-HEALTHBENCH_FULL_PATH = ROOT / "data" / "raw" / "healthbench.jsonl"
+HEALTHBENCH_PATH = ROOT / "data" / "raw" / "healthbench" / "hard.jsonl"
+HEALTHBENCH_FULL_PATH = ROOT / "data" / "raw" / "healthbench" / "full.jsonl"
 FILTER_TRACES_PATH = ROOT / "data" / "sft_qwen_graded" / "seed_7_train.jsonl"
 INSTR_DIR = ROOT / "data" / "irr_instructions"
 OUT_DIR = RESULTS_DIR / "irr"
@@ -412,7 +412,7 @@ has returned grades, and `kappa_results.json` holds the result for that rater.
 
 - `results_modal/seed_<N>/<config>.json` — 5-seed Modal eval (Llama-graded)
 - `data/sft_qwen_graded/seed_7_train.jsonl` — Qwen-filtered BODHI traces
-- `data/raw/healthbench_hard.jsonl`, `data/raw/healthbench.jsonl` — rubrics
+- `data/raw/healthbench/hard.jsonl`, `data/raw/healthbench/full.jsonl` — rubrics
 """)
 
 

@@ -1,0 +1,114 @@
+"""The train stage (bodhi_lora/pipeline/train.py): recipe, manifest and template helpers.
+No training runs here; the smoke cell trains for real (tests/test_pipeline_runner.py)."""
+
+import json
+from dataclasses import replace
+
+import pytest
+
+pytest.importorskip("torch")
+pytest.importorskip("trl")
+pytest.importorskip("peft")
+pytest.importorskip("pydantic")
+
+from bodhi_lora import manifest as mf  # noqa: E402
+from bodhi_lora.paths import CONFIGS_DIR, project  # noqa: E402
+from bodhi_lora.pipeline.context import StageContext  # noqa: E402
+from bodhi_lora.registry import load_registry  # noqa: E402
+
+
+def _ctx(tmp_path, cell_id):
+    reg = load_registry(CONFIGS_DIR)
+    proj = replace(project(CONFIGS_DIR), results_root=tmp_path)
+    return StageContext(reg=reg, project=proj, cell=reg.cells[cell_id], paths=proj.cell(cell_id))
+
+
+def test_recipe_comes_from_the_cell_and_the_model_record(tmp_path):
+    from bodhi_lora.pipeline import train as train_stage
+
+    cfg = train_stage.recipe(_ctx(tmp_path, "healthbench__mistral-small-24b__bodhi__2026-07"))
+    assert cfg["model"]["quantization"] == "4bit"
+    assert cfg["model"]["response_template"] == "[/INST]"
+    assert cfg["model"]["tokenizer_kwargs"] == {"fix_mistral_regex": True}
+    assert cfg["lora"]["r"] == 16 and len(cfg["lora"]["target_modules"]) == 7
+    assert train_stage.effective_batch(cfg["training"], world_size=1) == 16
+
+
+def test_train_manifest_records_recipe_batch_adapter_and_losses(tmp_path, monkeypatch):
+    from bodhi_lora.pipeline import train as train_stage
+
+    monkeypatch.delenv("WORLD_SIZE", raising=False)
+    ctx = _ctx(tmp_path, "healthbench__mistral-small-24b__bodhi__2026-07")
+    cfg = train_stage.recipe(ctx)
+    train = tmp_path / "train.jsonl"
+    val = tmp_path / "val.jsonl"
+    train.write_text('{"messages": [], "response": "a"}\n' * 3)
+    val.write_text('{"messages": [], "response": "b"}\n')
+    adapter = tmp_path / "adapter"
+    adapter.mkdir()
+    (adapter / "adapter_config.json").write_text(json.dumps({"r": 16, "lora_alpha": 32, "target_modules": ["q_proj"]}))
+    (adapter / "adapter_model.safetensors").write_bytes(b"w")
+    state = {"global_step": 525, "epoch": 3.0, "max_steps": 525, "num_train_epochs": 3,
+             "log_history": [{"loss": 0.9, "step": 10}, {"loss": 0.5, "step": 520},
+                             {"eval_loss": 0.6, "step": 175}]}
+    m = train_stage.build_train_manifest(ctx, 7, cfg, train, val, adapter, state, mf.Timer())
+    assert (m["stage"], m["status"], m["seed"]) == ("train", "complete", 7)
+    assert m["counts"]["effective_batch"] == 16          # 2 x 8 x 1 process
+    assert m["counts"]["global_step"] == 525
+    assert (m["counts"]["first_train_loss"], m["counts"]["last_train_loss"]) == (0.9, 0.5)
+    assert m["counts"]["eval_loss_by_step"] == [[175, 0.6]]
+    assert m["adapter"]["r"] == 16 and len(m["adapter"]["sha256"]) == 64
+    assert m["models"]["base"]["revision"] == "9527884be6e5616bdd54de542f9ae13384489724"
+    assert m["quantization"] == "4bit"
+    assert [i["n_lines"] for i in m["inputs"]] == [3, 1]
+
+
+def test_effective_batch_counts_processes():
+    from bodhi_lora.pipeline import train as train_lora
+    cfg = {"per_device_train_batch_size": 2, "gradient_accumulation_steps": 8}
+    assert train_lora.effective_batch(cfg, world_size=1) == 16
+    assert train_lora.effective_batch(cfg, world_size=4) == 64
+
+
+class FakeTokenizer:
+    def apply_chat_template(self, messages, tokenize=False, add_generation_prompt=False):
+        rendered = " | ".join(f"{msg['role']}:{msg['content']}" for msg in messages)
+        if add_generation_prompt:
+            rendered += " | assistant:"
+        return rendered
+
+
+def test_format_example_single_example(monkeypatch):
+    from bodhi_lora.pipeline import train as train_lora
+    monkeypatch.setattr(train_lora, "_tokenizer", FakeTokenizer())
+
+    result = train_lora.format_example(
+        {
+            "messages": [{"role": "user", "content": "hi"}],
+            "response": "hello",
+        }
+    )
+
+    assert result == "user:hi | assistant:hello"
+
+
+def test_format_example_batched_examples(monkeypatch):
+    from bodhi_lora.pipeline import train as train_lora
+    monkeypatch.setattr(train_lora, "_tokenizer", FakeTokenizer())
+
+    result = train_lora.format_example(
+        {
+            "messages": [
+                [{"role": "user", "content": "first"}],
+                [{"role": "user", "content": "second"}],
+            ],
+            "response": ["one", "two"],
+        }
+    )
+
+    assert result == [
+        "user:first | assistant:one",
+        "user:second | assistant:two",
+    ]
+
+

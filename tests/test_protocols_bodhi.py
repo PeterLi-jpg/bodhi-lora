@@ -1,25 +1,21 @@
-"""Pure-logic tests for the BODHI component-ablation wrapper (issue #69).
+"""The BODHI protocol (bodhi_lora/protocols/bodhi_llm.py) and its component ablations.
 
-bodhi-llm is a small pure-Python package (no torch/vllm deps), so we can
-import it directly without the ``import_with_mocks`` shim used elsewhere.
-
-CI (.github/workflows/ci.yml) installs only pyyaml/pytest/numpy, not
-bodhi-llm. Skip the whole module if bodhi isn't importable so the test
-suite stays green there; locally and on production pods the dependency
-is installed and the regex-strip invariants are exercised end-to-end.
+bodhi-llm is a small pure-Python package, so these run on the CPU with the stub engine.
+The ablation tests check that each strip removes its section and nothing else, so a
+prompt change in bodhi-llm fails here instead of silently not ablating (issue #69).
 """
-
-import sys
-from pathlib import Path
 
 import pytest
 
 pytest.importorskip("bodhi")
 
-ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT))
+from bodhi_lora.engine import StubEngine  # noqa: E402
+from bodhi_lora.paths import CONFIGS_DIR  # noqa: E402
+from bodhi_lora.protocols import Decoding, build  # noqa: E402
+from bodhi_lora.protocols.bodhi_llm import make_ablated_bodhi_config  # noqa: E402
+from bodhi_lora.registry import load_registry  # noqa: E402
 
-from bodhi_lora.protocols.bodhi_llm import make_ablated_bodhi_config
+REG = load_registry(CONFIGS_DIR)
 
 
 def test_none_returns_medical_default():
@@ -100,3 +96,25 @@ def test_format_roundtrip_substitutes_input():
     assert "patient with chest pain" in rendered
     assert "{input}" not in rendered
     assert "KEY UNCERTAINTIES" not in rendered
+
+
+def test_bodhi_makes_two_calls_and_returns_the_second_as_the_reply():
+    replies = iter(["TASK TYPE: advice\nRED FLAGS: none", "Rest and drink water."])
+    eng = StubEngine("m", reply=lambda msgs: next(replies))
+    proto = build(REG.protocols["bodhi"], REG.models["mistral-small-24b"])
+    out = proto.respond(eng, [{"role": "user", "content": "I have a cold."}], Decoding(max_new_tokens=4))
+    assert out.calls == 2 and len(eng.calls) == 2
+    assert out.response == "Rest and drink water." and out.analysis.startswith("TASK TYPE")
+    # The first pass had 6 words against a limit of 4, so a call hit its limit.
+    assert out.finish_length and out.completion_tokens == 6 + 4
+    assert out.metadata["ablate_component"] == "none" and out.metadata["mode"] == "two_pass"
+
+
+@pytest.mark.parametrize("pid, key", [("bodhi-no-calibration", "no_calibration"),
+                                      ("bodhi-no-questions", "no_questions"),
+                                      ("bodhi-no-abstention", "no_abstention"),
+                                      ("bodhi-no-domain-framing", "no_domain_framing")])
+def test_ablation_records_build_their_ablation(pid, key):
+    proto = build(REG.protocols[pid], REG.models["mistral-small-24b"])
+    assert proto.ablate == key
+    assert proto.config.domain == ("general" if key == "no_domain_framing" else "medical")

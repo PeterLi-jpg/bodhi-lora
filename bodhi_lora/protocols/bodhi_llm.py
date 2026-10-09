@@ -1,8 +1,11 @@
-"""BODHI wrapper component ablations for paper figure 3 (issue #69).
+"""BODHI as a protocol (impl key bodhi_llm), with its component ablations.
 
-The paper claims the LoRA internalizes the BODHI wrapper's epistemic virtues.
-A reviewer will reasonably ask which component of the wrapper actually drives
-the behavioral shift, since BODHI bundles several distinct things into Pass 1:
+BODHI (the bodhi-llm package) makes two calls per reply: pass 1 writes an analysis of
+the case, pass 2 writes the reply from it. Only the pass-2 text is the reply (and the
+training target of a trace); the analysis is kept for audit.
+
+The record's params.ablate removes one component from pass 1 (EXPERIMENTS.md E26).
+BODHI bundles several distinct things into pass 1:
 
   - domain framing       (medical vs general)
   - calibration prompt   ("4. KEY UNCERTAINTIES")
@@ -27,8 +30,12 @@ text was both present before and absent after.
 import re
 from typing import Set
 
-from bodhi import BODHIConfig
+from bodhi import BODHI, BODHIConfig
 from bodhi.prompts import render_analysis_prompt
+from pydantic import BaseModel, ConfigDict
+
+from bodhi_lora.protocols.base import CallLog, Decoding, Output, Protocol
+from bodhi_lora.registry.schema import ModelConfig, ProtocolConfig
 
 
 # Sentinel used during template construction so the literal "{input}" inside
@@ -113,7 +120,7 @@ def make_ablated_bodhi_config(component: str) -> BODHIConfig:
         raise RuntimeError(
             f"bodhi-llm prompt format changed: section "
             f"{section_marker!r} not found in rendered medical template "
-            f"(re-vendor or update _bodhi_ablation.py)"
+            f"(update bodhi_lora/protocols/bodhi_llm.py)"
         )
 
     stripped = pattern.sub("", rendered)
@@ -122,8 +129,34 @@ def make_ablated_bodhi_config(component: str) -> BODHIConfig:
         raise RuntimeError(
             f"bodhi-llm prompt format changed: section "
             f"{section_marker!r} still present after strip "
-            f"(re-vendor or update _bodhi_ablation.py)"
+            f"(update bodhi_lora/protocols/bodhi_llm.py)"
         )
 
     template = stripped.replace(_PLACEHOLDER, "{input}")
     return BODHIConfig(analysis_template=template, domain="medical")
+
+
+class BodhiParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    ablate: str = "none"
+
+
+class BodhiLLM(Protocol):
+    """Two calls per reply through bodhi-llm; pass 2's text is the reply."""
+
+    kind = "wrapper"
+
+    def __init__(self, protocol: ProtocolConfig, model: ModelConfig):
+        self.id = protocol.id
+        self.ablate = BodhiParams.model_validate(protocol.params).ablate
+        # Built once, so a prompt drift in bodhi-llm fails before any call.
+        self.config = make_ablated_bodhi_config(self.ablate)
+
+    def respond(self, engine, messages: list, decoding: Decoding) -> Output:
+        log = CallLog(engine, decoding)
+        # A BODHI object per reply: it holds the call function, and replies run in
+        # parallel threads, so each needs its own call log.
+        resp = BODHI(chat_function=log.chat, config=self.config).complete(messages)
+        metadata = dict(resp.metadata or {})
+        metadata["ablate_component"] = self.ablate
+        return log.output(resp.content, resp.analysis, metadata)

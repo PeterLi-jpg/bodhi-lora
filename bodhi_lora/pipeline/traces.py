@@ -1,524 +1,158 @@
-"""Generate BODHI wrapper traces over HealthBench for SFT training data.
+"""Stage traces: the teacher's replies to the train pool, under the cell's protocol.
 
---protocol picks the teaching protocol: bodhi (the paper's two-pass wrapper,
-same as --use-bodhi), ask_first (a second, single-pass protocol in
-bodhi_lora/protocols/ask_first.py) or none (bare inference). Every run writes
-<output stem>.manifest.json (bodhi_lora/manifest.py). --dry-run stubs the
-engine and writes <output stem>.dryrun.jsonl for a few prompts on a CPU.
+    python -m bodhi_lora.pipeline.traces --cell <cell id> [--stub-engine]
+
+The teacher is the cell's base model with its protocol. It answers the train pool in
+pool order, up to traces.max_prompts prompts, and every reply goes to
+shared/traces/traces.jsonl, because no training seed changes the traces. A cell with
+traces_from trains on another cell's traces and generates none.
+
+The stage resumes: prompts already in the file are skipped, and a file written with
+another model or protocol is refused, so a corpus never mixes settings (issues #6, #7).
+Each line keeps the reply, the protocol's internal text for audit, and the reply's
+calls, tokens and whether a call hit its token limit.
 """
+from __future__ import annotations
 
-import argparse
 import json
-import os
 import random
+import sys
+import threading
 import traceback
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-import sys
-
-import numpy as np
-import torch
 from tqdm import tqdm
-from transformers import set_seed
 
-from bodhi_lora import manifest as rmf
-from bodhi_lora.engine import StubEngine, VLLMEngine
-from bodhi_lora.protocols.ask_first import AskFirstProtocol
-from bodhi_lora.protocols.bodhi_llm import make_ablated_bodhi_config
+from bodhi_lora import manifest as mf
+from bodhi_lora.engine import make_engine
+from bodhi_lora.pipeline.context import StageContext, context_from_args, stage_parser
+from bodhi_lora.protocols import build, decoding_for
 
-PROTOCOLS = ("none", "bodhi", "ask_first")
-# Tokens per call: the limit every run so far used for a generation call.
-MAX_NEW_TOKENS_PER_PASS = 2048
-DRY_RUN_REPLY = "<plan>dry run plan</plan>\nREPLY:\nDRY RUN RESPONSE"
-
-DATA_DIR = Path("data/raw")
-
-DATASET_URLS = {
-    "healthbench": "https://openaipublic.blob.core.windows.net/simple-evals/healthbench/2025-05-07-06-14-12_oss_eval.jsonl",
-    "healthbench_hard": "https://openaipublic.blob.core.windows.net/simple-evals/healthbench/hard_2025-05-08-21-00-10.jsonl",
-    "healthbench_consensus": "https://openaipublic.blob.core.windows.net/simple-evals/healthbench/consensus_2025-05-09-20-00-46.jsonl",
-}
+# The stub teacher's reply carries the ask-first markers, so that protocol's parser runs too.
+STUB_TEACHER_REPLY = "<plan>stub plan</plan>\nREPLY:\nSTUB RESPONSE"
 
 
-def ensure_downloaded(name):
-    """Download dataset to data/raw/ if not already there."""
-    import urllib.request
-    path = DATA_DIR / f"{name}.jsonl"
-    if not path.exists():
-        print(f"Downloading {name}...")
-        DATA_DIR.mkdir(parents=True, exist_ok=True)
-        urllib.request.urlretrieve(DATASET_URLS[name], path)
-    return path
+def read_existing(path: Path) -> tuple[dict, int]:
+    """Traces already written, by prompt id, and the count of unreadable lines.
 
-
-def load_healthbench(name):
-    path = ensure_downloaded(name)
-    examples = []
+    An interrupted run can leave a cut-off last line; it is skipped and counted.
+    """
+    done, bad = {}, 0
+    if not path.is_file():
+        return done, bad
     with open(path) as f:
         for line in f:
-            ex = json.loads(line)
-            ex["_source"] = name
-            examples.append(ex)
-    print(f"  {name}: {len(examples)} examples")
-    return examples
-
-
-def load_multiple_datasets(names):
-    all_ex = []
-    seen = set()
-    for name in names:
-        for ex in load_healthbench(name):
-            if ex["prompt_id"] not in seen:
-                seen.add(ex["prompt_id"])
-                all_ex.append(ex)
-    print(f"Total unique: {len(all_ex)}")
-    return all_ex
-
-
-def load_local_jsonl(paths):
-    """Load prompts from local HealthBench-format JSONL files (rebuttal benchmarks).
-
-    Same output shape as load_healthbench: each row carries prompt_id + prompt, and
-    (for filtering) rubrics. Dedups by prompt_id across files.
-    """
-    all_ex, seen = [], set()
-    for path in paths:
-        n = 0
-        with open(path) as f:
-            for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-                ex = json.loads(line)
-                if ex["prompt_id"] in seen:
-                    continue
-                seen.add(ex["prompt_id"])
-                ex.setdefault("_source", Path(path).stem)
-                all_ex.append(ex)
-                n += 1
-        print(f"  {path}: {n} examples")
-    print(f"Total local: {len(all_ex)}")
-    return all_ex
-
-
-def load_exclude_ids(paths):
-    """Collect prompt_ids to exclude, from one or more files.
-
-    Accepts:
-      - .json  containing a list of ids, or {"prompt_ids": [...]}
-      - .jsonl containing one HealthBench example per line (reads
-        ``prompt_id`` from each). Useful for excluding an entire dataset,
-        e.g. ``data/raw/healthbench_hard.jsonl`` to drop all 1000 Hard
-        prompts for the HealthBench-only generalization experiment.
-
-    Accepts a string (one path) or a list of paths.
-    """
-    if isinstance(paths, str):
-        paths = [paths]
-    ids = set()
-    for path in paths:
-        if path.endswith(".jsonl"):
-            with open(path) as f:
-                for line in f:
-                    line = line.strip()
-                    if not line:
-                        continue
-                    ex = json.loads(line)
-                    ids.add(ex["prompt_id"])
-        else:
-            with open(path) as f:
-                data = json.load(f)
-            if isinstance(data, dict):
-                data = data["prompt_ids"]
-            ids.update(data)
-    return ids
-
-
-def make_protocol_wrapper(protocol, engine, ablate_component: str = "none"):
-    """Wrapper for the chosen teaching protocol, or None for bare inference."""
-    if protocol == "none":
-        return None
-    if protocol == "ask_first":
-        return AskFirstProtocol(lambda msgs: engine.chat(msgs, MAX_NEW_TOKENS_PER_PASS))
-    return make_bodhi_wrapper(engine, ablate_component=ablate_component)
-
-
-def resolve_protocol(protocol, use_bodhi):
-    """--use-bodhi is the short form of --protocol bodhi."""
-    if use_bodhi:
-        if protocol not in (None, "bodhi"):
-            raise SystemExit(f"--use-bodhi conflicts with --protocol {protocol}")
-        return "bodhi"
-    return protocol or "none"
-
-
-def make_bodhi_wrapper(engine, ablate_component: str = "none"):
-    """Set up BODHI wrapper once, reuse across examples.
-
-    ``ablate_component`` is one of the values accepted by
-    ``make_ablated_bodhi_config``. ``"none"`` is the production wrapper
-    (medical domain, all components active).
-    """
-    from bodhi import BODHI
-    chat_fn = lambda msgs: engine.chat(msgs, MAX_NEW_TOKENS_PER_PASS)
-    config = make_ablated_bodhi_config(ablate_component)
-    return BODHI(chat_function=chat_fn, config=config)
-
-
-def generate_response(engine, messages, use_bodhi, bodhi_wrapper=None,
-                      ablate_component: str = "none"):
-    """Return {content, analysis, metadata}. analysis/metadata are None for
-    non-BODHI runs so callers get a stable schema.
-
-    Per AnonAuthor2: saving analysis + metadata lets us audit *why* the model
-    decided what it did, not just what it said — critical for finding where
-    the humility wrapper went wrong on specific examples.
-
-    ``ablate_component`` is stamped into the returned metadata dict so each
-    row carries its own provenance (paper figure-3 ablation, issue #69).
-    """
-    if not use_bodhi:
-        return {
-            "content": engine.chat(messages, MAX_NEW_TOKENS_PER_PASS),
-            "analysis": None,
-            "metadata": {"ablate_component": ablate_component},
-        }
-    resp = bodhi_wrapper.complete(messages)
-    metadata = dict(resp.metadata) if resp.metadata else {}
-    metadata["ablate_component"] = ablate_component
-    return {
-        "content": resp.content,
-        "analysis": resp.analysis,
-        "metadata": metadata,
-    }
-
-
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--model",
-        default="google/medgemma-27b-text-it",
-        help="HF model to call via vLLM for trace generation",
-    )
-    parser.add_argument(
-        "--datasets",
-        nargs="+",
-        default=None,
-        choices=list(DATASET_URLS.keys()),
-        help="Named HealthBench datasets to draw prompts from "
-             "(e.g., healthbench_hard healthbench)",
-    )
-    parser.add_argument(
-        "--dataset-files",
-        nargs="+",
-        default=None,
-        help="Local HealthBench-format JSONL files to draw prompts from directly "
-             "(each line an example with prompt_id/prompt/rubrics). Use for the "
-             "rebuttal benchmarks built by bodhi_lora/data/loaders.py "
-             "(data/raw/medqa_open.jsonl, data/raw/medquad.jsonl). Combines with "
-             "--datasets if both are passed.",
-    )
-    parser.add_argument(
-        "--exclude-ids",
-        nargs="+",
-        default=None,
-        help="One or more JSON/JSONL files of prompt_ids to exclude from "
-             "generation. Accepts .json (list or {prompt_ids: [...]}) and "
-             ".jsonl (reads prompt_id from each row). For the "
-             "HealthBench-only generalization experiment, pass "
-             "data/raw/healthbench_hard.jsonl here to drop all 1000 Hard "
-             "prompts from training.",
-    )
-    parser.add_argument(
-        "--output",
-        required=True,
-        help="Path to write the JSONL of generated BODHI traces",
-    )
-    parser.add_argument(
-        "--use-bodhi",
-        action="store_true",
-        help="Wrap inference in the BODHI calibration prompt "
-             "(default: bare inference)",
-    )
-    parser.add_argument(
-        "--protocol",
-        choices=PROTOCOLS,
-        default=None,
-        help="Teaching protocol: bodhi (= --use-bodhi), ask_first "
-             "(bodhi_lora/protocols/ask_first.py) or none. Default none.",
-    )
-    parser.add_argument(
-        "--model-revision",
-        default=None,
-        help="HF commit of --model. Default: the pin in configs/families.yaml.",
-    )
-    # Engine settings: the VLLMEngine defaults the submitted generation ran with.
-    parser.add_argument("--max-model-len", type=int, default=8192)
-    parser.add_argument("--max-num-seqs", type=int, default=64)
-    parser.add_argument("--request-timeout", type=int, default=180)
-    parser.add_argument(
-        "--dry-run", action="store_true",
-        help="Stub the engine, generate --dry-run-examples traces on a CPU and "
-             "write <output stem>.dryrun.jsonl. Never writes --output.")
-    parser.add_argument("--dry-run-examples", type=int, default=2)
-    parser.add_argument(
-        "--ablate-component",
-        choices=["none", "no_calibration", "no_questions",
-                 "no_abstention", "no_domain_framing"],
-        default="none",
-        help="Which BODHI component to ablate "
-             "(none|no_calibration|no_questions|no_abstention|"
-             "no_domain_framing) for the paper figure-3 ablation "
-             "(issue #69). Only meaningful when --use-bodhi is set. "
-             "'none' (default) = production wrapper.",
-    )
-    parser.add_argument(
-        "--max-examples",
-        type=int,
-        default=None,
-        help="Cap on number of prompts to generate (debugging / smoke)",
-    )
-    parser.add_argument(
-        "--resume-from",
-        default=None,
-        help="Path to existing raw_traces.jsonl; resume by skipping "
-             "already-done prompt_ids",
-    )
-    parser.add_argument(
-        "--seed",
-        type=int,
-        default=42,
-        help="RNG seed for shuffling and BODHI internals (default 42)",
-    )
-    parser.add_argument(
-        "--force-resume",
-        action="store_true",
-        help="Skip the resume-config-mismatch guard (dangerous; use only "
-             "for replay/audit). The guard exists to refuse appending rows "
-             "generated with different model/bodhi/ablate settings "
-             "(issue #6/7).",
-    )
-    args = parser.parse_args()
-    protocol = resolve_protocol(args.protocol, args.use_bodhi)
-    if args.ablate_component != "none" and protocol != "bodhi":
-        raise SystemExit("--ablate-component applies to the bodhi protocol only")
-
-    # Expand ~ in any path the user may have passed so $HOME-relative paths
-    # work without manual expansion. Done after parse_args so we mutate the
-    # values once, before they are used downstream.
-    args.output = str(Path(args.output).expanduser())
-    if args.resume_from:
-        args.resume_from = str(Path(args.resume_from).expanduser())
-    if args.exclude_ids:
-        args.exclude_ids = [str(Path(p).expanduser()) for p in args.exclude_ids]
-    if args.dataset_files:
-        args.dataset_files = [str(Path(p).expanduser()) for p in args.dataset_files]
-
-    # Greedy decoding is deterministic without a seed, but the BODHI wrapper
-    # may use sampling internally (prompt shuffling, tie-breaking) — seed so
-    # reruns on identical hardware produce identical raw_traces.jsonl.
-    random.seed(args.seed)
-    np.random.seed(args.seed)
-    torch.manual_seed(args.seed)
-    set_seed(args.seed)
-
-    if not args.datasets and not args.dataset_files:
-        raise SystemExit("provide --datasets and/or --dataset-files")
-    examples = load_multiple_datasets(args.datasets) if args.datasets else []
-    if args.dataset_files:
-        examples += load_local_jsonl(args.dataset_files)
-
-    if args.exclude_ids:
-        exclude = load_exclude_ids(args.exclude_ids)
-        before = len(examples)
-        examples = [ex for ex in examples if ex["prompt_id"] not in exclude]
-        print(f"Excluded {before - len(examples)} eval examples, {len(examples)} left")
-
-    if args.max_examples:
-        examples = examples[:args.max_examples]
-    if args.dry_run:
-        examples = examples[:args.dry_run_examples]
-        args.output = str(Path(args.output).with_name(Path(args.output).stem + ".dryrun.jsonl"))
-        args.resume_from = None
-
-    done_ids = set()
-    if args.resume_from and Path(args.resume_from).exists():
-        # Issue #6/7: validate that existing rows were generated with the
-        # same model + bodhi setting. Mixing settings silently corrupts the
-        # training corpus. Refuse to resume on mismatch unless --force-resume.
-        prev_models = set()
-        prev_ablate = set()
-        prev_protocol = set()
-        n_skipped_malformed = 0
-        with open(args.resume_from) as f:
-            for line in f:
-                try:
-                    row = json.loads(line)
-                    done_ids.add(row["prompt_id"])
-                    if "model" in row:
-                        prev_models.add(row["model"])
-                    if "ablate_component" in row:
-                        prev_ablate.add(row["ablate_component"])
-                    # Rows written before --protocol existed carry only the
-                    # bodhi flag.
-                    if "protocol" in row:
-                        prev_protocol.add(row["protocol"])
-                    elif "bodhi" in row:
-                        prev_protocol.add("bodhi" if row["bodhi"] else "none")
-                except (json.JSONDecodeError, KeyError):
-                    # Skip corrupt lines from interrupted runs, but count them
-                    # so the operator sees how much truncation happened.
-                    n_skipped_malformed += 1
-        if n_skipped_malformed:
-            print(
-                f"WARNING: skipped {n_skipped_malformed} malformed rows during resume",
-                file=sys.stderr,
-            )
-
-        model_mismatch = prev_models and prev_models != {args.model}
-        protocol_mismatch = prev_protocol and prev_protocol != {protocol}
-        # Mixing ablation tags would invalidate the figure-3 ablation (issue
-        # #69): different rows would have been generated with different
-        # wrapper components disabled. Treat it like the model/bodhi mismatch.
-        ablate_mismatch = prev_ablate and prev_ablate != {args.ablate_component}
-        if model_mismatch or protocol_mismatch or ablate_mismatch:
-            msg = (
-                f"resume config mismatch — refusing to append to {args.resume_from}\n"
-                f"  existing rows: model={prev_models or '{unknown}'} "
-                f"protocol={prev_protocol or '{unknown}'} "
-                f"ablate={prev_ablate or '{unknown}'}\n"
-                f"  this run:      model={{{args.model!r}}} "
-                f"protocol={{{protocol!r}}} "
-                f"ablate={{{args.ablate_component!r}}}\n"
-                f"  re-running with different settings would silently mix "
-                f"outputs (issue #6/7, #69)\n"
-                f"  if you truly want to append across settings, pass --force-resume"
-            )
-            if not args.force_resume:
-                raise SystemExit(msg)
-            print(f"WARNING: {msg}\n(continuing because --force-resume was passed)")
-
-        examples = [ex for ex in examples if ex["prompt_id"] not in done_ids]
-        print(f"Resuming, skipping {len(done_ids)} already done "
-              f"(prev model={prev_models or '?'} protocol={prev_protocol or '?'} "
-              f"ablate={prev_ablate or '?'})")
-
-    print(f"\nGenerating {len(examples)} traces, protocol={protocol}, "
-          f"ablate={args.ablate_component}{' [DRY RUN]' if args.dry_run else ''}\n")
-
-    out_path = Path(args.output)
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    mode = "a" if done_ids else "w"
-    ok, fail = 0, 0
-
-    # Short-circuit: if the resume file already has at least max_examples
-    # traces, we have enough — don't bother spinning up vLLM.  Booting and
-    # tearing down a 27B vLLM container holds the TPU for ~5 min and used
-    # to break the next stage's vLLM init too.
-    #
-    # Two cases that count as "have enough":
-    #   - len(examples) == 0 after resume filter (no prompts left to do)
-    #   - len(done_ids) >= max_examples (already at target, even if a
-    #     reshuffled prompt order leaves some extras to do)
-    if len(examples) == 0 or (args.max_examples and len(done_ids) >= args.max_examples):
-        print(f"Nothing to generate (have {len(done_ids)} traces, need "
-              f"{args.max_examples or 'all'}). Skipping vLLM startup.")
-        return
-
-    # Concurrent inference: vLLM batches concurrent requests server-side via
-    # PagedAttention + continuous batching, so feeding the scheduler more
-    # in-flight requests lets it pack each batch fuller and amortizes
-    # prefill cost across more decode steps.
-    #
-    # The previous default (16) was severely under-subscribed for a 27B
-    # model on v6e-8 (256 GB HBM, ~200 GB free for KV after weights): the
-    # vLLM scheduler's max-num-seqs is 128+ on this footprint, so clamping
-    # the client to 16 left most scheduler slots empty. Bumping the default
-    # to 32 doubles in-flight requests while staying well under the server
-    # ceiling so first-run hardware behavior is predictable. See
-    # https://blog.vllm.ai/2024/09/05/perf-update.html for the underlying
-    # PagedAttention + continuous-batching behavior.
-    #
-    # Override per hardware:
-    #   GEN_CONCURRENCY=32   v6e-8   (default)
-    #   GEN_CONCURRENCY=64   v6e-8   stretch (verify HBM headroom in vllm startup log)
-    #   GEN_CONCURRENCY=128  v6e-16  (more HBM, more KV-cache slots)
-    #   GEN_CONCURRENCY=8    fallback if you hit HBM OOM at startup
-    from concurrent.futures import ThreadPoolExecutor, as_completed
-    import threading
-    GEN_CONCURRENCY = int(os.environ.get("GEN_CONCURRENCY", "32"))
-
-    model_revision = rmf.effective_revision(args.model, args.model_revision)
-    engine_kwargs = dict(revision=model_revision, max_model_len=args.max_model_len,
-                         max_num_seqs=args.max_num_seqs, request_timeout=args.request_timeout)
-    engine_ctx = (StubEngine(args.model, reply=DRY_RUN_REPLY, **engine_kwargs)
-                  if args.dry_run else VLLMEngine(args.model, **engine_kwargs))
-    with engine_ctx as engine:
-        bodhi_wrapper = make_protocol_wrapper(
-            protocol, engine, ablate_component=args.ablate_component)
-        # Lock around the JSONL append: workers can finish in any order, but
-        # f.write() / f.flush() must not interleave or we get corrupt lines.
-        write_lock = threading.Lock()
-
-        def _gen_one(ex):
+            if not line.strip():
+                continue
             try:
-                out = generate_response(
-                    engine, ex["prompt"], bodhi_wrapper is not None, bodhi_wrapper,
-                    ablate_component=args.ablate_component,
-                )
-                return {
-                    "prompt_id": ex["prompt_id"],
-                    "messages": ex["prompt"],
-                    "response": out["content"],
-                    "bodhi_analysis": out["analysis"],
-                    "bodhi_metadata": out["metadata"],
-                    "tags": ex.get("example_tags", []),
-                    "source_dataset": ex.get("_source", "unknown"),
-                    "model": args.model,
-                    "bodhi": protocol == "bodhi",
-                    "protocol": protocol,
-                    # Top-level for the resume-from consistency check.
-                    # Also lives inside bodhi_metadata for analysis tools.
-                    "ablate_component": args.ablate_component,
-                }, None
-            except Exception:
-                # Per-task try/except: a single bad prompt or transient HTTP
-                # error from vLLM should not kill the whole run.  Collect the
-                # full traceback (last 30 frames) so we can actually debug
-                # which call inside generate_response blew up, instead of
-                # losing it to repr(e).
-                tb = "\n".join(traceback.format_exc().strip().splitlines()[-30:])
-                return None, (ex.get("prompt_id", "?"), tb)
+                row = json.loads(line)
+                done[row["prompt_id"]] = row
+            except (json.JSONDecodeError, KeyError):
+                bad += 1
+    return done, bad
 
-        with open(out_path, mode) as f:
-            with ThreadPoolExecutor(max_workers=GEN_CONCURRENCY) as ex_pool:
-                futures = [ex_pool.submit(_gen_one, ex) for ex in examples]
-                for fut in tqdm(as_completed(futures), total=len(futures)):
+
+def check_resume(done: dict, model_repo: str, protocol_id: str, ablate: str) -> None:
+    """Refuse to append to traces made with another model, protocol or ablation."""
+    seen = {(r.get("model"), r.get("protocol"), r.get("ablate_component", "none")) for r in done.values()}
+    want = (model_repo, protocol_id, ablate)
+    if seen and seen != {want}:
+        raise SystemExit(f"traces in the file were made with {sorted(seen)}, this run is {want}; "
+                         "mixing them would corrupt the corpus. Move the file away to start over.")
+
+
+def run(ctx: StageContext) -> dict:
+    out_dir = ctx.paths.shared("traces")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    timer = mf.Timer()
+    if ctx.cell.traces_from:
+        src = ctx.traces_file()
+        if not src.is_file():
+            raise SystemExit(f"{src} is missing: run the traces stage of {ctx.cell.traces_from} first")
+        ctx.write_manifest(out_dir, "traces", timer=timer, inputs=[src],
+                           extra={"status": "complete", "traces_from": ctx.cell.traces_from,
+                                  "traces_file": str(src)})
+        return {"traces_from": ctx.cell.traces_from}
+
+    t = ctx.cell.traces
+    rows = ctx.rows_by_id()
+    pool = ctx.pools().train[:t.max_prompts]
+    out_path = out_dir / "traces.jsonl"
+    proto = build(ctx.protocol, ctx.model)
+    ablate = getattr(proto, "ablate", "none")
+    done, n_bad = read_existing(out_path)
+    check_resume(done, ctx.model.hf_id, ctx.protocol.id, ablate)
+    todo = [pid for pid in pool if pid not in done]
+    print(f"traces: {len(pool)} prompts in the pool cap, {len(done)} done, {len(todo)} to go"
+          f"{f', {n_bad} unreadable lines skipped' if n_bad else ''}", flush=True)
+    decoding = decoding_for(proto, max_new_tokens=t.max_new_tokens_per_pass,
+                            max_new_tokens_per_pass=t.max_new_tokens_per_pass,
+                            temperature=t.temperature, top_p=t.top_p,
+                            seed=t.seed if t.decoding == "sample" else None)
+    # The protocol code may sample (prompt order, tie breaks); seed it for reruns.
+    random.seed(t.seed)
+
+    ok, failed = 0, []
+    totals = {"calls": 0, "prompt_tokens": 0, "completion_tokens": 0, "finish_length": 0}
+    engine = make_engine(ctx.model, serving=t.serving, stub=ctx.stub, stub_reply=STUB_TEACHER_REPLY,
+                         log_path=ctx.log_path("vllm_traces.log"))
+    if todo:
+        lock = threading.Lock()
+        with engine as eng, open(out_path, "a") as f:
+            def one(pid):
+                try:
+                    row = rows[pid]
+                    o = proto.respond(eng, row.messages, decoding)
+                    return {
+                        "prompt_id": pid, "messages": row.messages, "response": o.response,
+                        "bodhi_analysis": o.analysis, "bodhi_metadata": o.metadata,
+                        "tags": row.tags, "source_dataset": ctx.bench.id,
+                        "model": ctx.model.hf_id, "model_id": ctx.model.id,
+                        "bodhi": ctx.protocol.impl == "bodhi_llm", "protocol": ctx.protocol.id,
+                        "ablate_component": ablate, "calls": o.calls,
+                        "prompt_tokens_total": o.prompt_tokens,
+                        "completion_tokens_total": o.completion_tokens,
+                        "finish_length": o.finish_length,
+                    }, None
+                except Exception:
+                    # One failed prompt (a timeout, a bad reply) must not stop the run.
+                    return None, (pid, "\n".join(traceback.format_exc().strip().splitlines()[-30:]))
+
+            with ThreadPoolExecutor(max_workers=t.serving.concurrency) as pool_ex:
+                futures = [pool_ex.submit(one, pid) for pid in todo]
+                for fut in tqdm(as_completed(futures), total=len(futures), desc="traces"):
                     trace, err = fut.result()
-                    if trace is not None:
-                        with write_lock:
-                            f.write(json.dumps(trace) + "\n")
-                            f.flush()
-                        ok += 1
-                    else:
-                        pid, err_tb = err
-                        print(f"  Error on {pid}:\n{err_tb}")
-                        fail += 1
+                    if trace is None:
+                        failed.append(err)
+                        continue
+                    with lock:
+                        f.write(json.dumps(trace) + "\n")
+                        f.flush()
+                    ok += 1
+                    totals["calls"] += trace["calls"]
+                    totals["prompt_tokens"] += trace["prompt_tokens_total"]
+                    totals["completion_tokens"] += trace["completion_tokens_total"]
+                    totals["finish_length"] += trace["finish_length"]
+    for pid, tb in failed[:5]:
+        print(f"  failed {pid}:\n{tb}", file=sys.stderr)
+    counts = {"n_pool_cap": len(pool), "n_resumed": len(done), "n_ok": ok, "n_failed": len(failed),
+              "n_unreadable_lines": n_bad, "tokens": totals}
+    ctx.write_manifest(out_dir, "traces", timer=timer, models={"teacher": ctx.model},
+                       config={"traces": t.model_dump(), "protocol": ctx.protocol.model_dump()},
+                       engines={"teacher": engine.settings()}, outputs=[out_path], counts=counts,
+                       extra={"status": "incomplete" if failed else "complete"})
+    print(f"traces: {ok} written, {len(failed)} failed -> {out_path}", flush=True)
+    if failed:
+        raise SystemExit(f"{len(failed)} prompts failed; run the stage again to retry them")
+    return counts
 
-    print(f"\nDone: {ok} ok, {fail} failed -> {out_path}")
-    rmf.write_manifest(rmf.manifest_path_for(out_path), rmf.build_manifest(
-        "generate",
-        config={**vars(args), "protocol": protocol},
-        models={"teacher": (args.model, args.model_revision)},
-        engines={"teacher": {**engine_ctx.settings(), "concurrency": GEN_CONCURRENCY}},
-        inputs=list(args.dataset_files or []) + [str(DATA_DIR / f"{n}.jsonl") for n in (args.datasets or [])]
-               + list(args.exclude_ids or []),
-        outputs=[out_path],
-        counts={"n_prompts_this_run": len(examples), "n_resumed": len(done_ids),
-                "n_ok": ok, "n_failed": fail},
-        extra={"protocol": protocol, "ablate_component": args.ablate_component},
-    ))
+
+def main(argv=None) -> int:
+    args = stage_parser(__doc__.splitlines()[0]).parse_args(argv)
+    run(context_from_args(args))
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

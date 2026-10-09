@@ -1,7 +1,6 @@
-# Inference env (.venv-infer): vLLM serving for generate_traces.py,
-# filter_traces.py, eval_healthbench.py, eval_epistemic.py,
-# regrade_cross_family.py and contamination_probe.py. rebuttal/launch/*.sh run
-# these with INFER_PY (default .venv-infer/bin/python).
+# Inference env (.venv-infer): vLLM serving for the probe, traces, filter, eval,
+# grade and bench stages (bodhi_lora/pipeline/). The runner starts them with
+# python.infer of configs/project.yaml (default .venv-infer/bin/python).
 #
 # vllm: the submitted eval image asked for vllm>=0.6.5,<0.10
 # (legacy/modal_eval.py:73) and the rebuttal requirements for >=0.9.0,<0.10.
@@ -19,7 +18,7 @@ torch==2.7.0
 # the posted .venv-infer was not recorded.
 transformers>=4.51.1,<4.54
 bodhi-llm[all]==0.1.4
-# bitsandbytes serves a 4-bit base (EVAL_BASE_QUANT=match). The vLLM 0.9.2
+# bitsandbytes serves a 4-bit base (eval.base_precision: train on a QLoRA cell). The vLLM 0.9.2
 # bitsandbytes docs ask for >=0.46.1.
 bitsandbytes>=0.46.1,<0.48; sys_platform == "linux"
 datasets>=2.18.0,<4.0.0

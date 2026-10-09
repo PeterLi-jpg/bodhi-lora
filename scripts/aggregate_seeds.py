@@ -57,7 +57,7 @@ Usage
 
     python scripts/aggregate_seeds.py \\
         --seed-dirs eval/seed_* \\
-        --healthbench data/raw/healthbench_hard.jsonl \\
+        --healthbench data/raw/healthbench/hard.jsonl \\
         --output eval/multi_seed_summary.json
 """
 

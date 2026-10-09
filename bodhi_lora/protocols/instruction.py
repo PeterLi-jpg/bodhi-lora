@@ -1,16 +1,18 @@
-"""Inference-time prompt baselines for the eval.
+"""Prompt protocols (impl key instruction): one instruction block, one call.
 
-Each baseline adds one instruction block to the unchanged base model at eval
-time. Nothing is trained. eval_healthbench.py runs them with --baseline, on the
-same eval prompts and with the same graders as the 2x2, so a baseline row is
-directly comparable with the base and LoRA rows of the same cell.
+A prompt protocol adds the record's instructions to the conversation, here as the
+inference-time baselines on the unchanged base (conditions such as base+clarify).
+Nothing is trained. They run on the same eval prompts and with the same graders as
+every other condition, so a baseline row compares with the base and LoRA rows of the
+same cell prompt by prompt. The instruction texts live in the protocol records; the two
+baselines so far:
 
 clarify
     Tells the model to ask short clarifying questions when facts that would
     change the advice are missing. This is the cheapest way to get context
     seeking without training.
 
-verbalized_confidence
+verbalized-confidence
     Tells the model to state its confidence in words and as a number, and to
     name what would change its answer. This follows the verbalized-confidence
     setup of Lin et al. (2022), "Teaching Models to Express Their Uncertainty
@@ -20,23 +22,8 @@ verbalized_confidence
     confidence in the main advice.
 """
 
-BASELINE_PROMPTS = {
-    "clarify": (
-        "You are answering a health question. If facts that would change your "
-        "advice are missing, ask the person for them with short, direct "
-        "questions. Ask before you give advice that depends on those facts. "
-        "If you can give safe general advice now, give it, and say how the "
-        "answers to your questions would change it. If no key facts are "
-        "missing, answer directly and do not ask questions."
-    ),
-    "verbalized_confidence": (
-        "You are answering a health question. Give your best answer. Then, on "
-        "a new line, state how confident you are that your main advice is "
-        "correct and safe for this person, in words and as a number from 0 to "
-        "100, in this form: \"Confidence: fairly confident (70/100)\". After "
-        "that, name the facts that would most change your answer."
-    ),
-}
+from bodhi_lora.protocols.base import CallLog, Decoding, Output, Protocol
+from bodhi_lora.registry.schema import ModelConfig, ProtocolConfig
 
 PLACEMENTS = ("system", "first_user")
 
@@ -49,9 +36,8 @@ def apply_instructions(messages, instructions, placement="system"):
     instructions go before its text.
 
     placement="first_user" puts the instructions at the top of the first user
-    turn. Use it for chat templates that raise on a system message
-    (system_role: false in configs/families.yaml, for example BioMistral).
-    Gemma 3 templates do the same merge themselves.
+    turn, for chat templates that raise on a system message (system_role: false
+    in the model record). Some templates do the same merge themselves.
     """
     if placement not in PLACEMENTS:
         raise ValueError(f"placement={placement!r}; use one of {PLACEMENTS}")
@@ -66,3 +52,20 @@ def apply_instructions(messages, instructions, placement="system"):
             m["content"] = f"{instructions}\n\n{m['content']}"
             return msgs
     raise ValueError("first_user placement needs at least one user message")
+
+
+class Instruction(Protocol):
+    """The record's instructions, placed where the model's chat template accepts them."""
+
+    kind = "prompt"
+
+    def __init__(self, protocol: ProtocolConfig, model: ModelConfig):
+        self.id = protocol.id
+        self.instructions = protocol.instructions
+        self.placement = "system" if model.chat_template.system_role else "first_user"
+
+    def respond(self, engine, messages: list, decoding: Decoding) -> Output:
+        log = CallLog(engine, decoding, logprobs=True)
+        text = log.chat(apply_instructions(messages, self.instructions, self.placement))
+        return log.output(text, metadata={"instruction_placement": self.placement},
+                          token_logprobs=log.last.token_logprobs)

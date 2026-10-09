@@ -47,12 +47,14 @@ starting; it left no folder). `rebuttal/results/cell_recipe.json` records each o
   returned 404 on 2026-10-08 (section 7). The early committed adapter comes from an HF-path
   run, not from the evaluated adapters.
 - The paper's hyperparameter table for this cell lists the full recipe that ran.
-- `02ac9a3:configs/lora_medgemma27b.yaml` and `configs/lora_medgemma27b_qlora.yaml` are configs
-  for the GPU path (r=16, alpha=32). They did not train the submitted adapters.
+- `02ac9a3:configs/lora_medgemma27b.yaml` and `02ac9a3:configs/lora_medgemma27b_qlora.yaml`
+  were configs for the GPU path (r=16, alpha=32). They did not train the submitted
+  adapters. The cell record `configs/cells/healthbench__medgemma-27b-text__bodhi__2026-05.yaml`
+  holds the recipe that did, as far as the repo shows it.
 
 ### Added cells
 
-All three configs use LoRA r=16, alpha=32, dropout 0.05 on `q,k,v,o,gate,up,down_proj`,
+All three recipes use LoRA r=16, alpha=32, dropout 0.05 on `q,k,v,o,gate,up,down_proj`,
 3 epochs, effective batch 16, learning rate 1e-4 with a cosine schedule and 5% warmup,
 and maximum sequence length 4,096. The synced `adapter_config.json` and
 `trainer_state.json` of all 35 adapters of the seven cells confirm rank, alpha, dropout,
@@ -61,11 +63,15 @@ evaluated adapter in `ckpt/best/` is the epoch checkpoint with the lowest valida
 (`load_best_model_at_end` in `bodhi_lora/pipeline/train.py`): epoch 1, 2 or 3, depending on the
 cell and seed.
 
-| Config | Base model | Training precision | Eval precision | Batch per device x accumulation |
+| Cell records (train block) | Base model | Training precision | Eval precision | Batch per device x accumulation |
 |---|---|---|---|---|
-| `rebuttal/configs/lora_mistral_small_24b_qlora.yaml` | `mistralai/Mistral-Small-24B-Instruct-2501` | 4-bit NF4 QLoRA, bf16 compute | bf16 base | 2 x 8 |
-| `rebuttal/configs/lora_med42_8b.yaml` | `m42-health/Llama3-Med42-8B` | bf16 | bf16 | 4 x 4 |
-| `rebuttal/configs/lora_biomistral7b.yaml` | `BioMistral/BioMistral-7B` | bf16 | bf16 | 4 x 4 |
+| `configs/cells/*__mistral-small-24b__bodhi__2026-07.yaml` | `mistralai/Mistral-Small-24B-Instruct-2501` | 4-bit NF4 QLoRA, bf16 compute | bf16 base | 2 x 8 |
+| `configs/cells/*__med42-8b__bodhi__2026-07.yaml` | `m42-health/Llama3-Med42-8B` | bf16 | bf16 | 4 x 4 |
+| `configs/cells/healthbench__biomistral-7b__bodhi__2026-07.yaml` | `BioMistral/BioMistral-7B` | bf16 | bf16 | 4 x 4 |
+
+The recipes were the files `61dada9:rebuttal/configs/lora_mistral_small_24b_qlora.yaml`,
+`61dada9:rebuttal/configs/lora_med42_8b.yaml` and `61dada9:rebuttal/configs/lora_biomistral7b.yaml`;
+the cell records copy every value, and a check on 2026-10-08 compared them field by field.
 
 The Mistral-Small-24B adapter is trained on a 4-bit base and served on a bf16 base.
 The MedGemma cell has no such mismatch.
@@ -89,7 +95,7 @@ The MedGemma cell has no such mismatch.
   peft 0.19.1, trl 0.11.4, bodhi-llm 0.1.4). `bash setup.sh` installs it and runs
   `pip check`.
 - Inference: a second env, `.venv-infer`, for vLLM 0.9.2, which needs an older
-  transformers. `run_cell.sh` calls `.venv-infer/bin/python` for generation, grading
+  transformers. The runner calls `.venv-infer/bin/python` for generation, grading
   and eval. `requirements-infer.txt` pins it. The env that produced the posted cells
   was not frozen (KNOWN_ISSUES).
 - Hardware for an added cell: one H100 80GB per seed. `rebuttal/PLAN.md` estimated 8 to
@@ -100,49 +106,51 @@ The MedGemma cell has no such mismatch.
 
 ## 5. Run
 
-Run one added cell. The seven paper cells use these MODEL, CONFIG and BENCH values:
+Every cell is a record in `configs/cells/`, and `python -m bodhi_lora run` runs it
+(`bodhi_lora/pipeline/runner.py`). The runner writes the cell's pools and per-seed eval
+ids, then runs the stages in order: traces, filter (grading), the leakage gate, and per
+seed the filter split, training, the eval of each condition and the grading. A stage
+whose manifest says complete is skipped, so a run resumes where it stopped.
 
 ```bash
-MODEL=mistralai/Mistral-Small-24B-Instruct-2501 \
-CONFIG=rebuttal/configs/lora_mistral_small_24b_qlora.yaml \
-BENCH=healthbench SEEDS="42 7 13 99 101" \
-bash rebuttal/launch/run_cell.sh
+python -m bodhi_lora run <cell id> --gpus 0,1,2,3,4    # one seed per GPU
+python -m bodhi_lora run <cell id> --dry-run           # print the GPU commands; CPU stub for the rest
+python -m bodhi_lora run <cell id> --stages grade      # judge re-grades only, also on a recorded cell
 ```
 
-| MODEL | CONFIG | BENCH |
-|---|---|---|
-| `mistralai/Mistral-Small-24B-Instruct-2501` | `rebuttal/configs/lora_mistral_small_24b_qlora.yaml` | `healthbench`, `chatdoctor`, `medquad`, `medqa` |
-| `m42-health/Llama3-Med42-8B` | `rebuttal/configs/lora_med42_8b.yaml` | `healthbench`, `chatdoctor` |
-| `BioMistral/BioMistral-7B` | `rebuttal/configs/lora_biomistral7b.yaml` | `healthbench` |
-
-`run_cell.sh` builds the benchmark JSONL if needed, generates and filters once, trains
-and evaluates each seed on a free GPU, and aggregates. Output goes to
-`results_rebuttal/<bench>__<model>/`. `rebuttal/launch/run_grid.sh` lists every cell of
-the table above. After each run, `bodhi_lora/manifest.py` records the resolved config, git commit
-and dirty flag, library versions, model revisions and adapter hash.
+The model stages run as subprocesses in the two environments of `configs/project.yaml`
+(`.venv` for training, `.venv-infer` for vLLM), each pinned to one GPU with its own vLLM
+port. The seven 2026-07 cells and the 2026-05 cell are records of past runs: the runner
+refuses to run them again, so their outputs never mix with new ones, and a new run of the
+same design is a new cell. `61dada9:rebuttal/launch/run_cell.sh` is the launcher the
+2026-07 cells ran; their records hold its settings.
 
 Check on the first run of a new base model:
 
-- Mistral masking: the Mistral configs set `data.response_template: "[/INST]"`. The
-  collator warns if the template is missing from an example, which would mean loss on
-  prompt tokens.
+- Masking: a model whose chat template has no assistant header to detect needs
+  `chat_template.response_template` in its record (`[/INST]` for the Mistral models).
+  The collator warns if the template is missing from an example, which would mean loss
+  on prompt tokens.
 - BioMistral chat template: `apply_chat_template` must work. If not, take the template
   from `mistralai/Mistral-7B-Instruct-v0.1`.
-- New benchmarks: `bodhi_lora/data/loaders.py` stops if it writes 0 rows.
+- New benchmarks: `bodhi_lora/data/loaders.py` stops if it builds 0 rows.
 
 The submitted cell needs TPU quota, a GCS bucket and a Modal account, and costs money.
 Its launchers in `legacy/` are kept to document what ran, not as the path to use.
 
 ## 6. What each stage writes
 
-| Stage | Script | Output |
+Each stage writes into `results/<cell id>/` (docs/ARCHITECTURE.md section 6), with a
+`manifest.json` in every stage folder.
+
+| Stage | Module | Output |
 |---|---|---|
-| 1 Generate | `bodhi_lora/pipeline/traces.py` | `raw_traces.jsonl`: prompt_id, messages, response, tags, model |
-| 2 Grade and filter | `bodhi_lora/pipeline/filter.py` | `train.jsonl`, `val.jsonl`, `graded.jsonl` with a `grade` field per trace |
-| 3 Train | `bodhi_lora/pipeline/train.py` | adapter in `ckpt/best/`, `trainer_state.json` |
-| 4 Eval | `bodhi_lora/pipeline/eval.py` | one JSON per condition: per-prompt score, rubric results, parse failures |
-| 5 Epistemic grade | `bodhi_lora/grading/epistemic.py` | `epistemic_scores.json`: per-prompt scores on the seven behaviors |
-| Aggregate | `scripts/aggregate_seeds.py` | `multi_seed_summary.json`. The copies from the GPU host predate 55f6c7c: they list the seeds as `["eval"]` (a wrong glob) and hold one seed. They are gitignored and unused; `make cells` recomputes from the per-seed files |
+| Prepare | `bodhi_lora/pipeline/runner.py` | `shared/inputs/`: pools, eval ids per seed, leakage report |
+| Traces | `bodhi_lora/pipeline/traces.py` | `results/<cell>/shared/traces/traces.jsonl`: prompt_id, messages, reply, protocol, calls, tokens |
+| Filter | `bodhi_lora/pipeline/filter.py` | `results/<cell>/shared/filter/graded.jsonl` (a `grade` per trace), `kept.jsonl`, and the train/val split (shared or per seed) |
+| Train | `bodhi_lora/pipeline/train.py` | `seed_<n>/train/`: adapter, `trainer_state.json`, `checkpoint-<k>/` |
+| Eval | `bodhi_lora/pipeline/eval.py` | `results/<cell>/seed_<n>/eval/<condition>.json`: per-prompt reply, rubric score and results, parse failures, calls, tokens |
+| Grade | `bodhi_lora/pipeline/grade.py` | `results/<cell>/seed_<n>/grade/epistemic__<evaluator>.json`, and `judge__<judge>.json` per judge |
 
 The normalized rubric score is `(earned - negative) / (positive - negative)`, so it is
 comparable across prompts with different penalty items.

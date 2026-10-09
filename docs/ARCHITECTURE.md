@@ -13,7 +13,7 @@ results folder and its own analysis. The result is not general:
 
 - **Two launch paths and six result locations.** The submitted MedGemma-27B cell ran
   through `legacy/modal_eval.py` into `results_modal/`. The cells added in the
-  discussion ran through `rebuttal/launch/run_cell.sh` into `results_rebuttal/`. A pilot
+  discussion ran through `02ac9a3:rebuttal/launch/run_cell.sh` into `results_rebuttal/`. A pilot
   run sits in the ignored `results/seed_42/`, analysis outputs in `rebuttal/results/`,
   and copied scores in `data/derived/` and `data/rebuttal_cells/`.
 - **Analysis special-cases one cell.** `scripts/paper_stats.py` computes the full
@@ -24,12 +24,12 @@ results folder and its own analysis. The result is not general:
 - **Conditions are code, not data.** `scripts/aggregate_seeds.py` knows four BODHI
   condition names, so a cell run with `PROTOCOL=ask_first` cannot be aggregated.
 - **Names and paths are literals in code.** The cell table in
-  `rebuttal/launch/run_grid.sh`, the benchmark case statement in
-  `rebuttal/launch/_common.sh`, the model tokens in `scripts/paper_stats.py`, the
+  `02ac9a3:rebuttal/launch/run_grid.sh`, the benchmark case statement in
+  `02ac9a3:rebuttal/launch/_common.sh`, the model tokens in `scripts/paper_stats.py`, the
   dataset-keyed row builders in `02ac9a3:scripts/build_benchmark_jsonl.py`, and
   `DATA_DIR = Path("data/raw")` in three scripts.
-- **Settings live in four places.** `configs/*.yaml`, `rebuttal/configs/*.yaml`, the
-  `PROFILE` blocks of `rebuttal/launch/_common.sh`, and script flag defaults.
+- **Settings live in four places.** `configs/*.yaml`, `02ac9a3:rebuttal/configs/`, the
+  `PROFILE` blocks of `02ac9a3:rebuttal/launch/_common.sh`, and script flag defaults.
 - **A name collision.** The installed `bodhi-llm` package imports as `bodhi`
   (`02ac9a3:scripts/_bodhi_ablation.py` does `from bodhi import BODHIConfig`). A repo-root
   package named bodhi would hide it. The package is therefore `bodhi_lora/`, after
@@ -97,8 +97,8 @@ The grader-family rule (`family_problems()`, convention 5 in
 
 ### 3.2 Examples
 
-These show the shape. The foundation lane copies the values from `configs/families.yaml`,
-`rebuttal/configs/*.yaml`, `rebuttal/launch/_common.sh` and `legacy/README.md`, and checks
+These show the shape. The foundation lane copies the values from `02ac9a3:configs/families.yaml`,
+`02ac9a3:rebuttal/configs/`, `02ac9a3:rebuttal/launch/_common.sh` and `legacy/README.md`, and checks
 each against its source. Together with the records they reference (the graders, the
 `bodhi` protocol), the examples pass `load_registry()` as written.
 
@@ -575,7 +575,7 @@ the analysis code on fixtures and synthetic tables only.
 
 | Path | Keeps | Leaves |
 |---|---|---|
-| `rebuttal/` | The review record: `rebuttal/responses/posted/`, `rebuttal/responses/drafts/`, `rebuttal/withdrawals.md`, `rebuttal/commitments.md`, `rebuttal/posted_values.json` (moved from `data/rebuttal_cells/`), `rebuttal/README.md`, `rebuttal/PLAN.md`, `rebuttal/COVERAGE.md` | `rebuttal/launch/`, `rebuttal/configs/`, `rebuttal/analyses/` and `rebuttal/results/` go (code into the package, settings into cell records, outputs superseded). `rebuttal/analyses/FINDINGS_quality_drop.md` moves to `rebuttal/responses/drafts/` as an unposted internal note; `rebuttal/prior_work_candidates.bib` moves to `paper/`. |
+| `rebuttal/` | The review record: `rebuttal/responses/posted/`, `rebuttal/responses/drafts/`, `rebuttal/withdrawals.md`, `rebuttal/commitments.md`, `rebuttal/posted_values.json` (moved from `data/rebuttal_cells/`), `rebuttal/README.md`, `rebuttal/PLAN.md`, `rebuttal/COVERAGE.md` | `02ac9a3:rebuttal/launch/`, `02ac9a3:rebuttal/configs/`, `rebuttal/analyses/` and `rebuttal/results/` go (code into the package, settings into cell records, outputs superseded). `rebuttal/analyses/FINDINGS_quality_drop.md` moves to `rebuttal/responses/drafts/` as an unposted internal note; `rebuttal/prior_work_candidates.bib` moves to `paper/`. |
 | `legacy/` | The launcher, trainer, exporter, config and eval script of the 2026-05 cell, the old lock file, and `README.md`. `scripts/prefetch_gemma_safetensors.py` joins them, because the TPU launcher used it. | Nothing else. The 2026-07 launcher is cited by commit (`61dada9:rebuttal/launch/run_cell.sh`), not copied. |
 | `scripts/` | Repository tools that are not pipeline steps: `check_doc_paths.py`, `check_no_secrets.sh`, `check_paper_macros.py`, `export_anonymous.sh`, `scripts/maintenance/`, `gpu_lease.sh` (host tool, the package never calls it), the physician sheet tools `make_irr_excel.py` and `make_tiebreaker_excel.py`, and the one-off `migrate_results.py`. | Every pipeline and analysis script (section 10). No shims: the Makefile and the CLI are the only entry points, and docs cite module paths. |
 | `paper/` | The paper source and `paper/generated/`. | Nothing. |
@@ -667,8 +667,8 @@ prompt template from before 035d85f; `medqa-open` is the template after it.
 | `data/rebuttal_cells/posted_values.json` | `rebuttal/posted_values.json` | moved |
 | `data/rebuttal_cells/README.md` | `rebuttal/README.md` (merged) | moved |
 | `data/raw/high_stakes_prompts.jsonl` (placeholder prompts) | archive | archived |
-| `configs/families.yaml` | `configs/models/*.yaml` | superseded |
-| `configs/lora_*.yaml`, `rebuttal/configs/*.yaml` | `train` blocks of `configs/cells/*.yaml` | superseded |
+| `02ac9a3:configs/families.yaml` | `configs/models/*.yaml` | superseded |
+| the old configs/lora_*.yaml files, `02ac9a3:rebuttal/configs/` | `train` blocks of `configs/cells/*.yaml` | superseded |
 | `checkpoints/` (ignored, smoke adapters) | archive | archived |
 
 The ignored copy in `../_remote_sync/results_rebuttal` stays where it is; the
@@ -693,10 +693,10 @@ a path it does not own asks the integrate lane.
 
 | Lane | Owns (writes) | Removes (git rm or git mv out) | Tests it owns |
 |---|---|---|---|
-| foundation (first, serial) | `bodhi_lora/{__init__,__main__,cli,paths,manifest}.py`, `bodhi_lora/registry/`, `bodhi_lora/engine/`, `configs/project.yaml`, `configs/models/`, the first version of `configs/benchmarks/`, `configs/protocols/` and `configs/cells/`, `requirements*.txt`, `tests/conftest.py` | `02ac9a3:scripts/run_manifest.py`, `02ac9a3:scripts/_vllm_engine.py`, `configs/families.yaml`, `configs/lora_*.yaml`, `rebuttal/configs/` | `tests/test_registry_*.py`, `tests/test_no_hardcode.py`, `tests/test_engine_*.py`, `tests/test_manifest_*.py` (from `test_pipeline_engine.py`, `test_pipeline_manifest.py`) |
-| data | `bodhi_lora/data/`, `configs/benchmarks/` (after foundation), `tests/fixtures/data/` | `02ac9a3:scripts/build_benchmark_jsonl.py`, `scripts/download_data.py`, `02ac9a3:scripts/make_bootstrap_eval_ids.py`, `02ac9a3:scripts/check_dataset_overlap.py` | `tests/test_data_*.py` (from `test_pipeline_benchmark.py`, `test_pipeline_overlap.py`, `test_make_bootstrap_eval_ids.py`) |
+| foundation (first, serial) | `bodhi_lora/{__init__,__main__,cli,paths,manifest}.py`, `bodhi_lora/registry/`, `bodhi_lora/engine/`, `configs/project.yaml`, `configs/models/`, the first version of `configs/benchmarks/`, `configs/protocols/` and `configs/cells/`, `requirements*.txt`, `tests/conftest.py` | `02ac9a3:scripts/run_manifest.py`, `02ac9a3:scripts/_vllm_engine.py`, `02ac9a3:configs/families.yaml`, the old configs/lora_*.yaml files, `02ac9a3:rebuttal/configs/` | `tests/test_registry_*.py`, `tests/test_no_hardcode.py`, `tests/test_engine_*.py`, `tests/test_manifest_*.py` (from `test_pipeline_engine.py`, `test_pipeline_manifest.py`) |
+| data | `bodhi_lora/data/`, `configs/benchmarks/` (after foundation), `tests/fixtures/data/` | `02ac9a3:scripts/build_benchmark_jsonl.py`, `02ac9a3:scripts/download_data.py`, `02ac9a3:scripts/make_bootstrap_eval_ids.py`, `02ac9a3:scripts/check_dataset_overlap.py` | `tests/test_data_*.py` (from `test_pipeline_benchmark.py`, `test_pipeline_overlap.py`, `test_make_bootstrap_eval_ids.py`) |
 | protocols | `bodhi_lora/protocols/`, `configs/protocols/` (after foundation), `tests/fixtures/protocols/` | `02ac9a3:scripts/baselines/`, `02ac9a3:scripts/_bodhi_ablation.py` | `tests/test_protocols_*.py` (from `test_bodhi_ablation.py`, `test_pipeline_baselines.py`) |
-| pipeline | `bodhi_lora/pipeline/`, `bodhi_lora/grading/`, `configs/cells/tiny-rubric__*.yaml`, `tests/fixtures/pipeline/` | the stage scripts (moved into `bodhi_lora/pipeline/` and `bodhi_lora/grading/` on 2026-10-08), `rebuttal/launch/`; the unused launchers and tools (`02ac9a3:gpu/`, `02ac9a3:slurm/`, `02ac9a3:scripts/preflight.py` and the others named in `scripts/README.md`) went on 2026-10-08 | `tests/test_pipeline_*.py`, `tests/test_grading_*.py` (from `test_filter_traces.py`, `test_eval_healthbench_skip.py`, `test_pure_logic.py`, `test_pipeline_{generate,filter,eval_dry_run,launch,regrade,train_manifest}.py`) |
+| pipeline | `bodhi_lora/pipeline/`, `bodhi_lora/grading/`, `configs/cells/tiny-rubric__*.yaml`, `tests/fixtures/pipeline/` | the stage scripts (moved into `bodhi_lora/pipeline/` and `bodhi_lora/grading/` on 2026-10-08), `02ac9a3:rebuttal/launch/`; the unused launchers and tools (`02ac9a3:gpu/`, `02ac9a3:slurm/`, `02ac9a3:scripts/preflight.py` and the others named in `scripts/README.md`) went on 2026-10-08 | `tests/test_pipeline_*.py`, `tests/test_grading_*.py` (from `test_filter_traces.py`, `test_eval_healthbench_skip.py`, `test_pure_logic.py`, `test_pipeline_{generate,filter,eval_dry_run,launch,regrade,train_manifest}.py`) |
 | analysis | `bodhi_lora/analysis/`, `bodhi_lora/report/`, `configs/report.yaml`, `paper/generated/`, macro names in `paper/main.tex` and `paper/checklist.tex`, `scripts/check_paper_macros.py`, `tests/fixtures/analysis/` | `scripts/{paper_stats,aggregate_seeds,aggregate_cross_seed,build_paper_figures,plot_epistemic_figures,plot_postprocessing,plot_training,plot_ushape,eval_ushape,rubric_diff,analyze_hedge_rate,_hedging_metric,grader_correlation,compute_irr_kappa,export_derived_inputs}.py`, `rebuttal/analyses/*.py` | `tests/test_analysis_*.py`, `tests/test_report_*.py` (from `test_stats_*.py`, `test_analyses_*.py`, `test_aggregate_seeds.py`, `test_plot_training.py`); removes `test_eval_ushape.py`, `test_rubric_diff.py`, `test_hedging_metric.py`, `test_analyze_hedge_rate.py` with their scripts |
 | migrate | `results/` (moves, `PROVENANCE.md`, `provenance.json`, historical manifests), `scripts/migrate_results.py`, `.gitignore`, `configs/cells/*__2026-*.yaml` (after foundation), `legacy/`, `rebuttal/README.md`, `rebuttal/posted_values.json`, `tests/fixtures/migrate/` | `results_modal/`, `results_rebuttal/`, `rebuttal/results/`, `data/derived/`, `data/rebuttal_cells/`, `data/irr_instructions/`, `data/raw/hard_200_sample_ids.json`, `data/raw/high_stakes_prompts.jsonl`; moves `rebuttal/analyses/FINDINGS_quality_drop.md`, `rebuttal/prior_work_candidates.bib`, `scripts/prefetch_gemma_safetensors.py` | `tests/test_migration_*.py` |
 | integrate (last, serial) | `Makefile`, `.github/workflows/`, `scripts/check_doc_paths.py`, `scripts/README.md`, `setup.sh`, `README.md`, `REPRODUCIBILITY.md`, `RESULTS.md`, `KNOWN_ISSUES.md`, `BLOCKED.md`, `contributions/`, `docs/` | `scripts/__init__.py` once `scripts/` holds tools only | runs every test; owns no new test file |

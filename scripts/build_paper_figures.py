@@ -104,7 +104,7 @@ def main() -> int:
         default="results_modal/cross_seed_aggregate.json",
     )
     parser.add_argument("--data-dir", default="results_modal")
-    parser.add_argument("--hb-hard", default="data/raw/healthbench_hard.jsonl")
+    parser.add_argument("--hb-hard", default="data/raw/healthbench/hard.jsonl")
     parser.add_argument(
         "--clean-legacy",
         action="store_true",

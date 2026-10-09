@@ -18,8 +18,9 @@ Required (tracked in git):
       Epistemic grader output, one row per graded completion.
 
 Optional (each table that needs one is skipped with a message if it is absent):
-  data/raw/healthbench_hard.jsonl          theme tags, difficulty, speaker tags (not in
-                                           git; setup.sh downloads it; make numbers
+  data/raw/healthbench/hard.jsonl          theme tags, difficulty, speaker tags (not in
+                                           git; python -m bodhi_lora fetch healthbench
+                                           downloads it; make numbers
                                            stops without it)
   data/derived/seed_7_filter_scores.json   filter scores of the seed-7 training split
                                            (tau table)
@@ -2070,7 +2071,7 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--results-dir", type=Path, default=ROOT / "results_modal")
     ap.add_argument("--out-dir", type=Path, default=ROOT / "paper" / "generated")
-    ap.add_argument("--healthbench", type=Path, default=ROOT / "data" / "raw" / "healthbench_hard.jsonl")
+    ap.add_argument("--healthbench", type=Path, default=ROOT / "data" / "raw" / "healthbench" / "hard.jsonl")
     # Small tracked copies of the scores in two large ignored files
     # (scripts/export_derived_inputs.py writes them).
     ap.add_argument("--filter-scores", type=Path,

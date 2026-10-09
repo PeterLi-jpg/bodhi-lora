@@ -5,9 +5,10 @@ dist/
 build/
 .pytest_cache/
 
-data/raw/*.jsonl
-# Per-seed eval draws; bodhi_lora/data/splits.py rebuilds them from the seed.
-data/raw/hard_seed_*.json
+# The data root: benchmark files that python -m bodhi_lora fetch downloads or builds,
+# one folder per benchmark.
+data/raw/*
+!data/raw/.gitkeep
 data/sft/*.jsonl
 data/sft/seed_*/
 data/sft/smoke/

@@ -39,7 +39,7 @@ import re
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
-HARD = REPO / "data" / "raw" / "healthbench_hard.jsonl"
+HARD = REPO / "data" / "raw" / "healthbench" / "hard.jsonl"
 SEED_DIRS = ["seed_7", "seed_13", "seed_42", "seed_99", "seed_101"]
 
 CONFIG_DISPLAY = {

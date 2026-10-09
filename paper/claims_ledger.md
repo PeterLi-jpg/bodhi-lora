@@ -16,7 +16,7 @@ Kinds:
   (the per-seed eval JSON and the host logs are gitignored; `make numbers` needs only the
   tracked files).
 - **computed, untracked input**: the macro comes from a file that git ignores. The only
-  such input left is `data/raw/healthbench_hard.jsonl`, a public download (`setup.sh`).
+  such input left is `data/raw/healthbench/hard.jsonl`, a public download (`python -m bodhi_lora fetch healthbench`).
   `make numbers` stops with a message when it is absent.
 - **posted**: the macro comes from `data/rebuttal_cells/posted_values.json`, a transcription
   of the OpenReview replies, and the paper quotes it as what was posted. Since the sync no
@@ -50,7 +50,7 @@ Inputs: `RM` is `results_modal/seed_*/` (the four `<condition>.json` files and
 | Claim | Macro(s) | Function | Source | Kind |
 |---|---|---|---|---|
 | The two passes overran the context on 4.3% of prompts | `\statCompletionDropPctBaseCoT` | `counts_and_failures` | RM | computed |
-| 40 of 1,000 Hard prompts tagged as written by a health professional; 63 carry the tag (lower bound) | `\statHardHealthProfessional`, `\statHardSpeakerTagged`, `\statHardPrompts` | `speaker_tags`, `difficulty_range` | `data/raw/healthbench_hard.jsonl` (`physician_agreed_category` tags) | computed; HealthBench is a public download |
+| 40 of 1,000 Hard prompts tagged as written by a health professional; 63 carry the tag (lower bound) | `\statHardHealthProfessional`, `\statHardSpeakerTagged`, `\statHardPrompts` | `speaker_tags`, `difficulty_range` | `data/raw/healthbench/hard.jsonl` (`physician_agreed_category` tags) | computed; HealthBench is a public download |
 | Posted 14 of 1,000 (Appendix H, as corrected); the committed keyword rule finds 4 of 667 evaluated prompts | `\statPostedClinicianPrompts`, `\statClinicianKeywordPrompts`, `\statMimicryEvalPrompts` | `generality_section`, `rebuttal_section` | PV; `rebuttal/results/mimicry_split.json` | posted (not reproduced; withdrawals W14); computed |
 | Four LoRA - Base effects with Holm-adjusted p <= 0.0065 | `\statScopeBoundingLoRAvsBasePHolm` (the largest of the four) | `compare_conditions` | RM | computed |
 | Active inquiry rises in 3 of 4 added cells; aggregate falls in all 4 | `\statCellsAddedAIRose`, `\statCellsAddedCompared`, `\statCellsAddedWithAggregate` | `generality_section` | GV | computed |
@@ -62,7 +62,7 @@ Inputs: `RM` is `results_modal/seed_*/` (the four `<condition>.json` files and
 | Claim | Macro(s) | Function | Source | Kind |
 |---|---|---|---|---|
 | 4,000 HealthBench prompts outside the Hard set | `\statFilterPool` | `tau_calibration` | constant `FILTER_POOL` (5,000 HealthBench minus 1,000 Hard; legacy launcher) | design |
-| Seed-7 training split: 2,816 traces, 0 in the Hard set | `\statFilterTrainNSeedSeven`, `\statTrainHardOverlapSeedSeven` | `tau_calibration` | `data/derived/seed_7_filter_scores.json` (scores copied from the ignored `data/sft_qwen_graded/seed_7_train.jsonl`), `data/raw/healthbench_hard.jsonl` | computed; HealthBench is a public download |
+| Seed-7 training split: 2,816 traces, 0 in the Hard set | `\statFilterTrainNSeedSeven`, `\statTrainHardOverlapSeedSeven` | `tau_calibration` | `data/derived/seed_7_filter_scores.json` (scores copied from the ignored `data/sft_qwen_graded/seed_7_train.jsonl`), `data/raw/healthbench/hard.jsonl` | computed; HealthBench is a public download |
 | tau = 0.4, r = 8, alpha = 16, 300 steps, 64 examples per step, 2,048 tokens | none | | `legacy/configs/lora_medgemma27b_tunix.yaml`, `legacy/tpu/launch_5seeds_tunix.sh` (Table hparams comments) | design; not checked against the saved adapters, because the GCS bucket returned 404 on 2026-10-08 (D1; BLOCKED.md item 3) |
 | Added cells: r = 16, alpha = 32 (section 3.3, Table F.2, Appendix J) | `\statCellsLoRARank`, `\statCellsLoRAAlpha` | `recipe_macros` | CR (the synced `adapter_config.json` of all 35 adapters) | computed |
 | 1,000 draws per condition cover 667 unique prompts; 271 repeat | `\statPromptEvaluations`, `\statUniquePrompts`, `\statRepeatedPrompts` | `counts_and_failures` | RM | computed |
@@ -109,7 +109,7 @@ Inputs: `RM` is `results_modal/seed_*/` (the four `<condition>.json` files and
 | Largest p of the four drops 0.016; each survives Holm over the 6 added cells not set aside (largest p_Holm 0.016), as posted | `\statCellsAddedDropPMax`, `\statCellsAddedDropPHolmMax`, `\statCellsHolmFamily` | `generality_section` | GV | computed (`rebuttal/results/quality_drop.json` gives the same tests with Holm over 7 cells) |
 | MedQA: Base asked in 99.0% to 100.0% of responses per graded seed; aggregate +0.018 [+0.003, +0.033]; the posted rise | `\statCellMedQAMistralBaseActiveInquirySeedMin`, `...SeedMax`, `\statCellMedQAMistralAggregateDiff`, `...DiffCI` | `generality_section` | GV | computed |
 | MedQA dimensions graded in 4 of 5 seeds | `\statCellMedQAMistralEpistemicSeeds`, `\statCellMedQAMistralSeeds` | `generality_section` | GV (`per_seed`) | computed |
-| Recipe and evaluation differences of the added cells | none | | `rebuttal/configs/*.yaml`, `rebuttal/launch/run_cell.sh`, `bodhi_lora/engine/vllm.py` (comments above Table hparams-cells) | design |
+| Recipe and evaluation differences of the added cells | none | | the train and eval blocks of `configs/cells/*__2026-07.yaml` (from `61dada9:rebuttal/configs/` and `61dada9:rebuttal/launch/run_cell.sh`), comments above Table hparams-cells | design |
 
 ## Results: CoT on the adapted model (section 4.3)
 
@@ -129,7 +129,7 @@ Inputs: `RM` is `results_modal/seed_*/` (the four `<condition>.json` files and
 | Claim | Macro(s) | Function | Source | Kind |
 |---|---|---|---|---|
 | Aggregate falls by 0.014 to 0.086 in the added cells outside the family | `\statCellsAddedDropMin`, `\statCellsAddedDropMax` | `generality_section` | GV | computed |
-| Baseline code exists and has not run | none | | `bodhi_lora/protocols/`, `rebuttal/launch/run_baselines.sh` | design |
+| Baseline code exists and has not run | none | | `bodhi_lora/protocols/`, the `clarify` and `verbalized-confidence` records in `configs/protocols/` | design |
 | Antidepressant example: Base asks nothing, LoRA asks about duration, intensity, sleep, appetite, energy, concentration and self-harm, and gives a crisis line | none (qualitative) | | `results_modal/seed_99/{base,lora}_no_wrapper.json` and `epistemic_scores.json`, prompt `2c915b71` | computed (read by hand; quoted in Appendix K) |
 | Table 4: prior approaches compared on what they change, inference cost, what they need and their target | none | | the cited papers | design (positioning, not a measurement) |
 | Second protocol implemented, not run | none | | `bodhi_lora/protocols/ask_first.py` | design |
@@ -145,7 +145,7 @@ Inputs: `RM` is `results_modal/seed_*/` (the four `<condition>.json` files and
 | Figure 1 labels: 4,000 prompts, 2,816 train in seed 7, r = 8, 250 to 300 steps, 200 of 1,000 prompts | Figure 1 | computed for the counts (`paper/figures/pipeline_standalone.tex` inputs `generated/numbers.tex`); design for r and steps | `make figures` rebuilds the PDF |
 | Every added cell on every dimension (Table J.3), MedQuAD specificity 1.71, 1.47, 1.33 | Appendix J, `tab_cell_dimensions.tex` | computed (GV; `\statCellMedQuADMistral<Cond><Dim>`; withdrawals W20, W21) | Settled by the sync |
 | Per-cell tau, graded, kept, train, val, steps, evaluated epoch (Table J.1); tau = 0.4 in every cell, no re-filter | Appendix J, `tab_cell_filter.tex`, `\statCellsTau`, `\statCellsRefilterLines` | computed (CR, from `logs/host/filter_*.log` and the synced trainer states) | Settled by the sync (PROV-3) |
-| Table F.2: rank, alpha, dropout, target modules, epochs, batch per device and accumulation of the added cells | `\statCellsLoRA*`, `\statCellsTrainEpochs`, `\statCellsEffectiveBatch`, `\statCellsBatchPerDevice*`, `\statCellsGradAccum*` | computed (CR, from the synced adapter and trainer files) | Settled by the sync; learning rate, schedule, sequence length and precision stay design values from `rebuttal/configs/*.yaml` |
+| Table F.2: rank, alpha, dropout, target modules, epochs, batch per device and accumulation of the added cells | `\statCellsLoRA*`, `\statCellsTrainEpochs`, `\statCellsEffectiveBatch`, `\statCellsBatchPerDevice*`, `\statCellsGradAccum*` | computed (CR, from the synced adapter and trainer files) | Settled by the sync; learning rate, schedule, sequence length and precision stay design values from the train blocks of `configs/cells/*__2026-07.yaml` |
 | Askers minus non-askers: positive in 3 of 4 cells, -0.002 in BioMistral-7B; Med42-8B -0.036 and -0.025 | Appendix J, `\statCellsAddedAskersGapPositive`, `\statCell<Cell>AskersGap` | computed (GV, `lora_askers_minus_non_askers`) | Settled by the sync |
 | Incomplete host runs: BioMistral-7B on MedQA, 1 seed, 40 traces, 3 steps, 10 prompts; MedGemma-27B on MedQA and MedQuAD and Gemma-2-9B on HealthBench-Hard stopped in trace generation | Appendix J, `\statRunMedQABioMistral<...>` | computed (CR) for the counts; the four runs from `cell_recipe.json` (`incomplete` in `numbers.json`) | |
 | Second grader on seed 42 (r = 0.42, rho = 0.35, 43 shared prompts) | Appendix H | computed (`data/derived/seed_42_qwen_grader_scores.json`, scores copied from the ignored `results/seed_42/eval/`) | Settled: `make derived` rebuilds the copy from the source files |

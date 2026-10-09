@@ -1,5 +1,6 @@
 #!/bin/bash
-# run this once after cloning, before submitting any slurm jobs
+# Run this once after cloning, inside the training virtualenv (.venv). It also builds
+# the vLLM env (.venv-infer) on Linux and downloads HealthBench to the data root.
 set -euo pipefail
 
 cd "$(dirname "$0")"
@@ -32,7 +33,7 @@ echo "=== setup ==="
 echo "python: $(command -v python)"
 python --version
 
-mkdir -p logs data/raw data/sft eval checkpoints
+mkdir -p data/raw
 
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
@@ -66,7 +67,7 @@ fi
 
 echo
 echo "=== data ==="
-python scripts/download_data.py
+python -m bodhi_lora fetch healthbench
 
 echo
 echo "ready"

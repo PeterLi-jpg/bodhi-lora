@@ -4,9 +4,15 @@ Finish [installation.md](installation.md) first.
 
 ## Smoke test
 
-`smoke.sh` and its GPU smoke config were removed on 2026-10-08. The smoke cell
-`configs/cells/tiny-rubric__tiny-random-llama__bodhi.yaml` replaces them: it runs every
-stage on the CPU with a tiny public model.
+```bash
+make smoke
+```
+
+This runs the smoke cell `configs/cells/tiny-rubric__tiny-random-llama__bodhi.yaml` on
+the CPU, in about two minutes: every stage of a cell, with the stub engine in place of
+vLLM and a tiny public model (`hf-internal-testing/tiny-random-LlamaForCausalLM`) trained
+for real. It needs no GPU and no token. The outputs go to `outputs/smoke/` (ignored by
+git). A failing stage stops the run and prints the end of its log.
 
 ## Real runs
 
@@ -15,15 +21,12 @@ section 5.
 
 ## One stage alone
 
-Evaluate an adapter that already exists:
+Every stage is a module with the same command line, so one stage of one seed can run by
+hand, for example the eval of one condition:
 
 ```bash
-python -m bodhi_lora.pipeline.eval \
-    --model google/medgemma-27b-text-it \
-    --lora-path checkpoints/best \
-    --sample-ids data/raw/hard_200_sample_ids.json \
-    --output eval/lora_no_wrapper.json
+python -m bodhi_lora.pipeline.eval --cell <cell id> --seed 42 --condition lora+bodhi
 ```
 
-Resume an interrupted generation with `bodhi_lora/pipeline/traces.py --resume-from <file>`;
-it skips the prompt ids it already wrote.
+A rerun of the traces or filter stage resumes: it skips the prompts it already wrote or
+graded. `python -m bodhi_lora run` skips every stage whose manifest says complete.

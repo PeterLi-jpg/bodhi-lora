@@ -1,8 +1,18 @@
 """The command line: python -m bodhi_lora <command>.
 
     list [models|benchmarks|protocols|cells] [--settings]
-        Print the registry. --settings prints, for cells, every setting that differs
-        between them, so a reader sees where the old runs depart from the new ones.
+        Print the registry. --settings prints every setting that differs between the
+        records, so a reader sees where the old runs depart from the new ones.
+    fetch <benchmark> ...
+        Download or build a benchmark's rows into the data root, checked against the
+        record's pins.
+    run <cell> [--stages traces,filter,...] [--seeds 42 7] [--gpus 0,1]
+               [--stub-engine | --dry-run] [--results-root DIR] [--force]
+        Run a cell (bodhi_lora/pipeline/runner.py). --stub-engine runs every stage on the
+        CPU with the stub engine and trains for real; --dry-run also prints the GPU
+        commands and skips training.
+    analyze, report
+        The uniform analysis and the paper report; the analysis lane builds them.
 
 Every command first loads and checks the whole registry, so a broken config fails here
 with every problem listed.
@@ -13,7 +23,7 @@ import argparse
 import json
 from pathlib import Path
 
-from bodhi_lora.paths import CONFIGS_DIR
+from bodhi_lora.paths import CONFIGS_DIR, project
 from bodhi_lora.registry import Registry, family_problems, load_registry
 
 KINDS = ("models", "benchmarks", "protocols", "cells")
@@ -93,6 +103,48 @@ def cmd_list(args, reg: Registry) -> int:
     return 0
 
 
+def cmd_fetch(args, reg: Registry) -> int:
+    from bodhi_lora.data import load_rows
+
+    proj = project(args.configs)
+    for bid in args.benchmarks:
+        if bid not in reg.benchmarks:
+            raise SystemExit(f"no benchmark {bid!r}; benchmarks are {sorted(reg.benchmarks)}")
+        rows = load_rows(reg.benchmarks[bid], proj.data_root, fetch=True)
+        print(f"{bid}: {len(rows)} rows in {proj.rel(proj.benchmark_dir(bid))}")
+    return 0
+
+
+def cmd_run(args, reg: Registry) -> int:
+    from bodhi_lora.pipeline.runner import STAGES, RunError, run_cell
+
+    stages = tuple(args.stages.split(",")) if args.stages else STAGES
+    gpus = [int(g) for g in args.gpus.split(",")] if args.gpus else []
+    mode = "dry_run" if args.dry_run else "stub" if args.stub_engine else "gpu"
+    try:
+        run_cell(reg, project(args.configs), args.cell, stages=stages, seeds=args.seeds, gpus=gpus,
+                 mode=mode, configs_dir=args.configs, results_root=args.results_root, force=args.force)
+    except RunError as e:
+        print(f"run refused or failed: {e}", flush=True)
+        return 1
+    return 0
+
+
+def cmd_analysis_lane(args, reg: Registry) -> int:
+    from bodhi_lora import analysis, report
+
+    try:
+        if args.command == "analyze":
+            analysis.analyze_cell(reg, "")
+        else:
+            report.report(reg, {}, Path("paper/generated"))
+    except NotImplementedError as e:
+        print(f"python -m bodhi_lora {args.command}: {e}. Until then, make numbers and "
+              "make figures write the paper's outputs.")
+        return 2
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(prog="python -m bodhi_lora", description=__doc__.split("\n\n")[0])
     ap.add_argument("--configs", type=Path, default=CONFIGS_DIR, help="the registry folder")
@@ -102,6 +154,26 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("kind", nargs="?", choices=KINDS)
     p.add_argument("--settings", action="store_true", help="print the settings that differ")
     p.set_defaults(func=cmd_list)
+
+    p = sub.add_parser("fetch", help="download or build benchmark rows")
+    p.add_argument("benchmarks", nargs="+")
+    p.set_defaults(func=cmd_fetch)
+
+    p = sub.add_parser("run", help="run a cell")
+    p.add_argument("cell")
+    p.add_argument("--stages", default=None, help="comma list; default every stage")
+    p.add_argument("--seeds", type=int, nargs="+", default=None, help="default every seed of the cell")
+    p.add_argument("--gpus", default=None, help="comma list of GPU indices, e.g. 0,1")
+    mode = p.add_mutually_exclusive_group()
+    mode.add_argument("--stub-engine", action="store_true")
+    mode.add_argument("--dry-run", action="store_true")
+    p.add_argument("--results-root", type=Path, default=None)
+    p.add_argument("--force", action="store_true", help="rerun stages whose manifest says complete")
+    p.set_defaults(func=cmd_run)
+
+    for name in ("analyze", "report"):
+        p = sub.add_parser(name, help="built by the analysis lane")
+        p.set_defaults(func=cmd_analysis_lane)
     return ap
 
 

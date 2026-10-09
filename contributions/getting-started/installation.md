@@ -28,11 +28,11 @@ HealthBench into `data/raw/`. On macOS, pip prints `Ignoring autoawq` and
 
 ## 3. Inference env
 
-`rebuttal/launch/run_cell.sh` runs generation, grading and eval with
+The runner (`python -m bodhi_lora run`) runs generation, grading and eval with
 `.venv-infer/bin/python`, a second env for vLLM 0.9.2, which needs an older transformers
 than training does. `requirements-infer.txt` pins it; the env behind the posted cells was
-not frozen (KNOWN_ISSUES). Point
-`INFER_PY` and `TRAIN_PY` at other interpreters if your envs live elsewhere.
+not frozen (KNOWN_ISSUES). If your envs live elsewhere, change `python.train` and
+`python.infer` in `configs/project.yaml`.
 
 ## 4. Hugging Face access
 

@@ -1,42 +1,30 @@
-"""Pretraining contamination probe (issue #72).
+"""Stage probe: contamination of the base model by the benchmark (issue #72).
 
-Feeds the base model the first N tokens of HealthBench Hard prompts and
-measures exact-completion / prefix-overlap rates against a PubMedQA
-medical-text baseline. If HealthBench Hard was in MedGemma-27B's
-pretraining corpus, we expect the HB rate to be significantly higher
-than the PubMedQA rate (Fisher exact test).
+    python -m bodhi_lora.pipeline.probe --cell <cell id> [--stub-engine]
 
-Usage (TPU/GPU pod, after merge):
-
-    python -m bodhi_lora.pipeline.probe \
-        --model google/medgemma-27b-text-it \
-        --n-prompts 100 \
-        --output eval/contamination_probe.json
-
-CPU box: --help and py_compile only. Actual probe needs 27B inference.
+The base model gets the first prefix_tokens tokens of a prompt and continues it
+greedily. A prompt counts as memorised when the continuation equals the prompt's next
+continuation_tokens tokens. The probe compares that rate on the cell's eval pool with
+the rate on control text from another benchmark (the cell's probe.control), by a
+two-sided Fisher exact test. Output: shared/probe/probe.json.
 """
+from __future__ import annotations
 
-import argparse
 import json
-import os
 import random
 import sys
-import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime, timezone
-from pathlib import Path
 
 import numpy as np
 from tqdm import tqdm
-from transformers import AutoTokenizer, set_seed
 
-from bodhi_lora import manifest as rmf
-from bodhi_lora.engine.vllm import VLLMEngine
+from bodhi_lora import manifest as mf
+from bodhi_lora.data import load_rows
+from bodhi_lora.engine import make_engine
+from bodhi_lora.pipeline.context import StageContext, context_from_args, stage_parser
 
-HEALTHBENCH_HARD_URL = (
-    "https://openaipublic.blob.core.windows.net/simple-evals/healthbench/"
-    "hard_2025-05-08-21-00-10.jsonl"
-)
+INTERPRETATION = ("p < 0.05 with a benchmark rate well above the control rate is evidence that "
+                  "the benchmark prompts were in the base model's pretraining data.")
 
 
 # ── pure helpers (unit-testable) ────────────────────────────────────────────
@@ -57,76 +45,11 @@ def compute_prefix_overlap_tokens(toks_a, toks_b) -> int:
 
 
 def extract_user_prompt_text(prompt_messages) -> str:
-    """Concatenate user-role content from a HealthBench prompt list.
-
-    HealthBench rows store `prompt` as [{role, content}, ...]. We pull
-    just the user turns and join with newlines so multi-turn prompts
-    flatten to a single string for tokenization.
-    """
+    """The user turns of a prompt, joined by newlines, so a multi-turn prompt
+    flattens to one string for tokenization."""
     return "\n".join(
         m["content"] for m in prompt_messages if m.get("role") == "user"
     )
-
-
-# ── data loaders ────────────────────────────────────────────────────────────
-
-def load_healthbench(path: Path) -> list:
-    """Load HealthBench Hard jsonl, downloading if missing."""
-    if not path.exists():
-        print(f"Downloading HealthBench Hard to {path}...")
-        path.parent.mkdir(parents=True, exist_ok=True)
-        urllib.request.urlretrieve(HEALTHBENCH_HARD_URL, path)
-    examples = []
-    with open(path) as f:
-        for line in f:
-            line = line.strip()
-            if line:
-                examples.append(json.loads(line))
-    return examples
-
-
-def load_pubmedqa(cache_path: Path) -> list:
-    """Load PubMedQA `pqa_artificial` questions, caching to a local jsonl.
-
-    On a network-enabled box we hydrate from HF `bigbio/pubmed_qa`, then
-    write a thin jsonl of {"question", "_source"} so subsequent runs are
-    offline. If both the HF load and the cache are unavailable, raise a
-    clear error pointing at the cache path.
-    """
-    if cache_path.exists():
-        rows = []
-        with open(cache_path) as f:
-            for line in f:
-                line = line.strip()
-                if line:
-                    rows.append(json.loads(line))
-        return rows
-
-    try:
-        from datasets import load_dataset
-    except ImportError as e:
-        raise RuntimeError(
-            f"datasets package missing AND no cache at {cache_path}. "
-            "Install datasets>=2.18.0 or pre-populate the cache."
-        ) from e
-
-    try:
-        ds = load_dataset("bigbio/pubmed_qa", "pqa_artificial", split="train")
-    except Exception as e:
-        raise RuntimeError(
-            f"Failed to load bigbio/pubmed_qa AND no cache at {cache_path}. "
-            "On a network-enabled box, run this script once to populate the "
-            "cache, then copy data/raw/pubmedqa_baseline.jsonl onto the "
-            "offline pod. Original error: " + repr(e)
-        ) from e
-
-    rows = [{"question": ex["question"], "_source": "pubmed_qa"} for ex in ds]
-    cache_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(cache_path, "w") as f:
-        for row in rows:
-            f.write(json.dumps(row) + "\n")
-    print(f"Cached {len(rows)} PubMedQA questions -> {cache_path}")
-    return rows
 
 
 # ── stats ───────────────────────────────────────────────────────────────────
@@ -235,8 +158,7 @@ def run_probe_set(name: str, prompts: list, tokenizer, engine, prefix_tokens: in
                   continuation_tokens: int, concurrency: int) -> dict:
     """Probe a list of (prompt_id, prompt_text) tuples concurrently.
 
-    Per-task try/except so a single HTTP failure doesn't kill the whole set,
-    same pattern as eval_healthbench.py.
+    Per-task try/except, so a single HTTP failure does not end the whole set.
     """
     samples = []
     n_skipped = 0
@@ -273,134 +195,62 @@ def run_probe_set(name: str, prompts: list, tokenizer, engine, prefix_tokens: in
     return aggregate(samples, n_skipped)
 
 
-# ── main ───────────────────────────────────────────────────────────────────
+def run(ctx: StageContext) -> dict:
+    from transformers import AutoTokenizer, set_seed
 
-INTERPRETATION = (
-    "p<0.05 with HB rate >> baseline rate is evidence of HealthBench Hard "
-    "contamination in MedGemma-27B pretraining."
-)
+    probe = ctx.cell.probe
+    if probe is None:
+        raise SystemExit(f"{ctx.cell.id} has no probe block")
+    out_dir = ctx.paths.shared("probe")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    timer = mf.Timer()
+    random.seed(probe.seed)
+    np.random.seed(probe.seed)
+    set_seed(probe.seed)
+    rng = random.Random(probe.seed)
+    rows = ctx.rows_by_id()
+    pool = sorted(ctx.pools().eval)
+    control_bench = ctx.reg.benchmarks[probe.control]
+    control = load_rows(control_bench, ctx.project.data_root, fetch=False)
+    for name, items in (("eval pool", pool), ("control", control)):
+        if len(items) < probe.n_prompts:
+            raise SystemExit(f"the {name} has {len(items)} rows; the probe needs {probe.n_prompts}")
+    bench_prompts = [(pid, extract_user_prompt_text(rows[pid].messages))
+                     for pid in rng.sample(pool, probe.n_prompts)]
+    control_prompts = [(r.prompt_id, extract_user_prompt_text(r.messages))
+                       for r in rng.sample(control, probe.n_prompts)]
+    tokenizer = AutoTokenizer.from_pretrained(ctx.model.hf_id, revision=ctx.model.revision,
+                                              **ctx.model.chat_template.tokenizer_kwargs)
+    engine = make_engine(ctx.model, serving=probe.serving, stub=ctx.stub,
+                         log_path=ctx.log_path("vllm_probe.log"))
+    with engine as eng:
+        bench_result = run_probe_set(ctx.bench.id, bench_prompts, tokenizer, eng, probe.prefix_tokens,
+                                     probe.continuation_tokens, probe.serving.concurrency)
+        control_result = run_probe_set(probe.control, control_prompts, tokenizer, eng, probe.prefix_tokens,
+                                       probe.continuation_tokens, probe.serving.concurrency)
+    b_hits = sum(1 for s in bench_result["samples"] if s["exact_match"])
+    c_hits = sum(1 for s in control_result["samples"] if s["exact_match"])
+    p_value, test_used = fisher_or_z(b_hits, bench_result["n"], c_hits, control_result["n"])
+    out = {"benchmark_id": ctx.bench.id, "control_id": probe.control, "model": ctx.model.hf_id,
+           "benchmark": bench_result, "control": control_result, "fisher_p_value": p_value,
+           "test_used": test_used, "settings": probe.model_dump(), "interpretation": INTERPRETATION}
+    path = out_dir / "probe.json"
+    path.write_text(json.dumps(out, indent=2))
+    counts = {"benchmark_hits": b_hits, "control_hits": c_hits, "n_per_set": probe.n_prompts,
+              "fisher_p_value": p_value}
+    ctx.write_manifest(out_dir, "probe", timer=timer, models={"base": ctx.model},
+                       engines={"base": engine.settings()}, outputs=[path], counts=counts,
+                       extra={"status": "complete"})
+    print(f"probe: {b_hits}/{bench_result['n']} benchmark, {c_hits}/{control_result['n']} control, "
+          f"p={p_value:.4g} ({test_used}) -> {path}", flush=True)
+    return counts
 
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--model", default="google/medgemma-27b-text-it")
-    parser.add_argument("--model-revision", default=None,
-                        help="HF commit of --model. Default: the pin in configs/families.yaml.")
-    parser.add_argument("--n-prompts", type=int, default=100,
-                        help="Per-set sample size (HB and PubMedQA each).")
-    parser.add_argument("--prefix-tokens", type=int, default=30)
-    parser.add_argument("--continuation-tokens", type=int, default=50)
-    parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--output", default="eval/contamination_probe.json")
-    parser.add_argument(
-        "--healthbench-data",
-        default="data/raw/healthbench_hard.jsonl",
-        help="Auto-downloads if missing.",
-    )
-    parser.add_argument(
-        "--pubmedqa-data",
-        default="data/raw/pubmedqa_baseline.jsonl",
-        help="Cache file; auto-populated from bigbio/pubmed_qa on first run.",
-    )
-    args = parser.parse_args()
-
-    # Same seed setup as generate_traces.py: covers random + numpy +
-    # transformers (vLLM is greedy here, but tokenizer init still benefits).
-    random.seed(args.seed)
-    np.random.seed(args.seed)
-    set_seed(args.seed)
-
-    rng = random.Random(args.seed)
-
-    hb_path = Path(args.healthbench_data)
-    pq_path = Path(args.pubmedqa_data)
-
-    hb_all = load_healthbench(hb_path)
-    pq_all = load_pubmedqa(pq_path)
-    print(f"Loaded {len(hb_all)} HealthBench Hard rows and "
-          f"{len(pq_all)} PubMedQA rows.")
-
-    if len(hb_all) < args.n_prompts:
-        raise RuntimeError(
-            f"HealthBench has only {len(hb_all)} rows; need {args.n_prompts}."
-        )
-    if len(pq_all) < args.n_prompts:
-        raise RuntimeError(
-            f"PubMedQA has only {len(pq_all)} rows; need {args.n_prompts}."
-        )
-
-    hb_sample = rng.sample(hb_all, args.n_prompts)
-    pq_sample = rng.sample(pq_all, args.n_prompts)
-
-    hb_prompts = [
-        (ex.get("prompt_id", i), extract_user_prompt_text(ex["prompt"]))
-        for i, ex in enumerate(hb_sample)
-    ]
-    pq_prompts = [(i, ex["question"]) for i, ex in enumerate(pq_sample)]
-
-    revision = rmf.effective_revision(args.model, args.model_revision)
-    tokenizer = AutoTokenizer.from_pretrained(args.model, revision=revision)
-    eval_concurrency = int(os.environ.get("EVAL_CONCURRENCY", "16"))
-
-    # Single base-model engine, no LoRA, no wrapper.
-    # The engine settings the probe always ran with.
-    engine_ctx = VLLMEngine(args.model, revision=revision, max_model_len=8192, max_num_seqs=64,
-                            request_timeout=180)
-    with engine_ctx as engine:
-        hb_result = run_probe_set(
-            "healthbench", hb_prompts, tokenizer, engine,
-            args.prefix_tokens, args.continuation_tokens, eval_concurrency,
-        )
-        pq_result = run_probe_set(
-            "pubmedqa", pq_prompts, tokenizer, engine,
-            args.prefix_tokens, args.continuation_tokens, eval_concurrency,
-        )
-
-    hb_hits = sum(1 for s in hb_result["samples"] if s["exact_match"])
-    pq_hits = sum(1 for s in pq_result["samples"] if s["exact_match"])
-    p_value, test_used = fisher_or_z(
-        hb_hits, hb_result["n"], pq_hits, pq_result["n"]
-    )
-
-    summary = {
-        "healthbench": hb_result,
-        "pubmedqa": pq_result,
-        "fisher_p_value": p_value,
-        "test_used": test_used,
-        "model": args.model,
-        "seed": args.seed,
-        "prefix_tokens": args.prefix_tokens,
-        "continuation_tokens": args.continuation_tokens,
-        "n_prompts_per_set": args.n_prompts,
-        "timestamp_utc": datetime.now(timezone.utc).isoformat(),
-        "interpretation": INTERPRETATION,
-    }
-
-    out = Path(args.output)
-    out.parent.mkdir(parents=True, exist_ok=True)
-    with open(out, "w") as f:
-        json.dump(summary, f, indent=2)
-    rmf.write_manifest(rmf.manifest_path_for(out), rmf.build_manifest(
-        "contamination_probe",
-        config=vars(args),
-        models={"base": (args.model, args.model_revision)},
-        engines={"base": {**engine_ctx.settings(), "concurrency": eval_concurrency}},
-        inputs=[hb_path, pq_path],
-        outputs=[out],
-        counts={"healthbench_hits": hb_hits, "pubmedqa_hits": pq_hits,
-                "n_per_set": args.n_prompts, "fisher_p_value": p_value},
-    ))
-
-    hb_rate = hb_result["exact_match_rate"]
-    pq_rate = pq_result["exact_match_rate"]
-    hb_rate_str = f"{hb_rate:.4f}" if hb_rate is not None else "n/a"
-    pq_rate_str = f"{pq_rate:.4f}" if pq_rate is not None else "n/a"
-    print(
-        f"\nHB exact_match_rate={hb_rate_str}  "
-        f"PubMedQA exact_match_rate={pq_rate_str}  "
-        f"p={p_value:.4g} ({test_used})  -> {out}"
-    )
+def main(argv=None) -> int:
+    args = stage_parser(__doc__.splitlines()[0]).parse_args(argv)
+    run(context_from_args(args))
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

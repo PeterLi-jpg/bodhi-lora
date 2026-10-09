@@ -82,11 +82,11 @@ jobs:
           EOF
 
       # A clean checkout must rebuild every committed paper number (audit REPRO-6).
-      # HealthBench is the one input not in git; download_data.py fetches it from
-      # OpenAI's public bucket, as setup.sh does.
+      # HealthBench is the one input not in git; fetch downloads it from OpenAI's public
+      # bucket and checks it against the sha256 pins of its record, as setup.sh does.
       - name: Rebuild the paper numbers from the checkout
         run: |
-          python scripts/download_data.py
+          python -m bodhi_lora fetch healthbench
           make numbers
           git diff --exit-code paper/generated
           python scripts/check_paper_macros.py

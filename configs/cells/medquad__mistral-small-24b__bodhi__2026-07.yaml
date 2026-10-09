@@ -1,4 +1,4 @@
-# A cell added in the 2026-07 discussion. It ran rebuttal/launch/run_cell.sh at 61dada9;
+# A cell added in the 2026-07 discussion. It ran 61dada9:rebuttal/launch/run_cell.sh;
 # legacy/README.md section 7 lists how its settings differ from the 2026-05 cell.
 id: medquad__mistral-small-24b__bodhi__2026-07
 benchmark: medquad
