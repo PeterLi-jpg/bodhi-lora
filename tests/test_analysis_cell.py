@@ -106,20 +106,36 @@ def test_seed_level_test_and_holm_family(reg, tmp_path):
         pytest.fail("no dimension with spread in the synthetic table")
 
 
-def test_a_seed_without_a_value_is_not_measured(reg, tmp_path):
+def test_a_seed_without_a_value_leaves_the_seed_level_statistics(reg, tmp_path):
+    """docs/ANALYSIS_PLAN.md 2.3: the seeds that remain carry the statistic, the degrees
+    of freedom fall, and the output names the missing seed."""
     table = synthetic_table(reg.cells[SMOKE])
     # Seed 2's lora replies all fail their dimension grade.
     hit = (table["seed"] == 2) & (table["condition"] == "lora")
     table.loc[hit, "epi_status"] = "parse_failure"
     table.loc[hit, list(EPISTEMIC)] = np.nan
     out = run(reg, table, tmp_path)
-    assert "seed(s) [2]" in out["conditions"]["active_inquiry"]["lora"]["not_measured"]
-    assert "not_measured" in out["contrasts"]["lora - base"]["metrics"]["active_inquiry"]
+    summary = out["conditions"]["active_inquiry"]["lora"]
+    assert summary["per_seed"]["2"] is None and summary["seeds_missing"] == [2] and summary["n_seeds"] == 2
+    seed_means = table[table["condition"] == "lora"].groupby("seed")["active_inquiry"].mean()
+    assert summary["seed_mean"] == pytest.approx(seed_means.loc[[1, 3]].mean())
+    r = out["contrasts"]["lora - base"]["metrics"]["active_inquiry"]
+    assert r["n_seeds"] == 2 and r["df"] == 1 and r["seeds_missing"] == [2]
     # The worst case counts the failed grades at the undesirable end instead.
     worst = out["worst_case"]["active_inquiry"]["contrasts"]["lora - base"]
     assert worst["df"] == 2
     # The rubric score does not depend on the dimension grade.
     assert out["contrasts"]["lora - base"]["metrics"]["rubric_score"]["df"] == 2
+
+
+def test_a_condition_with_no_seed_left_is_not_measured(reg, tmp_path):
+    table = synthetic_table(reg.cells[SMOKE])
+    hit = table["condition"] == "lora"
+    table.loc[hit, "epi_status"] = "parse_failure"
+    table.loc[hit, list(EPISTEMIC)] = np.nan
+    out = run(reg, table, tmp_path)
+    assert "not_measured" in out["conditions"]["active_inquiry"]["lora"]
+    assert out["contrasts"]["lora - base"]["metrics"]["active_inquiry"]["n_seeds"] == 0
 
 
 def test_absent_inputs_say_why(reg, tmp_path):

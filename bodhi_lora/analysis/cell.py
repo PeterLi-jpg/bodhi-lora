@@ -4,11 +4,13 @@ The same code runs on every cell. A statistic is absent only when its input is a
 (no grades, no labels, no tokenizer, a field an older file lacks), and the output then
 says "not measured" with the reason. Nothing here names a cell, a model or a benchmark.
 
-Statistical unit (decision D7): the seed. A seed-level summary or test needs a value in
-every seed of the cell; a seed without one (for example a seed whose dimension grading
-found none of its prompts) makes the statistic not measured, and the per-seed values
-still show which seed is missing. Pooled numbers are descriptive, with intervals from
-one prompt-clustered bootstrap per cell (stats.ClusterBootstrap).
+Statistical unit (decision D7): the seed. A seed-level summary or test uses the seeds
+that have a value (for a contrast, in both conditions); a seed without one (for example
+a seed whose dimension grading found none of its prompts) leaves it, the degrees of
+freedom fall, n_seeds and seeds_missing say so, and the per-seed values show the gap
+(docs/ANALYSIS_PLAN.md section 2.3). With fewer than two seeds there is no interval and
+no test. Pooled numbers are descriptive, with intervals from one prompt-clustered
+bootstrap per cell (stats.ClusterBootstrap).
 
 Contrasts come from the cell's conditions by rule: every condition minus base; lora
 minus base+<protocol>; lora+<protocol> minus lora; lora minus each base+<baseline>
@@ -148,26 +150,30 @@ def _missing_seeds(values, seeds) -> list[int]:
 
 
 def summarize(values: np.ndarray, seeds: list[int], pooled: pd.Series) -> dict:
-    """Seed-level summary of one metric in one condition."""
+    """Seed-level summary of one metric in one condition, over the seeds with a value."""
     missing = _missing_seeds(values, seeds)
+    have = np.asarray([v for v in values if np.isfinite(v)], dtype=float)
     out = {"per_seed": {str(s): _f(v) for s, v in zip(seeds, values)},
-           "pooled_mean": _f(pooled.mean()) if len(pooled) else None, "n_pooled": int(pooled.count())}
-    if missing or not seeds:
+           "pooled_mean": _f(pooled.mean()) if len(pooled) else None, "n_pooled": int(pooled.count()),
+           "n_seeds": int(len(have)), "seeds_missing": missing}
+    if not len(have):
         out.update({"seed_mean": None, "seed_sd": None, "seed_ci95_t": [None, None],
                     "not_measured": f"no value in seed(s) {missing}" if missing else "no seeds"})
         return out
-    mean, lo, hi = st.t_interval(values)
-    out.update({"seed_mean": _f(mean), "seed_sd": _f(np.std(values, ddof=1)) if len(values) > 1 else None,
+    mean, lo, hi = st.t_interval(have)
+    out.update({"seed_mean": _f(mean), "seed_sd": _f(np.std(have, ddof=1)) if len(have) > 1 else None,
                 "seed_ci95_t": [_f(lo), _f(hi)]})
     return out
 
 
 def paired(sm: pd.DataFrame, a: str, b: str, seeds: list[int]) -> dict:
+    """Seed-level paired test a - b over the seeds where both conditions have a value."""
     va, vb = sm[a].to_numpy(dtype=float), sm[b].to_numpy(dtype=float)
     missing = sorted(set(_missing_seeds(va, seeds)) | set(_missing_seeds(vb, seeds)))
-    if missing:
-        return {"not_measured": f"no value in seed(s) {missing}"}
+    if len(missing) == len(seeds):
+        return {"not_measured": f"no value in seed(s) {missing}", "n_seeds": 0, "seeds_missing": missing}
     r = st.paired_test(va, vb)
+    r["seeds_missing"] = missing
     if r["n_seeds"] < 2:
         r["not_measured_test"] = "one seed: no interval and no test"
     return r
@@ -259,7 +265,8 @@ def worst_case_section(d: CellData, metrics: list[Metric], pairs) -> dict:
         if m.worst is None:
             continue
         sm = d.seed_means(d.frame(m, worst_case=True))
-        res[m.key] = {"conditions": {c: _f(sm[c].mean()) if not sm[c].isna().any() else None for c in d.conditions},
+        # pandas mean skips the seeds without a value, as summarize() does.
+        res[m.key] = {"conditions": {c: _f(sm[c].mean()) if sm[c].notna().any() else None for c in d.conditions},
                       "contrasts": {contrast_key(a, b): paired(sm, a, b, d.seeds) for a, b in pairs}}
     return res
 

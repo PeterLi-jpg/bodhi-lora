@@ -615,7 +615,9 @@ absent (no labels, no judge files, a field a legacy file lacks), and then the ou
 **Statistical unit (D7).** The seed. For each seed and condition, a dimension's value is
 the mean over scored responses, and the rubric score is the mean over completions. Every
 test pairs conditions within a seed: mean difference, t interval with n_seeds - 1 degrees
-of freedom (t(4) with five seeds), two-sided paired t. Pooled response-level numbers are
+of freedom (t(4) with five seeds), two-sided paired t. A seed with no value (for example
+a seed whose grading found none of its prompts) leaves the statistic, the degrees of
+freedom fall, and the output names the seed (ANALYSIS_PLAN.md section 2.3). Pooled response-level numbers are
 descriptive, with prompt-clustered bootstrap intervals (5,000 resamples, fixed seed),
 because a prompt can appear in several seeds' draws.
 
