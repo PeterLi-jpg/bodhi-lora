@@ -1,0 +1,50 @@
+{
+  "cell": "healthbench__medgemma-27b-text__bodhi__2026-05",
+  "completions": {
+    "base": 200,
+    "base+bodhi": 191,
+    "lora": 200,
+    "lora+bodhi": 191
+  },
+  "grade": {
+    "counts": {
+      "base": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "base+bodhi": {
+        "examples": 190,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 1
+      },
+      "lora": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "lora+bodhi": {
+        "examples": 184,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 7
+      }
+    },
+    "file": "results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_101/grade/epistemic__llama-3.1-8b.json",
+    "present": true
+  },
+  "n_examples": {
+    "base": 200,
+    "base+bodhi": 200,
+    "lora": 200,
+    "lora+bodhi": 200
+  },
+  "seed": 101,
+  "sources": {
+    "results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_101/eval/base+bodhi.json": "6140d860af71c0b82f49377ddf44239b46d9a628c6ddb747a6cd3943cfd8ab9b",
+    "results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_101/eval/base.json": "ada1cc35f9adb55c3217e1f52749a2e1dbea24fd3179b7812c0a581618fee324",
+    "results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_101/eval/lora+bodhi.json": "3df19df8d1c08b92e23addb823e557609e715068b5bd3b3de20e4447a0730d1b",
+    "results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_101/eval/lora.json": "fe6fa19da3b5c935ce33213e1dbc79d2e363d53cedd1c947588656a9deb14d4a",
+    "results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_101/grade/epistemic__llama-3.1-8b.json": "0b8675bc6b60eb87dd85c21f291b796317c254a12fd7acc635fa4cc7454bbfb4"
+  },
+  "tokenizer": "tokenizer.json of google/medgemma-27b-text-it at 5b667cf2ddcf064085bc90952edb35a0edbfb79c is not in the local Hugging Face cache (fetch it with: huggingface-cli download google/medgemma-27b-text-it tokenizer.json --revision 5b667cf2ddcf064085bc90952edb35a0edbfb79c)"
+}
