@@ -82,9 +82,9 @@ Short labels for each concern. The full text is in the OpenReview thread and in
 **P1. Dated analysis plan.** Answers MR-F, HomM-final (claims built during the
 discussion), convention 3. Fix the metrics, unit, tests, correction families, contrasts,
 label definitions and any margin before a new run, and before a new statistic is computed
-on existing outputs. BLOCKED.md item 5 has the proposed defaults. GPU: no. Status: to
-write (the first author's methodology call). Everything below that is "to run", and E02,
-depends on it.
+on existing outputs. GPU: no. Status: drafted as [ANALYSIS_PLAN.md](ANALYSIS_PLAN.md)
+(proposed, 2026-10-08); the first author adopts or changes it. Everything below that is
+"to run", and E02, depends on it.
 
 **P2. Citation check before submission.** The program chairs' checker flagged 0 of 22
 references. Run the `.bib` check again on the resubmission bibliography. GPU: no.
@@ -167,7 +167,7 @@ HomM-W3. Re-grade the stored outputs of `healthbench__med42-8b__bodhi__2026-07` 
 family (Gemma-2-27B by default; MedGemma-27B is the clinical choice). Report per-criterion
 kappa against the evaluator and the LoRA minus Base contrasts under the judge. The dagger
 stays. GPU: yes, about 2 to 5 H100-hours per cell, under 1 with the dimensions only
-(BLOCKED.md item 7). Code: `bodhi_lora/pipeline/grade.py`, dry-run tested. Status: to
+([RUN_PLAN.md](RUN_PLAN.md) R1). Code: `bodhi_lora/pipeline/grade.py`, dry-run tested. Status: to
 run.
 
 **E10. Clinical-judge robustness panel.** Answers C26, LxMF-3, HomM-Q4, HomM-W3,
@@ -180,7 +180,7 @@ evaluator, weighted kappa on the 0 to 2 dimensions, Pearson r of the rubric scor
 every contrast recomputed. It does not replace the evaluator. Cells: every existing cell
 and every new one. GPU: yes, about 1 to 5 H100-hours per judge and cell. Status: to build
 (judge lists in the grade stage), then to run. Meditron3-8B has no pinned revision yet
-(BLOCKED.md item 12), and Aloe-Beta-8B has no model record yet.
+(BLOCKED.md, "Hugging Face facts"), and Aloe-Beta-8B has no model record yet.
 
 **E11. Contamination probe for every base model and benchmark.** Answers EVAL-12,
 NUM-7. Does the base complete benchmark prompts verbatim more often than a control text?
@@ -207,7 +207,7 @@ for each baseline, because a prompt can raise asking without targeting it. Cells
 new cell (E13, E16, E25); optional on the 2026-07 cells, which pair with their stored
 Base rows only if the grader repo and the serving settings match the cell record. GPU:
 yes, about 2 to 3 H100-hours per 24-27B cell for the two single-pass baselines
-(BLOCKED.md item 6), more with the two-pass one. Status: two exist (dry-run tested), one
+([RUN_PLAN.md](RUN_PLAN.md) R2), more with the two-pass one. Status: two exist (dry-run tested), one
 to build; all to run.
 
 **E14. MediQ paired probe: calibration against mimicry.** Answers MR-W4, LxMF-2 directly.
@@ -481,6 +481,11 @@ Summed from the rows, Tier A comes to roughly 65 to 115 H100-hours, and Tiers A 
 to roughly 115 to 170. On the shared host this has no meter; at an on-demand rate of 2 to
 4 dollars per H100-hour, Tier A is roughly 130 to 460 dollars. Nothing runs before the
 first author's go-ahead (open decision O6).
+
+[RUN_PLAN.md](RUN_PLAN.md) orders these runs and estimates each one again from the
+measured stage times of the 2026-07 cells. Where its figures differ from the rows above,
+RUN_PLAN.md holds. The largest difference is the labelled cells, which evaluate 775
+prompts per seed.
 
 ## 5. Coverage
 
