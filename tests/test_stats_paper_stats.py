@@ -406,7 +406,9 @@ def test_every_cell_gets_the_same_statistics(tmp_path):
     # MedGemma, Mistral HB, BioMistral, ChatDoctor Mistral, MedQuAD Mistral; all but
     # BioMistral raise active inquiry and context-seeking after Holm.
     assert (k["all"], k["added"], k["outside"], k["outside_ask_rose"]) == (8, 7, 5, 4)
-    assert k["added_kept"] == 6
+    # The red-flag counts of LoRA+BODHI against LoRA leave out the Med42-8B cells (D6):
+    # Mistral HB, BioMistral, ChatDoctor Mistral and MedQuAD Mistral. Only MedQuAD rises.
+    assert (k["added_outside"], k["added_red_flag_cot_fell"], k["added_red_flag_cot_rose"]) == (4, 0, 1)
     assert (k["same_family"], k["set_aside"]) == (2, 1)
     bio = next(c for c in u["cells"] if c["id"] == "healthbench__biomistral-7b")
     assert (bio["dims_rose"], bio["dims_fell"]) == (0, 0)

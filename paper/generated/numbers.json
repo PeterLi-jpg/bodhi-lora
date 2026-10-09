@@ -17450,9 +17450,9 @@
       "outside_red_flag_rose": 4,
       "outside_scope_rose": 4,
       "outside_dim_fell": 2,
-      "added_kept": 6,
+      "added_outside": 4,
       "added_red_flag_cot_fell": 0,
-      "added_red_flag_cot_rose": 2,
+      "added_red_flag_cot_rose": 1,
       "added_base_ai_sd_min": 0.273861,
       "added_base_ai_sd_max": 2.13307
     }

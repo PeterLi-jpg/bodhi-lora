@@ -1694,10 +1694,11 @@ def uniform_section(posted: dict, generated: dict, out, macros) -> dict:
         cells.append(rec)
 
     # Counts the text states. "Outside": base model outside the evaluator's family and
-    # not set aside, the submitted cell included (D6). "Added kept": the added cells that
-    # are not set aside.
+    # not set aside, the submitted cell included (D6). "Added outside": the same without
+    # the submitted cell. The paper leaves the same-family cells out of every count across
+    # cells, so no count here includes them.
     outside = [c for c in cells if not c["same_family_as_evaluator"] and not c["set_aside"]]
-    added_kept = [c for c in cells if c["id"] != MAIN_CELL_ID and not c["set_aside"]]
+    added_outside = [c for c in outside if c["id"] != MAIN_CELL_ID]
     added = [c for c in cells if c["id"] != MAIN_CELL_ID]
 
     def rose(c, metric, ctok="LoRAvsBase"):
@@ -1715,10 +1716,11 @@ def uniform_section(posted: dict, generated: dict, out, macros) -> dict:
         "outside_red_flag_rose": sum(rose(c, "red_flag") for c in outside),
         "outside_scope_rose": sum(rose(c, "scope_bounding") for c in outside),
         "outside_dim_fell": sum(c["dims_fell"] > 0 for c in outside),
-        "added_kept": len(added_kept),
+        "added_outside": len(added_outside),
         # LoRA+BODHI minus LoRA on red-flag identification: the drop of the submitted cell.
-        "added_red_flag_cot_fell": sum(_p_sig(c["contrasts"]["LoRACoTvsLoRA"]["red_flag"], -1) for c in added_kept),
-        "added_red_flag_cot_rose": sum(rose(c, "red_flag", "LoRACoTvsLoRA") for c in added_kept),
+        "added_red_flag_cot_fell": sum(_p_sig(c["contrasts"]["LoRACoTvsLoRA"]["red_flag"], -1)
+                                       for c in added_outside),
+        "added_red_flag_cot_rose": sum(rose(c, "red_flag", "LoRACoTvsLoRA") for c in added_outside),
         "added_base_ai_sd_min": min(base_ai_sd, default=None),
         "added_base_ai_sd_max": max(base_ai_sd, default=None),
     }
@@ -1738,11 +1740,12 @@ def uniform_section(posted: dict, generated: dict, out, macros) -> dict:
                f"{what}: scope bounding higher under LoRA than Base, Holm p < {ALPHA}")
     macros.add("CellsOutsideDimFell", fmt_int(counts["outside_dim_fell"]),
                f"{what}: at least one dimension lower under LoRA than Base, Holm p < {ALPHA}")
-    macros.add("CellsAddedKept", fmt_int(counts["added_kept"]), "added cells that are not set aside")
+    added_what = "added cells outside the evaluator's family, not set aside"
+    macros.add("CellsAddedOutside", fmt_int(counts["added_outside"]), added_what)
     macros.add("CellsAddedRedFlagCoTFell", fmt_int(counts["added_red_flag_cot_fell"]),
-               f"added cells not set aside: red flag lower under LoRA+CoT than LoRA, paired t p < {ALPHA}")
+               f"{added_what}: red flag lower under LoRA+CoT than LoRA, paired t p < {ALPHA}")
     macros.add("CellsAddedRedFlagCoTRose", fmt_int(counts["added_red_flag_cot_rose"]),
-               f"added cells not set aside: red flag higher under LoRA+CoT than LoRA, Holm p < {ALPHA}")
+               f"{added_what}: red flag higher under LoRA+CoT than LoRA, Holm p < {ALPHA}")
     if base_ai_sd:
         macros.add("CellsAddedBaseAISDMin", fmt(counts["added_base_ai_sd_min"], 1),
                    f"{SRC_SYNCED}: smallest cross-seed SD of Base active inquiry in the added cells (points)")

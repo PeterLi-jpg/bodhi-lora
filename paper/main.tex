@@ -520,8 +520,8 @@ that the adapter and the protocol compete for capacity.
 
 The drop does not repeat in the added cells. There, red-flag identification under LoRA+\bodhi{}
 is lower than under LoRA with $p < 0.05$ in \statCellsAddedRedFlagCoTFell{} of the
-\statCellsAddedKept{} cells that are not set aside, and higher with $p_{\text{Holm}} < 0.05$ in
-\statCellsAddedRedFlagCoTRose{} (Appendix~\ref{app:perseed}). These cells differ from the
+\statCellsAddedOutside{} added cells outside the evaluator's family, and higher with
+$p_{\text{Holm}} < 0.05$ in \statCellsAddedRedFlagCoTRose{} (Appendix~\ref{app:perseed}). These cells differ from the
 MedGemma-27B cell in base model, recipe and context length, so we cannot say why. We have not
 measured leakage in them (\S\ref{sec:future}). The adapter is meant to run without the protocol.
 
