@@ -59,7 +59,10 @@ of the plan's section 10, with no physician label read. For E02, add
 `needs-info-physician` to the `active_inquiry` entry of `discrimination` in
 `configs/report.yaml`, then run `make analyze` and `make numbers`. Also accept or change
 the post hoc `red-flag-at-stake` label and the escalation rule behind the over-flagging
-rates (KNOWN_ISSUES.md) before any text cites them. Then RUN_PLAN.md may start.
+rates (KNOWN_ISSUES.md) before any text cites them. The paper cites none of the new
+values yet: it reports format leakage, token counts and the discrimination index for the
+2026-05 cell only, and no over-flagging rate. Whether it should cite the added cells'
+values is your call. Then RUN_PLAN.md may start.
 
 ## 2. Go-ahead for GPU runs
 

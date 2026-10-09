@@ -522,8 +522,8 @@ The drop does not repeat in the added cells. There, red-flag identification unde
 is lower than under LoRA with $p < 0.05$ in \statCellsAddedRedFlagCoTFell{} of the
 \statCellsAddedOutside{} added cells outside the evaluator's family, and higher with
 $p_{\text{Holm}} < 0.05$ in \statCellsAddedRedFlagCoTRose{} (Appendix~\ref{app:perseed}). These cells differ from the
-MedGemma-27B cell in base model, recipe and context length, so we cannot say why. We have not
-measured leakage in them (\S\ref{sec:future}). The adapter is meant to run without the protocol.
+MedGemma-27B cell in base model, recipe and context length, so we cannot say why. We do not
+report leakage in them here (\S\ref{sec:future}). The adapter is meant to run without the protocol.
 
 %======================================================================
 \section{Discussion}
@@ -620,14 +620,14 @@ the MedGemma-27B cell. So a difference between the two can come from the setting
 from the base model or the benchmark. The Mistral-Small-24B adapters were trained against a 4-bit
 base and evaluated on the bfloat16 base. The Med42-8B cells share the evaluator's family, and the
 only MedQA run used a prompt that cues asking, so these cells do not test the recipe.
-\emph{Design.} Red-flag identification measures sensitivity only; we have no measure of
+\emph{Design.} Red-flag identification measures sensitivity only; we report no measure of
 over-flagging. The seeds vary training and the evaluation draw but not the teacher traces.
 Decoding was greedy. We ran no ablation over $\tau$, rank or data size, and no arm without the
 filter, so we cannot attribute any effect to the filter. We did not time training or inference per
 configuration on dedicated hardware. The MedGemma-27B adapters were not retained, so their LoRA
 configuration comes from the training code, and no saved file can confirm it.
-\emph{Analyses.} The leakage split, the token counts and the discrimination index exist for the
-MedGemma-27B cell only.
+\emph{Analyses.} We report the leakage split, the token counts and the discrimination index for
+the MedGemma-27B cell only.
 
 \subsection{Future Work}
 \label{sec:future}
@@ -645,7 +645,7 @@ first. (6) A clinical judge from a third model family on every cell, the Med42-8
 (7) Filter and teacher ablations, which test the BioMistral-7B hypothesis. (8) Clinician-posed
 prompts: the HealthBench prompts that physicians labelled as written by a health professional, and
 the NLM Clinical Questions Collection. We chose these open sets because MIMIC and eICU need
-credentialed access. Three analyses need only the outputs that exist: the discrimination index
+credentialed access. Three analyses need no new run: the discrimination index
 with the physicians' labels on every \hbhard{} cell, and format leakage and output tokens in the
 added cells.
 
