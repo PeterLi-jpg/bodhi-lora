@@ -6108,7 +6108,11 @@
    "value": 0.4
   }
  },
- "judges": {},
+ "judges": {
+  "phi-4": {
+   "not_measured": "no judge file in the cell's grade folders"
+  }
+ },
  "leakage": {
   "leak_bodhi__analysis-format": {
    "conditions": {
