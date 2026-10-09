@@ -1710,6 +1710,8 @@ def uniform_section(posted: dict, generated: dict, out, macros) -> dict:
     counts = {
         "all": len(cells),
         "added": len(added),
+        "same_family": sum(c["same_family_as_evaluator"] for c in cells),
+        "set_aside": sum(c["set_aside"] for c in cells),
         "outside": len(outside),
         "outside_ask_rose": sum(rose(c, "active_inquiry_pct") and rose(c, "context_seeking") for c in outside),
         "outside_red_flag_rose": sum(rose(c, "red_flag") for c in outside),
@@ -1726,6 +1728,9 @@ def uniform_section(posted: dict, generated: dict, out, macros) -> dict:
     what = "cells outside the evaluator's family, not set aside, submitted cell included"
     macros.add("CellsAll", fmt_int(counts["all"]), f"{SRC_SYNCED}: every cell, the submitted one included")
     macros.add("CellsAdded", fmt_int(counts["added"]), f"{SRC_SYNCED}: cells added after the submission")
+    macros.add("CellsSameFamily", fmt_int(counts["same_family"]),
+               f"{SRC_POSTED}: cells whose base model shares the evaluator's family (D6)")
+    macros.add("CellsSetAside", fmt_int(counts["set_aside"]), f"{SRC_POSTED}: cells set aside, with a reason")
     macros.add("CellsOutside", fmt_int(counts["outside"]), what)
     macros.add("CellsOutsideAskRose", fmt_int(counts["outside_ask_rose"]),
                f"{what}: active inquiry and context-seeking both higher under LoRA than Base, Holm p < {ALPHA}")

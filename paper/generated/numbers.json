@@ -17338,6 +17338,8 @@
     "counts": {
       "all": 8,
       "added": 7,
+      "same_family": 2,
+      "set_aside": 1,
       "outside": 5,
       "outside_ask_rose": 4,
       "outside_red_flag_rose": 4,

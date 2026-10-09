@@ -394,6 +394,7 @@ def test_every_cell_gets_the_same_statistics(tmp_path):
     # BioMistral raise active inquiry and context-seeking after Holm.
     assert (k["all"], k["added"], k["outside"], k["outside_ask_rose"]) == (8, 7, 5, 4)
     assert k["added_kept"] == 6
+    assert (k["same_family"], k["set_aside"]) == (2, 1)
     bio = next(c for c in u["cells"] if c["id"] == "healthbench__biomistral-7b")
     assert (bio["dims_rose"], bio["dims_fell"]) == (0, 0)
     assert _macro(tmp_path, "CellsOutsideAskRose") == "4"
