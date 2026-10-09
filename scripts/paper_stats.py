@@ -1493,9 +1493,6 @@ def generality_section(posted: dict, generated: dict | None, out, macros, recipe
         if _finite(agg.get("p_holm_over_cells")):
             macros.add(f"Cell{tok}AggregatePHolm", fmt_p(agg["p_holm_over_cells"]),
                        "Holm over the added cells with a test")
-        if _finite((cell.get("askers_gap") or {}).get("gap")):
-            macros.add(f"Cell{tok}AskersGap", fmt(cell["askers_gap"]["gap"], 3, sign=True),
-                       f"{SRC_SYNCED}: aggregate score of LoRA responses that ask minus those that do not")
         # A cell where some seeds have no epistemic grade (MedQA: seed 42's grading found
         # none of its prompts). Its seven-dimension means stay empty in the tables; the
         # text gives the seeds that have a grade and their range.
@@ -1671,7 +1668,8 @@ def uniform_section(posted: dict, generated: dict, out, macros) -> dict:
         seeds = [str(s) for s in g["seeds"]]
         rec = {"id": g["id"], "benchmark": m["benchmark"], "base_model": m["base_model"],
                "same_family_as_evaluator": m["same_family_as_evaluator"], "set_aside": m["set_aside"],
-               "seeds": g["seeds"], "conditions": {}, "contrasts": {}}
+               "seeds": g["seeds"], "conditions": {}, "contrasts": {},
+               "askers_gap": g.get("lora_askers_minus_non_askers")}
         vals = {}
         for cfg, gc in GV_COND.items():
             for metric in POSTED_METRIC:
@@ -1759,6 +1757,10 @@ def uniform_section(posted: dict, generated: dict, out, macros) -> dict:
                    f"{c['id']}: dimensions higher under LoRA than Base, Holm p < {ALPHA}")
         macros.add(f"Cell{tok}DimsFell", fmt_int(c["dims_fell"]),
                    f"{c['id']}: dimensions lower under LoRA than Base, Holm p < {ALPHA}")
+        if _finite((c["askers_gap"] or {}).get("gap")):
+            macros.add(f"Cell{tok}AskersGap", fmt(c["askers_gap"]["gap"], 3, sign=True),
+                       f"{SRC_SYNCED}: {c['id']} aggregate score of LoRA responses that ask minus those "
+                       "that do not, pooled over seeds")
         for ctok in UNIFORM_MACRO_CONTRASTS:
             for metric, (_, _, dp) in POSTED_METRIC.items():
                 r = c["contrasts"][ctok][metric]
