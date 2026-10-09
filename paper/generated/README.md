@@ -2,7 +2,8 @@
 
 `scripts/paper_stats.py` writes every file in this folder. Do not edit them by hand.
 To rebuild them, run `make numbers` from the repo root. Two runs on the same inputs
-give the same bytes.
+give the same bytes. Part of the output comes from `bodhi_lora.report`, which the script
+calls (section "The report of the uniform analysis" below).
 
 ## Files
 
@@ -26,6 +27,8 @@ Then replace the body of a table with `\input{generated/tab_<name>}`.
 | `<M>/validation/kappa_results.json` | yes | `tab_kappa`, `\statKappa*` |
 | `<M>/analysis/{interference_mechanism,mimicry_split,second_person_questions}.json` | yes | leakage, discrimination, odds ratio and second-person macros |
 | `<M>/analysis/stats.json` | yes (`make analyze`) | `\statTokensEngine*` |
+| `results/<cell>/analysis/stats.json`, every analyzed cell | yes (`make analyze`) | `tab_cell_<token>`, `tab_cross_cell_checks`, `\stat<token>*` |
+| `results/cross_cell/stats.json` | yes (`make analyze`) | `\statGroup*` |
 | `<M>/seed_7/filter/filter_scores.json` | yes | `tab_tau_calibration`, `\statFilter*`, `\statTrainHardOverlapSeedSeven` |
 | `results/cross_cell/generated_values.json` | yes (`make cells`) | `tab_cross_cell`, `tab_cell_detail_*`, `\statCell*`, `\statCells*` |
 | `results/cross_cell/cell_recipe.json` | yes (`make cells`) | `tab_cell_filter`, `\statCellsLoRA*`, `\statRun*` |
@@ -92,3 +95,58 @@ and stores the result in `numbers.json` under `generality.main_cell_check`.
 `\statTokensEngine<condition>` come from the `cost` section of the submitted cell's
 `analysis/stats.json`, which `make analyze` writes. The serving engine stored a token
 count for the one-pass conditions only, so the two-pass conditions have no macro.
+
+## The report of the uniform analysis
+
+`bodhi_lora.report` reads each analyzed cell's `analysis/stats.json` and
+`results/cross_cell/stats.json`, which `make analyze` writes from the tracked response
+tables. It treats every cell the same way. `make numbers` adds its macros to
+`numbers.tex`, its record to `numbers.json` under `uniform_report`, and these tables:
+
+- `tab_cell_<token>`: one per analyzed cell (the cells of `configs/report.yaml`
+  `statuses` with a `stats.json`). The rows are the seven dimensions, the aggregate
+  score, the harm proxy, the text rules, the label rates, the askers gap, format
+  leakage, reply length and tokens. The columns are each condition's mean of seed means,
+  then LoRA minus Base and LoRA minus Base+protocol, each with its 95% t half width and
+  its p (Holm over the seven dimensions for a dimension). The first row names the cell,
+  its seeds, a fixed prompt set, missing dimension grades, a family waiver and the reason
+  a cell is set aside. So the MedQA cell states in its own table that its preamble told
+  the model to ask.
+- `tab_cross_cell_checks`: one row per cell of `report.cross_cells`, with the columns of
+  `report.cross_table` in `configs/report.yaml`. Every cell gets every column; "--"
+  marks a value the cell does not have.
+
+Macro names start with the cell record's `report.token`, then the statistic:
+
+| Pattern | Value |
+|---|---|
+| `\stat<T>Seeds`, `\stat<T>Prompts`, `\stat<T>Completions<C>` | counts |
+| `\stat<T><Metric><C>` | mean of seed means of a metric in condition C |
+| `\stat<T><Metric><A>vs<B>Diff`, `...CI`, `...P`, `...PHolm`, `...Seeds` | A minus B over seeds: mean difference, 95% t interval, paired t p (Holm over the seven dimensions for a dimension), seed count when a seed is missing |
+| `\stat<T><Response><Label>PosRate<C>`, `...NegRate<C>`, `...Index<C>`, each with `CI` | rate of a 0/1 response on the label's positive and negative prompts, and their difference (pooled, prompt-clustered bootstrap interval) |
+| `\stat<T><Response><Label>NegRate<A>vs<B>Diff`, `CI`, `P` | the negative-group rate, A minus B over seeds |
+| `\stat<T>Leak<Protocol><Rule><C>` | share of scored replies that break a leak rule (%) |
+| `\stat<T>AskersGap<C>`, `CI` | aggregate score of replies that ask minus replies that do not |
+| `\stat<T>TokensEngine<C>`, `\stat<T>Tokens<A>vs<B>Pct`, `\stat<T>Chars<A>vs<B>Pct` | tokens the engine stored (one-pass conditions); length differences in percent |
+| `\statGroup<G>Cells`, `\statGroup<G><Metric><A>vs<B>Up`, `Down`, `Measured`, `PHolmMax` | counts over a group of `configs/report.yaml` |
+
+`<T>` is the cell token (for example `HBMistralJul`), `<C>` a condition (`Base`,
+`BaseBodhi`, `LoRA`, `LoRABodhi`), `<Metric>` a metric key in CamelCase
+(`ActiveInquiry`, `RubricScore`, `Escalation`, `SecondPersonQ`), `<Label>` a label id in
+CamelCase. A value the cell lacks has no macro, so a paper that uses one fails the macro
+check instead of printing a wrong number.
+
+The over-flagging rate of commitment C30 is
+`\stat<T>EscalationRedFlagAtStakeNegRate<C>`: the share of replies that mention
+emergency or urgent care, on prompts whose theme is not emergency referrals and whose
+rubric says nothing about urgency. Both the rule (`configs/report.yaml`,
+`text_features.escalation`) and the label (`configs/benchmarks/healthbench.yaml`,
+`red-flag-at-stake`) are post hoc, so these numbers are exploratory. The rule counts
+conditional and negated mentions too, so it is an upper bound on flags raised without
+cause.
+
+Token counts come from the model's own tokenizer, read from the local Hugging Face
+cache at the pinned revision. Only the Mistral-Small-24B tokenizer is in that cache
+now, so the MedGemma-27B, Med42-8B and BioMistral-7B cells have no tokenizer count; their
+one-pass conditions have the engine's count. The two-pass conditions stored only their
+final reply, so their token counts leave out the first pass.

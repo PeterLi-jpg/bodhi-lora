@@ -1803,6 +1803,28 @@ def _check_main_seed_means(vals: dict, seeds: list[str], conditions_res: dict) -
                                  f"has {v}, the raw outputs give {raw[s] * mult}; run make cells")
 
 
+def uniform_report(out, macros) -> dict[str, str]:
+    """The report of the uniform analysis (bodhi_lora.report): every analyzed cell's
+    macros, named by its record's report.token, its table, and the cross-cell table of the
+    checks that need no GPU, all from the cells' analysis/stats.json (make analyze).
+    Returns the tables."""
+    from bodhi_lora.analysis import report_config
+    from bodhi_lora.paths import project
+    from bodhi_lora.registry import load_registry
+    from bodhi_lora.report import report
+
+    configs = ROOT / "configs"
+    rep = report(load_registry(configs), report_config(configs), project(configs))
+    for name, value, source in rep.macros:
+        macros.add(name, value, source)
+    for rec in rep.record["cells"].values():
+        out["meta"]["inputs"][rec["stats"]] = rec["sha256"]
+    if rep.record["cross_cell"]:
+        out["meta"]["inputs"][rep.record["cross_cell"]["stats"]] = rep.record["cross_cell"]["sha256"]
+    out["uniform_report"] = rep.record
+    return rep.tables
+
+
 def cost_section(stats_path: Path, out, macros) -> None:
     """Output tokens per response, from the submitted cell's stats.json (make analyze).
 
@@ -2312,7 +2334,7 @@ CROSS_ANALYSES = ("cell_recipe.json", "quality_drop.json")
 def run(results_dir: Path, out_dir: Path, healthbench: Path | None, filter_scores: Path | None,
         kappa: Path | None, cell_analysis: Path | None, posted_values: Path | None,
         generated_values: Path | None = None, qwen_grader_scores: Path | None = None,
-        cross_cell: Path | None = None) -> dict:
+        cross_cell: Path | None = None, with_report: bool = True) -> dict:
     seeds = discover_seeds(results_dir)
     df = load_responses(results_dir, seeds)
     out: dict = {"meta": {"seeds": seeds, "conditions": list(CONDITIONS),
@@ -2394,7 +2416,9 @@ def run(results_dir: Path, out_dir: Path, healthbench: Path | None, filter_score
         if generated is not None:
             uniform_section(posted, generated, out, macros)
 
+    report_tables = uniform_report(out, macros) if with_report else {}
     tables = build_tables(out, seeds)
+    tables.update(report_tables)
 
     out_dir.mkdir(parents=True, exist_ok=True)
     # A table whose input went missing must not survive from an earlier run.
