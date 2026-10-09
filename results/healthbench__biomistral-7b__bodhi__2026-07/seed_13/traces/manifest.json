@@ -1,0 +1,19 @@
+{
+  "schema": 2,
+  "stage": "traces",
+  "cell": "healthbench__biomistral-7b__bodhi__2026-07",
+  "seed": 13,
+  "created_utc": "2026-10-09T08:55:18.040490+00:00",
+  "status": "not_kept",
+  "files": {},
+  "note": "teacher traces are shared by every seed",
+  "written_by": {
+    "script": "scripts/migrate_results.py --manifests",
+    "git": {
+      "sha": "4e3edce5962174602e3689dfc9bad7cc461ac636",
+      "dirty": true,
+      "diff_sha256": "89265271f50bcac6ae139a86d4d33dd6ce6f58a5a7af471b3eba2a6bd04757f3",
+      "n_untracked": 0
+    }
+  }
+}

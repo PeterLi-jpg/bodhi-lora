@@ -135,7 +135,8 @@ def test_t_interval_matches_table_1_lora_bodhi_row():
     ag = _import_aggregate_seeds()
     means = []
     for seed in (7, 13, 42, 99, 101):
-        with open(ROOT / "results_modal" / f"seed_{seed}" / "lora_bodhi.json") as f:
+        with open(ROOT / "results" / "healthbench__medgemma-27b-text__bodhi__2026-05"
+                  / f"seed_{seed}" / "eval" / "lora+bodhi.json") as f:
             means.append(json.load(f)["mean"])
     out = ag._aggregate_metric_across_seeds(means)
     assert round(out["ci_low"], 3) == 0.452
@@ -188,8 +189,13 @@ def _write_healthbench_jsonl(path, n_prompts=6):
     path.write_text("\n".join(json.dumps(r) for r in rows) + "\n")
 
 
+# The file each condition has in an eval folder.
+FILE = {"base_no_wrapper": "base", "base_bodhi": "base+bodhi",
+        "lora_no_wrapper": "lora", "lora_bodhi": "lora+bodhi"}
+
+
 def _write_seed_dir(seed_dir, score_per_config):
-    """Write the four CONFIG_NAMES JSONs into seed_dir.
+    """Write the four condition JSONs into seed_dir.
 
     score_per_config maps config name -> per-prompt score (constant for
     simplicity). The eval JSON shape mirrors what eval_healthbench.py
@@ -201,7 +207,7 @@ def _write_seed_dir(seed_dir, score_per_config):
         score = score_per_config[cfg]
         results = [{"prompt_id": f"p{i}", "score": score} for i in range(6)]
         payload = {"mean": score, "results": results}
-        (seed_dir / f"{cfg}.json").write_text(json.dumps(payload))
+        (seed_dir / f"{FILE[cfg]}.json").write_text(json.dumps(payload))
 
 
 def test_main_aggregates_across_three_seeds(tmp_path, monkeypatch, capsys):
@@ -267,7 +273,7 @@ def test_main_aborts_on_malformed_seed_json(tmp_path, monkeypatch):
         {"base_no_wrapper": 0.3, "base_bodhi": 0.4,
          "lora_no_wrapper": 0.5, "lora_bodhi": 0.6},
     )
-    bad_path = eval_root / "seed_2" / "base_no_wrapper.json"
+    bad_path = eval_root / "seed_2" / "base.json"
     bad_path.write_text("{this is not json")
 
     monkeypatch.setattr(sys, "argv", [

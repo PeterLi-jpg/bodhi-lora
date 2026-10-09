@@ -9,9 +9,9 @@ Issue numbers such as #5 are GitHub issues on `PeterLi-jpg/bohdi-lora`.
 ### Blocked on data outside the repo
 
 - **The added cells' full responses are not versioned (PROV-1).** The per-seed eval JSON
-  (about 370 MB) is in the local copy of `results_rebuttal/` and on the shared H100 host,
-  and it is gitignored. The repo tracks what the paper needs from it
-  (`data/rebuttal_cells/generated_values.json`) and the adapter configs, trainer states and
+  (about 370 MB) is in the local copy, in the `results/*__2026-07/` cells, and on the
+  shared H100 host, and it is gitignored. The repo tracks what the paper needs from it
+  (`results/cross_cell/generated_values.json`) and the adapter configs, trainer states and
   eval ids. Rebuilding `generated_values.json` needs the local copy (`make cells`).
 - **The submitted adapter config is not confirmed (HYG-4, D1).** Repo evidence says
   r=8, alpha=16. The GCS bucket that held the five submitted adapters returned 404 on
@@ -20,7 +20,7 @@ Issue numbers such as #5 are GitHub issues on `PeterLi-jpg/bohdi-lora`.
   `bohdi-data-cache`, which may still hold them (BLOCKED.md item 3).
 - **Returned physician grades are not in the repo (PROV-5, EVAL-5).** One of three
   raters returned. `scripts/compute_irr_kappa.py` read that file in place and wrote
-  `results_modal/irr/kappa_results.json`, which names no rater. Nobody else can
+  `results/healthbench__medgemma-27b-text__bodhi__2026-05/validation/kappa_results.json`, which names no rater. Nobody else can
   recompute it until the de-identified grades (grading_id to pass, fail or unsure) are
   committed. Strip the `physician_id` column first. Rater identities stay out of git.
 
@@ -44,7 +44,7 @@ Issue numbers such as #5 are GitHub issues on `PeterLi-jpg/bohdi-lora`.
   aggregate score, sets it aside and says why (withdrawals W12).
 - **MedQA seed 42 has no epistemic grades.** Its grading looked the prompts up in
   HealthBench-Hard only and skipped all 200 per condition
-  (`logs/host/eval_medqa_mistralai_Mistral-Small-24B-Instruct-2501_s42.log`); later seeds
+  (`results/medqa-open-preamble__mistral-small-24b__bodhi__2026-07/logs/eval_medqa_mistralai_Mistral-Small-24B-Instruct-2501_s42.log`); later seeds
   loaded the MedQA prompts. The cell's seven dimensions have four seeds.
 - **The two pipelines differ (REPRO-3).** Context length, server batch size, grader
   mirror, eval-prompt policy, trainer and hardware all differ between the submitted
@@ -73,7 +73,7 @@ Issue numbers such as #5 are GitHub issues on `PeterLi-jpg/bohdi-lora`.
   `requirements-infer.txt` gives the range and why; each eval JSON records only its
   transformers and bodhi-llm versions) and an overlap-check output (the gate came after
   these runs). The eval ids are synced: each non-HealthBench cell has its `eval_ids.json`,
-  and the HealthBench cells used `data/raw/hard_200_sample_ids.json`. New runs record all
+  and the HealthBench cells used `02ac9a3:data/raw/hard_200_sample_ids.json`. New runs record all
   of this in their manifests (`bodhi_lora/manifest.py`).
 - **The host's `multi_seed_summary.json` files are wrong.** They predate 55f6c7c and list
   their seeds as `["eval"]`, so each holds one seed. They are gitignored and unused;
@@ -121,8 +121,8 @@ Issue numbers such as #5 are GitHub issues on `PeterLi-jpg/bohdi-lora`.
   the rows from it, and `bodhi_lora/data/splits.py` draws the pool and the holdout with a
   seed. The head-of-file rule of the posted cells is the `head` split of their records.
 - **Leakage gate (EVAL-12, 838e0a9).** The runner runs `bodhi_lora/data/leakage.py` on
-  the graded traces of every cell before training and writes
-  `results/<cell>/shared/inputs/leakage.json`.
+  the graded traces of every cell before training and writes its report,
+  `leakage.json`, into the cell's shared inputs folder (`bodhi_lora/paths.py`).
 - **One record per cell.** `configs/cells/` lists every cell of the final grid, with the
   Med42-8B and ChatDoctor cells, and the runs that stopped early.
 - **Train/eval separation (CLAIM-11).** Older docs said training used Hard prompts. It

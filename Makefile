@@ -4,20 +4,23 @@
 #   make paper     both, then paper/build/main.pdf
 #   make test      the test suite
 #   make smoke     the smoke cell on the CPU: every stage, the tiny model trained for real
-#   make rebuttal  rebuttal/results/*.json from results_modal/
-#   make cells     rebuttal-cell values, paired tests, tau and recipe (needs the host copies)
-#   make kappa     results_modal/irr/kappa_results.json (needs RATER_FILES)
-#   make derived   data/derived/*.json from the large ignored files they copy scores from
+#   make rebuttal  the submitted cell's analysis/*.json (discrimination, leakage, questions)
+#   make cells     results/cross_cell/*.json: added-cell values, paired tests, tau and recipe
+#                  (needs the ignored host copies in the 2026-07 cells)
+#   make kappa     $(MAIN_CELL)/validation/kappa_results.json (needs RATER_FILES)
+#   make derived   the tracked score copies, from the large ignored files they copy
 
 PYTHON ?= python3
 # Inputs kept out of git; point these at the files if they live elsewhere.
 # HealthBench-Hard is public; python -m bodhi_lora fetch healthbench downloads it. numbers and figures stop
 # without it, because the paper uses its theme tags and rubric points.
 HB_HARD ?= data/raw/healthbench/hard.jsonl
-# The seed-7 training traces (49 MB). make numbers reads only their scores, from the
-# tracked data/derived/seed_7_filter_scores.json; kappa and derived need the file.
-FILTER_TRAIN ?= data/sft_qwen_graded/seed_7_train.jsonl
-POSTED_VALUES ?= data/rebuttal_cells/posted_values.json
+# The submitted cell (results/PROVENANCE.md).
+MAIN_CELL ?= results/healthbench__medgemma-27b-text__bodhi__2026-05
+# The seed-7 training traces (49 MB, ignored). make numbers reads only their scores, from
+# the tracked $(MAIN_CELL)/seed_7/filter/filter_scores.json; kappa and derived need the file.
+FILTER_TRAIN ?= $(MAIN_CELL)/seed_7/filter/train.jsonl
+POSTED_VALUES ?= rebuttal/posted_values.json
 
 .PHONY: numbers figures paper test smoke rebuttal cells kappa derived
 
@@ -51,12 +54,12 @@ rebuttal: $(HB_HARD)
 	$(PYTHON) rebuttal/analyses/interference_mechanism.py
 	$(PYTHON) rebuttal/analyses/second_person_questions.py
 
-# Reads the added cells' raw eval JSON in results_rebuttal/ and the filter logs in
-# logs/host/, both copied from the GPU host and gitignored (REPRODUCIBILITY.md section 7).
-# cell_values.py diffs the values against data/rebuttal_cells/posted_values.json;
-# cell_recipe.py reads tau, trace counts and the adapter recipe per cell (PROV-3).
+# Reads the added cells' raw eval JSON and host logs in their results/ folders, copied
+# from the GPU host and gitignored (REPRODUCIBILITY.md section 7). cell_values.py diffs
+# the values against $(POSTED_VALUES); cell_recipe.py reads tau, trace counts and the
+# adapter recipe per cell (PROV-3).
 cells:
-	$(PYTHON) rebuttal/analyses/cell_values.py
+	$(PYTHON) rebuttal/analyses/cell_values.py --posted "$(POSTED_VALUES)"
 	$(PYTHON) rebuttal/analyses/quality_drop.py
 	$(PYTHON) rebuttal/analyses/cell_recipe.py
 

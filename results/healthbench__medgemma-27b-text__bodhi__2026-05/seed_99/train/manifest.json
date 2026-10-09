@@ -1,0 +1,19 @@
+{
+  "schema": 2,
+  "stage": "train",
+  "cell": "healthbench__medgemma-27b-text__bodhi__2026-05",
+  "seed": 99,
+  "created_utc": "2026-10-09T08:55:47.699388+00:00",
+  "status": "not_kept",
+  "files": {},
+  "note": "trained outside this package (legacy/README.md section 3); adapters not retained",
+  "written_by": {
+    "script": "scripts/migrate_results.py --manifests",
+    "git": {
+      "sha": "4e3edce5962174602e3689dfc9bad7cc461ac636",
+      "dirty": true,
+      "diff_sha256": "fac4d63b9a3d153ce22c30ef9f0ad095b19c5ac371de75c17a6f870d5788312e",
+      "n_untracked": 0
+    }
+  }
+}

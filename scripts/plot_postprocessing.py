@@ -7,12 +7,15 @@ Saves to paper/figures/:
   effect_size_forest.pdf     -- Cohen's d forest plot (reads paper/generated/numbers.json)
 
 Usage:
-    python scripts/plot_postprocessing.py [--data-dir results_modal] [--hb-hard data/raw/healthbench/hard.jsonl] [--out-dir paper/figures]
+    python scripts/plot_postprocessing.py [--data-dir <cell folder>] [--hb-hard data/raw/healthbench/hard.jsonl] [--out-dir paper/figures]
+
+The default cell folder is results/healthbench__medgemma-27b-text__bodhi__2026-05.
 """
 
 import argparse
 import json
 import random
+import sys
 from pathlib import Path
 
 import matplotlib
@@ -20,6 +23,11 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import numpy as np
+
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+
+from bodhi_lora.registry import condition_from_legacy  # noqa: E402
 
 # ── Palette and config ordering (match epistemic figures) ────────────────────
 
@@ -71,10 +79,10 @@ def load_health_results(data_dir, seeds=SEEDS, configs=None):
     pooled = {cfg: [] for cfg in configs}
     for seed in seeds:
         for cfg in configs:
-            path = Path(data_dir) / f"seed_{seed}" / f"{cfg}.json"
+            # A missing seed would silently shrink the pooled figures, so it is an error.
+            path = Path(data_dir) / f"seed_{seed}" / "eval" / f"{condition_from_legacy(cfg)}.json"
             if not path.exists():
-                print(f"  [warn] missing: {path}")
-                continue
+                raise SystemExit(f"plot_postprocessing: missing {path}")
             d = json.load(open(path))
             for r in d["results"]:
                 pooled[cfg].append(r)
@@ -328,7 +336,7 @@ def plot_effect_sizes(numbers_path, out_path):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data-dir",  default="results_modal")
+    parser.add_argument("--data-dir",  default="results/healthbench__medgemma-27b-text__bodhi__2026-05")
     parser.add_argument("--hb-hard",   default="data/raw/healthbench/hard.jsonl")
     parser.add_argument("--out-dir",   default="paper/figures")
     # Written by scripts/paper_stats.py (make numbers); the forest plot reads d and its CI.

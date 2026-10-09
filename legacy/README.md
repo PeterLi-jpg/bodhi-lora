@@ -1,6 +1,6 @@
 # legacy/: the code behind the submitted MedGemma numbers
 
-The submitted MedGemma-27B numbers (`results_modal/seed_{7,13,42,99,101}/`) came
+The submitted MedGemma-27B numbers (`results/healthbench__medgemma-27b-text__bodhi__2026-05/`, moved from `02ac9a3:results_modal/`) came
 from a TPU training path and a Modal eval path. Commit ef5b923 deleted both from
 this branch. This directory restores them from history, unchanged except for
 two reworded comments (section 1), so the submitted cell can be read and, in
@@ -23,7 +23,7 @@ Modal eval cloned main at that commit. `modal_eval.py` was committed later
 
 | File | Git blob at 8262d49 | What it did |
 |---|---|---|
-| `modal_eval.py` | 8a3d309 | Stages 4 and 5 (the 2x2 eval and the epistemic grade) for the 5 seeds on Modal A100-80GB. It cloned main, patched three files at run time, pulled each adapter from GCS and wrote `results_modal/`. |
+| `modal_eval.py` | 8a3d309 | Stages 4 and 5 (the 2x2 eval and the epistemic grade) for the 5 seeds on Modal A100-80GB. It cloned main, patched three files at run time, pulled each adapter from GCS and wrote `02ac9a3:results_modal/` (now `results/healthbench__medgemma-27b-text__bodhi__2026-05/`). |
 | `tpu/launch_5seeds_tunix.sh` | 2e5b571 | Stages 1 to 3 on five v6e-8 spot TPU VMs, one seed per VM: trace generation, Qwen filtering, tunix LoRA training and the export to a PEFT adapter. |
 | `configs/lora_medgemma27b_tunix.yaml` | 9d899fe | The tunix training config. |
 | `scripts/train_lora_tunix.py` | f92d792 | The tunix and qwix LoRA trainer. |

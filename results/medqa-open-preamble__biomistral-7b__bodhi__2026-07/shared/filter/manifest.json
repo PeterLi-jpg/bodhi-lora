@@ -1,0 +1,34 @@
+{
+  "schema": 2,
+  "stage": "filter",
+  "cell": "medqa-open-preamble__biomistral-7b__bodhi__2026-07",
+  "seed": null,
+  "created_utc": "2026-10-09T08:56:03.576250+00:00",
+  "status": "not_kept",
+  "recorded": {
+    "tau": 0.4,
+    "raw": 40,
+    "graded": 40,
+    "kept": 3,
+    "train": 2,
+    "val": 1,
+    "n_filter_passes": 1,
+    "rubric_parse_failures": [
+      0,
+      120
+    ],
+    "score_field": "overall_score"
+  },
+  "source": "results/cross_cell/cell_recipe.json",
+  "source_log_sha256": "1271a03b2b728fd52c405224c340a554bbbbb28dad64fbd48fe8d2224acd3118",
+  "note": "graded, kept and split traces stayed on the GPU host; counts and tau from the filter log",
+  "written_by": {
+    "script": "scripts/migrate_results.py --manifests",
+    "git": {
+      "sha": "4e3edce5962174602e3689dfc9bad7cc461ac636",
+      "dirty": true,
+      "diff_sha256": "a313787772b9da68d24944ecae103d07cd5654323f2c8fddf874ad98624633a6",
+      "n_untracked": 0
+    }
+  }
+}

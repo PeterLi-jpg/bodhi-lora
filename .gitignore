@@ -9,42 +9,32 @@ build/
 # one folder per benchmark.
 data/raw/*
 !data/raw/.gitkeep
-data/sft/*.jsonl
-data/sft/seed_*/
-data/sft/smoke/
-data/sft/figures/
-# Filtered training traces (49 MB per seed). Regenerable from Stages 1-2.
-data/sft_qwen_graded/
-eval/smoke/
-eval/*.json
-eval/seed_*/
-eval/figures/
 
-# Model weights, optimizer state and tokenizer copies never go in git.
+# Model weights and optimizer state never go in git.
 checkpoints/
 *.bin
 *.safetensors
 optimizer*.pt
-results/
-# rebuttal/results/ holds small analysis JSON that the paper cites. The
-# results/ rule above would hide it, so allow it back in.
-!rebuttal/results/
 
-# Rebuttal cells synced from the GPU box. Commit the per-seed summaries and
-# eval JSON; keep raw generations and adapter binaries out. Only the adapter
-# config and trainer state from each checkpoint are kept.
-results_rebuttal/**/*.jsonl
-# per-seed eval outputs hold full model responses (~370 MB); they stay on the
-# GPU host and in a local archive. make cells turns them into the tracked
-# data/rebuttal_cells/generated_values.json.
-results_rebuttal/**/eval/*.json
-# multi_seed_summary.json on the host lists its seeds as ["eval"] (wrong glob);
-# cell_values.py recomputes from the per-seed files instead.
-results_rebuttal/**/multi_seed_summary.json
-results_rebuttal/**/ckpt/**
-!results_rebuttal/**/ckpt/**/
-!results_rebuttal/**/ckpt/**/adapter_config.json
-!results_rebuttal/**/ckpt/**/trainer_state.json
+# results/: one folder per cell (docs/ARCHITECTURE.md section 6). The rule depends on the
+# kind of file, never on the cell. Tracked: manifests, cell records, id lists, scores,
+# adapter configs, trainer states, analysis and validation files. Ignored: traces and the
+# other JSONL, adapter weights and checkpoint state, raw eval and grade JSON, logs.
+results/**/*.jsonl
+results/**/logs/
+results/**/eval/*.json
+results/**/grade/*.json
+!results/**/manifest.json
+!results/**/*.manifest.json
+results/**/train/**
+!results/**/train/**/
+!results/**/train/**/adapter_config.json
+!results/**/train/**/trainer_state.json
+!results/**/train/**/manifest.json
+# Open decision O2 (docs/ARCHITECTURE.md section 12): the 2026-05 cell's raw eval and
+# grade JSON stay tracked, as they were before the move, until one rule covers every cell.
+!results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_*/eval/*.json
+!results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_*/grade/*.json
 
 paper/build/
 paper/figures/*.pdf

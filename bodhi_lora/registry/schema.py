@@ -66,6 +66,23 @@ def parse_condition(name: str) -> tuple[str, Optional[str]]:
     return m.group(1), m.group(2)
 
 
+def condition_from_legacy(name: str) -> str:
+    """The condition that a name from the runs before this package stands for.
+
+    Those runs (2026-04 to 2026-07) wrote ``<weights>_no_wrapper`` and
+    ``<weights>_<protocol>``. Their files were renamed when they moved into the results
+    root (results/PROVENANCE.md), but the rows inside keep the old names, so every
+    reader of a migrated file maps them with this one rule. A protocol id has hyphens
+    where the old names had underscores.
+    """
+    weights, sep, rest = name.partition("_")
+    if weights not in WEIGHTS or not sep or not rest:
+        raise ValueError(f"legacy condition {name!r}: expected <base|lora>_no_wrapper or <base|lora>_<protocol>")
+    condition = weights if rest == "no_wrapper" else f"{weights}+{rest.replace('_', '-')}"
+    parse_condition(condition)
+    return condition
+
+
 class _Record(BaseModel):
     """Base of every registry record: unknown keys are errors, values are read-only."""
 

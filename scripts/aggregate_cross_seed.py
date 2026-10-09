@@ -1,16 +1,19 @@
 """Aggregate Stage 4 + Stage 5 metrics across all 5 seeds.
 
-Reads ``results_modal/seed_<N>/{base_no_wrapper,base_bodhi,lora_no_wrapper,lora_bodhi,epistemic_scores}.json``
-for N in {7, 13, 42, 99, 101} and writes:
+Reads the submitted cell's ``seed_<N>/eval/{base,base+bodhi,lora,lora+bodhi}.json`` and
+``seed_<N>/grade/epistemic__<evaluator>.json`` for N in {7, 13, 42, 99, 101}, under
+results/healthbench__medgemma-27b-text__bodhi__2026-05/, and writes into its analysis/:
 
-  results_modal/cross_seed_aggregate.json
+  cross_seed_aggregate.json
     Per-config means and stds across the 5 seeds, both for HealthBench score
     (Stage 4) and the six epistemic dimensions (Stage 5). One JSON file the
     paper can quote directly.
 
-  results_modal/cross_seed_aggregate.md
+  cross_seed_aggregate.md
     Human-readable Markdown table for quick eyeballing / pasting into the
     results section.
+
+The configs keep the names the rows inside the files use (base_no_wrapper, ...).
 
 Why ``mean over seeds, not pooled means`` — each seed evaluates a different
 200-prompt subset (deterministic by seed, see make_bootstrap_eval_ids.py),
@@ -22,11 +25,17 @@ from __future__ import annotations
 
 import json
 import statistics
+import sys
 from pathlib import Path
 from typing import Iterable
 
 ROOT = Path(__file__).resolve().parent.parent
-RESULTS_DIR = ROOT / "results_modal"
+sys.path.insert(0, str(ROOT))
+
+from bodhi_lora.registry import condition_from_legacy  # noqa: E402
+
+RESULTS_DIR = ROOT / "results" / "healthbench__medgemma-27b-text__bodhi__2026-05"
+OUT_DIR = RESULTS_DIR / "analysis"
 SEEDS = (7, 13, 42, 99, 101)
 STAGE4_CONFIGS = ("base_no_wrapper", "base_bodhi", "lora_no_wrapper", "lora_bodhi")
 EPISTEMIC_AGG_KEYS = (
@@ -114,17 +123,19 @@ def load_per_seed_stage4(seed: int) -> dict[str, dict]:
     seed_dir = RESULTS_DIR / f"seed_{seed}"
     out = {}
     for cfg in STAGE4_CONFIGS:
-        with open(seed_dir / f"{cfg}.json") as f:
+        with open(seed_dir / "eval" / f"{condition_from_legacy(cfg)}.json") as f:
             out[cfg] = json.load(f)
     return out
 
 
 def load_per_seed_stage5(seed: int) -> dict[str, dict]:
-    """Load epistemic_scores.json and index by config name."""
-    seed_dir = RESULTS_DIR / f"seed_{seed}"
-    with open(seed_dir / "epistemic_scores.json") as f:
+    """Load the evaluator's grade file and index by config name."""
+    found = sorted((RESULTS_DIR / f"seed_{seed}" / "grade").glob("epistemic__*.json"))
+    if len(found) != 1:
+        raise SystemExit(f"expected one evaluator grade file for seed {seed}, found {len(found)}")
+    with open(found[0]) as f:
         d = json.load(f)
-    # epistemic_scores.json has list of {name, aggregates, ...} configs.
+    # The grade file has a list of {name, aggregates, ...} configs.
     by_name = {c["name"]: c for c in d["configs"]}
     return by_name
 
@@ -204,8 +215,8 @@ def main() -> None:
         "stage4_healthbench": s4_agg,
         "stage5_epistemic": s5_agg,
     }
-    json_path = RESULTS_DIR / "cross_seed_aggregate.json"
-    md_path = RESULTS_DIR / "cross_seed_aggregate.md"
+    json_path = OUT_DIR / "cross_seed_aggregate.json"
+    md_path = OUT_DIR / "cross_seed_aggregate.md"
     json_path.write_text(json.dumps(out, indent=2))
     md_path.write_text(render_md(s4_agg, s5_agg))
     print(f"wrote {json_path}")

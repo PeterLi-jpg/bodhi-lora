@@ -1,0 +1,24 @@
+{
+  "schema": 2,
+  "stage": "eval",
+  "cell": "medquad__mistral-small-24b__bodhi__2026-07",
+  "seed": 101,
+  "created_utc": "2026-10-09T08:56:30.122198+00:00",
+  "status": "recorded",
+  "files": {
+    "base+bodhi.json": "71ced13b1dc2b235f65b3f45d037c4bb7022df754ae571577448f37ded610f92",
+    "base.json": "dfb40b16459eda8f5f25ac1ee9a2fdda119f7b575bd2e4a7b359b4d67d4587bb",
+    "lora+bodhi.json": "3d87a63a03768f888a49c69f15b6cedb47357ea89e255b0e699afbe60430aff2",
+    "lora.json": "98109330d8f3dd9099b529b7c2ecb4b02c5ef453cc85d415083cfe4af4bcb59b"
+  },
+  "note": "replies and rubric grades per condition",
+  "written_by": {
+    "script": "scripts/migrate_results.py --manifests",
+    "git": {
+      "sha": "4e3edce5962174602e3689dfc9bad7cc461ac636",
+      "dirty": true,
+      "diff_sha256": "717d642d4ce702c597cfe8e1954c0db055c4e7b42806262f2d5dd53de30203d9",
+      "n_untracked": 0
+    }
+  }
+}

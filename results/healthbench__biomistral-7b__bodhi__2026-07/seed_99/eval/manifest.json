@@ -1,0 +1,24 @@
+{
+  "schema": 2,
+  "stage": "eval",
+  "cell": "healthbench__biomistral-7b__bodhi__2026-07",
+  "seed": 99,
+  "created_utc": "2026-10-09T08:55:21.776754+00:00",
+  "status": "recorded",
+  "files": {
+    "base+bodhi.json": "6185496ef50138a8ca6f6e089f61d871b9f5db7ee58eeff71268f4e8c9a94e52",
+    "base.json": "132034d36e34e575d0b02bdcd081784030ef7ab88a6c079e0e29b391b5ecf644",
+    "lora+bodhi.json": "caead8267dbe013270b368629bb572235cd85becbd93a797abe43f197ad9e8ea",
+    "lora.json": "11a921de3ec61451b6995d30736feb2de93f390c8f880444bcf474cc51eb0377"
+  },
+  "note": "replies and rubric grades per condition",
+  "written_by": {
+    "script": "scripts/migrate_results.py --manifests",
+    "git": {
+      "sha": "4e3edce5962174602e3689dfc9bad7cc461ac636",
+      "dirty": true,
+      "diff_sha256": "2b2b0dd4fce4cc70388af4d0234dfdb039ae924b84734d5bebb5bde4f0baad02",
+      "n_untracked": 0
+    }
+  }
+}

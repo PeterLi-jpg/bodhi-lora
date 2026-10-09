@@ -1,0 +1,24 @@
+{
+  "schema": 2,
+  "stage": "train",
+  "cell": "chatdoctor__med42-8b__bodhi__2026-07",
+  "seed": 99,
+  "created_utc": "2026-10-09T08:55:00.757269+00:00",
+  "status": "recorded",
+  "files": {
+    "adapter_config.json": "af206a2ba30071a72ae0699b32fb165cded10ad79db50c35dc904e109377c931",
+    "checkpoint-454/trainer_state.json": "d31045ba0cda0077c8b40037f49ad9b1d1e9efab68046cb57143bd60410e8949",
+    "checkpoint-681/trainer_state.json": "2ea29fbdf5ffd4bbe6d294cf4cdc907e103a12aa0b4e54323e2095e3929d1cc0",
+    "trainer_state.json": "91758b0d2a7c84fa3514c936162cb4c7f7dd7b632fb547f0267e7247d044d7ea"
+  },
+  "note": "adapter files; weights are ignored by git or were not retained",
+  "written_by": {
+    "script": "scripts/migrate_results.py --manifests",
+    "git": {
+      "sha": "4e3edce5962174602e3689dfc9bad7cc461ac636",
+      "dirty": true,
+      "diff_sha256": "99b515111e1c53fc872e3059ca8ee0e8189be2e490e1b98cdd93d51d9b6b8bcc",
+      "n_untracked": 0
+    }
+  }
+}

@@ -34,7 +34,7 @@ train:
   hardware: not recorded
 eval:
   conditions: [base, base+bodhi, lora]
-  # data/raw/hard_200_sample_ids.json, in the cell's shared/inputs folder.
+  # 02ac9a3:data/raw/hard_200_sample_ids.json, in the cell's shared/inputs folder.
   ids: {policy: fixed_file, n: 200, file: eval_ids.json}
   base_precision: model
   max_new_tokens: 1024

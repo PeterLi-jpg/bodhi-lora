@@ -3,12 +3,15 @@
 Inputs
 ------
 For each seed there is one directory matching the ``--seed-dirs`` glob (e.g.
-``eval/seed_42``). Each directory holds the per-config outputs of
+``results/<cell>/seed_*/eval``). Each directory holds the per-condition outputs of
 ``bodhi_lora/pipeline/eval.py``::
 
-    eval/seed_42/{base_no_wrapper,base_bodhi,lora_no_wrapper,lora_bodhi}.json
-    eval/seed_7/{...}
-    eval/seed_13/{...}
+    results/<cell>/seed_42/eval/{base,base+bodhi,lora,lora+bodhi}.json
+    results/<cell>/seed_7/eval/{...}
+    results/<cell>/seed_13/eval/{...}
+
+The summary keys each condition by the name the rows inside the files use
+(base_no_wrapper, base_bodhi, lora_no_wrapper, lora_bodhi).
 
 The HealthBench JSONL passed via ``--healthbench`` is consulted for tier
 metadata (``pos_points`` per prompt) so the across-seed numbers can be
@@ -83,6 +86,7 @@ from scripts.eval_ushape import (
     aggregate_by_tier,
     aggregate_by_theme,
 )
+from bodhi_lora.registry import condition_from_legacy
 
 
 CONFIG_NAMES = ("base_no_wrapper", "base_bodhi", "lora_no_wrapper", "lora_bodhi")
@@ -139,7 +143,7 @@ def _collect_per_seed_results(seed_dirs):
         label = _seed_label(d)
         configs = {}
         for cfg in CONFIG_NAMES:
-            p = Path(d) / f"{cfg}.json"
+            p = Path(d) / f"{condition_from_legacy(cfg)}.json"
             if not p.exists():
                 continue
             configs[cfg] = _load_eval_json(p)

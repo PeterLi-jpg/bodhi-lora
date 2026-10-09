@@ -100,10 +100,10 @@ Why: a history rewrite and remote branch deletion change public state, which is 
   still expands the acronym the other way in its docstrings and cites the PLOS Digital Health
   paper.
 - D12, after the sync (2026-10-08). The added cells' raw outputs were copied from the GPU
-  host (commit 60c1a54). Their numbers now come from `data/rebuttal_cells/generated_values.json`,
+  host (commit 60c1a54). Their numbers now come from `results/cross_cell/generated_values.json`,
   which `make cells` computes from those outputs, with a paired t(4) interval for every cell.
   The "transcribed from posted values; raw outputs pending sync" footnote is gone from the
-  paper (38b800e). `data/rebuttal_cells/posted_values.json` stays as the record of what was
+  paper (38b800e). `rebuttal/posted_values.json` stays as the record of what was
   posted; one posted value differs from the raw outputs (`rebuttal/withdrawals.md` W21). The
   MedQA cell is in Table 3 with its aggregate score and interval. Its only run is the
   preamble run, so it stays set aside with that reason, and its seven dimensions stay out of
@@ -116,7 +116,7 @@ Why: a history rewrite and remote branch deletion change public state, which is 
   HF-path run, not an evaluated adapter), and possibly the Modal volume `bohdi-data-cache`,
   into which `legacy/modal_eval.py` (lines 119 and 435-447) copied each seed's `checkpoints/best/` and
   `train.jsonl`/`val.jsonl` (BLOCKED.md item 3). The added cells' recipe is now read from
-  their synced adapter and trainer files (`rebuttal/results/cell_recipe.json`, Table F.2).
+  their synced adapter and trainer files (`results/cross_cell/cell_recipe.json`, Table F.2).
 - D6, after the sync (2026-10-08). The askers-minus-non-askers count is now made without
   the Med42-8B cells (Appendix J). The Med42-8B cells stay in the Holm family of the
   aggregate tests (the six added cells that are not set aside), as in the posted tests; that

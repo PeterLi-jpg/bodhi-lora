@@ -12,15 +12,16 @@ The code grew in two review phases, and each phase left its own launcher, its ow
 results folder and its own analysis. The result is not general:
 
 - **Two launch paths and six result locations.** The submitted MedGemma-27B cell ran
-  through `legacy/modal_eval.py` into `results_modal/`. The cells added in the
-  discussion ran through `02ac9a3:rebuttal/launch/run_cell.sh` into `results_rebuttal/`. A pilot
-  run sits in the ignored `results/seed_42/`, analysis outputs in `rebuttal/results/`,
-  and copied scores in `data/derived/` and `data/rebuttal_cells/`.
+  through `legacy/modal_eval.py` into `02ac9a3:results_modal/`. The cells added in the
+  discussion ran through `02ac9a3:rebuttal/launch/run_cell.sh` into `02ac9a3:results_rebuttal/`. A pilot
+  run sat in the ignored results/seed_42/, analysis outputs in `02ac9a3:rebuttal/results/`,
+  and copied scores in `02ac9a3:data/derived/` and `02ac9a3:data/rebuttal_cells/`.
+  Section 10 records the move into one results root.
 - **Analysis special-cases one cell.** `scripts/paper_stats.py` computes the full
   statistics only for the submitted cell (`MAIN_CELL_ID`, a fixed `CONDITIONS` tuple).
   The added cells get a subset through `rebuttal/analyses/cell_values.py` and
   `rebuttal/analyses/quality_drop.py`. The discrimination, leakage and question-count
-  analyses read `results_modal/` only.
+  analyses read `02ac9a3:results_modal/` only.
 - **Conditions are code, not data.** `scripts/aggregate_seeds.py` knows four BODHI
   condition names, so a cell run with `PROTOCOL=ask_first` cannot be aggregated.
 - **Names and paths are literals in code.** The cell table in
@@ -380,7 +381,7 @@ def analyze_cross(reg: Registry, report_cfg: dict) -> dict # every cell's stats.
 def report(reg: Registry, report_cfg: dict, out_dir: Path) -> None  # -> paper/generated/
 ```
 
-Stage output formats stay compatible with the files that exist: `eval/<condition>.json`
+Stage output formats stay compatible with the files that exist: `results/<cell_id>/seed_<n>/eval/<condition>.json`
 keeps the fields `02ac9a3:scripts/eval_healthbench.py` writes (`results[]` with `prompt_id`,
 `response`, `score`, `criteria_results`, `parse_failures`, `response_token_count`), and
 `results/<cell_id>/seed_<n>/grade/epistemic__<grader>.json` keeps the fields of
@@ -575,7 +576,7 @@ the analysis code on fixtures and synthetic tables only.
 
 | Path | Keeps | Leaves |
 |---|---|---|
-| `rebuttal/` | The review record: `rebuttal/responses/posted/`, `rebuttal/responses/drafts/`, `rebuttal/withdrawals.md`, `rebuttal/commitments.md`, `rebuttal/posted_values.json` (moved from `data/rebuttal_cells/`), `rebuttal/README.md`, `rebuttal/PLAN.md`, `rebuttal/COVERAGE.md` | `02ac9a3:rebuttal/launch/`, `02ac9a3:rebuttal/configs/`, `rebuttal/analyses/` and `rebuttal/results/` go (code into the package, settings into cell records, outputs superseded). `rebuttal/analyses/FINDINGS_quality_drop.md` moves to `rebuttal/responses/drafts/` as an unposted internal note; `rebuttal/prior_work_candidates.bib` moves to `paper/`. |
+| `rebuttal/` | The review record: `rebuttal/responses/posted/`, `rebuttal/responses/drafts/`, `rebuttal/withdrawals.md`, `rebuttal/commitments.md`, `rebuttal/posted_values.json` (moved from `02ac9a3:data/rebuttal_cells/`), `rebuttal/README.md`, `rebuttal/PLAN.md`, `rebuttal/COVERAGE.md` | `02ac9a3:rebuttal/launch/`, `02ac9a3:rebuttal/configs/`, `rebuttal/analyses/` and `02ac9a3:rebuttal/results/` go (code into the package, settings into cell records, outputs superseded). `rebuttal/analyses/FINDINGS_quality_drop.md` moves to `rebuttal/responses/drafts/` as an unposted internal note; `rebuttal/prior_work_candidates.bib` moves to `paper/`. |
 | `legacy/` | The launcher, trainer, exporter, config and eval script of the 2026-05 cell, the old lock file, and `README.md`. `scripts/prefetch_gemma_safetensors.py` joins them, because the TPU launcher used it. | Nothing else. The 2026-07 launcher is cited by commit (`61dada9:rebuttal/launch/run_cell.sh`), not copied. |
 | `scripts/` | Repository tools that are not pipeline steps: `check_doc_paths.py`, `check_no_secrets.sh`, `check_paper_macros.py`, `export_anonymous.sh`, `scripts/maintenance/`, `gpu_lease.sh` (host tool, the package never calls it), the physician sheet tools `make_irr_excel.py` and `make_tiebreaker_excel.py`, and the one-off `migrate_results.py`. | Every pipeline and analysis script (section 10). No shims: the Makefile and the CLI are the only entry points, and docs cite module paths. |
 | `paper/` | The paper source and `paper/generated/`. | Nothing. |
@@ -607,27 +608,31 @@ loader implementation keys (`bodhi_llm`, `rubric_jsonl`) are code names and are 
 
 ## 10. Migration map
 
-The migrate lane moves tracked files with `git mv` in its worktree. Ignored files exist
-only in the main checkout, so its script `scripts/migrate_results.py` plans their moves
-with `--plan` and the integrate lane applies them in the main checkout with `--apply`.
-Nothing is deleted; a file with no new home goes to the archive folder next to the repo.
+The move ran on 2026-10-08. `scripts/migrate_results.py --apply` moved tracked files
+with `git mv` and ignored files on disk, hashed every file before and after, and wrote
+`results/provenance.json` (one entry per old file) and `results/PROVENANCE.md`. Nothing
+was deleted; a file with no new home went to the archive folder next to the repo
+(`../_archive/foundation_2026-10-08/`). `--manifests` then wrote each recorded cell's
+`cell.yaml` and a manifest per stage folder, with status `recorded` or `not_kept`.
+Old paths below are as of `02ac9a3` when git tracked them; the others were ignored.
 
 ### 10.1 Cell ids for existing outputs
 
 | Old location | Cell id | Status |
 |---|---|---|
-| `results_modal/` | `healthbench__medgemma-27b-text__bodhi__2026-05` | complete; train `external` (TPU recipe, `legacy/README.md` section 3); adapters not retained |
-| `results_rebuttal/healthbench__mistralai_Mistral-Small-24B-Instruct-2501/` | `healthbench__mistral-small-24b__bodhi__2026-07` | complete |
-| `results_rebuttal/healthbench__m42-health_Llama3-Med42-8B/` | `healthbench__med42-8b__bodhi__2026-07` | complete; family waiver (D6) |
-| `results_rebuttal/healthbench__BioMistral_BioMistral-7B/` | `healthbench__biomistral-7b__bodhi__2026-07` | complete |
-| `results_rebuttal/chatdoctor__mistralai_Mistral-Small-24B-Instruct-2501/` | `chatdoctor__mistral-small-24b__bodhi__2026-07` | complete |
-| `results_rebuttal/chatdoctor__m42-health_Llama3-Med42-8B/` | `chatdoctor__med42-8b__bodhi__2026-07` | complete; family waiver (D6) |
-| `results_rebuttal/medquad__mistralai_Mistral-Small-24B-Instruct-2501/` | `medquad__mistral-small-24b__bodhi__2026-07` | complete |
-| `results_rebuttal/medqa__mistralai_Mistral-Small-24B-Instruct-2501/` | `medqa-open-preamble__mistral-small-24b__bodhi__2026-07` | complete; set aside (W12) |
-| `results_rebuttal/medqa__BioMistral_BioMistral-7B/` | `medqa-open-preamble__biomistral-7b__bodhi__2026-07` | partial (seed 42) |
-| `results_rebuttal/medqa__google_medgemma-27b-text-it/` | `medqa-open-preamble__medgemma-27b-text__bodhi__2026-07` | not run (eval ids only) |
-| `results_rebuttal/medquad__google_medgemma-27b-text-it/` | `medquad__medgemma-27b-text__bodhi__2026-07` | not run (eval ids only) |
-| `results/seed_42/`, `results/_rescue/` (ignored) | `healthbench__medgemma-27b-text__bodhi__2026-04` | pilot: 2,999 traces, 838 train rows, seed 42, Qwen grader |
+| `02ac9a3:results_modal/` | `healthbench__medgemma-27b-text__bodhi__2026-05` | complete; train `external` (TPU recipe, `legacy/README.md` section 3); adapters not retained |
+| `02ac9a3:results_rebuttal/healthbench__mistralai_Mistral-Small-24B-Instruct-2501/` | `healthbench__mistral-small-24b__bodhi__2026-07` | complete |
+| `02ac9a3:results_rebuttal/healthbench__m42-health_Llama3-Med42-8B/` | `healthbench__med42-8b__bodhi__2026-07` | complete; family waiver (D6) |
+| `02ac9a3:results_rebuttal/healthbench__BioMistral_BioMistral-7B/` | `healthbench__biomistral-7b__bodhi__2026-07` | complete |
+| `02ac9a3:results_rebuttal/chatdoctor__mistralai_Mistral-Small-24B-Instruct-2501/` | `chatdoctor__mistral-small-24b__bodhi__2026-07` | complete |
+| `02ac9a3:results_rebuttal/chatdoctor__m42-health_Llama3-Med42-8B/` | `chatdoctor__med42-8b__bodhi__2026-07` | complete; family waiver (D6) |
+| `02ac9a3:results_rebuttal/medquad__mistralai_Mistral-Small-24B-Instruct-2501/` | `medquad__mistral-small-24b__bodhi__2026-07` | complete |
+| `02ac9a3:results_rebuttal/medqa__mistralai_Mistral-Small-24B-Instruct-2501/` | `medqa-open-preamble__mistral-small-24b__bodhi__2026-07` | complete; set aside (W12) |
+| `02ac9a3:results_rebuttal/medqa__BioMistral_BioMistral-7B/` | `medqa-open-preamble__biomistral-7b__bodhi__2026-07` | partial (seed 42) |
+| `02ac9a3:results_rebuttal/medqa__google_medgemma-27b-text-it/` | `medqa-open-preamble__medgemma-27b-text__bodhi__2026-07` | not run (eval ids only) |
+| `02ac9a3:results_rebuttal/medquad__google_medgemma-27b-text-it/` | `medquad__medgemma-27b-text__bodhi__2026-07` | not run (eval ids only) |
+| no folder; host logs only | `healthbench__gemma-2-9b__bodhi__2026-07` | not run (stopped in trace generation) |
+| results/seed_42/ and results/_rescue/ (ignored) | `healthbench__medgemma-27b-text__bodhi__2026-04` | pilot: 2,999 traces, 838 train rows, seed 42, Qwen grader |
 
 The run month comes from `run_metadata.timestamp_utc` in each cell's eval files
 (2026-05-04 for the submitted cell; 2026-07-23 to 2026-07-28 for the added cells;
@@ -636,51 +641,57 @@ prompt template from before 035d85f; `medqa-open` is the template after it.
 
 ### 10.2 Files
 
-`<C>` is the new cell folder from 10.1, `<S>` is `seed_<n>`, `<M>` the 2026-05 cell.
+`<C>` is the new cell folder from 10.1, `<S>` is `seed_<n>`, `<M>` the 2026-05 cell and
+`<pilot>` the 2026-04 cell. A moved file kept its bytes; "superseded" means `make analyze`
+replaces it once it reproduces its values (10.3).
 
 | Old path | New path | Kind |
 |---|---|---|
-| `results_modal/<S>/base_no_wrapper.json` (and `base_bodhi`, `lora_no_wrapper`, `lora_bodhi`) | `results/<M>/<S>/eval/base.json` (and `base+bodhi`, `lora`, `lora+bodhi`) | moved; tracked then ignored (O2) |
-| `results_modal/<S>/epistemic_scores.json` | `results/<M>/<S>/grade/epistemic__llama-3.1-8b.json` | moved |
-| `results_modal/cross_seed_aggregate.json`, `.md` | `results/<M>/analysis/stats.json` | superseded |
-| `results_modal/irr/*.xlsx`, `results_modal/irr/README.md` | `results/<M>/validation/` | moved |
-| `results_modal/irr/kappa_results.json` | `results/<M>/validation/kappa.json` | moved |
-| `data/irr_instructions/*.json` | `results/<M>/validation/instructions/` | moved |
-| `data/derived/seed_7_filter_scores.json` | `results/<M>/seed_7/filter/scores.csv` | extracted |
-| `data/sft_qwen_graded/seed_7_train.jsonl` (ignored) | `results/<M>/seed_7/filter/train.jsonl` | moved |
-| `data/derived/seed_42_qwen_grader_scores.json` | `results/<pilot>/seed_42/table.csv`, extracted from the pilot's raw files | superseded |
-| `results/seed_42/eval/*.json` (ignored) | `results/<pilot>/seed_42/eval/` | moved |
-| `results/_rescue/raw_traces.jsonl`, `results/_rescue/sft/*.jsonl` (ignored) | `results/<pilot>/shared/traces/`, `results/<pilot>/seed_42/filter/` | moved |
-| `results/seed_42/figures/*.png` (ignored) | archive | archived |
-| `results_rebuttal/<old>/eval_ids.json` | `results/<C>/shared/inputs/eval_ids.json` | moved |
-| `data/raw/hard_200_sample_ids.json` | `results/<C>/shared/inputs/eval_ids.json` of the three 2026-07 HealthBench cells | moved (one to three) |
-| `results_rebuttal/<old>/<S>/ckpt/best/adapter_config.json`, `trainer_state.json` | `results/<C>/<S>/train/` | moved |
-| `results_rebuttal/<old>/<S>/ckpt/checkpoint-<k>/trainer_state.json` | `results/<C>/<S>/train/checkpoint-<k>/trainer_state.json` | moved |
-| `results_rebuttal/<old>/<S>/eval/<cond>.json` (ignored) | `results/<C>/<S>/eval/<new cond>.json` | moved |
-| `results_rebuttal/<old>/<S>/eval/epistemic_scores.json` (ignored) | `results/<C>/<S>/grade/epistemic__llama-3.1-8b-nous.json` | moved |
-| `results_rebuttal/<old>/multi_seed_summary.json` (ignored, wrong seed glob) | archive | archived |
-| `logs/host/filter_<bench>_<tag>.log` and the other host logs (ignored) | `results/<C>/logs/`; tau and counts into `results/<C>/shared/filter/manifest.json` | moved and extracted |
-| `rebuttal/results/mimicry_split.json`, `interference_mechanism.json`, `second_person_questions.json` | `results/<M>/analysis/stats.json` (discrimination, leakage, question rate) | superseded |
-| `rebuttal/results/quality_drop.json` | `results/cross_cell/stats.json` (aggregate family) | superseded |
-| `rebuttal/results/cell_recipe.json` | the `filter` and `train` manifests of each `<C>` | superseded |
-| `data/rebuttal_cells/generated_values.json` | `results/cross_cell/stats.json` | superseded |
-| `data/rebuttal_cells/posted_values.json` | `rebuttal/posted_values.json` | moved |
-| `data/rebuttal_cells/README.md` | `rebuttal/README.md` (merged) | moved |
-| `data/raw/high_stakes_prompts.jsonl` (placeholder prompts) | archive | archived |
+| `02ac9a3:results_modal/seed_7/base_no_wrapper.json` (each seed; and `base_bodhi`, `lora_no_wrapper`, `lora_bodhi`) | `results/<M>/<S>/eval/base.json` (and `base+bodhi`, `lora`, `lora+bodhi`) | moved; still tracked (O2) |
+| `02ac9a3:results_modal/seed_7/epistemic_scores.json` (each seed) | `results/<M>/<S>/grade/epistemic__llama-3.1-8b.json` | moved; still tracked (O2) |
+| `02ac9a3:results_modal/cross_seed_aggregate.json`, `.md` | `results/<M>/analysis/` | moved; superseded |
+| `02ac9a3:results_modal/irr/` (sheets, answer key, README) | `results/<M>/validation/` | moved |
+| `02ac9a3:results_modal/irr/kappa_results.json` | `results/<M>/validation/kappa_results.json` | moved |
+| `02ac9a3:data/irr_instructions/` | `results/<M>/validation/instructions/` | moved |
+| `02ac9a3:data/derived/seed_7_filter_scores.json` | `results/<M>/seed_7/filter/filter_scores.json` | moved |
+| data/sft_qwen_graded/seed_7_train.jsonl (ignored) | `results/<M>/seed_7/filter/train.jsonl` | moved |
+| `02ac9a3:data/derived/seed_42_qwen_grader_scores.json` | `results/<pilot>/analysis/qwen_grader_scores.json` | moved |
+| results/seed_42/eval/*.json (ignored) | `results/<pilot>/seed_42/eval/` | moved |
+| results/_rescue/raw_traces.jsonl and results/_rescue/sft/ (ignored) | `results/<pilot>/shared/traces/traces.jsonl`, `results/<pilot>/seed_42/filter/` | moved |
+| checkpoints/seed_42/ (ignored) | `results/<pilot>/seed_42/train/` | moved |
+| results/seed_42/figures/ and three pilot analysis outputs (ignored) | archive | archived |
+| `02ac9a3:results_rebuttal/medqa__google_medgemma-27b-text-it/eval_ids.json` (each folder) | `results/<C>/shared/inputs/eval_ids.json` | moved |
+| `02ac9a3:data/raw/hard_200_sample_ids.json` | `results/<C>/shared/inputs/eval_ids.json` of the three 2026-07 HealthBench cells, the Gemma-2-9B run and the pilot | moved (one to five) |
+| `02ac9a3:results_rebuttal/healthbench__BioMistral_BioMistral-7B/seed_42/ckpt/best/` (each seed: `adapter_config.json`, `trainer_state.json`) | `results/<C>/<S>/train/` | moved |
+| `02ac9a3:results_rebuttal/healthbench__BioMistral_BioMistral-7B/seed_42/ckpt/` (the trainer state of each epoch checkpoint) | `results/<C>/<S>/train/checkpoint-<k>/trainer_state.json` | moved |
+| the host copy's seed_N/eval/ condition files and epistemic_scores.json (ignored) | `results/<C>/<S>/eval/<condition>.json`, `results/<C>/<S>/grade/epistemic__llama-3.1-8b-nous.json` | moved |
+| the host copy's multi_seed_summary.json (ignored, wrong seed glob) | archive | archived |
+| the host logs, logs/host/ (ignored) | `results/<C>/logs/`; tau and counts into `results/<C>/shared/filter/manifest.json`; four logs that span cells to the archive | moved and extracted |
+| `02ac9a3:rebuttal/results/mimicry_split.json`, `interference_mechanism.json`, `second_person_questions.json` | `results/<M>/analysis/` | moved; superseded |
+| `02ac9a3:rebuttal/results/quality_drop.json`, `cell_recipe.json` | `results/cross_cell/` | moved; superseded |
+| `02ac9a3:data/rebuttal_cells/generated_values.json` | `results/cross_cell/generated_values.json` | moved; superseded |
+| `02ac9a3:data/rebuttal_cells/posted_values.json` | `rebuttal/posted_values.json` | moved |
+| `02ac9a3:data/rebuttal_cells/README.md` | `rebuttal/README.md` | merged |
+| smoke outputs in checkpoints/, data/sft/ and eval/smoke/ (ignored) | archive | archived |
 | `02ac9a3:configs/families.yaml` | `configs/models/*.yaml` | superseded |
 | the old configs/lora_*.yaml files, `02ac9a3:rebuttal/configs/` | `train` blocks of `configs/cells/*.yaml` | superseded |
-| `checkpoints/` (ignored, smoke adapters) | archive | archived |
 
-The ignored copy in `../_remote_sync/results_rebuttal` stays where it is; the
-provenance note records that its files match the moved ones by sha256.
+The ignored copy in `../_remote_sync/results_rebuttal` stays where it is; each of its
+files has the sha256 of a file that moved (results/PROVENANCE.md).
+
+The scripts that wrote the superseded files read the new layout and still key their
+outputs as before (`rebuttal/analyses/host_runs.py`), so `make rebuttal` and
+`make cells` reproduce every value: the 2026-05 analyses and `quality_drop.json` byte for
+byte, `generated_values.json` and `cell_recipe.json` up to the folder names they record.
+Run on the regenerated files, `make numbers` writes the same `numbers.tex` and tables.
 
 ### 10.3 Equivalence before removal
 
 An old analysis file is removed only after `make analyze` reproduces its values. The
 analysis lane adds a test that compares the new statistics with each superseded file at
-its stored precision: `rebuttal/results/*.json`,
-`data/rebuttal_cells/generated_values.json` and the macros in `paper/generated/numbers.tex`.
-A mismatch is a finding to explain, not a tolerance to raise.
+its stored precision: the files marked superseded in 10.2 and the macros in
+`paper/generated/numbers.tex`. A mismatch is a finding to explain, not a tolerance to
+raise.
 
 ## 11. Build lanes
 
@@ -698,7 +709,7 @@ a path it does not own asks the integrate lane.
 | protocols | `bodhi_lora/protocols/`, `configs/protocols/` (after foundation), `tests/fixtures/protocols/` | `02ac9a3:scripts/baselines/`, `02ac9a3:scripts/_bodhi_ablation.py` | `tests/test_protocols_*.py` (from `test_bodhi_ablation.py`, `test_pipeline_baselines.py`) |
 | pipeline | `bodhi_lora/pipeline/`, `bodhi_lora/grading/`, `configs/cells/tiny-rubric__*.yaml`, `tests/fixtures/pipeline/` | the stage scripts (moved into `bodhi_lora/pipeline/` and `bodhi_lora/grading/` on 2026-10-08), `02ac9a3:rebuttal/launch/`; the unused launchers and tools (`02ac9a3:gpu/`, `02ac9a3:slurm/`, `02ac9a3:scripts/preflight.py` and the others named in `scripts/README.md`) went on 2026-10-08 | `tests/test_pipeline_*.py`, `tests/test_grading_*.py` (from `test_filter_traces.py`, `test_eval_healthbench_skip.py`, `test_pure_logic.py`, `test_pipeline_{generate,filter,eval_dry_run,launch,regrade,train_manifest}.py`) |
 | analysis | `bodhi_lora/analysis/`, `bodhi_lora/report/`, `configs/report.yaml`, `paper/generated/`, macro names in `paper/main.tex` and `paper/checklist.tex`, `scripts/check_paper_macros.py`, `tests/fixtures/analysis/` | `scripts/{paper_stats,aggregate_seeds,aggregate_cross_seed,build_paper_figures,plot_epistemic_figures,plot_postprocessing,plot_training,plot_ushape,eval_ushape,rubric_diff,analyze_hedge_rate,_hedging_metric,grader_correlation,compute_irr_kappa,export_derived_inputs}.py`, `rebuttal/analyses/*.py` | `tests/test_analysis_*.py`, `tests/test_report_*.py` (from `test_stats_*.py`, `test_analyses_*.py`, `test_aggregate_seeds.py`, `test_plot_training.py`); removes `test_eval_ushape.py`, `test_rubric_diff.py`, `test_hedging_metric.py`, `test_analyze_hedge_rate.py` with their scripts |
-| migrate | `results/` (moves, `PROVENANCE.md`, `provenance.json`, historical manifests), `scripts/migrate_results.py`, `.gitignore`, `configs/cells/*__2026-*.yaml` (after foundation), `legacy/`, `rebuttal/README.md`, `rebuttal/posted_values.json`, `tests/fixtures/migrate/` | `results_modal/`, `results_rebuttal/`, `rebuttal/results/`, `data/derived/`, `data/rebuttal_cells/`, `data/irr_instructions/`, `data/raw/hard_200_sample_ids.json`, `data/raw/high_stakes_prompts.jsonl`; moves `rebuttal/analyses/FINDINGS_quality_drop.md`, `rebuttal/prior_work_candidates.bib`, `scripts/prefetch_gemma_safetensors.py` | `tests/test_migration_*.py` |
+| migrate | `results/` (moves, `PROVENANCE.md`, `provenance.json`, historical manifests), `scripts/migrate_results.py`, `.gitignore`, `configs/cells/*__2026-*.yaml` (after foundation), `legacy/`, `rebuttal/README.md`, `rebuttal/posted_values.json`, `tests/fixtures/migrate/` | `02ac9a3:results_modal/`, `02ac9a3:results_rebuttal/`, `02ac9a3:rebuttal/results/`, `02ac9a3:data/derived/`, `02ac9a3:data/rebuttal_cells/`, `02ac9a3:data/irr_instructions/`, `data/raw/hard_200_sample_ids.json`, `data/raw/high_stakes_prompts.jsonl`; moves `rebuttal/analyses/FINDINGS_quality_drop.md`, `rebuttal/prior_work_candidates.bib`, `scripts/prefetch_gemma_safetensors.py` | `tests/test_migration_*.py` |
 | integrate (last, serial) | `Makefile`, `.github/workflows/`, `scripts/check_doc_paths.py`, `scripts/README.md`, `setup.sh`, `README.md`, `REPRODUCIBILITY.md`, `RESULTS.md`, `KNOWN_ISSUES.md`, `BLOCKED.md`, `contributions/`, `docs/` | `scripts/__init__.py` once `scripts/` holds tools only | runs every test; owns no new test file |
 
 Shared files have one owner each. `tests/fixtures/` is split into one folder per lane;

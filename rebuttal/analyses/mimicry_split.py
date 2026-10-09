@@ -30,17 +30,24 @@ the scale-free odds ratio of asking, context_dependent vs self_contained:
 with a CI from the same prompt-level bootstrap resamples. (The ORs quoted to LxMF,
 1.16 / 1.54 / 1.56, were computed by hand from the rates; this is the scripted version.)
 
-Runs against the committed results in results_modal/. No inference, no H100.
+Runs against the submitted cell's grade files (--cell-dir). No inference, no H100.
 """
 
 import argparse
 import json
 import re
+import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO))
+
+from scripts.paper_stats import grade_path  # noqa: E402
+
+# The submitted cell (results/PROVENANCE.md).
+CELL = REPO / "results" / "healthbench__medgemma-27b-text__bodhi__2026-05"
 HARD = REPO / "data" / "raw" / "healthbench" / "hard.jsonl"
-SEED_DIRS = ["seed_7", "seed_13", "seed_42", "seed_99", "seed_101"]
+SEEDS = (7, 13, 42, 99, 101)
 
 CONFIG_DISPLAY = {
     "base_no_wrapper": "Base",
@@ -119,14 +126,12 @@ def group_theme_only(m):
     return "context_dependent" if m["theme"] == "context_seeking" else "self_contained"
 
 
-def load_examples():
+def load_examples(cell_dir=CELL):
     """Pool every graded response across the 5 seeds -> list of per-response rows."""
     rows = []
-    for sd in SEED_DIRS:
-        path = REPO / "results_modal" / sd / "epistemic_scores.json"
-        if not path.exists():
-            continue
-        data = json.load(open(path))
+    for seed in SEEDS:
+        # grade_path stops on a missing seed, so a moved file cannot shrink the pool.
+        data = json.load(open(grade_path(Path(cell_dir), seed)))
         for cfg in data["configs"]:
             name = cfg["name"]
             for ex in cfg["examples"]:
@@ -138,7 +143,7 @@ def load_examples():
                     continue
                 rows.append(
                     {
-                        "seed": sd,
+                        "seed": seed,
                         "config": name,
                         "prompt_id": ex["prompt_id"],
                         "active_inquiry": bool(ai),
@@ -267,13 +272,14 @@ def report(idx, eval_pids, meta, labelname, out):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out", default=str(REPO / "rebuttal" / "results" / "mimicry_split.json"))
+    ap.add_argument("--cell-dir", default=str(CELL))
+    ap.add_argument("--out", default=str(CELL / "analysis" / "mimicry_split.json"))
     # data/raw/*.jsonl is gitignored; pass the path when the file lives elsewhere.
     ap.add_argument("--healthbench", default=str(HARD))
     args = ap.parse_args()
 
     meta = load_prompt_meta(args.healthbench)
-    rows = load_examples()
+    rows = load_examples(args.cell_dir)
     eval_pids = sorted({r["prompt_id"] for r in rows})
 
     # ---- persona composition of the evaluated prompts (context for FzpA W2) ----

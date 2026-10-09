@@ -1,0 +1,19 @@
+{
+  "schema": 2,
+  "stage": "traces",
+  "cell": "healthbench__med42-8b__bodhi__2026-07",
+  "seed": 7,
+  "created_utc": "2026-10-09T08:55:28.318991+00:00",
+  "status": "not_kept",
+  "files": {},
+  "note": "teacher traces are shared by every seed",
+  "written_by": {
+    "script": "scripts/migrate_results.py --manifests",
+    "git": {
+      "sha": "4e3edce5962174602e3689dfc9bad7cc461ac636",
+      "dirty": true,
+      "diff_sha256": "5b34841518f2031205d4b4b58ec2cbe4ba90ebabd78be5d2e93bc0ddee5c7656",
+      "n_untracked": 0
+    }
+  }
+}

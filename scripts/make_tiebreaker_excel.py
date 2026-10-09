@@ -1,6 +1,6 @@
 """Stage 2 IRR helper: build a tiebreaker Excel from the 3 reviewer files.
 
-Reads ``results_modal/irr/Grading-*.xlsx`` (NOT Grading-template, NOT
+Reads ``<M>/validation/Grading-*.xlsx`` (NOT Grading-template, NOT
 Grading-tiebreaker), joins by ``grading_id``, and emits ONE Excel containing
 only the rows where the 3 primary reviewers split. The adjudicator (AnonClinician4)
 fills in the Tiebreaker tab.
@@ -20,12 +20,14 @@ are resolved by majority and are NOT shown to the adjudicator.
 
 Output
 ------
-``results_modal/irr/Grading-tiebreaker.xlsx`` with two sheets:
+``<M>/validation/Grading-tiebreaker.xlsx`` with two sheets:
   - Tiebreaker    (one row per disputed criterion, with the 3 prior grades
                    anonymized as reviewer_1/2/3 in the order the files were
                    loaded; adjudicator fills tiebreaker_grade + confidence
                    + required notes)
-  - Instructions - Tiebreaker  (verbatim from data/irr_instructions/tiebreaker.json)
+  - Instructions - Tiebreaker  (verbatim from <M>/validation/instructions/tiebreaker.json)
+
+<M> is the submitted cell, results/healthbench__medgemma-27b-text__bodhi__2026-05/.
 """
 from __future__ import annotations
 
@@ -40,8 +42,8 @@ from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
 ROOT = Path(__file__).resolve().parent.parent
-IRR_DIR = ROOT / "results_modal" / "irr"
-INSTR_DIR = ROOT / "data" / "irr_instructions"
+IRR_DIR = ROOT / "results" / "healthbench__medgemma-27b-text__bodhi__2026-05" / "validation"
+INSTR_DIR = IRR_DIR / "instructions"
 
 GRADE_VALUES = {"pass", "fail", "unsure"}
 

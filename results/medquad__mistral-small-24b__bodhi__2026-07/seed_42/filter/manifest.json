@@ -1,0 +1,20 @@
+{
+  "schema": 2,
+  "stage": "filter",
+  "cell": "medquad__mistral-small-24b__bodhi__2026-07",
+  "seed": 42,
+  "created_utc": "2026-10-09T08:56:20.380741+00:00",
+  "status": "not_kept",
+  "files": {},
+  "note": "the train/val split",
+  "shared": "results/medquad__mistral-small-24b__bodhi__2026-07/shared/filter",
+  "written_by": {
+    "script": "scripts/migrate_results.py --manifests",
+    "git": {
+      "sha": "4e3edce5962174602e3689dfc9bad7cc461ac636",
+      "dirty": true,
+      "diff_sha256": "6172c3fc9d3fb11efeb862e7df7b6de157832430f05ff93fa4e0a0da2c73d50d",
+      "n_untracked": 0
+    }
+  }
+}

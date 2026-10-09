@@ -1,8 +1,8 @@
 """Tests for scripts/compute_irr_kappa.py on a small synthetic fixture.
 
 The returned physician files stay outside the repo, so these tests build the same
-spreadsheet layout (template, answer key, rater sheets) and a matching
-results_modal-style grader output in a temp dir.
+spreadsheet layout (template, answer key, rater sheets) and a matching cell folder
+of grader output in a temp dir.
 """
 
 import json
@@ -28,7 +28,7 @@ CRITERIA = {
 
 def _build(tmp_path, rater_grades, extra_raters=()):
     results = tmp_path / "results"
-    (results / "seed_7").mkdir(parents=True)
+    (results / "seed_7" / "eval").mkdir(parents=True)
     out_results, sheet_rows, key_rows = [], [], []
     for r_i, (pid, crits) in enumerate(CRITERIA.items(), 1):
         cr = [{"criterion": f"{pid} criterion {j}", "points": pts, "criteria_met": met}
@@ -43,7 +43,7 @@ def _build(tmp_path, rater_grades, extra_raters=()):
             key_rows.append({"grading_id": gid, "response_id": f"R{r_i:03d}", "source": "eval_llama",
                              "seed": 7.0, "config": "base_no_wrapper", "criterion_number": j,
                              "is_avoid_item": avoid, "llm_score": 0.5})
-    (results / "seed_7" / "base_no_wrapper.json").write_text(json.dumps({"results": out_results}))
+    (results / "seed_7" / "eval" / "base.json").write_text(json.dumps({"results": out_results}))
 
     template = tmp_path / "Grading-template.xlsx"
     with pd.ExcelWriter(template) as w:
@@ -137,9 +137,7 @@ def test_bootstrap_ci_brackets_the_estimate(tmp_path):
 
 def test_committed_kappa_results_are_deidentified():
     """The committed output names raters only by label and confirms the paper's 0.35 / n=509."""
-    path = ROOT / "results_modal" / "irr" / "kappa_results.json"
-    if not path.is_file():
-        pytest.skip("kappa_results.json not committed yet")
+    path = irr.IRR_DIR / "kappa_results.json"
     d = json.loads(path.read_text())
     assert d["raters"] == ["rater_A"]
     ev = d["llm_vs_physician"]["eval_llama"]["all"]

@@ -95,15 +95,19 @@ def maybe_remove(path: Path, root: Path) -> None:
         print(f"Removed legacy figure -> {path.relative_to(root)}")
 
 
+# The submitted cell, whose results the paper's figures show.
+MAIN_CELL = "results/healthbench__medgemma-27b-text__bodhi__2026-05"
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--tex", default="paper/main.tex")
     parser.add_argument("--out-dir", default="paper/figures")
     parser.add_argument(
         "--aggregate",
-        default="results_modal/cross_seed_aggregate.json",
+        default=f"{MAIN_CELL}/analysis/cross_seed_aggregate.json",
     )
-    parser.add_argument("--data-dir", default="results_modal")
+    parser.add_argument("--data-dir", default=MAIN_CELL)
     parser.add_argument("--hb-hard", default="data/raw/healthbench/hard.jsonl")
     parser.add_argument(
         "--clean-legacy",

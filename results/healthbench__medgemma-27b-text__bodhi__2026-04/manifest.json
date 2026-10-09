@@ -1,0 +1,55 @@
+{
+  "schema": 2,
+  "stage": "cell",
+  "cell": "healthbench__medgemma-27b-text__bodhi__2026-04",
+  "seed": null,
+  "created_utc": "2026-10-09T08:55:39.972546+00:00",
+  "models": {
+    "base": {
+      "id": "medgemma-27b-text",
+      "repo_id": "google/medgemma-27b-text-it",
+      "family": "gemma",
+      "revision": "5b667cf2ddcf064085bc90952edb35a0edbfb79c",
+      "revision_source": "record",
+      "unpinned_reason": null
+    },
+    "filter": {
+      "id": "qwen2.5-14b",
+      "repo_id": "Qwen/Qwen2.5-14B-Instruct",
+      "family": "qwen2",
+      "revision": "cf98f3b3bbb457ad9e2bb7baf9a0125b6b88caa8",
+      "revision_source": "record",
+      "unpinned_reason": null
+    },
+    "evaluator": {
+      "id": "qwen2.5-14b",
+      "repo_id": "Qwen/Qwen2.5-14B-Instruct",
+      "family": "qwen2",
+      "revision": "cf98f3b3bbb457ad9e2bb7baf9a0125b6b88caa8",
+      "revision_source": "record",
+      "unpinned_reason": null
+    }
+  },
+  "status": "recorded",
+  "record_status": "pilot",
+  "family": {
+    "waiver": "A pilot run before the asymmetric grading design; the filter grader also graded the eval."
+  },
+  "note": "outputs of a run made before this package; results/PROVENANCE.md maps every old path",
+  "stage_manifests": {
+    "seed_42/eval/manifest.json": "83c235f41e509c140445f36cd4defe16d3fa3955e0d577a7ecd0c9bb63652c8c",
+    "seed_42/filter/manifest.json": "f10430c2be88663a1c8a5dc1b77d220bd98bc3512564180d9b67fe48648547ae",
+    "seed_42/grade/manifest.json": "ca17a4997592b6c79d0fea5f671008e3599762a737aabd9f80caea8fd8f767bf",
+    "seed_42/traces/manifest.json": "e1ecacf5432a54f698f9e03c382f1fb0146d56e044821782865e5c419bf31588",
+    "seed_42/train/manifest.json": "0a79a033919c9e33a643c292cbaa35e38475190ea4357dcd0c39060d9cb14454"
+  },
+  "written_by": {
+    "script": "scripts/migrate_results.py --manifests",
+    "git": {
+      "sha": "4e3edce5962174602e3689dfc9bad7cc461ac636",
+      "dirty": true,
+      "diff_sha256": "ac161f939ad91b4e50dd9065a54f0bc95bd5914a7c18421f78970e2127fc6abc",
+      "n_untracked": 0
+    }
+  }
+}

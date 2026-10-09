@@ -1,0 +1,56 @@
+{
+  "schema": 2,
+  "stage": "cell",
+  "cell": "medqa-open-preamble__biomistral-7b__bodhi__2026-07",
+  "seed": null,
+  "created_utc": "2026-10-09T08:56:06.173227+00:00",
+  "models": {
+    "base": {
+      "id": "biomistral-7b",
+      "repo_id": "BioMistral/BioMistral-7B",
+      "family": "mistral",
+      "revision": "9a11e1ffa817c211cbb52ee1fb312dc6b61b40a5",
+      "revision_source": "record",
+      "unpinned_reason": null
+    },
+    "filter": {
+      "id": "qwen2.5-14b",
+      "repo_id": "Qwen/Qwen2.5-14B-Instruct",
+      "family": "qwen2",
+      "revision": "cf98f3b3bbb457ad9e2bb7baf9a0125b6b88caa8",
+      "revision_source": "record",
+      "unpinned_reason": null
+    },
+    "evaluator": {
+      "id": "llama-3.1-8b-nous",
+      "repo_id": "NousResearch/Meta-Llama-3.1-8B-Instruct",
+      "family": "llama3",
+      "revision": "d10aef7999a2b5ba950ab3974312feeedbfe0b77",
+      "revision_source": "record",
+      "unpinned_reason": null
+    }
+  },
+  "status": "recorded",
+  "record_status": "partial",
+  "family": {
+    "waiver": null
+  },
+  "note": "outputs of a run made before this package; results/PROVENANCE.md maps every old path",
+  "stage_manifests": {
+    "seed_42/eval/manifest.json": "b46c6779672ef7d5e996b2890a870756ab2f4d35dfa124b17fda3b799599b7c3",
+    "seed_42/filter/manifest.json": "6f329fece46035ed121b989e61ec1d35d1ff38452b6613e5290414fbab665e5d",
+    "seed_42/grade/manifest.json": "2268bc1448d3d9690f2b33fcdee608c40e417b303b09c21e6dbda25bfe83fa73",
+    "seed_42/traces/manifest.json": "f5f647112cbda9dc5412be4e1fc614fe0811ac8403828fbc7cafc399365109b1",
+    "seed_42/train/manifest.json": "c0f378b53725c844567eaf463b2c28516d0dcd835499bf1adbb8e2404b75e9c3",
+    "shared/filter/manifest.json": "3c6ed103bbae16e544bc893d4478c86f56c3b688c43037cbf5b67e880008d936"
+  },
+  "written_by": {
+    "script": "scripts/migrate_results.py --manifests",
+    "git": {
+      "sha": "4e3edce5962174602e3689dfc9bad7cc461ac636",
+      "dirty": true,
+      "diff_sha256": "e79bf3c17c8c8f1e235cfac288884549646bb7858d864d669238d1d76eae3ab6",
+      "n_untracked": 0
+    }
+  }
+}

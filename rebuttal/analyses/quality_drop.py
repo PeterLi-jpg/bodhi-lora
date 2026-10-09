@@ -6,17 +6,17 @@ seeds putting all six below p = 0.02 and all six surviving Holm correction. The
 numbers sit in rebuttal/analyses/FINDINGS_quality_drop.md, but the code was run
 interactively on the remote host and never committed. This is that test as a script.
 
-For each cell under --cells-root (the layout rebuttal/launch/run_cell.sh writes):
+For each run of the GPU host (host_runs.py), keyed by the run name the host gave it:
 
-    <cells-root>/<bench>__<model>/seed_<N>/eval/{base_no_wrapper,lora_no_wrapper}.json
+    results/<cell>/seed_<N>/eval/{base,lora}.json
 
-it takes the per-seed aggregate score (the ``mean`` field eval_healthbench.py writes),
+it takes the per-seed aggregate score (the ``mean`` field the eval stage writes),
 pairs Base and LoRA within each seed, and reports the mean difference, its t interval
 (n_seeds - 1 df) and the two-sided paired t p. Holm runs over the cells (statsmodels).
 
-The per-seed eval JSON of the added cells is copied from the shared H100 host into
-results_rebuttal/ and gitignored (PROV-1). Without that copy the script has nothing to
-read and exits with a message.
+The per-seed eval JSON of the added cells is copied from the shared H100 host and
+gitignored (PROV-1). Without that copy the script has nothing to read and exits with a
+message.
 """
 
 import argparse
@@ -29,7 +29,13 @@ from scipy import stats
 from statsmodels.stats.multitest import multipletests
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO))
+
+from rebuttal.analyses.host_runs import host_runs  # noqa: E402
+
+# The condition files. The output keeps the names the rows inside them use.
 BASE, LORA = "base_no_wrapper", "lora_no_wrapper"
+FILES = {BASE: "base", LORA: "lora"}
 
 
 def seed_scores(cell_dir):
@@ -42,7 +48,7 @@ def seed_scores(cell_dir):
             continue
         scores = {}
         for cfg in (BASE, LORA):
-            p = seed_dir / "eval" / f"{cfg}.json"
+            p = seed_dir / "eval" / f"{FILES[cfg]}.json"
             if p.is_file():
                 with open(p) as f:
                     scores[cfg] = float(json.load(f)["mean"])
@@ -64,16 +70,16 @@ def paired_test(base, lora):
             "per_seed_diff": d.tolist()}
 
 
-def analyse(cells_root):
+def analyse(results_root):
     cells = {}
-    for cell_dir in sorted(p for p in Path(cells_root).iterdir() if p.is_dir()):
+    for name, cell_dir in host_runs(results_root).items():
         per_seed = seed_scores(cell_dir)
         if len(per_seed) < 2:
-            print(f"  skip {cell_dir.name}: {len(per_seed)} seed(s) with both configs")
+            print(f"  skip {name}: {len(per_seed)} seed(s) with both configs")
             continue
         r = paired_test([v[BASE] for v in per_seed.values()], [v[LORA] for v in per_seed.values()])
         r["seeds"] = list(per_seed)
-        cells[cell_dir.name] = r
+        cells[name] = r
     if cells:
         names = list(cells)
         adj = multipletests([cells[c]["p"] for c in names], method="holm")[1]
@@ -85,15 +91,14 @@ def analyse(cells_root):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--cells-root", default=str(REPO / "results_rebuttal"))
-    ap.add_argument("--out", default=str(REPO / "rebuttal" / "results" / "quality_drop.json"))
+    ap.add_argument("--results-root", default=str(REPO / "results"))
+    ap.add_argument("--out", default=str(REPO / "results" / "cross_cell" / "quality_drop.json"))
     args = ap.parse_args()
 
-    root = Path(args.cells_root)
-    if not root.is_dir():
-        sys.exit(f"quality_drop: {root} not found. Sync results_rebuttal/ from the shared "
-                 "H100 box first (PROV-1); the posted t values cannot be checked without it.")
-    res = analyse(root)
+    res = analyse(Path(args.results_root))
+    if not res["cells"]:
+        sys.exit(f"quality_drop: no host run under {args.results_root} has eval files. Sync them "
+                 "from the shared H100 box first (PROV-1); the posted t values cannot be checked without them.")
     print(f"{'cell':40s} {'base':>7s} {'lora':>7s} {'diff':>8s} {'t':>7s} {'p':>8s} {'p_holm':>8s}")
     for name, r in res["cells"].items():
         print(f"{name:40s} {r['base_mean']:7.4f} {r['lora_mean']:7.4f} {r['diff']:+8.4f} "

@@ -1,0 +1,24 @@
+{
+  "schema": 2,
+  "stage": "train",
+  "cell": "medquad__mistral-small-24b__bodhi__2026-07",
+  "seed": 13,
+  "created_utc": "2026-10-09T08:56:25.241617+00:00",
+  "status": "recorded",
+  "files": {
+    "adapter_config.json": "513cc515956eaf1d5656af923f08cf45c73513e63e253cf8ab1732b47439c5f8",
+    "checkpoint-372/trainer_state.json": "eefd43b533753f990f99e5cc907f4ad88fa19be00753606476f4d7cabf3bd355",
+    "checkpoint-558/trainer_state.json": "4797d1f6a43eebb0575a41a3f241c55c912b02dc2d38cb3545479191e3bfd94b",
+    "trainer_state.json": "30f5b43f69191cf2f231f240e0c560694fbbca734f695de0b89768288b00ac70"
+  },
+  "note": "adapter files; weights are ignored by git or were not retained",
+  "written_by": {
+    "script": "scripts/migrate_results.py --manifests",
+    "git": {
+      "sha": "4e3edce5962174602e3689dfc9bad7cc461ac636",
+      "dirty": true,
+      "diff_sha256": "985069a2aa4874b2a77e72a7d8cee4a697d67ab685a3509b1171e44ca67c26c8",
+      "n_untracked": 0
+    }
+  }
+}

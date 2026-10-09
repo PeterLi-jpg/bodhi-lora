@@ -11,10 +11,17 @@ outputs and writes three kinds of file into ``paper/generated/``:
 
 Inputs
 ------
+The results root is one folder per cell (results/PROVENANCE.md). The submitted cell is
+results/healthbench__medgemma-27b-text__bodhi__2026-05/ (<M> below). The labels in the
+outputs (numbers.tex comments, numbers.json meta.inputs, table sources) still name the
+paths the files had when the paper's numbers were first written; the analysis lane
+renames them together with the macros.
+
 Required (tracked in git):
-  results_modal/seed_<N>/{base_no_wrapper,base_bodhi,lora_no_wrapper,lora_bodhi}.json
-      HealthBench grader output, one row per completion.
-  results_modal/seed_<N>/epistemic_scores.json
+  <M>/seed_<N>/eval/{base,base+bodhi,lora,lora+bodhi}.json
+      HealthBench grader output, one row per completion (conditions base_no_wrapper,
+      base_bodhi, lora_no_wrapper and lora_bodhi inside the files).
+  <M>/seed_<N>/grade/epistemic__<evaluator>.json
       Epistemic grader output, one row per graded completion.
 
 Optional (each table that needs one is skipped with a message if it is absent):
@@ -22,23 +29,25 @@ Optional (each table that needs one is skipped with a message if it is absent):
                                            git; python -m bodhi_lora fetch healthbench
                                            downloads it; make numbers
                                            stops without it)
-  data/derived/seed_7_filter_scores.json   filter scores of the seed-7 training split
+  <M>/seed_7/filter/filter_scores.json     filter scores of the seed-7 training split
                                            (tau table)
-  results_modal/irr/kappa_results.json     physician kappa (kappa table)
-  rebuttal/results/*.json                  rebuttal analyses (leakage, odds ratios)
-  data/rebuttal_cells/posted_values.json   rebuttal cells (generality tables)
-  data/rebuttal_cells/generated_values.json  synced rebuttal cells (make cells); a cell
+  <M>/validation/kappa_results.json        physician kappa (kappa table)
+  <M>/analysis/{mimicry_split,interference_mechanism,second_person_questions}.json
+                                           rebuttal analyses (leakage, odds ratios)
+  rebuttal/posted_values.json              rebuttal cells (generality tables)
+  results/cross_cell/generated_values.json synced rebuttal cells (make cells); a cell
                                            found here replaces its posted values and
                                            gets a paired t interval on the aggregate
-  rebuttal/results/cell_recipe.json        per-cell tau, trace counts and adapter recipe,
+  results/cross_cell/{cell_recipe,quality_drop}.json
+                                           per-cell tau, trace counts and adapter recipe,
                                            read from the host logs and the synced adapter
                                            files (make cells; filter table, Table F.2)
-  data/derived/seed_42_qwen_grader_scores.json  seed-42 side run graded by Qwen2.5-14B
+  <pilot>/analysis/qwen_grader_scores.json seed-42 pilot run graded by Qwen2.5-14B
                                            (cross-grader check)
 
-The two data/derived/ files are tracked. scripts/export_derived_inputs.py writes them
-from the large ignored files they come from (the seed-7 training traces and
-results/seed_42/eval/), so a clean checkout rebuilds every number.
+The filter-score and grader-score copies are tracked. scripts/export_derived_inputs.py
+writes them from the large ignored files they come from (the seed-7 training traces and
+the pilot's eval files), so a clean checkout rebuilds every number.
 
 Statistical units
 -----------------
@@ -64,6 +73,7 @@ import hashlib
 import json
 import math
 import re
+import sys
 from collections import Counter
 from pathlib import Path
 
@@ -73,6 +83,9 @@ from scipy import stats
 from statsmodels.stats.multitest import multipletests
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+
+from bodhi_lora.registry import condition_from_legacy  # noqa: E402
 
 CONDITIONS = ("base_no_wrapper", "base_bodhi", "lora_no_wrapper", "lora_bodhi")
 # Macro-name token and table label for each condition.
@@ -141,6 +154,9 @@ METRICS = (
          kind="chars", source="hb", worst=None),
 )
 METRIC = {m["key"]: m for m in METRICS}
+# The file each condition has in a cell's eval folder. CONDITIONS keeps the names the
+# rows inside the files use.
+COND_FILE = {c: condition_from_legacy(c) for c in CONDITIONS}
 # The paper's seven behavioral dimensions. This is the Holm family within a contrast.
 SEVEN_DIMS = ("uncertainty_ack", "active_inquiry", "context_seeking", "red_flag",
               "scope_bounding", "hedging_quality", "specificity")
@@ -211,28 +227,39 @@ def _epistemic_columns(scores: dict) -> dict:
     }
 
 
-def load_responses(results_dir: Path, seeds: list[int], subdir: str = "") -> pd.DataFrame:
+def eval_path(cell_dir: Path, seed: int, cfg: str) -> Path:
+    return cell_dir / f"seed_{seed}" / "eval" / f"{COND_FILE[cfg]}.json"
+
+
+def grade_path(cell_dir: Path, seed: int) -> Path:
+    """The evaluator's dimension grades of a seed (one epistemic__<evaluator>.json)."""
+    found = sorted((cell_dir / f"seed_{seed}" / "grade").glob("epistemic__*.json"))
+    if len(found) != 1:
+        raise SystemExit(f"paper_stats: expected one evaluator grade file in {cell_dir}/seed_{seed}/grade, found {len(found)}")
+    return found[0]
+
+
+def load_responses(results_dir: Path, seeds: list[int]) -> pd.DataFrame:
     """One row per HealthBench completion, joined to its epistemic grade.
 
     ``ep_status`` is "scored", "parse_failure" (the grader output did not
-    parse) or "missing" (eval_epistemic hit a grade error and wrote no row).
+    parse) or "missing" (the grader hit a grade error and wrote no row).
     Epistemic metric columns are NaN unless the row is scored.
 
-    ``subdir`` is the folder inside each seed dir that holds the eval files:
-    "" for results_modal/, "eval" for a rebuttal cell (rebuttal/launch/run_cell.sh).
+    ``results_dir`` is a cell folder of the results root; the conditions inside the
+    files keep the names base_no_wrapper, base_bodhi, lora_no_wrapper and lora_bodhi.
     """
     rows = []
     for seed in seeds:
-        seed_dir = results_dir / f"seed_{seed}" / subdir
-        with open(seed_dir / "epistemic_scores.json") as f:
+        with open(grade_path(results_dir, seed)) as f:
             ep = {c["name"]: {e["prompt_id"]: e for e in c["examples"]}
                   for c in json.load(f)["configs"]}
         for cfg in CONDITIONS:
-            with open(seed_dir / f"{cfg}.json") as f:
+            with open(eval_path(results_dir, seed, cfg)) as f:
                 hb = json.load(f)
             hb_ids = [r["prompt_id"] for r in hb["results"]]
             if len(hb_ids) != len(set(hb_ids)):
-                raise SystemExit(f"duplicate prompt_id in {seed_dir}/{cfg}.json")
+                raise SystemExit(f"duplicate prompt_id in {eval_path(results_dir, seed, cfg)}")
             extra = set(ep.get(cfg, {})) - set(hb_ids)
             if extra:
                 raise SystemExit(f"{len(extra)} epistemic rows without a completion in seed {seed} {cfg}")
@@ -980,8 +1007,8 @@ def speaker_tags(path: Path, out, macros):
 def cross_grader(path: Path, results_dir: Path, out, macros):
     """Seed-42 aggregate scores from the Qwen-graded side run against the Llama-graded main run.
 
-    The side run (results/seed_42/eval/, gitignored; its scores are in
-    data/derived/seed_42_qwen_grader_scores.json) drew its own 200 prompts, so the
+    The side run (the 2026-04 pilot, whose eval files are ignored; its scores are in
+    its analysis/qwen_grader_scores.json) drew its own 200 prompts, so the
     two runs share only part of their draws. Pearson and Spearman r are over the
     shared prompts; the mean scores and differences are over each run's own draw.
     """
@@ -992,7 +1019,7 @@ def cross_grader(path: Path, results_dir: Path, out, macros):
     q_all, l_all = [], []
     means = {}
     for cfg in cfgs:
-        with open(results_dir / "seed_42" / f"{cfg}.json") as f:
+        with open(eval_path(results_dir, 42, cfg)) as f:
             ll = json.load(f)
         qs = {pid: float(score) for pid, score in q["conditions"][cfg]}
         ls = {r["prompt_id"]: float(r["score"]) for r in ll["results"]}
@@ -1363,7 +1390,8 @@ def resolve_cells(posted: dict, generated: dict | None, recipe: dict | None = No
     cell's filter log, the filter clearance comes from the log instead of the posts.
     """
     synced = {c["id"]: c for c in (generated or {}).get("cells", [])}
-    recipes = (recipe or {}).get("cells", {})
+    # Both files name the cell folder they read, so the folder joins them.
+    recipe_by_dir = {r["dir"]: r for r in (recipe or {}).get("cells", {}).values()}
     cells = []
     for c in posted["cells"]:
         if c["id"] == MAIN_CELL_ID:
@@ -1383,7 +1411,7 @@ def resolve_cells(posted: dict, generated: dict | None, recipe: dict | None = No
             rec["askers_gap"] = g.get("lora_askers_minus_non_askers")
             # make cells ran the test on the unrounded seed means (cell_values.py).
             rec["aggregate_lora_minus_base"] = dict(g["aggregate_lora_minus_base"])
-            r = recipes.get(Path(g["dir"]).name)
+            r = recipe_by_dir.get(g["dir"])
             if r is not None:
                 rec["recipe"] = r
                 if (r.get("filter") or {}).get("parsed"):
@@ -1980,9 +2008,17 @@ def _rel(path: Path) -> str:
         return path.name
 
 
+# The analyses of the discussion. They were written into rebuttal/results/, and the
+# outputs still name them so; they now live in the submitted cell's analysis folder and in
+# results/cross_cell/.
+CELL_ANALYSES = ("interference_mechanism.json", "mimicry_split.json", "second_person_questions.json")
+CROSS_ANALYSES = ("cell_recipe.json", "quality_drop.json")
+
+
 def run(results_dir: Path, out_dir: Path, healthbench: Path | None, filter_scores: Path | None,
-        kappa: Path | None, rebuttal_results: Path | None, posted_values: Path | None,
-        generated_values: Path | None = None, qwen_grader_scores: Path | None = None) -> dict:
+        kappa: Path | None, cell_analysis: Path | None, posted_values: Path | None,
+        generated_values: Path | None = None, qwen_grader_scores: Path | None = None,
+        cross_cell: Path | None = None) -> dict:
     seeds = discover_seeds(results_dir)
     df = load_responses(results_dir, seeds)
     out: dict = {"meta": {"seeds": seeds, "conditions": list(CONDITIONS),
@@ -1991,9 +2027,9 @@ def run(results_dir: Path, out_dir: Path, healthbench: Path | None, filter_score
                                         "cluster": "prompt_id", "interval": "percentile"},
                           "inputs": {}}}
     for s in seeds:
-        for name in [*(f"{c}.json" for c in CONDITIONS), "epistemic_scores.json"]:
-            p = results_dir / f"seed_{s}" / name
-            out["meta"]["inputs"][f"results_modal/seed_{s}/{name}"] = _sha256(p)
+        for c in CONDITIONS:
+            out["meta"]["inputs"][f"results_modal/seed_{s}/{c}.json"] = _sha256(eval_path(results_dir, s, c))
+        out["meta"]["inputs"][f"results_modal/seed_{s}/epistemic_scores.json"] = _sha256(grade_path(results_dir, s))
     macros = Macros()
     boot = ClusterBootstrap(df["prompt_id"].unique().tolist(), BOOTSTRAP_RESAMPLES, BOOTSTRAP_SEED)
 
@@ -2026,12 +2062,16 @@ def run(results_dir: Path, out_dir: Path, healthbench: Path | None, filter_score
         cross_grader(qwen_grader_scores, results_dir, out, macros)
     if optional(kappa, "kappa table", "results_modal/irr/kappa_results.json"):
         kappa_section(kappa, out, macros)
-    if rebuttal_results is not None and rebuttal_results.is_dir():
-        for p in sorted(rebuttal_results.glob("*.json")):
-            out["meta"]["inputs"][f"rebuttal/results/{p.name}"] = _sha256(p)
-        rebuttal_section(rebuttal_results, out, macros)
+    if cell_analysis is not None and cell_analysis.is_dir():
+        files = {n: cell_analysis / n for n in CELL_ANALYSES}
+        if cross_cell is not None:
+            files.update({n: cross_cell / n for n in CROSS_ANALYSES})
+        for name in sorted(files):
+            if files[name].is_file():
+                out["meta"]["inputs"][f"rebuttal/results/{name}"] = _sha256(files[name])
+        rebuttal_section(cell_analysis, out, macros)
     else:
-        print(f"SKIP rebuttal analyses: {rebuttal_results} not found")
+        print(f"SKIP rebuttal analyses: {cell_analysis} not found")
     if optional(posted_values, "generality table (rebuttal cells)", "data/rebuttal_cells/posted_values.json"):
         posted = load_posted_values(posted_values)
         generated = None
@@ -2042,7 +2082,7 @@ def run(results_dir: Path, out_dir: Path, healthbench: Path | None, filter_score
         else:
             print(f"note: {generated_values} not found; added cells use posted values (PROV-1)")
         recipe = None
-        recipe_path = None if rebuttal_results is None else rebuttal_results / "cell_recipe.json"
+        recipe_path = None if cross_cell is None else cross_cell / "cell_recipe.json"
         if recipe_path is not None and recipe_path.is_file():
             with open(recipe_path) as f:
                 recipe = json.load(f)
@@ -2069,25 +2109,25 @@ def run(results_dir: Path, out_dir: Path, healthbench: Path | None, filter_score
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    ap.add_argument("--results-dir", type=Path, default=ROOT / "results_modal")
+    results = ROOT / "results"
+    cell = results / "healthbench__medgemma-27b-text__bodhi__2026-05"
+    ap.add_argument("--results-dir", type=Path, default=cell, help="the submitted cell's folder")
     ap.add_argument("--out-dir", type=Path, default=ROOT / "paper" / "generated")
     ap.add_argument("--healthbench", type=Path, default=ROOT / "data" / "raw" / "healthbench" / "hard.jsonl")
     # Small tracked copies of the scores in two large ignored files
     # (scripts/export_derived_inputs.py writes them).
-    ap.add_argument("--filter-scores", type=Path,
-                    default=ROOT / "data" / "derived" / "seed_7_filter_scores.json")
-    ap.add_argument("--kappa", type=Path, default=ROOT / "results_modal" / "irr" / "kappa_results.json")
-    ap.add_argument("--rebuttal-results", type=Path, default=ROOT / "rebuttal" / "results")
-    ap.add_argument("--posted-values", type=Path,
-                    default=ROOT / "data" / "rebuttal_cells" / "posted_values.json")
-    # Written by `make cells` once results_rebuttal/ is synced; replaces posted values cell by cell.
-    ap.add_argument("--generated-values", type=Path,
-                    default=ROOT / "data" / "rebuttal_cells" / "generated_values.json")
+    ap.add_argument("--filter-scores", type=Path, default=cell / "seed_7" / "filter" / "filter_scores.json")
+    ap.add_argument("--kappa", type=Path, default=cell / "validation" / "kappa_results.json")
+    ap.add_argument("--cell-analysis", type=Path, default=cell / "analysis")
+    ap.add_argument("--cross-cell", type=Path, default=results / "cross_cell")
+    ap.add_argument("--posted-values", type=Path, default=ROOT / "rebuttal" / "posted_values.json")
+    # Written by `make cells` from the synced cells; replaces posted values cell by cell.
+    ap.add_argument("--generated-values", type=Path, default=results / "cross_cell" / "generated_values.json")
     ap.add_argument("--qwen-grader-scores", type=Path,
-                    default=ROOT / "data" / "derived" / "seed_42_qwen_grader_scores.json")
+                    default=results / "healthbench__medgemma-27b-text__bodhi__2026-04" / "analysis" / "qwen_grader_scores.json")
     a = ap.parse_args()
-    run(a.results_dir, a.out_dir, a.healthbench, a.filter_scores, a.kappa, a.rebuttal_results,
-        a.posted_values, a.generated_values, a.qwen_grader_scores)
+    run(a.results_dir, a.out_dir, a.healthbench, a.filter_scores, a.kappa, a.cell_analysis,
+        a.posted_values, a.generated_values, a.qwen_grader_scores, a.cross_cell)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,19 @@
+{
+  "schema": 2,
+  "stage": "traces",
+  "cell": "chatdoctor__med42-8b__bodhi__2026-07",
+  "seed": 99,
+  "created_utc": "2026-10-09T08:55:00.062538+00:00",
+  "status": "not_kept",
+  "files": {},
+  "note": "teacher traces are shared by every seed",
+  "written_by": {
+    "script": "scripts/migrate_results.py --manifests",
+    "git": {
+      "sha": "4e3edce5962174602e3689dfc9bad7cc461ac636",
+      "dirty": true,
+      "diff_sha256": "9dbfc95e3941533dffa000e377c00359764b72e3cf92389df56cf8e1e2b51a48",
+      "n_untracked": 0
+    }
+  }
+}

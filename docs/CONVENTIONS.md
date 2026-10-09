@@ -81,11 +81,13 @@ depends on it.
 Every result lives under one results root in the repo, each run has a manifest, and no
 number is posted from a file that exists only on a remote machine.
 
-- Why: the added cells exist only on the GPU host, and the recorded settings did not
+- Why: the added cells existed only on the GPU host, and the recorded settings did not
   describe what ran (PROV-1, HYG-4, REPRO-7).
-- Enforced by: `bodhi_lora/manifest.py` writes the manifest. `.gitignore` admits
-  per-seed eval JSON and summaries under `results_rebuttal/` and keeps raw generations
-  and weights out. Review step: a reply or paper number cites a file that is in git.
+- Enforced by: `bodhi_lora/manifest.py` writes the manifest. `.gitignore` decides by the
+  kind of file under `results/`: manifests, cell records, id lists, adapter configs,
+  trainer states, analysis and validation files are tracked; traces, raw eval and grade
+  JSON, adapter weights and logs stay out (results/PROVENANCE.md). Review step: a reply or
+  paper number cites a file that is in git.
 
 ## 8. One canonical paper source
 

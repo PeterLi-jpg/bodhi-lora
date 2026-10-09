@@ -1,0 +1,20 @@
+{
+  "schema": 2,
+  "stage": "filter",
+  "cell": "medqa-open-preamble__biomistral-7b__bodhi__2026-07",
+  "seed": 42,
+  "created_utc": "2026-10-09T08:56:04.440228+00:00",
+  "status": "not_kept",
+  "files": {},
+  "note": "the train/val split",
+  "shared": "results/medqa-open-preamble__biomistral-7b__bodhi__2026-07/shared/filter",
+  "written_by": {
+    "script": "scripts/migrate_results.py --manifests",
+    "git": {
+      "sha": "4e3edce5962174602e3689dfc9bad7cc461ac636",
+      "dirty": true,
+      "diff_sha256": "f5a38bc57f7f46745d68b7bf14acf1d30f2fde82c37bbae03572bbcd9e951bae",
+      "n_untracked": 0
+    }
+  }
+}

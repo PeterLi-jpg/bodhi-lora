@@ -1,0 +1,21 @@
+{
+  "schema": 2,
+  "stage": "grade",
+  "cell": "healthbench__biomistral-7b__bodhi__2026-07",
+  "seed": 99,
+  "created_utc": "2026-10-09T08:55:22.251641+00:00",
+  "status": "recorded",
+  "files": {
+    "epistemic__llama-3.1-8b-nous.json": "91ca050f53b697ee383e44c29328b93f48bdfb809d4ad986a03c4bb8bb170d3c"
+  },
+  "note": "the evaluator's dimension grades",
+  "written_by": {
+    "script": "scripts/migrate_results.py --manifests",
+    "git": {
+      "sha": "4e3edce5962174602e3689dfc9bad7cc461ac636",
+      "dirty": true,
+      "diff_sha256": "fdf78a651eaaf5eab4b7a0d4300d43b81764aa62a6c37e83923f3116786be7ac",
+      "n_untracked": 0
+    }
+  }
+}

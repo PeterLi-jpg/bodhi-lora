@@ -1,0 +1,20 @@
+{
+  "schema": 2,
+  "stage": "filter",
+  "cell": "medqa-open-preamble__mistral-small-24b__bodhi__2026-07",
+  "seed": 42,
+  "created_utc": "2026-10-09T08:56:07.906116+00:00",
+  "status": "not_kept",
+  "files": {},
+  "note": "the train/val split",
+  "shared": "results/medqa-open-preamble__mistral-small-24b__bodhi__2026-07/shared/filter",
+  "written_by": {
+    "script": "scripts/migrate_results.py --manifests",
+    "git": {
+      "sha": "4e3edce5962174602e3689dfc9bad7cc461ac636",
+      "dirty": true,
+      "diff_sha256": "72baeb79e2c1741d9baa686c59f9b64eff63afeee6ede60e873a365a8b523619",
+      "n_untracked": 0
+    }
+  }
+}

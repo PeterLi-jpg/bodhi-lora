@@ -1,0 +1,20 @@
+{
+  "schema": 2,
+  "stage": "filter",
+  "cell": "healthbench__biomistral-7b__bodhi__2026-07",
+  "seed": 101,
+  "created_utc": "2026-10-09T08:55:23.149670+00:00",
+  "status": "not_kept",
+  "files": {},
+  "note": "the train/val split",
+  "shared": "results/healthbench__biomistral-7b__bodhi__2026-07/shared/filter",
+  "written_by": {
+    "script": "scripts/migrate_results.py --manifests",
+    "git": {
+      "sha": "4e3edce5962174602e3689dfc9bad7cc461ac636",
+      "dirty": true,
+      "diff_sha256": "27bd9d02ed54970a0600b5be35d84c4d9b90145990786cf9bcfdba9fb1806ea6",
+      "n_untracked": 0
+    }
+  }
+}

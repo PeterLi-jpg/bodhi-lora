@@ -1,0 +1,21 @@
+{
+  "schema": 2,
+  "stage": "grade",
+  "cell": "healthbench__mistral-small-24b__bodhi__2026-07",
+  "seed": 99,
+  "created_utc": "2026-10-09T08:56:00.560093+00:00",
+  "status": "recorded",
+  "files": {
+    "epistemic__llama-3.1-8b-nous.json": "eb82be5445ce57eb5dfa57f400592fed49cb2d479f2208946b03eaf7397de0a5"
+  },
+  "note": "the evaluator's dimension grades",
+  "written_by": {
+    "script": "scripts/migrate_results.py --manifests",
+    "git": {
+      "sha": "4e3edce5962174602e3689dfc9bad7cc461ac636",
+      "dirty": true,
+      "diff_sha256": "9629a731972d4e2078832e09528ef94ce7c453124832eedea976cda1b89daaff",
+      "n_untracked": 0
+    }
+  }
+}

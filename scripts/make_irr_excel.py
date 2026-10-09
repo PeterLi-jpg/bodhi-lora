@@ -6,10 +6,12 @@ Each Excel has 3 sheets:
     yellow columns: ``physician_id``, ``physician_grade`` (pass/fail/unsure),
     ``physician_confidence`` (1/2/3), plus optional ``notes``.
   - **Instructions - Primary**: workflow + grading rules (verbatim from
-    the processed clinician_1 template at data/irr_instructions/primary.json).
+    the processed clinician_1 template at <M>/validation/instructions/primary.json).
   - **Instructions - Tiebreaker**: instructions for the adjudicator (used
     only after Stage-1 reviewers return; verbatim from
-    data/irr_instructions/tiebreaker.json).
+    <M>/validation/instructions/tiebreaker.json).
+
+<M> is the submitted cell, results/healthbench__medgemma-27b-text__bodhi__2026-05/.
 
 Sampling
 --------
@@ -23,7 +25,7 @@ rows ≈ 50 × ~10 = ~500 rows per clinician. The is_avoid_item column flags
 criteria where the model should NOT exhibit the behavior (negative-points
 rubric items) — orange-highlighted in the Excel.
 
-Output files (in results_modal/irr/):
+Output files (in <M>/validation/):
   Grading-template.xlsx              master copy, do not edit
   Grading-reviewer1.xlsx ..         3 identical reviewer copies. Keep these
   Grading-reviewer3.xlsx             names; never put a rater's name in a file
@@ -36,6 +38,7 @@ from __future__ import annotations
 
 import json
 import random
+import sys
 from pathlib import Path
 
 import pandas as pd
@@ -45,12 +48,16 @@ from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
 ROOT = Path(__file__).resolve().parent.parent
-RESULTS_DIR = ROOT / "results_modal"
+sys.path.insert(0, str(ROOT))
+
+from bodhi_lora.registry import condition_from_legacy  # noqa: E402
+
+RESULTS_DIR = ROOT / "results" / "healthbench__medgemma-27b-text__bodhi__2026-05"
 HEALTHBENCH_PATH = ROOT / "data" / "raw" / "healthbench" / "hard.jsonl"
 HEALTHBENCH_FULL_PATH = ROOT / "data" / "raw" / "healthbench" / "full.jsonl"
-FILTER_TRACES_PATH = ROOT / "data" / "sft_qwen_graded" / "seed_7_train.jsonl"
-INSTR_DIR = ROOT / "data" / "irr_instructions"
-OUT_DIR = RESULTS_DIR / "irr"
+FILTER_TRACES_PATH = RESULTS_DIR / "seed_7" / "filter" / "train.jsonl"
+OUT_DIR = RESULTS_DIR / "validation"
+INSTR_DIR = OUT_DIR / "instructions"
 
 SEEDS = (7, 13, 42, 99, 101)
 CONFIGS = ("base_no_wrapper", "base_bodhi", "lora_no_wrapper", "lora_bodhi")
@@ -117,7 +124,7 @@ def load_per_seed_results(seed: int) -> dict[str, list[dict]]:
     seed_dir = RESULTS_DIR / f"seed_{seed}"
     out: dict[str, list[dict]] = {}
     for cfg in CONFIGS:
-        with open(seed_dir / f"{cfg}.json") as f:
+        with open(seed_dir / "eval" / f"{condition_from_legacy(cfg)}.json") as f:
             d = json.load(f)
         out[cfg] = d["results"]
     return out
@@ -410,8 +417,8 @@ has returned grades, and `kappa_results.json` holds the result for that rater.
 
 ## Data sources
 
-- `results_modal/seed_<N>/<config>.json` — 5-seed Modal eval (Llama-graded)
-- `data/sft_qwen_graded/seed_7_train.jsonl` — Qwen-filtered BODHI traces
+- `../seed_<N>/eval/<condition>.json` — 5-seed Modal eval (Llama-graded)
+- `../seed_7/filter/train.jsonl` — Qwen-filtered BODHI traces
 - `data/raw/healthbench/hard.jsonl`, `data/raw/healthbench/full.jsonl` — rubrics
 """)
 

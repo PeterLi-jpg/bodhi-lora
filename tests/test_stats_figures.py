@@ -9,7 +9,7 @@ sys.path.insert(0, str(ROOT))
 
 from scripts import plot_epistemic_figures as pef  # noqa: E402
 
-AGG = ROOT / "results_modal" / "cross_seed_aggregate.json"
+AGG = ROOT / "results" / "healthbench__medgemma-27b-text__bodhi__2026-05" / "analysis" / "cross_seed_aggregate.json"
 
 
 def test_figure_2_has_two_panels_with_their_own_axes(tmp_path):

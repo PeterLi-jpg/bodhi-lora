@@ -1,0 +1,20 @@
+{
+  "schema": 2,
+  "stage": "filter",
+  "cell": "chatdoctor__med42-8b__bodhi__2026-07",
+  "seed": 42,
+  "created_utc": "2026-10-09T08:54:55.015568+00:00",
+  "status": "not_kept",
+  "files": {},
+  "note": "the train/val split",
+  "shared": "results/chatdoctor__med42-8b__bodhi__2026-07/shared/filter",
+  "written_by": {
+    "script": "scripts/migrate_results.py --manifests",
+    "git": {
+      "sha": "4e3edce5962174602e3689dfc9bad7cc461ac636",
+      "dirty": true,
+      "diff_sha256": "20e22bdf380f22a97e67670214d35b8f7f639398caf75acf56e508c2467b86c5",
+      "n_untracked": 0
+    }
+  }
+}

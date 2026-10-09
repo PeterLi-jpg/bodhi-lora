@@ -1,0 +1,19 @@
+{
+  "schema": 2,
+  "stage": "traces",
+  "cell": "chatdoctor__mistral-small-24b__bodhi__2026-07",
+  "seed": 99,
+  "created_utc": "2026-10-09T08:55:09.808744+00:00",
+  "status": "not_kept",
+  "files": {},
+  "note": "teacher traces are shared by every seed",
+  "written_by": {
+    "script": "scripts/migrate_results.py --manifests",
+    "git": {
+      "sha": "4e3edce5962174602e3689dfc9bad7cc461ac636",
+      "dirty": true,
+      "diff_sha256": "929f18a9493887770d11d2b4cc606dfc06594ccfaae9fe624813e99cf48c39c3",
+      "n_untracked": 0
+    }
+  }
+}

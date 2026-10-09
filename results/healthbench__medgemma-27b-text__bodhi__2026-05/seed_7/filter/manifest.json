@@ -1,0 +1,22 @@
+{
+  "schema": 2,
+  "stage": "filter",
+  "cell": "healthbench__medgemma-27b-text__bodhi__2026-05",
+  "seed": 7,
+  "created_utc": "2026-10-09T08:55:42.893524+00:00",
+  "status": "recorded",
+  "files": {
+    "filter_scores.json": "3e3e688090c0de5df809d6df0bf18ccdcf64dec49ab0b25ba9a80253c653b9a0",
+    "train.jsonl": "60bc234058dec78b0d4e091d8776b3e406a8e078f01205dc73e153028f4c313e"
+  },
+  "note": "the train/val split",
+  "written_by": {
+    "script": "scripts/migrate_results.py --manifests",
+    "git": {
+      "sha": "4e3edce5962174602e3689dfc9bad7cc461ac636",
+      "dirty": true,
+      "diff_sha256": "7ffcd745523c74585ad9ad906e24437d88f162b4266198a05d455b82a724e4a8",
+      "n_untracked": 0
+    }
+  }
+}

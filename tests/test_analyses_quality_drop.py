@@ -1,8 +1,8 @@
-"""Tests for rebuttal/analyses/quality_drop.py on a synthetic cells tree.
+"""Tests for rebuttal/analyses/quality_drop.py on a synthetic results root.
 
-The real cells live on the shared H100 box (PROV-1). These fixtures mirror the
-layout rebuttal/launch/run_cell.sh writes, so the script runs unchanged once the
-data is synced.
+The eval files of the real cells are copies from the shared H100 box (PROV-1). These
+fixtures mirror the cell folders the copies sit in, with the host's generation log
+that names each run.
 """
 
 import importlib.util
@@ -25,16 +25,21 @@ def _load():
     return mod
 
 
-def _write_cell(root, name, base, lora, extra_seed_without_lora=False):
+def _write_cell(root, run, base, lora, extra_seed_without_lora=False):
+    """A cell folder holding the host run <bench>__<tag>."""
+    bench, _, tag = run.partition("__")
+    cell = root / f"{bench}__{tag.lower()}__bodhi__2026-07"
+    (cell / "logs").mkdir(parents=True)
+    (cell / "logs" / f"gen_{bench}_{tag}.log").write_text("Generating\n")
     for i, (b, l) in enumerate(zip(base, lora)):
-        ev = root / name / f"seed_{[7, 13, 42, 99, 101][i]}" / "eval"
+        ev = cell / f"seed_{[7, 13, 42, 99, 101][i]}" / "eval"
         ev.mkdir(parents=True)
-        (ev / "base_no_wrapper.json").write_text(json.dumps({"mean": b}))
-        (ev / "lora_no_wrapper.json").write_text(json.dumps({"mean": l}))
+        (ev / "base.json").write_text(json.dumps({"mean": b}))
+        (ev / "lora.json").write_text(json.dumps({"mean": l}))
     if extra_seed_without_lora:
-        ev = root / name / "seed_5" / "eval"
+        ev = cell / "seed_5" / "eval"
         ev.mkdir(parents=True)
-        (ev / "base_no_wrapper.json").write_text(json.dumps({"mean": 0.9}))
+        (ev / "base.json").write_text(json.dumps({"mean": 0.9}))
 
 
 def test_paired_t_and_holm_match_hand_computation(tmp_path, monkeypatch):
@@ -43,10 +48,10 @@ def test_paired_t_and_holm_match_hand_computation(tmp_path, monkeypatch):
     lora_a = [0.40, 0.42, 0.40, 0.42, 0.41]
     base_b = [0.50, 0.52, 0.49, 0.51, 0.50]
     lora_b = [0.50, 0.51, 0.50, 0.50, 0.51]
-    _write_cell(tmp_path / "cells", "healthbench__a", base_a, lora_a, extra_seed_without_lora=True)
-    _write_cell(tmp_path / "cells", "chatdoctor__b", base_b, lora_b)
+    _write_cell(tmp_path / "results", "healthbench__a", base_a, lora_a, extra_seed_without_lora=True)
+    _write_cell(tmp_path / "results", "chatdoctor__b", base_b, lora_b)
     out = tmp_path / "quality_drop.json"
-    monkeypatch.setattr(sys, "argv", ["quality_drop.py", "--cells-root", str(tmp_path / "cells"),
+    monkeypatch.setattr(sys, "argv", ["quality_drop.py", "--results-root", str(tmp_path / "results"),
                                       "--out", str(out)])
     qd.main()
     cells = json.loads(out.read_text())["cells"]
@@ -78,9 +83,9 @@ def test_posted_t_values_pass_holm():
     assert multipletests(p, method="holm")[0].all()
 
 
-def test_missing_cells_root_exits_with_message(tmp_path, monkeypatch):
+def test_missing_eval_copies_exit_with_message(tmp_path, monkeypatch):
     qd = _load()
-    monkeypatch.setattr(sys, "argv", ["quality_drop.py", "--cells-root", str(tmp_path / "nope")])
+    monkeypatch.setattr(sys, "argv", ["quality_drop.py", "--results-root", str(tmp_path / "nope")])
     with pytest.raises(SystemExit) as exc:
         qd.main()
     assert "PROV-1" in str(exc.value)

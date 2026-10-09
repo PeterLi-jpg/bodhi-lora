@@ -81,7 +81,7 @@ What evidence remains:
   435-447) pulled each seed's `checkpoints/best/` (with `adapter_config.json`) and its
   `train.jsonl` and `val.jsonl` from the bucket into that volume, at `/seed_<N>/`, before
   the evaluation. A Modal volume persists until someone deletes it. No other store is named
-  in `legacy/` or `results_modal/`: the second volume, `bohdi-hf-cache`, holds base-model
+  in `legacy/` or `results/healthbench__medgemma-27b-text__bodhi__2026-05/`: the second volume, `bohdi-hf-cache`, holds base-model
   weights only.
 
 Action, with your Modal login (reading a volume uses no GPU; `-` writes to stdout, per the
@@ -123,8 +123,8 @@ Done on 2026-10-08. The raw outputs and logs were copied read-only from the GPU 
 tau, trace counts and adapter recipe (5d5890e, d5d5637, b7bbdfb). The paper takes them
 from there, with no "transcribed" footnote, names the MedQA run (the preamble run) and the
 incomplete host runs (38b800e). The records followed (bd40a05, 5f3f858, 624a1db): one
-posted value was wrong (W21), C24 is done, and `results_rebuttal/` left the `PENDING` list
-of `scripts/check_doc_paths.py`. [PROV-1, PROV-2, PROV-3, CR-1, C24, W11, W12]
+posted value was wrong (W21), C24 is done, and the host copy left the `PENDING` list
+of `scripts/check_doc_paths.py`; on 2026-10-08 it moved into the `results/*__2026-07/` cells. [PROV-1, PROV-2, PROV-3, CR-1, C24, W11, W12]
 
 One step remains. It needs a login to the host (REPRO-10):
 
@@ -229,11 +229,11 @@ Action:
 
    ```bash
    make kappa RATER_FILES="<private dir>/<returned Grading file>.xlsx"
-   git diff --exit-code results_modal/irr/kappa_results.json   # expect no diff (0.354, n=509)
+   git diff --exit-code results/healthbench__medgemma-27b-text__bodhi__2026-05/validation/kappa_results.json   # expect no diff (0.354, n=509)
    ```
 
 2. Send the two raters who have not returned their sheet their
-   `results_modal/irr/Grading-reviewer<K>.xlsx`. Keep the returned files outside the
+   `results/healthbench__medgemma-27b-text__bodhi__2026-05/validation/Grading-reviewer<K>.xlsx`. Keep the returned files outside the
    repo.
 3. When both are back:
 
@@ -319,8 +319,12 @@ Why: none of this ran, because D16 forbids remote changes in the cleanup.
   `rebuttal/PLAN.md`). It needs a dated plan (item 5).
 - **Contamination probe (NUM-7).** Appendix A types its numbers by hand and says the
   output was not kept. Run it on a GPU, commit the JSON, and add an emitter to
-  `scripts/paper_stats.py`:
-  `.venv-infer/bin/python -m bodhi_lora.pipeline.probe --n-prompts 200 --prefix-tokens 15 --continuation-tokens 25 --output results_modal/contamination_probe.json`.
+  `scripts/paper_stats.py`. The probe is a stage now: it reads a `probe` block in a cell
+  record (n_prompts 200, prefix_tokens 15, continuation_tokens 25 for the Appendix A
+  setting) and writes probe.json in the shared probe folder of that cell. No record has a `probe`
+  block yet, and the runner refuses the recorded 2026-05 cell, so this needs a new cell
+  record on the MedGemma-27B base first; then
+  `python -m bodhi_lora run <cell id> --stages probe --gpus 0`.
   About one H100-hour (rough estimate).
 - **Red flags early in the protocol (C31).** Promised to LxMF. No code exists yet. It
   needs a protocol variant that writes red flags before the extended reasoning, a cell
@@ -359,12 +363,12 @@ Why: none of this ran, because D16 forbids remote changes in the cleanup.
   `OpenMeditron/Meditron3-8B` and add it to `configs/models/meditron3-8b.yaml`; compare the LFS
   sha256 of `NousResearch/Meta-Llama-3.1-8B-Instruct` with `meta-llama/Llama-3.1-8B-Instruct`.
 - **Full responses of the added cells.** The per-seed eval JSON (about 370 MB) is in the
-  gitignored `results_rebuttal/`, in a local archive outside the repo and on the host. The
+  `results/*__2026-07/` cells (gitignored), in a local archive outside the repo and on the host. The
   repo tracks only what `make numbers` needs. Decide whether to archive it with its
   sha256, as for the training traces below; reviewers who ask for per-cell outputs need it.
-- **Training traces of the submitted cell.** `data/sft_qwen_graded/seed_7_train.jsonl`
+- **Training traces of the submitted cell.** `results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_7/filter/train.jsonl`
   (49 MB) is ignored. `make numbers` reads its scores from the tracked
-  `data/derived/seed_7_filter_scores.json`; `make kappa` and `make derived` still need
+  `results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_7/filter/filter_scores.json`; `make kappa` and `make derived` still need
   the file. Decide whether to archive it with its sha256.
 - **Equivalence margin (EVAL-1, D2).** D2 says no margin. If you want a non-inferiority
   statement, state the margin first; the 90% interval is in

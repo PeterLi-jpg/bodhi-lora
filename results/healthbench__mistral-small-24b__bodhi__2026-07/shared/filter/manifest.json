@@ -1,0 +1,34 @@
+{
+  "schema": 2,
+  "stage": "filter",
+  "cell": "healthbench__mistral-small-24b__bodhi__2026-07",
+  "seed": null,
+  "created_utc": "2026-10-09T08:55:51.535023+00:00",
+  "status": "not_kept",
+  "recorded": {
+    "tau": 0.4,
+    "raw": 4000,
+    "graded": 4000,
+    "kept": 2486,
+    "train": 2238,
+    "val": 248,
+    "n_filter_passes": 1,
+    "rubric_parse_failures": [
+      2,
+      45391
+    ],
+    "score_field": "overall_score"
+  },
+  "source": "results/cross_cell/cell_recipe.json",
+  "source_log_sha256": "29e4c028df9e0ef75cb0e0979adce4ceab6484c450e04f5d91cadbc8f4b568b4",
+  "note": "graded, kept and split traces stayed on the GPU host; counts and tau from the filter log",
+  "written_by": {
+    "script": "scripts/migrate_results.py --manifests",
+    "git": {
+      "sha": "4e3edce5962174602e3689dfc9bad7cc461ac636",
+      "dirty": true,
+      "diff_sha256": "46bb8e1fd0116e681abafc3a2803494f22316c64f207ee05d89e2dc9d060461c",
+      "n_untracked": 0
+    }
+  }
+}

@@ -1,17 +1,21 @@
 """Write the small derived inputs that paper_stats.py reads, from the large ignored files.
 
-Two tables in the paper come from files that git ignores because of their size:
+Two tables in the paper come from files that git ignores because of their size
+(<M> is the submitted cell, <pilot> the 2026-04 pilot, both under results/):
 
-  data/sft_qwen_graded/seed_7_train.jsonl  (49 MB: the seed-7 training traces)
-  results/seed_42/eval/<condition>.json     (8 MB: the seed-42 run graded by Qwen2.5-14B)
+  <M>/seed_7/filter/train.jsonl      (49 MB: the seed-7 training traces)
+  <pilot>/seed_42/eval/<cond>.json   (8 MB: the seed-42 run graded by Qwen2.5-14B)
 
 paper_stats.py needs only the scores in them. This script copies those scores, with
-the prompt ids, into data/derived/, which is tracked. So `make numbers` rebuilds every
-number in a clean checkout. The output keeps the source row order, so float sums in
-paper_stats.py match a run on the source files bit for bit.
+the prompt ids, into <M>/seed_7/filter/filter_scores.json and
+<pilot>/analysis/qwen_grader_scores.json, which are tracked. So `make numbers` rebuilds
+every number in a clean checkout. The output keeps the source row order, so float sums
+in paper_stats.py match a run on the source files bit for bit.
 
 The derived files hold no response text. Each records the sha256 of its source, so a
-reader with the source file can rerun this script and diff the output.
+reader with the source file can rerun this script and diff the output. The tracked
+copies name their sources by the paths the files had when they were exported, before
+the results root (results/PROVENANCE.md); a new export names the paths it read.
 
 Usage:
     python3 scripts/export_derived_inputs.py [--filter-train PATH] [--qwen-grader-dir DIR]
@@ -22,12 +26,18 @@ import argparse
 import hashlib
 import json
 import re
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-OUT_DIR = ROOT / "data" / "derived"
-FILTER_SCORES = OUT_DIR / "seed_7_filter_scores.json"
-QWEN_SCORES = OUT_DIR / "seed_42_qwen_grader_scores.json"
+sys.path.insert(0, str(ROOT))
+
+from bodhi_lora.registry import condition_from_legacy  # noqa: E402
+
+MAIN_CELL = ROOT / "results" / "healthbench__medgemma-27b-text__bodhi__2026-05"
+PILOT = ROOT / "results" / "healthbench__medgemma-27b-text__bodhi__2026-04"
+FILTER_SCORES = MAIN_CELL / "seed_7" / "filter" / "filter_scores.json"
+QWEN_SCORES = PILOT / "analysis" / "qwen_grader_scores.json"
 # The side run graded these three conditions only.
 QWEN_CONDITIONS = ("base_no_wrapper", "base_bodhi", "lora_no_wrapper")
 
@@ -40,6 +50,13 @@ def _sha256(path: Path) -> str:
     return h.hexdigest()
 
 
+def _rel(path: Path) -> str:
+    try:
+        return str(path.resolve().relative_to(ROOT.resolve()))
+    except ValueError:
+        return str(path)
+
+
 def _write(path: Path, obj: dict) -> None:
     # indent=1 puts every number on its own line; fold each [prompt_id, value] pair
     # back onto one line so the file stays short and diffs read row by row.
@@ -48,7 +65,7 @@ def _write(path: Path, obj: dict) -> None:
         raise SystemExit(f"export_derived_inputs: folding changed the content of {path.name}")
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text + "\n")
-    print(f"wrote {path.relative_to(ROOT)}")
+    print(f"wrote {_rel(path)}")
 
 
 def export_filter_scores(src: Path) -> dict:
@@ -60,7 +77,7 @@ def export_filter_scores(src: Path) -> dict:
                 rows.append([r["prompt_id"], r["grade"]["normalized_score"]])
     return {
         "what": "Qwen2.5-14B filter score of each trace in the seed-7 training split",
-        "source": "data/sft_qwen_graded/seed_7_train.jsonl",
+        "source": _rel(src),
         "source_sha256": _sha256(src),
         "columns": ["prompt_id", "normalized_score"],
         "rows": rows,
@@ -70,12 +87,12 @@ def export_filter_scores(src: Path) -> dict:
 def export_qwen_scores(qdir: Path) -> dict:
     conditions, sources, graders = {}, {}, set()
     for cfg in QWEN_CONDITIONS:
-        p = qdir / f"{cfg}.json"
+        p = qdir / f"{condition_from_legacy(cfg)}.json"
         with open(p) as f:
             q = json.load(f)
         graders.add(q.get("run_metadata", {}).get("grader_model"))
         conditions[cfg] = [[r["prompt_id"], r["score"]] for r in q["results"]]
-        sources[cfg] = {"source": f"results/seed_42/eval/{cfg}.json", "source_sha256": _sha256(p)}
+        sources[cfg] = {"source": _rel(p), "source_sha256": _sha256(p)}
     if len(graders) != 1:
         raise SystemExit(f"export_derived_inputs: grader differs across conditions: {graders}")
     return {
@@ -89,12 +106,13 @@ def export_qwen_scores(qdir: Path) -> dict:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    ap.add_argument("--filter-train", type=Path,
-                    default=ROOT / "data" / "sft_qwen_graded" / "seed_7_train.jsonl")
-    ap.add_argument("--qwen-grader-dir", type=Path, default=ROOT / "results" / "seed_42" / "eval")
+    ap.add_argument("--filter-train", type=Path, default=MAIN_CELL / "seed_7" / "filter" / "train.jsonl")
+    ap.add_argument("--qwen-grader-dir", type=Path, default=PILOT / "seed_42" / "eval")
+    ap.add_argument("--filter-out", type=Path, default=FILTER_SCORES)
+    ap.add_argument("--qwen-out", type=Path, default=QWEN_SCORES)
     a = ap.parse_args()
-    _write(FILTER_SCORES, export_filter_scores(a.filter_train))
-    _write(QWEN_SCORES, export_qwen_scores(a.qwen_grader_dir))
+    _write(a.filter_out, export_filter_scores(a.filter_train))
+    _write(a.qwen_out, export_qwen_scores(a.qwen_grader_dir))
 
 
 if __name__ == "__main__":

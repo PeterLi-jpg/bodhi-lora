@@ -1,0 +1,49 @@
+{
+  "schema": 2,
+  "stage": "cell",
+  "cell": "medqa-open-preamble__medgemma-27b-text__bodhi__2026-07",
+  "seed": null,
+  "created_utc": "2026-10-09T08:56:06.605221+00:00",
+  "models": {
+    "base": {
+      "id": "medgemma-27b-text",
+      "repo_id": "google/medgemma-27b-text-it",
+      "family": "gemma",
+      "revision": "5b667cf2ddcf064085bc90952edb35a0edbfb79c",
+      "revision_source": "record",
+      "unpinned_reason": null
+    },
+    "filter": {
+      "id": "qwen2.5-14b",
+      "repo_id": "Qwen/Qwen2.5-14B-Instruct",
+      "family": "qwen2",
+      "revision": "cf98f3b3bbb457ad9e2bb7baf9a0125b6b88caa8",
+      "revision_source": "record",
+      "unpinned_reason": null
+    },
+    "evaluator": {
+      "id": "llama-3.1-8b-nous",
+      "repo_id": "NousResearch/Meta-Llama-3.1-8B-Instruct",
+      "family": "llama3",
+      "revision": "d10aef7999a2b5ba950ab3974312feeedbfe0b77",
+      "revision_source": "record",
+      "unpinned_reason": null
+    }
+  },
+  "status": "recorded",
+  "record_status": "not_run",
+  "family": {
+    "waiver": null
+  },
+  "note": "outputs of a run made before this package; results/PROVENANCE.md maps every old path",
+  "stage_manifests": {},
+  "written_by": {
+    "script": "scripts/migrate_results.py --manifests",
+    "git": {
+      "sha": "4e3edce5962174602e3689dfc9bad7cc461ac636",
+      "dirty": true,
+      "diff_sha256": "03b2e5c7a03ef626087826b3d005ed9acd02649ba72cffa8fd7500f769ef1a3f",
+      "n_untracked": 0
+    }
+  }
+}

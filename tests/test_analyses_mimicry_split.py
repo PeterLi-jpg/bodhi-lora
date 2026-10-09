@@ -1,7 +1,7 @@
 """Tests for rebuttal/analyses/mimicry_split.py.
 
-The unit tests run anywhere. The golden test reruns the script on the committed
-results_modal/ data and pins the values quoted to reviewer LxMF; it needs
+The unit tests run anywhere. The golden test reruns the script on the
+submitted cell's committed grade files and pins the values quoted to reviewer LxMF; it needs
 data/raw/healthbench/hard.jsonl (gitignored, fetched by python -m bodhi_lora fetch healthbench)
 and skips without it.
 """

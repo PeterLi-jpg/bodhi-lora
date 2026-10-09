@@ -1,7 +1,7 @@
 """Tests for scripts/paper_stats.py.
 
-The golden tests run the generator on the committed results_modal/ data and pin the
-values the paper reports, as they actually compute. Where the paper's printed value
+The golden tests run the generator on the committed results of the submitted cell and
+pin the values the paper reports, as they actually compute. Where the paper's printed value
 differs, the test pins the computed one and the comment says what the paper had.
 """
 
@@ -20,14 +20,19 @@ sys.path.insert(0, str(ROOT))
 from scripts import paper_stats as ps  # noqa: E402
 
 FIXTURES = ROOT / "tests" / "fixtures"
+RESULTS = ROOT / "results"
+# The submitted cell and the 2026-04 pilot (results/PROVENANCE.md).
+M = RESULTS / "healthbench__medgemma-27b-text__bodhi__2026-05"
+PILOT = RESULTS / "healthbench__medgemma-27b-text__bodhi__2026-04"
+CROSS = RESULTS / "cross_cell"
+POSTED = ROOT / "rebuttal" / "posted_values.json"
 
 
 def _run(out_dir, posted=None):
     # Optional inputs off, except the committed kappa and rebuttal outputs, so the
     # test does not depend on gitignored data.
-    return ps.run(ROOT / "results_modal", out_dir, None, None,
-                  ROOT / "results_modal" / "irr" / "kappa_results.json",
-                  ROOT / "rebuttal" / "results", posted)
+    return ps.run(M, out_dir, None, None, M / "validation" / "kappa_results.json",
+                  M / "analysis", posted, cross_cell=CROSS)
 
 
 @pytest.fixture(scope="module")
@@ -162,7 +167,7 @@ def test_response_size_and_correlations(generated):
 
 
 def test_context_seeking_anchor(generated):
-    # Golden counts from a direct pass over results_modal/seed_*/epistemic_scores.json:
+    # Golden counts from a direct pass over the cell's seed_*/grade/epistemic__*.json:
     # grades of 2 on context-seeking, and how many of them carry no direct question.
     cs = generated[0]["context_seeking_anchor"]
     assert {c: (v["n_score_2"], v["n_score_2_no_question"]) for c, v in cs.items()} == {
@@ -214,15 +219,25 @@ def test_two_runs_are_byte_identical(generated, tmp_path):
 
 
 def test_committed_outputs_are_current():
-    """paper/generated/ must be what `make numbers` writes from the committed data."""
+    """paper/generated/ must be what `make numbers` writes from the committed data.
+
+    numbers.json names its inputs by the paths they had when the paper's numbers were
+    first written. results/provenance.json maps each old path to the file's place now.
+    """
     committed = ROOT / "paper" / "generated" / "numbers.json"
     if not committed.is_file():
         pytest.skip("paper/generated not committed yet")
+    moved = {e["old"]: e["new"][0] for e in json.loads((RESULTS / "provenance.json").read_text())}
+    # The HealthBench file moved to data/raw/healthbench/ before the results root; it
+    # is ignored by git, so a clean checkout may not have it.
+    moved["data/raw/healthbench_hard.jsonl"] = "data/raw/healthbench/hard.jsonl"
     meta = json.loads(committed.read_text())["meta"]["inputs"]
-    for rel, sha in meta.items():
-        p = ROOT / rel
-        if p.is_file():
-            assert ps._sha256(p) == sha, f"{rel} changed since paper/generated was built; run make numbers"
+    for label, sha in meta.items():
+        p = ROOT / moved.get(label, label)
+        if label == "data/raw/healthbench_hard.jsonl" and not p.is_file():
+            continue
+        assert p.is_file(), f"{label}: input not found at {p.relative_to(ROOT)}"
+        assert ps._sha256(p) == sha, f"{label} changed since paper/generated was built; run make numbers"
 
 
 # ---------------------------------------------------------------- rebuttal cells
@@ -244,8 +259,8 @@ def test_posted_values_fixture_builds_generality_table(tmp_path):
 
 def test_committed_posted_values_main_cell_once_and_agrees(tmp_path):
     # The committed file repeats the submitted cell as posted. Its rows must come
-    # from results_modal once, and the posted values must match those seed means.
-    out = _run(tmp_path, ROOT / "data" / "rebuttal_cells" / "posted_values.json")
+    # from the cell's results once, and the posted values must match those seed means.
+    out = _run(tmp_path, POSTED)
     check = out["generality"]["main_cell_check"]
     assert len(check) == 8
     assert all(r["agrees"] for r in check), [r for r in check if not r["agrees"]]
@@ -259,7 +274,7 @@ def test_committed_posted_values_main_cell_once_and_agrees(tmp_path):
 def test_cross_cell_counts_leave_out_same_family_cells(tmp_path):
     # D6: the Med42-8B cells share the evaluator's family and stay out of every
     # cross-cell count; the submitted cell is in.
-    out = _run(tmp_path, ROOT / "data" / "rebuttal_cells" / "posted_values.json")
+    out = _run(tmp_path, POSTED)
     c = out["generality"]["cross_cell_counts"]
     assert c["excluded_same_family"] == ["chatdoctor__med42-8b", "healthbench__med42-8b"]
     # MedGemma, Mistral HB, BioMistral, ChatDoctor Mistral, MedQuAD Mistral.
@@ -287,11 +302,10 @@ def test_synced_cell_replaces_posted_values_and_gets_a_t_interval(tmp_path):
     cv = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(cv)
     gen = tmp_path / "generated_values.json"
-    cv.run(ROOT / "data" / "rebuttal_cells" / "posted_values.json", tmp_path / "none",
-           ROOT / "results_modal", {"healthbench__mistral-small-24b": ROOT / "results_modal"}, gen)
+    # An empty results root, so no synced copy of the other cells is read.
+    cv.run(POSTED, tmp_path / "none", {"healthbench__medgemma-27b": M, "healthbench__mistral-small-24b": M}, gen)
     out_dir = tmp_path / "out"
-    out = ps.run(ROOT / "results_modal", out_dir, None, None, None, None,
-                 ROOT / "data" / "rebuttal_cells" / "posted_values.json", gen)
+    out = ps.run(M, out_dir, None, None, None, None, POSTED, gen)
     cells = {c["id"]: c for c in out["generality"]["cells"]}
     m = cells["healthbench__mistral-small-24b"]
     assert m["source"] == "synced"
@@ -314,9 +328,8 @@ def test_synced_cell_replaces_posted_values_and_gets_a_t_interval(tmp_path):
 def test_committed_cells_give_tests_recipe_and_filter_table(tmp_path):
     # The committed generated_values.json and cell_recipe.json (make cells), as the
     # paper uses them: every added cell synced, no transcription mark, one recipe.
-    out = ps.run(ROOT / "results_modal", tmp_path, None, None, None, ROOT / "rebuttal" / "results",
-                 ROOT / "data" / "rebuttal_cells" / "posted_values.json",
-                 ROOT / "data" / "rebuttal_cells" / "generated_values.json")
+    out = ps.run(M, tmp_path, None, None, None, M / "analysis", POSTED,
+                 CROSS / "generated_values.json", cross_cell=CROSS)
     cells = {c["id"]: c for c in out["generality"]["cells"]}
     assert {c["source"] for c in cells.values()} == {"synced"}
     c = out["generality"]["cross_cell_counts"]
@@ -356,13 +369,14 @@ def test_completion_drop_and_filter_macros(generated):
     assert _macro(out_dir, "CompletionDropPctLoRACoT") == "4.1"   # 959 of 1,000
 
 
-DERIVED = ROOT / "data" / "derived"
+# The tracked score copies (scripts/export_derived_inputs.py).
+FILTER_SCORES = M / "seed_7" / "filter" / "filter_scores.json"
+QWEN_SCORES = PILOT / "analysis" / "qwen_grader_scores.json"
 
 
 def test_cross_grader_side_run(tmp_path):
     # Reads the tracked score copy, so it runs in a clean checkout (audit REPRO-6).
-    out = ps.run(ROOT / "results_modal", tmp_path, None, None, None, None, None, None,
-                 DERIVED / "seed_42_qwen_grader_scores.json")
+    out = ps.run(M, tmp_path, None, None, None, None, None, None, QWEN_SCORES)
     cg = out["cross_grader"]
     assert {c["n_shared"] for c in cg["conditions"].values()} == {43}
     assert all(c["grader"] == "Qwen/Qwen2.5-14B-Instruct" for c in cg["conditions"].values())
@@ -373,8 +387,7 @@ def test_cross_grader_side_run(tmp_path):
 
 
 def test_tau_table_from_tracked_scores(tmp_path):
-    out = ps.run(ROOT / "results_modal", tmp_path, None, DERIVED / "seed_7_filter_scores.json",
-                 None, None, None)
+    out = ps.run(M, tmp_path, None, FILTER_SCORES, None, None, None)
     tc = out["tau_calibration"]
     assert tc["n_train_split"] == 2816
     assert tc["rows"][0] == {"tau": 0.4, "share_of_train_split": 1.0,
@@ -383,21 +396,27 @@ def test_tau_table_from_tracked_scores(tmp_path):
     assert (tmp_path / "tab_tau_calibration.tex").is_file()
 
 
-@pytest.mark.parametrize("name", ["seed_7_filter_scores.json", "seed_42_qwen_grader_scores.json"])
-def test_derived_inputs_match_their_sources(tmp_path, monkeypatch, name):
-    """The tracked score copies equal a fresh export from the ignored source files."""
+def _without_source_paths(obj):
+    """The copy minus its "source" path labels, which name where the export read."""
+    if isinstance(obj, dict):
+        return {k: _without_source_paths(v) for k, v in obj.items() if k != "source"}
+    return obj
+
+
+@pytest.mark.parametrize("which", ["filter", "qwen"])
+def test_derived_inputs_match_their_sources(tmp_path, which):
+    """The tracked score copies equal a fresh export from the ignored source files:
+    the same rows and the same source sha256."""
     from scripts import export_derived_inputs as ex
-    src = {"seed_7_filter_scores.json": ROOT / "data" / "sft_qwen_graded" / "seed_7_train.jsonl",
-           "seed_42_qwen_grader_scores.json": ROOT / "results" / "seed_42" / "eval" / "base_no_wrapper.json"}
-    if not src[name].is_file():
+    src = {"filter": M / "seed_7" / "filter" / "train.jsonl",
+           "qwen": PILOT / "seed_42" / "eval" / "base.json"}[which]
+    if not src.is_file():
         pytest.skip("ignored source file not present")
-    monkeypatch.setattr(ex, "OUT_DIR", tmp_path)
-    monkeypatch.setattr(ex, "ROOT", tmp_path)
-    if name.startswith("seed_7"):
-        ex._write(tmp_path / name, ex.export_filter_scores(src[name]))
-    else:
-        ex._write(tmp_path / name, ex.export_qwen_scores(src[name].parent))
-    assert (tmp_path / name).read_bytes() == (DERIVED / name).read_bytes()
+    tracked = FILTER_SCORES if which == "filter" else QWEN_SCORES
+    fresh = ex.export_filter_scores(src) if which == "filter" else ex.export_qwen_scores(src.parent)
+    ex._write(tmp_path / "copy.json", fresh)
+    assert (_without_source_paths(json.loads((tmp_path / "copy.json").read_text()))
+            == _without_source_paths(json.loads(tracked.read_text())))
 
 
 def test_missing_posted_values_prints_skip(tmp_path, capsys):

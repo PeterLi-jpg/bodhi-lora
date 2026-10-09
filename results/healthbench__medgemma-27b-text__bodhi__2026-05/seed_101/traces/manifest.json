@@ -1,0 +1,19 @@
+{
+  "schema": 2,
+  "stage": "traces",
+  "cell": "healthbench__medgemma-27b-text__bodhi__2026-05",
+  "seed": 101,
+  "created_utc": "2026-10-09T08:55:48.967469+00:00",
+  "status": "not_kept",
+  "files": {},
+  "note": "teacher traces are shared by every seed",
+  "written_by": {
+    "script": "scripts/migrate_results.py --manifests",
+    "git": {
+      "sha": "4e3edce5962174602e3689dfc9bad7cc461ac636",
+      "dirty": true,
+      "diff_sha256": "5c863b6a404d0b5a5cd989bc46f69146b263b90dd3201ed8f7870f35947260f7",
+      "n_untracked": 0
+    }
+  }
+}

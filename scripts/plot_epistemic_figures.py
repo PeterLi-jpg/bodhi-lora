@@ -6,7 +6,7 @@ Produces:
 
 Usage:
     python scripts/plot_epistemic_figures.py \
-        --aggregate results_modal/cross_seed_aggregate.json \
+        --aggregate results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/cross_seed_aggregate.json \
         --out-dir paper/figures
 """
 
@@ -177,7 +177,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--aggregate",
-        default="results_modal/cross_seed_aggregate.json",
+        default="results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/cross_seed_aggregate.json",
     )
     parser.add_argument(
         "--out-dir",

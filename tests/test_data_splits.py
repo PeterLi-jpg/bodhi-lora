@@ -117,6 +117,7 @@ def test_healthbench_splits_and_the_2026_05_draws(reg):
     default = split_rows(bench, "default", rows)
     assert (len(default.train), len(default.eval), len(default.probe)) == (3321, 1000, 679)
     # The pilot split: only its fixed 200 eval ids leave the train pool.
-    fixed = json.loads((REPO_ROOT / "data" / "raw" / "hard_200_sample_ids.json").read_text())["prompt_ids"]
+    pilot_ids = REPO_ROOT / "results" / "healthbench__medgemma-27b-text__bodhi__2026-04" / "shared" / "inputs" / "eval_ids.json"
+    fixed = json.loads(pilot_ids.read_text())["prompt_ids"]
     pilot = split_rows(bench, "pilot", rows, fixed)
     assert len(pilot.eval) == 200 and len(pilot.train) == 4800

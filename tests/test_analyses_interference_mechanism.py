@@ -1,6 +1,6 @@
 """Tests for rebuttal/analyses/interference_mechanism.py.
 
-The golden test reruns the script on the committed results_modal/ data and pins the
+The golden test reruns the script on the submitted cell's committed grade files and pins the
 leakage numbers posted in the rebuttal (54.6% under LoRA+CoT, red-flag 1.33 leaked vs
 1.73 clean). Note the denominator: the script counts responses with a parsed epistemic
 grade (507/928). Over every LoRA+CoT completion in the HealthBench files the same rule

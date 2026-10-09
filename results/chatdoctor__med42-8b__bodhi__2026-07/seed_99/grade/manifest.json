@@ -1,0 +1,21 @@
+{
+  "schema": 2,
+  "stage": "grade",
+  "cell": "chatdoctor__med42-8b__bodhi__2026-07",
+  "seed": 99,
+  "created_utc": "2026-10-09T08:55:01.489012+00:00",
+  "status": "recorded",
+  "files": {
+    "epistemic__llama-3.1-8b-nous.json": "479abbe5cf7aec9136ea29b65dd768a458c34ce1f9ad3f04bb6689cefafb0122"
+  },
+  "note": "the evaluator's dimension grades",
+  "written_by": {
+    "script": "scripts/migrate_results.py --manifests",
+    "git": {
+      "sha": "4e3edce5962174602e3689dfc9bad7cc461ac636",
+      "dirty": true,
+      "diff_sha256": "ffab0539fe705d4cbb9bccb5c7ac1e2a6f5fd1b026728d35585eeda3f57f343b",
+      "n_untracked": 0
+    }
+  }
+}

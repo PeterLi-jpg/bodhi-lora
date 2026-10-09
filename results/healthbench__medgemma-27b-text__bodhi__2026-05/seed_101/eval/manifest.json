@@ -1,0 +1,24 @@
+{
+  "schema": 2,
+  "stage": "eval",
+  "cell": "healthbench__medgemma-27b-text__bodhi__2026-05",
+  "seed": 101,
+  "created_utc": "2026-10-09T08:55:50.244872+00:00",
+  "status": "recorded",
+  "files": {
+    "base+bodhi.json": "6140d860af71c0b82f49377ddf44239b46d9a628c6ddb747a6cd3943cfd8ab9b",
+    "base.json": "ada1cc35f9adb55c3217e1f52749a2e1dbea24fd3179b7812c0a581618fee324",
+    "lora+bodhi.json": "3df19df8d1c08b92e23addb823e557609e715068b5bd3b3de20e4447a0730d1b",
+    "lora.json": "fe6fa19da3b5c935ce33213e1dbc79d2e363d53cedd1c947588656a9deb14d4a"
+  },
+  "note": "replies and rubric grades per condition",
+  "written_by": {
+    "script": "scripts/migrate_results.py --manifests",
+    "git": {
+      "sha": "4e3edce5962174602e3689dfc9bad7cc461ac636",
+      "dirty": true,
+      "diff_sha256": "d5cd9d56490c700674f87ed8a38d0ca5d9edf1be28837e8a0729b5a15ed920ca",
+      "n_untracked": 0
+    }
+  }
+}

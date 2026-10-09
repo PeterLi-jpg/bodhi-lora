@@ -167,7 +167,10 @@ if deny_file:
 # Model generations on public benchmark prompts. Short name tokens occur there
 # as ordinary words, and these files hold no rater or author text, so the
 # deny-file tokens skip these files. The built-in patterns still scan them.
-MODEL_OUTPUT = re.compile(r"^(results_modal/seed_[^/]+|results_rebuttal/.+/eval)/")
+# The first two forms are the layout before the results root (results/PROVENANCE.md),
+# for a --ref from before it; a cell's validation/ and analysis/ are always scanned.
+MODEL_OUTPUT = re.compile(r"^(results_modal/seed_[^/]+|results_rebuttal/.+/eval"
+                          r"|results/[^/]+/(?:seed_[^/]+|shared))/")
 
 OFFICE = {".xlsx", ".docx", ".pptx"}
 

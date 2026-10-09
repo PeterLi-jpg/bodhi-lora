@@ -1,8 +1,8 @@
 """Tests for rebuttal/analyses/cell_values.py.
 
-The added cells live on the shared GPU host (PROV-1). The test builds a cell tree in
-the layout rebuttal/launch/run_cell.sh writes, from the committed results_modal/
-files, so the script runs unchanged once the real cells are synced.
+The eval files of the added cells are copies from the shared GPU host (PROV-1). The
+test builds a results root whose added cell holds the submitted cell's committed files,
+so the script runs unchanged on the real copies.
 """
 
 import copy
@@ -13,8 +13,8 @@ from pathlib import Path
 from scipy import stats
 
 ROOT = Path(__file__).resolve().parent.parent
-POSTED = ROOT / "data" / "rebuttal_cells" / "posted_values.json"
-CONFIGS = ("base_no_wrapper", "base_bodhi", "lora_no_wrapper", "lora_bodhi")
+POSTED = ROOT / "rebuttal" / "posted_values.json"
+M = ROOT / "results" / "healthbench__medgemma-27b-text__bodhi__2026-05"
 
 
 def _load():
@@ -25,27 +25,28 @@ def _load():
     return mod
 
 
-def _fake_cell(root, name):
-    """results_modal/seed_<N>/* linked into <root>/<name>/seed_<N>/eval/."""
-    for seed_dir in sorted((ROOT / "results_modal").glob("seed_*")):
-        ev = root / name / seed_dir.name / "eval"
-        ev.mkdir(parents=True)
-        for f in (*(f"{c}.json" for c in CONFIGS), "epistemic_scores.json"):
-            (ev / f).symlink_to(seed_dir / f)
+def _fake_cell(root, cell_id):
+    """The submitted cell's eval and grade files linked into <root>/<cell_id>/."""
+    for seed_dir in sorted(M.glob("seed_*")):
+        for stage in ("eval", "grade"):
+            d = root / cell_id / seed_dir.name / stage
+            d.mkdir(parents=True)
+            for f in sorted((seed_dir / stage).glob("*.json")):
+                if f.name != "manifest.json":
+                    (d / f.name).symlink_to(f)
 
 
-def test_folder_name_matches_run_cell():
+def test_every_posted_cell_has_a_registry_cell():
     cv = _load()
-    assert cv.cell_dir_name("healthbench", "mistralai/Mistral-Small-24B-Instruct-2501") == \
-        "healthbench__mistralai_Mistral-Small-24B-Instruct-2501"
-    assert cv.cell_dir_name("chatdoctor", "m42-health/Llama3-Med42-8B") == \
-        "chatdoctor__m42-health_Llama3-Med42-8B"
+    posted = {c["id"] for c in json.loads(POSTED.read_text())["cells"]}
+    assert set(cv.POSTED_CELL) == posted
+    assert all((ROOT / "configs" / "cells" / f"{c}.yaml").is_file() for c in cv.POSTED_CELL.values())
 
 
 def test_submitted_cell_matches_posted_and_missing_cells_are_named(tmp_path):
     cv = _load()
     out = tmp_path / "generated_values.json"
-    res = cv.run(POSTED, tmp_path / "no_cells", ROOT / "results_modal", {}, out)
+    res = cv.run(POSTED, tmp_path / "no_cells", {"healthbench__medgemma-27b": M}, out)
     assert [c["id"] for c in res["cells"]] == ["healthbench__medgemma-27b"]
     assert len(res["cells"][0]["diff_vs_posted"]) == 8
     assert res["mismatches"] == []
@@ -67,12 +68,13 @@ def test_synced_cell_layout_is_read_and_a_wrong_posted_value_is_flagged(tmp_path
     posted["cells"] = [fake]
     p = tmp_path / "posted.json"
     p.write_text(json.dumps(posted))
-    cells = tmp_path / "results_rebuttal"
-    _fake_cell(cells, "healthbench__mistralai_Mistral-Small-24B-Instruct-2501")
+    root = tmp_path / "results"
+    _fake_cell(root, "healthbench__mistral-small-24b__bodhi__2026-07")
 
-    res = cv.run(p, cells, ROOT / "results_modal", {}, tmp_path / "gv.json")
+    res = cv.run(p, root, {}, tmp_path / "gv.json")
     cell = res["cells"][0]
-    assert cell["eval_subdir"] == "eval"
+    # A folder outside the repository is named by its last part only (no absolute paths).
+    assert cell["dir"] == "healthbench__mistral-small-24b__bodhi__2026-07"
     assert abs(cell["conditions"]["base"]["aggregate"]["mean"] - 0.459) <= 0.0005
     assert [(m["condition"], m["metric"]) for m in res["mismatches"]] == [("lora", "aggregate")]
     # Askers minus non-askers among LoRA's graded responses: every scored LoRA response

@@ -17,16 +17,23 @@ of a patient-facing answer. If that is the cause, then:
   (c) the drop should NOT be explained by length/truncation: if it were attention
       dilution from long outputs, red-flag would fall with length regardless of format.
 
-Runs against results_modal/. No inference, no H100.
+Runs against the submitted cell's grade files (--cell-dir). No inference, no H100.
 """
 
 import argparse
 import json
 import re
+import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
-SEED_DIRS = ["seed_7", "seed_13", "seed_42", "seed_99", "seed_101"]
+sys.path.insert(0, str(REPO))
+
+from scripts.paper_stats import grade_path  # noqa: E402
+
+# The submitted cell (results/PROVENANCE.md).
+CELL = REPO / "results" / "healthbench__medgemma-27b-text__bodhi__2026-05"
+SEEDS = (7, 13, 42, 99, 101)
 CONFIG_DISPLAY = {
     "base_no_wrapper": "Base",
     "base_bodhi": "Wrapper",
@@ -66,7 +73,7 @@ def is_leaked(text, threshold=2, patterns=LEAK_RE):
     return count_leak_markers(text, patterns) >= threshold
 
 
-def load(config_name):
+def load(config_name, cell_dir=CELL):
     """Pool a config's per-response rows across the 5 seeds.
 
     Only responses with a parsed epistemic grade are kept, because the red-flag
@@ -75,11 +82,9 @@ def load(config_name):
     HealthBench result files the same rule gives 532/959 = 55.5%.
     """
     rows = []
-    for sd in SEED_DIRS:
-        path = REPO / "results_modal" / sd / "epistemic_scores.json"
-        if not path.exists():
-            continue
-        data = json.load(open(path))
+    for seed in SEEDS:
+        # grade_path stops on a missing seed, so a moved file cannot shrink the pool.
+        data = json.load(open(grade_path(Path(cell_dir), seed)))
         for cfg in data["configs"]:
             if cfg["name"] != config_name:
                 continue
@@ -108,10 +113,11 @@ def mean(xs):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out", default=str(REPO / "rebuttal" / "results" / "interference_mechanism.json"))
+    ap.add_argument("--cell-dir", default=str(CELL))
+    ap.add_argument("--out", default=str(CELL / "analysis" / "interference_mechanism.json"))
     args = ap.parse_args()
 
-    data = {c: load(c) for c in CONFIG_ORDER}
+    data = {c: load(c, args.cell_dir) for c in CONFIG_ORDER}
     out = {"configs": {}}
 
     print("=" * 82)

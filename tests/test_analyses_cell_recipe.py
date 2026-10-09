@@ -1,8 +1,8 @@
 """Tests for rebuttal/analyses/cell_recipe.py (PROV-3).
 
-The real inputs are the host logs (gitignored) and the tracked adapter files. The test
-builds a small tree in the same layout, with log lines in the format
-bodhi_lora/pipeline/filter.py prints.
+The real inputs are the host logs (gitignored) and the tracked adapter files in the cell
+folders of the results root. The test builds a small results root in the same layout,
+with log lines in the format bodhi_lora/pipeline/filter.py prints.
 """
 
 import importlib.util
@@ -33,7 +33,7 @@ FILTER_LOG = (
 
 
 def _seed(cell, seed, best_step, max_steps=558, batch=2):
-    best = cell / f"seed_{seed}" / "ckpt" / "best"
+    best = cell / f"seed_{seed}" / "train"
     best.mkdir(parents=True)
     (best / "adapter_config.json").write_text(json.dumps({
         "base_model_name_or_path": "org/model", "r": 16, "lora_alpha": 32, "lora_dropout": 0.05,
@@ -43,29 +43,48 @@ def _seed(cell, seed, best_step, max_steps=558, batch=2):
         "best_global_step": best_step}))
 
 
+def _logs(cell, **files):
+    logs = cell / "logs"
+    logs.mkdir(parents=True, exist_ok=True)
+    for name, text in files.items():
+        (logs / name).write_text(text)
+
+
+def _provenance(root, *host_folders):
+    """The move's record: one old file in each run folder the host wrote."""
+    entries = [{"old": f"results_rebuttal/{f}/eval_ids.json"} for f in host_folders]
+    entries.append({"old": "logs/host/grid.log"})
+    (root / "provenance.json").write_text(json.dumps(entries))
+
+
 def test_tau_counts_and_recipe_are_read_and_checked(tmp_path):
     cr = _load()
-    cells, logs = tmp_path / "results_rebuttal", tmp_path / "logs"
-    logs.mkdir()
-    (logs / "filter_medquad_m.log").write_text(FILTER_LOG)
-    cell = cells / "medquad__m"
+    root = tmp_path / "results"
+    cell = root / "medquad__m__bodhi__2026-07"
+    _logs(cell, **{"gen_medquad_m.log": "Generating\n", "filter_medquad_m.log": FILTER_LOG})
     for s, step in zip((7, 13, 42, 99, 101), (558, 558, 372, 558, 186)):
         _seed(cell, s, step)
-    (cell / "eval_ids.json").write_text(json.dumps({"prompt_ids": ["a", "b"]}))
+    (cell / "shared" / "inputs").mkdir(parents=True)
+    (cell / "shared" / "inputs" / "eval_ids.json").write_text(json.dumps({"prompt_ids": ["a", "b"]}))
     # A run that never trained: only eval ids and a failed generation log.
-    (cells / "medqa__g").mkdir(parents=True)
-    (logs / "gen_medqa_g.log").write_text("RuntimeError: vllm serve did not become healthy\n")
-    # A run stopped before it wrote a folder: only its generation log and the launcher's
-    # log, which holds this run's section and then another run's.
-    (logs / "gen_healthbench_org_m-9b.log").write_text("Generating 4000 traces\n  waiting (300s)\n\n")
-    (logs / "launch.log").write_text(
-        "=== cell: healthbench x org/m-9b  (seeds: 42 7) ===\n  waiting (300s)\n"
-        "run_cell.sh: line 103: 1 Killed   generate_traces.py\n"
-        "=== cell: medquad x m  (seeds: 42) ===\nrun_cell.sh: line 103: 2 Killed   other\n")
+    _logs(root / "medqa__g__bodhi__2026-07",
+          **{"gen_medqa_g.log": "RuntimeError: vllm serve did not become healthy\n"})
+    # A run stopped before it wrote a folder on the host: only its generation log and the
+    # launcher's log, which holds this run's section and then another run's.
+    _logs(root / "healthbench__m-9b__bodhi__2026-07", **{
+        "gen_healthbench_org_m-9b.log": "Generating 4000 traces\n  waiting (300s)\n\n",
+        "launch.log": "=== cell: healthbench x org/m-9b  (seeds: 42 7) ===\n  waiting (300s)\n"
+                      "run_cell.sh: line 103: 1 Killed   generate_traces.py\n"
+                      "=== cell: medquad x m  (seeds: 42) ===\nrun_cell.sh: line 103: 2 Killed   other\n"})
+    # A cell the package ran has no host logs and is not a host run.
+    (root / "tiny__t__bodhi" / "seed_1" / "train").mkdir(parents=True)
+    _provenance(root, "medquad__m", "medqa__g")
 
-    res = cr.run(cells, logs, tmp_path / "out.json")
+    res = cr.run(root, tmp_path / "out.json")
     c = res["cells"]["medquad__m"]
+    assert sorted(res["cells"]) == ["medqa__g", "medquad__m"]
     assert c["status"] == "complete" and c["seeds"] == [7, 13, 42, 99, 101]
+    assert c["dir"].endswith("results/medquad__m__bodhi__2026-07")
     assert c["filter"]["tau"] == 0.4 and c["filter"]["kept"] == 3294 and c["filter"]["train"] == 2965
     assert c["filter"]["rubric_parse_failures"] == [1, 33600]
     assert c["adapter"]["r"] == 16 and c["adapter"]["target_modules"] == ["k_proj", "q_proj", "v_proj"]
@@ -100,10 +119,18 @@ def test_refilter_rule_follows_the_launcher(tmp_path):
 
 def test_seeds_that_disagree_on_the_recipe_stop_the_run(tmp_path):
     cr = _load()
-    cells, logs = tmp_path / "results_rebuttal", tmp_path / "logs"
-    logs.mkdir()
-    cell = cells / "healthbench__m"
+    root = tmp_path / "results"
+    cell = root / "healthbench__m__bodhi__2026-07"
+    _logs(cell, **{"gen_healthbench_m.log": "Generating\n"})
     _seed(cell, 7, 140)
     _seed(cell, 13, 140, batch=4)
+    _provenance(root, "healthbench__m")
     with pytest.raises(SystemExit, match="train_batch_size"):
-        cr.run(cells, logs, tmp_path / "out.json")
+        cr.run(root, tmp_path / "out.json")
+
+
+def test_a_root_without_host_logs_stops(tmp_path):
+    cr = _load()
+    (tmp_path / "results").mkdir()
+    with pytest.raises(SystemExit, match="no host logs"):
+        cr.run(tmp_path / "results", tmp_path / "out.json")

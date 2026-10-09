@@ -1,0 +1,34 @@
+{
+  "schema": 2,
+  "stage": "filter",
+  "cell": "healthbench__med42-8b__bodhi__2026-07",
+  "seed": null,
+  "created_utc": "2026-10-09T08:55:25.709645+00:00",
+  "status": "not_kept",
+  "recorded": {
+    "tau": 0.4,
+    "raw": 4000,
+    "graded": 4000,
+    "kept": 2030,
+    "train": 1827,
+    "val": 203,
+    "n_filter_passes": 1,
+    "rubric_parse_failures": [
+      0,
+      45391
+    ],
+    "score_field": "overall_score"
+  },
+  "source": "results/cross_cell/cell_recipe.json",
+  "source_log_sha256": "dcc26981ca813555114fcbcf90ed3b315cc9ae21fd20907024dcdb2b85a7bac9",
+  "note": "graded, kept and split traces stayed on the GPU host; counts and tau from the filter log",
+  "written_by": {
+    "script": "scripts/migrate_results.py --manifests",
+    "git": {
+      "sha": "4e3edce5962174602e3689dfc9bad7cc461ac636",
+      "dirty": true,
+      "diff_sha256": "9181123d13865e097c7222f96c2bcae1f5a90bce962c1f1ef6dfcac2ec15b011",
+      "n_untracked": 0
+    }
+  }
+}

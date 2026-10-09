@@ -1,0 +1,75 @@
+{
+  "schema": 2,
+  "stage": "cell",
+  "cell": "healthbench__medgemma-27b-text__bodhi__2026-05",
+  "seed": null,
+  "created_utc": "2026-10-09T08:55:51.104185+00:00",
+  "models": {
+    "base": {
+      "id": "medgemma-27b-text",
+      "repo_id": "google/medgemma-27b-text-it",
+      "family": "gemma",
+      "revision": "5b667cf2ddcf064085bc90952edb35a0edbfb79c",
+      "revision_source": "record",
+      "unpinned_reason": null
+    },
+    "filter": {
+      "id": "qwen2.5-14b",
+      "repo_id": "Qwen/Qwen2.5-14B-Instruct",
+      "family": "qwen2",
+      "revision": "cf98f3b3bbb457ad9e2bb7baf9a0125b6b88caa8",
+      "revision_source": "record",
+      "unpinned_reason": null
+    },
+    "evaluator": {
+      "id": "llama-3.1-8b",
+      "repo_id": "meta-llama/Llama-3.1-8B-Instruct",
+      "family": "llama3",
+      "revision": "0e9e39f249a16976918f6564b8830bc894c89659",
+      "revision_source": "record",
+      "unpinned_reason": null
+    }
+  },
+  "status": "recorded",
+  "record_status": "complete",
+  "family": {
+    "waiver": null
+  },
+  "note": "outputs of a run made before this package; results/PROVENANCE.md maps every old path",
+  "stage_manifests": {
+    "seed_101/eval/manifest.json": "16477f168bf9d26f4b28de4ddc62f21c07b726866b5cc4162da89361484ec0de",
+    "seed_101/filter/manifest.json": "3505ed6daf4c366b4a6eca345b3ca31860d49cd34c989096402788c0b97bf0d8",
+    "seed_101/grade/manifest.json": "9ad0146dfe693a9545ee2cf0340575a8f3d6d7f48179369c7255e00803ab92d3",
+    "seed_101/traces/manifest.json": "5770b8b396d1f24fbd06b85a75e5a4ba85cffc099704b5c5abb68464821e065e",
+    "seed_101/train/manifest.json": "680de009f6a8030e0440b9760379616d28c4d4ba33aec7ca5a3c46a192daad9c",
+    "seed_13/eval/manifest.json": "f5d646a9dec41169117417eae5cc790ad30262dbd6b3f2bc1f079681f4bd37d3",
+    "seed_13/filter/manifest.json": "c46abc7279e6830787e08541b746994f64cbcfa7f15f25fb9c46257796a15823",
+    "seed_13/grade/manifest.json": "5c023adecf31e4a3a65deeb72dbd37d85fe41fa2b88ffa68e752bba39115ccef",
+    "seed_13/traces/manifest.json": "8ed2108d33fadb1bd6a688da14ddcf261552487c6b383f2de52033007f21c369",
+    "seed_13/train/manifest.json": "910f18564e466716ca0bdfe3e8a43c28ce844d6f8216ccb078355ea9d19ab47c",
+    "seed_42/eval/manifest.json": "e3e765a97d0821d4a261e5f683e38ab361b69e775a528609e8028fb0d809a814",
+    "seed_42/filter/manifest.json": "a4ae464c9dd7018e73914e76c905ccf596bfae792b07affe2f7cbcef49ab878a",
+    "seed_42/grade/manifest.json": "9c5304258e4bfd3fac1e7aa3921b38e646bdbf1be604c9675db273a6724e23df",
+    "seed_42/traces/manifest.json": "193f791ecfceb227043c2ceb34a4d439e481102eb1c11a02d86d2cd01432437a",
+    "seed_42/train/manifest.json": "604690734f74b8fceb959bbb5f4e13b49f0d694463cddbca9ae3294ad2a62bfb",
+    "seed_7/eval/manifest.json": "61995a71f05fa3aa90f56fc79b2dd4c4b72cb064a9ec8cc329b2fdb8330f8ab6",
+    "seed_7/filter/manifest.json": "5c59b827733e4874855e0ddc95b8bc06bf313877aad8a745ce5ad58a36ce2ed4",
+    "seed_7/grade/manifest.json": "7b29b7e80fff4230d7bf8d527b81976174f66e88e82bb55b47b730366168cc22",
+    "seed_7/traces/manifest.json": "19e497cd94b96618c2c12acd0fcbd078a376d8bc55e27c8c1d05beb0930f8e80",
+    "seed_7/train/manifest.json": "177a111f72c429219414271d15f29540f87dc97d6eb876ef82dd649364235629",
+    "seed_99/eval/manifest.json": "48fa84b35b4ff6d6ca9d6e14538aee39c3d4164bd640bd48a1fc05dfd43b5edf",
+    "seed_99/filter/manifest.json": "4714a0e4cdf06d9026de658f0d9fb43f8b62591700778557aea8ce129ffef592",
+    "seed_99/grade/manifest.json": "1423cf4b2e14a85a28f953856e74bd0a2bce8bfc68beafffb93b37a81eda9b68",
+    "seed_99/traces/manifest.json": "0544c9e084f3bf18fc9a968306647b28e956760d531bf43b9f57f9d8f2763db0",
+    "seed_99/train/manifest.json": "22a730ea0dcbade91e2a1a3afffe4a2f1862199d70cf3abdf7e88c5b77d3850d"
+  },
+  "written_by": {
+    "script": "scripts/migrate_results.py --manifests",
+    "git": {
+      "sha": "4e3edce5962174602e3689dfc9bad7cc461ac636",
+      "dirty": true,
+      "diff_sha256": "07e7ad60f08cfff3874ebada98cd505165e572958c72295eba79a24a55422c12",
+      "n_untracked": 0
+    }
+  }
+}

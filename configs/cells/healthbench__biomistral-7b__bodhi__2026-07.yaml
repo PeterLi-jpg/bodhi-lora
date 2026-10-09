@@ -41,7 +41,7 @@ train:
   hardware: 1x H100 80GB
 eval:
   conditions: [base, base+bodhi, lora, lora+bodhi]
-  # data/raw/hard_200_sample_ids.json, one fixed set for every seed, now in the cell's
+  # 02ac9a3:data/raw/hard_200_sample_ids.json, one fixed set for every seed, now in the cell's
   # shared/inputs folder.
   ids: {policy: fixed_file, n: 200, file: eval_ids.json}
   base_precision: model

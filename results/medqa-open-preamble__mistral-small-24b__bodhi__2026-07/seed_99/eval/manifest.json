@@ -1,0 +1,24 @@
+{
+  "schema": 2,
+  "stage": "eval",
+  "cell": "medqa-open-preamble__mistral-small-24b__bodhi__2026-07",
+  "seed": 99,
+  "created_utc": "2026-10-09T08:56:15.568361+00:00",
+  "status": "recorded",
+  "files": {
+    "base+bodhi.json": "ade71cd304af2c2599920fac9c05d8b5f47e3712ba611a2b513f8d8754b77107",
+    "base.json": "bbf07d5fc4050c001b48358a8b91ebdc695df33fb43b19bfd5d291205523e2d8",
+    "lora+bodhi.json": "52bec46e661edf6d3823d690c5830867683d23781c12868479ceb9b725d74649",
+    "lora.json": "46d623c366f56aa0ab610dadd9c4abcebee3de002781ba4bc0e210650fb8a8fb"
+  },
+  "note": "replies and rubric grades per condition",
+  "written_by": {
+    "script": "scripts/migrate_results.py --manifests",
+    "git": {
+      "sha": "4e3edce5962174602e3689dfc9bad7cc461ac636",
+      "dirty": true,
+      "diff_sha256": "ce8e53ae1356d204ebcc956129efcfd49bd7005b2143b8b1992596289ba83ef7",
+      "n_untracked": 0
+    }
+  }
+}

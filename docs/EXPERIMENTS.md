@@ -492,7 +492,7 @@ changes already in `paper/main.tex`, with the commitment that records them.
 | MR-W1 | E13 (a general base), E24, E19; text: scope is patient-facing Q&A (D4, C6, done) |
 | MR-W2 | E16, E17, E13, E25; text: recipe plus decomposition, not a framework (C1, C2, C12, done) |
 | MR-W3 | E09, E10, E02, E03, E14, E06; E27 deferred; text: grader limits (C13, done) |
-| MR-W4 | E02, E14, E22, E03; the 2026-05 discrimination analysis exists (`rebuttal/results/mimicry_split.json`) |
+| MR-W4 | E02, E14, E22, E03; the 2026-05 discrimination analysis exists (`results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/mimicry_split.json`) |
 | MR-W5 | text done (C5, C10, C20); E07 makes the criterion operational; E01 tables |
 | MR-W6 | E12; text: prior-work subsection and table (C15, done) |
 | MR-F | P1, E01, E13 (one set of settings), E12, E16; every corrected claim in the paper (C11, done) |

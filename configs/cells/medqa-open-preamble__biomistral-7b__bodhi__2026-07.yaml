@@ -1,4 +1,4 @@
-# A one-seed smoke run of the 2026-07 launcher at 61dada9 (logs/host/cell_*.log).
+# A one-seed smoke run of the 2026-07 launcher at 61dada9 (its host logs are in the cell's logs folder).
 id: medqa-open-preamble__biomistral-7b__bodhi__2026-07
 benchmark: medqa-open-preamble
 split: head-10
@@ -15,7 +15,7 @@ traces:
 filter:
   # The launcher's rule for non-HealthBench cells: tau 0.4, then the 22nd-percentile tau
   # when the train split kept less than 40% of the raw traces. No cell met it
-  # (rebuttal/results/cell_recipe.json).
+  # (results/cross_cell/cell_recipe.json).
   tau: {rule: fixed_then_percentile, value: 0.4, percentile: 22, min_kept_share: 0.4}
   val_ratio: 0.1
   # One train/val split for every seed.

@@ -14,24 +14,31 @@ Definition, fixed before comparing with the posted values:
      you / your / yours / yourself / yourselves as a word.
   4. A response counts if it has at least one such sentence.
 
-The denominator is every completion in results_modal/seed_*/<condition>.json. No
+The denominator is every completion in the cell's seed_*/eval/<condition>.json. No
 grader is involved, so epistemic parse failures do not drop rows.
 
 It is a text match: it cannot tell an apt question from a rhetorical one, and a
 question in a quoted example counts the same as one put to the reader.
 
-Runs against results_modal/. No inference.
+Runs against the submitted cell's eval files (--results-dir). No inference.
 """
 
 import argparse
 import json
 import re
+import sys
 from pathlib import Path
 
 import numpy as np
 from scipy import stats
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO))
+
+from scripts.paper_stats import eval_path  # noqa: E402
+
+# The submitted cell (results/PROVENANCE.md).
+CELL = REPO / "results" / "healthbench__medgemma-27b-text__bodhi__2026-05"
 SEEDS = (7, 13, 42, 99, 101)
 CONFIG_ORDER = ["base_no_wrapper", "base_bodhi", "lora_no_wrapper", "lora_bodhi"]
 CONFIG_DISPLAY = {
@@ -63,7 +70,7 @@ def load_flags(results_dir, seeds=SEEDS):
     out = {cfg: {} for cfg in CONFIG_ORDER}
     for seed in seeds:
         for cfg in CONFIG_ORDER:
-            with open(Path(results_dir) / f"seed_{seed}" / f"{cfg}.json") as f:
+            with open(eval_path(Path(results_dir), seed, cfg)) as f:
                 results = json.load(f)["results"]
             out[cfg][seed] = [has_second_person_question(r["response"]) for r in results]
     return out
@@ -92,8 +99,8 @@ def summarize(flags, seeds=SEEDS):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--results-dir", default=str(REPO / "results_modal"))
-    ap.add_argument("--out", default=str(REPO / "rebuttal" / "results" / "second_person_questions.json"))
+    ap.add_argument("--results-dir", default=str(CELL))
+    ap.add_argument("--out", default=str(CELL / "analysis" / "second_person_questions.json"))
     args = ap.parse_args()
 
     res = summarize(load_flags(args.results_dir))

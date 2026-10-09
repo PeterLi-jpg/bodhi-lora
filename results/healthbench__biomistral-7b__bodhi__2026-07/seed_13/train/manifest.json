@@ -1,0 +1,24 @@
+{
+  "schema": 2,
+  "stage": "train",
+  "cell": "healthbench__biomistral-7b__bodhi__2026-07",
+  "seed": 13,
+  "created_utc": "2026-10-09T08:55:18.918109+00:00",
+  "status": "recorded",
+  "files": {
+    "adapter_config.json": "50754d4ec1d1cebda788ddc518571b2675bf231574f74e70cd472ea22f7c4089",
+    "checkpoint-138/trainer_state.json": "f3828187c5b5215429e2466d599c096b58474632489585bd7c529a4fdb32c61b",
+    "checkpoint-46/trainer_state.json": "50222e1923db4bdf227caedbc153784e0573ca53c44b9745598603782160ff20",
+    "trainer_state.json": "61e1a4f01571867ce19c4ecdcacac00ebe3a94d78103f21eeceb64242271bd3d"
+  },
+  "note": "adapter files; weights are ignored by git or were not retained",
+  "written_by": {
+    "script": "scripts/migrate_results.py --manifests",
+    "git": {
+      "sha": "4e3edce5962174602e3689dfc9bad7cc461ac636",
+      "dirty": true,
+      "diff_sha256": "654f932ae000f3211acc628974db17d630ccf87a5aa71c9637e9fa802b3850da",
+      "n_untracked": 0
+    }
+  }
+}

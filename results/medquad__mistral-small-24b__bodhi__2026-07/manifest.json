@@ -1,0 +1,76 @@
+{
+  "schema": 2,
+  "stage": "cell",
+  "cell": "medquad__mistral-small-24b__bodhi__2026-07",
+  "seed": null,
+  "created_utc": "2026-10-09T08:56:30.988313+00:00",
+  "models": {
+    "base": {
+      "id": "mistral-small-24b",
+      "repo_id": "mistralai/Mistral-Small-24B-Instruct-2501",
+      "family": "mistral",
+      "revision": "9527884be6e5616bdd54de542f9ae13384489724",
+      "revision_source": "record",
+      "unpinned_reason": null
+    },
+    "filter": {
+      "id": "qwen2.5-14b",
+      "repo_id": "Qwen/Qwen2.5-14B-Instruct",
+      "family": "qwen2",
+      "revision": "cf98f3b3bbb457ad9e2bb7baf9a0125b6b88caa8",
+      "revision_source": "record",
+      "unpinned_reason": null
+    },
+    "evaluator": {
+      "id": "llama-3.1-8b-nous",
+      "repo_id": "NousResearch/Meta-Llama-3.1-8B-Instruct",
+      "family": "llama3",
+      "revision": "d10aef7999a2b5ba950ab3974312feeedbfe0b77",
+      "revision_source": "record",
+      "unpinned_reason": null
+    }
+  },
+  "status": "recorded",
+  "record_status": "complete",
+  "family": {
+    "waiver": null
+  },
+  "note": "outputs of a run made before this package; results/PROVENANCE.md maps every old path",
+  "stage_manifests": {
+    "seed_101/eval/manifest.json": "0cecf58396e793dd4020c6b276be157525da5b2431ea130e7254c2ba1b8318ff",
+    "seed_101/filter/manifest.json": "b44e3a7b8a40a08c290a7517b0ed882d79a779adcf53118efa7e7767f2d40a20",
+    "seed_101/grade/manifest.json": "858e790d4c6e98adb6bde5d3fdbd55ac5627cdb15ddad9c99f5ffed4cbebc311",
+    "seed_101/traces/manifest.json": "3e178e3660a1f630392506025d516b59928a80bf69190b79de69c678483ede45",
+    "seed_101/train/manifest.json": "4d37725d9b5721d464dbc6e0e831f47a9e368ca4a698b63ab3b197d02832e2eb",
+    "seed_13/eval/manifest.json": "b8b492021fac00603eff1219d57f9026722348ed9f7be5ca972ca9aae9b1d005",
+    "seed_13/filter/manifest.json": "750de859b26fb1baa12f372a5535e1f2bbf0a36aa2f476e35f4da6932e7de552",
+    "seed_13/grade/manifest.json": "337c2c3b473fd5356b629e66bbb664b6e96856589b19ae80dd08ec26955afc39",
+    "seed_13/traces/manifest.json": "2da8913717109016f6cdcbb838d6a53d4e4366575b3a228a6b9b29abbb3d3dee",
+    "seed_13/train/manifest.json": "fb83469d3d282d2fa0de1cfaa46b008b730be450a0e7e7e8574c57568202a226",
+    "seed_42/eval/manifest.json": "456aebd8accd609f824612bb794db40dd33c8c3dc9335c31e016a4686fd236e3",
+    "seed_42/filter/manifest.json": "7599eb21ecc288fb06742e71324a38b3e70cd3689ed52fc9e1c338bf9ae58525",
+    "seed_42/grade/manifest.json": "8521196b48984cedd60109b146ffd8cfb8dd4f4e9b65e8e50a5ba3fce9e7bd0e",
+    "seed_42/traces/manifest.json": "ffe4f55d9e3156559f86908438604e880611797b607d61ae87f9cee0338bf0ab",
+    "seed_42/train/manifest.json": "0469d60cfd9f0272fa05f8f2efd179eb65be7aa6b84925718673736e8c6d75c7",
+    "seed_7/eval/manifest.json": "27f9a420c0efde0b3c6eedc1087b8ef633046f117045e4f92ad77bb70e3f4e6d",
+    "seed_7/filter/manifest.json": "1211b16e2ad75c89cae4852ef2969cab907337640cb1ce15f08eea38e87ebc29",
+    "seed_7/grade/manifest.json": "3f26509c9f5ab68ea0dc45c98a881baa8c143d5fd69908c6cc6cf618adb4e812",
+    "seed_7/traces/manifest.json": "6b756d2c3f353024a0ab9dc26cf60850f1d02b0800719f2e2c6cbc1bb0744a73",
+    "seed_7/train/manifest.json": "09bab8299a430fe539d6ac093bf605f464f87aafb77c438a0e25296cf8586695",
+    "seed_99/eval/manifest.json": "5c58af97d6ee5852a9355d207f81f74fe685ba059ec7f692f171227102579099",
+    "seed_99/filter/manifest.json": "6cac40254548da5f3c4c269333c982f5e8e098c025fee456d2951c7165c7e777",
+    "seed_99/grade/manifest.json": "1c65e84182d78fe280ae1a83f2d1d54d19721bdd28f5fbb4da492cdd31d6ad17",
+    "seed_99/traces/manifest.json": "5ae35fae49c4d701cb066b78d8e2849af1867231012fff2fb752682f30f73763",
+    "seed_99/train/manifest.json": "9c90b910853a4f2fae7d2296ad41310458a6d5881bae54c9ccbb8e893a2576fc",
+    "shared/filter/manifest.json": "e40ea3a97fadb16fdd4f71fae75c20fb1a529a1a26c60a9b0ee2efde061daff6"
+  },
+  "written_by": {
+    "script": "scripts/migrate_results.py --manifests",
+    "git": {
+      "sha": "4e3edce5962174602e3689dfc9bad7cc461ac636",
+      "dirty": true,
+      "diff_sha256": "ea2b7f36465d813ceca4377ed320214277eda2d28f2ed428f3bb718e54bf12d1",
+      "n_untracked": 0
+    }
+  }
+}

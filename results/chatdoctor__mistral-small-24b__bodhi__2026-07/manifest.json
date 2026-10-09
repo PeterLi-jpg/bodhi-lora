@@ -1,0 +1,76 @@
+{
+  "schema": 2,
+  "stage": "cell",
+  "cell": "chatdoctor__mistral-small-24b__bodhi__2026-07",
+  "seed": null,
+  "created_utc": "2026-10-09T08:55:13.499219+00:00",
+  "models": {
+    "base": {
+      "id": "mistral-small-24b",
+      "repo_id": "mistralai/Mistral-Small-24B-Instruct-2501",
+      "family": "mistral",
+      "revision": "9527884be6e5616bdd54de542f9ae13384489724",
+      "revision_source": "record",
+      "unpinned_reason": null
+    },
+    "filter": {
+      "id": "qwen2.5-14b",
+      "repo_id": "Qwen/Qwen2.5-14B-Instruct",
+      "family": "qwen2",
+      "revision": "cf98f3b3bbb457ad9e2bb7baf9a0125b6b88caa8",
+      "revision_source": "record",
+      "unpinned_reason": null
+    },
+    "evaluator": {
+      "id": "llama-3.1-8b-nous",
+      "repo_id": "NousResearch/Meta-Llama-3.1-8B-Instruct",
+      "family": "llama3",
+      "revision": "d10aef7999a2b5ba950ab3974312feeedbfe0b77",
+      "revision_source": "record",
+      "unpinned_reason": null
+    }
+  },
+  "status": "recorded",
+  "record_status": "complete",
+  "family": {
+    "waiver": null
+  },
+  "note": "outputs of a run made before this package; results/PROVENANCE.md maps every old path",
+  "stage_manifests": {
+    "seed_101/eval/manifest.json": "922979c819d224eb34d086b239b3a00a1c2af68c43e972e23d8c85634643300e",
+    "seed_101/filter/manifest.json": "70b538170463e75bda1f4d099d73249d64118bb9e04b0cd8267d40a4ede50892",
+    "seed_101/grade/manifest.json": "2b16a865f4956116699f7e9428405ebf22753575e6355f8737d5a0271370a25a",
+    "seed_101/traces/manifest.json": "232da34edc3ea0f56aff630fb18e1e8d0c4f3564390131754e0b2a80abbe7d77",
+    "seed_101/train/manifest.json": "eefe0d6e0c00f6dec8527d9b78d3bc9809fe967bfb400f6e6498cca947eb00e2",
+    "seed_13/eval/manifest.json": "27d8088416cdb2163220c303b79c5f01b12459bbbc1cba3f19e946e9e27f5b58",
+    "seed_13/filter/manifest.json": "a0d0040cf6762b689c2f27c6733d998ce14dc76d356134b4efee2ad79aac8200",
+    "seed_13/grade/manifest.json": "81df4c8eddfcc34805f23adc6dd917d83e95109eaadbe9259839408c20ca6b7c",
+    "seed_13/traces/manifest.json": "b4590449d534b0b448627c6718bf6b15111dfc8194eb91b5f3baac36ad4a96dd",
+    "seed_13/train/manifest.json": "a3237c37792e29c86d0c697a08b23c5c1ba2ba8f71bceabf4ea5a77c4cb0f83c",
+    "seed_42/eval/manifest.json": "da82170537dca58bceabef348a35de41b60ec8e4da288b170dcfa5bd554fff82",
+    "seed_42/filter/manifest.json": "4c3afcaa29e0ab6cb7cad589da68854ba3760ced662ed2b80f01d26399129a03",
+    "seed_42/grade/manifest.json": "f7bf0e18fa1ea9be055a7fdf7fa244f6e616cc8982dfa033a020ea41b6f0ba1e",
+    "seed_42/traces/manifest.json": "2b7fdc6f3b46fcc83cf6b39d8fc61a3db298835c4b4fb25b790c3face2c8cb98",
+    "seed_42/train/manifest.json": "782cb804635c0218d43d77726cbc041052ffd3f55b43ba815d3bcc46995f07ee",
+    "seed_7/eval/manifest.json": "89d0e22389f549cc2064113a039db3bcd318b40ceb524705132b509f5da68db7",
+    "seed_7/filter/manifest.json": "9de37e89ca099182fddbcc59463cb08fecc0cebf55010147ef6241c8bb353b06",
+    "seed_7/grade/manifest.json": "c4ab88d37f6fdabcc276ab6d88fe0490429343d065af48b8f93f87e2c1d4ed71",
+    "seed_7/traces/manifest.json": "27d6548232455d4dec727ae034cf8c01ca3e256388bcb5ec6b0cc979cdf57718",
+    "seed_7/train/manifest.json": "44c4d708c3957e8c865c951607c82532cec71274b515a2020e51594bb599d132",
+    "seed_99/eval/manifest.json": "6067dc6559438bbd1c5366c848eff0a3fb3df5ee6b8b6af92464c4063ee4a627",
+    "seed_99/filter/manifest.json": "da9122c078fd4a8966fb1f471813d0f51e48cb9ab94d2b458be23c1e7a1da79f",
+    "seed_99/grade/manifest.json": "0f1bc2f73eae52ae1520ad6cf283568712f2005c901407723b993e6cbe60fa50",
+    "seed_99/traces/manifest.json": "cc519562187a2a7f28f772c996b9af0226010ee789034361f8072b784e70b5c6",
+    "seed_99/train/manifest.json": "1e98bf9536e1bee904bac3bd9a7fd7c44e8de58f3b7ef69873ae9003fab6d68e",
+    "shared/filter/manifest.json": "e85da1e036e4743c7ef2596b9ff3f190098b754a62ac40662c4bf2c52bc6e0b7"
+  },
+  "written_by": {
+    "script": "scripts/migrate_results.py --manifests",
+    "git": {
+      "sha": "4e3edce5962174602e3689dfc9bad7cc461ac636",
+      "dirty": true,
+      "diff_sha256": "723e20f98cca96ada9a8eeabf578e0bbb7a948ea01d6e0cccf711b87a3611377",
+      "n_untracked": 0
+    }
+  }
+}

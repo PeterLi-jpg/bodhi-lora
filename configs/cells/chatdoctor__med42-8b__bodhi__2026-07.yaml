@@ -18,7 +18,7 @@ traces:
 filter:
   # The launcher's rule for non-HealthBench cells: tau 0.4, then the 22nd-percentile tau
   # when the train split kept less than 40% of the raw traces. No cell met it
-  # (rebuttal/results/cell_recipe.json).
+  # (results/cross_cell/cell_recipe.json).
   tau: {rule: fixed_then_percentile, value: 0.4, percentile: 22, min_kept_share: 0.4}
   val_ratio: 0.1
   # One train/val split for every seed.

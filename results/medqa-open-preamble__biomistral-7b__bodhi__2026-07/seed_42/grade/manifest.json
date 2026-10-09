@@ -1,0 +1,21 @@
+{
+  "schema": 2,
+  "stage": "grade",
+  "cell": "medqa-open-preamble__biomistral-7b__bodhi__2026-07",
+  "seed": 42,
+  "created_utc": "2026-10-09T08:56:05.741156+00:00",
+  "status": "recorded",
+  "files": {
+    "epistemic__llama-3.1-8b-nous.json": "1c59ef7d49554c0fc6ae60d8e3ea5ed3fc1c4c84d0816e3565d0cc1c47689197"
+  },
+  "note": "the evaluator's dimension grades",
+  "written_by": {
+    "script": "scripts/migrate_results.py --manifests",
+    "git": {
+      "sha": "4e3edce5962174602e3689dfc9bad7cc461ac636",
+      "dirty": true,
+      "diff_sha256": "fcb07da515e4248b8c14f701ef7be24889aee8165ec38d8f8eea66b8999e5da7",
+      "n_untracked": 0
+    }
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "schema": 2,
+  "stage": "eval",
+  "cell": "chatdoctor__med42-8b__bodhi__2026-07",
+  "seed": 101,
+  "created_utc": "2026-10-09T08:55:02.966679+00:00",
+  "status": "recorded",
+  "files": {
+    "base+bodhi.json": "ef544a4d3a3f794d7251b93507b398602bfb8a29239e13b7b88ec9509f9df6c1",
+    "base.json": "cdf5df30e2e2c5f7a3b602a362691bbe5ca8424cef6ac6fc3e3172db079eb0c9",
+    "lora+bodhi.json": "5d0a5735cd68363f6df239cc17edffee7b511326eaebddee171d6e30b59ba37b",
+    "lora.json": "76871c72cd7b4dc408d4c9c9d7e68a8f1c59cd74b4f4cc77f1f43aa6fd48cd2f"
+  },
+  "note": "replies and rubric grades per condition",
+  "written_by": {
+    "script": "scripts/migrate_results.py --manifests",
+    "git": {
+      "sha": "4e3edce5962174602e3689dfc9bad7cc461ac636",
+      "dirty": true,
+      "diff_sha256": "9081ed27174280094dd45969bd35971f42bd0e51b6720dcf083c6599876bd8f8",
+      "n_untracked": 0
+    }
+  }
+}

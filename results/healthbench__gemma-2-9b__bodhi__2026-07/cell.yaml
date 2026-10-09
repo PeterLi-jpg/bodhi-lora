@@ -1,0 +1,63 @@
+id: healthbench__gemma-2-9b__bodhi__2026-07
+benchmark: healthbench
+split: hard
+model: gemma-2-9b
+protocol: bodhi
+seeds:
+- 42
+- 7
+- 13
+- 99
+- 101
+adapters_from: null
+traces_from: null
+grading:
+  filter: qwen2.5-14b
+  evaluator: llama-3.1-8b-nous
+  judges: []
+  same_family_waiver: null
+traces:
+  max_prompts: 4200
+  decoding: greedy
+  temperature: 0.0
+  top_p: 1.0
+  seed: 0
+  max_new_tokens_per_pass: 2048
+  serving:
+    max_model_len: 8192
+    max_num_seqs: 64
+    concurrency: 32
+    request_timeout_s: 180
+    drain_s: 0.0
+filter: null
+train: null
+eval:
+  conditions:
+  - base
+  - base+bodhi
+  - lora
+  - lora+bodhi
+  ids:
+    policy: fixed_file
+    n: 200
+    only: []
+    file: eval_ids.json
+  base_precision: model
+  base_precision_reason: null
+  max_new_tokens: 1024
+  max_new_tokens_per_pass: 2048
+  serving:
+    max_model_len: 8192
+    max_num_seqs: 64
+    concurrency: 16
+    request_timeout_s: 180
+    drain_s: 30.0
+probe: null
+bench: null
+report:
+  label: HealthBench-Hard, Gemma-2-9B
+  token: HBGemmaTwoNineJul
+  status: not_run
+  set_aside: null
+  notes: Killed while vLLM was starting in trace generation; it left logs and no results
+    folder. No training config was recorded.

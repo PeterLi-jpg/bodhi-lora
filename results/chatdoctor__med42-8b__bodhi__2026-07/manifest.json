@@ -1,0 +1,84 @@
+{
+  "schema": 2,
+  "stage": "cell",
+  "cell": "chatdoctor__med42-8b__bodhi__2026-07",
+  "seed": null,
+  "created_utc": "2026-10-09T08:55:03.694174+00:00",
+  "models": {
+    "base": {
+      "id": "med42-8b",
+      "repo_id": "m42-health/Llama3-Med42-8B",
+      "family": "llama3",
+      "revision": "ceab7e7ee4b9dbde7ba82867f34274db51487d83",
+      "revision_source": "record",
+      "unpinned_reason": null
+    },
+    "filter": {
+      "id": "qwen2.5-14b",
+      "repo_id": "Qwen/Qwen2.5-14B-Instruct",
+      "family": "qwen2",
+      "revision": "cf98f3b3bbb457ad9e2bb7baf9a0125b6b88caa8",
+      "revision_source": "record",
+      "unpinned_reason": null
+    },
+    "evaluator": {
+      "id": "llama-3.1-8b-nous",
+      "repo_id": "NousResearch/Meta-Llama-3.1-8B-Instruct",
+      "family": "llama3",
+      "revision": "d10aef7999a2b5ba950ab3974312feeedbfe0b77",
+      "revision_source": "record",
+      "unpinned_reason": null
+    },
+    "judge:gemma-2-27b": {
+      "id": "gemma-2-27b",
+      "repo_id": "google/gemma-2-27b-it",
+      "family": "gemma",
+      "revision": "aaf20e6b9f4c0fcf043f6fb2a2068419086d77b0",
+      "revision_source": "record",
+      "unpinned_reason": null
+    }
+  },
+  "status": "recorded",
+  "record_status": "complete",
+  "family": {
+    "waiver": "Run before the family rule existed; the base shares the evaluator's Llama-3 family (D6)."
+  },
+  "note": "outputs of a run made before this package; results/PROVENANCE.md maps every old path",
+  "stage_manifests": {
+    "seed_101/eval/manifest.json": "24c399e894320f2004c74a6156875bcef2cf2b8e4b0ac3ad5d2e9022334e352a",
+    "seed_101/filter/manifest.json": "62614f258196364a47f442ac6cb427d1cadb53d53eeba9a2596f8cc12bbce66c",
+    "seed_101/grade/manifest.json": "d25169c1462a9f4aa5a068e03b15d5388de771e874406efd9eb0a785bbb6ec89",
+    "seed_101/traces/manifest.json": "a32d42d10def64f918dd8cce91f7255dd7b8e2839f26b8dd4a4f94c13ff8bf26",
+    "seed_101/train/manifest.json": "8ad4e58b3ddcda3059391f3c2938de54de507c4b8cc31b998b59c62ae14d801e",
+    "seed_13/eval/manifest.json": "11d25d228c10ea7c566f09a8e6b390b54418f3f3e1433a70583517988ab2818f",
+    "seed_13/filter/manifest.json": "41252e544847d0c547ff85bb7ca3ce1570fcc8b20b11301fe6bd13bb20668a1c",
+    "seed_13/grade/manifest.json": "0e7c8d694fa275c1d33072bc8a576b1195960794ae5689c3d9f0f656740b3147",
+    "seed_13/traces/manifest.json": "adaf51a11b33232191fabbe1b1d45ff249a779cdd25f8333ecd3fca24606e1ed",
+    "seed_13/train/manifest.json": "ffdd15448e98765076904eae3b7159bf48d9030b62f40011e605532c79455233",
+    "seed_42/eval/manifest.json": "27548e0a41d8b932b0ae32020bb431e819094b8b95ea56d65c8955ef5db3fdb2",
+    "seed_42/filter/manifest.json": "2914bf196feb79a4cd9ce8ec99a85b07210870ee2de52271e31cefaf60aaaa1b",
+    "seed_42/grade/manifest.json": "f5040b0c8513f7f5261db1b19a9d8467fb33baca1a92d17dfa2c926610466494",
+    "seed_42/traces/manifest.json": "db211882e57d1e7e25e8c72f210fd822789eb9f37ade2611ecd2bb986db917d9",
+    "seed_42/train/manifest.json": "85aeb77e07199f971e4615479736fbea3ae1710d9f4f35ae1aec040caba7dabd",
+    "seed_7/eval/manifest.json": "633d303bd8ab79605de8f21aeffa4dc7a3a5b24e51580eb608e5027cc353832e",
+    "seed_7/filter/manifest.json": "6cd6c49ca0bd880716109dd502d597800fd54884ca512b1f62d3ff2801977205",
+    "seed_7/grade/manifest.json": "92aa0d3c4014e7af6d25664d8bb4a1249cb9762e4c464eb5f52b3961a0c0cb0a",
+    "seed_7/traces/manifest.json": "69113d36627133f1a5d2c484dee57c7b0f9fdca36cac8c748e7ec5752d042cc5",
+    "seed_7/train/manifest.json": "692f9078d0c572d5e0ca741c354c08bc66b308463071f60fb58ce3d359df376a",
+    "seed_99/eval/manifest.json": "f11f8b098281170c395906dd0cd9fd4d113b889ab0c590a33f0e5d0ebaa32d2b",
+    "seed_99/filter/manifest.json": "1d0fdcf85b8c1cada5e6178fb010c958fee372ec1b4850e0d52e1345bbdb2a46",
+    "seed_99/grade/manifest.json": "7c99c6978e71a306cd71cafcafaeb9e4f93bf4c82a3a78da6f7dcbdb042ec886",
+    "seed_99/traces/manifest.json": "911d268394f5010e9179bf055161480046cc358b22fabedf18862ac259dfea67",
+    "seed_99/train/manifest.json": "426127e3b9e4257cda34e6f347777213992444fa8790cf3ec918d9d09694b846",
+    "shared/filter/manifest.json": "953059683468e98448dba88eb9f17f4e23538cc2b05da38b665101aba0d46cf4"
+  },
+  "written_by": {
+    "script": "scripts/migrate_results.py --manifests",
+    "git": {
+      "sha": "4e3edce5962174602e3689dfc9bad7cc461ac636",
+      "dirty": true,
+      "diff_sha256": "9a19e80a743f9af2c536add42f10918209c12076043f1b9f793606c847c584a6",
+      "n_untracked": 0
+    }
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "schema": 2,
+  "stage": "eval",
+  "cell": "medqa-open-preamble__biomistral-7b__bodhi__2026-07",
+  "seed": 42,
+  "created_utc": "2026-10-09T08:56:05.308980+00:00",
+  "status": "recorded",
+  "files": {
+    "base+bodhi.json": "f8a6a04a16f14775bc5941645830335f52039374ed1cf60d03b20aec44d342a0",
+    "base.json": "a14f279ab73dcb224910b028c411c23489dd08cea8564a6c67fcfa58244e425c",
+    "lora+bodhi.json": "e78f269e29e8b3380bb71c91e638c75f34f8e1529675ad933dab648d77ec297f",
+    "lora.json": "4f8dc400873cfdbd2c82b48af4dd7ad3055becc4235be21e982950e99cd08897"
+  },
+  "note": "replies and rubric grades per condition",
+  "written_by": {
+    "script": "scripts/migrate_results.py --manifests",
+    "git": {
+      "sha": "4e3edce5962174602e3689dfc9bad7cc461ac636",
+      "dirty": true,
+      "diff_sha256": "0b19aa8d2bc840284fdb17f681efce9dc1a55e8de4d9f4585b3872e9e04f2002",
+      "n_untracked": 0
+    }
+  }
+}

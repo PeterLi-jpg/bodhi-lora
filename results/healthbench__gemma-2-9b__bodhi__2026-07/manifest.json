@@ -1,0 +1,49 @@
+{
+  "schema": 2,
+  "stage": "cell",
+  "cell": "healthbench__gemma-2-9b__bodhi__2026-07",
+  "seed": null,
+  "created_utc": "2026-10-09T08:55:25.294979+00:00",
+  "models": {
+    "base": {
+      "id": "gemma-2-9b",
+      "repo_id": "google/gemma-2-9b-it",
+      "family": "gemma",
+      "revision": null,
+      "revision_source": "unpinned",
+      "unpinned_reason": "Not read from the hub: the one run that loaded it stopped before trace generation began, and no output depends on its weights."
+    },
+    "filter": {
+      "id": "qwen2.5-14b",
+      "repo_id": "Qwen/Qwen2.5-14B-Instruct",
+      "family": "qwen2",
+      "revision": "cf98f3b3bbb457ad9e2bb7baf9a0125b6b88caa8",
+      "revision_source": "record",
+      "unpinned_reason": null
+    },
+    "evaluator": {
+      "id": "llama-3.1-8b-nous",
+      "repo_id": "NousResearch/Meta-Llama-3.1-8B-Instruct",
+      "family": "llama3",
+      "revision": "d10aef7999a2b5ba950ab3974312feeedbfe0b77",
+      "revision_source": "record",
+      "unpinned_reason": null
+    }
+  },
+  "status": "recorded",
+  "record_status": "not_run",
+  "family": {
+    "waiver": null
+  },
+  "note": "outputs of a run made before this package; results/PROVENANCE.md maps every old path",
+  "stage_manifests": {},
+  "written_by": {
+    "script": "scripts/migrate_results.py --manifests",
+    "git": {
+      "sha": "4e3edce5962174602e3689dfc9bad7cc461ac636",
+      "dirty": true,
+      "diff_sha256": "deb935b376aac5b7eac7f20c8a6d9b2ec699e702f8e9bdb030358b28817c911e",
+      "n_untracked": 0
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "schema": 2,
+  "stage": "grade",
+  "cell": "healthbench__medgemma-27b-text__bodhi__2026-05",
+  "seed": 99,
+  "created_utc": "2026-10-09T08:55:48.548644+00:00",
+  "status": "recorded",
+  "files": {
+    "epistemic__llama-3.1-8b.json": "3a6fbf217d8f69173fc1c9139caab497b0a54622faada9dcf5644f818d6424d7"
+  },
+  "note": "the evaluator's dimension grades",
+  "written_by": {
+    "script": "scripts/migrate_results.py --manifests",
+    "git": {
+      "sha": "4e3edce5962174602e3689dfc9bad7cc461ac636",
+      "dirty": true,
+      "diff_sha256": "e50a3bfa8f540d3987dd468f1ed8efe94b28419653955c7f434ec888235903cd",
+      "n_untracked": 0
+    }
+  }
+}

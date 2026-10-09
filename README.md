@@ -49,19 +49,16 @@ behind these points are in [docs/DECISIONS.md](docs/DECISIONS.md).
 ## Layout
 
 ```
-configs/            training configs for MedGemma-27B (GPU path) and the smoke model
-data/
-  irr_instructions/ physician grading instructions (raters are AnonClinician1-4)
-  raw/              HealthBench eval ids; benchmark JSONL is downloaded or built here
-  rebuttal_cells/   added-cell values from the raw outputs (generated_values.json) and as posted
-docs/               conventions, decision log, reuse and licenses
+bodhi_lora/         the package: registry, pipeline stages, engine, data, protocols, grading
+configs/            the registry: models, benchmarks, protocols and cells (one YAML each)
+data/raw/           benchmark files, downloaded or built here (gitignored)
+docs/               architecture, conventions, decision log, reuse and licenses
 hooks/              commit-msg and pre-push hooks (activate once, see below)
 legacy/             frozen launchers of the submitted MedGemma-27B cell (TPU, Modal)
 paper/              canonical paper source (paper/main.tex) and the frozen submission
-rebuttal/           added-cell configs, launchers, analyses and the posted replies
-results_modal/      submitted cell: per-seed eval and epistemic-score JSON
-rebuttal/results/   JSON written by the rebuttal analyses
-scripts/            pipeline stages, statistics, figures, IRR tools, repo checks
+rebuttal/           analyses of the discussion, the posted replies and the posted values
+results/            one folder per cell, and cross_cell/ (results/PROVENANCE.md)
+scripts/            statistics, figures, IRR tools, repo checks
 tests/              pytest suite, no GPU needed
 ```
 
@@ -69,12 +66,12 @@ tests/              pytest suite, no GPU needed
 
 | Set | Cells | Pipeline | Raw outputs |
 |---|---|---|---|
-| Submitted | MedGemma-27B on HealthBench-Hard | tunix LoRA on 8x TPU v6e; eval on one A100 (Modal). Launchers in `legacy/` | `results_modal/`, committed |
-| Added | Mistral-Small-24B, Med42-8B†, BioMistral-7B on HealthBench-Hard; Mistral-Small-24B and Med42-8B† on ChatDoctor; Mistral-Small-24B on MedQuAD; Mistral-Small-24B on MedQA (set aside) | GPU path: `bodhi_lora/pipeline/train.py` through the 2026-07 launcher (`61dada9:rebuttal/launch/run_cell.sh`), on H100 | copied from the GPU host into `results_rebuttal/` (eval JSON gitignored; per-seed values in `data/rebuttal_cells/generated_values.json`) |
+| Submitted | MedGemma-27B on HealthBench-Hard | tunix LoRA on 8x TPU v6e; eval on one A100 (Modal). Launchers in `legacy/` | `results/healthbench__medgemma-27b-text__bodhi__2026-05/`, committed |
+| Added | Mistral-Small-24B, Med42-8B†, BioMistral-7B on HealthBench-Hard; Mistral-Small-24B and Med42-8B† on ChatDoctor; Mistral-Small-24B on MedQuAD; Mistral-Small-24B on MedQA (set aside) | GPU path: `bodhi_lora/pipeline/train.py` through the 2026-07 launcher (`61dada9:rebuttal/launch/run_cell.sh`), on H100 | copied from the GPU host into the `results/*__2026-07/` cells (eval JSON gitignored; per-seed values in `results/cross_cell/generated_values.json`) |
 
-The paper takes the added-cell numbers from `data/rebuttal_cells/generated_values.json`,
+The paper takes the added-cell numbers from `results/cross_cell/generated_values.json`,
 which `make cells` computes from the synced raw outputs.
-`data/rebuttal_cells/posted_values.json` stays as the record of what was posted.
+`rebuttal/posted_values.json` stays as the record of what was posted.
 [REPRODUCIBILITY.md](REPRODUCIBILITY.md) has the per-cell configs and the differences
 between the two pipelines.
 
@@ -85,25 +82,27 @@ hand (docs/CONVENTIONS.md, rule 2).
 
 `make numbers` needs one file that is not in git: `data/raw/healthbench/hard.jsonl`,
 the public HealthBench-Hard set. `python -m bodhi_lora fetch healthbench` downloads it. Every other input is
-committed, including small copies of the filter scores and the second-grader scores
-in `data/derived/` (paper/generated/README.md).
+committed, including small copies of the filter scores
+(`results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_7/filter/filter_scores.json`) and the second-grader scores
+(`results/healthbench__medgemma-27b-text__bodhi__2026-04/analysis/qwen_grader_scores.json`);
+paper/generated/README.md lists them.
 
 ```bash
 make test       # pytest suite
-make numbers    # all tables and inline numbers, from results_modal/ and the rebuttal data
+make numbers    # all tables and inline numbers, from results/ and rebuttal/posted_values.json
 make figures    # all figures (scripts/build_paper_figures.py)
 make paper      # numbers + figures, then compile paper/main.tex
 ```
 
 | Paper item | Input | Notes |
 |---|---|---|
-| Main HealthBench-Hard table, per-seed table | `results_modal/seed_*/{base_no_wrapper,base_bodhi,lora_no_wrapper,lora_bodhi}.json` | seed is the unit: paired t over 5 seeds, t intervals |
-| Epistemic-behavior table, effect sizes | `results_modal/seed_*/epistemic_scores.json` | Holm over the seven behaviors in each contrast; prompt-level d is descriptive, with a prompt-clustered bootstrap interval |
-| Physician agreement table | `results_modal/irr/kappa_results.json` (`make kappa` on the returned file, read outside the repo) | per-row grades are not committed, so the value cannot be recomputed from the repo alone (KNOWN_ISSUES) |
+| Main HealthBench-Hard table, per-seed table | `results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_*/eval/{base,base+bodhi,lora,lora+bodhi}.json` | seed is the unit: paired t over 5 seeds, t intervals |
+| Epistemic-behavior table, effect sizes | `results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_*/grade/epistemic__llama-3.1-8b.json` | Holm over the seven behaviors in each contrast; prompt-level d is descriptive, with a prompt-clustered bootstrap interval |
+| Physician agreement table | `results/healthbench__medgemma-27b-text__bodhi__2026-05/validation/kappa_results.json` (`make kappa` on the returned file, read outside the repo) | per-row grades are not committed, so the value cannot be recomputed from the repo alone (KNOWN_ISSUES) |
 | Discrimination analysis | `rebuttal/analyses/mimicry_split.py` | both labelings side by side, post hoc |
 | Format-leakage analysis | `rebuttal/analyses/interference_mechanism.py` | post hoc diagnosis |
-| Added-cell tables | `data/rebuttal_cells/generated_values.json` (`make cells` from `results_rebuttal/`) | Med42-8B rows marked † |
-| Per-cell tau, trace counts, adapter recipe | `rebuttal/results/cell_recipe.json` (`make cells` from `logs/host/` and the adapter files) | PROV-3 |
+| Added-cell tables | `results/cross_cell/generated_values.json` (`make cells` from the `results/*__2026-07/` cells) | Med42-8B rows marked † |
+| Per-cell tau, trace counts, adapter recipe | `results/cross_cell/cell_recipe.json` (`make cells` from each cell's `logs/` and adapter files) | PROV-3 |
 | Hyperparameter tables | `legacy/` launcher, the train blocks of `configs/cells/`, the synced adapter files | one table per cell group; the submitted adapter config could not be checked against the saved files |
 
 ## Run the pipeline
@@ -133,18 +132,22 @@ judge re-grades to it (`--stages grade`).
 
 ## Where results live
 
-- `results_modal/`: the submitted cell. Five seeds, four conditions, 200 prompts per
-  seed, plus `epistemic_scores.json` per seed. `results_modal/cross_seed_aggregate.md`
-  is a generated summary.
-- `results_modal/irr/`: the blank physician grading sheets and the answer key. Returned
-  sheets are not in the repo.
-- `rebuttal/results/`: outputs of the rebuttal analyses.
-- `results_rebuttal/`: the added cells, copied from the GPU host on 2026-10-08. Git
-  tracks each cell's `eval_ids.json`, `adapter_config.json` and `trainer_state.json`. The
-  per-seed eval JSON (full responses, about 370 MB), the host's `multi_seed_summary.json`
-  (wrong seed list), raw generations and adapter weights are gitignored. `make cells`
-  turns the eval JSON into `data/rebuttal_cells/generated_values.json`.
-- `logs/host/`: the GPU host's logs (gitignored). `make cells` reads the filter logs.
+Every result is in `results/`, one folder per cell, named by its cell id.
+[results/PROVENANCE.md](results/PROVENANCE.md) maps each old location to its new one.
+
+- `results/healthbench__medgemma-27b-text__bodhi__2026-05/`: the submitted cell. Five seeds, four conditions,
+  200 prompts per seed: `results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_*/eval/<condition>.json` and the evaluator's grades,
+  `results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_*/grade/epistemic__llama-3.1-8b.json`. `results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/` holds the rebuttal
+  analyses of this cell and a generated summary, `results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/cross_seed_aggregate.md`.
+- `results/healthbench__medgemma-27b-text__bodhi__2026-05/validation/`: the blank physician grading sheets, the instructions and the
+  answer key. Returned sheets are not in the repo.
+- `results/*__2026-07/`: the added cells, copied from the GPU host on 2026-10-08. Git
+  tracks the eval ids of each cell (`results/*/shared/inputs/eval_ids.json`), the
+  `adapter_config.json` and `trainer_state.json` of each seed, and a manifest per stage.
+  The per-seed eval JSON (full responses, about 370 MB), raw generations, adapter
+  weights and the host's logs are gitignored. `make cells` turns the eval JSON and the
+  filter logs into `results/cross_cell/generated_values.json` and
+  `results/cross_cell/cell_recipe.json`.
 - [RESULTS.md](RESULTS.md): what each result is, where it lives and its status.
 
 ## Data and leakage

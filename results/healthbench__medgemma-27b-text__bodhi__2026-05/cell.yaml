@@ -1,0 +1,104 @@
+id: healthbench__medgemma-27b-text__bodhi__2026-05
+benchmark: healthbench
+split: hard
+model: medgemma-27b-text
+protocol: bodhi
+seeds:
+- 42
+- 7
+- 13
+- 99
+- 101
+adapters_from: null
+traces_from: null
+grading:
+  filter: qwen2.5-14b
+  evaluator: llama-3.1-8b
+  judges: []
+  same_family_waiver: null
+traces:
+  max_prompts: 4000
+  decoding: greedy
+  temperature: 0.0
+  top_p: 1.0
+  seed: 0
+  max_new_tokens_per_pass: 2048
+  serving:
+    max_model_len: 8192
+    max_num_seqs: 64
+    concurrency: 32
+    request_timeout_s: 180
+    drain_s: 0.0
+filter:
+  tau:
+    rule: fixed
+    value: 0.4
+    percentile: null
+    min_kept_share: null
+    seed: 0
+  val_ratio: 0.1
+  split_policy: per_seed
+  split_seed: null
+  serving:
+    max_model_len: 8192
+    max_num_seqs: 64
+    concurrency: 16
+    request_timeout_s: 180
+    drain_s: 0.0
+train:
+  engine: external
+  record: legacy/README.md section 3
+  method: lora
+  quantization: null
+  r: 8
+  alpha: 16.0
+  dropout: 0.05
+  target_modules:
+  - q_proj
+  - k_proj
+  - v_proj
+  epochs: null
+  max_steps: 300
+  per_device_batch: 1
+  grad_accum: 8
+  effective_batch: 64
+  lr: 0.0001
+  scheduler: constant
+  warmup_ratio: 0.0
+  max_seq_length: 2048
+  gradient_checkpointing: true
+  checkpoint: last
+  eval_every: steps
+  eval_steps: 50
+  logging_steps: 10
+  hardware: 1x TPU v6e-8 per seed
+eval:
+  conditions:
+  - base
+  - base+bodhi
+  - lora
+  - lora+bodhi
+  ids:
+    policy: per_seed_draw
+    n: 200
+    only: []
+    file: null
+  base_precision: model
+  base_precision_reason: null
+  max_new_tokens: 1024
+  max_new_tokens_per_pass: 2048
+  serving:
+    max_model_len: 4096
+    max_num_seqs: 32
+    concurrency: 32
+    request_timeout_s: 900
+    drain_s: 0.0
+probe: null
+bench: null
+report:
+  label: HealthBench-Hard, MedGemma-27B
+  token: HBMedGemmaMay
+  status: complete
+  set_aside: null
+  notes: The adapters were trained on TPU and not retained, so new experiments on
+    this base need a new cell.

@@ -15,8 +15,9 @@ Approach
      (needs at least 2 votes); a tie goes to the adjudicator file if one is given.
    ``unsure`` consensus rows are excluded from kappa.
 2. LLM verdict per criterion, from the stored grader output:
-   - eval_llama rows: results_modal/seed_<N>/<config>.json, results[].criteria_results;
-   - filter_qwen rows: data/sft_qwen_graded/seed_7_train.jsonl, grade.criteria_results.
+   - eval_llama rows: <M>/seed_<N>/eval/<condition>.json, results[].criteria_results;
+   - filter_qwen rows: <M>/seed_7/filter/train.jsonl, grade.criteria_results.
+   <M> is the submitted cell, results/healthbench__medgemma-27b-text__bodhi__2026-05/.
    The physician's ``pass`` means "the response did the right thing". For a positive
    criterion that is criteria_met = True. For a negative (avoid) criterion it is
    criteria_met = False: the response avoided the harm. The first version of this
@@ -28,7 +29,7 @@ Approach
    independent; the eval rows come from 10 prompts).
 4. With two or more raters, pairwise inter-physician kappa on rows both graded.
 
-Output: results_modal/irr/kappa_results.json (de-identified).
+Output: <M>/validation/kappa_results.json (de-identified).
 
 Usage:
     python3 scripts/compute_irr_kappa.py --rater-files /path/to/Grading-<rater>.xlsx [...]
@@ -38,6 +39,7 @@ from __future__ import annotations
 import argparse
 import json
 import string
+import sys
 from itertools import combinations
 from pathlib import Path
 
@@ -45,7 +47,12 @@ import numpy as np
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parent.parent
-IRR_DIR = ROOT / "results_modal" / "irr"
+sys.path.insert(0, str(ROOT))
+
+from bodhi_lora.registry import condition_from_legacy  # noqa: E402
+
+CELL = ROOT / "results" / "healthbench__medgemma-27b-text__bodhi__2026-05"
+IRR_DIR = CELL / "validation"
 GRADES = ("pass", "fail", "unsure")
 CONFIGS = ("base_no_wrapper", "base_bodhi", "lora_no_wrapper", "lora_bodhi")
 BOOTSTRAP_RESAMPLES = 5000
@@ -161,7 +168,8 @@ def llm_verdicts(rows: pd.DataFrame, results_dir: Path, filter_traces: Path | No
         if r.source == "eval_llama":
             key = (int(r.seed), r.config)
             if key not in eval_cache:
-                with open(results_dir / f"seed_{key[0]}" / f"{key[1]}.json") as f:
+                # The sheet names conditions as the rows in the eval files do.
+                with open(results_dir / f"seed_{key[0]}" / "eval" / f"{condition_from_legacy(key[1])}.json") as f:
                     eval_cache[key] = {x["prompt_id"]: x for x in json.load(f)["results"]}
             criteria = eval_cache[key][r.prompt_id]["criteria_results"]
         elif filter_cache is not None:
@@ -249,9 +257,8 @@ def main() -> None:
     ap.add_argument("--adjudicator", type=Path, default=None, help="filled tiebreaker xlsx, if any")
     ap.add_argument("--answer-key", type=Path, default=IRR_DIR / "answer_key.xlsx")
     ap.add_argument("--template", type=Path, default=IRR_DIR / "Grading-template.xlsx")
-    ap.add_argument("--results-dir", type=Path, default=ROOT / "results_modal")
-    ap.add_argument("--filter-traces", type=Path,
-                    default=ROOT / "data" / "sft_qwen_graded" / "seed_7_train.jsonl")
+    ap.add_argument("--results-dir", type=Path, default=CELL)
+    ap.add_argument("--filter-traces", type=Path, default=CELL / "seed_7" / "filter" / "train.jsonl")
     ap.add_argument("--out", type=Path, default=IRR_DIR / "kappa_results.json")
     a = ap.parse_args()
 

@@ -1,4 +1,4 @@
-"""Golden test for scripts/aggregate_cross_seed.py on the committed results_modal/ data.
+"""Golden test for scripts/aggregate_cross_seed.py on the submitted cell's committed results.
 
 Pins the cross-seed means the paper's Tables 1 and 2 quote, and the pooled n the
 CoT conditions actually have (PROV-4: not 985-998).
@@ -52,9 +52,9 @@ def test_pooled_counts(agg):
 
 
 def test_committed_aggregate_matches_a_fresh_run(agg):
-    """results_modal/cross_seed_aggregate.json must be what the script writes now."""
+    """The cell's analysis/cross_seed_aggregate.json must be what the script writes now."""
     s4, s5 = agg
-    committed = json.loads((ROOT / "results_modal" / "cross_seed_aggregate.json").read_text())
+    committed = json.loads((acs.OUT_DIR / "cross_seed_aggregate.json").read_text())
     fresh = json.loads(json.dumps({"seeds": list(acs.SEEDS), "stage4_healthbench": s4,
                                    "stage5_epistemic": s5}))
     # Floats compared to 1e-12: Python versions differ in the last bit of stdev.

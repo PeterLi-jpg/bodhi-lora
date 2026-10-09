@@ -31,7 +31,8 @@ and on MedQuAD (folders with `eval_ids.json` only; trace generation failed on 20
 because the vLLM server did not become healthy), BioMistral-7B on MedQA (a smoke run:
 one seed, 40 traces, 3 kept, 3 optimizer steps, 10 eval prompts) and Gemma-2-9B on
 HealthBench-Hard (stopped in trace generation on 2026-07-27 while its vLLM server was
-starting; it left no folder). `rebuttal/results/cell_recipe.json` records each one's status.
+starting; it left no folder on the host). `results/cross_cell/cell_recipe.json` records
+each one's status.
 
 ## 2. Per-cell training configs
 
@@ -58,8 +59,9 @@ All three recipes use LoRA r=16, alpha=32, dropout 0.05 on `q,k,v,o,gate,up,down
 3 epochs, effective batch 16, learning rate 1e-4 with a cosine schedule and 5% warmup,
 and maximum sequence length 4,096. The synced `adapter_config.json` and
 `trainer_state.json` of all 35 adapters of the seven cells confirm rank, alpha, dropout,
-target modules, epochs and the effective batch (`rebuttal/results/cell_recipe.json`). The
-evaluated adapter in `ckpt/best/` is the epoch checkpoint with the lowest validation loss
+target modules, epochs and the effective batch (`results/cross_cell/cell_recipe.json`). The
+evaluated adapter (the host's `ckpt/best/`, now `results/*/seed_*/train/`) is the epoch
+checkpoint with the lowest validation loss
 (`load_best_model_at_end` in `bodhi_lora/pipeline/train.py`): epoch 1, 2 or 3, depending on the
 cell and seed.
 
@@ -84,8 +86,8 @@ The MedGemma cell has no such mismatch.
 | LoRA | r=8, alpha=16 (from the code; the saved adapters could not be checked) | r=16, alpha=32 (from the saved adapter configs) |
 | Eval server | vLLM on Modal A100-80GB, `max_model_len` 4096, `--max-num-seqs` 32 | vLLM 0.9 subprocess on H100, `max_model_len` 8192, `--max-num-seqs` 64 |
 | Eval grader | `meta-llama/Llama-3.1-8B-Instruct` | `NousResearch/Meta-Llama-3.1-8B-Instruct`, a mirror of the same model |
-| Eval prompts | a new 200-prompt draw from HealthBench-Hard per seed | HealthBench: the fixed `data/raw/hard_200_sample_ids.json` for every seed; other benchmarks: the first 200 prompts of the built JSONL |
-| Filter threshold tau | 0.4 | 0.4 in every cell, from the filter logs (`rebuttal/results/cell_recipe.json`). The launcher's rule would re-filter a non-HealthBench cell at the 22nd percentile of the scores when its `train.jsonl` holds under 40% of the raw traces (`1262448:rebuttal/launch/run_cell.sh:160-200`); no cell met it (`refilter_rule_met` in `cell_recipe.json`), and no log shows a second cut |
+| Eval prompts | a new 200-prompt draw from HealthBench-Hard per seed | HealthBench: the fixed `02ac9a3:data/raw/hard_200_sample_ids.json` for every seed (now `results/*/shared/inputs/eval_ids.json`); other benchmarks: the first 200 prompts of the built JSONL |
+| Filter threshold tau | 0.4 | 0.4 in every cell, from the filter logs (`results/cross_cell/cell_recipe.json`). The launcher's rule would re-filter a non-HealthBench cell at the 22nd percentile of the scores when its `train.jsonl` holds under 40% of the raw traces (`1262448:rebuttal/launch/run_cell.sh:160-200`); no cell met it (`refilter_rule_met` in `cell_recipe.json`), and no log shows a second cut |
 | What a seed changes | eval draw, train/val split, LoRA init, data order | LoRA init and data order. One filter pass per cell, and fixed eval prompts |
 | Teacher traces | generated once with greedy decoding | generated once per cell with greedy decoding |
 
@@ -161,31 +163,29 @@ comparable across prompts with different penalty items.
 |---|---|---|
 | HealthBench JSONL | `data/raw/` (ignored) | `bash setup.sh` |
 | ChatDoctor, MedQuAD, MedQA JSONL | `data/raw/` (ignored) | `bodhi_lora/data/loaders.py`, at the pinned dataset revisions; its manifest records the sha256 of each file |
-| Filtered training traces of the submitted cell | `data/sft_qwen_graded/` (ignored) | regenerate with stages 1 and 2 |
+| Filtered training traces of the submitted cell | the seed-7 split only, `results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_7/filter/train.jsonl` (ignored); the other seeds' traces were on a bucket that returned 404 (results/PROVENANCE.md) | regenerate with stages 1 and 2 |
 | Submitted adapters and trainer states | were at `gs://bohdi-runs-tokyo-micron/prod-v39-tunix-27b-neurips/`; that bucket returned 404 on 2026-10-08, and the project has no buckets | `legacy/modal_eval.py` copied each seed's `checkpoints/best/` and `train.jsonl`/`val.jsonl` into the Modal volume `bohdi-data-cache` (`/data/seed_<N>/`); that volume may still hold them (BLOCKED.md item 3) |
-| Added-cell outputs | `/data/PROJECTS/bohdi/results_rebuttal/` on the shared H100 host; copied on 2026-10-08 to `results_rebuttal/` here and to a local archive outside the repo | the sync command below |
-| Added-cell host logs | `/data/PROJECTS/bohdi/logs/` on the host; copied to `logs/host/` (gitignored) | the second command below |
+| Added-cell outputs | `/data/PROJECTS/bohdi/results_rebuttal/` on the shared H100 host; copied on 2026-10-08 and moved into the `results/*__2026-07/` cells (eval JSON gitignored), and to a local archive outside the repo | the sync record below |
+| Added-cell host logs | `/data/PROJECTS/bohdi/logs/` on the host; copied on 2026-10-08 into each cell's `logs/` folder (gitignored) | the sync record below |
 | Returned physician grades | the study coordinator | only de-identified grades go in the repo |
 
-Sync the added cells. This copies JSON only (eval files, summaries, eval ids, adapter
-configs, trainer states) and leaves raw generations and weights on the host:
+The copy of 2026-10-08 was complete: 194 of 194 JSON files, 36 of 36 adapter configs and
+108 of 108 trainer states. It copied JSON only (eval files, summaries, eval ids, adapter
+configs, trainer states) and the logs, and left raw generations and weights on the host:
 
 ```bash
 rsync -av --prune-empty-dirs --include '*/' --include '*.json' --exclude '*' \
-    <gpu-host>:/data/PROJECTS/bohdi/results_rebuttal/ results_rebuttal/
+    <gpu-host>:/data/PROJECTS/bohdi/results_rebuttal/ <copy>/results_rebuttal/
+rsync -av <gpu-host>:/data/PROJECTS/bohdi/logs/ <copy>/logs/host/
 ```
 
-The copy of 2026-10-08 was complete: 194 of 194 JSON files, 36 of 36 adapter configs and
-108 of 108 trainer states. Git tracks the adapter configs, trainer states and eval ids; the
-per-seed eval JSON (full responses, about 370 MB) is gitignored. Copy the logs too, then
-run `make cells`, which reads both and writes the tracked `generated_values.json`,
-`quality_drop.json` and `cell_recipe.json`:
-
-```bash
-mkdir -p logs/host
-rsync -av <gpu-host>:/data/PROJECTS/bohdi/logs/ logs/host/
-make cells
-```
+`scripts/migrate_results.py` then moved each file into its cell folder and checked its
+sha256 where it landed (results/PROVENANCE.md). Git tracks the adapter configs, trainer
+states, eval ids and the stage manifests; the per-seed eval JSON (full responses, about
+370 MB) and the logs are gitignored. `make cells` reads both and writes the tracked
+`results/cross_cell/generated_values.json`, `results/cross_cell/quality_drop.json` and
+`results/cross_cell/cell_recipe.json`. New runs write the results root directly
+(`python -m bodhi_lora run`), so they need no move.
 
 ## 8. Determinism
 

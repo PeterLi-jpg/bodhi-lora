@@ -1,0 +1,24 @@
+{
+  "schema": 2,
+  "stage": "train",
+  "cell": "chatdoctor__mistral-small-24b__bodhi__2026-07",
+  "seed": 99,
+  "created_utc": "2026-10-09T08:55:10.515103+00:00",
+  "status": "recorded",
+  "files": {
+    "adapter_config.json": "0622cdc98f46ef873fc99273e7e352a2ac025907037114d475f022e223fce293",
+    "checkpoint-462/trainer_state.json": "f246455f638b0592dd7145efb1c5eaeb4beaf2b71802e10e44e504eb4b9dae80",
+    "checkpoint-693/trainer_state.json": "eb6341b651d4226af68c7a26daf74671c42b2641fabf50e8cb7d43a38dd306fa",
+    "trainer_state.json": "c7ab0cb7e191c96c9aec4473d5918c210f04d51d20e094f50471fca5cbd9da82"
+  },
+  "note": "adapter files; weights are ignored by git or were not retained",
+  "written_by": {
+    "script": "scripts/migrate_results.py --manifests",
+    "git": {
+      "sha": "4e3edce5962174602e3689dfc9bad7cc461ac636",
+      "dirty": true,
+      "diff_sha256": "5ed29ef9aabe1aa09c189063483a5751d5c8f61bbd3a5c7bb3905bd4b4d27de7",
+      "n_untracked": 0
+    }
+  }
+}

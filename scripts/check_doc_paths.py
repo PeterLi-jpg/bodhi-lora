@@ -37,7 +37,7 @@ DOC_GLOBS = ["docs/**/*.md", "contributions/**/*.md"]
 # Paths the docs name that are not in the repo yet. Each entry is a promise, not
 # a file: the check warns when one exists, so the entry can be removed.
 PENDING = {
-    "results_rebuttal/healthbench__mistralai_Mistral-Small-24B-Instruct-2501__ask_first/":
+    "results/healthbench__mistral-small-24b__ask-first/":
         "written by the second-protocol run (BLOCKED.md item 9), not run yet",
 }
 # Paths of the target design in docs/ARCHITECTURE.md, written by the build lanes of its
@@ -46,7 +46,7 @@ PENDING = {
 _ARCHITECTURE = "planned in docs/ARCHITECTURE.md; a build lane writes it"
 PENDING.update({k: _ARCHITECTURE for k in (
     "configs/report.yaml",
-    "rebuttal/posted_values.json", "scripts/migrate_results.py",
+    "results/*/seed_*/table.csv", "results/*/analysis/stats.json", "results/cross_cell/stats.json",
     "tests/fixtures/protocols/", "tests/fixtures/analysis/", "tests/fixtures/migrate/",
     "tests/test_no_hardcode.py", "tests/test_manifest_*.py",
     "tests/test_analysis_*.py", "tests/test_report_*.py", "tests/test_migration_*.py",

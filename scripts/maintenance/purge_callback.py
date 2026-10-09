@@ -31,8 +31,10 @@ from collections import Counter
 
 # Model outputs and training traces on public prompts, tokenizer vocabularies,
 # checkpoints and vendored code. Short tokens occur there as ordinary words.
+# results/<cell>/seed_*/ and shared/ hold the same outputs since the results root
+# (results/PROVENANCE.md); a cell's validation/ and analysis/ are still read.
 SKIP = re.compile(rb"^(results_modal/seed_[^/]+/|results_rebuttal/|third_party/|checkpoints/"
-                  rb"|data/sft[^/]*/|eval/)|(^|/)tokenizer[^/]*$")
+                  rb"|data/sft[^/]*/|eval/|results/[^/]+/(?:seed_[^/]+|shared)/)|(^|/)tokenizer[^/]*$")
 # Only text-like files are read. Weights and optimizer states are skipped
 # unread, which keeps the rewrite fast.
 TEXT_EXT = (b".md", b".txt", b".tex", b".bib", b".py", b".sh", b".json", b".jsonl",

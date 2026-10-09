@@ -1,0 +1,21 @@
+{
+  "schema": 2,
+  "stage": "grade",
+  "cell": "medquad__mistral-small-24b__bodhi__2026-07",
+  "seed": 42,
+  "created_utc": "2026-10-09T08:56:21.692213+00:00",
+  "status": "recorded",
+  "files": {
+    "epistemic__llama-3.1-8b-nous.json": "fb9c93aba7b8c577d6a9c4f3f730026f8d51f63f68eeeac17611ad95cbb0fbd5"
+  },
+  "note": "the evaluator's dimension grades",
+  "written_by": {
+    "script": "scripts/migrate_results.py --manifests",
+    "git": {
+      "sha": "4e3edce5962174602e3689dfc9bad7cc461ac636",
+      "dirty": true,
+      "diff_sha256": "fe5b2734632f24120c270d13dfbf0dfff20e7c8c5622be94d7273a698f4eb342",
+      "n_untracked": 0
+    }
+  }
+}
