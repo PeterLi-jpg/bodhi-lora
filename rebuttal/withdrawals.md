@@ -19,7 +19,7 @@ correction that exists only in a reply does not count.
 - **Live paper:** `paper/main.tex` at commit 61dada9. The paper lanes will move these lines.
 
 Each "must say" text is plain wording for the paper lanes to adapt. Numbers in it come from
-the posted replies (see `data/rebuttal_cells/posted_values.json`) or from files in this repo.
+the posted replies (see `rebuttal/posted_values.json`) or from files in this repo.
 
 ---
 
@@ -328,7 +328,7 @@ prompts repeat across seeds (audit CLAIM-10).
   64 against 32 concurrent sequences, one fixed set of 200 HealthBench prompts for all seeds
   against a new draw per seed, grader weights from a mirror repo, and H100 against A100.
 - tau was 0.4 in every added cell, MedQuAD included. Each filter log prints `threshold=0.4`,
-  and no host log has the 22nd-percentile re-filter line (`rebuttal/results/cell_recipe.json`,
+  and no host log has the 22nd-percentile re-filter line (`results/cross_cell/cell_recipe.json`,
   commit 5d5890e; PROV-3). The earlier reading that MedQuAD used a percentile cut came from its
   clearance, 78.4%, which a 22nd-percentile cut would also give. Done in Appendix J (Table J.1)
   of `paper/main.tex`, commit 38b800e. The synced `adapter_config.json` files confirm r = 16,
@@ -364,7 +364,7 @@ preamble run. Its traces were generated on 2026-07-27, and its eval files were w
 epistemic grade (seed 42's grading found none of the MedQA prompts), as posted for the preamble
 run. Its aggregate score rises from 0.665 to 0.683
 (+0.018, 95% t interval [+0.003, +0.033], paired over five seeds), the values in the unposted
-drafts (`data/rebuttal_cells/README.md`, "Not in this file"). So the posted "aggregate score
+drafts (`rebuttal/README.md`, "Not in these files"). So the posted "aggregate score
 rises" (`HomM_2_followup_part1.md:11`) describes the preamble run, which measures instruction
 following. No run without the preamble exists. Done in section 4.2, the abstract, the Limitations
 and Appendix J of `paper/main.tex` (commit 38b800e), with every number from `make numbers`. Since
@@ -406,7 +406,7 @@ cells, the evaluator is from the same family as the base model (audit EVAL-7).
 **Correction.** Not corrected in the discussion. The keyword rule behind 14 was never
 committed, and no script in the repo gives 14. The committed rule, `CLINICIAN_RE` in
 `rebuttal/analyses/mimicry_split.py`, finds 4 of the 667 evaluated prompts
-(`rebuttal/results/mimicry_split.json`). HealthBench's own physician-agreed tag
+(`results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/mimicry_split.json`). HealthBench's own physician-agreed tag
 (`physician_agreed_category:health-professional`) marks 40 of the 1,000 Hard prompts as
 written by a health professional. Only 63 prompts, all in the communication theme, carry
 the tag, so 40 is a lower bound.
@@ -430,7 +430,7 @@ Appendix H, macros `\statHardHealthProfessional`, `\statHardSpeakerTagged`).
 **Correction.** Not corrected in the discussion. The posted numbers compare each condition's
 discrimination index with zero. The test of a change is LoRA minus Base: +8.4 points
 [-1.2, +17.9] with the rubric-based labeling and +10.0 [-0.5, +20.1] with the theme-only one
-(`rebuttal/results/mimicry_split.json`). Both intervals include zero. The adapter also asks more
+(`results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/mimicry_split.json`). Both intervals include zero. The adapter also asks more
 on self-contained prompts (15.9% to 37.5%, and 17.0% to 43.2%).
 
 **The paper must say.** We do not show that the adapter learned when to ask, and template
@@ -536,12 +536,12 @@ Base hedging quality 1.46 ± 0.01. Two earlier posts (`LxMF_1_rebuttal.md:76`,
 **What the raw outputs give.** `make cells` (`rebuttal/analyses/cell_values.py`) computes 1.4548
 from the per-seed eval files, which rounds to 1.45. It is the only posted value of the added cells
 that differs from the raw outputs at the posted precision
-(`data/rebuttal_cells/generated_values.json`, `mismatches`). So 1.45 was right and Table 1's 1.46
+(`results/cross_cell/generated_values.json`, `mismatches`). So 1.45 was right and Table 1's 1.46
 was not.
 
 **The paper must say.** 1.45, from the generated values. Done: Appendix J and
 `paper/generated/tab_cell_detail_2.tex` print the generated value, and
-`data/rebuttal_cells/posted_values.json` keeps 1.46 as the record of what was posted.
+`rebuttal/posted_values.json` keeps 1.46 as the record of what was posted.
 
 ---
 
@@ -576,7 +576,7 @@ paper lanes must decide on each one.
   `:103`. This rests on 5 of 998 against 0 of 985 responses (Fisher p = 0.062, audit CLAIM-8).
 - **MedQuAD base hedging, 1.45 against 1.46.** Settled by the raw outputs; see W21.
 - **"in five of the six added cells at every seed"** `FzpA_2_followup.md:15`. Checked against
-  the raw outputs on 2026-10-08 (`data/rebuttal_cells/generated_values.json`, per_seed): LoRA
+  the raw outputs on 2026-10-08 (`results/cross_cell/generated_values.json`, per_seed): LoRA
   active inquiry is above Base in all five seeds of five added cells, and in one of five seeds of
   BioMistral-7B. The claim holds as posted. It counts the two Med42-8B cells, which the paper
   leaves out of cross-model statements (D6).
@@ -587,7 +587,7 @@ paper lanes must decide on each one.
   HealthBench rubric criteria (`scripts/make_irr_excel.py`, `scripts/compute_irr_kappa.py`).
   The paper now says that no physician graded the seven dimensions (a59cb82).
 - **The antidepressant example.** `FzpA_2_followup.md:21` says the adapter asks about "current
-  medications and conditions". The answer in `results_modal/seed_99/lora_no_wrapper.json`
+  medications and conditions". The answer in `results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_99/eval/lora.json`
   (prompt `2c915b71`) does not. The paper lists only the questions it asks (5c2e9b0).
 - **The hedging scale.** `FzpA_2_followup.md:27` says the grader's scale is "0 for a bare
   referral". The grader prompt gives the two ends but ties no score to them, and the grader

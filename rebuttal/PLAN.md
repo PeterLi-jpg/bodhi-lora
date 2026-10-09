@@ -37,9 +37,10 @@ Llama-3.1-8B-Instruct.
 | MedQuAD | Mistral-Small-24B | active inquiry rises |
 | MedQA | Mistral-Small-24B | set aside (see `withdrawals.md` W12) |
 
-The posted numbers are in `data/rebuttal_cells/posted_values.json`. The raw outputs were
-copied from the shared GPU host on 2026-10-08 into the gitignored `results_rebuttal/`.
-`make cells` reads them and writes `data/rebuttal_cells/generated_values.json`, and the
+The posted numbers are in `rebuttal/posted_values.json`. The raw outputs were copied from
+the shared GPU host on 2026-10-08; they are now in the `results/*__2026-07/` cells, with the
+eval files gitignored (`results/PROVENANCE.md`). `make cells` reads them and writes
+`results/cross_cell/generated_values.json`, and the
 paper takes the added-cell values from that file (audit PROV-1). One posted value was
 wrong (`withdrawals.md` W21).
 

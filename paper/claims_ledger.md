@@ -11,23 +11,26 @@ replies, is `docs/CLAIMS.md`. This file is the number-level map for the current 
 Kinds:
 
 - **computed**: the macro comes from committed data in this repository. For the added cells
-  that data is `data/rebuttal_cells/generated_values.json` and `rebuttal/results/*.json`,
+  that data is `results/cross_cell/generated_values.json` and the cells' `analysis/` files,
   which `make cells` computes from the raw outputs synced from the GPU host on 2026-10-08
   (the per-seed eval JSON and the host logs are gitignored; `make numbers` needs only the
   tracked files).
 - **computed, untracked input**: the macro comes from a file that git ignores. The only
   such input left is `data/raw/healthbench/hard.jsonl`, a public download (`python -m bodhi_lora fetch healthbench`).
   `make numbers` stops with a message when it is absent.
-- **posted**: the macro comes from `data/rebuttal_cells/posted_values.json`, a transcription
+- **posted**: the macro comes from `rebuttal/posted_values.json`, a transcription
   of the OpenReview replies, and the paper quotes it as what was posted. Since the sync no
   added-cell result is of this kind.
 - **design**: a setting of the experiment (seeds, prompts per seed, context length, tau,
   LoRA rank). Its source is the config or launcher named in the Source column.
 - **unverified**: typed in the paper; the output that produced it is not in the repository.
 
-Inputs: `RM` is `results_modal/seed_*/` (the four `<condition>.json` files and
-`epistemic_scores.json`), `PV` is `data/rebuttal_cells/posted_values.json`, `GV` is
-`data/rebuttal_cells/generated_values.json`, `CR` is `rebuttal/results/cell_recipe.json`.
+Inputs: `RM` is `results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_*/` (the four `eval/<condition>.json` files and
+`grade/epistemic__llama-3.1-8b.json`), `PV` is `rebuttal/posted_values.json`, `GV` is
+`results/cross_cell/generated_values.json`, `CR` is `results/cross_cell/cell_recipe.json`.
+Before the move to the results root these were `results_modal/`, `data/rebuttal_cells/` and
+`rebuttal/results/`; the source comments in `numbers.tex` still use those names, and
+`results/provenance.json` maps them.
 
 ## Abstract
 
@@ -40,10 +43,10 @@ Inputs: `RM` is `results_modal/seed_*/` (the four `<condition>.json` files and
 | 5 cells outside the evaluator's family and not set aside; active inquiry and context-seeking both rise (Holm p < 0.05) in 4 | `\statCellsOutside`, `\statCellsOutsideAskRose` | `uniform_section` | GV (per-seed means; `paired_test` and `holm` of `bodhi_lora/analysis/stats.py`) | computed |
 | Aggregate falls in all 4, by 0.014 to 0.086, largest paired t p = 0.016 | `\statCellsAddedWithAggregate`, `\statCellsAddedDropMin`, `\statCellsAddedDropMax`, `\statCellsAddedDropPMax` | `generality_section` | GV | computed |
 | Adding CoT to the adapter changes red-flag identification by -0.161 [-0.262, -0.059] on the 0-2 score, Holm-adjusted p = 0.058 (the rate, -20.6 points, is a secondary measure stated in section 4.3) | `\statRedFlagLoRACoTvsLoRADiff`, `...CI`, `...PHolm` | `compare_conditions` | RM | computed |
-| Format leakage in 54.6% of LoRA+BODHI answers | `\statLeakagePctLoRACoT` | `rebuttal_section` | `rebuttal/results/interference_mechanism.json` | computed |
+| Format leakage in 54.6% of LoRA+BODHI answers | `\statLeakagePctLoRACoT` | `rebuttal_section` | `results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/interference_mechanism.json` | computed |
 | The red-flag drop does not repeat in the added cells | none in the abstract; section 4.3 gives the counts | `uniform_section` | GV | computed (see the section 4.3 rows) |
 | The 2 Med42-8B cells share the evaluator's family and the MedQA cell's prompt told the model to ask, so the counts leave them out | `\statCellsSameFamily` | `uniform_section` | the `same_family_as_evaluator` and `set_aside` flags of each cell in PV | design (D6; the MedQA run identity: withdrawals W12) |
-| Physician agreement kappa 0.35, target 0.6 set in advance for the filter grader, on rubric criteria only; no physician graded the seven dimensions | `\statKappaAll`; 0.6 is the target in the plan of 2026-04-29 | `kappa_section` | `results_modal/irr/kappa_results.json`, computed by `make kappa` from the returned rater file, which carries a name and is kept outside the repo; row design in `scripts/make_irr_excel.py` | computed from an input outside the repo (audit NUM-2): the committed `IRR-clinicians/` sheets are blank, so the value cannot be recomputed from the repo |
+| Physician agreement kappa 0.35, target 0.6 set in advance for the filter grader, on rubric criteria only; no physician graded the seven dimensions | `\statKappaAll`; 0.6 is the target in the plan of 2026-04-29 | `kappa_section` | `results/healthbench__medgemma-27b-text__bodhi__2026-05/validation/kappa_results.json`, computed by `make kappa` from the returned rater file, which carries a name and is kept outside the repo; row design in `scripts/make_irr_excel.py` | computed from an input outside the repo (audit NUM-2): the committed `IRR-clinicians/` sheets are blank, so the value cannot be recomputed from the repo |
 | BioMistral-7B is a null result | none in the abstract | | GV (see the section 4.1 rows) | computed |
 
 ## Introduction
@@ -52,7 +55,7 @@ Inputs: `RM` is `results_modal/seed_*/` (the four `<condition>.json` files and
 |---|---|---|---|---|
 | The two passes overran the context on 4.3% of prompts | `\statCompletionDropPctBaseCoT` | `counts_and_failures` | RM | computed |
 | 40 of 1,000 Hard prompts tagged as written by a health professional; 63 carry the tag (lower bound) | `\statHardHealthProfessional`, `\statHardSpeakerTagged`, `\statHardPrompts` | `speaker_tags`, `difficulty_range` | `data/raw/healthbench/hard.jsonl` (`physician_agreed_category` tags) | computed; HealthBench is a public download |
-| Posted 14 of 1,000 (Appendix H, as corrected); the committed keyword rule finds 4 of 667 evaluated prompts | `\statPostedClinicianPrompts`, `\statClinicianKeywordPrompts`, `\statMimicryEvalPrompts` | `generality_section`, `rebuttal_section` | PV; `rebuttal/results/mimicry_split.json` | posted (not reproduced; withdrawals W14); computed |
+| Posted 14 of 1,000 (Appendix H, as corrected); the committed keyword rule finds 4 of 667 evaluated prompts | `\statPostedClinicianPrompts`, `\statClinicianKeywordPrompts`, `\statMimicryEvalPrompts` | `generality_section`, `rebuttal_section` | PV; `results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/mimicry_split.json` | posted (not reproduced; withdrawals W14); computed |
 | 8 cells, 7 of them added; active inquiry and context-seeking rise in 4 of the 5 cells outside the evaluator's family; aggregate falls in all 4 added cells among them | `\statCellsAll`, `\statCellsAdded`, `\statCellsOutsideAskRose`, `\statCellsOutside`, `\statCellsAddedWithAggregate` | `uniform_section`, `generality_section` | GV | computed |
 | BODHI expansion "Balanced, Open-minded, Diagnostic, Humble, Inquisitive" | none | | the cited BMJ paper (docs/DECISIONS.md, D15 note) | design |
 | Pass 1 has seven fields: task type, audience, best assessment, key uncertainties, questions to ask, red flags, safe recommendations | none | | `bodhi/prompts.py` in bodhi-llm 0.1.4 (pinned in `requirements.txt`) | design |
@@ -62,13 +65,13 @@ Inputs: `RM` is `results_modal/seed_*/` (the four `<condition>.json` files and
 | Claim | Macro(s) | Function | Source | Kind |
 |---|---|---|---|---|
 | 4,000 HealthBench prompts outside the Hard set | `\statFilterPool` | `tau_calibration` | constant `FILTER_POOL` (5,000 HealthBench minus 1,000 Hard; legacy launcher) | design |
-| Seed-7 training split: 2,816 traces, 0 in the Hard set | `\statFilterTrainNSeedSeven`, `\statTrainHardOverlapSeedSeven` | `tau_calibration` | `data/derived/seed_7_filter_scores.json` (scores copied from the ignored `data/sft_qwen_graded/seed_7_train.jsonl`), `data/raw/healthbench/hard.jsonl` | computed; HealthBench is a public download |
+| Seed-7 training split: 2,816 traces, 0 in the Hard set | `\statFilterTrainNSeedSeven`, `\statTrainHardOverlapSeedSeven` | `tau_calibration` | `results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_7/filter/filter_scores.json` (scores copied from the ignored `seed_7/filter/train.jsonl` of the same cell), `data/raw/healthbench/hard.jsonl` | computed; HealthBench is a public download |
 | tau = 0.4, r = 8, alpha = 16, 300 steps, 64 examples per step, 2,048 tokens | none | | `legacy/configs/lora_medgemma27b_tunix.yaml`, `legacy/tpu/launch_5seeds_tunix.sh` (Table hparams comments) | design; not checked against the saved adapters, because the GCS bucket returned 404 on 2026-10-08 (D1; BLOCKED.md item 3) |
 | Added cells: r = 16, alpha = 32 (section 3.3, Table F.2, Appendix J) | `\statCellsLoRARank`, `\statCellsLoRAAlpha` | `recipe_macros` | CR (the synced `adapter_config.json` of all 35 adapters) | computed |
 | 1,000 draws per condition cover 667 unique prompts; 271 repeat | `\statPromptEvaluations`, `\statUniquePrompts`, `\statRepeatedPrompts` | `counts_and_failures` | RM | computed |
 | Epistemic parse failures 0.20% to 1.49% per condition | `\statEpistemicParseFailPctBase`, `\statEpistemicParseFailPctMax` | `counts_and_failures` | RM | computed |
 | HealthBench criterion failures at most 0.087% per run | `\statHealthBenchParseFailPctMaxRun` | `counts_and_failures` | RM | computed |
-| 1 of 3 physicians; kappa 0.35 [0.28, 0.43] on 509 rows from 10 prompts | `\statKappaRaters`, `\statKappaAll`, `\statKappaAllCI`, `\statKappaAllN`, `\statKappaPrompts` | `kappa_section` | `results_modal/irr/kappa_results.json` | computed from an input outside the repo (see the abstract row) |
+| 1 of 3 physicians; kappa 0.35 [0.28, 0.43] on 509 rows from 10 prompts | `\statKappaRaters`, `\statKappaAll`, `\statKappaAllCI`, `\statKappaAllN`, `\statKappaPrompts` | `kappa_section` | `results/healthbench__medgemma-27b-text__bodhi__2026-05/validation/kappa_results.json` | computed from an input outside the repo (see the abstract row) |
 | 4,096-token evaluation context, greedy decoding, A100-80GB | none | | `legacy/modal_eval.py` (max_model_len patch, GPU type) | design |
 | Context-seeking 2 without a direct question: 74.4% of Base 2s, 47.2% of LoRA 2s | `\statContextSeekingTwoNoQuestionPctBase`, `\statContextSeekingTwoNoQuestionPctLoRA` | `context_seeking_anchor` | RM | computed |
 | Mapping of the seven dimensions to the BODHI components (Table bodhi-map) | none | | names in the cited BMJ paper; Pass 1 fields in bodhi-llm 0.1.4 | design (our reading) |
@@ -81,7 +84,7 @@ Inputs: `RM` is `results_modal/seed_*/` (the four `<condition>.json` files and
 |---|---|---|---|---|
 | Table E.3 (score, t interval, pooled n, n per seed) | `tab_main_healthbench.tex` | `build_tables` | RM | computed |
 | Table E.4 (seven dimensions, rates, scored n) | `tab_epistemic.tex` | `build_tables` | RM | computed |
-| Figure E.1 (two panels) | `paper/figures/epistemic_bar.pdf` | `scripts/plot_epistemic_figures.py` | `results_modal/cross_seed_aggregate.json` | computed |
+| Figure E.1 (two panels) | `paper/figures/epistemic_bar.pdf` | `scripts/plot_epistemic_figures.py` | `results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/cross_seed_aggregate.json` | computed |
 | Active inquiry, context-seeking, red flag, scope: diff, CI, Holm p; the four effects keep Holm-adjusted p <= 0.0065 | `\stat<Dim>LoRAvsBaseDiff`, `...CI`, `...PHolm`, `\statScopeBoundingLoRAvsBasePHolm` (the largest of the four) | `compare_conditions` | RM | computed |
 | Output tokens per response from the serving engine, Base and LoRA (also Appendix H) | `\statTokensEngineBase`, `\statTokensEngineLoRA` | `cost_section` | `results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/stats.json` (`cost`, written by `make analyze`) | computed |
 | Questions per response 0.45 to 1.16 | `\statQuestionsBase`, `\statQuestionsLoRA` | `describe_conditions` | RM | computed |
@@ -109,7 +112,7 @@ Inputs: `RM` is `results_modal/seed_*/` (the four `<condition>.json` files and
 | BioMistral-7B: 11.7% to 10.1%, teacher 14.5%, filter kept 20.4% | `\statCellHBBioMistral<...>` | `generality_section` | GV; the filter share from CR | computed |
 | Adapter at or above its teacher in 3 of 5 cells (submitted included) | `\statCellsAtOrAboveTeacher`, `\statCellsCompared` | `generality_section` | RM, GV | computed |
 | Aggregate falls in all 4 added cells outside the evaluator's family, 0.014 to 0.086 | `\statCellsAddedWithAggregate`, `\statCellsAddedDropMin`, `\statCellsAddedDropMax` | `generality_section` | GV | computed |
-| Largest p of the four drops 0.016; each survives Holm over the 6 added cells not set aside (largest p_Holm 0.016), as posted | `\statCellsAddedDropPMax`, `\statCellsAddedDropPHolmMax`, `\statCellsHolmFamily` | `generality_section` | GV | computed (`rebuttal/results/quality_drop.json` gives the same tests with Holm over 7 cells) |
+| Largest p of the four drops 0.016; each survives Holm over the 6 added cells not set aside (largest p_Holm 0.016), as posted | `\statCellsAddedDropPMax`, `\statCellsAddedDropPHolmMax`, `\statCellsHolmFamily` | `generality_section` | GV | computed (`results/cross_cell/quality_drop.json` gives the same tests with Holm over 7 cells) |
 | MedQA: Base asked in 99.0% to 100.0% of responses per graded seed; aggregate +0.018 [+0.003, +0.033]; the posted rise | `\statCellMedQAMistralBaseActiveInquirySeedMin`, `...SeedMax`, `\statCellMedQAMistralAggregateDiff`, `...DiffCI` | `generality_section` | GV | computed |
 | MedQA dimensions in Table 1 use the 4 seeds with dimension grades | `\statCellMedQAMistralEpistemicSeeds` | `generality_section` | GV (`per_seed`) | computed |
 | Recipe and evaluation differences of the added cells | none | | the train and eval blocks of `configs/cells/*__2026-07.yaml` (from `61dada9:rebuttal/configs/` and `61dada9:rebuttal/launch/run_cell.sh`), comments above Table hparams-cells | design |
@@ -123,9 +126,9 @@ Inputs: `RM` is `results_modal/seed_*/` (the four `<condition>.json` files and
 | Red-flag rate -20.6 points [-29.8, -11.4], p = 0.0034 | `\statRedFlagRateLoRACoTvsLoRADiff`, `...CI`, `...P` | `compare_conditions` | RM | computed |
 | Against Base: no detected difference on the score, lower on the rate | `\statRedFlagLoRACoTvsBaseDiff`, `...CI`, `\statRedFlagRateLoRACoTvsBaseDiff`, `...CI` | `compare_conditions` | RM | computed |
 | Aggregate LoRA+BODHI minus LoRA -0.008 [-0.020, +0.004] | `\statHealthBenchLoRACoTvsLoRADiff`, `...CI` | `compare_conditions` | RM | computed |
-| Leakage 54.6% against 0.2% to 3.0%: at least 2 of 9 analysis-format markers (the 7 Pass 1 headers, "differential", "scope of") | `\statLeakagePct<Cond>` | `rebuttal_section` | `rebuttal/results/interference_mechanism.json` | computed |
-| Seven Pass 1 headers only (Appendix H): 53.2% against 0.0% to 0.8%; red flag 1.32 (n = 494) and 1.73 (n = 434) | `\statLeakagePassOnePct<Cond>`, `\statRedFlagLeakedPassOne`, `\statRedFlagCleanPassOne`, `\statLeakagePassOneN...` | `rebuttal_section` | `rebuttal/results/interference_mechanism.json` | computed |
-| Red flag 1.33 (n = 507) leaked, 1.73 (n = 421) not leaked | `\statRedFlagLeaked`, `\statRedFlagClean`, `\statLeakageNLoRACoT`, `\statLeakageNCleanLoRACoT` | `rebuttal_section` | `rebuttal/results/interference_mechanism.json` | computed |
+| Leakage 54.6% against 0.2% to 3.0%: at least 2 of 9 analysis-format markers (the 7 Pass 1 headers, "differential", "scope of") | `\statLeakagePct<Cond>` | `rebuttal_section` | `results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/interference_mechanism.json` | computed |
+| Seven Pass 1 headers only (Appendix H): 53.2% against 0.0% to 0.8%; red flag 1.32 (n = 494) and 1.73 (n = 434) | `\statLeakagePassOnePct<Cond>`, `\statRedFlagLeakedPassOne`, `\statRedFlagCleanPassOne`, `\statLeakagePassOneN...` | `rebuttal_section` | `results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/interference_mechanism.json` | computed |
+| Red flag 1.33 (n = 507) leaked, 1.73 (n = 421) not leaked | `\statRedFlagLeaked`, `\statRedFlagClean`, `\statLeakageNLoRACoT`, `\statLeakageNCleanLoRACoT` | `rebuttal_section` | `results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/interference_mechanism.json` | computed |
 | The drop does not repeat in the added cells: LoRA+BODHI below LoRA (p < 0.05) in 0 of the 4 added cells outside the evaluator's family, above it (Holm p < 0.05) in 1 | `\statCellsAddedRedFlagCoTFell`, `\statCellsAddedRedFlagCoTRose`, `\statCellsAddedOutside` | `uniform_section` | GV (per-seed means; `paired_test` and `holm` of `bodhi_lora/analysis/stats.py`) | computed |
 
 ## Discussion
@@ -134,10 +137,10 @@ Inputs: `RM` is `results_modal/seed_*/` (the four `<condition>.json` files and
 |---|---|---|---|---|
 | Aggregate falls by 0.014 to 0.086 in the added cells outside the family | `\statCellsAddedDropMin`, `\statCellsAddedDropMax` | `generality_section` | GV | computed |
 | Future work (section 5.3): experiments built and checked on the CPU, not run, among them three prompt baselines, a second protocol, a clinical judge and an over-flagging test | none | | the planned cell records in `configs/cells/`, the `clarify`, `verbalized-confidence` and `mediq-abstain` records in `configs/protocols/`, docs/EXPERIMENTS.md, docs/RUN_PLAN.md | design |
-| Antidepressant example: Base asks nothing, LoRA asks about duration, intensity, sleep, appetite, energy, concentration and self-harm, and gives a crisis line | none (qualitative) | | `results_modal/seed_99/{base,lora}_no_wrapper.json` and `epistemic_scores.json`, prompt `2c915b71` | computed (read by hand; quoted in Appendix K) |
+| Antidepressant example: Base asks nothing, LoRA asks about duration, intensity, sleep, appetite, energy, concentration and self-harm, and gives a crisis line | none (qualitative) | | `results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_99/eval/{base,lora}.json` and `grade/epistemic__llama-3.1-8b.json`, prompt `2c915b71` | computed (read by hand; quoted in Appendix K) |
 | Table 2: prior approaches compared on what they change, inference cost, what they need and their target | none | | the cited papers | design (positioning, not a measurement) |
 | Second protocol implemented, not run (section 5.3) | none | | `bodhi_lora/protocols/ask_first.py` | design |
-| The adapter also asks more on self-contained prompts (15.9% to 37.5%; 17.0% to 43.2%); its gain in discrimination over Base includes zero (+8.4 [-1.2, +17.9]; +10.0 [-0.5, +20.1]); posted selectivity claim withdrawn | `\statAskSelfContained<Labeling><Cond>`, `\statDiscrimination<Labeling>LoRAvsBase`, `...CI`, `\statDiscrimination<Labeling><Cond>`, `...CI` | `rebuttal_section` | `rebuttal/results/mimicry_split.json` | computed (post hoc labelings; withdrawals W15) |
+| The adapter also asks more on self-contained prompts (15.9% to 37.5%; 17.0% to 43.2%); its gain in discrimination over Base includes zero (+8.4 [-1.2, +17.9]; +10.0 [-0.5, +20.1]); posted selectivity claim withdrawn | `\statAskSelfContained<Labeling><Cond>`, `\statDiscrimination<Labeling>LoRAvsBase`, `...CI`, `\statDiscrimination<Labeling><Cond>`, `...CI` | `rebuttal_section` | `results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/mimicry_split.json` | computed (post hoc labelings; withdrawals W15) |
 | Prior work compared: MediQ, CRAFT-MD, AMIE, R-Tuning, linguistic calibration (section 2, Table 2) | none | | the cited papers; venues checked against Crossref and arXiv on 2026-10-08 | design (positioning) |
 
 ## Appendix numbers that are not computed here
@@ -154,5 +157,5 @@ Inputs: `RM` is `results_modal/seed_*/` (the four `<condition>.json` files and
 | Cross-seed SD of Base active inquiry in the added cells, 0.3 to 2.1 points | Appendix J, `\statCellsAddedBaseAISDMin`, `\statCellsAddedBaseAISDMax` (`uniform_section`) | computed (GV) | Settled by the sync |
 | Posted: the adapter needs about 58% fewer output tokens than the protocol; withdrawn | Appendix H, `\statPostedFewerTokensPct` | posted (PV; withdrawals W22) | Nothing: the two-pass conditions stored only their final response |
 | Incomplete host runs: BioMistral-7B on MedQA, 1 seed, 40 traces, 3 steps, 10 prompts; MedGemma-27B on MedQA and MedQuAD and Gemma-2-9B on HealthBench-Hard stopped in trace generation | Appendix J, `\statRunMedQABioMistral<...>` | computed (CR) for the counts; the four runs from `cell_recipe.json` (`incomplete` in `numbers.json`) | |
-| Second grader on seed 42 (r = 0.42, rho = 0.35, 43 shared prompts) | Appendix H | computed (`data/derived/seed_42_qwen_grader_scores.json`, scores copied from the ignored `results/seed_42/eval/`) | Settled: `make derived` rebuilds the copy from the source files |
+| Second grader on seed 42 (r = 0.42, rho = 0.35, 43 shared prompts) | Appendix H | computed (`results/healthbench__medgemma-27b-text__bodhi__2026-04/analysis/qwen_grader_scores.json`, scores copied from the pilot's ignored eval files) | Settled: `make derived` rebuilds the copy from the source files |
 | Plan specified in the repository on 2026-04-29 (not an outside registry), grader switch 2026-05-01 | Abstract, section 3.4, Appendix B | design | commits aa7eec4 (`RESULTS.md` 7.B) and 1376aec; the paper omits the hashes because they find the public repo (withdrawals W19) |
