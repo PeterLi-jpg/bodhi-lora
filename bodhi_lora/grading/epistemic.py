@@ -42,7 +42,7 @@ import numpy as np
 from tqdm import tqdm
 
 from bodhi_lora import manifest as rmf
-from bodhi_lora.engine.vllm import DryRunEngine, VLLMEngine
+from bodhi_lora.engine import StubEngine, VLLMEngine
 from bodhi_lora.pipeline.filter import LocalGrader, parse_json_response
 
 DATA_DIR = Path("data/raw")
@@ -392,7 +392,7 @@ def main():
     engine_kwargs = dict(revision=grader_revision, max_model_len=args.max_model_len,
                          max_num_seqs=args.max_num_seqs, request_timeout=args.request_timeout)
     if args.dry_run:
-        grader_ctx = DryRunEngine(args.grader_model, reply=DRY_RUN_EPISTEMIC_REPLY, **engine_kwargs)
+        grader_ctx = StubEngine(args.grader_model, reply=DRY_RUN_EPISTEMIC_REPLY, **engine_kwargs)
         for cfg in configs:
             cfg["results"] = cfg["results"][:2]
     else:

@@ -193,5 +193,4 @@ record them, which `bodhi_lora/manifest.py` does.
 | `401 Unauthorized` from Hugging Face | no token, or no access to a gated model | accept the model terms, set `HF_TOKEN` |
 | CUDA out of memory in training | 24-27B in bf16 | use the QLoRA config or an 80 GB card |
 | `Could not auto-detect response template` | non-standard chat template | set `data.response_template` in the config |
-| vLLM hangs at start on a GPU box | the Docker path pulled a TPU image | `run_cell.sh` sets `BODHI_VLLM_MODE=subprocess`; keep it |
 | `pip check` fails after install | a shared or base env | use a fresh venv |

@@ -106,9 +106,9 @@ Issue numbers such as #5 are GitHub issues on `PeterLi-jpg/bohdi-lora`.
   silently. The epistemic grader still drops them from its means (EVAL-9, above).
 - **#6, #7** `generate_traces.py --resume-from` refuses rows made with other settings.
 - **#23** Training checkpoints on step intervals and resumes from the latest one.
-- **#65** `bodhi_lora/engine/vllm.py` sets `--enforce-eager` the same way in Docker and
-  subprocess mode. Eager mode stays the default, because CUDA-graph capture with LoRA
-  hangs in vLLM 0.9.
+- **#65** `bodhi_lora/engine/vllm.py` sets `--enforce-eager` by default, because
+  CUDA-graph capture with LoRA hangs in vLLM 0.9. The engine runs vLLM as a subprocess
+  only; the Docker and TPU modes were removed on 2026-10-08.
 - **#3** The filter grader (Qwen2.5-14B) and the evaluator (Llama-3.1-8B) come from
   different families. Med42-8B breaks this rule for its own cells (see above).
 - **Dependency pins (REPRO-10, b2452bc).** `requirements-infer.txt` pins

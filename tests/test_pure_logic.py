@@ -174,46 +174,6 @@ def test_summarize_bootstrap_is_seeded():
     assert summary_a == summary_b
 
 
-def test_vllm_engine_enforce_eager_flag():
-    """Issue #65: --enforce-eager must be conditional on the kwarg.
-
-    Default True preserves the old behavior (graph-capture hang on LoRA);
-    explicit False is needed for the latency benchmark to compare graph mode.
-    Both docker and subprocess builds must agree, otherwise the run-mode
-    silently changes the eval profile.
-    """
-    from bodhi_lora.engine.vllm import VLLMEngine
-
-    eng_default = VLLMEngine(model="google/gemma-3-4b-it", tp_size=1)
-    assert eng_default._enforce_eager is True
-    assert "--enforce-eager" in eng_default._build_docker_cmd()
-    assert "--enforce-eager" in eng_default._build_subprocess_cmd()
-
-    eng_off = VLLMEngine(model="google/gemma-3-4b-it", tp_size=1, enforce_eager=False)
-    assert eng_off._enforce_eager is False
-    assert "--enforce-eager" not in eng_off._build_docker_cmd()
-    assert "--enforce-eager" not in eng_off._build_subprocess_cmd()
-
-
-def test_vllm_engine_lora_on_tpu_raises_fast(monkeypatch):
-    """vllm/vllm-tpu doesn't implement add_lora; we must not let the caller
-    spin up a doomed engine and poll a dead container for 45 minutes.
-    """
-    from bodhi_lora.engine import vllm as _vllm_engine
-
-    monkeypatch.setattr(_vllm_engine, "_detect_accelerator", lambda: "tpu")
-
-    import pytest as _pytest
-    with _pytest.raises(NotImplementedError, match="vllm/vllm-tpu"):
-        _vllm_engine.VLLMEngine(
-            model="google/medgemma-27b-text-it", tp_size=1,
-            lora_path="checkpoints/best",
-        )
-
-    # Without lora_path, TPU detection is fine and construction succeeds.
-    _ = _vllm_engine.VLLMEngine(model="google/medgemma-27b-text-it", tp_size=1)
-
-
 # ── contamination_probe.py (issue #72) ───────────────────────────────────
 
 def _import_contamination_probe(monkeypatch):

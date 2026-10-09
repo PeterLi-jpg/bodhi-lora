@@ -22,11 +22,13 @@ from tqdm import tqdm
 from transformers import set_seed
 
 from bodhi_lora import manifest as rmf
-from bodhi_lora.engine.vllm import DryRunEngine, VLLMEngine
+from bodhi_lora.engine import StubEngine, VLLMEngine
 from bodhi_lora.protocols.ask_first import AskFirstProtocol
 from bodhi_lora.protocols.bodhi_llm import make_ablated_bodhi_config
 
 PROTOCOLS = ("none", "bodhi", "ask_first")
+# Tokens per call: the limit every run so far used for a generation call.
+MAX_NEW_TOKENS_PER_PASS = 2048
 DRY_RUN_REPLY = "<plan>dry run plan</plan>\nREPLY:\nDRY RUN RESPONSE"
 
 DATA_DIR = Path("data/raw")
@@ -137,7 +139,7 @@ def make_protocol_wrapper(protocol, engine, ablate_component: str = "none"):
     if protocol == "none":
         return None
     if protocol == "ask_first":
-        return AskFirstProtocol(lambda msgs: engine.chat(msgs))
+        return AskFirstProtocol(lambda msgs: engine.chat(msgs, MAX_NEW_TOKENS_PER_PASS))
     return make_bodhi_wrapper(engine, ablate_component=ablate_component)
 
 
@@ -158,7 +160,7 @@ def make_bodhi_wrapper(engine, ablate_component: str = "none"):
     (medical domain, all components active).
     """
     from bodhi import BODHI
-    chat_fn = lambda msgs: engine.chat(msgs)
+    chat_fn = lambda msgs: engine.chat(msgs, MAX_NEW_TOKENS_PER_PASS)
     config = make_ablated_bodhi_config(ablate_component)
     return BODHI(chat_function=chat_fn, config=config)
 
@@ -177,7 +179,7 @@ def generate_response(engine, messages, use_bodhi, bodhi_wrapper=None,
     """
     if not use_bodhi:
         return {
-            "content": engine.chat(messages),
+            "content": engine.chat(messages, MAX_NEW_TOKENS_PER_PASS),
             "analysis": None,
             "metadata": {"ablate_component": ablate_component},
         }
@@ -253,6 +255,7 @@ def main():
     # Engine settings: the VLLMEngine defaults the submitted generation ran with.
     parser.add_argument("--max-model-len", type=int, default=8192)
     parser.add_argument("--max-num-seqs", type=int, default=64)
+    parser.add_argument("--request-timeout", type=int, default=180)
     parser.add_argument(
         "--dry-run", action="store_true",
         help="Stub the engine, generate --dry-run-examples traces on a CPU and "
@@ -447,8 +450,8 @@ def main():
 
     model_revision = rmf.effective_revision(args.model, args.model_revision)
     engine_kwargs = dict(revision=model_revision, max_model_len=args.max_model_len,
-                         max_num_seqs=args.max_num_seqs)
-    engine_ctx = (DryRunEngine(args.model, reply=DRY_RUN_REPLY, **engine_kwargs)
+                         max_num_seqs=args.max_num_seqs, request_timeout=args.request_timeout)
+    engine_ctx = (StubEngine(args.model, reply=DRY_RUN_REPLY, **engine_kwargs)
                   if args.dry_run else VLLMEngine(args.model, **engine_kwargs))
     with engine_ctx as engine:
         bodhi_wrapper = make_protocol_wrapper(

@@ -38,7 +38,7 @@ from pathlib import Path
 import numpy as np
 
 from bodhi_lora import manifest as rmf
-from bodhi_lora.engine.vllm import DryRunEngine, VLLMEngine
+from bodhi_lora.engine import StubEngine, VLLMEngine
 from bodhi_lora.pipeline.filter import LocalGrader, grade_trace
 from bodhi_lora.grading.epistemic import (
     DRY_RUN_EPISTEMIC_REPLY, aggregate, flatten_grade, grade_response, messages_to_text,
@@ -203,7 +203,7 @@ def main(argv=None):
     engine_kwargs = dict(revision=revision, max_model_len=args.max_model_len,
                          max_num_seqs=args.max_num_seqs, request_timeout=args.request_timeout)
     if args.dry_run:
-        engine = DryRunEngine(judge, reply=_dry_run_reply, **engine_kwargs)
+        engine = StubEngine(judge, reply=_dry_run_reply, **engine_kwargs)
         for data in loaded.values():
             data["results"] = data.get("results", [])[:2]
     else:

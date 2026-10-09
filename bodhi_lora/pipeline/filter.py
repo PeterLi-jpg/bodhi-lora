@@ -321,6 +321,7 @@ def main():
     # Engine settings: the VLLMEngine defaults the submitted filter ran with.
     parser.add_argument("--max-model-len", type=int, default=8192)
     parser.add_argument("--max-num-seqs", type=int, default=64)
+    parser.add_argument("--request-timeout", type=int, default=180)
     parser.add_argument(
         "--score-field",
         default="overall_score",
@@ -479,7 +480,8 @@ def main():
 
     grader_revision = rmf.effective_revision(args.grader_model, args.grader_revision)
     engine = VLLMEngine(args.grader_model, revision=grader_revision,
-                        max_model_len=args.max_model_len, max_num_seqs=args.max_num_seqs)
+                        max_model_len=args.max_model_len, max_num_seqs=args.max_num_seqs,
+                        request_timeout=args.request_timeout)
     engine_settings = engine.settings()
     # With nothing left to grade (a re-filter from a resumed grade file), do
     # not boot the grader: it only holds a GPU for minutes.

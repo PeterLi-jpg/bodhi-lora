@@ -39,7 +39,7 @@ from tqdm import tqdm
 from transformers import set_seed
 
 from bodhi_lora import manifest as rmf
-from bodhi_lora.engine.vllm import DryRunEngine, VLLMEngine
+from bodhi_lora.engine import StubEngine, VLLMEngine
 from bodhi_lora.pipeline.filter import GRADER_TEMPLATE, LocalGrader, parse_json_response, grade_trace
 from bodhi_lora.protocols.ask_first import AskFirstProtocol
 from bodhi_lora.protocols.instruction import BASELINE_PROMPTS, apply_instructions
@@ -96,6 +96,8 @@ def load_eval_data(sample_ids_path, benchmark_jsonl=None):
 
 
 WRAPPERS = ("none", "bodhi", "ask_first")
+# Tokens per call: the limit every run so far used for a generation call.
+MAX_NEW_TOKENS_PER_PASS = 2048
 
 # Dry-run stub replies. The policy reply carries the ask-first markers so the
 # reply parser runs too; the grader reply is a valid rubric verdict.
@@ -105,7 +107,7 @@ DRY_RUN_GRADER_REPLY = '```json\n{"explanation": "dry run", "criteria_met": fals
 
 def make_wrapper(protocol: str, engine):
     """Build the CoT wrapper used by the '+CoT' conditions."""
-    chat_fn = lambda msgs: engine.chat(msgs)
+    chat_fn = lambda msgs: engine.chat(msgs, MAX_NEW_TOKENS_PER_PASS)
     if protocol == "ask_first":
         return AskFirstProtocol(chat_fn)
     from bodhi import BODHI, BODHIConfig
@@ -510,7 +512,7 @@ def main():
 
     def _engine(model, revision, reply, **extra):
         if args.dry_run:
-            return DryRunEngine(model, reply=reply, revision=revision, **engine_kwargs, **extra)
+            return StubEngine(model, reply=reply, revision=revision, **engine_kwargs, **extra)
         return VLLMEngine(model, revision=revision, **engine_kwargs, **extra)
 
     print(f"\nEval: {tag}  ({len(examples)} examples)"

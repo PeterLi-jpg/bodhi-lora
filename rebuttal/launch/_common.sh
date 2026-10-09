@@ -112,13 +112,8 @@ if [ "$DRY_RUN" != 1 ]; then
     : "${HF_TOKEN:?HF_TOKEN not set and no ~/.cache/huggingface/token found}"
 fi
 
-# vLLM: run the venv's GPU vLLM as a subprocess. The auto-detected docker path
-# pulls a vllm/vllm-tpu image (TPU) that hangs on this GPU box. Pin tensor-parallel
-# to 1 because each stage runs on a single CUDA_VISIBLE_DEVICES GPU; raise VLLM_TP
-# to tensor-parallel generation/eval across several idle GPUs when they are free.
-export BODHI_VLLM_MODE="${BODHI_VLLM_MODE:-subprocess}"
-export BODHI_VLLM_ACCEL="${BODHI_VLLM_ACCEL:-gpu}"
-export BODHI_VLLM_TP="${VLLM_TP:-1}"
+# vLLM runs as a subprocess of each stage. Its tensor-parallel size is the number of
+# GPUs in CUDA_VISIBLE_DEVICES, one per stage here (bodhi_lora/engine/vllm.py).
 
 # ---- GPU selection ------------------------------------------------------------------
 # PIN_GPU (recommended when launching several cells at once): a space-separated list

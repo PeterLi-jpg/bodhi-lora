@@ -343,7 +343,9 @@ def main():
     eval_concurrency = int(os.environ.get("EVAL_CONCURRENCY", "16"))
 
     # Single base-model engine, no LoRA, no wrapper.
-    engine_ctx = VLLMEngine(args.model, revision=revision)
+    # The engine settings the probe always ran with.
+    engine_ctx = VLLMEngine(args.model, revision=revision, max_model_len=8192, max_num_seqs=64,
+                            request_timeout=180)
     with engine_ctx as engine:
         hb_result = run_probe_set(
             "healthbench", hb_prompts, tokenizer, engine,

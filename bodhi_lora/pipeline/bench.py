@@ -74,7 +74,7 @@ def make_bodhi_wrapper(engine: VLLMEngine):
     Imported lazily so `--help` works without the bodhi package installed.
     """
     from bodhi import BODHI, BODHIConfig
-    chat_fn = lambda msgs: engine.chat(msgs)
+    chat_fn = lambda msgs: engine.chat(msgs, 2048)
     return BODHI(chat_function=chat_fn, config=BODHIConfig(domain="medical"))
 
 
@@ -109,7 +109,9 @@ def _run_one_config(
     print(f"\n=== {config_name} ===", flush=True)
     latencies_s = []
     output_tokens = []
-    with VLLMEngine(model, lora_path=lora_path, enforce_eager=enforce_eager) as engine:
+    # The engine settings the benchmark always ran with.
+    with VLLMEngine(model, lora_path=lora_path, enforce_eager=enforce_eager, max_model_len=8192,
+                    max_num_seqs=64, request_timeout=180) as engine:
         bodhi_wrapper = make_bodhi_wrapper(engine) if use_bodhi else None
 
         def _gen_one(messages):
