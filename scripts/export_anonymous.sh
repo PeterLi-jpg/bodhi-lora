@@ -144,8 +144,10 @@ GATE = [
                                r"|Massachusetts Institute", re.I)),
     # All-caps affiliations, case-sensitive. The deny-file skips all-caps hits as
     # acronyms, so these must be built in. "MIT" is also a license name; those
-    # uses (MIT License, "MIT, see LICENSE", a "| MIT |" table cell) are allowed.
-    ("affiliation", re.compile(r"\bUNC\b|\bMIT\b(?!\s*(?:[Ll]icen[cs]e|, see|\|))")),
+    # uses (MIT License, "MIT, see LICENSE", a "| MIT |" table cell, and the license
+    # field of a registry record, YAML or JSON) are allowed.
+    ("affiliation", re.compile(r"\bUNC\b|(?<!license: )(?<!\"license\": \")\bMIT\b"
+                               r"(?!\s*(?:[Ll]icen[cs]e|, see|\|))")),
     ("repo slug", re.compile(r"bohdi", re.I)),
     ("co-author repo", re.compile(r"humbleai", re.I)),
     ("tool branch prefix", re.compile(r"claude/|worktree-agent", re.I)),
