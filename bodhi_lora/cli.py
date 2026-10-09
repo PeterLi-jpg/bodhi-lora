@@ -21,8 +21,8 @@
         --all, the cells configs/report.yaml analyzes, then the cross-cell statistics
         when every cell they need has its stats.json.
     report
-        The paper report; not built yet. make numbers and make figures write the paper's
-        outputs.
+        Says where the report is written: make numbers runs bodhi_lora.report.report
+        through scripts/paper_stats.py into paper/generated/.
 
 Every command first loads and checks the whole registry, so a broken config fails here
 with every problem listed.
@@ -180,8 +180,8 @@ def cmd_analyze(args, reg: Registry) -> int:
 
 
 def cmd_report(args, reg: Registry) -> int:
-    print("python -m bodhi_lora report is not built yet. make numbers and make figures write the "
-          "paper's outputs.")
+    print("make numbers writes the report: scripts/paper_stats.py calls bodhi_lora.report.report and "
+          "writes its macros and tables into paper/generated/. make figures writes the figures.")
     return 2
 
 
@@ -220,7 +220,7 @@ def build_parser() -> argparse.ArgumentParser:
                    help="first write the response tables from the raw stage outputs")
     p.set_defaults(func=cmd_analyze)
 
-    p = sub.add_parser("report", help="the paper report (not built yet)")
+    p = sub.add_parser("report", help="where the paper report is written (make numbers)")
     p.set_defaults(func=cmd_report)
     return ap
 

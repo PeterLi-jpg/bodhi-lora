@@ -106,6 +106,28 @@ class Posted(_Record):
     cells: dict[str, CellId]
 
 
+class CrossColumn(_Record):
+    """One column of the cross-cell table: a number of each cell's stats.json.
+
+    `value` and `ci` are dotted paths into stats.json; {protocol} stands for the cell's
+    protocol id. `ci` names a t interval, printed as plus or minus its half width."""
+    group: str = ""
+    header: str
+    value: str
+    ci: Optional[str] = None
+    scale: float = 1.0
+    decimals: int = Field(ge=0)
+    sign: bool = False
+
+
+class Display(_Record):
+    """Names the tables print. A key without one prints as its id."""
+    weights: dict[str, str] = Field(default_factory=dict)
+    protocols: dict[RegistryId, str] = Field(default_factory=dict)
+    metrics: dict[str, str] = Field(default_factory=dict)
+    labels: dict[RegistryId, str] = Field(default_factory=dict)
+
+
 class ReportConfig(_Record):
     statuses: list[Literal["complete", "partial", "pilot", "planned"]]
     bootstrap: Bootstrap
@@ -117,6 +139,8 @@ class ReportConfig(_Record):
     group_contrasts: list[GroupContrast]
     grader_comparisons: list[GraderComparison] = Field(default_factory=list)
     posted: Optional[Posted] = None
+    display: Display = Field(default_factory=Display)
+    cross_table: list[CrossColumn] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def _refs(self) -> "ReportConfig":

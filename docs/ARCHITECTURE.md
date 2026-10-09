@@ -449,8 +449,8 @@ def extract_cell(reg, cell_id: str, proj=None, cfg=None) -> dict   # raw outputs
 def analyze_cell(reg, cell_id: str, proj=None, cfg=None) -> dict   # tables -> the cell's stats.json
 def analyze_cross(reg, report_cfg=None, proj=None) -> dict    # every cell's stats.json -> the cross-cell one
 
-# bodhi_lora.report (stub)
-def report(reg, report_cfg: dict, out_dir: Path) -> None   # -> paper/generated/
+# bodhi_lora.report (scripts/paper_stats.py calls it; make numbers writes its output)
+def report(reg, cfg, proj) -> Report   # every stats.json -> macros, tables, record for paper/generated/
 ```
 
 Stage output formats stay compatible with the files that exist: `results/<cell_id>/seed_<n>/eval/<condition>.json`
@@ -473,7 +473,7 @@ python -m bodhi_lora run <cell_id> [--stages probe,traces,filter,train,eval,grad
                                    [--gpus 0,1] [--judges a,b | --judges none]
                                    [--stub-engine | --dry-run] [--results-root DIR] [--force]
 python -m bodhi_lora analyze (<cell_id> ... | --all) [--extract]
-python -m bodhi_lora report        # not built yet
+python -m bodhi_lora report        # says where the report is written (make numbers)
 ```
 
 - `list --settings` prints the settings that differ between cells, so a reader sees at
@@ -494,8 +494,9 @@ python -m bodhi_lora report        # not built yet
   so it runs in CI. `--all` takes the cells whose status `configs/report.yaml` lists,
   says which have no tables, and runs the cross-cell statistics once every cell they
   need has its `stats.json`.
-- `report` will write the paper's numbers, tables and figures from the analysis
-  outputs. It is not built; it prints so and exits 2.
+- `report` prints where the report is written and exits 2: `make numbers` runs
+  `scripts/paper_stats.py`, which calls `bodhi_lora.report.report` and writes its macros
+  and tables with its own into `paper/generated/`.
 
 Makefile targets call the CLI, the repository tools in `scripts/` and the LaTeX build.
 No target runs pipeline code any other way. The paper targets still call the scripts in
@@ -655,11 +656,14 @@ families, the teacher strength against the effect, and each cell's marks (family
 waiver, set aside, status). Labels with `timing: post_hoc` are printed as exploratory.
 
 **Report.** `report` turns `results/<cell_id>/analysis/stats.json` and
-`results/cross_cell/stats.json` into `paper/generated/`. Macro names follow one rule, `\stat<CellToken><Metric><Condition><Field>`,
-with the cell token from `report.token`. The tables the paper uses are listed in
-`configs/report.yaml` (rows, columns, cells, statistics), so a new table is a config
-change. The report lane renames the macros in `paper/main.tex` in the same commit that
-changes the generator, so `make paper` passes at every commit.
+`results/cross_cell/stats.json` into macros and tables, and `make numbers` writes them
+into `paper/generated/` (its README lists them). Macro names follow one rule,
+`\stat<CellToken><Metric><Condition><Field>`, with the cell token from `report.token`.
+Each analyzed cell gets the same table, `tab_cell_<token>`; the cross-cell table
+`tab_cross_cell_checks` has the columns `configs/report.yaml` lists under `cross_table`,
+the same for every cell. The macros of `scripts/paper_stats.py` keep their names, so the
+paper builds unchanged; moving `paper/main.tex` to the report's macros is the paper's
+change.
 
 **Pre-registration.** Convention 3 still holds. A statistic that has not been computed
 on a cell's outputs before (for example the physician-label discrimination index) goes
