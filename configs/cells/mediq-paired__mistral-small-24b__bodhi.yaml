@@ -1,0 +1,29 @@
+# E14, the MediQ paired probe: the adapters of healthbench__mistral-small-24b__bodhi on 200 complete and
+# incomplete pairs per seed. Calibration predicts that the adapter asks more on the
+# incomplete twin than on the complete one, by more than the base does; mimicry predicts
+# that asking rises on both. The baselines show whether a prompt raises asking without
+# targeting it. First: python -m bodhi_lora fetch mediq-paired, and pin the sha256 it prints.
+# Run: python -m bodhi_lora run mediq-paired__mistral-small-24b__bodhi --gpus 0,1,2,3,4
+id: mediq-paired__mistral-small-24b__bodhi
+benchmark: mediq-paired
+split: default
+model: mistral-small-24b
+protocol: bodhi
+seeds: [42, 7, 13, 99, 101]
+adapters_from: healthbench__mistral-small-24b__bodhi
+grading:
+  filter: qwen2.5-14b
+  evaluator: llama-3.1-8b
+eval:
+  conditions: [base, base+bodhi, lora, lora+bodhi, base+clarify,
+               base+verbalized-confidence, base+mediq-abstain]
+  ids: {policy: per_seed_draw, n: 200, unit: pair}
+  # The base is served as it was trained, 4-bit under a QLoRA adapter (audit REPRO-12).
+  base_precision: train
+  max_new_tokens: 1024
+  max_new_tokens_per_pass: 2048
+  serving: {max_model_len: 8192, max_num_seqs: 32, concurrency: 32, request_timeout_s: 900}
+report:
+  label: MediQ paired probe, Mistral-Small-24B
+  token: MediqMistral
+  status: planned
