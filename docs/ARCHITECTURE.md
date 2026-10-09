@@ -638,7 +638,8 @@ get their own Holm correction.
 | Counts: prompts, unique prompts, completions, missing completions, parse failures of both graders | eval, grade | D13, LxMF 1 |
 | Worst case: failed grades scored at the undesirable end | evaluator | D13 |
 | Blanket disclaimers: counts and two-sided Fisher exact test | evaluator | D10 |
-| Discrimination index for every label with both groups present: P(ask given positive) minus P(ask given negative), odds ratio, bootstrap interval, seed-level interval, and the difference between conditions | labels, evaluator | D9, MR-W4 |
+| Discrimination index for every response and label of `configs/report.yaml` with both groups present: the rate in each group, P(response given positive) minus P(response given negative), odds ratio, bootstrap intervals, seed-level intervals, and per contrast the difference of the indices and of each group's rate | labels, evaluator, text | D9, MR-W4 |
+| Over-flagging (post hoc): the escalation mention rate on the negative group of `red-flag-at-stake`, prompts whose theme is not emergency referrals and whose rubric says nothing about urgency | labels, text | C30 |
 | Format leakage for every leak rule of every protocol used: leak share, dimensions by leak status, red flag by length quartile in non-leaked responses | text, evaluator | D11, LxMF 4 |
 | Length and token cost: characters, tokens, calls, total tokens per condition; stage time from manifests | eval, manifests | C25 |
 | Askers gap: rubric score of asking minus non-asking responses within a condition | evaluator | withdrawals W7 |

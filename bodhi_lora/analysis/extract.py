@@ -146,6 +146,8 @@ class TextRule:
 
     def __call__(self, text: str) -> float:
         text = MARKDOWN.sub("", text or "")
+        if self.feature.kind == "mention":
+            return float(self.pattern.search(text) is not None)
         for sentence in SENTENCE_SPLIT.split(text):
             sentence = sentence.strip().rstrip("\"')]")
             if sentence.endswith("?") and self.pattern.search(sentence):

@@ -15,23 +15,39 @@ statuses: [complete, partial, pilot]
 bootstrap: {resamples: 5000, seed: 0}
 
 # Grader-free rules over the reply text. Each becomes a 0/1 column of the response table.
+# Patterns ignore case; (?-i:...) makes a part match case.
 #   question: the reply has a sentence that ends in "?" and matches `pattern`, after
 #             markdown emphasis and quote marks are removed (sentences split at
 #             whitespace after . ! ? and at line breaks).
+#   mention:  `pattern` matches anywhere in the reply, after markdown emphasis is removed.
 text_features:
   second_person_q:
     kind: question
     description: a question put to the reader (a sentence ending in "?" with you, your, yours, yourself or yourselves)
     pattern: '\b(you|your|yours|yourself|yourselves)\b'
+  # Post hoc (2026-10-09), for the over-flagging check of commitment C30. It counts every
+  # mention: a conditional one ("call 911 if ..."), a negated one and a description of a
+  # setting count too. So on prompts with no red flag it is an upper bound on flags
+  # raised without cause. The same rule applies to every condition and cell.
+  escalation:
+    kind: mention
+    description: the reply mentions emergency or urgent care (911, a call to 999 or 112, an emergency room, department, service or number, the ER (not ER/PR or a drug's extended-release ER), A&E, urgent care, an ambulance, or immediate, urgent or emergency medical attention)
+    pattern: '\b911\b|\b(call|dial|phone|ring)(ing)? (999|112)\b|\bemergency (room|department|services?|care|medical (services|care|help|attention|treatment)|number|help|attention|treatment|evaluation|physician|doctor)\b|\b(the|an|nearest|local|or|to|your) (?-i:ER)\b(?!/)|\bA&E\b|\burgent care\b|\bambulance\b|\b(seek|get|obtain) (immediate|urgent|emergency|prompt) (medical )?(care|attention|help|evaluation|treatment)\b|\b(immediate|urgent) medical (attention|care|help|evaluation|treatment)\b|\bgo (to|straight to) (the )?(nearest )?(hospital|emergency)\b|\bcall (for )?(an ambulance|emergency)\b'
 
-# The discrimination index: P(response asks | label positive) - P(asks | label negative),
-# for each listed label whose groups both occur among a cell's evaluated prompts. Only
-# labels listed here are computed. The physician labels of the benchmark records are left
-# out on purpose: computing a new statistic on outputs that exist needs the dated
-# analysis plan first (docs/CONVENTIONS.md, convention 3; docs/ARCHITECTURE.md O4).
+# The discrimination index: P(response | label positive) - P(response | label negative),
+# for each listed label whose groups both occur among a cell's evaluated prompts, with the
+# rate in each group. Only labels listed here are computed. The physician labels of the
+# benchmark records are left out on purpose: the analysis plan keeps them unseen on every
+# cell until its adoption (docs/ANALYSIS_PLAN.md, state at registration; convention 3).
+#   active_inquiry: does the reply ask more where information is missing (decision D9:
+#     both post hoc labellings, side by side).
+#   escalation: on the negative group of red-flag-at-stake (prompts with no red flag at
+#     issue), the rate is the over-flagging rate of commitment C30.
 discrimination:
-  response: active_inquiry
-  labels: [needs-info-theme-or-rubric, needs-info-theme]
+  - response: active_inquiry
+    labels: [needs-info-theme-or-rubric, needs-info-theme]
+  - response: escalation
+    labels: [red-flag-at-stake]
 
 # Response-length quartile edges come from this condition's scored replies.
 length_reference: base

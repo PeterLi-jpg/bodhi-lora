@@ -21,6 +21,7 @@ from bodhi_lora.registry import load_registry  # noqa: E402
 
 SMOKE = "tiny-rubric__tiny-random-llama__bodhi"
 PROMPTS = [f"p{i}" for i in range(6)]
+TEXT = sorted(report_config().text_features)
 
 
 @pytest.fixture(scope="module")
@@ -41,7 +42,7 @@ def synthetic_table(cell, seeds=(1, 2, 3)):
                        "calls": np.nan, "tokens_total": np.nan, "finish_length": 0.0,
                        "rubric_score": 0.5 + 0.01 * ci, "rubric_score_worst": 0.5,
                        "rubric_items": 2.0, "rubric_parse_failures": 0.0, "neg_items_met": 0.0,
-                       "neg_points_lost": 0.0, "epi_status": "scored", "second_person_q": 0.0}
+                       "neg_points_lost": 0.0, "epi_status": "scored", **{t: 0.0 for t in TEXT}}
                 # 0-2 grades, 0/1 rates and question counts, as the evaluator gives them.
                 row.update({k: float(rng.integers(0, 2 if EPISTEMIC_KIND.get(k) == "rate" else 3))
                             for k in EPISTEMIC})
@@ -49,7 +50,7 @@ def synthetic_table(cell, seeds=(1, 2, 3)):
                 row["active_inquiry"] = float(pi < min(ci + s, len(PROMPTS)))
                 rows.append(row)
     df = pd.DataFrame(rows)
-    return df[KEY + RESPONSE + RUBRIC + ["epi_status", *EPISTEMIC, "second_person_q"]]
+    return df[KEY + RESPONSE + RUBRIC + ["epi_status", *EPISTEMIC, *TEXT]]
 
 
 def synthetic_prompts():
@@ -143,8 +144,9 @@ def test_absent_inputs_say_why(reg, tmp_path):
     assert "not_measured" in out["themes"]
     assert "not_measured" in out["recipe"]
     assert "not_measured" in out["validation"]
-    for lab, res in out["discrimination"].items():
-        assert "not_measured" in res, lab
+    for resp, labels in out["discrimination"].items():
+        for lab, res in labels.items():
+            assert "not_measured" in res, (resp, lab)
 
 
 def test_analyze_takes_cells_or_all():

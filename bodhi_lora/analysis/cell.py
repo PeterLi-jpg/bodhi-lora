@@ -436,66 +436,104 @@ def themes_section(d: CellData) -> dict:
     return res
 
 
-def discrimination_section(d: CellData, reg: Registry, cfg: ReportConfig, pairs, boot) -> dict:
-    """P(ask | label positive) - P(ask | label negative) per condition, for each listed label.
+def _group_rates(d: CellData, frame: pd.DataFrame, condition: str, boot: st.ClusterBootstrap) -> dict:
+    """Rate of a 0/1 response in each label group of one condition: pooled with its
+    bootstrap resamples, and per seed. frame holds columns seed, condition, prompt_id, v, g."""
+    sc = frame[frame["condition"] == condition]
+    out = {}
+    for g, name in ((1.0, "positive"), (0.0, "negative")):
+        grp = sc[sc["g"] == g]
+        per_seed = [grp.loc[grp["seed"] == seed, "v"].mean() if (grp["seed"] == seed).any() else float("nan")
+                    for seed in d.seeds]
+        out[name] = {"rate": float(grp["v"].mean()) if len(grp) else float("nan"), "n": int(len(grp)),
+                     "boot": boot.means(grp[["prompt_id", "v"]]), "per_seed": np.asarray(per_seed, dtype=float)}
+    return out
+
+
+def _seed_summary(values: np.ndarray, seeds: list[int]) -> dict:
+    """Mean and t interval over the seeds with a value; the per-seed values."""
+    have = values[np.isfinite(values)]
+    mean, lo, hi = st.t_interval(have) if len(have) else (np.nan,) * 3
+    return {"per_seed": {str(k): _f(v) for k, v in zip(seeds, values)}, "seed_mean": _f(mean),
+            "seed_ci95_t": [_f(lo), _f(hi)], "n_seeds": int(len(have)),
+            "seeds_missing": [k for k, v in zip(seeds, values) if not np.isfinite(v)]}
+
+
+def discrimination_section(d: CellData, reg: Registry, cfg: ReportConfig, metrics: list[Metric], pairs,
+                           boot: st.ClusterBootstrap) -> dict:
+    """For each discrimination set of the report config: the rate of a 0/1 response among
+    the label's positive and negative prompts, and the index P(response | positive) -
+    P(response | negative), per condition.
 
     Pooled over seeds (every reply to a prompt counts), with a prompt-clustered bootstrap
-    interval, the odds ratio, a seed-level t interval over the per-seed indices, and the
-    difference between the conditions of each contrast.
+    interval for each rate, the index and the odds ratio; per-seed values with a t
+    interval over seeds. Each contrast a - b gets the difference of the indices and of
+    each group's rate, with a bootstrap interval and the seed-level paired test. An
+    evaluator response counts scored replies only; a text feature counts every
+    completion (Metric.source).
     """
     bench = reg.benchmarks[d.cell.benchmark]
-    resp = cfg.discrimination.response
+    by_key = {m.key: m for m in metrics}
     res = {}
-    for lab in cfg.discrimination.labels:
-        col = f"label_{lab}"
-        if lab not in bench.labels or col not in d.prompts:
-            res[lab] = {"not_measured": f"benchmark {bench.id} has no label {lab}"}
-            continue
-        value = dict(zip(d.prompts["prompt_id"], d.prompts[col]))
-        s = d.scored.assign(g=d.scored["prompt_id"].map(value))
-        s = s[s["g"].notna()]
-        groups = s.groupby("g")["prompt_id"].nunique()
-        if groups.get(1.0, 0) == 0 or groups.get(0.0, 0) == 0:
-            res[lab] = {"not_measured": "both groups are not present among the evaluated prompts"}
-            continue
-        out = {"timing": bench.labels[lab].timing, "source": bench.labels[lab].source,
-               "exploratory": bench.labels[lab].timing == "post_hoc",
-               "n_prompts": {"positive": int(groups[1.0]), "negative": int(groups[0.0])}, "conditions": {},
-               "contrasts": {}}
-        boot_disc = {}
-        for c in d.conditions:
-            sc = s[s["condition"] == c]
-            pos = sc[sc["g"] == 1.0][["prompt_id", resp]].rename(columns={resp: "v"})
-            neg = sc[sc["g"] == 0.0][["prompt_id", resp]].rename(columns={resp: "v"})
-            rp, rn = pos["v"].mean(), neg["v"].mean()
-            bp, bn = boot.means(pos), boot.means(neg)
-            boot_disc[c] = bp - bn
-            with np.errstate(invalid="ignore", divide="ignore"):
-                or_boot = np.array([st.odds_ratio(x, y) for x, y in zip(bp, bn)])
-            per_seed = []
-            for seed in d.seeds:
-                ss = sc[sc["seed"] == seed]
-                a, b = ss.loc[ss["g"] == 1.0, resp], ss.loc[ss["g"] == 0.0, resp]
-                per_seed.append(a.mean() - b.mean() if len(a) and len(b) else float("nan"))
-            mean, lo, hi = st.t_interval(per_seed) if np.all(np.isfinite(per_seed)) else (np.nan,) * 3
-            out["conditions"][c] = {
-                "positive_rate": _f(rp), "negative_rate": _f(rn), "n_positive": int(len(pos)),
-                "n_negative": int(len(neg)), "discrimination": _f(rp - rn),
-                "discrimination_ci95": st.percentile_ci(bp - bn),
-                "odds_ratio": _f(st.odds_ratio(rp, rn)), "odds_ratio_ci95": st.percentile_ci(or_boot),
-                "per_seed": {str(k): _f(v) for k, v in zip(d.seeds, per_seed)},
-                "seed_mean": _f(mean), "seed_ci95_t": [_f(lo), _f(hi)]}
-        for a, b in pairs:
-            ra, rb = out["conditions"][a], out["conditions"][b]
-            sa = np.array([ra["per_seed"][str(k)] if ra["per_seed"][str(k)] is not None else np.nan for k in d.seeds])
-            sb = np.array([rb["per_seed"][str(k)] if rb["per_seed"][str(k)] is not None else np.nan for k in d.seeds])
-            out["contrasts"][contrast_key(a, b)] = {
-                "diff": _f(ra["discrimination"] - rb["discrimination"]),
-                "diff_ci95": st.percentile_ci(boot_disc[a] - boot_disc[b]),
-                "seed_test": st.paired_test(sa, sb) if np.all(np.isfinite(sa) & np.isfinite(sb)) else
-                {"not_measured": "a seed has no index"}}
-        res[lab] = out
+    for spec in cfg.discrimination:
+        resp = spec.response
+        if resp not in by_key or by_key[resp].kind != "rate":
+            raise ValueError(f"discrimination response {resp!r} is not a 0/1 column of the response table")
+        base = d.frame(by_key[resp])
+        res[resp] = {}
+        for lab in spec.labels:
+            col = f"label_{lab}"
+            if lab not in bench.labels or col not in d.prompts:
+                res[resp][lab] = {"not_measured": f"benchmark {bench.id} has no label {lab}"}
+                continue
+            value = dict(zip(d.prompts["prompt_id"], d.prompts[col]))
+            frame = base.assign(g=base["prompt_id"].map(value))
+            frame = frame[frame["g"].notna()]
+            groups = frame.groupby("g")["prompt_id"].nunique()
+            if groups.get(1.0, 0) == 0 or groups.get(0.0, 0) == 0:
+                res[resp][lab] = {"not_measured": "both groups are not present among the evaluated prompts"}
+                continue
+            out = {"timing": bench.labels[lab].timing, "source": bench.labels[lab].source,
+                   "exploratory": bench.labels[lab].timing == "post_hoc",
+                   "n_prompts": {"positive": int(groups[1.0]), "negative": int(groups[0.0])},
+                   "conditions": {}, "contrasts": {}}
+            rates = {c: _group_rates(d, frame, c, boot) for c in d.conditions}
+            for c, r in rates.items():
+                pos, neg = r["positive"], r["negative"]
+                with np.errstate(invalid="ignore", divide="ignore"):
+                    or_boot = np.array([st.odds_ratio(x, y) for x, y in zip(pos["boot"], neg["boot"])])
+                cond = {"positive_rate": _f(pos["rate"]), "negative_rate": _f(neg["rate"]),
+                        "n_positive": pos["n"], "n_negative": neg["n"],
+                        "positive_rate_ci95": st.percentile_ci(pos["boot"]),
+                        "negative_rate_ci95": st.percentile_ci(neg["boot"]),
+                        "discrimination": _f(pos["rate"] - neg["rate"]),
+                        "discrimination_ci95": st.percentile_ci(pos["boot"] - neg["boot"]),
+                        "odds_ratio": _f(st.odds_ratio(pos["rate"], neg["rate"])),
+                        "odds_ratio_ci95": st.percentile_ci(or_boot)}
+                cond.update(_seed_summary(pos["per_seed"] - neg["per_seed"], d.seeds))
+                cond["negative_rate_seed"] = _seed_summary(neg["per_seed"], d.seeds)
+                cond["positive_rate_seed"] = _seed_summary(pos["per_seed"], d.seeds)
+                out["conditions"][c] = cond
+            for a, b in pairs:
+                ra, rb = rates[a], rates[b]
+                ia = ra["positive"]["per_seed"] - ra["negative"]["per_seed"]
+                ib = rb["positive"]["per_seed"] - rb["negative"]["per_seed"]
+                ctr = {"diff": _f(out["conditions"][a]["discrimination"] - out["conditions"][b]["discrimination"]),
+                       "diff_ci95": st.percentile_ci((ra["positive"]["boot"] - ra["negative"]["boot"])
+                                                     - (rb["positive"]["boot"] - rb["negative"]["boot"])),
+                       "seed_test": _seed_test(ia, ib, d.seeds)}
+                for g in ("positive", "negative"):
+                    ctr[f"{g}_rate"] = {"diff": _f(ra[g]["rate"] - rb[g]["rate"]),
+                                        "diff_ci95": st.percentile_ci(ra[g]["boot"] - rb[g]["boot"]),
+                                        "seed_test": _seed_test(ra[g]["per_seed"], rb[g]["per_seed"], d.seeds)}
+                out["contrasts"][contrast_key(a, b)] = ctr
+            res[resp][lab] = out
     return res
+
+
+def _seed_test(a: np.ndarray, b: np.ndarray, seeds: list[int]) -> dict:
+    """paired() on two per-seed arrays."""
+    return paired(pd.DataFrame({"a": a, "b": b}), "a", "b", seeds)
 
 
 def _leak_threshold(reg: Registry, col: str) -> int:
@@ -699,7 +737,7 @@ def analyze_tables(reg: Registry, cell: CellConfig, table: pd.DataFrame, prompts
         "prompts": prompts_section(d, train_ids),
         "themes": themes_section(d),
         "leakage": leakage(d, reg),
-        "discrimination": discrimination_section(d, reg, cfg, pairs, boot),
+        "discrimination": discrimination_section(d, reg, cfg, metrics, pairs, boot),
         "askers_gap": askers_gap_section(d, boot),
         "filter": filt,
         "recipe": recipe_section(cell, paths, filt),

@@ -25,7 +25,9 @@ class Bootstrap(_Record):
 
 
 class TextFeature(_Record):
-    kind: Literal["question"]
+    # question: a sentence that ends in "?" matches the pattern. mention: the pattern
+    # matches anywhere in the reply.
+    kind: Literal["question", "mention"]
     description: str
     pattern: str
 
@@ -36,8 +38,12 @@ class TextFeature(_Record):
 
 
 class Discrimination(_Record):
+    """P(response | label positive) - P(response | label negative) for each label.
+
+    `response` is a 0/1 column of the response table: an evaluator rate (scored replies
+    only) or a text feature (every completion)."""
     response: str
-    labels: list[RegistryId]
+    labels: list[RegistryId] = Field(min_length=1)
 
 
 class Where(_Record):
@@ -104,7 +110,7 @@ class ReportConfig(_Record):
     statuses: list[Literal["complete", "partial", "pilot", "planned"]]
     bootstrap: Bootstrap
     text_features: dict[str, TextFeature]
-    discrimination: Discrimination
+    discrimination: list[Discrimination]
     length_reference: str
     cross_cells: list[CellId]
     groups: dict[RegistryId, Group]
@@ -115,6 +121,9 @@ class ReportConfig(_Record):
     @model_validator(mode="after")
     def _refs(self) -> "ReportConfig":
         parse_condition(self.length_reference)
+        responses = [d.response for d in self.discrimination]
+        if len(set(responses)) != len(responses):
+            raise ValueError("a discrimination response repeats; list all its labels in one entry")
         tokens = [g.token for g in self.groups.values()] + [g.token for g in self.grader_comparisons]
         if len(set(tokens)) != len(tokens):
             raise ValueError("group and comparison tokens repeat")
