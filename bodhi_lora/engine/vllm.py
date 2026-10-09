@@ -19,6 +19,13 @@ The response fields follow vLLM 0.9.2's OpenAI protocol
 (vllm/entrypoints/openai/protocol.py at tag v0.9.2): choices[0].message.content,
 choices[0].finish_reason ("length" when the token limit stopped the reply),
 usage.prompt_tokens and usage.completion_tokens.
+
+The contamination probe needs raw text, not a chat turn: a chat template would wrap the
+prefix in a user message, and the model would answer it instead of continuing it. For
+that the engine also has tokenize(), detokenize() and continue_ids(), on the server's
+/tokenize, /detokenize and /v1/completions routes (vllm/entrypoints/openai/api_server.py
+and protocol.py at tag v0.9.2: TokenizeCompletionRequest with add_special_tokens,
+DetokenizeRequest, and CompletionRequest, whose prompt may be a list of token ids).
 """
 
 import json
@@ -218,12 +225,34 @@ class VLLMEngine:
     def _served_name(self) -> str:
         return ADAPTER_NAME if self.lora_path else self.model
 
-    def _post(self, payload: dict, timeout: Optional[int] = None) -> dict:
+    def _post(self, payload: dict, timeout: Optional[int] = None,
+              route: str = "/v1/chat/completions") -> dict:
         req = urllib.request.Request(
-            f"http://localhost:{self.port}/v1/chat/completions",
+            f"http://localhost:{self.port}{route}",
             data=json.dumps(payload).encode(), headers={"Content-Type": "application/json"})
         with urllib.request.urlopen(req, timeout=timeout or self.request_timeout) as r:
             return json.loads(r.read())
+
+    def tokenize(self, text: str) -> List[int]:
+        """Token ids of raw text with the served tokenizer, without special tokens."""
+        resp = self._post({"model": self._served_name(), "prompt": text, "add_special_tokens": False},
+                          route="/tokenize")
+        return list(resp["tokens"])
+
+    def detokenize(self, ids: List[int]) -> str:
+        return self._post({"model": self._served_name(), "tokens": list(ids)}, route="/detokenize")["prompt"]
+
+    def continue_ids(self, prompt_ids: List[int], max_new_tokens: int,
+                     temperature: float = 0.0) -> Completion:
+        """A raw continuation of token ids, with no chat template."""
+        resp = self._post({"model": self._served_name(), "prompt": list(prompt_ids),
+                           "max_tokens": max_new_tokens, "temperature": temperature},
+                          route="/v1/completions")
+        choice = resp["choices"][0]
+        usage = resp.get("usage") or {}
+        return Completion(text=choice["text"], prompt_tokens=int(usage.get("prompt_tokens") or 0),
+                          completion_tokens=int(usage.get("completion_tokens") or 0),
+                          finish_reason=choice.get("finish_reason"))
 
     def complete(self, messages: list, max_new_tokens: int, temperature: float = 0.0,
                  top_p: float = 1.0, seed: Optional[int] = None,

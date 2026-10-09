@@ -95,3 +95,34 @@ def test_stub_engine_records_calls_and_supports_reply_functions():
     s = eng.settings()
     assert s["stub"] is True and s["max_model_len"] == 4096
     json.dumps(s)
+
+
+def test_raw_continuation_routes_send_token_ids_and_no_chat_template(monkeypatch):
+    eng = make_engine(MODEL, serving=SERVING)
+    sent = []
+
+    def fake_post(payload, timeout=None, route="/v1/chat/completions"):
+        sent.append((route, payload))
+        if route == "/tokenize":
+            return {"tokens": [5, 6, 7], "count": 3, "max_model_len": 4096}
+        if route == "/detokenize":
+            return {"prompt": "a b"}
+        return {"choices": [{"text": " c d", "finish_reason": "length"}],
+                "usage": {"prompt_tokens": 3, "completion_tokens": 2}}
+
+    monkeypatch.setattr(eng, "_post", fake_post)
+    assert eng.tokenize("a b c") == [5, 6, 7]
+    assert eng.detokenize([5, 6]) == "a b"
+    done = eng.continue_ids([5, 6, 7], max_new_tokens=2)
+    assert done.text == " c d" and done.finish_length and done.prompt_tokens == 3
+    routes = [r for r, _ in sent]
+    assert routes == ["/tokenize", "/detokenize", "/v1/completions"]
+    assert sent[0][1]["add_special_tokens"] is False
+    assert sent[2][1]["prompt"] == [5, 6, 7] and "messages" not in sent[2][1]
+
+
+def test_stub_tokenizer_round_trips_and_continues_raw_text():
+    eng = make_engine(MODEL, serving=SERVING, stub=True, stub_reply=lambda m: m[-1]["content"].upper())
+    ids = eng.tokenize("the cat saw the dog")
+    assert ids[0] == ids[3] and eng.detokenize(ids) == "the cat saw the dog"
+    assert eng.continue_ids(ids[:2], max_new_tokens=5).text == "THE CAT"
