@@ -67,12 +67,17 @@ def run(reg, table, tmp_path):
 
 
 def test_contrasts_come_from_the_conditions_by_rule(reg):
-    pairs = contrasts_of(reg.cells[SMOKE], reg)
+    cell = reg.cells[SMOKE]
+    conds = cell.eval.conditions
+    pairs = contrasts_of(cell, reg)
+    own = f"base+{cell.protocol}"
+    baselines = [c for c in conds if c.startswith("base+") and c != own]
+    assert {own, f"lora+{cell.protocol}", "lora"} <= set(conds) and baselines
     # every condition minus base; lora minus base+<protocol>; lora+<protocol> minus lora;
-    # lora minus each other base+<prompt protocol>.
-    assert pairs == [("base+bodhi", "base"), ("lora", "base"), ("lora+bodhi", "base"),
-                     ("base+clarify", "base"), ("lora", "base+bodhi"), ("lora+bodhi", "lora"),
-                     ("lora", "base+clarify")]
+    # lora minus each other base+<prompt protocol>; nothing else, and no pair twice.
+    expected = ([(c, "base") for c in conds if c != "base"] + [("lora", own), (f"lora+{cell.protocol}", "lora")]
+                + [("lora", c) for c in baselines])
+    assert sorted(pairs) == sorted(expected) and len(pairs) == len(set(pairs))
 
 
 def test_seed_level_test_and_holm_family(reg, tmp_path):
