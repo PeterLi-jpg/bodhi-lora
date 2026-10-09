@@ -43,6 +43,13 @@ eval:
   max_new_tokens: 64
   max_new_tokens_per_pass: 64
   serving: {max_model_len: 1024, max_num_seqs: 4, concurrency: 4, request_timeout_s: 60}
+# The probe runs on the stub engine's word tokenizer; the control is the same fixture.
+probe:
+  control: tiny-rubric
+  n_prompts: 4
+  prefix_tokens: 3
+  continuation_tokens: 3
+  serving: {max_model_len: 1024, max_num_seqs: 4, concurrency: 4, request_timeout_s: 60}
 report:
   label: Smoke test
   token: Smoke

@@ -41,6 +41,9 @@ def test_stub_run_writes_every_stage_and_manifest(reg, smoke_run):
     cell = reg.cells[SMOKE]
     assert _manifest(smoke_run / "manifest.json")["status"] == "finished"
     assert _manifest(smoke_run / "shared" / "traces" / "manifest.json")["counts"]["n_ok"] == 12
+    probe = json.loads((smoke_run / "shared" / "probe" / "probe.json").read_text())
+    assert probe["benchmark"]["n"] == probe["control"]["n"] == cell.probe.n_prompts
+    assert probe["test_used"] == "fisher_exact"
     assert json.loads((smoke_run / "shared" / "inputs" / "leakage.json").read_text())["passed"]
     for seed in cell.seeds:
         sd = smoke_run / f"seed_{seed}"
@@ -130,15 +133,16 @@ def test_a_recorded_cell_only_gets_judge_regrades_that_read_its_stored_replies(t
     before = sorted(str(p) for p in stored.root.rglob("*"))
     with pytest.raises(RunError, match="records a past run"):
         run_cell(reg, proj, RECORDED, mode="dry_run", configs_dir=configs)
-    run_cell(reg, proj, RECORDED, mode="dry_run", stages=("grade",), configs_dir=configs)
+    run_cell(reg, proj, RECORDED, mode="dry_run", stages=("probe", "grade"), configs_dir=configs)
     out = capsys.readouterr().out
-    assert "--judge medgemma-27b-text" in out
+    assert "--judge medgemma-27b-text" in out and "bodhi_lora.pipeline.probe" in out
     assert sorted(str(p) for p in stored.root.rglob("*")) == before
     scratch = proj.scratch_root / "dry_run" / RECORDED
     judged = json.loads((scratch / "seed_2" / "grade" / "judge__medgemma-27b-text.json").read_text())
     assert [c["name"] for c in judged["configs"]] == cell.eval.conditions
     assert judged["configs"][0]["examples"][0]["original_score"] == 0.5
     assert not (scratch / "seed_2" / "grade" / "epistemic__llama-3.1-8b.json").exists()
+    assert json.loads((scratch / "shared" / "probe" / "probe.json").read_text())["benchmark"]["n"] == 4
 
 
 def test_recorded_and_external_cells_are_refused(reg, tmp_path):

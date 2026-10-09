@@ -25,7 +25,8 @@ on its own.
 
 A cell whose report.status records a past run (complete, partial, not_run, pilot) keeps
 its outputs: only the stages in ADDITIVE_STAGES run on it, and they only add files (a
-judge re-grade). The evaluator's grades of such a cell are never redone. A stub or dry
+judge re-grade, the contamination probe). The evaluator's grades of such a cell are
+never redone. A stub or dry
 run of a recorded cell links its stored eval outputs into the scratch root, read-only,
 so the stub judges grade the real stored replies. A new run of a recorded design is a
 new cell.
@@ -54,8 +55,9 @@ from bodhi_lora.registry import RECORD_STATUSES, Registry, family_problems
 
 STAGES = ("probe", "traces", "filter", "train", "eval", "grade", "bench")
 MODES = ("gpu", "stub", "dry_run")
-# Stages that only add files to a recorded cell's folder.
-ADDITIVE_STAGES = ("grade",)
+# Stages that only add files to a recorded cell's folder: judge re-grades and the
+# contamination probe.
+ADDITIVE_STAGES = ("probe", "grade")
 
 
 class RunError(RuntimeError):
@@ -176,7 +178,7 @@ def plan(ctx: StageContext, stages: Sequence[str], seeds: Sequence[int],
     shared, per_seed = [], {s: [] for s in seeds}
     trains_here = cell.adapters_from is None and cell.train is not None
     if "probe" in stages and cell.probe:
-        shared.append(Step("probe", done=p.shared("probe") / "manifest.json"))
+        shared.append(probe_step(ctx))
     if "traces" in stages and trains_here:
         shared.append(Step("traces", done=p.shared("traces") / "manifest.json"))
     if "filter" in stages and trains_here:
@@ -197,6 +199,18 @@ def plan(ctx: StageContext, stages: Sequence[str], seeds: Sequence[int],
         if "bench" in stages and cell.bench:
             steps.append(Step("bench", s, done=p.stage(s, "bench") / "manifest.json"))
     return shared, per_seed
+
+
+def probe_step(ctx: StageContext) -> Step:
+    return Step("probe", done=ctx.paths.shared("probe") / "manifest.json")
+
+
+def fetch_benchmarks(ctx: StageContext, stages: Sequence[str]) -> None:
+    """Build every benchmark the stages read in the data root, here and not in a GPU stage:
+    the cell's own, and the probe's control set."""
+    load_rows(ctx.bench, ctx.project.data_root, fetch=True)
+    if "probe" in stages and ctx.cell.probe:
+        load_rows(ctx.reg.benchmarks[ctx.cell.probe.control], ctx.project.data_root, fetch=True)
 
 
 def judge_step(ctx: StageContext, seed: int, judge: str) -> Step:
@@ -403,6 +417,7 @@ def run_cell(reg: Registry, proj: Project, cell_id: str, *, stages: Sequence[str
     if mode == "dry_run":
         runner.print_plan(shared, per_seed)
     prepare(ctx, fetch=True)
+    fetch_benchmarks(ctx, stages)
     write_cell_manifest("started")
     try:
         for step in shared:
@@ -446,12 +461,12 @@ def _add_to_recorded(runner: Runner, stored: CellPaths, stages: Sequence[str], s
     runner.say(f"{ctx.cell.id}: recorded run; adding files only ({', '.join(stages)})")
     if runner.mode != "gpu" and stored.root != ctx.paths.root:
         link_stored_outputs(stored, ctx.paths, ctx.cell, seeds)
-    # The grade stage reads the prompts from the data root; build it once here.
-    load_rows(ctx.bench, ctx.project.data_root, fetch=True)
+    fetch_benchmarks(ctx, stages)
+    shared = [probe_step(ctx)] if "probe" in stages and ctx.cell.probe else []
     steps = [judge_step(ctx, s, j) for s in seeds for j in judges] if "grade" in stages else []
     if runner.mode == "dry_run":
-        runner.print_plan([], {s: [st for st in steps if st.seed == s] for s in seeds})
-    for step in steps:
+        runner.print_plan(shared, {s: [st for st in steps if st.seed == s] for s in seeds})
+    for step in shared + steps:
         runner.run_step(step, runner.gpus[0])
     return ctx.paths.root
 

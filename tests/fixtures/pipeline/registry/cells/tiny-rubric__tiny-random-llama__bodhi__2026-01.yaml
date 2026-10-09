@@ -1,5 +1,5 @@
 # A recorded cell for the tests: status complete, so the runner only adds judge
-# re-grades to it. Its stored eval files are written by the test that uses it.
+# re-grades and the probe to it. Its stored eval files are written by the test that uses it.
 id: tiny-rubric__tiny-random-llama__bodhi__2026-01
 benchmark: tiny-rubric
 model: tiny-random-llama
@@ -15,6 +15,12 @@ eval:
   base_precision: model
   max_new_tokens: 64
   max_new_tokens_per_pass: 64
+  serving: {max_model_len: 1024, max_num_seqs: 4, concurrency: 4, request_timeout_s: 60}
+probe:
+  control: tiny-rubric
+  n_prompts: 4
+  prefix_tokens: 3
+  continuation_tokens: 3
   serving: {max_model_len: 1024, max_num_seqs: 4, concurrency: 4, request_timeout_s: 60}
 report:
   label: Recorded fixture cell
