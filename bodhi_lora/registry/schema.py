@@ -402,6 +402,9 @@ class Grading(_Record):
     # Reason for a cell that breaks the family rule (R1 or R2). The cell is then marked in
     # every table, and a cell with outputs to judge needs a judge from a fourth family.
     same_family_waiver: Optional[str] = None
+    # The judges' engine; null: eval.serving. A judge prompt holds the conversation, the
+    # reply and the grading template, so a cell evaluated with a short context needs more.
+    judge_serving: Optional["Serving"] = None
 
 
 class Serving(_Record):
@@ -415,6 +418,9 @@ class Serving(_Record):
     request_timeout_s: PosInt
     # Pause between two engines. Only the old TPU runtime needed one.
     drain_s: Annotated[float, Field(ge=0)] = 0.0
+
+
+Grading.model_rebuild()
 
 
 class Traces(_Record):

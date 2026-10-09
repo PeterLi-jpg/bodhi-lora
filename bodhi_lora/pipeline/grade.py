@@ -133,7 +133,7 @@ def judge_of(ctx: StageContext, seed: int, files: dict, judge_id: str) -> tuple:
         raise SystemExit(f"{judge_id} is not a judge of {ctx.cell.id}: {ctx.cell.grading.judges}")
     judge = ctx.reg.models[judge_id]
     rows = ctx.rows_by_id()
-    serving = ctx.cell.eval.serving
+    serving = ctx.cell.grading.judge_serving or ctx.cell.eval.serving
     engine = make_engine(judge, serving=serving, stub=ctx.stub, stub_reply=_stub_reply,
                          log_path=ctx.log_path(f"vllm_judge_{judge_id}_s{seed}.log"))
     configs = []

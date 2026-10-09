@@ -13,6 +13,9 @@ grading:
   # Gemma judge here, and configs/models/phi-4.yaml says why no clinical judge fits. Run:
   #   python -m bodhi_lora run healthbench__medgemma-27b-text__bodhi__2026-05 --stages grade --judges phi-4 --gpus 0
   judges: [phi-4]
+  # The cell was evaluated with a 4,096-token context; a judge prompt holds the
+  # conversation, a reply of up to about 1,700 tokens and the grading template.
+  judge_serving: {max_model_len: 8192, max_num_seqs: 64, concurrency: 32, request_timeout_s: 900}
 traces:
   # The launcher set no cap, so all 4,000 prompts of the train pool.
   max_prompts: 4000

@@ -155,6 +155,8 @@ def test_a_recorded_cell_only_gets_judge_regrades_that_read_its_stored_replies(t
     assert first["harm"]["harm_extent"] == "none" and judged["configs"][0]["harm"]["n_scored"] == 4
     assert not (scratch / "seed_2" / "grade" / "epistemic__llama-3.1-8b.json").exists()
     assert json.loads((scratch / "shared" / "probe" / "probe.json").read_text())["benchmark"]["n"] == 4
+    manifest = json.loads((scratch / "seed_2" / "grade" / "judge__medgemma-27b-text.manifest.json").read_text())
+    assert manifest["engines"]["judge"]["max_model_len"] == 2048   # grading.judge_serving
 
 
 def test_recorded_and_external_cells_are_refused(reg, tmp_path):
