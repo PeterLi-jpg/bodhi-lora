@@ -1,4 +1,5 @@
-"""Compute every number the paper reports for the submitted MedGemma cell.
+"""Compute every number the paper reports: the submitted MedGemma cell from its raw
+outputs, and the same seed-level statistics for every cell from its per-seed means.
 
 One script, one pass, no hand-typed numbers. It reads the committed eval
 outputs and writes three kinds of file into ``paper/generated/``:
@@ -34,10 +35,13 @@ Optional (each table that needs one is skipped with a message if it is absent):
   <M>/validation/kappa_results.json        physician kappa (kappa table)
   <M>/analysis/{mimicry_split,interference_mechanism,second_person_questions}.json
                                            rebuttal analyses (leakage, odds ratios)
+  <M>/analysis/stats.json                  the uniform analysis of the cell (make analyze);
+                                           only its token counts are read
   rebuttal/posted_values.json              rebuttal cells (generality tables)
-  results/cross_cell/generated_values.json synced rebuttal cells (make cells); a cell
-                                           found here replaces its posted values and
-                                           gets a paired t interval on the aggregate
+  results/cross_cell/generated_values.json per-seed means of every cell (make cells); a
+                                           cell found here replaces its posted values,
+                                           and every cell here gets the same contrasts
+                                           (uniform_section)
   results/cross_cell/{cell_recipe,quality_drop}.json
                                            per-cell tau, trace counts and adapter recipe,
                                            read from the host logs and the synced adapter
@@ -85,6 +89,7 @@ from statsmodels.stats.multitest import multipletests
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
+from bodhi_lora.analysis import stats as uniform_stats  # noqa: E402
 from bodhi_lora.registry import condition_from_legacy  # noqa: E402
 
 CONDITIONS = ("base_no_wrapper", "base_bodhi", "lora_no_wrapper", "lora_bodhi")
@@ -1615,9 +1620,204 @@ def generality_section(posted: dict, generated: dict | None, out, macros, recipe
                          ("near_zero_cells", "NearZero")):
             macros.add(f"PostedAskersGap{tok}", fmt_int(v[key]),
                        f"{SRC_POSTED}: cells where LoRA's askers minus non-askers aggregate gap is {key}")
+    if "cost" in an:
+        macros.add("PostedFewerTokensPct", fmt_int(an["cost"]["adapter_fewer_output_tokens_pct"]),
+                   f"{SRC_POSTED}: posted share (percent) by which the adapter needs fewer output tokens "
+                   "than the protocol")
     res["sources"] = {c["id"]: c["source"] for c in res["cells"]}
     out["generality"] = res
     return res
+
+
+# ---------------------------------------------------------------------------
+# The same statistics for every cell
+# ---------------------------------------------------------------------------
+
+# generated_values.json condition name for each condition of this script.
+GV_COND = {"base_no_wrapper": "base", "base_bodhi": "base_cot", "lora_no_wrapper": "lora",
+           "lora_bodhi": "lora_cot"}
+# The contrasts that get macros for every cell; numbers.json keeps all five.
+UNIFORM_MACRO_CONTRASTS = ("LoRAvsBase", "LoRACoTvsLoRA", "LoRAvsBaseCoT")
+ALPHA = 0.05
+
+
+def _gv_dims() -> list[str]:
+    """The generated_values.json metrics that are one of the seven dimensions."""
+    return [m for m, (key, _, _) in POSTED_METRIC.items() if key in SEVEN_DIMS]
+
+
+def uniform_section(posted: dict, generated: dict, out, macros) -> dict:
+    """The same statistics for every cell, from its per-seed condition means.
+
+    generated_values.json (make cells) holds the per-seed means of every cell, the
+    submitted cell's too. So one rule gives every cell the same numbers: the mean of the
+    seed means of each condition, and the paper's five contrasts, each with the
+    seed-level paired t of the uniform analysis (bodhi_lora/analysis/stats.py) and Holm
+    over the seven dimensions within the contrast (decisions D2 and D7, convention 14).
+    The aggregate score is one secondary test per contrast, outside the Holm family. A
+    seed with no value in either condition leaves that contrast, and n_seeds says so:
+    seed 42 of the MedQA cell has no dimension grades.
+
+    The submitted cell's per-seed means here must equal the ones this script computes
+    from its raw outputs; the run stops if they do not.
+    """
+    meta = {c["id"]: c for c in posted["cells"]}
+    dims = _gv_dims()
+    cells = []
+    for g in generated["cells"]:
+        if g["id"] not in meta:
+            raise SystemExit(f"paper_stats: {g['id']} is in generated_values.json but not in posted_values.json")
+        m = meta[g["id"]]
+        seeds = [str(s) for s in g["seeds"]]
+        rec = {"id": g["id"], "benchmark": m["benchmark"], "base_model": m["base_model"],
+               "same_family_as_evaluator": m["same_family_as_evaluator"], "set_aside": m["set_aside"],
+               "seeds": g["seeds"], "conditions": {}, "contrasts": {}}
+        vals = {}
+        for cfg, gc in GV_COND.items():
+            for metric in POSTED_METRIC:
+                per = g["conditions"][gc][metric]["per_seed"]
+                arr = np.array([np.nan if per.get(s) is None else per[s] for s in seeds], dtype=float)
+                vals[cfg, metric] = arr
+                ok = arr[np.isfinite(arr)]
+                rec["conditions"].setdefault(cfg, {})[metric] = {
+                    "mean": float(ok.mean()) if len(ok) else None,
+                    "sd": float(ok.std(ddof=1)) if len(ok) > 1 else None,
+                    "n_seeds": int(len(ok))}
+        if g["id"] == MAIN_CELL_ID:
+            _check_main_seed_means(vals, seeds, out["conditions"])
+        for ctok, a, b in CONTRASTS:
+            res = {metric: uniform_stats.paired_test(vals[a, metric], vals[b, metric]) for metric in POSTED_METRIC}
+            for metric, ph in zip(dims, uniform_stats.holm([res[x]["p"] for x in dims])):
+                res[metric]["p_holm"] = ph
+            rec["contrasts"][ctok] = res
+        lb = rec["contrasts"]["LoRAvsBase"]
+        rec["dims_rose"] = sum(_holm_sig(lb[x], +1) for x in dims)
+        rec["dims_fell"] = sum(_holm_sig(lb[x], -1) for x in dims)
+        cells.append(rec)
+
+    # Counts the text states. "Outside": base model outside the evaluator's family and
+    # not set aside, the submitted cell included (D6). "Added kept": the added cells that
+    # are not set aside.
+    outside = [c for c in cells if not c["same_family_as_evaluator"] and not c["set_aside"]]
+    added_kept = [c for c in cells if c["id"] != MAIN_CELL_ID and not c["set_aside"]]
+    added = [c for c in cells if c["id"] != MAIN_CELL_ID]
+
+    def rose(c, metric, ctok="LoRAvsBase"):
+        return _holm_sig(c["contrasts"][ctok][metric], +1)
+
+    base_ai_sd = [c["conditions"]["base_no_wrapper"]["active_inquiry_pct"]["sd"] for c in added]
+    base_ai_sd = [x for x in base_ai_sd if _finite(x)]
+    counts = {
+        "all": len(cells),
+        "added": len(added),
+        "outside": len(outside),
+        "outside_ask_rose": sum(rose(c, "active_inquiry_pct") and rose(c, "context_seeking") for c in outside),
+        "outside_red_flag_rose": sum(rose(c, "red_flag") for c in outside),
+        "outside_scope_rose": sum(rose(c, "scope_bounding") for c in outside),
+        "outside_dim_fell": sum(c["dims_fell"] > 0 for c in outside),
+        "added_kept": len(added_kept),
+        # LoRA+BODHI minus LoRA on red-flag identification: the drop of the submitted cell.
+        "added_red_flag_cot_fell": sum(_p_sig(c["contrasts"]["LoRACoTvsLoRA"]["red_flag"], -1) for c in added_kept),
+        "added_red_flag_cot_rose": sum(rose(c, "red_flag", "LoRACoTvsLoRA") for c in added_kept),
+        "added_base_ai_sd_min": min(base_ai_sd, default=None),
+        "added_base_ai_sd_max": max(base_ai_sd, default=None),
+    }
+    src = f"{SRC_SYNCED}, per-seed means; bodhi_lora/analysis/stats.py paired_test and holm"
+    what = "cells outside the evaluator's family, not set aside, submitted cell included"
+    macros.add("CellsAll", fmt_int(counts["all"]), f"{SRC_SYNCED}: every cell, the submitted one included")
+    macros.add("CellsAdded", fmt_int(counts["added"]), f"{SRC_SYNCED}: cells added after the submission")
+    macros.add("CellsOutside", fmt_int(counts["outside"]), what)
+    macros.add("CellsOutsideAskRose", fmt_int(counts["outside_ask_rose"]),
+               f"{what}: active inquiry and context-seeking both higher under LoRA than Base, Holm p < {ALPHA}")
+    macros.add("CellsOutsideRedFlagRose", fmt_int(counts["outside_red_flag_rose"]),
+               f"{what}: red-flag identification higher under LoRA than Base, Holm p < {ALPHA}")
+    macros.add("CellsOutsideScopeRose", fmt_int(counts["outside_scope_rose"]),
+               f"{what}: scope bounding higher under LoRA than Base, Holm p < {ALPHA}")
+    macros.add("CellsOutsideDimFell", fmt_int(counts["outside_dim_fell"]),
+               f"{what}: at least one dimension lower under LoRA than Base, Holm p < {ALPHA}")
+    macros.add("CellsAddedKept", fmt_int(counts["added_kept"]), "added cells that are not set aside")
+    macros.add("CellsAddedRedFlagCoTFell", fmt_int(counts["added_red_flag_cot_fell"]),
+               f"added cells not set aside: red flag lower under LoRA+CoT than LoRA, paired t p < {ALPHA}")
+    macros.add("CellsAddedRedFlagCoTRose", fmt_int(counts["added_red_flag_cot_rose"]),
+               f"added cells not set aside: red flag higher under LoRA+CoT than LoRA, Holm p < {ALPHA}")
+    if base_ai_sd:
+        macros.add("CellsAddedBaseAISDMin", fmt(counts["added_base_ai_sd_min"], 1),
+                   f"{SRC_SYNCED}: smallest cross-seed SD of Base active inquiry in the added cells (points)")
+        macros.add("CellsAddedBaseAISDMax", fmt(counts["added_base_ai_sd_max"], 1),
+                   f"{SRC_SYNCED}: largest cross-seed SD of Base active inquiry in the added cells (points)")
+    for c in cells:
+        tok = CELL_TOKEN.get(c["id"])
+        if tok is None:
+            print(f"note: no macro token for cell {c['id']}; its uniform macros are skipped")
+            continue
+        macros.add(f"Cell{tok}DimsRose", fmt_int(c["dims_rose"]),
+                   f"{c['id']}: dimensions higher under LoRA than Base, Holm p < {ALPHA}")
+        macros.add(f"Cell{tok}DimsFell", fmt_int(c["dims_fell"]),
+                   f"{c['id']}: dimensions lower under LoRA than Base, Holm p < {ALPHA}")
+        for ctok in UNIFORM_MACRO_CONTRASTS:
+            for metric, (_, _, dp) in POSTED_METRIC.items():
+                r = c["contrasts"][ctok][metric]
+                if not _finite(r["diff"]):
+                    continue
+                name = f"Cell{tok}{POSTED_METRIC_TOKEN[metric]}{ctok}"
+                macros.add(name + "Diff", fmt(r["diff"], dp, sign=True),
+                           f"{src}: {c['id']} {metric}, {ctok}, mean of {r['n_seeds']} per-seed differences")
+                if _finite(r["ci95"][0]):
+                    macros.add(name + "CI", fmt_ci(r["ci95"][0], r["ci95"][1], dp),
+                               f"95% t({r['df']}) interval of the per-seed differences")
+                if metric in dims:
+                    if _finite(r.get("p_holm")):
+                        macros.add(name + "PHolm", fmt_p(r["p_holm"]), "Holm p over the seven dimensions")
+                elif _finite(r["p"]):
+                    macros.add(name + "P", fmt_p(r["p"]), "two-sided paired t p over seeds")
+    out["uniform"] = {"source": src, "alpha": ALPHA, "cells": cells, "counts": counts}
+    return out["uniform"]
+
+
+def _holm_sig(r: dict, sign: int) -> bool:
+    """A contrast with Holm p below ALPHA in the given direction."""
+    return _finite(r.get("p_holm")) and r["p_holm"] < ALPHA and sign * r["diff"] > 0
+
+
+def _p_sig(r: dict, sign: int) -> bool:
+    """A contrast with unadjusted paired t p below ALPHA in the given direction."""
+    return _finite(r.get("p")) and r["p"] < ALPHA and sign * r["diff"] > 0
+
+
+def _check_main_seed_means(vals: dict, seeds: list[str], conditions_res: dict) -> None:
+    """Stop when generated_values.json and the raw outputs disagree on the submitted cell.
+
+    generated_values.json keeps six significant digits, so the tolerance is two decimals
+    finer than the paper prints."""
+    for (cfg, metric), arr in vals.items():
+        key, mult, dp = POSTED_METRIC[metric]
+        raw = conditions_res[key][cfg]["per_seed"]
+        for s, v in zip(seeds, arr):
+            if not np.isfinite(v) or abs(v - raw[s] * mult) > 10 ** -(dp + 2):
+                raise SystemExit(f"paper_stats: {MAIN_CELL_ID} {cfg} {metric} seed {s}: generated_values.json "
+                                 f"has {v}, the raw outputs give {raw[s] * mult}; run make cells")
+
+
+def cost_section(stats_path: Path, out, macros) -> None:
+    """Output tokens per response, from the submitted cell's stats.json (make analyze).
+
+    The engine stored a token count for the one-pass conditions only; the two-pass
+    conditions kept only their final reply, so their tokens are not measured.
+    """
+    with open(stats_path) as f:
+        cost = json.load(f)["cost"]
+    src = f"{_rel(stats_path)} cost"
+    res = {"conditions": {}}
+    for cfg in CONDITIONS:
+        c = cost["conditions"][COND_FILE[cfg]]
+        res["conditions"][cfg] = {"tokens_engine_mean": c["tokens_engine_mean"],
+                                  "tokens_engine_n": c["tokens_engine_n"], "n": c["n"]}
+        if c["tokens_engine_n"]:
+            macros.add(f"TokensEngine{COND_TOKEN[cfg]}", fmt(c["tokens_engine_mean"], 0),
+                       f"{src}: mean output tokens per response that the engine stored, "
+                       f"{c['tokens_engine_n']} of {c['n']} responses")
+    res["not_measured"] = cost.get("not_measured_calls")
+    out["cost"] = res
 
 
 # ---------------------------------------------------------------------------
@@ -1824,6 +2024,9 @@ def build_tables(out, seeds) -> dict[str, str]:
         filter_tab = cell_filter_table(out)
         if filter_tab is not None:
             t["tab_cell_filter"] = filter_tab
+    if "uniform" in out:
+        t["tab_cross_cell"] = cross_cell_table(out)
+        t.update(cell_detail_tables(out))
     return t
 
 
@@ -1988,6 +2191,84 @@ def cell_filter_table(out) -> str | None:
                    "ckpt/best/trainer_state.json)")
 
 
+def _pm(r: dict, dp: int, star: bool) -> str:
+    """A contrast as its mean plus or minus half its 95% t interval (the interval is
+    symmetric), with a star when ``star`` is set."""
+    if not _finite(r.get("diff")):
+        return "--"
+    s = f"{r['diff']:+.{dp}f}"
+    if float(s) == 0:
+        s = f"{0:.{dp}f}"
+    lo, hi = r["ci95"]
+    if _finite(lo) and _finite(hi):
+        s += f"\\pm{(hi - lo) / 2:.{dp}f}"
+    return "\\ensuremath{" + s + ("^{*}" if star else "") + "}"
+
+
+def _uniform_groups(cells: list[dict]) -> list[list[dict]]:
+    """The submitted cell, the added cells that are kept, and the set-aside cells."""
+    groups = ([c for c in cells if c["id"] == MAIN_CELL_ID],
+              [c for c in cells if c["id"] != MAIN_CELL_ID and not c["set_aside"]],
+              [c for c in cells if c["set_aside"]])
+    return [g for g in groups if g]
+
+
+def _uniform_label(c: dict) -> list[str]:
+    mark = "$^{\\dagger}$" if c["same_family_as_evaluator"] else ""
+    return [BENCH_SHORT.get(c["benchmark"], c["benchmark"]), c["base_model"] + mark]
+
+
+def cross_cell_table(out) -> str:
+    """One row per cell, the same statistics in each: active inquiry under Base and LoRA,
+    and LoRA - Base on four dimensions and the aggregate score."""
+    def row(c):
+        lb = c["contrasts"]["LoRAvsBase"]
+        ai = c["conditions"]
+        cols = [_num(ai[cfg]["active_inquiry_pct"]["mean"], 1) for cfg in ("base_no_wrapper", "lora_no_wrapper")]
+        for metric in ("active_inquiry_pct", "context_seeking", "red_flag", "scope_bounding"):
+            r = lb[metric]
+            cols.append(_pm(r, POSTED_METRIC[metric][2], _finite(r.get("p_holm")) and r["p_holm"] < ALPHA))
+        agg = lb["aggregate"]
+        cols.append(_pm(agg, 3, _finite(agg["p"]) and agg["p"] < ALPHA))
+        return cols
+
+    blocks = [[_uniform_label(c) + row(c) for c in g] for g in _uniform_groups(out["uniform"]["cells"])]
+    return _two_row_tabular(
+        "llrrrrrrr",
+        [("", 1), ("", 1), ("Active inquiry (\\%)", 3), ("LoRA $-$ Base", 4)],
+        ["Benchmark", "Base model", "Base", "LoRA", "LoRA $-$ Base", "Context-seeking",
+         "\\shortstack[r]{Red-flag\\\\identification}", "\\shortstack[r]{Scope\\\\bounding}", "Aggregate"],
+        blocks, out["uniform"]["source"])
+
+
+def cell_detail_tables(out, per_table: int = 4) -> dict[str, str]:
+    """Every cell's seven dimensions and aggregate score in the four conditions, with
+    LoRA - Base and LoRA+CoT - LoRA. Four cells per table, so each table fits a page."""
+    cells = [c for g in _uniform_groups(out["uniform"]["cells"]) for c in g]
+    header = ["", *(COND_LABEL[c] for c in CONDITIONS), "LoRA $-$ Base", "$p_{\\text{Holm}}$",
+              "LoRA+\\bodhi{} $-$ LoRA", "$p_{\\text{Holm}}$"]
+    tables = {}
+    for i in range(0, len(cells), per_table):
+        blocks = []
+        for c in cells[i:i + per_table]:
+            n_dim = min(c["conditions"][cfg][m]["n_seeds"] for cfg in CONDITIONS for m in _gv_dims())
+            seeds = f" ({n_dim} of {len(c['seeds'])} seeds have dimension grades)" if n_dim < len(c["seeds"]) else ""
+            mark = "$^{\\dagger}$" if c["same_family_as_evaluator"] else ""
+            block = [[f"\\multicolumn{{9}}{{l}}{{\\emph{{{c['benchmark']}, {c['base_model']}}}{mark}{seeds}}}"]]
+            for metric, (key, _, dp) in POSTED_METRIC.items():
+                label = "Aggregate score (0--1)" if key == "healthbench" else METRIC[key]["label"]
+                row = [label] + [_num(c["conditions"][cfg][metric]["mean"], dp) for cfg in CONDITIONS]
+                for ctok in ("LoRAvsBase", "LoRACoTvsLoRA"):
+                    r = c["contrasts"][ctok][metric]
+                    p = r.get("p_holm") if key in SEVEN_DIMS else r["p"]
+                    row += [_pm(r, dp, False), fmt_p(p) if _finite(p) else "--"]
+                block.append(row)
+            blocks.append(block)
+        tables[f"tab_cell_detail_{i // per_table + 1}"] = tabular("lrrrrrrrr", header, blocks,
+                                                                 out["uniform"]["source"])
+    return tables
+
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -2070,6 +2351,14 @@ def run(results_dir: Path, out_dir: Path, healthbench: Path | None, filter_score
             if files[name].is_file():
                 out["meta"]["inputs"][f"rebuttal/results/{name}"] = _sha256(files[name])
         rebuttal_section(cell_analysis, out, macros)
+        # The uniform analysis of the submitted cell (make analyze). Only its token counts
+        # are read here; the paper's other numbers of this cell still come from above.
+        stats_path = cell_analysis / "stats.json"
+        if stats_path.is_file():
+            out["meta"]["inputs"][_rel(stats_path)] = _sha256(stats_path)
+            cost_section(stats_path, out, macros)
+        else:
+            print(f"SKIP token counts: {stats_path} not found (make analyze)")
     else:
         print(f"SKIP rebuttal analyses: {cell_analysis} not found")
     if optional(posted_values, "generality table (rebuttal cells)", "data/rebuttal_cells/posted_values.json"):
@@ -2089,6 +2378,8 @@ def run(results_dir: Path, out_dir: Path, healthbench: Path | None, filter_score
         else:
             print(f"SKIP added-cell recipe and filter table: {recipe_path} not found (make cells)")
         generality_section(posted, generated, out, macros, recipe)
+        if generated is not None:
+            uniform_section(posted, generated, out, macros)
 
     tables = build_tables(out, seeds)
 

@@ -1236,6 +1236,8 @@
 \newcommand{\statSecondPersonPctBaseCoT}{\ensuremath{36.2}} % rebuttal/results/second_person_questions.json: completions with a second-person question
 \newcommand{\statSecondPersonPctLoRA}{\ensuremath{36.7}} % rebuttal/results/second_person_questions.json: completions with a second-person question
 \newcommand{\statSecondPersonPctLoRACoT}{\ensuremath{65.4}} % rebuttal/results/second_person_questions.json: completions with a second-person question
+\newcommand{\statTokensEngineBase}{\ensuremath{753}} % results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/stats.json cost: mean output tokens per response that the engine stored, 1000 of 1000 responses
+\newcommand{\statTokensEngineLoRA}{\ensuremath{781}} % results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/stats.json cost: mean output tokens per response that the engine stored, 1000 of 1000 responses
 \newcommand{\statCellHBMistralBaseActiveInquiry}{\ensuremath{25.6}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py): healthbench__mistral-small-24b base active_inquiry_pct (mean over seeds)
 \newcommand{\statCellHBMistralBaseAggregate}{\ensuremath{0.425}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py): healthbench__mistral-small-24b base aggregate (mean over seeds)
 \newcommand{\statCellHBMistralBaseContextSeeking}{\ensuremath{1.05}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py): healthbench__mistral-small-24b base context_seeking (mean over seeds)
@@ -1529,3 +1531,602 @@
 \newcommand{\statPostedAskersGapPositive}{3} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): cells where LoRA's askers minus non-askers aggregate gap is positive_cells
 \newcommand{\statPostedAskersGapNegative}{3} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): cells where LoRA's askers minus non-askers aggregate gap is negative_cells
 \newcommand{\statPostedAskersGapNearZero}{1} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): cells where LoRA's askers minus non-askers aggregate gap is near_zero_cells
+\newcommand{\statPostedFewerTokensPct}{58} % data/rebuttal_cells/posted_values.json (transcribed from posted replies): posted share (percent) by which the adapter needs fewer output tokens than the protocol
+\newcommand{\statCellsAll}{8} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py): every cell, the submitted one included
+\newcommand{\statCellsAdded}{7} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py): cells added after the submission
+\newcommand{\statCellsOutside}{5} % cells outside the evaluator's family, not set aside, submitted cell included
+\newcommand{\statCellsOutsideAskRose}{4} % cells outside the evaluator's family, not set aside, submitted cell included: active inquiry and context-seeking both higher under LoRA than Base, Holm p < 0.05
+\newcommand{\statCellsOutsideRedFlagRose}{4} % cells outside the evaluator's family, not set aside, submitted cell included: red-flag identification higher under LoRA than Base, Holm p < 0.05
+\newcommand{\statCellsOutsideScopeRose}{4} % cells outside the evaluator's family, not set aside, submitted cell included: scope bounding higher under LoRA than Base, Holm p < 0.05
+\newcommand{\statCellsOutsideDimFell}{2} % cells outside the evaluator's family, not set aside, submitted cell included: at least one dimension lower under LoRA than Base, Holm p < 0.05
+\newcommand{\statCellsAddedKept}{6} % added cells that are not set aside
+\newcommand{\statCellsAddedRedFlagCoTFell}{0} % added cells not set aside: red flag lower under LoRA+CoT than LoRA, paired t p < 0.05
+\newcommand{\statCellsAddedRedFlagCoTRose}{2} % added cells not set aside: red flag higher under LoRA+CoT than LoRA, Holm p < 0.05
+\newcommand{\statCellsAddedBaseAISDMin}{\ensuremath{0.3}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py): smallest cross-seed SD of Base active inquiry in the added cells (points)
+\newcommand{\statCellsAddedBaseAISDMax}{\ensuremath{2.1}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py): largest cross-seed SD of Base active inquiry in the added cells (points)
+\newcommand{\statCellHBMedGemmaDimsRose}{4} % healthbench__medgemma-27b: dimensions higher under LoRA than Base, Holm p < 0.05
+\newcommand{\statCellHBMedGemmaDimsFell}{0} % healthbench__medgemma-27b: dimensions lower under LoRA than Base, Holm p < 0.05
+\newcommand{\statCellHBMedGemmaActiveInquiryLoRAvsBaseDiff}{\ensuremath{+28.0}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__medgemma-27b active_inquiry_pct, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellHBMedGemmaActiveInquiryLoRAvsBaseCI}{\ensuremath{[+22.9,\,+33.2]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMedGemmaActiveInquiryLoRAvsBasePHolm}{\ensuremath{6.7\times10^{-4}}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMedGemmaUncertaintyAckLoRAvsBaseDiff}{\ensuremath{0.00}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__medgemma-27b uncertainty_ack, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellHBMedGemmaUncertaintyAckLoRAvsBaseCI}{\ensuremath{[-0.02,\,+0.02]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMedGemmaUncertaintyAckLoRAvsBasePHolm}{\ensuremath{0.97}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMedGemmaContextSeekingLoRAvsBaseDiff}{\ensuremath{+0.35}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__medgemma-27b context_seeking, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellHBMedGemmaContextSeekingLoRAvsBaseCI}{\ensuremath{[+0.28,\,+0.41]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMedGemmaContextSeekingLoRAvsBasePHolm}{\ensuremath{6.7\times10^{-4}}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMedGemmaRedFlagLoRAvsBaseDiff}{\ensuremath{+0.15}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__medgemma-27b red_flag, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellHBMedGemmaRedFlagLoRAvsBaseCI}{\ensuremath{[+0.13,\,+0.17]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMedGemmaRedFlagLoRAvsBasePHolm}{\ensuremath{3.6\times10^{-4}}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMedGemmaScopeBoundingLoRAvsBaseDiff}{\ensuremath{+0.06}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__medgemma-27b scope_bounding, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellHBMedGemmaScopeBoundingLoRAvsBaseCI}{\ensuremath{[+0.04,\,+0.08]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMedGemmaScopeBoundingLoRAvsBasePHolm}{\ensuremath{0.0065}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMedGemmaHedgingQualityLoRAvsBaseDiff}{\ensuremath{+0.05}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__medgemma-27b hedging_quality, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellHBMedGemmaHedgingQualityLoRAvsBaseCI}{\ensuremath{[+0.00,\,+0.09]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMedGemmaHedgingQualityLoRAvsBasePHolm}{\ensuremath{0.077}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMedGemmaSpecificityLoRAvsBaseDiff}{\ensuremath{+0.04}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__medgemma-27b specificity, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellHBMedGemmaSpecificityLoRAvsBaseCI}{\ensuremath{[+0.01,\,+0.07]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMedGemmaSpecificityLoRAvsBasePHolm}{\ensuremath{0.055}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMedGemmaAggregateLoRAvsBaseDiff}{\ensuremath{+0.004}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__medgemma-27b aggregate, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellHBMedGemmaAggregateLoRAvsBaseCI}{\ensuremath{[-0.011,\,+0.020]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMedGemmaAggregateLoRAvsBaseP}{\ensuremath{0.48}} % two-sided paired t p over seeds
+\newcommand{\statCellHBMedGemmaActiveInquiryLoRACoTvsLoRADiff}{\ensuremath{+34.5}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__medgemma-27b active_inquiry_pct, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellHBMedGemmaActiveInquiryLoRACoTvsLoRACI}{\ensuremath{[+28.4,\,+40.5]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMedGemmaActiveInquiryLoRACoTvsLoRAPHolm}{\ensuremath{6.4\times10^{-4}}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMedGemmaUncertaintyAckLoRACoTvsLoRADiff}{\ensuremath{+0.01}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__medgemma-27b uncertainty_ack, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellHBMedGemmaUncertaintyAckLoRACoTvsLoRACI}{\ensuremath{[-0.02,\,+0.04]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMedGemmaUncertaintyAckLoRACoTvsLoRAPHolm}{\ensuremath{1}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMedGemmaContextSeekingLoRACoTvsLoRADiff}{\ensuremath{+0.15}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__medgemma-27b context_seeking, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellHBMedGemmaContextSeekingLoRACoTvsLoRACI}{\ensuremath{[+0.09,\,+0.21]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMedGemmaContextSeekingLoRACoTvsLoRAPHolm}{\ensuremath{0.013}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMedGemmaRedFlagLoRACoTvsLoRADiff}{\ensuremath{-0.16}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__medgemma-27b red_flag, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellHBMedGemmaRedFlagLoRACoTvsLoRACI}{\ensuremath{[-0.26,\,-0.06]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMedGemmaRedFlagLoRACoTvsLoRAPHolm}{\ensuremath{0.058}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMedGemmaScopeBoundingLoRACoTvsLoRADiff}{\ensuremath{0.00}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__medgemma-27b scope_bounding, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellHBMedGemmaScopeBoundingLoRACoTvsLoRACI}{\ensuremath{[-0.02,\,+0.03]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMedGemmaScopeBoundingLoRACoTvsLoRAPHolm}{\ensuremath{1}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMedGemmaHedgingQualityLoRACoTvsLoRADiff}{\ensuremath{0.00}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__medgemma-27b hedging_quality, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellHBMedGemmaHedgingQualityLoRACoTvsLoRACI}{\ensuremath{[-0.04,\,+0.05]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMedGemmaHedgingQualityLoRACoTvsLoRAPHolm}{\ensuremath{1}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMedGemmaSpecificityLoRACoTvsLoRADiff}{\ensuremath{0.00}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__medgemma-27b specificity, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellHBMedGemmaSpecificityLoRACoTvsLoRACI}{\ensuremath{[-0.03,\,+0.02]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMedGemmaSpecificityLoRACoTvsLoRAPHolm}{\ensuremath{1}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMedGemmaAggregateLoRACoTvsLoRADiff}{\ensuremath{-0.008}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__medgemma-27b aggregate, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellHBMedGemmaAggregateLoRACoTvsLoRACI}{\ensuremath{[-0.020,\,+0.004]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMedGemmaAggregateLoRACoTvsLoRAP}{\ensuremath{0.15}} % two-sided paired t p over seeds
+\newcommand{\statCellHBMedGemmaActiveInquiryLoRAvsBaseCoTDiff}{\ensuremath{-2.4}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__medgemma-27b active_inquiry_pct, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellHBMedGemmaActiveInquiryLoRAvsBaseCoTCI}{\ensuremath{[-5.7,\,+1.0]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMedGemmaActiveInquiryLoRAvsBaseCoTPHolm}{\ensuremath{0.36}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMedGemmaUncertaintyAckLoRAvsBaseCoTDiff}{\ensuremath{+0.04}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__medgemma-27b uncertainty_ack, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellHBMedGemmaUncertaintyAckLoRAvsBaseCoTCI}{\ensuremath{[+0.02,\,+0.07]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMedGemmaUncertaintyAckLoRAvsBaseCoTPHolm}{\ensuremath{0.052}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMedGemmaContextSeekingLoRAvsBaseCoTDiff}{\ensuremath{-0.02}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__medgemma-27b context_seeking, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellHBMedGemmaContextSeekingLoRAvsBaseCoTCI}{\ensuremath{[-0.08,\,+0.05]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMedGemmaContextSeekingLoRAvsBaseCoTPHolm}{\ensuremath{0.95}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMedGemmaRedFlagLoRAvsBaseCoTDiff}{\ensuremath{+0.01}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__medgemma-27b red_flag, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellHBMedGemmaRedFlagLoRAvsBaseCoTCI}{\ensuremath{[-0.03,\,+0.05]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMedGemmaRedFlagLoRAvsBaseCoTPHolm}{\ensuremath{0.95}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMedGemmaScopeBoundingLoRAvsBaseCoTDiff}{\ensuremath{+0.03}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__medgemma-27b scope_bounding, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellHBMedGemmaScopeBoundingLoRAvsBaseCoTCI}{\ensuremath{[-0.00,\,+0.06]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMedGemmaScopeBoundingLoRAvsBaseCoTPHolm}{\ensuremath{0.22}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMedGemmaHedgingQualityLoRAvsBaseCoTDiff}{\ensuremath{+0.06}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__medgemma-27b hedging_quality, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellHBMedGemmaHedgingQualityLoRAvsBaseCoTCI}{\ensuremath{[+0.02,\,+0.09]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMedGemmaHedgingQualityLoRAvsBaseCoTPHolm}{\ensuremath{0.052}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMedGemmaSpecificityLoRAvsBaseCoTDiff}{\ensuremath{+0.04}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__medgemma-27b specificity, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellHBMedGemmaSpecificityLoRAvsBaseCoTCI}{\ensuremath{[+0.01,\,+0.07]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMedGemmaSpecificityLoRAvsBaseCoTPHolm}{\ensuremath{0.16}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMedGemmaAggregateLoRAvsBaseCoTDiff}{\ensuremath{0.000}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__medgemma-27b aggregate, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellHBMedGemmaAggregateLoRAvsBaseCoTCI}{\ensuremath{[-0.010,\,+0.010]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMedGemmaAggregateLoRAvsBaseCoTP}{\ensuremath{0.91}} % two-sided paired t p over seeds
+\newcommand{\statCellHBMistralDimsRose}{7} % healthbench__mistral-small-24b: dimensions higher under LoRA than Base, Holm p < 0.05
+\newcommand{\statCellHBMistralDimsFell}{0} % healthbench__mistral-small-24b: dimensions lower under LoRA than Base, Holm p < 0.05
+\newcommand{\statCellHBMistralActiveInquiryLoRAvsBaseDiff}{\ensuremath{+31.0}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__mistral-small-24b active_inquiry_pct, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellHBMistralActiveInquiryLoRAvsBaseCI}{\ensuremath{[+25.0,\,+37.0]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMistralActiveInquiryLoRAvsBasePHolm}{\ensuremath{4.1\times10^{-4}}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMistralUncertaintyAckLoRAvsBaseDiff}{\ensuremath{+0.06}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__mistral-small-24b uncertainty_ack, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellHBMistralUncertaintyAckLoRAvsBaseCI}{\ensuremath{[+0.04,\,+0.07]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMistralUncertaintyAckLoRAvsBasePHolm}{\ensuremath{9.3\times10^{-4}}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMistralContextSeekingLoRAvsBaseDiff}{\ensuremath{+0.71}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__mistral-small-24b context_seeking, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellHBMistralContextSeekingLoRAvsBaseCI}{\ensuremath{[+0.61,\,+0.82]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMistralContextSeekingLoRAvsBasePHolm}{\ensuremath{2.3\times10^{-4}}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMistralRedFlagLoRAvsBaseDiff}{\ensuremath{+0.64}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__mistral-small-24b red_flag, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellHBMistralRedFlagLoRAvsBaseCI}{\ensuremath{[+0.60,\,+0.69]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMistralRedFlagLoRAvsBasePHolm}{\ensuremath{1.8\times10^{-5}}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMistralScopeBoundingLoRAvsBaseDiff}{\ensuremath{+0.20}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__mistral-small-24b scope_bounding, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellHBMistralScopeBoundingLoRAvsBaseCI}{\ensuremath{[+0.19,\,+0.21]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMistralScopeBoundingLoRAvsBasePHolm}{\ensuremath{6.7\times10^{-6}}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMistralHedgingQualityLoRAvsBaseDiff}{\ensuremath{+0.22}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__mistral-small-24b hedging_quality, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellHBMistralHedgingQualityLoRAvsBaseCI}{\ensuremath{[+0.18,\,+0.27]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMistralHedgingQualityLoRAvsBasePHolm}{\ensuremath{4.1\times10^{-4}}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMistralSpecificityLoRAvsBaseDiff}{\ensuremath{+0.23}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__mistral-small-24b specificity, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellHBMistralSpecificityLoRAvsBaseCI}{\ensuremath{[+0.20,\,+0.27]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMistralSpecificityLoRAvsBasePHolm}{\ensuremath{2.6\times10^{-4}}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMistralAggregateLoRAvsBaseDiff}{\ensuremath{-0.014}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__mistral-small-24b aggregate, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellHBMistralAggregateLoRAvsBaseCI}{\ensuremath{[-0.021,\,-0.007]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMistralAggregateLoRAvsBaseP}{\ensuremath{0.0054}} % two-sided paired t p over seeds
+\newcommand{\statCellHBMistralActiveInquiryLoRACoTvsLoRADiff}{\ensuremath{+15.8}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__mistral-small-24b active_inquiry_pct, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellHBMistralActiveInquiryLoRACoTvsLoRACI}{\ensuremath{[-7.2,\,+38.8]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMistralActiveInquiryLoRACoTvsLoRAPHolm}{\ensuremath{0.64}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMistralUncertaintyAckLoRACoTvsLoRADiff}{\ensuremath{-0.11}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__mistral-small-24b uncertainty_ack, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellHBMistralUncertaintyAckLoRACoTvsLoRACI}{\ensuremath{[-0.22,\,-0.00]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMistralUncertaintyAckLoRACoTvsLoRAPHolm}{\ensuremath{0.33}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMistralContextSeekingLoRACoTvsLoRADiff}{\ensuremath{+0.01}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__mistral-small-24b context_seeking, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellHBMistralContextSeekingLoRACoTvsLoRACI}{\ensuremath{[-0.13,\,+0.16]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMistralContextSeekingLoRACoTvsLoRAPHolm}{\ensuremath{1}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMistralRedFlagLoRACoTvsLoRADiff}{\ensuremath{-0.03}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__mistral-small-24b red_flag, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellHBMistralRedFlagLoRACoTvsLoRACI}{\ensuremath{[-0.10,\,+0.05]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMistralRedFlagLoRACoTvsLoRAPHolm}{\ensuremath{1}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMistralScopeBoundingLoRACoTvsLoRADiff}{\ensuremath{-0.06}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__mistral-small-24b scope_bounding, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellHBMistralScopeBoundingLoRACoTvsLoRACI}{\ensuremath{[-0.14,\,+0.02]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMistralScopeBoundingLoRACoTvsLoRAPHolm}{\ensuremath{0.62}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMistralHedgingQualityLoRACoTvsLoRADiff}{\ensuremath{-0.07}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__mistral-small-24b hedging_quality, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellHBMistralHedgingQualityLoRACoTvsLoRACI}{\ensuremath{[-0.22,\,+0.07]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMistralHedgingQualityLoRACoTvsLoRAPHolm}{\ensuremath{0.9}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMistralSpecificityLoRACoTvsLoRADiff}{\ensuremath{-0.04}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__mistral-small-24b specificity, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellHBMistralSpecificityLoRACoTvsLoRACI}{\ensuremath{[-0.12,\,+0.05]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMistralSpecificityLoRACoTvsLoRAPHolm}{\ensuremath{1}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMistralAggregateLoRACoTvsLoRADiff}{\ensuremath{-0.007}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__mistral-small-24b aggregate, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellHBMistralAggregateLoRACoTvsLoRACI}{\ensuremath{[-0.028,\,+0.014]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMistralAggregateLoRACoTvsLoRAP}{\ensuremath{0.4}} % two-sided paired t p over seeds
+\newcommand{\statCellHBMistralActiveInquiryLoRAvsBaseCoTDiff}{\ensuremath{+2.4}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__mistral-small-24b active_inquiry_pct, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellHBMistralActiveInquiryLoRAvsBaseCoTCI}{\ensuremath{[-3.1,\,+7.9]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMistralActiveInquiryLoRAvsBaseCoTPHolm}{\ensuremath{0.59}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMistralUncertaintyAckLoRAvsBaseCoTDiff}{\ensuremath{+0.04}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__mistral-small-24b uncertainty_ack, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellHBMistralUncertaintyAckLoRAvsBaseCoTCI}{\ensuremath{[+0.01,\,+0.07]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMistralUncertaintyAckLoRAvsBaseCoTPHolm}{\ensuremath{0.18}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMistralContextSeekingLoRAvsBaseCoTDiff}{\ensuremath{-0.04}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__mistral-small-24b context_seeking, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellHBMistralContextSeekingLoRAvsBaseCoTCI}{\ensuremath{[-0.12,\,+0.03]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMistralContextSeekingLoRAvsBaseCoTPHolm}{\ensuremath{0.57}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMistralRedFlagLoRAvsBaseCoTDiff}{\ensuremath{-0.05}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__mistral-small-24b red_flag, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellHBMistralRedFlagLoRAvsBaseCoTCI}{\ensuremath{[-0.10,\,-0.01]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMistralRedFlagLoRAvsBaseCoTPHolm}{\ensuremath{0.21}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMistralScopeBoundingLoRAvsBaseCoTDiff}{\ensuremath{+0.01}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__mistral-small-24b scope_bounding, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellHBMistralScopeBoundingLoRAvsBaseCoTCI}{\ensuremath{[-0.01,\,+0.03]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMistralScopeBoundingLoRAvsBaseCoTPHolm}{\ensuremath{0.52}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMistralHedgingQualityLoRAvsBaseCoTDiff}{\ensuremath{+0.01}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__mistral-small-24b hedging_quality, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellHBMistralHedgingQualityLoRAvsBaseCoTCI}{\ensuremath{[-0.03,\,+0.05]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMistralHedgingQualityLoRAvsBaseCoTPHolm}{\ensuremath{0.59}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMistralSpecificityLoRAvsBaseCoTDiff}{\ensuremath{-0.05}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__mistral-small-24b specificity, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellHBMistralSpecificityLoRAvsBaseCoTCI}{\ensuremath{[-0.09,\,-0.00]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMistralSpecificityLoRAvsBaseCoTPHolm}{\ensuremath{0.22}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMistralAggregateLoRAvsBaseCoTDiff}{\ensuremath{-0.005}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__mistral-small-24b aggregate, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellHBMistralAggregateLoRAvsBaseCoTCI}{\ensuremath{[-0.013,\,+0.003]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMistralAggregateLoRAvsBaseCoTP}{\ensuremath{0.17}} % two-sided paired t p over seeds
+\newcommand{\statCellHBMedFortyTwoDimsRose}{6} % healthbench__med42-8b: dimensions higher under LoRA than Base, Holm p < 0.05
+\newcommand{\statCellHBMedFortyTwoDimsFell}{1} % healthbench__med42-8b: dimensions lower under LoRA than Base, Holm p < 0.05
+\newcommand{\statCellHBMedFortyTwoActiveInquiryLoRAvsBaseDiff}{\ensuremath{+40.7}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__med42-8b active_inquiry_pct, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellHBMedFortyTwoActiveInquiryLoRAvsBaseCI}{\ensuremath{[+35.8,\,+45.6]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMedFortyTwoActiveInquiryLoRAvsBasePHolm}{\ensuremath{8.5\times10^{-5}}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMedFortyTwoUncertaintyAckLoRAvsBaseDiff}{\ensuremath{+0.18}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__med42-8b uncertainty_ack, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellHBMedFortyTwoUncertaintyAckLoRAvsBaseCI}{\ensuremath{[+0.18,\,+0.19]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMedFortyTwoUncertaintyAckLoRAvsBasePHolm}{\ensuremath{1.6\times10^{-6}}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMedFortyTwoContextSeekingLoRAvsBaseDiff}{\ensuremath{+0.89}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__med42-8b context_seeking, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellHBMedFortyTwoContextSeekingLoRAvsBaseCI}{\ensuremath{[+0.85,\,+0.92]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMedFortyTwoContextSeekingLoRAvsBasePHolm}{\ensuremath{1.6\times10^{-6}}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMedFortyTwoRedFlagLoRAvsBaseDiff}{\ensuremath{+0.22}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__med42-8b red_flag, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellHBMedFortyTwoRedFlagLoRAvsBaseCI}{\ensuremath{[+0.18,\,+0.26]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMedFortyTwoRedFlagLoRAvsBasePHolm}{\ensuremath{2.5\times10^{-4}}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMedFortyTwoScopeBoundingLoRAvsBaseDiff}{\ensuremath{+0.29}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__med42-8b scope_bounding, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellHBMedFortyTwoScopeBoundingLoRAvsBaseCI}{\ensuremath{[+0.28,\,+0.30]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMedFortyTwoScopeBoundingLoRAvsBasePHolm}{\ensuremath{1.6\times10^{-6}}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMedFortyTwoHedgingQualityLoRAvsBaseDiff}{\ensuremath{+0.26}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__med42-8b hedging_quality, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellHBMedFortyTwoHedgingQualityLoRAvsBaseCI}{\ensuremath{[+0.22,\,+0.30]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMedFortyTwoHedgingQualityLoRAvsBasePHolm}{\ensuremath{1.2\times10^{-4}}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMedFortyTwoSpecificityLoRAvsBaseDiff}{\ensuremath{-0.08}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__med42-8b specificity, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellHBMedFortyTwoSpecificityLoRAvsBaseCI}{\ensuremath{[-0.10,\,-0.06]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMedFortyTwoSpecificityLoRAvsBasePHolm}{\ensuremath{3.7\times10^{-4}}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMedFortyTwoAggregateLoRAvsBaseDiff}{\ensuremath{-0.013}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__med42-8b aggregate, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellHBMedFortyTwoAggregateLoRAvsBaseCI}{\ensuremath{[-0.019,\,-0.007]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMedFortyTwoAggregateLoRAvsBaseP}{\ensuremath{0.0034}} % two-sided paired t p over seeds
+\newcommand{\statCellHBMedFortyTwoActiveInquiryLoRACoTvsLoRADiff}{\ensuremath{+31.8}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__med42-8b active_inquiry_pct, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellHBMedFortyTwoActiveInquiryLoRACoTvsLoRACI}{\ensuremath{[+23.7,\,+39.9]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMedFortyTwoActiveInquiryLoRACoTvsLoRAPHolm}{\ensuremath{0.0015}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMedFortyTwoUncertaintyAckLoRACoTvsLoRADiff}{\ensuremath{+0.02}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__med42-8b uncertainty_ack, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellHBMedFortyTwoUncertaintyAckLoRACoTvsLoRACI}{\ensuremath{[+0.02,\,+0.03]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMedFortyTwoUncertaintyAckLoRACoTvsLoRAPHolm}{\ensuremath{0.001}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMedFortyTwoContextSeekingLoRACoTvsLoRADiff}{\ensuremath{+0.48}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__med42-8b context_seeking, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellHBMedFortyTwoContextSeekingLoRACoTvsLoRACI}{\ensuremath{[+0.42,\,+0.54]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMedFortyTwoContextSeekingLoRACoTvsLoRAPHolm}{\ensuremath{1.9\times10^{-4}}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMedFortyTwoRedFlagLoRACoTvsLoRADiff}{\ensuremath{+0.07}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__med42-8b red_flag, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellHBMedFortyTwoRedFlagLoRACoTvsLoRACI}{\ensuremath{[-0.00,\,+0.13]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMedFortyTwoRedFlagLoRACoTvsLoRAPHolm}{\ensuremath{0.056}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMedFortyTwoScopeBoundingLoRACoTvsLoRADiff}{\ensuremath{+0.08}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__med42-8b scope_bounding, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellHBMedFortyTwoScopeBoundingLoRACoTvsLoRACI}{\ensuremath{[+0.05,\,+0.11]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMedFortyTwoScopeBoundingLoRACoTvsLoRAPHolm}{\ensuremath{0.0026}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMedFortyTwoHedgingQualityLoRACoTvsLoRADiff}{\ensuremath{+0.15}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__med42-8b hedging_quality, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellHBMedFortyTwoHedgingQualityLoRACoTvsLoRACI}{\ensuremath{[+0.11,\,+0.19]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMedFortyTwoHedgingQualityLoRACoTvsLoRAPHolm}{\ensuremath{0.0015}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMedFortyTwoSpecificityLoRACoTvsLoRADiff}{\ensuremath{+0.19}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__med42-8b specificity, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellHBMedFortyTwoSpecificityLoRACoTvsLoRACI}{\ensuremath{[+0.15,\,+0.23]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMedFortyTwoSpecificityLoRACoTvsLoRAPHolm}{\ensuremath{9.5\times10^{-4}}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMedFortyTwoAggregateLoRACoTvsLoRADiff}{\ensuremath{-0.010}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__med42-8b aggregate, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellHBMedFortyTwoAggregateLoRACoTvsLoRACI}{\ensuremath{[-0.017,\,-0.004]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMedFortyTwoAggregateLoRACoTvsLoRAP}{\ensuremath{0.013}} % two-sided paired t p over seeds
+\newcommand{\statCellHBMedFortyTwoActiveInquiryLoRAvsBaseCoTDiff}{\ensuremath{-4.6}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__med42-8b active_inquiry_pct, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellHBMedFortyTwoActiveInquiryLoRAvsBaseCoTCI}{\ensuremath{[-9.8,\,+0.6]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMedFortyTwoActiveInquiryLoRAvsBaseCoTPHolm}{\ensuremath{0.28}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMedFortyTwoUncertaintyAckLoRAvsBaseCoTDiff}{\ensuremath{+0.02}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__med42-8b uncertainty_ack, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellHBMedFortyTwoUncertaintyAckLoRAvsBaseCoTCI}{\ensuremath{[+0.00,\,+0.04]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMedFortyTwoUncertaintyAckLoRAvsBaseCoTPHolm}{\ensuremath{0.18}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMedFortyTwoContextSeekingLoRAvsBaseCoTDiff}{\ensuremath{-0.07}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__med42-8b context_seeking, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellHBMedFortyTwoContextSeekingLoRAvsBaseCoTCI}{\ensuremath{[-0.14,\,+0.00]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMedFortyTwoContextSeekingLoRAvsBaseCoTPHolm}{\ensuremath{0.28}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMedFortyTwoRedFlagLoRAvsBaseCoTDiff}{\ensuremath{-0.07}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__med42-8b red_flag, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellHBMedFortyTwoRedFlagLoRAvsBaseCoTCI}{\ensuremath{[-0.15,\,+0.01]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMedFortyTwoRedFlagLoRAvsBaseCoTPHolm}{\ensuremath{0.28}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMedFortyTwoScopeBoundingLoRAvsBaseCoTDiff}{\ensuremath{-0.03}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__med42-8b scope_bounding, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellHBMedFortyTwoScopeBoundingLoRAvsBaseCoTCI}{\ensuremath{[-0.07,\,+0.01]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMedFortyTwoScopeBoundingLoRAvsBaseCoTPHolm}{\ensuremath{0.28}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMedFortyTwoHedgingQualityLoRAvsBaseCoTDiff}{\ensuremath{-0.03}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__med42-8b hedging_quality, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellHBMedFortyTwoHedgingQualityLoRAvsBaseCoTCI}{\ensuremath{[-0.06,\,+0.01]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMedFortyTwoHedgingQualityLoRAvsBaseCoTPHolm}{\ensuremath{0.28}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMedFortyTwoSpecificityLoRAvsBaseCoTDiff}{\ensuremath{-0.12}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__med42-8b specificity, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellHBMedFortyTwoSpecificityLoRAvsBaseCoTCI}{\ensuremath{[-0.15,\,-0.08]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMedFortyTwoSpecificityLoRAvsBaseCoTPHolm}{\ensuremath{0.0068}} % Holm p over the seven dimensions
+\newcommand{\statCellHBMedFortyTwoAggregateLoRAvsBaseCoTDiff}{\ensuremath{+0.001}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__med42-8b aggregate, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellHBMedFortyTwoAggregateLoRAvsBaseCoTCI}{\ensuremath{[-0.007,\,+0.009]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBMedFortyTwoAggregateLoRAvsBaseCoTP}{\ensuremath{0.75}} % two-sided paired t p over seeds
+\newcommand{\statCellHBBioMistralDimsRose}{0} % healthbench__biomistral-7b: dimensions higher under LoRA than Base, Holm p < 0.05
+\newcommand{\statCellHBBioMistralDimsFell}{0} % healthbench__biomistral-7b: dimensions lower under LoRA than Base, Holm p < 0.05
+\newcommand{\statCellHBBioMistralActiveInquiryLoRAvsBaseDiff}{\ensuremath{-1.6}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__biomistral-7b active_inquiry_pct, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellHBBioMistralActiveInquiryLoRAvsBaseCI}{\ensuremath{[-4.2,\,+1.0]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBBioMistralActiveInquiryLoRAvsBasePHolm}{\ensuremath{0.8}} % Holm p over the seven dimensions
+\newcommand{\statCellHBBioMistralUncertaintyAckLoRAvsBaseDiff}{\ensuremath{-0.03}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__biomistral-7b uncertainty_ack, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellHBBioMistralUncertaintyAckLoRAvsBaseCI}{\ensuremath{[-0.14,\,+0.08]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBBioMistralUncertaintyAckLoRAvsBasePHolm}{\ensuremath{1}} % Holm p over the seven dimensions
+\newcommand{\statCellHBBioMistralContextSeekingLoRAvsBaseDiff}{\ensuremath{+0.01}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__biomistral-7b context_seeking, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellHBBioMistralContextSeekingLoRAvsBaseCI}{\ensuremath{[-0.03,\,+0.06]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBBioMistralContextSeekingLoRAvsBasePHolm}{\ensuremath{1}} % Holm p over the seven dimensions
+\newcommand{\statCellHBBioMistralRedFlagLoRAvsBaseDiff}{\ensuremath{+0.08}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__biomistral-7b red_flag, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellHBBioMistralRedFlagLoRAvsBaseCI}{\ensuremath{[+0.03,\,+0.13]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBBioMistralRedFlagLoRAvsBasePHolm}{\ensuremath{0.096}} % Holm p over the seven dimensions
+\newcommand{\statCellHBBioMistralScopeBoundingLoRAvsBaseDiff}{\ensuremath{-0.05}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__biomistral-7b scope_bounding, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellHBBioMistralScopeBoundingLoRAvsBaseCI}{\ensuremath{[-0.16,\,+0.06]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBBioMistralScopeBoundingLoRAvsBasePHolm}{\ensuremath{1}} % Holm p over the seven dimensions
+\newcommand{\statCellHBBioMistralHedgingQualityLoRAvsBaseDiff}{\ensuremath{-0.11}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__biomistral-7b hedging_quality, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellHBBioMistralHedgingQualityLoRAvsBaseCI}{\ensuremath{[-0.19,\,-0.02]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBBioMistralHedgingQualityLoRAvsBasePHolm}{\ensuremath{0.18}} % Holm p over the seven dimensions
+\newcommand{\statCellHBBioMistralSpecificityLoRAvsBaseDiff}{\ensuremath{-0.03}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__biomistral-7b specificity, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellHBBioMistralSpecificityLoRAvsBaseCI}{\ensuremath{[-0.13,\,+0.07]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBBioMistralSpecificityLoRAvsBasePHolm}{\ensuremath{1}} % Holm p over the seven dimensions
+\newcommand{\statCellHBBioMistralAggregateLoRAvsBaseDiff}{\ensuremath{-0.015}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__biomistral-7b aggregate, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellHBBioMistralAggregateLoRAvsBaseCI}{\ensuremath{[-0.026,\,-0.005]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBBioMistralAggregateLoRAvsBaseP}{\ensuremath{0.016}} % two-sided paired t p over seeds
+\newcommand{\statCellHBBioMistralActiveInquiryLoRACoTvsLoRADiff}{\ensuremath{+0.4}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__biomistral-7b active_inquiry_pct, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellHBBioMistralActiveInquiryLoRACoTvsLoRACI}{\ensuremath{[-1.6,\,+2.4]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBBioMistralActiveInquiryLoRACoTvsLoRAPHolm}{\ensuremath{1}} % Holm p over the seven dimensions
+\newcommand{\statCellHBBioMistralUncertaintyAckLoRACoTvsLoRADiff}{\ensuremath{-0.02}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__biomistral-7b uncertainty_ack, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellHBBioMistralUncertaintyAckLoRACoTvsLoRACI}{\ensuremath{[-0.22,\,+0.18]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBBioMistralUncertaintyAckLoRACoTvsLoRAPHolm}{\ensuremath{1}} % Holm p over the seven dimensions
+\newcommand{\statCellHBBioMistralContextSeekingLoRACoTvsLoRADiff}{\ensuremath{0.00}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__biomistral-7b context_seeking, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellHBBioMistralContextSeekingLoRACoTvsLoRACI}{\ensuremath{[-0.05,\,+0.05]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBBioMistralContextSeekingLoRACoTvsLoRAPHolm}{\ensuremath{1}} % Holm p over the seven dimensions
+\newcommand{\statCellHBBioMistralRedFlagLoRACoTvsLoRADiff}{\ensuremath{+0.09}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__biomistral-7b red_flag, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellHBBioMistralRedFlagLoRACoTvsLoRACI}{\ensuremath{[-0.07,\,+0.24]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBBioMistralRedFlagLoRACoTvsLoRAPHolm}{\ensuremath{1}} % Holm p over the seven dimensions
+\newcommand{\statCellHBBioMistralScopeBoundingLoRACoTvsLoRADiff}{\ensuremath{-0.01}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__biomistral-7b scope_bounding, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellHBBioMistralScopeBoundingLoRACoTvsLoRACI}{\ensuremath{[-0.18,\,+0.16]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBBioMistralScopeBoundingLoRACoTvsLoRAPHolm}{\ensuremath{1}} % Holm p over the seven dimensions
+\newcommand{\statCellHBBioMistralHedgingQualityLoRACoTvsLoRADiff}{\ensuremath{+0.02}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__biomistral-7b hedging_quality, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellHBBioMistralHedgingQualityLoRACoTvsLoRACI}{\ensuremath{[-0.15,\,+0.19]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBBioMistralHedgingQualityLoRACoTvsLoRAPHolm}{\ensuremath{1}} % Holm p over the seven dimensions
+\newcommand{\statCellHBBioMistralSpecificityLoRACoTvsLoRADiff}{\ensuremath{-0.02}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__biomistral-7b specificity, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellHBBioMistralSpecificityLoRACoTvsLoRACI}{\ensuremath{[-0.18,\,+0.14]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBBioMistralSpecificityLoRACoTvsLoRAPHolm}{\ensuremath{1}} % Holm p over the seven dimensions
+\newcommand{\statCellHBBioMistralAggregateLoRACoTvsLoRADiff}{\ensuremath{-0.001}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__biomistral-7b aggregate, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellHBBioMistralAggregateLoRACoTvsLoRACI}{\ensuremath{[-0.010,\,+0.009]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBBioMistralAggregateLoRACoTvsLoRAP}{\ensuremath{0.86}} % two-sided paired t p over seeds
+\newcommand{\statCellHBBioMistralActiveInquiryLoRAvsBaseCoTDiff}{\ensuremath{-4.4}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__biomistral-7b active_inquiry_pct, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellHBBioMistralActiveInquiryLoRAvsBaseCoTCI}{\ensuremath{[-7.4,\,-1.4]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBBioMistralActiveInquiryLoRAvsBaseCoTPHolm}{\ensuremath{0.09}} % Holm p over the seven dimensions
+\newcommand{\statCellHBBioMistralUncertaintyAckLoRAvsBaseCoTDiff}{\ensuremath{0.00}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__biomistral-7b uncertainty_ack, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellHBBioMistralUncertaintyAckLoRAvsBaseCoTCI}{\ensuremath{[-0.09,\,+0.09]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBBioMistralUncertaintyAckLoRAvsBaseCoTPHolm}{\ensuremath{1}} % Holm p over the seven dimensions
+\newcommand{\statCellHBBioMistralContextSeekingLoRAvsBaseCoTDiff}{\ensuremath{-0.11}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__biomistral-7b context_seeking, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellHBBioMistralContextSeekingLoRAvsBaseCoTCI}{\ensuremath{[-0.17,\,-0.06]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBBioMistralContextSeekingLoRAvsBaseCoTPHolm}{\ensuremath{0.036}} % Holm p over the seven dimensions
+\newcommand{\statCellHBBioMistralRedFlagLoRAvsBaseCoTDiff}{\ensuremath{+0.05}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__biomistral-7b red_flag, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellHBBioMistralRedFlagLoRAvsBaseCoTCI}{\ensuremath{[+0.00,\,+0.10]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBBioMistralRedFlagLoRAvsBaseCoTPHolm}{\ensuremath{0.19}} % Holm p over the seven dimensions
+\newcommand{\statCellHBBioMistralScopeBoundingLoRAvsBaseCoTDiff}{\ensuremath{+0.07}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__biomistral-7b scope_bounding, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellHBBioMistralScopeBoundingLoRAvsBaseCoTCI}{\ensuremath{[-0.02,\,+0.17]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBBioMistralScopeBoundingLoRAvsBaseCoTPHolm}{\ensuremath{0.36}} % Holm p over the seven dimensions
+\newcommand{\statCellHBBioMistralHedgingQualityLoRAvsBaseCoTDiff}{\ensuremath{-0.01}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__biomistral-7b hedging_quality, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellHBBioMistralHedgingQualityLoRAvsBaseCoTCI}{\ensuremath{[-0.10,\,+0.07]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBBioMistralHedgingQualityLoRAvsBaseCoTPHolm}{\ensuremath{1}} % Holm p over the seven dimensions
+\newcommand{\statCellHBBioMistralSpecificityLoRAvsBaseCoTDiff}{\ensuremath{+0.07}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__biomistral-7b specificity, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellHBBioMistralSpecificityLoRAvsBaseCoTCI}{\ensuremath{[-0.02,\,+0.16]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBBioMistralSpecificityLoRAvsBaseCoTPHolm}{\ensuremath{0.36}} % Holm p over the seven dimensions
+\newcommand{\statCellHBBioMistralAggregateLoRAvsBaseCoTDiff}{\ensuremath{0.000}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: healthbench__biomistral-7b aggregate, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellHBBioMistralAggregateLoRAvsBaseCoTCI}{\ensuremath{[-0.010,\,+0.010]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellHBBioMistralAggregateLoRAvsBaseCoTP}{\ensuremath{0.98}} % two-sided paired t p over seeds
+\newcommand{\statCellChatDoctorMistralDimsRose}{6} % chatdoctor__mistral-small-24b: dimensions higher under LoRA than Base, Holm p < 0.05
+\newcommand{\statCellChatDoctorMistralDimsFell}{1} % chatdoctor__mistral-small-24b: dimensions lower under LoRA than Base, Holm p < 0.05
+\newcommand{\statCellChatDoctorMistralActiveInquiryLoRAvsBaseDiff}{\ensuremath{+50.8}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: chatdoctor__mistral-small-24b active_inquiry_pct, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellChatDoctorMistralActiveInquiryLoRAvsBaseCI}{\ensuremath{[+47.0,\,+54.7]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellChatDoctorMistralActiveInquiryLoRAvsBasePHolm}{\ensuremath{2.3\times10^{-5}}} % Holm p over the seven dimensions
+\newcommand{\statCellChatDoctorMistralUncertaintyAckLoRAvsBaseDiff}{\ensuremath{-0.12}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: chatdoctor__mistral-small-24b uncertainty_ack, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellChatDoctorMistralUncertaintyAckLoRAvsBaseCI}{\ensuremath{[-0.19,\,-0.05]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellChatDoctorMistralUncertaintyAckLoRAvsBasePHolm}{\ensuremath{0.016}} % Holm p over the seven dimensions
+\newcommand{\statCellChatDoctorMistralContextSeekingLoRAvsBaseDiff}{\ensuremath{+0.65}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: chatdoctor__mistral-small-24b context_seeking, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellChatDoctorMistralContextSeekingLoRAvsBaseCI}{\ensuremath{[+0.60,\,+0.71]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellChatDoctorMistralContextSeekingLoRAvsBasePHolm}{\ensuremath{3.4\times10^{-5}}} % Holm p over the seven dimensions
+\newcommand{\statCellChatDoctorMistralRedFlagLoRAvsBaseDiff}{\ensuremath{+0.44}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: chatdoctor__mistral-small-24b red_flag, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellChatDoctorMistralRedFlagLoRAvsBaseCI}{\ensuremath{[+0.40,\,+0.49]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellChatDoctorMistralRedFlagLoRAvsBasePHolm}{\ensuremath{4.8\times10^{-5}}} % Holm p over the seven dimensions
+\newcommand{\statCellChatDoctorMistralScopeBoundingLoRAvsBaseDiff}{\ensuremath{+0.05}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: chatdoctor__mistral-small-24b scope_bounding, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellChatDoctorMistralScopeBoundingLoRAvsBaseCI}{\ensuremath{[+0.02,\,+0.08]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellChatDoctorMistralScopeBoundingLoRAvsBasePHolm}{\ensuremath{0.016}} % Holm p over the seven dimensions
+\newcommand{\statCellChatDoctorMistralHedgingQualityLoRAvsBaseDiff}{\ensuremath{+0.15}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: chatdoctor__mistral-small-24b hedging_quality, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellChatDoctorMistralHedgingQualityLoRAvsBaseCI}{\ensuremath{[+0.09,\,+0.20]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellChatDoctorMistralHedgingQualityLoRAvsBasePHolm}{\ensuremath{0.0049}} % Holm p over the seven dimensions
+\newcommand{\statCellChatDoctorMistralSpecificityLoRAvsBaseDiff}{\ensuremath{+0.34}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: chatdoctor__mistral-small-24b specificity, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellChatDoctorMistralSpecificityLoRAvsBaseCI}{\ensuremath{[+0.30,\,+0.39]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellChatDoctorMistralSpecificityLoRAvsBasePHolm}{\ensuremath{1.2\times10^{-4}}} % Holm p over the seven dimensions
+\newcommand{\statCellChatDoctorMistralAggregateLoRAvsBaseDiff}{\ensuremath{-0.016}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: chatdoctor__mistral-small-24b aggregate, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellChatDoctorMistralAggregateLoRAvsBaseCI}{\ensuremath{[-0.024,\,-0.008]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellChatDoctorMistralAggregateLoRAvsBaseP}{\ensuremath{0.0059}} % two-sided paired t p over seeds
+\newcommand{\statCellChatDoctorMistralActiveInquiryLoRACoTvsLoRADiff}{\ensuremath{-9.8}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: chatdoctor__mistral-small-24b active_inquiry_pct, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellChatDoctorMistralActiveInquiryLoRACoTvsLoRACI}{\ensuremath{[-14.9,\,-4.8]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellChatDoctorMistralActiveInquiryLoRACoTvsLoRAPHolm}{\ensuremath{0.019}} % Holm p over the seven dimensions
+\newcommand{\statCellChatDoctorMistralUncertaintyAckLoRACoTvsLoRADiff}{\ensuremath{-0.39}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: chatdoctor__mistral-small-24b uncertainty_ack, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellChatDoctorMistralUncertaintyAckLoRACoTvsLoRACI}{\ensuremath{[-0.51,\,-0.27]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellChatDoctorMistralUncertaintyAckLoRACoTvsLoRAPHolm}{\ensuremath{0.006}} % Holm p over the seven dimensions
+\newcommand{\statCellChatDoctorMistralContextSeekingLoRACoTvsLoRADiff}{\ensuremath{-0.32}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: chatdoctor__mistral-small-24b context_seeking, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellChatDoctorMistralContextSeekingLoRACoTvsLoRACI}{\ensuremath{[-0.43,\,-0.21]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellChatDoctorMistralContextSeekingLoRACoTvsLoRAPHolm}{\ensuremath{0.0081}} % Holm p over the seven dimensions
+\newcommand{\statCellChatDoctorMistralRedFlagLoRACoTvsLoRADiff}{\ensuremath{-0.03}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: chatdoctor__mistral-small-24b red_flag, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellChatDoctorMistralRedFlagLoRACoTvsLoRACI}{\ensuremath{[-0.08,\,+0.02]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellChatDoctorMistralRedFlagLoRACoTvsLoRAPHolm}{\ensuremath{0.19}} % Holm p over the seven dimensions
+\newcommand{\statCellChatDoctorMistralScopeBoundingLoRACoTvsLoRADiff}{\ensuremath{-0.27}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: chatdoctor__mistral-small-24b scope_bounding, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellChatDoctorMistralScopeBoundingLoRACoTvsLoRACI}{\ensuremath{[-0.42,\,-0.12]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellChatDoctorMistralScopeBoundingLoRACoTvsLoRAPHolm}{\ensuremath{0.019}} % Holm p over the seven dimensions
+\newcommand{\statCellChatDoctorMistralHedgingQualityLoRACoTvsLoRADiff}{\ensuremath{-0.38}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: chatdoctor__mistral-small-24b hedging_quality, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellChatDoctorMistralHedgingQualityLoRACoTvsLoRACI}{\ensuremath{[-0.53,\,-0.23]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellChatDoctorMistralHedgingQualityLoRACoTvsLoRAPHolm}{\ensuremath{0.011}} % Holm p over the seven dimensions
+\newcommand{\statCellChatDoctorMistralSpecificityLoRACoTvsLoRADiff}{\ensuremath{-0.26}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: chatdoctor__mistral-small-24b specificity, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellChatDoctorMistralSpecificityLoRACoTvsLoRACI}{\ensuremath{[-0.39,\,-0.13]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellChatDoctorMistralSpecificityLoRACoTvsLoRAPHolm}{\ensuremath{0.019}} % Holm p over the seven dimensions
+\newcommand{\statCellChatDoctorMistralAggregateLoRACoTvsLoRADiff}{\ensuremath{-0.094}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: chatdoctor__mistral-small-24b aggregate, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellChatDoctorMistralAggregateLoRACoTvsLoRACI}{\ensuremath{[-0.119,\,-0.068]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellChatDoctorMistralAggregateLoRACoTvsLoRAP}{\ensuremath{5.1\times10^{-4}}} % two-sided paired t p over seeds
+\newcommand{\statCellChatDoctorMistralActiveInquiryLoRAvsBaseCoTDiff}{\ensuremath{+4.1}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: chatdoctor__mistral-small-24b active_inquiry_pct, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellChatDoctorMistralActiveInquiryLoRAvsBaseCoTCI}{\ensuremath{[-2.0,\,+10.3]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellChatDoctorMistralActiveInquiryLoRAvsBaseCoTPHolm}{\ensuremath{0.58}} % Holm p over the seven dimensions
+\newcommand{\statCellChatDoctorMistralUncertaintyAckLoRAvsBaseCoTDiff}{\ensuremath{-0.01}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: chatdoctor__mistral-small-24b uncertainty_ack, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellChatDoctorMistralUncertaintyAckLoRAvsBaseCoTCI}{\ensuremath{[-0.07,\,+0.06]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellChatDoctorMistralUncertaintyAckLoRAvsBaseCoTPHolm}{\ensuremath{1}} % Holm p over the seven dimensions
+\newcommand{\statCellChatDoctorMistralContextSeekingLoRAvsBaseCoTDiff}{\ensuremath{-0.10}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: chatdoctor__mistral-small-24b context_seeking, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellChatDoctorMistralContextSeekingLoRAvsBaseCoTCI}{\ensuremath{[-0.16,\,-0.05]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellChatDoctorMistralContextSeekingLoRAvsBaseCoTPHolm}{\ensuremath{0.047}} % Holm p over the seven dimensions
+\newcommand{\statCellChatDoctorMistralRedFlagLoRAvsBaseCoTDiff}{\ensuremath{-0.04}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: chatdoctor__mistral-small-24b red_flag, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellChatDoctorMistralRedFlagLoRAvsBaseCoTCI}{\ensuremath{[-0.08,\,+0.01]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellChatDoctorMistralRedFlagLoRAvsBaseCoTPHolm}{\ensuremath{0.43}} % Holm p over the seven dimensions
+\newcommand{\statCellChatDoctorMistralScopeBoundingLoRAvsBaseCoTDiff}{\ensuremath{-0.01}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: chatdoctor__mistral-small-24b scope_bounding, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellChatDoctorMistralScopeBoundingLoRAvsBaseCoTCI}{\ensuremath{[-0.04,\,+0.03]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellChatDoctorMistralScopeBoundingLoRAvsBaseCoTPHolm}{\ensuremath{1}} % Holm p over the seven dimensions
+\newcommand{\statCellChatDoctorMistralHedgingQualityLoRAvsBaseCoTDiff}{\ensuremath{-0.04}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: chatdoctor__mistral-small-24b hedging_quality, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellChatDoctorMistralHedgingQualityLoRAvsBaseCoTCI}{\ensuremath{[-0.09,\,+0.02]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellChatDoctorMistralHedgingQualityLoRAvsBaseCoTPHolm}{\ensuremath{0.58}} % Holm p over the seven dimensions
+\newcommand{\statCellChatDoctorMistralSpecificityLoRAvsBaseCoTDiff}{\ensuremath{-0.04}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: chatdoctor__mistral-small-24b specificity, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellChatDoctorMistralSpecificityLoRAvsBaseCoTCI}{\ensuremath{[-0.11,\,+0.02]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellChatDoctorMistralSpecificityLoRAvsBaseCoTPHolm}{\ensuremath{0.58}} % Holm p over the seven dimensions
+\newcommand{\statCellChatDoctorMistralAggregateLoRAvsBaseCoTDiff}{\ensuremath{-0.009}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: chatdoctor__mistral-small-24b aggregate, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellChatDoctorMistralAggregateLoRAvsBaseCoTCI}{\ensuremath{[-0.016,\,-0.002]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellChatDoctorMistralAggregateLoRAvsBaseCoTP}{\ensuremath{0.02}} % two-sided paired t p over seeds
+\newcommand{\statCellChatDoctorMedFortyTwoDimsRose}{5} % chatdoctor__med42-8b: dimensions higher under LoRA than Base, Holm p < 0.05
+\newcommand{\statCellChatDoctorMedFortyTwoDimsFell}{1} % chatdoctor__med42-8b: dimensions lower under LoRA than Base, Holm p < 0.05
+\newcommand{\statCellChatDoctorMedFortyTwoActiveInquiryLoRAvsBaseDiff}{\ensuremath{+83.5}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: chatdoctor__med42-8b active_inquiry_pct, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellChatDoctorMedFortyTwoActiveInquiryLoRAvsBaseCI}{\ensuremath{[+80.4,\,+86.6]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellChatDoctorMedFortyTwoActiveInquiryLoRAvsBasePHolm}{\ensuremath{1.3\times10^{-6}}} % Holm p over the seven dimensions
+\newcommand{\statCellChatDoctorMedFortyTwoUncertaintyAckLoRAvsBaseDiff}{\ensuremath{+0.20}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: chatdoctor__med42-8b uncertainty_ack, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellChatDoctorMedFortyTwoUncertaintyAckLoRAvsBaseCI}{\ensuremath{[+0.17,\,+0.22]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellChatDoctorMedFortyTwoUncertaintyAckLoRAvsBasePHolm}{\ensuremath{1.0\times10^{-4}}} % Holm p over the seven dimensions
+\newcommand{\statCellChatDoctorMedFortyTwoContextSeekingLoRAvsBaseDiff}{\ensuremath{+1.10}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: chatdoctor__med42-8b context_seeking, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellChatDoctorMedFortyTwoContextSeekingLoRAvsBaseCI}{\ensuremath{[+1.05,\,+1.16]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellChatDoctorMedFortyTwoContextSeekingLoRAvsBasePHolm}{\ensuremath{3.4\times10^{-6}}} % Holm p over the seven dimensions
+\newcommand{\statCellChatDoctorMedFortyTwoRedFlagLoRAvsBaseDiff}{\ensuremath{+0.04}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: chatdoctor__med42-8b red_flag, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellChatDoctorMedFortyTwoRedFlagLoRAvsBaseCI}{\ensuremath{[-0.00,\,+0.08]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellChatDoctorMedFortyTwoRedFlagLoRAvsBasePHolm}{\ensuremath{0.052}} % Holm p over the seven dimensions
+\newcommand{\statCellChatDoctorMedFortyTwoScopeBoundingLoRAvsBaseDiff}{\ensuremath{+0.32}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: chatdoctor__med42-8b scope_bounding, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellChatDoctorMedFortyTwoScopeBoundingLoRAvsBaseCI}{\ensuremath{[+0.29,\,+0.34]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellChatDoctorMedFortyTwoScopeBoundingLoRAvsBasePHolm}{\ensuremath{3.2\times10^{-5}}} % Holm p over the seven dimensions
+\newcommand{\statCellChatDoctorMedFortyTwoHedgingQualityLoRAvsBaseDiff}{\ensuremath{+0.08}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: chatdoctor__med42-8b hedging_quality, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellChatDoctorMedFortyTwoHedgingQualityLoRAvsBaseCI}{\ensuremath{[+0.05,\,+0.10]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellChatDoctorMedFortyTwoHedgingQualityLoRAvsBasePHolm}{\ensuremath{0.0021}} % Holm p over the seven dimensions
+\newcommand{\statCellChatDoctorMedFortyTwoSpecificityLoRAvsBaseDiff}{\ensuremath{-0.11}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: chatdoctor__med42-8b specificity, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellChatDoctorMedFortyTwoSpecificityLoRAvsBaseCI}{\ensuremath{[-0.15,\,-0.07]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellChatDoctorMedFortyTwoSpecificityLoRAvsBasePHolm}{\ensuremath{0.0032}} % Holm p over the seven dimensions
+\newcommand{\statCellChatDoctorMedFortyTwoAggregateLoRAvsBaseDiff}{\ensuremath{-0.041}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: chatdoctor__med42-8b aggregate, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellChatDoctorMedFortyTwoAggregateLoRAvsBaseCI}{\ensuremath{[-0.052,\,-0.030]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellChatDoctorMedFortyTwoAggregateLoRAvsBaseP}{\ensuremath{4.6\times10^{-4}}} % two-sided paired t p over seeds
+\newcommand{\statCellChatDoctorMedFortyTwoActiveInquiryLoRACoTvsLoRADiff}{\ensuremath{-8.8}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: chatdoctor__med42-8b active_inquiry_pct, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellChatDoctorMedFortyTwoActiveInquiryLoRACoTvsLoRACI}{\ensuremath{[-17.7,\,+0.1]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellChatDoctorMedFortyTwoActiveInquiryLoRACoTvsLoRAPHolm}{\ensuremath{0.21}} % Holm p over the seven dimensions
+\newcommand{\statCellChatDoctorMedFortyTwoUncertaintyAckLoRACoTvsLoRADiff}{\ensuremath{0.00}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: chatdoctor__med42-8b uncertainty_ack, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellChatDoctorMedFortyTwoUncertaintyAckLoRACoTvsLoRACI}{\ensuremath{[-0.02,\,+0.01]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellChatDoctorMedFortyTwoUncertaintyAckLoRACoTvsLoRAPHolm}{\ensuremath{1}} % Holm p over the seven dimensions
+\newcommand{\statCellChatDoctorMedFortyTwoContextSeekingLoRACoTvsLoRADiff}{\ensuremath{+0.02}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: chatdoctor__med42-8b context_seeking, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellChatDoctorMedFortyTwoContextSeekingLoRACoTvsLoRACI}{\ensuremath{[-0.08,\,+0.11]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellChatDoctorMedFortyTwoContextSeekingLoRACoTvsLoRAPHolm}{\ensuremath{1}} % Holm p over the seven dimensions
+\newcommand{\statCellChatDoctorMedFortyTwoRedFlagLoRACoTvsLoRADiff}{\ensuremath{+0.16}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: chatdoctor__med42-8b red_flag, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellChatDoctorMedFortyTwoRedFlagLoRACoTvsLoRACI}{\ensuremath{[+0.13,\,+0.19]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellChatDoctorMedFortyTwoRedFlagLoRACoTvsLoRAPHolm}{\ensuremath{4.8\times10^{-4}}} % Holm p over the seven dimensions
+\newcommand{\statCellChatDoctorMedFortyTwoScopeBoundingLoRACoTvsLoRADiff}{\ensuremath{0.00}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: chatdoctor__med42-8b scope_bounding, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellChatDoctorMedFortyTwoScopeBoundingLoRACoTvsLoRACI}{\ensuremath{[-0.05,\,+0.05]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellChatDoctorMedFortyTwoScopeBoundingLoRACoTvsLoRAPHolm}{\ensuremath{1}} % Holm p over the seven dimensions
+\newcommand{\statCellChatDoctorMedFortyTwoHedgingQualityLoRACoTvsLoRADiff}{\ensuremath{+0.08}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: chatdoctor__med42-8b hedging_quality, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellChatDoctorMedFortyTwoHedgingQualityLoRACoTvsLoRACI}{\ensuremath{[+0.04,\,+0.11]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellChatDoctorMedFortyTwoHedgingQualityLoRACoTvsLoRAPHolm}{\ensuremath{0.027}} % Holm p over the seven dimensions
+\newcommand{\statCellChatDoctorMedFortyTwoSpecificityLoRACoTvsLoRADiff}{\ensuremath{+0.10}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: chatdoctor__med42-8b specificity, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellChatDoctorMedFortyTwoSpecificityLoRACoTvsLoRACI}{\ensuremath{[+0.07,\,+0.13]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellChatDoctorMedFortyTwoSpecificityLoRACoTvsLoRAPHolm}{\ensuremath{0.0055}} % Holm p over the seven dimensions
+\newcommand{\statCellChatDoctorMedFortyTwoAggregateLoRACoTvsLoRADiff}{\ensuremath{+0.003}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: chatdoctor__med42-8b aggregate, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellChatDoctorMedFortyTwoAggregateLoRACoTvsLoRACI}{\ensuremath{[-0.009,\,+0.016]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellChatDoctorMedFortyTwoAggregateLoRACoTvsLoRAP}{\ensuremath{0.48}} % two-sided paired t p over seeds
+\newcommand{\statCellChatDoctorMedFortyTwoActiveInquiryLoRAvsBaseCoTDiff}{\ensuremath{+3.0}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: chatdoctor__med42-8b active_inquiry_pct, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellChatDoctorMedFortyTwoActiveInquiryLoRAvsBaseCoTCI}{\ensuremath{[-1.7,\,+7.7]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellChatDoctorMedFortyTwoActiveInquiryLoRAvsBaseCoTPHolm}{\ensuremath{0.3}} % Holm p over the seven dimensions
+\newcommand{\statCellChatDoctorMedFortyTwoUncertaintyAckLoRAvsBaseCoTDiff}{\ensuremath{+0.01}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: chatdoctor__med42-8b uncertainty_ack, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellChatDoctorMedFortyTwoUncertaintyAckLoRAvsBaseCoTCI}{\ensuremath{[+0.01,\,+0.02]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellChatDoctorMedFortyTwoUncertaintyAckLoRAvsBaseCoTPHolm}{\ensuremath{0.027}} % Holm p over the seven dimensions
+\newcommand{\statCellChatDoctorMedFortyTwoContextSeekingLoRAvsBaseCoTDiff}{\ensuremath{-0.01}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: chatdoctor__med42-8b context_seeking, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellChatDoctorMedFortyTwoContextSeekingLoRAvsBaseCoTCI}{\ensuremath{[-0.06,\,+0.05]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellChatDoctorMedFortyTwoContextSeekingLoRAvsBaseCoTPHolm}{\ensuremath{0.78}} % Holm p over the seven dimensions
+\newcommand{\statCellChatDoctorMedFortyTwoRedFlagLoRAvsBaseCoTDiff}{\ensuremath{-0.19}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: chatdoctor__med42-8b red_flag, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellChatDoctorMedFortyTwoRedFlagLoRAvsBaseCoTCI}{\ensuremath{[-0.20,\,-0.17]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellChatDoctorMedFortyTwoRedFlagLoRAvsBaseCoTPHolm}{\ensuremath{3.3\times10^{-5}}} % Holm p over the seven dimensions
+\newcommand{\statCellChatDoctorMedFortyTwoScopeBoundingLoRAvsBaseCoTDiff}{\ensuremath{-0.08}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: chatdoctor__med42-8b scope_bounding, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellChatDoctorMedFortyTwoScopeBoundingLoRAvsBaseCoTCI}{\ensuremath{[-0.11,\,-0.04]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellChatDoctorMedFortyTwoScopeBoundingLoRAvsBaseCoTPHolm}{\ensuremath{0.011}} % Holm p over the seven dimensions
+\newcommand{\statCellChatDoctorMedFortyTwoHedgingQualityLoRAvsBaseCoTDiff}{\ensuremath{-0.15}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: chatdoctor__med42-8b hedging_quality, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellChatDoctorMedFortyTwoHedgingQualityLoRAvsBaseCoTCI}{\ensuremath{[-0.18,\,-0.11]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellChatDoctorMedFortyTwoHedgingQualityLoRAvsBaseCoTPHolm}{\ensuremath{0.0014}} % Holm p over the seven dimensions
+\newcommand{\statCellChatDoctorMedFortyTwoSpecificityLoRAvsBaseCoTDiff}{\ensuremath{-0.20}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: chatdoctor__med42-8b specificity, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellChatDoctorMedFortyTwoSpecificityLoRAvsBaseCoTCI}{\ensuremath{[-0.25,\,-0.14]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellChatDoctorMedFortyTwoSpecificityLoRAvsBaseCoTPHolm}{\ensuremath{0.0029}} % Holm p over the seven dimensions
+\newcommand{\statCellChatDoctorMedFortyTwoAggregateLoRAvsBaseCoTDiff}{\ensuremath{-0.039}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: chatdoctor__med42-8b aggregate, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellChatDoctorMedFortyTwoAggregateLoRAvsBaseCoTCI}{\ensuremath{[-0.048,\,-0.031]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellChatDoctorMedFortyTwoAggregateLoRAvsBaseCoTP}{\ensuremath{2.2\times10^{-4}}} % two-sided paired t p over seeds
+\newcommand{\statCellMedQuADMistralDimsRose}{6} % medquad__mistral-small-24b: dimensions higher under LoRA than Base, Holm p < 0.05
+\newcommand{\statCellMedQuADMistralDimsFell}{1} % medquad__mistral-small-24b: dimensions lower under LoRA than Base, Holm p < 0.05
+\newcommand{\statCellMedQuADMistralActiveInquiryLoRAvsBaseDiff}{\ensuremath{+20.0}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: medquad__mistral-small-24b active_inquiry_pct, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellMedQuADMistralActiveInquiryLoRAvsBaseCI}{\ensuremath{[+16.2,\,+23.7]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellMedQuADMistralActiveInquiryLoRAvsBasePHolm}{\ensuremath{3.6\times10^{-4}}} % Holm p over the seven dimensions
+\newcommand{\statCellMedQuADMistralUncertaintyAckLoRAvsBaseDiff}{\ensuremath{+0.11}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: medquad__mistral-small-24b uncertainty_ack, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellMedQuADMistralUncertaintyAckLoRAvsBaseCI}{\ensuremath{[+0.10,\,+0.13]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellMedQuADMistralUncertaintyAckLoRAvsBasePHolm}{\ensuremath{4.3\times10^{-5}}} % Holm p over the seven dimensions
+\newcommand{\statCellMedQuADMistralContextSeekingLoRAvsBaseDiff}{\ensuremath{+0.91}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: medquad__mistral-small-24b context_seeking, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellMedQuADMistralContextSeekingLoRAvsBaseCI}{\ensuremath{[+0.86,\,+0.96]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellMedQuADMistralContextSeekingLoRAvsBasePHolm}{\ensuremath{7.1\times10^{-6}}} % Holm p over the seven dimensions
+\newcommand{\statCellMedQuADMistralRedFlagLoRAvsBaseDiff}{\ensuremath{+0.11}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: medquad__mistral-small-24b red_flag, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellMedQuADMistralRedFlagLoRAvsBaseCI}{\ensuremath{[+0.06,\,+0.16]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellMedQuADMistralRedFlagLoRAvsBasePHolm}{\ensuremath{0.0064}} % Holm p over the seven dimensions
+\newcommand{\statCellMedQuADMistralScopeBoundingLoRAvsBaseDiff}{\ensuremath{+0.04}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: medquad__mistral-small-24b scope_bounding, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellMedQuADMistralScopeBoundingLoRAvsBaseCI}{\ensuremath{[+0.00,\,+0.08]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellMedQuADMistralScopeBoundingLoRAvsBasePHolm}{\ensuremath{0.034}} % Holm p over the seven dimensions
+\newcommand{\statCellMedQuADMistralHedgingQualityLoRAvsBaseDiff}{\ensuremath{+0.33}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: medquad__mistral-small-24b hedging_quality, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellMedQuADMistralHedgingQualityLoRAvsBaseCI}{\ensuremath{[+0.29,\,+0.36]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellMedQuADMistralHedgingQualityLoRAvsBasePHolm}{\ensuremath{7.9\times10^{-5}}} % Holm p over the seven dimensions
+\newcommand{\statCellMedQuADMistralSpecificityLoRAvsBaseDiff}{\ensuremath{-0.39}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: medquad__mistral-small-24b specificity, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellMedQuADMistralSpecificityLoRAvsBaseCI}{\ensuremath{[-0.41,\,-0.36]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellMedQuADMistralSpecificityLoRAvsBasePHolm}{\ensuremath{1.0\times10^{-5}}} % Holm p over the seven dimensions
+\newcommand{\statCellMedQuADMistralAggregateLoRAvsBaseDiff}{\ensuremath{-0.086}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: medquad__mistral-small-24b aggregate, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellMedQuADMistralAggregateLoRAvsBaseCI}{\ensuremath{[-0.112,\,-0.059]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellMedQuADMistralAggregateLoRAvsBaseP}{\ensuremath{8.4\times10^{-4}}} % two-sided paired t p over seeds
+\newcommand{\statCellMedQuADMistralActiveInquiryLoRACoTvsLoRADiff}{\ensuremath{+15.7}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: medquad__mistral-small-24b active_inquiry_pct, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellMedQuADMistralActiveInquiryLoRACoTvsLoRACI}{\ensuremath{[+10.3,\,+21.1]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellMedQuADMistralActiveInquiryLoRACoTvsLoRAPHolm}{\ensuremath{0.0063}} % Holm p over the seven dimensions
+\newcommand{\statCellMedQuADMistralUncertaintyAckLoRACoTvsLoRADiff}{\ensuremath{+0.01}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: medquad__mistral-small-24b uncertainty_ack, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellMedQuADMistralUncertaintyAckLoRACoTvsLoRACI}{\ensuremath{[+0.01,\,+0.02]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellMedQuADMistralUncertaintyAckLoRACoTvsLoRAPHolm}{\ensuremath{0.0067}} % Holm p over the seven dimensions
+\newcommand{\statCellMedQuADMistralContextSeekingLoRACoTvsLoRADiff}{\ensuremath{+0.45}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: medquad__mistral-small-24b context_seeking, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellMedQuADMistralContextSeekingLoRACoTvsLoRACI}{\ensuremath{[+0.28,\,+0.62]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellMedQuADMistralContextSeekingLoRACoTvsLoRAPHolm}{\ensuremath{0.0067}} % Holm p over the seven dimensions
+\newcommand{\statCellMedQuADMistralRedFlagLoRACoTvsLoRADiff}{\ensuremath{+0.64}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: medquad__mistral-small-24b red_flag, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellMedQuADMistralRedFlagLoRACoTvsLoRACI}{\ensuremath{[+0.61,\,+0.68]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellMedQuADMistralRedFlagLoRACoTvsLoRAPHolm}{\ensuremath{6.4\times10^{-6}}} % Holm p over the seven dimensions
+\newcommand{\statCellMedQuADMistralScopeBoundingLoRACoTvsLoRADiff}{\ensuremath{+0.06}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: medquad__mistral-small-24b scope_bounding, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellMedQuADMistralScopeBoundingLoRACoTvsLoRACI}{\ensuremath{[+0.04,\,+0.09]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellMedQuADMistralScopeBoundingLoRACoTvsLoRAPHolm}{\ensuremath{0.0067}} % Holm p over the seven dimensions
+\newcommand{\statCellMedQuADMistralHedgingQualityLoRACoTvsLoRADiff}{\ensuremath{+0.14}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: medquad__mistral-small-24b hedging_quality, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellMedQuADMistralHedgingQualityLoRACoTvsLoRACI}{\ensuremath{[+0.09,\,+0.19]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellMedQuADMistralHedgingQualityLoRACoTvsLoRAPHolm}{\ensuremath{0.0067}} % Holm p over the seven dimensions
+\newcommand{\statCellMedQuADMistralSpecificityLoRACoTvsLoRADiff}{\ensuremath{+0.39}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: medquad__mistral-small-24b specificity, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellMedQuADMistralSpecificityLoRACoTvsLoRACI}{\ensuremath{[+0.31,\,+0.48]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellMedQuADMistralSpecificityLoRACoTvsLoRAPHolm}{\ensuremath{0.0012}} % Holm p over the seven dimensions
+\newcommand{\statCellMedQuADMistralAggregateLoRACoTvsLoRADiff}{\ensuremath{-0.081}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: medquad__mistral-small-24b aggregate, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellMedQuADMistralAggregateLoRACoTvsLoRACI}{\ensuremath{[-0.125,\,-0.036]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellMedQuADMistralAggregateLoRACoTvsLoRAP}{\ensuremath{0.0072}} % two-sided paired t p over seeds
+\newcommand{\statCellMedQuADMistralActiveInquiryLoRAvsBaseCoTDiff}{\ensuremath{+3.4}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: medquad__mistral-small-24b active_inquiry_pct, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellMedQuADMistralActiveInquiryLoRAvsBaseCoTCI}{\ensuremath{[+0.4,\,+6.5]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellMedQuADMistralActiveInquiryLoRAvsBaseCoTPHolm}{\ensuremath{0.036}} % Holm p over the seven dimensions
+\newcommand{\statCellMedQuADMistralUncertaintyAckLoRAvsBaseCoTDiff}{\ensuremath{+0.20}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: medquad__mistral-small-24b uncertainty_ack, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellMedQuADMistralUncertaintyAckLoRAvsBaseCoTCI}{\ensuremath{[+0.18,\,+0.23]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellMedQuADMistralUncertaintyAckLoRAvsBaseCoTPHolm}{\ensuremath{1.4\times10^{-4}}} % Holm p over the seven dimensions
+\newcommand{\statCellMedQuADMistralContextSeekingLoRAvsBaseCoTDiff}{\ensuremath{+0.36}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: medquad__mistral-small-24b context_seeking, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellMedQuADMistralContextSeekingLoRAvsBaseCoTCI}{\ensuremath{[+0.28,\,+0.44]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellMedQuADMistralContextSeekingLoRAvsBaseCoTPHolm}{\ensuremath{8.6\times10^{-4}}} % Holm p over the seven dimensions
+\newcommand{\statCellMedQuADMistralRedFlagLoRAvsBaseCoTDiff}{\ensuremath{-0.05}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: medquad__mistral-small-24b red_flag, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellMedQuADMistralRedFlagLoRAvsBaseCoTCI}{\ensuremath{[-0.09,\,-0.02]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellMedQuADMistralRedFlagLoRAvsBaseCoTPHolm}{\ensuremath{0.032}} % Holm p over the seven dimensions
+\newcommand{\statCellMedQuADMistralScopeBoundingLoRAvsBaseCoTDiff}{\ensuremath{+0.28}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: medquad__mistral-small-24b scope_bounding, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellMedQuADMistralScopeBoundingLoRAvsBaseCoTCI}{\ensuremath{[+0.24,\,+0.32]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellMedQuADMistralScopeBoundingLoRAvsBaseCoTPHolm}{\ensuremath{1.6\times10^{-4}}} % Holm p over the seven dimensions
+\newcommand{\statCellMedQuADMistralHedgingQualityLoRAvsBaseCoTDiff}{\ensuremath{+0.38}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: medquad__mistral-small-24b hedging_quality, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellMedQuADMistralHedgingQualityLoRAvsBaseCoTCI}{\ensuremath{[+0.34,\,+0.42]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellMedQuADMistralHedgingQualityLoRAvsBaseCoTPHolm}{\ensuremath{7.6\times10^{-5}}} % Holm p over the seven dimensions
+\newcommand{\statCellMedQuADMistralSpecificityLoRAvsBaseCoTDiff}{\ensuremath{-0.15}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: medquad__mistral-small-24b specificity, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellMedQuADMistralSpecificityLoRAvsBaseCoTCI}{\ensuremath{[-0.19,\,-0.10]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellMedQuADMistralSpecificityLoRAvsBaseCoTPHolm}{\ensuremath{0.0026}} % Holm p over the seven dimensions
+\newcommand{\statCellMedQuADMistralAggregateLoRAvsBaseCoTDiff}{\ensuremath{+0.044}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: medquad__mistral-small-24b aggregate, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellMedQuADMistralAggregateLoRAvsBaseCoTCI}{\ensuremath{[+0.014,\,+0.074]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellMedQuADMistralAggregateLoRAvsBaseCoTP}{\ensuremath{0.015}} % two-sided paired t p over seeds
+\newcommand{\statCellMedQAMistralDimsRose}{3} % medqa__mistral-small-24b: dimensions higher under LoRA than Base, Holm p < 0.05
+\newcommand{\statCellMedQAMistralDimsFell}{1} % medqa__mistral-small-24b: dimensions lower under LoRA than Base, Holm p < 0.05
+\newcommand{\statCellMedQAMistralActiveInquiryLoRAvsBaseDiff}{\ensuremath{-38.3}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: medqa__mistral-small-24b active_inquiry_pct, LoRAvsBase, mean of 4 per-seed differences
+\newcommand{\statCellMedQAMistralActiveInquiryLoRAvsBaseCI}{\ensuremath{[-47.1,\,-29.5]}} % 95% t(3) interval of the per-seed differences
+\newcommand{\statCellMedQAMistralActiveInquiryLoRAvsBasePHolm}{\ensuremath{0.0033}} % Holm p over the seven dimensions
+\newcommand{\statCellMedQAMistralUncertaintyAckLoRAvsBaseDiff}{\ensuremath{0.00}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: medqa__mistral-small-24b uncertainty_ack, LoRAvsBase, mean of 4 per-seed differences
+\newcommand{\statCellMedQAMistralUncertaintyAckLoRAvsBaseCI}{\ensuremath{[+0.00,\,+0.00]}} % 95% t(3) interval of the per-seed differences
+\newcommand{\statCellMedQAMistralContextSeekingLoRAvsBaseDiff}{\ensuremath{0.00}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: medqa__mistral-small-24b context_seeking, LoRAvsBase, mean of 4 per-seed differences
+\newcommand{\statCellMedQAMistralContextSeekingLoRAvsBaseCI}{\ensuremath{[+0.00,\,+0.00]}} % 95% t(3) interval of the per-seed differences
+\newcommand{\statCellMedQAMistralRedFlagLoRAvsBaseDiff}{\ensuremath{+0.60}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: medqa__mistral-small-24b red_flag, LoRAvsBase, mean of 4 per-seed differences
+\newcommand{\statCellMedQAMistralRedFlagLoRAvsBaseCI}{\ensuremath{[+0.57,\,+0.63]}} % 95% t(3) interval of the per-seed differences
+\newcommand{\statCellMedQAMistralRedFlagLoRAvsBasePHolm}{\ensuremath{4.2\times10^{-5}}} % Holm p over the seven dimensions
+\newcommand{\statCellMedQAMistralScopeBoundingLoRAvsBaseDiff}{\ensuremath{+0.01}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: medqa__mistral-small-24b scope_bounding, LoRAvsBase, mean of 4 per-seed differences
+\newcommand{\statCellMedQAMistralScopeBoundingLoRAvsBaseCI}{\ensuremath{[-0.00,\,+0.03]}} % 95% t(3) interval of the per-seed differences
+\newcommand{\statCellMedQAMistralScopeBoundingLoRAvsBasePHolm}{\ensuremath{0.08}} % Holm p over the seven dimensions
+\newcommand{\statCellMedQAMistralHedgingQualityLoRAvsBaseDiff}{\ensuremath{+0.02}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: medqa__mistral-small-24b hedging_quality, LoRAvsBase, mean of 4 per-seed differences
+\newcommand{\statCellMedQAMistralHedgingQualityLoRAvsBaseCI}{\ensuremath{[+0.01,\,+0.04]}} % 95% t(3) interval of the per-seed differences
+\newcommand{\statCellMedQAMistralHedgingQualityLoRAvsBasePHolm}{\ensuremath{0.028}} % Holm p over the seven dimensions
+\newcommand{\statCellMedQAMistralSpecificityLoRAvsBaseDiff}{\ensuremath{+0.12}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: medqa__mistral-small-24b specificity, LoRAvsBase, mean of 4 per-seed differences
+\newcommand{\statCellMedQAMistralSpecificityLoRAvsBaseCI}{\ensuremath{[+0.09,\,+0.16]}} % 95% t(3) interval of the per-seed differences
+\newcommand{\statCellMedQAMistralSpecificityLoRAvsBasePHolm}{\ensuremath{0.0046}} % Holm p over the seven dimensions
+\newcommand{\statCellMedQAMistralAggregateLoRAvsBaseDiff}{\ensuremath{+0.018}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: medqa__mistral-small-24b aggregate, LoRAvsBase, mean of 5 per-seed differences
+\newcommand{\statCellMedQAMistralAggregateLoRAvsBaseCI}{\ensuremath{[+0.003,\,+0.033]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellMedQAMistralAggregateLoRAvsBaseP}{\ensuremath{0.028}} % two-sided paired t p over seeds
+\newcommand{\statCellMedQAMistralActiveInquiryLoRACoTvsLoRADiff}{\ensuremath{+17.5}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: medqa__mistral-small-24b active_inquiry_pct, LoRACoTvsLoRA, mean of 4 per-seed differences
+\newcommand{\statCellMedQAMistralActiveInquiryLoRACoTvsLoRACI}{\ensuremath{[+0.6,\,+34.4]}} % 95% t(3) interval of the per-seed differences
+\newcommand{\statCellMedQAMistralActiveInquiryLoRACoTvsLoRAPHolm}{\ensuremath{0.27}} % Holm p over the seven dimensions
+\newcommand{\statCellMedQAMistralUncertaintyAckLoRACoTvsLoRADiff}{\ensuremath{0.00}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: medqa__mistral-small-24b uncertainty_ack, LoRACoTvsLoRA, mean of 4 per-seed differences
+\newcommand{\statCellMedQAMistralUncertaintyAckLoRACoTvsLoRACI}{\ensuremath{[+0.00,\,+0.00]}} % 95% t(3) interval of the per-seed differences
+\newcommand{\statCellMedQAMistralContextSeekingLoRACoTvsLoRADiff}{\ensuremath{-0.01}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: medqa__mistral-small-24b context_seeking, LoRACoTvsLoRA, mean of 4 per-seed differences
+\newcommand{\statCellMedQAMistralContextSeekingLoRACoTvsLoRACI}{\ensuremath{[-0.01,\,+0.00]}} % 95% t(3) interval of the per-seed differences
+\newcommand{\statCellMedQAMistralContextSeekingLoRACoTvsLoRAPHolm}{\ensuremath{0.73}} % Holm p over the seven dimensions
+\newcommand{\statCellMedQAMistralRedFlagLoRACoTvsLoRADiff}{\ensuremath{-0.05}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: medqa__mistral-small-24b red_flag, LoRACoTvsLoRA, mean of 4 per-seed differences
+\newcommand{\statCellMedQAMistralRedFlagLoRACoTvsLoRACI}{\ensuremath{[-0.12,\,+0.02]}} % 95% t(3) interval of the per-seed differences
+\newcommand{\statCellMedQAMistralRedFlagLoRACoTvsLoRAPHolm}{\ensuremath{0.5}} % Holm p over the seven dimensions
+\newcommand{\statCellMedQAMistralScopeBoundingLoRACoTvsLoRADiff}{\ensuremath{0.00}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: medqa__mistral-small-24b scope_bounding, LoRACoTvsLoRA, mean of 4 per-seed differences
+\newcommand{\statCellMedQAMistralScopeBoundingLoRACoTvsLoRACI}{\ensuremath{[-0.01,\,+0.00]}} % 95% t(3) interval of the per-seed differences
+\newcommand{\statCellMedQAMistralScopeBoundingLoRACoTvsLoRAPHolm}{\ensuremath{1}} % Holm p over the seven dimensions
+\newcommand{\statCellMedQAMistralHedgingQualityLoRACoTvsLoRADiff}{\ensuremath{0.00}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: medqa__mistral-small-24b hedging_quality, LoRACoTvsLoRA, mean of 4 per-seed differences
+\newcommand{\statCellMedQAMistralHedgingQualityLoRACoTvsLoRACI}{\ensuremath{[-0.01,\,+0.01]}} % 95% t(3) interval of the per-seed differences
+\newcommand{\statCellMedQAMistralHedgingQualityLoRACoTvsLoRAPHolm}{\ensuremath{1}} % Holm p over the seven dimensions
+\newcommand{\statCellMedQAMistralSpecificityLoRACoTvsLoRADiff}{\ensuremath{0.00}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: medqa__mistral-small-24b specificity, LoRACoTvsLoRA, mean of 4 per-seed differences
+\newcommand{\statCellMedQAMistralSpecificityLoRACoTvsLoRACI}{\ensuremath{[-0.03,\,+0.02]}} % 95% t(3) interval of the per-seed differences
+\newcommand{\statCellMedQAMistralSpecificityLoRACoTvsLoRAPHolm}{\ensuremath{1}} % Holm p over the seven dimensions
+\newcommand{\statCellMedQAMistralAggregateLoRACoTvsLoRADiff}{\ensuremath{+0.005}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: medqa__mistral-small-24b aggregate, LoRACoTvsLoRA, mean of 5 per-seed differences
+\newcommand{\statCellMedQAMistralAggregateLoRACoTvsLoRACI}{\ensuremath{[-0.025,\,+0.035]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellMedQAMistralAggregateLoRACoTvsLoRAP}{\ensuremath{0.66}} % two-sided paired t p over seeds
+\newcommand{\statCellMedQAMistralActiveInquiryLoRAvsBaseCoTDiff}{\ensuremath{+0.7}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: medqa__mistral-small-24b active_inquiry_pct, LoRAvsBaseCoT, mean of 4 per-seed differences
+\newcommand{\statCellMedQAMistralActiveInquiryLoRAvsBaseCoTCI}{\ensuremath{[-6.0,\,+7.4]}} % 95% t(3) interval of the per-seed differences
+\newcommand{\statCellMedQAMistralActiveInquiryLoRAvsBaseCoTPHolm}{\ensuremath{0.99}} % Holm p over the seven dimensions
+\newcommand{\statCellMedQAMistralUncertaintyAckLoRAvsBaseCoTDiff}{\ensuremath{0.00}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: medqa__mistral-small-24b uncertainty_ack, LoRAvsBaseCoT, mean of 4 per-seed differences
+\newcommand{\statCellMedQAMistralUncertaintyAckLoRAvsBaseCoTCI}{\ensuremath{[+0.00,\,+0.00]}} % 95% t(3) interval of the per-seed differences
+\newcommand{\statCellMedQAMistralContextSeekingLoRAvsBaseCoTDiff}{\ensuremath{0.00}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: medqa__mistral-small-24b context_seeking, LoRAvsBaseCoT, mean of 4 per-seed differences
+\newcommand{\statCellMedQAMistralContextSeekingLoRAvsBaseCoTCI}{\ensuremath{[-0.00,\,+0.01]}} % 95% t(3) interval of the per-seed differences
+\newcommand{\statCellMedQAMistralContextSeekingLoRAvsBaseCoTPHolm}{\ensuremath{0.55}} % Holm p over the seven dimensions
+\newcommand{\statCellMedQAMistralRedFlagLoRAvsBaseCoTDiff}{\ensuremath{+0.03}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: medqa__mistral-small-24b red_flag, LoRAvsBaseCoT, mean of 4 per-seed differences
+\newcommand{\statCellMedQAMistralRedFlagLoRAvsBaseCoTCI}{\ensuremath{[+0.01,\,+0.04]}} % 95% t(3) interval of the per-seed differences
+\newcommand{\statCellMedQAMistralRedFlagLoRAvsBaseCoTPHolm}{\ensuremath{0.048}} % Holm p over the seven dimensions
+\newcommand{\statCellMedQAMistralScopeBoundingLoRAvsBaseCoTDiff}{\ensuremath{0.00}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: medqa__mistral-small-24b scope_bounding, LoRAvsBaseCoT, mean of 4 per-seed differences
+\newcommand{\statCellMedQAMistralScopeBoundingLoRAvsBaseCoTCI}{\ensuremath{[+0.00,\,+0.00]}} % 95% t(3) interval of the per-seed differences
+\newcommand{\statCellMedQAMistralHedgingQualityLoRAvsBaseCoTDiff}{\ensuremath{0.00}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: medqa__mistral-small-24b hedging_quality, LoRAvsBaseCoT, mean of 4 per-seed differences
+\newcommand{\statCellMedQAMistralHedgingQualityLoRAvsBaseCoTCI}{\ensuremath{[+0.00,\,+0.00]}} % 95% t(3) interval of the per-seed differences
+\newcommand{\statCellMedQAMistralSpecificityLoRAvsBaseCoTDiff}{\ensuremath{+0.01}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: medqa__mistral-small-24b specificity, LoRAvsBaseCoT, mean of 4 per-seed differences
+\newcommand{\statCellMedQAMistralSpecificityLoRAvsBaseCoTCI}{\ensuremath{[-0.02,\,+0.03]}} % 95% t(3) interval of the per-seed differences
+\newcommand{\statCellMedQAMistralSpecificityLoRAvsBaseCoTPHolm}{\ensuremath{0.99}} % Holm p over the seven dimensions
+\newcommand{\statCellMedQAMistralAggregateLoRAvsBaseCoTDiff}{\ensuremath{+0.010}} % data/rebuttal_cells/generated_values.json (rebuttal/analyses/cell_values.py), per-seed means; bodhi_lora/analysis/stats.py paired_test and holm: medqa__mistral-small-24b aggregate, LoRAvsBaseCoT, mean of 5 per-seed differences
+\newcommand{\statCellMedQAMistralAggregateLoRAvsBaseCoTCI}{\ensuremath{[-0.003,\,+0.022]}} % 95% t(4) interval of the per-seed differences
+\newcommand{\statCellMedQAMistralAggregateLoRAvsBaseCoTP}{\ensuremath{0.093}} % two-sided paired t p over seeds

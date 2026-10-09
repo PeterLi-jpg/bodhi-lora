@@ -362,6 +362,83 @@ def test_committed_cells_give_tests_recipe_and_filter_table(tmp_path):
         assert "posted_values" not in (tmp_path / f"{name}.tex").read_text().splitlines()[0]
 
 
+def _uniform_run(out_dir, generated_values=CROSS / "generated_values.json"):
+    return ps.run(M, out_dir, None, None, None, M / "analysis", POSTED, generated_values, cross_cell=CROSS)
+
+
+def test_every_cell_gets_the_same_statistics(tmp_path):
+    # Convention 14: one rule gives every cell the five contrasts on the seven dimensions
+    # and the aggregate score, with Holm over the seven within each contrast.
+    out = _uniform_run(tmp_path)
+    u = out["uniform"]
+    assert [c["id"] for c in u["cells"]][0] == "healthbench__medgemma-27b"
+    assert len(u["cells"]) == 8
+    for c in u["cells"]:
+        assert set(c["contrasts"]) == {t for t, _, _ in ps.CONTRASTS}
+        for ctok, res in c["contrasts"].items():
+            assert set(res) == set(ps.POSTED_METRIC)
+            assert all("p_holm" in res[m] for m in ps._gv_dims())
+            assert "p_holm" not in res["aggregate"]
+    # The submitted cell from generated_values.json equals the raw-output contrasts.
+    main = u["cells"][0]["contrasts"]["LoRAvsBase"]
+    raw = out["contrasts"]["LoRAvsBase"]["metrics"]
+    assert main["active_inquiry_pct"]["diff"] == pytest.approx(100 * raw["active_inquiry"]["diff"], abs=1e-3)
+    assert main["red_flag"]["p_holm"] == pytest.approx(raw["red_flag"]["p_holm_within_contrast"], rel=1e-3)
+    assert main["aggregate"]["ci95"] == pytest.approx(raw["healthbench"]["ci95"], abs=1e-5)
+    # MedQA: seed 42 has no dimension grades, so its dimension contrasts use four seeds.
+    medqa = next(c for c in u["cells"] if c["id"] == "medqa__mistral-small-24b")
+    assert medqa["contrasts"]["LoRAvsBase"]["active_inquiry_pct"]["n_seeds"] == 4
+    assert medqa["contrasts"]["LoRAvsBase"]["aggregate"]["n_seeds"] == 5
+    k = u["counts"]
+    # MedGemma, Mistral HB, BioMistral, ChatDoctor Mistral, MedQuAD Mistral; all but
+    # BioMistral raise active inquiry and context-seeking after Holm.
+    assert (k["all"], k["added"], k["outside"], k["outside_ask_rose"]) == (8, 7, 5, 4)
+    assert k["added_kept"] == 6
+    bio = next(c for c in u["cells"] if c["id"] == "healthbench__biomistral-7b")
+    assert (bio["dims_rose"], bio["dims_fell"]) == (0, 0)
+    assert _macro(tmp_path, "CellsOutsideAskRose") == "4"
+    assert _macro(tmp_path, "CellHBMistralRedFlagLoRAvsBaseDiff") == "+0.64"
+    # _macro strips trailing braces, so the exponent's closing brace is gone here.
+    assert _macro(tmp_path, "CellMedQuADMistralAggregateLoRAvsBaseP") == "8.4\\times10^{-4"
+
+
+def test_uniform_tables(tmp_path):
+    _uniform_run(tmp_path)
+    tab = (tmp_path / "tab_cross_cell.tex").read_text()
+    rows = [line for line in tab.splitlines() if " & " in line and "\\ensuremath" in line]
+    assert len(rows) == 8
+    assert rows[0].startswith("HB-Hard & MedGemma-27B & \\ensuremath{17.5} & \\ensuremath{45.6}")
+    # Holm star on the dimensions; the submitted cell's aggregate has none (p = 0.48).
+    assert "\\ensuremath{+28.0\\pm5.1^{*}}" in rows[0]
+    assert rows[0].endswith("\\ensuremath{+0.004\\pm0.015} \\\\")
+    assert "Med42-8B$^{\\dagger}$" in tab
+    # The set-aside cell sits last, in its own block.
+    assert rows[-1].startswith("MedQA & ") and tab.rindex("\\midrule") < tab.index("MedQA & ")
+    detail = (tmp_path / "tab_cell_detail_1.tex").read_text() + (tmp_path / "tab_cell_detail_2.tex").read_text()
+    assert detail.count("\\multicolumn{9}{l}") == 8
+    assert "(4 of 5 seeds have dimension grades)" in detail
+
+
+def test_main_cell_mismatch_stops_the_run(tmp_path):
+    gv = json.loads((CROSS / "generated_values.json").read_text())
+    main = next(c for c in gv["cells"] if c["id"] == "healthbench__medgemma-27b")
+    main["conditions"]["lora"]["red_flag"]["per_seed"]["42"] += 0.01
+    path = tmp_path / "generated_values.json"
+    path.write_text(json.dumps(gv))
+    with pytest.raises(SystemExit, match="healthbench__medgemma-27b lora_no_wrapper red_flag seed 42"):
+        _uniform_run(tmp_path / "out", path)
+
+
+def test_token_counts_come_from_the_uniform_analysis(generated):
+    out, d = generated
+    c = out["cost"]["conditions"]
+    # The engine stored a count for the one-pass conditions only.
+    assert c["base_bodhi"]["tokens_engine_n"] == c["lora_bodhi"]["tokens_engine_n"] == 0
+    assert c["base_no_wrapper"]["tokens_engine_n"] == c["lora_no_wrapper"]["tokens_engine_n"] == 1000
+    assert _macro(d, "TokensEngineBase") == "753" and _macro(d, "TokensEngineLoRA") == "781"
+    assert "statTokensEngineBaseCoT" not in (d / "numbers.tex").read_text()
+
+
 def test_completion_drop_and_filter_macros(generated):
     out, out_dir = generated
     assert _macro(out_dir, "CompletionDropPctBase") == "0.0"
