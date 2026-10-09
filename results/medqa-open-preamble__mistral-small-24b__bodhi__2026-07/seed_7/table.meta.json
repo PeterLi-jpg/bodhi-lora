@@ -1,0 +1,56 @@
+{
+  "cell": "medqa-open-preamble__mistral-small-24b__bodhi__2026-07",
+  "completions": {
+    "base": 200,
+    "base+bodhi": 200,
+    "lora": 200,
+    "lora+bodhi": 200
+  },
+  "grade": {
+    "counts": {
+      "base": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "base+bodhi": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "lora": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "lora+bodhi": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      }
+    },
+    "file": "/Users/anqipeterli/Desktop/Substrate Labs/Research/BODHI/_wt/analysis2/results/medqa-open-preamble__mistral-small-24b__bodhi__2026-07/seed_7/grade/epistemic__llama-3.1-8b-nous.json",
+    "present": true
+  },
+  "n_examples": {
+    "base": 200,
+    "base+bodhi": 200,
+    "lora": 200,
+    "lora+bodhi": 200
+  },
+  "score_metric": {
+    "base": "normalized_score",
+    "base+bodhi": "normalized_score",
+    "lora": "normalized_score",
+    "lora+bodhi": "normalized_score"
+  },
+  "seed": 7,
+  "sources": {
+    "/Users/anqipeterli/Desktop/Substrate Labs/Research/BODHI/_wt/analysis2/results/medqa-open-preamble__mistral-small-24b__bodhi__2026-07/seed_7/eval/base+bodhi.json": "d07b26af2f426ab244d6e4fe23cc75c8700b4bc15831262134b2800b2014cfaf",
+    "/Users/anqipeterli/Desktop/Substrate Labs/Research/BODHI/_wt/analysis2/results/medqa-open-preamble__mistral-small-24b__bodhi__2026-07/seed_7/eval/base.json": "66ec195324fd5abfea6fdda3de8d5020c0f5255327f9050ddef42cc22b81b080",
+    "/Users/anqipeterli/Desktop/Substrate Labs/Research/BODHI/_wt/analysis2/results/medqa-open-preamble__mistral-small-24b__bodhi__2026-07/seed_7/eval/lora+bodhi.json": "bf8cc160d2fc2bcab7cadd8ffdf545fa064fbb77eb4e13f23c91e940bfa9c0c1",
+    "/Users/anqipeterli/Desktop/Substrate Labs/Research/BODHI/_wt/analysis2/results/medqa-open-preamble__mistral-small-24b__bodhi__2026-07/seed_7/eval/lora.json": "39b7a60e2dd46c7030b00cdc7cb63b681dd2867c8f03c86a14fd875a45882226",
+    "/Users/anqipeterli/Desktop/Substrate Labs/Research/BODHI/_wt/analysis2/results/medqa-open-preamble__mistral-small-24b__bodhi__2026-07/seed_7/grade/epistemic__llama-3.1-8b-nous.json": "49145a85e2aa350fc3679bdecedd4966cd9fabfc2d9c7eedd6fc4e99abf2760a"
+  },
+  "tokenizer": "mistralai/Mistral-Small-24B-Instruct-2501@9527884be6e5616bdd54de542f9ae13384489724"
+}

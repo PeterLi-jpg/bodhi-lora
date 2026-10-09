@@ -445,12 +445,12 @@ class StageContext:                # what a stage reads: registry, project, cell
 # Each stage is also a module: python -m bodhi_lora.pipeline.<stage> --cell <id> [--seed n]
 
 # bodhi_lora.analysis (project and report config default to configs/)
-def extract(reg, cell_id: str, proj=None, cfg=None) -> dict   # raw outputs -> each seed's table.csv
+def extract_cell(reg, cell_id: str, proj=None, cfg=None) -> dict   # raw outputs -> each seed's table.csv
 def analyze_cell(reg, cell_id: str, proj=None, cfg=None) -> dict   # tables -> the cell's stats.json
 def analyze_cross(reg, report_cfg=None, proj=None) -> dict    # every cell's stats.json -> the cross-cell one
 
-# bodhi_lora.report (stub)
-def report(reg, report_cfg: dict, out_dir: Path) -> None   # -> paper/generated/
+# bodhi_lora.report (scripts/paper_stats.py calls it; make numbers writes its output)
+def report(reg, cfg, proj) -> Report   # every stats.json -> macros, tables, record for paper/generated/
 ```
 
 Stage output formats stay compatible with the files that exist: `results/<cell_id>/seed_<n>/eval/<condition>.json`
@@ -473,7 +473,7 @@ python -m bodhi_lora run <cell_id> [--stages probe,traces,filter,train,eval,grad
                                    [--gpus 0,1] [--judges a,b | --judges none]
                                    [--stub-engine | --dry-run] [--results-root DIR] [--force]
 python -m bodhi_lora analyze (<cell_id> ... | --all) [--extract]
-python -m bodhi_lora report        # not built yet
+python -m bodhi_lora report        # says where the report is written (make numbers)
 ```
 
 - `list --settings` prints the settings that differ between cells, so a reader sees at
@@ -494,8 +494,9 @@ python -m bodhi_lora report        # not built yet
   so it runs in CI. `--all` takes the cells whose status `configs/report.yaml` lists,
   says which have no tables, and runs the cross-cell statistics once every cell they
   need has its `stats.json`.
-- `report` will write the paper's numbers, tables and figures from the analysis
-  outputs. It is not built; it prints so and exits 2.
+- `report` prints where the report is written and exits 2: `make numbers` runs
+  `scripts/paper_stats.py`, which calls `bodhi_lora.report.report` and writes its macros
+  and tables with its own into `paper/generated/`.
 
 Makefile targets call the CLI, the repository tools in `scripts/` and the LaTeX build.
 No target runs pipeline code any other way. The paper targets still call the scripts in
@@ -615,7 +616,9 @@ absent (no labels, no judge files, a field a legacy file lacks), and then the ou
 **Statistical unit (D7).** The seed. For each seed and condition, a dimension's value is
 the mean over scored responses, and the rubric score is the mean over completions. Every
 test pairs conditions within a seed: mean difference, t interval with n_seeds - 1 degrees
-of freedom (t(4) with five seeds), two-sided paired t. Pooled response-level numbers are
+of freedom (t(4) with five seeds), two-sided paired t. A seed with no value (for example
+a seed whose grading found none of its prompts) leaves the statistic, the degrees of
+freedom fall, and the output names the seed (ANALYSIS_PLAN.md section 2.3). Pooled response-level numbers are
 descriptive, with prompt-clustered bootstrap intervals (5,000 resamples, fixed seed),
 because a prompt can appear in several seeds' draws.
 
@@ -636,7 +639,8 @@ get their own Holm correction.
 | Counts: prompts, unique prompts, completions, missing completions, parse failures of both graders | eval, grade | D13, LxMF 1 |
 | Worst case: failed grades scored at the undesirable end | evaluator | D13 |
 | Blanket disclaimers: counts and two-sided Fisher exact test | evaluator | D10 |
-| Discrimination index for every label with both groups present: P(ask given positive) minus P(ask given negative), odds ratio, bootstrap interval, seed-level interval, and the difference between conditions | labels, evaluator | D9, MR-W4 |
+| Discrimination index for every response and label of `configs/report.yaml` with both groups present: the rate in each group, P(response given positive) minus P(response given negative), odds ratio, bootstrap intervals, seed-level intervals, and per contrast the difference of the indices and of each group's rate | labels, evaluator, text | D9, MR-W4 |
+| Over-flagging (post hoc): the escalation mention rate on the negative group of `red-flag-at-stake`, prompts whose theme is not emergency referrals and whose rubric says nothing about urgency | labels, text | C30 |
 | Format leakage for every leak rule of every protocol used: leak share, dimensions by leak status, red flag by length quartile in non-leaked responses | text, evaluator | D11, LxMF 4 |
 | Length and token cost: characters, tokens, calls, total tokens per condition; stage time from manifests | eval, manifests | C25 |
 | Askers gap: rubric score of asking minus non-asking responses within a condition | evaluator | withdrawals W7 |
@@ -652,11 +656,14 @@ families, the teacher strength against the effect, and each cell's marks (family
 waiver, set aside, status). Labels with `timing: post_hoc` are printed as exploratory.
 
 **Report.** `report` turns `results/<cell_id>/analysis/stats.json` and
-`results/cross_cell/stats.json` into `paper/generated/`. Macro names follow one rule, `\stat<CellToken><Metric><Condition><Field>`,
-with the cell token from `report.token`. The tables the paper uses are listed in
-`configs/report.yaml` (rows, columns, cells, statistics), so a new table is a config
-change. The report lane renames the macros in `paper/main.tex` in the same commit that
-changes the generator, so `make paper` passes at every commit.
+`results/cross_cell/stats.json` into macros and tables, and `make numbers` writes them
+into `paper/generated/` (its README lists them). Macro names follow one rule,
+`\stat<CellToken><Metric><Condition><Field>`, with the cell token from `report.token`.
+Each analyzed cell gets the same table, `tab_cell_<token>`; the cross-cell table
+`tab_cross_cell_checks` has the columns `configs/report.yaml` lists under `cross_table`,
+the same for every cell. The macros of `scripts/paper_stats.py` keep their names, so the
+paper builds unchanged; moving `paper/main.tex` to the report's macros is the paper's
+change.
 
 **Pre-registration.** Convention 3 still holds. A statistic that has not been computed
 on a cell's outputs before (for example the physician-label discrimination index) goes
@@ -671,9 +678,12 @@ discrimination index for the labels `configs/report.yaml` lists, format leakage,
 askers gap, filter and recipe records, judge agreement (criterion kappa, Pearson r of the
 rubric score, exact agreement per dimension, rubric-score contrasts under each judge),
 and the physician kappa file. The cross-cell step adds the groups, Holm over each group's
-cells, and the posted-value check. Only the 2026-05 cell has tracked tables; the other
-recorded cells wait for `make extract` after the analysis plan is adopted (BLOCKED.md
-item 1). Not built yet, each needed by the analysis plan before its cells exist: the
+cells, and the posted-value check. Every recorded cell with outputs has tracked tables
+and a `stats.json` (the eight cells of `report.cross_cells`, the 2026-04 pilot and the
+partial BioMistral-7B MedQA cell), and `results/cross_cell/stats.json` exists. These
+are the descriptive and exploratory items of ANALYSIS_PLAN.md section 10 (E01 to E05,
+E08); no physician label is read, and E02 with `needs-info-physician` still waits for
+the plan's adoption (BLOCKED.md item 1). Not built yet, each needed by the analysis plan before its cells exist: the
 weighted kappa and dimension contrasts under a judge (H8), the judges' harm grades
 (C33), the probe and bench outputs (E11, E20), stage times from the manifests (E08),
 contrasts between cells (H9, H10, E24), the paired-probe statistics (H3 through E14), and
@@ -880,8 +890,17 @@ O6). A record of status `planned` changes no number in the paper.
   (convention 3: the analysis plan reads over-flagging from the physician labels, H7),
   and the unfinished report module. Both are kept outside the repo in
   `../_archive/analysis_lane_wip_2026-10-09/`.
-- Not done, so its "done means" row above still applies: `make report`, the macro rename
-  in `paper/main.tex`, and the removal of the old analysis scripts.
+- **analysis, second attempt** (`gen/lane-analysis-2`) fixed `make extract` (the
+  package function `extract` was hidden by its submodule of the same name), ran extract
+  and analyze on every cell with outputs, read the stored score formula of files without
+  `score_metric` (the 2026-04 pilot), let a missing seed leave a statistic instead of
+  blanking it (ANALYSIS_PLAN.md 2.3), added the escalation mention rule, the post hoc
+  `red-flag-at-stake` label and the group rates of the discrimination section (the
+  over-flagging check of C30, marked exploratory), and built `bodhi_lora.report`, which
+  `make numbers` now runs. No number the paper printed before changed.
+- Not done, so its "done means" row above still applies: `make report` as its own
+  target, the macro rename in `paper/main.tex`, and the removal of the old analysis
+  scripts.
 
 ## 12. Open decisions for the first author
 

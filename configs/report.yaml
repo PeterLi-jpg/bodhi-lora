@@ -15,23 +15,39 @@ statuses: [complete, partial, pilot]
 bootstrap: {resamples: 5000, seed: 0}
 
 # Grader-free rules over the reply text. Each becomes a 0/1 column of the response table.
+# Patterns ignore case; (?-i:...) makes a part match case.
 #   question: the reply has a sentence that ends in "?" and matches `pattern`, after
 #             markdown emphasis and quote marks are removed (sentences split at
 #             whitespace after . ! ? and at line breaks).
+#   mention:  `pattern` matches anywhere in the reply, after markdown emphasis is removed.
 text_features:
   second_person_q:
     kind: question
     description: a question put to the reader (a sentence ending in "?" with you, your, yours, yourself or yourselves)
     pattern: '\b(you|your|yours|yourself|yourselves)\b'
+  # Post hoc (2026-10-09), for the over-flagging check of commitment C30. It counts every
+  # mention: a conditional one ("call 911 if ..."), a negated one and a description of a
+  # setting count too. So on prompts with no red flag it is an upper bound on flags
+  # raised without cause. The same rule applies to every condition and cell.
+  escalation:
+    kind: mention
+    description: the reply mentions emergency or urgent care (911, a call to 999 or 112, an emergency room, department, service or number, the ER (not ER/PR or a drug's extended-release ER), A&E, urgent care, an ambulance, or immediate, urgent or emergency medical attention)
+    pattern: '\b911\b|\b(call|dial|phone|ring)(ing)? (999|112)\b|\bemergency (room|department|services?|care|medical (services|care|help|attention|treatment)|number|help|attention|treatment|evaluation|physician|doctor)\b|\b(the|an|nearest|local|or|to|your) (?-i:ER)\b(?!/)|\bA&E\b|\burgent care\b|\bambulance\b|\b(seek|get|obtain) (immediate|urgent|emergency|prompt) (medical )?(care|attention|help|evaluation|treatment)\b|\b(immediate|urgent) medical (attention|care|help|evaluation|treatment)\b|\bgo (to|straight to) (the )?(nearest )?(hospital|emergency)\b|\bcall (for )?(an ambulance|emergency)\b'
 
-# The discrimination index: P(response asks | label positive) - P(asks | label negative),
-# for each listed label whose groups both occur among a cell's evaluated prompts. Only
-# labels listed here are computed. The physician labels of the benchmark records are left
-# out on purpose: computing a new statistic on outputs that exist needs the dated
-# analysis plan first (docs/CONVENTIONS.md, convention 3; docs/ARCHITECTURE.md O4).
+# The discrimination index: P(response | label positive) - P(response | label negative),
+# for each listed label whose groups both occur among a cell's evaluated prompts, with the
+# rate in each group. Only labels listed here are computed. The physician labels of the
+# benchmark records are left out on purpose: the analysis plan keeps them unseen on every
+# cell until its adoption (docs/ANALYSIS_PLAN.md, state at registration; convention 3).
+#   active_inquiry: does the reply ask more where information is missing (decision D9:
+#     both post hoc labellings, side by side).
+#   escalation: on the negative group of red-flag-at-stake (prompts with no red flag at
+#     issue), the rate is the over-flagging rate of commitment C30.
 discrimination:
-  response: active_inquiry
-  labels: [needs-info-theme-or-rubric, needs-info-theme]
+  - response: active_inquiry
+    labels: [needs-info-theme-or-rubric, needs-info-theme]
+  - response: escalation
+    labels: [red-flag-at-stake]
 
 # Response-length quartile edges come from this condition's scored replies.
 length_reference: base
@@ -131,3 +147,71 @@ posted:
     chatdoctor__med42-8b: chatdoctor__med42-8b__bodhi__2026-07
     medquad__mistral-small-24b: medquad__mistral-small-24b__bodhi__2026-07
     medqa__mistral-small-24b: medqa-open-preamble__mistral-small-24b__bodhi__2026-07
+
+# The report (bodhi_lora.report; make numbers runs it through scripts/paper_stats.py):
+# macros named by each cell's report.token, one table per analyzed cell, and the
+# cross-cell table below. Names the tables print:
+display:
+  weights: {base: Base, lora: LoRA}
+  protocols: {bodhi: '\bodhi{}'}
+  metrics:
+    uncertainty_ack: 'Uncertainty ack.\ (0--2)'
+    active_inquiry: 'Active inquiry (\%)'
+    context_seeking: 'Context-seeking (0--2)'
+    red_flag: 'Red-flag identification (0--2)'
+    scope_bounding: 'Scope bounding (0--2)'
+    hedging_quality: 'Hedging quality (0--2)'
+    specificity: 'Specificity (0--2)'
+    rubric_score: 'Aggregate score (0--1)'
+    neg_any: 'Harm proxy (\%)'
+    second_person_q: 'Grader-free question rate (\%)'
+    escalation: 'Mentions emergency care (\%)'
+    chars: 'Reply length (characters)'
+    tokens: 'Reply tokens (tokenizer)'
+  labels:
+    needs-info-theme-or-rubric: 'needs information (theme or rubric)'
+    needs-info-theme: 'needs information (theme)'
+    red-flag-at-stake: 'red flag at issue'
+
+# The cross-cell table of the checks that need no GPU: every cell of cross_cells gets
+# every column, "--" where the cell has no such value (for example no label on its
+# benchmark, or no tokenizer in the local cache). Paths are into each cell's stats.json.
+cross_table:
+  - group: 'Mentions emergency care on prompts with no red flag (\%, post hoc)'
+    header: Base
+    value: discrimination.escalation.red-flag-at-stake.conditions.base.negative_rate
+    scale: 100
+    decimals: 1
+  - group: 'Mentions emergency care on prompts with no red flag (\%, post hoc)'
+    header: LoRA
+    value: discrimination.escalation.red-flag-at-stake.conditions.lora.negative_rate
+    scale: 100
+    decimals: 1
+  - group: 'Mentions emergency care on prompts with no red flag (\%, post hoc)'
+    header: 'LoRA $-$ Base'
+    value: discrimination.escalation.red-flag-at-stake.contrasts.lora - base.negative_rate.seed_test.diff
+    ci: discrimination.escalation.red-flag-at-stake.contrasts.lora - base.negative_rate.seed_test.ci95
+    scale: 100
+    decimals: 1
+    sign: true
+  - header: '\shortstack[r]{Asking index, post hoc\\LoRA $-$ Base (pp)}'
+    value: discrimination.active_inquiry.needs-info-theme-or-rubric.contrasts.lora - base.diff
+    scale: 100
+    decimals: 1
+    sign: true
+  - header: '\shortstack[r]{Format leak\\LoRA+P (\%)}'
+    value: leakage.leak_{protocol}__analysis-format.conditions.lora+{protocol}.leaked_share
+    scale: 100
+    decimals: 1
+  - header: '\shortstack[r]{Askers gap\\LoRA}'
+    value: askers_gap.lora.gap
+    decimals: 3
+    sign: true
+  - group: 'Tokens per reply'
+    header: 'Base+P'
+    value: cost.conditions.base+{protocol}.tokens_mean
+    decimals: 0
+  - group: 'Tokens per reply'
+    header: LoRA
+    value: cost.conditions.lora.tokens_mean
+    decimals: 0

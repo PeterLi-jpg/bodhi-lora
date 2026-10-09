@@ -70,6 +70,20 @@ Issue numbers such as #5 are GitHub issues on `PeterLi-jpg/bohdi-lora`.
   labelings are reported, both marked post hoc and exploratory.
 - **Calibration is not measured (#1, D3).** The eval JSON has Brier and ECE fields from
   a token-probability proxy. The paper does not report them.
+- **The over-flagging check is post hoc and coarse (C30).** The label `red-flag-at-stake`
+  and the escalation mention rule were defined on 2026-10-09, after the outputs existed,
+  so the rates are exploratory. The rule counts any mention of emergency or urgent care,
+  conditional and negated ones too ("call 911 if ..."), so on prompts with no red flag
+  it is an upper bound on flags raised without cause. The planned test (H7) reads the
+  physician labels on new cells.
+- **Three models have no tokenizer count.** `analyze --extract` counts reply tokens with
+  the model's own tokenizer from the local Hugging Face cache and never downloads. Only
+  Mistral-Small-24B's tokenizer is cached, so the MedGemma-27B, Med42-8B and
+  BioMistral-7B cells have the engine's count for one-pass conditions only. To fill
+  them: `huggingface-cli download <repo> tokenizer.json --revision <revision>` for each
+  model record (MedGemma needs an accepted licence and a token), then `make extract`
+  and `make numbers`. Two-pass conditions stored only their final reply, so their token
+  counts leave out the first pass in every cell.
 
 ### Reproducibility gaps
 
@@ -128,6 +142,14 @@ Issue numbers such as #5 are GitHub issues on `PeterLi-jpg/bohdi-lora`.
 
 ## Fixed
 
+- **`make extract` stopped with a TypeError (2026-10-09).** The package function
+  `bodhi_lora.analysis.extract` was hidden by its submodule of the same name once the
+  submodule was imported, so `analyze --extract` called a module. The function is now
+  `extract_cell`, and every recorded cell with outputs has been extracted.
+- **The 2026-04 pilot's rubric scores did not recompute (2026-10-09).** Its eval files
+  predate the `score_metric` field and store the benchmark's raw score. Extract now
+  checks each file against the formula it stored and puts the normalized score in the
+  table for every cell.
 - **A request longer than a server's context window was retried forever (2026-10-09).**
   Traces, filter and grade counted it as a failed request, marked the stage incomplete
   and asked for a rerun, which failed the same way. The engine now raises

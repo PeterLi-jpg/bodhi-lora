@@ -118,7 +118,7 @@ def _analysis(name):
 def test_rebuttal_analyses_of_the_cell(stats):
     problems = []
     old = _analysis("mimicry_split.json")["primary_theme_or_rubric"]
-    disc = stats["discrimination"]["needs-info-theme-or-rubric"]
+    disc = stats["discrimination"]["active_inquiry"]["needs-info-theme-or-rubric"]
     for c, v in old["configs"].items():
         compare({k: v[k] for k in ("discrimination", "discrimination_ci95", "odds_ratio", "odds_ratio_ci95")},
                 disc["conditions"][CONDITION[c]], f"mimicry_split/{c}", problems)

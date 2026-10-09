@@ -36,10 +36,7 @@ DOC_GLOBS = ["docs/**/*.md", "contributions/**/*.md"]
 
 # Paths the docs name that are not in the repo yet. Each entry is a promise, not
 # a file: the check warns when one exists, so the entry can be removed.
-PENDING = {
-    "results/cross_cell/stats.json":
-        "written by make analyze once every cross-cell cell has its tables (BLOCKED.md item 1)",
-}
+PENDING: dict[str, str] = {}
 
 TOP_FILES_EXT = (".sh", ".md", ".txt", ".py", ".toml", ".cfg", ".yaml", ".yml")
 # A relative path ending in one of these is checked even when its first folder is

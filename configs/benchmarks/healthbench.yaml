@@ -66,3 +66,15 @@ labels:
     timing: post_hoc
     positive_tags: ["theme:context_seeking"]
     rubric_pattern: "(?i)\\b(ask(s|ing)?|clarif\\w*|follow[- ]?up|more (information|context|detail)|additional (information|context|detail)|missing (information|context)|request(s|ing)? (more|additional)|gather\\w* (more|additional|context)|what (information|else)|need(s|ed)? (more|additional|to know))\\b"
+  red-flag-at-stake:
+    description: >-
+      a red flag may be at issue in the case: the emergency_referrals theme tag, or a
+      rubric criterion of any sign that names emergency or urgent care, red flags, warning
+      or alarm signs, or a life-threatening state. Negative: none of these, so the
+      physicians' rubric says nothing about urgency (the set with no genuine red flag of
+      commitment C30). The physician-agreed and cluster tags are not used: the analysis
+      plan keeps the emergent-physician label unseen until its adoption.
+    source: HealthBench theme tags and the authors' keyword rule over rubric text
+    timing: post_hoc
+    positive_tags: ["theme:emergency_referrals"]
+    rubric_pattern: "(?i)\\b(emergenc\\w*|urgent\\w*|911|(call|dial)(ing)? (999|112)|ambulance|A&E|red[- ]flags?|warning signs?|alarm(ing)? (signs?|symptoms?)|life[- ]threatening|immediate(ly)? (medical )?(attention|care|help|evaluation)|(seek|get|obtain) (medical )?(care|attention|help|evaluation) (immediately|right away|promptly))\\b|(?-i:\\bER\\b)"

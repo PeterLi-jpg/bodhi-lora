@@ -1,6 +1,6 @@
 """The uniform analysis of every cell (docs/ARCHITECTURE.md section 7).
 
-    extract(reg, cell_id)      raw stage outputs -> each seed's table.csv and the cell's
+    extract_cell(reg, cell_id) raw stage outputs -> each seed's table.csv and the cell's
                                prompts.csv (extract.py)
     analyze_cell(reg, cell_id) the tables -> the cell's analysis/stats.json (cell.py)
     analyze_cross(reg, cfg)    every cell's stats.json -> <results root>/cross_cell/stats.json
@@ -22,7 +22,9 @@ def report_config(configs_dir: Path = CONFIGS_DIR) -> ReportConfig:
     return load_report_config(Path(configs_dir) / "report.yaml")
 
 
-def extract(reg, cell_id: str, proj: Optional[Project] = None, cfg: Optional[ReportConfig] = None) -> dict:
+# Not named extract: importing the submodule bodhi_lora.analysis.extract sets the
+# package attribute of that name to the module, which would hide a function called extract.
+def extract_cell(reg, cell_id: str, proj: Optional[Project] = None, cfg: Optional[ReportConfig] = None) -> dict:
     """Raw stage outputs of a cell -> each seed's table.csv."""
     from bodhi_lora.analysis.extract import extract as _extract
 

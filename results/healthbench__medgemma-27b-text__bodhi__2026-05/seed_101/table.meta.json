@@ -38,6 +38,12 @@
     "lora": 200,
     "lora+bodhi": 200
   },
+  "score_metric": {
+    "base": "normalized_score",
+    "base+bodhi": "normalized_score",
+    "lora": "normalized_score",
+    "lora+bodhi": "normalized_score"
+  },
   "seed": 101,
   "sources": {
     "results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_101/eval/base+bodhi.json": "6140d860af71c0b82f49377ddf44239b46d9a628c6ddb747a6cd3943cfd8ab9b",

@@ -207,6 +207,19 @@ def test_no_absolute_paths_in_outputs(generated):
         assert str(ROOT) not in text and str(Path.home()) not in text, f.name
 
 
+def test_numbers_carry_the_report_of_the_uniform_analysis(generated):
+    """make numbers writes bodhi_lora.report's macros and tables next to its own, and
+    names each analyzed cell's stats.json among its inputs."""
+    out, out_dir = generated
+    rec = out["uniform_report"]
+    assert rec["cells"] and "tab_cross_cell_checks" in rec["tables"]
+    for name in rec["tables"]:
+        assert (out_dir / f"{name}.tex").is_file(), name
+    for cell in rec["cells"].values():
+        assert out["meta"]["inputs"][cell["stats"]] == cell["sha256"]
+        assert _macro(out_dir, f"{cell['token']}Seeds")
+
+
 # ---------------------------------------------------------------- determinism
 
 def test_two_runs_are_byte_identical(generated, tmp_path):

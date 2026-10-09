@@ -21,6 +21,7 @@ from bodhi_lora.registry import load_registry  # noqa: E402
 
 SMOKE = "tiny-rubric__tiny-random-llama__bodhi"
 PROMPTS = [f"p{i}" for i in range(6)]
+TEXT = sorted(report_config().text_features)
 
 
 @pytest.fixture(scope="module")
@@ -41,7 +42,7 @@ def synthetic_table(cell, seeds=(1, 2, 3)):
                        "calls": np.nan, "tokens_total": np.nan, "finish_length": 0.0,
                        "rubric_score": 0.5 + 0.01 * ci, "rubric_score_worst": 0.5,
                        "rubric_items": 2.0, "rubric_parse_failures": 0.0, "neg_items_met": 0.0,
-                       "neg_points_lost": 0.0, "epi_status": "scored", "second_person_q": 0.0}
+                       "neg_points_lost": 0.0, "epi_status": "scored", **{t: 0.0 for t in TEXT}}
                 # 0-2 grades, 0/1 rates and question counts, as the evaluator gives them.
                 row.update({k: float(rng.integers(0, 2 if EPISTEMIC_KIND.get(k) == "rate" else 3))
                             for k in EPISTEMIC})
@@ -49,7 +50,7 @@ def synthetic_table(cell, seeds=(1, 2, 3)):
                 row["active_inquiry"] = float(pi < min(ci + s, len(PROMPTS)))
                 rows.append(row)
     df = pd.DataFrame(rows)
-    return df[KEY + RESPONSE + RUBRIC + ["epi_status", *EPISTEMIC, "second_person_q"]]
+    return df[KEY + RESPONSE + RUBRIC + ["epi_status", *EPISTEMIC, *TEXT]]
 
 
 def synthetic_prompts():
@@ -106,15 +107,21 @@ def test_seed_level_test_and_holm_family(reg, tmp_path):
         pytest.fail("no dimension with spread in the synthetic table")
 
 
-def test_a_seed_without_a_value_is_not_measured(reg, tmp_path):
+def test_a_seed_without_a_value_leaves_the_seed_level_statistics(reg, tmp_path):
+    """docs/ANALYSIS_PLAN.md 2.3: the seeds that remain carry the statistic, the degrees
+    of freedom fall, and the output names the missing seed."""
     table = synthetic_table(reg.cells[SMOKE])
     # Seed 2's lora replies all fail their dimension grade.
     hit = (table["seed"] == 2) & (table["condition"] == "lora")
     table.loc[hit, "epi_status"] = "parse_failure"
     table.loc[hit, list(EPISTEMIC)] = np.nan
     out = run(reg, table, tmp_path)
-    assert "seed(s) [2]" in out["conditions"]["active_inquiry"]["lora"]["not_measured"]
-    assert "not_measured" in out["contrasts"]["lora - base"]["metrics"]["active_inquiry"]
+    summary = out["conditions"]["active_inquiry"]["lora"]
+    assert summary["per_seed"]["2"] is None and summary["seeds_missing"] == [2] and summary["n_seeds"] == 2
+    seed_means = table[table["condition"] == "lora"].groupby("seed")["active_inquiry"].mean()
+    assert summary["seed_mean"] == pytest.approx(seed_means.loc[[1, 3]].mean())
+    r = out["contrasts"]["lora - base"]["metrics"]["active_inquiry"]
+    assert r["n_seeds"] == 2 and r["df"] == 1 and r["seeds_missing"] == [2]
     # The worst case counts the failed grades at the undesirable end instead.
     worst = out["worst_case"]["active_inquiry"]["contrasts"]["lora - base"]
     assert worst["df"] == 2
@@ -122,13 +129,24 @@ def test_a_seed_without_a_value_is_not_measured(reg, tmp_path):
     assert out["contrasts"]["lora - base"]["metrics"]["rubric_score"]["df"] == 2
 
 
+def test_a_condition_with_no_seed_left_is_not_measured(reg, tmp_path):
+    table = synthetic_table(reg.cells[SMOKE])
+    hit = table["condition"] == "lora"
+    table.loc[hit, "epi_status"] = "parse_failure"
+    table.loc[hit, list(EPISTEMIC)] = np.nan
+    out = run(reg, table, tmp_path)
+    assert "not_measured" in out["conditions"]["active_inquiry"]["lora"]
+    assert out["contrasts"]["lora - base"]["metrics"]["active_inquiry"]["n_seeds"] == 0
+
+
 def test_absent_inputs_say_why(reg, tmp_path):
     out = run(reg, synthetic_table(reg.cells[SMOKE]), tmp_path)
     assert "not_measured" in out["themes"]
     assert "not_measured" in out["recipe"]
     assert "not_measured" in out["validation"]
-    for lab, res in out["discrimination"].items():
-        assert "not_measured" in res, lab
+    for resp, labels in out["discrimination"].items():
+        for lab, res in labels.items():
+            assert "not_measured" in res, (resp, lab)
 
 
 def test_analyze_takes_cells_or_all():
@@ -138,3 +156,14 @@ def test_analyze_takes_cells_or_all():
         cli.main(["analyze"])
     with pytest.raises(SystemExit, match="no cells"):
         cli.main(["analyze", "no-such__cell__id"])
+
+
+def test_extract_runs_through_the_command_line():
+    """analyze --extract reaches extract_cell. Importing the submodule
+    bodhi_lora.analysis.extract once hid a package function of the same name, and
+    make extract stopped with a TypeError; a cell without outputs must instead stop
+    with the reason."""
+    from bodhi_lora import cli
+
+    with pytest.raises(SystemExit, match="no eval outputs"):
+        cli.main(["analyze", "--extract", SMOKE])

@@ -18,7 +18,9 @@ Response table columns (docs/ARCHITECTURE.md section 6):
                tokenizer.json is in the local Hugging Face cache); tokens_engine (the count
                the serving engine stored, single-call conditions only); calls, tokens_total,
                finish_length (stored by the package's eval stage; empty in older files)
-    rubric     rubric_score, rubric_score_worst (failed negative criteria counted as met),
+    rubric     rubric_score (normalized; recomputed from the verdicts when the file stored
+               another score, see STORED_SCORE), rubric_score_worst (failed negative
+               criteria counted as met),
                rubric_items, rubric_parse_failures, neg_items_met, neg_points_lost,
                axis_<axis> for each rubric axis tag
     evaluator  epi_status (scored, parse_failure, missing, not_graded) and the dimension
@@ -93,6 +95,15 @@ def epistemic_columns(scores: dict) -> dict:
     }
 
 
+def raw_rubric_score(criteria: list[dict]) -> float:
+    """The benchmark's own per-example score, before its aggregate clips it: earned points
+    (negative criteria met count against) over positive points. Eval files without a
+    score_metric field (written before the field existed) stored this one."""
+    pos = sum(c["points"] for c in criteria if c["points"] > 0)
+    earned = sum(c["points"] for c in criteria if c["criteria_met"])
+    return earned / pos if pos > 0 else 0.0
+
+
 def rubric_score(criteria: list[dict], flip_failed_negatives: bool = False) -> float:
     """Normalized rubric score: (earned - negative points) / (positive - negative points).
 
@@ -114,6 +125,12 @@ def rubric_score(criteria: list[dict], flip_failed_negatives: bool = False) -> f
     return (earned - neg) / rng if rng > 0 else 0.0
 
 
+# The score each eval file says it stored, by its score_metric field -> how to recompute
+# it from the stored criterion verdicts. The table holds the normalized score for every
+# file, so cells compare on one formula.
+STORED_SCORE = {"normalized_score": rubric_score, None: raw_rubric_score}
+
+
 # -- text features ----------------------------------------------------------------------
 
 MARKDOWN = re.compile(r"[*_`#>]+")
@@ -129,6 +146,8 @@ class TextRule:
 
     def __call__(self, text: str) -> float:
         text = MARKDOWN.sub("", text or "")
+        if self.feature.kind == "mention":
+            return float(self.pattern.search(text) is not None)
         for sentence in SENTENCE_SPLIT.split(text):
             sentence = sentence.strip().rstrip("\"')]")
             if sentence.endswith("?") and self.pattern.search(sentence):
@@ -262,6 +281,10 @@ def seed_table(reg: Registry, cell: CellConfig, paths: CellPaths, seed: int, cfg
             raise ExtractError(f"{path}: rows are condition {_condition_of(data)!r}, not {condition!r}")
         results = data["results"]
         ids = [r["prompt_id"] for r in results]
+        stored = data.get("score_metric")
+        if stored not in STORED_SCORE:
+            raise ExtractError(f"{path}: unknown score_metric {stored!r}")
+        meta.setdefault("score_metric", {})[condition] = stored
         if len(ids) != len(set(ids)):
             raise ExtractError(f"{path}: a prompt id repeats")
         meta["n_examples"][condition] = int(data.get("n_examples", len(results)))
@@ -274,11 +297,13 @@ def seed_table(reg: Registry, cell: CellConfig, paths: CellPaths, seed: int, cfg
         tokens = count_tokens(tokenizer, [r["response"] for r in results]) if tokenizer else None
         for i, r in enumerate(results):
             criteria = r["criteria_results"]
-            score = rubric_score(criteria)
-            # Our recompute must equal the stored score, or the worst case is not comparable.
-            if not math.isclose(score, r["score"], abs_tol=1e-9):
+            # The recompute of the stored score must equal it, or we do not read the
+            # verdicts the way the run did, and the worst case is not comparable.
+            again = STORED_SCORE[stored](criteria)
+            if not math.isclose(again, r["score"], abs_tol=1e-9):
                 raise ExtractError(f"{path}: {r['prompt_id']}: rubric score {r['score']} does not "
-                                   f"recompute ({score})")
+                                   f"recompute ({again})")
+            score = float(r["score"]) if stored == "normalized_score" else rubric_score(criteria)
             neg_met = [c for c in criteria if c["points"] < 0 and c["criteria_met"]]
             row = {"cell": cell.id, "seed": seed, "condition": condition, "prompt_id": r["prompt_id"],
                    "chars": float(len(r["response"])),
@@ -287,7 +312,7 @@ def seed_table(reg: Registry, cell: CellConfig, paths: CellPaths, seed: int, cfg
                    "calls": _num(r.get("calls")),
                    "tokens_total": _num(r.get("completion_tokens_total")),
                    "finish_length": float(r["finish_length"]) if "finish_length" in r else float("nan"),
-                   "rubric_score": float(r["score"]),
+                   "rubric_score": score,
                    "rubric_score_worst": rubric_score(criteria, flip_failed_negatives=True),
                    "rubric_items": float(len(criteria)),
                    "rubric_parse_failures": float(sum(bool(c.get("parse_failed")) for c in criteria)),
