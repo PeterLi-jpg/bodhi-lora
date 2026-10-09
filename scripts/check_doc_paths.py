@@ -37,26 +37,9 @@ DOC_GLOBS = ["docs/**/*.md", "contributions/**/*.md"]
 # Paths the docs name that are not in the repo yet. Each entry is a promise, not
 # a file: the check warns when one exists, so the entry can be removed.
 PENDING = {
-    "results/healthbench__mistral-small-24b__ask-first/":
-        "written by the second-protocol run (BLOCKED.md item 9), not run yet",
+    "results/cross_cell/stats.json":
+        "written by make analyze once every cross-cell cell has its tables (BLOCKED.md item 1)",
 }
-# Paths of the target design in docs/ARCHITECTURE.md, written by the build lanes of its
-# section 11. Glob keys are never reported as present, so the integrate lane removes this
-# block once the lanes have merged and the check passes without it.
-_ARCHITECTURE = "planned in docs/ARCHITECTURE.md; a build lane writes it"
-PENDING.update({k: _ARCHITECTURE for k in (
-    "configs/report.yaml",
-    "results/*/seed_*/table.csv", "results/*/analysis/stats.json", "results/cross_cell/stats.json",
-    "tests/fixtures/protocols/", "tests/fixtures/analysis/", "tests/fixtures/migrate/",
-    "tests/test_manifest_*.py",
-    "tests/test_analysis_*.py", "tests/test_report_*.py", "tests/test_migration_*.py",
-)})
-# Planned cell records of docs/EXPERIMENTS.md, written when the first author fixes their
-# settings in the analysis plan.
-PENDING.update({k: "planned in docs/EXPERIMENTS.md" for k in (
-    "configs/cells/healthbench__mistral-small-24b__bodhi.yaml",
-    "configs/cells/healthbench__mistral-small-24b__bodhi__labelled.yaml",
-)})
 
 TOP_FILES_EXT = (".sh", ".md", ".txt", ".py", ".toml", ".cfg", ".yaml", ".yml")
 # A relative path ending in one of these is checked even when its first folder is

@@ -1,10 +1,11 @@
 # Architecture
 
-Target design for the resubmission code, written on 2026-10-08. The registry schema
-(`bodhi_lora/registry/schema.py`) and its test (`tests/test_registry_schema.py`) are in
-the repo now. Nothing else here is built yet: the build lanes in section 11 move the
-code. [EXPERIMENTS.md](EXPERIMENTS.md) lists the runs and analyses this design must
-carry.
+Design of the resubmission code, written on 2026-10-08 and brought up to date when the
+build lanes merged on 2026-10-09. Sections 3 to 6 and 9 describe code that is in the
+repo. Section 7 is built up to `analyze`; the report (`python -m bodhi_lora report`) is
+not built yet, so `make numbers` still writes the paper's numbers. Section 11 records how
+the lanes ran. [EXPERIMENTS.md](EXPERIMENTS.md) lists the runs and analyses this design
+must carry.
 
 ## 1. Why the code changes
 
@@ -68,10 +69,11 @@ the record's id:
 | `configs/protocols/` | `ProtocolConfig` | Kind (wrapper or prompt), implementation key, pinned package, passes, instructions, leak rules, reference. |
 | `configs/cells/` | `CellConfig` | Benchmark, split, model, protocol, seeds, graders, and the trace, filter, train, eval and report settings. |
 
-Two more files hold project settings: `configs/project.yaml` (the results root and the
-data root) and `configs/report.yaml` (which cells form each cross-cell family, and which
-tables the paper uses). Nothing in the package names a model, a benchmark or a results
-path (section 9).
+Two more files hold project settings: `configs/project.yaml` (the results root, the data
+root, and the scratch root where stub and dry runs write) and `configs/report.yaml` (the
+grader-free text rules, the labels of the discrimination index, the cells and groups of
+the cross-cell statistics, and the posted values to check). Nothing in the package names
+a model, a benchmark or a results path (section 9).
 
 ### 3.1 Validation
 
@@ -190,7 +192,7 @@ instructions: >-
   advice that depends on those facts. If you can give safe general advice now, give it,
   and say how the answers to your questions would change it. If no key facts are
   missing, answer directly and do not ask questions.
-reference: Clarifying-question prompting baseline (02ac9a3:scripts/baselines/prompts.py)
+reference: Clarifying-question prompting baseline (EXPERIMENTS.md E12)
 ```
 
 ```yaml
@@ -204,7 +206,7 @@ seeds: [42, 7, 13, 99, 101]
 grading:
   filter: qwen2.5-14b
   evaluator: llama-3.1-8b-nous
-  judges: [gemma-2-27b]
+  judges: [gemma-2-27b, medgemma-27b-text]
   same_family_waiver: Run before the family rule existed; the base shares the evaluator's Llama-3 family (D6).
 traces:
   max_prompts: 4200
@@ -252,6 +254,23 @@ A cell whose adapters were trained outside this package records the recipe with
 whose adapters it evaluates, and has no `traces`, `filter` or `train` block. A teacher
 swap sets `traces_from` to the cell whose teacher traces it trains on.
 
+Fields the experiments lane added (each is checked by the schema):
+
+- `grading.judge_serving`: the judges' engine settings; null means `eval.serving`. A
+  judge prompt holds the conversation, the reply and the template, so it can need a
+  longer context than the eval.
+- `bench.seeds`: the seeds whose adapters the `bench` stage times, at the eval's token
+  limits. They must be seeds of the cell.
+- `eval.ids.unit: pair`: `n` counts pairs of a paired benchmark, and both rows of each
+  drawn pair are evaluated.
+- `rubric: none` on a benchmark: its rows have no reference criteria, the eval records
+  no rubric score, and `validate_registry()` refuses a cell that would train on it.
+- `source.files[].sha256: null` with `unpinned_reason`: a file whose hash nobody has read
+  yet. `python -m bodhi_lora fetch` prints the hash to pin, and each run's inputs
+  manifest records the hash it read.
+- `probe` on a recorded cell: the contamination probe adds files only, so the runner
+  allows it there, like a judge re-grade.
+
 ## 4. Package
 
 One importable package at the repository root, run as `python -m bodhi_lora`. No
@@ -261,16 +280,17 @@ install step: the repo root is on `sys.path` for the CLI and for the tests.
 bodhi_lora/
   __init__.py
   __main__.py      python -m bodhi_lora
-  cli.py           subcommands run, analyze, report, list
+  cli.py           subcommands list, fetch, run, analyze, report (report not built)
   paths.py         results and data roots from configs/project.yaml; CellPaths
   manifest.py      run manifests                       <- 02ac9a3:scripts/run_manifest.py
   registry/
-    schema.py      records, validate_registry, load_registry   (in the repo now)
+    schema.py      records, validate_registry, load_registry
   engine/
     vllm.py        vLLM OpenAI server as a subprocess  <- 02ac9a3:scripts/_vllm_engine.py
     stub.py        the CPU stub engine for dry runs     <- 02ac9a3:scripts/_vllm_engine.py
   data/
-    loaders.py     loader registry: rubric_jsonl, hf_qa, mediq_paired, cqc_xml
+    loaders.py     loader registry by file format: rubric_jsonl, hf_qa,
+                   paired_context_jsonl, xml_records
     rubric.py      the synthesized multi-criterion rubric  <- build_benchmark_jsonl.py
     splits.py      pools, holdouts, eval-id draws           <- make_bootstrap_eval_ids.py
     labels.py      label rules on rows
@@ -281,10 +301,11 @@ bodhi_lora/
                                                         <- 02ac9a3:scripts/_bodhi_ablation.py
     ask_first.py                                        <- 02ac9a3:scripts/baselines/ask_first.py
     instruction.py prompt protocols                     <- 02ac9a3:scripts/baselines/prompts.py
-    mediq_abstain.py  confidence check, then ask or answer (new)
+    abstain.py     impl abstain: confidence check, then ask or answer (mediq-abstain)
   grading/
     rubric.py      rubric grader prompt, parse, retries <- 02ac9a3:scripts/filter_traces.py
     epistemic.py   seven-dimension grader               <- 02ac9a3:scripts/eval_epistemic.py
+    harm.py        judge harm axes: extent, likelihood, delayed care (C33 proxy)
   pipeline/
     runner.py      stage order, seeds, GPU assignment, resume, manifests
     probe.py       contamination probe                  <- 02ac9a3:scripts/contamination_probe.py
@@ -297,17 +318,19 @@ bodhi_lora/
                                                         <- eval_epistemic.py, regrade_cross_family.py
     bench.py       measured time and tokens per condition  <- 02ac9a3:scripts/latency_benchmark.py
   analysis/
-    extract.py     raw stage outputs to the per-seed response table
+    config.py      configs/report.yaml as typed records
+    extract.py     raw stage outputs to the per-seed response table and prompts.csv
     stats.py       t interval, paired t, Holm, Fisher, clustered bootstrap, Cohen's d
                                                         <- scripts/paper_stats.py
-    cell.py        every statistic of one cell
-    cross.py       cross-cell tables and correction families
-    agreement.py   judge against evaluator agreement    <- scripts/grader_correlation.py
-    kappa.py       physician agreement                  <- scripts/compute_irr_kappa.py
-  report/
-    latex.py       numbers.tex, numbers.json, tab_*.tex <- scripts/paper_stats.py
-    figures.py     paper figures                        <- build_paper_figures.py, plot_*.py
+    cell.py        every statistic of one cell, judge agreement included
+    cross.py       cross-cell groups, Holm over cells, the posted-value check
+  report/          not built: numbers.tex, numbers.json, tab_*.tex and figures from the
+                   analysis outputs (scripts/paper_stats.py and
+                   scripts/build_paper_figures.py write them until then)
 ```
+
+Physician agreement stays in `scripts/compute_irr_kappa.py` (`make kappa`); the analysis
+reads its output, `results/<cell_id>/validation/kappa_results.json`, into the statistics.
 
 The arrows name the existing file whose logic each module reuses. Each lane moves the
 file with `git mv` and then edits it, so `git log --follow` keeps the history. The TPU
@@ -316,13 +339,13 @@ docker modes of `02ac9a3:scripts/_vllm_engine.py` are not carried over; the TPU 
 
 ### 4.1 Interfaces between modules
 
-The foundation step built these (2026-10-09). A lane that needs to change one says so
-in its report, and the change lands at the integrate step. `analysis` and `report` are
-stubs that raise `NotImplementedError`; the analysis lane builds them.
+The foundation step built these (2026-10-09), and the lanes changed them as noted. A
+change to one lands at the integrate step. `report` is a stub that raises
+`NotImplementedError`.
 
 ```python
 # bodhi_lora.paths
-def project(configs_dir: Path = CONFIGS_DIR) -> Project    # results_root, data_root, interpreters
+def project(configs_dir: Path = CONFIGS_DIR) -> Project    # results_root, data_root, scratch_root, interpreters
 class Project:
     def cell(self, cell_id: str) -> CellPaths
     def benchmark_dir(self, benchmark_id: str) -> Path      # <data_root>/<benchmark_id>
@@ -395,6 +418,14 @@ class Engine:                      # context manager; the stub has the same surf
     def complete(self, messages: list, max_new_tokens: int, temperature: float = 0.0,
                  top_p: float = 1.0, seed: int | None = None, logprobs: bool = False) -> Completion
     def settings(self) -> dict     # for the manifest
+    # The contamination probe continues raw text, with no chat template: token ids with
+    # the served tokenizer on /tokenize and /detokenize, then /v1/completions.
+    def tokenize(self, text: str) -> list[int]
+    def detokenize(self, ids: list[int]) -> str
+    def continue_ids(self, prompt_ids: list[int], max_new_tokens: int,
+                     temperature: float = 0.0) -> Completion
+class ContextLengthError(ValueError)   # the server refused a request longer than its context;
+                                   # traces, filter and grade list such items and skip them
 def make_engine(model: ModelConfig, *, serving: Serving, adapter: Path | None = None,
                 quantize: bool = False, stub: bool = False, ...) -> Engine
 
@@ -403,13 +434,20 @@ STAGES = ("probe", "traces", "filter", "train", "eval", "grade", "bench")
 def run_cell(reg: Registry, proj: Project, cell_id: str, *, stages: Sequence[str] = STAGES,
              seeds: Sequence[int] | None = None, gpus: Sequence[int] = (),
              mode: str = "gpu",              # "gpu", "stub" or "dry_run"
-             results_root: Path | None = None, force: bool = False) -> Path
+             results_root: Path | None = None, force: bool = False,
+             judges: Sequence[str] | None = None) -> Path    # None: every judge of the cell
+# A stub or dry run writes under <scratch_root>/<mode>/, never under the results root, and
+# refuses a results_root inside it. A recorded cell takes only the additive stages
+# (probe, judge re-grades).
+class StageContext:                # what a stage reads: registry, project, cell, paths
+    def split(self) -> Split       # the benchmark split of the cell
+    def rows_by_id(self) -> dict[str, Row]
 # Each stage is also a module: python -m bodhi_lora.pipeline.<stage> --cell <id> [--seed n]
 
-# bodhi_lora.analysis (stubs)
-def extract(reg, cell_id: str) -> None                     # raw outputs -> each seed's table.csv
-def analyze_cell(reg, cell_id: str) -> dict                # tables -> the cell's stats.json
-def analyze_cross(reg, report_cfg: dict) -> dict           # every cell's stats.json -> the cross-cell one
+# bodhi_lora.analysis (project and report config default to configs/)
+def extract(reg, cell_id: str, proj=None, cfg=None) -> dict   # raw outputs -> each seed's table.csv
+def analyze_cell(reg, cell_id: str, proj=None, cfg=None) -> dict   # tables -> the cell's stats.json
+def analyze_cross(reg, report_cfg=None, proj=None) -> dict    # every cell's stats.json -> the cross-cell one
 
 # bodhi_lora.report (stub)
 def report(reg, report_cfg: dict, out_dir: Path) -> None   # -> paper/generated/
@@ -430,10 +468,12 @@ condition names (`base_no_wrapper`, `lora_bodhi`) map to the new ones by one rul
 
 ```
 python -m bodhi_lora list [models|benchmarks|protocols|cells] [--settings]
-python -m bodhi_lora run <cell_id> [--stages traces,filter,train,eval,grade] [--seeds 42 7]
-                                   [--gpus 0,1] [--stub-engine | --dry-run]
+python -m bodhi_lora fetch <benchmark> ...
+python -m bodhi_lora run <cell_id> [--stages probe,traces,filter,train,eval,grade,bench] [--seeds 42 7]
+                                   [--gpus 0,1] [--judges a,b | --judges none]
+                                   [--stub-engine | --dry-run] [--results-root DIR] [--force]
 python -m bodhi_lora analyze (<cell_id> ... | --all) [--extract]
-python -m bodhi_lora report [--out DIR]
+python -m bodhi_lora report        # not built yet
 ```
 
 - `list --settings` prints the settings that differ between cells, so a reader sees at
@@ -441,18 +481,25 @@ python -m bodhi_lora report [--out DIR]
 - `run` checks the registry, refuses an `external` cell, writes a manifest per stage,
   and resumes a stage whose output is complete. `--stub-engine` replaces vLLM with the
   CPU stub for generation and grading and runs everything else for real. `--dry-run`
-  also prints the training command instead of training. Neither needs a token or a GPU.
-  The smoke cell in `configs/cells/` has a tiny public base model, so
-  `make smoke` trains it for real on the CPU.
+  first prints the GPU command of every step, then runs like `--stub-engine` without
+  training. Neither needs a token or a GPU, and both write under the scratch root of
+  `configs/project.yaml`, never under the results root. The smoke cell in
+  `configs/cells/` has a tiny public base model, so `make smoke` trains it for real on
+  the CPU.
+- `run --judges a,b` runs only those judges of the cell in the grade stage;
+  `--judges none` runs the evaluator only. On a recorded cell, `--stages grade` adds
+  judge files and `--stages probe` adds the contamination probe; nothing else runs.
 - `analyze --extract` reads the raw stage outputs (local, ignored by git) and writes the
   per-seed response tables. `analyze` without `--extract` reads only the tracked tables,
-  so it runs in CI.
-- `report` writes the paper's numbers, tables and figures from the analysis outputs.
+  so it runs in CI. `--all` takes the cells whose status `configs/report.yaml` lists,
+  says which have no tables, and runs the cross-cell statistics once every cell they
+  need has its `stats.json`.
+- `report` will write the paper's numbers, tables and figures from the analysis
+  outputs. It is not built; it prints so and exits 2.
 
 Makefile targets call the CLI, the repository tools in `scripts/` and the LaTeX build.
-No target runs pipeline code any other way. The analysis targets still call the scripts
-in `scripts/` and `rebuttal/analyses/` until the analysis lane builds `analyze` and
-`report`. The target set when that lane is done:
+No target runs pipeline code any other way. The paper targets still call the scripts in
+`scripts/` and `rebuttal/analyses/` until `report` exists. The target set when it does:
 
 | Target | Command |
 |---|---|
@@ -465,10 +512,10 @@ in `scripts/` and `rebuttal/analyses/` until the analysis lane builds `analyze` 
 | `make kappa` | physician agreement from rater files kept outside the repo |
 | `make check` | doc paths, secrets scan, registry load |
 
-Today `make test`, `make smoke`, `make kappa` and `make check` are as above.
-`make numbers`, `make figures`, `make cells`, `make rebuttal` and `make derived` still run
-the old analysis scripts on the results root; they go away when `make analyze` and
-`make report` reproduce their outputs (10.3).
+Today `make extract`, `make analyze`, `make test`, `make smoke`, `make kappa` and
+`make check` are as above. `make numbers`, `make figures`, `make cells`, `make rebuttal`
+and `make derived` still run the old analysis scripts on the results root; they go away
+when `make analyze` and `make report` reproduce their outputs (10.3).
 
 ## 6. Results root
 
@@ -616,6 +663,22 @@ on a cell's outputs before (for example the physician-label discrimination index
 into the dated analysis plan before anyone runs it on real outputs. The build lanes test
 the analysis code on fixtures and synthetic tables only.
 
+**State on 2026-10-09.** `analyze` computes, for every cell with tables: the dimensions,
+rates, rubric score, length and harm proxy per condition and their contrasts by the rule
+above, counts and parse failures, the worst case, blanket disclaimers, length quartiles,
+cost, shift correlations, the context-seeking anchor check, rubric axes, themes, the
+discrimination index for the labels `configs/report.yaml` lists, format leakage, the
+askers gap, filter and recipe records, judge agreement (criterion kappa, Pearson r of the
+rubric score, exact agreement per dimension, rubric-score contrasts under each judge),
+and the physician kappa file. The cross-cell step adds the groups, Holm over each group's
+cells, and the posted-value check. Only the 2026-05 cell has tracked tables; the other
+recorded cells wait for `make extract` after the analysis plan is adopted (BLOCKED.md
+item 1). Not built yet, each needed by the analysis plan before its cells exist: the
+weighted kappa and dimension contrasts under a judge (H8), the judges' harm grades
+(C33), the probe and bench outputs (E11, E20), stage times from the manifests (E08),
+contrasts between cells (H9, H10, E24), the paired-probe statistics (H3 through E14), and
+`lora+red-flags-first` minus `lora+bodhi` (H6), which the contrast rule does not make.
+
 ## 8. What stays outside the package
 
 | Path | Keeps | Leaves |
@@ -737,6 +800,16 @@ its stored precision: the files marked superseded in 10.2 and the macros in
 `paper/generated/numbers.tex`. A mismatch is a finding to explain, not a tolerance to
 raise.
 
+Done for the 2026-05 cell: `tests/test_analysis_equivalence.py` recomputes it from its
+tracked tables and matches `paper/generated/numbers.json` (conditions, contrasts, worst
+case, disclaimers, length quartiles, axes, themes, counts, the context-seeking anchor,
+shift correlations, reply size, tau calibration) and the cell's `mimicry_split.json`,
+`interference_mechanism.json` and `second_person_questions.json`. Two old values differ
+by definition, and the test says why: the median of an even count, and a group count the
+old script took over the base condition only. Not done: the cross-cell files
+(`generated_values.json`, `quality_drop.json`, `cell_recipe.json`), which need the
+2026-07 tables, so no old script or Makefile target has been removed.
+
 ## 11. Build lanes
 
 The plan of seven lanes ran differently. One foundation step built the registry, the
@@ -750,17 +823,17 @@ own goes in its report and lands at the integrate step.
 
 | Lane | Branch | Worktree |
 |---|---|---|
-| analysis | `gen/lane-analysis` | `../_wt/analysis` |
-| experiments | `gen/lane-experiments` | `../_wt/experiments` |
-| plans | `gen/lane-plans` | `../_wt/plans` |
+| analysis | `gen/lane-analysis` | `../_wt/analysis` (removed after the merge) |
+| experiments | `gen/lane-experiments` | `../_wt/experiments` (removed after the merge) |
+| plans | `gen/lane-plans` | `../_wt/plans` (removed after the merge) |
 
 ### 11.1 Ownership
 
 | Lane | Owns (writes) | Tests it owns |
 |---|---|---|
 | foundation (done) | `bodhi_lora/{__init__,__main__,cli,paths,manifest}.py`, `bodhi_lora/registry/`, `bodhi_lora/engine/`, `configs/`, `results/` (the move, `PROVENANCE.md`, `provenance.json`, the recorded manifests), `scripts/migrate_results.py`, `.gitignore`, `Makefile`, `.github/workflows/` | `tests/test_registry_*.py`, `tests/test_no_hardcode.py`, `tests/test_engine_*.py`, `tests/test_manifest.py`, `tests/test_migration_*.py` |
-| analysis | `bodhi_lora/analysis/`, `bodhi_lora/report/`, the `analyze` and `report` commands, `configs/report.yaml`, `paper/generated/`, macro names in `paper/main.tex` and `paper/checklist.tex`, `scripts/check_paper_macros.py`, the analysis scripts in `scripts/` and `rebuttal/analyses/` (to replace them), `results/*/analysis/`, `results/*/seed_*/table.csv`, `results/cross_cell/`, `tests/fixtures/analysis/` | `tests/test_analysis_*.py`, `tests/test_report_*.py`, and the old `tests/test_stats_*.py`, `tests/test_analyses_*.py`, `tests/test_aggregate_seeds.py` until their scripts go |
-| experiments | `bodhi_lora/pipeline/`, `bodhi_lora/grading/`, `bodhi_lora/protocols/`, `bodhi_lora/data/`, new records in `configs/cells/`, `configs/protocols/`, `configs/benchmarks/` and `configs/models/` (status `planned`), `tests/fixtures/pipeline/`, `tests/fixtures/protocols/` | `tests/test_pipeline_*.py`, `tests/test_protocols_*.py`, `tests/test_data_*.py`, `tests/test_grading_*.py` |
+| analysis | `bodhi_lora/analysis/`, `bodhi_lora/report/`, the `analyze` and `report` commands, `configs/report.yaml`, `paper/generated/`, macro names in `paper/main.tex` and `paper/checklist.tex`, `scripts/check_paper_macros.py`, the analysis scripts in `scripts/` and `rebuttal/analyses/` (to replace them), `results/*/analysis/`, `results/*/seed_*/table.csv`, `results/cross_cell/` | `tests/test_analysis_*.py`, the report's tests, and the old `tests/test_stats_*.py`, `tests/test_analyses_*.py`, `tests/test_aggregate_seeds.py` until their scripts go |
+| experiments | `bodhi_lora/pipeline/`, `bodhi_lora/grading/`, `bodhi_lora/protocols/`, `bodhi_lora/data/`, new records in `configs/cells/`, `configs/protocols/`, `configs/benchmarks/` and `configs/models/` (status `planned`), `tests/fixtures/pipeline/` | `tests/test_pipeline_*.py`, `tests/test_protocols_*.py`, `tests/test_data_*.py`, `tests/test_grading_*.py` |
 | plans | `docs/EXPERIMENTS.md`, `docs/DECISIONS.md`, `docs/CLAIMS.md`, drafts of the dated analysis plan in `docs/` (O4), `BLOCKED.md`, `KNOWN_ISSUES.md`, `RESULTS.md`, `REPRODUCIBILITY.md`, `README.md`, the records in `rebuttal/` | none |
 | integrate (last) | `docs/ARCHITECTURE.md`, `scripts/check_doc_paths.py`, `scripts/README.md`, `setup.sh`, and any shared path a lane asked for | runs every test |
 
@@ -792,6 +865,23 @@ O6). A record of status `planned` changes no number in the paper.
 | experiments | Every planned cell in [EXPERIMENTS.md](EXPERIMENTS.md) with fixed settings has a record that loads, and `python -m bodhi_lora run <cell> --dry-run` prints its GPU commands; each GPU item is listed with its command and an H100-hour estimate. |
 | plans | A draft of the dated analysis plan for the first author, and every EXPERIMENTS.md entry tied to a cell record, a decision or a BLOCKED.md item. |
 | integrate | All of the above from a clean checkout of the merged branch, and `scripts/check_doc_paths.py` passes with no `PENDING` entry left for a path that now exists. |
+
+### 11.4 How the lanes ended (2026-10-09)
+
+- **plans** and **experiments** merged as their branches stood. The integrate step then
+  brought the docs in line with the records (cell ids, loader keys, judges), stopped a
+  stub or dry run from writing under the results root through `--results-root`, and
+  made traces, filter and grade skip a request that does not fit the context window
+  instead of asking for a rerun that would fail the same way.
+- **analysis** stopped before its first commit. The integrate step reviewed its work,
+  checked it against the outputs it supersedes (10.3), and committed the extract and
+  analyze parts on `gen/lane-analysis` before the merge. It left out two parts: a post
+  hoc red-flag label with an over-flagging rate computed on the 2026-05 outputs
+  (convention 3: the analysis plan reads over-flagging from the physician labels, H7),
+  and the unfinished report module. Both are kept outside the repo in
+  `../_archive/analysis_lane_wip_2026-10-09/`.
+- Not done, so its "done means" row above still applies: `make report`, the macro rename
+  in `paper/main.tex`, and the removal of the old analysis scripts.
 
 ## 12. Open decisions for the first author
 
