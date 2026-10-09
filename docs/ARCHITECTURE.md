@@ -678,9 +678,12 @@ discrimination index for the labels `configs/report.yaml` lists, format leakage,
 askers gap, filter and recipe records, judge agreement (criterion kappa, Pearson r of the
 rubric score, exact agreement per dimension, rubric-score contrasts under each judge),
 and the physician kappa file. The cross-cell step adds the groups, Holm over each group's
-cells, and the posted-value check. Only the 2026-05 cell has tracked tables; the other
-recorded cells wait for `make extract` after the analysis plan is adopted (BLOCKED.md
-item 1). Not built yet, each needed by the analysis plan before its cells exist: the
+cells, and the posted-value check. Every recorded cell with outputs has tracked tables
+and a `stats.json` (the eight cells of `report.cross_cells`, the 2026-04 pilot and the
+partial BioMistral-7B MedQA cell), and `results/cross_cell/stats.json` exists. These
+are the descriptive and exploratory items of ANALYSIS_PLAN.md section 10 (E01 to E05,
+E08); no physician label is read, and E02 with `needs-info-physician` still waits for
+the plan's adoption (BLOCKED.md item 1). Not built yet, each needed by the analysis plan before its cells exist: the
 weighted kappa and dimension contrasts under a judge (H8), the judges' harm grades
 (C33), the probe and bench outputs (E11, E20), stage times from the manifests (E08),
 contrasts between cells (H9, H10, E24), the paired-probe statistics (H3 through E14), and
@@ -887,8 +890,17 @@ O6). A record of status `planned` changes no number in the paper.
   (convention 3: the analysis plan reads over-flagging from the physician labels, H7),
   and the unfinished report module. Both are kept outside the repo in
   `../_archive/analysis_lane_wip_2026-10-09/`.
-- Not done, so its "done means" row above still applies: `make report`, the macro rename
-  in `paper/main.tex`, and the removal of the old analysis scripts.
+- **analysis, second attempt** (`gen/lane-analysis-2`) fixed `make extract` (the
+  package function `extract` was hidden by its submodule of the same name), ran extract
+  and analyze on every cell with outputs, read the stored score formula of files without
+  `score_metric` (the 2026-04 pilot), let a missing seed leave a statistic instead of
+  blanking it (ANALYSIS_PLAN.md 2.3), added the escalation mention rule, the post hoc
+  `red-flag-at-stake` label and the group rates of the discrimination section (the
+  over-flagging check of C30, marked exploratory), and built `bodhi_lora.report`, which
+  `make numbers` now runs. No number the paper printed before changed.
+- Not done, so its "done means" row above still applies: `make report` as its own
+  target, the macro rename in `paper/main.tex`, and the removal of the old analysis
+  scripts.
 
 ## 12. Open decisions for the first author
 
