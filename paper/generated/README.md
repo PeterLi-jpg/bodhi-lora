@@ -53,19 +53,24 @@ details.
 
 `tab_generality` and `tab_generality_aggregate` take the first row (the submitted
 cell) from `results_modal/`. Each other row comes from
-`data/rebuttal_cells/generated_values.json` when `make cells` has written that cell
-from the synced raw outputs. Otherwise the row holds the posted values, transcribed
-from the OpenReview replies into `data/rebuttal_cells/posted_values.json`, and carries
-an asterisk. The raw outputs of the added cells are not in the repo yet (audit PROV-1).
+`data/rebuttal_cells/generated_values.json`, which `make cells` writes from the raw
+outputs synced on 2026-10-08 into the gitignored `results_rebuttal/` (audit PROV-1).
+Each row gets a paired t interval on LoRA minus Base for the aggregate score.
 
-A synced row gets a paired t interval on LoRA minus Base for the aggregate score. A
-posted row has means only, so its interval reads "pending". A dagger marks a cell whose
-base model shares the evaluator's Llama-3 family (decision D6). The `\statCells*`
-counts leave those cells and the set-aside MedQA cell out, and include the submitted
-cell.
+The script keeps a fallback for a tree without `generated_values.json` or without one
+of its cells: that row holds the posted values from
+`data/rebuttal_cells/posted_values.json`, carries an asterisk, and its interval reads
+"pending", because the posts have means only. Since the sync no row uses the fallback.
+`numbers.json` (`generality.provenance`) and the first line of each table name the
+source that the rows actually use.
+
+A dagger marks a cell whose base model shares the evaluator's Llama-3 family (decision
+D6). The `\statCells*` counts leave those cells and the set-aside MedQA cell out, and
+include the submitted cell.
 
 `tab_cell_dimensions` lists every epistemic dimension under Base, Base+BODHI and LoRA for
-each added cell that has all seven posted. Only MedQuAD does so far.
+each added cell that has all seven in every seed. That is every added cell except MedQA,
+whose seed 42 has no epistemic grades.
 
 The script checks that the posted values of the submitted cell match `results_modal/`
 and stores the result in `numbers.json` under `generality.main_cell_check`.

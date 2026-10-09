@@ -37,14 +37,19 @@ Llama-3.1-8B-Instruct.
 | MedQuAD | Mistral-Small-24B | active inquiry rises |
 | MedQA | Mistral-Small-24B | set aside (see `withdrawals.md` W12) |
 
-The posted numbers are in `data/rebuttal_cells/posted_values.json`. The raw outputs are
-still on the shared GPU host (audit PROV-1).
+The posted numbers are in `data/rebuttal_cells/posted_values.json`. The raw outputs were
+copied from the shared GPU host on 2026-10-08 into the gitignored `results_rebuttal/`.
+`make cells` reads them and writes `data/rebuttal_cells/generated_values.json`, and the
+paper takes the added-cell values from that file (audit PROV-1). One posted value was
+wrong (`withdrawals.md` W21).
 
 ## Planned but not run
 
 - The MediQ paired complete-against-incomplete probe.
 - MedicationQA, MedDialog and MedMCQA.
-- MedGemma and BioMistral on MedQA or MedQuAD.
+- MedGemma and BioMistral on MedQA or MedQuAD. MedGemma on MedQA and on MedQuAD, and
+  Gemma-2-9B on HealthBench-Hard, stopped in trace generation. BioMistral on MedQA ran
+  only as a one-seed smoke test (`../RESULTS.md`).
 - A second CoT protocol, or a BODHI ablation variant (C29). Code for an ask-first protocol
   now exists (`PROTOCOL=ask_first` in `launch/run_cell.sh`).
 - The clinical-judge re-grade (C26).
