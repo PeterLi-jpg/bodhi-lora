@@ -106,9 +106,11 @@ python -c "import json,glob; print(len({r['prompt_id'] for f in glob.glob('resul
 | Discrimination with the physician labels (E02) | `make analyze` | planned: fixed in ANALYSIS_PLAN.md section 5.2, not computed on any output yet | the secondary test of calibration against mimicry |
 | Red-flag drop with LoRA plus the BODHI prompt | `make analyze` (format leakage per leak rule) | raw | format leakage, a post hoc diagnosis (D11) |
 | Where the rubric-score drop comes from | `make analyze` (rubric axes and the askers gap) | raw | exploratory (ANALYSIS_PLAN.md section 4); the internal note is `rebuttal/responses/drafts/FINDINGS_quality_drop.md` |
-| Harm proxy (negative rubric criteria met) | `make analyze` | planned (E06) | LLM-graded proxy, not the physician harm review (C33) |
-| Prior-work prompt baselines | `bodhi_lora/protocols/` | planned: two built and stub-tested, one to build; RUN_PLAN.md R2 | compared only inside a cell that ran them (ANALYSIS_PLAN.md H4) |
+| Harm proxy (negative rubric criteria met) | `make analyze` (`neg_any`, `neg_points_lost`) | raw for the 2026-05 cell; the other recorded cells after `make extract` | LLM-graded proxy, secondary (E06, ANALYSIS_PLAN.md section 10); not the physician harm review (C33) |
+| Prior-work prompt baselines | `bodhi_lora/protocols/` | planned: all three built and stub-tested; RUN_PLAN.md R2 | compared only inside a cell that ran them (ANALYSIS_PLAN.md H4) |
 | Med42-8B re-grade outside the Llama and Qwen families | `bodhi_lora/pipeline/grade.py` | planned: built, needs a GPU; RUN_PLAN.md R1 | D6, ANALYSIS_PLAN.md H8 |
+| Judges on the other recorded cells, with their harm grades | `bodhi_lora/pipeline/grade.py` | planned: built, needs a GPU; RUN_PLAN.md R6 | C26, ANALYSIS_PLAN.md H8; the harm grades are an LLM proxy, not C33 |
+| Contamination probe | `bodhi_lora/pipeline/probe.py` | planned: built, needs a GPU; RUN_PLAN.md R11 | Appendix A only (E11, ANALYSIS_PLAN.md section 10) |
 | Per-cell tau, trace counts and adapter recipe | the filter logs and the adapter and trainer files of each cell | raw (`results/cross_cell/cell_recipe.json`) | PROV-3 |
 | Measured cost per configuration | the run manifests and the `bench` stage | planned (E20); the 2026-07 host logs give shared-host times only (RUN_PLAN.md section 3.1) | C25 |
 | Training-loss figure | none | removed from the paper | it came from an early run on 838 traces, not the reported adapters (D14) |

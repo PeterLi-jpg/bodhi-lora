@@ -40,10 +40,11 @@ Issue numbers such as #5 are GitHub issues on `PeterLi-jpg/bohdi-lora`.
 - **Med42-8B shares the evaluator's family (EVAL-7, D6).** The cells are marked † and
   kept out of cross-model statements. The judge re-grade is built
   (`bodhi_lora/pipeline/grade.py`) and waits for the GPU go-ahead (docs/RUN_PLAN.md R1).
-- **No prior-work baseline has run (EVAL-8).** `bodhi_lora/protocols/` holds two of the
-  three prompt baselines; the third (`mediq-abstain`) is to build. They run inside the
-  new cells, so they share the grader and the prompts of the conditions they are
-  compared with (docs/RUN_PLAN.md R2, docs/ANALYSIS_PLAN.md H4).
+- **No prior-work baseline has run (EVAL-8).** The three prompt baselines (`clarify`,
+  `verbalized-confidence`, `mediq-abstain`) are protocol records in `configs/protocols/`,
+  run by `bodhi_lora/protocols/`, and pass their stub tests. They run inside the new
+  cells, so they share the grader and the prompts of the conditions they are compared
+  with (docs/RUN_PLAN.md R2, docs/ANALYSIS_PLAN.md H4).
 - **The MedQA cell has only the preamble run.** Its one run used the old prompt that told
   the model to ask (Base asks in nearly every response), so it measures instruction
   following. The fixed prompt (035d85f) was never run. The paper reports the cell's
@@ -102,9 +103,10 @@ Issue numbers such as #5 are GitHub issues on `PeterLi-jpg/bohdi-lora`.
 ### Planned runs
 
 - **The cost estimates rest on shared-host times.** docs/RUN_PLAN.md scales the stage
-  times of the 2026-07 cells, measured on a shared host. The speed of serving a 4-bit
-  base in vLLM, and of a 27B judge, is not measured; the plan gives a range for each. The
-  first run's manifests and its `bench` stage replace the estimates (E20, C25).
+  times of the 2026-07 cells, measured on a shared host, to each cell record. The speed
+  of serving a 4-bit base in vLLM, of a 14B or 27B judge, and of the judges' harm call is
+  not measured; the plan gives a range or states the assumption. The first run's
+  manifests and its `bench` stage replace the estimates (E20, C25).
 - **The runner evaluates seed-invariant conditions for every seed.** With fixed eval ids
   and greedy decoding, `base` and `base+bodhi` give the same outputs for each seed, but
   the runner runs them five times. In the labelled cells that is nearly half of the time.

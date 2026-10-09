@@ -93,8 +93,8 @@ Some drafts hold numbers that we never posted. The last section below lists them
   `responses/posted/` as `AC_1_part1.md` and `AC_2_part2.md` with `git mv`, and add them to
   the table above. Their withdrawals and promises repeat ones that are already in the ledgers.
 - **Promised experiments.** C25 to C33 need GPU time, people or data access.
-  `commitments.md` says where each one stands (done, built and awaiting GPU, to build,
-  changed or deferred). docs/RUN_PLAN.md orders the runs, with their cost, and
+  `commitments.md` says where each one stands (done, built and awaiting GPU, changed or
+  deferred). docs/RUN_PLAN.md orders the runs, with their cost, and
   docs/ANALYSIS_PLAN.md fixes how each result is read before it exists. No GPU run starts
   before the first author's go-ahead, and the two remaining raters (C28) are deferred
   (docs/DECISIONS.md D20, D21).
