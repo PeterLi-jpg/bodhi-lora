@@ -33,6 +33,7 @@ import os
 import subprocess
 import sys
 import time
+import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
 from typing import List, Optional, Tuple
@@ -40,6 +41,17 @@ from typing import List, Optional, Tuple
 # The server serves an adapter under this name; requests for the adapter use it.
 ADAPTER_NAME = "adapter"
 QUANTIZATIONS = (None, "bitsandbytes")
+
+
+class ContextLengthError(ValueError):
+    """The server refused a request that does not fit its context window.
+
+    A retry fails the same way, so a stage records such an item as too long and skipped
+    instead of asking for a rerun. vLLM 0.9.2 answers HTTP 400 with "This model's maximum
+    context length is N tokens. However, you requested M tokens ..." when prompt tokens
+    plus max_tokens exceed max_model_len (OpenAIServing._validate_input in
+    vllm/entrypoints/openai/serving_engine.py at tag v0.9.2).
+    """
 
 
 @dataclass(frozen=True)
@@ -230,8 +242,14 @@ class VLLMEngine:
         req = urllib.request.Request(
             f"http://localhost:{self.port}{route}",
             data=json.dumps(payload).encode(), headers={"Content-Type": "application/json"})
-        with urllib.request.urlopen(req, timeout=timeout or self.request_timeout) as r:
-            return json.loads(r.read())
+        try:
+            with urllib.request.urlopen(req, timeout=timeout or self.request_timeout) as r:
+                return json.loads(r.read())
+        except urllib.error.HTTPError as e:
+            body = e.read().decode("utf-8", errors="replace")
+            if e.code == 400 and "maximum context length" in body:
+                raise ContextLengthError(body) from e
+            raise
 
     def tokenize(self, text: str) -> List[int]:
         """Token ids of raw text with the served tokenizer, without special tokens."""

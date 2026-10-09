@@ -25,7 +25,7 @@ from pathlib import Path
 from tqdm import tqdm
 
 from bodhi_lora import manifest as mf
-from bodhi_lora.engine import make_engine
+from bodhi_lora.engine import ContextLengthError, make_engine
 from bodhi_lora.pipeline.context import StageContext, context_from_args, stage_parser
 from bodhi_lora.protocols import build, decoding_for
 
@@ -93,7 +93,7 @@ def run(ctx: StageContext) -> dict:
     # The protocol code may sample (prompt order, tie breaks); seed it for reruns.
     random.seed(t.seed)
 
-    ok, failed = 0, []
+    ok, failed, too_long = 0, [], []
     totals = {"calls": 0, "prompt_tokens": 0, "completion_tokens": 0, "finish_length": 0}
     engine = make_engine(ctx.model, serving=t.serving, stub=ctx.stub, stub_reply=STUB_TEACHER_REPLY,
                          log_path=ctx.log_path("vllm_traces.log"))
@@ -115,6 +115,10 @@ def run(ctx: StageContext) -> dict:
                         "completion_tokens_total": o.completion_tokens,
                         "finish_length": o.finish_length,
                     }, None
+                except ContextLengthError:
+                    # The prompt does not fit the context window; a rerun would fail the
+                    # same way, so it is skipped and listed, not retried.
+                    return None, (pid, None)
                 except Exception:
                     # One failed prompt (a timeout, a bad reply) must not stop the run.
                     return None, (pid, "\n".join(traceback.format_exc().strip().splitlines()[-30:]))
@@ -124,7 +128,7 @@ def run(ctx: StageContext) -> dict:
                 for fut in tqdm(as_completed(futures), total=len(futures), desc="traces"):
                     trace, err = fut.result()
                     if trace is None:
-                        failed.append(err)
+                        (too_long if err[1] is None else failed).append(err)
                         continue
                     with lock:
                         f.write(json.dumps(trace) + "\n")
@@ -137,12 +141,15 @@ def run(ctx: StageContext) -> dict:
     for pid, tb in failed[:5]:
         print(f"  failed {pid}:\n{tb}", file=sys.stderr)
     counts = {"n_pool_cap": len(pool), "n_resumed": len(done), "n_ok": ok, "n_failed": len(failed),
+              "n_too_long": len(too_long),
               "n_unreadable_lines": n_bad, "tokens": totals}
     ctx.write_manifest(out_dir, "traces", timer=timer, models={"teacher": ctx.model},
                        config={"traces": t.model_dump(), "protocol": ctx.protocol.model_dump()},
                        engines={"teacher": engine.settings()}, outputs=[out_path], counts=counts,
-                       extra={"status": "incomplete" if failed else "complete"})
-    print(f"traces: {ok} written, {len(failed)} failed -> {out_path}", flush=True)
+                       extra={"status": "incomplete" if failed else "complete",
+                              "too_long_ids": sorted(pid for pid, _ in too_long)})
+    print(f"traces: {ok} written, {len(failed)} failed, {len(too_long)} too long for the context "
+          f"window -> {out_path}", flush=True)
     if failed:
         raise SystemExit(f"{len(failed)} prompts failed; run the stage again to retry them")
     return counts

@@ -15,6 +15,9 @@ seed_<n>/grade/judge__<judge>.json, in three parts:
   dimensions  the seven epistemic dimensions, with the evaluator's template
   harm        extent and likelihood of possible harm and delayed care (grading/harm.py)
 A reply whose row has no rubric (a benchmark with rubric: none) gets no rubric part.
+A request that does not fit the grader's context window is listed per condition
+(too_long_ids) and skipped: a rerun would fail the same way. Any other failed request
+leaves the stage incomplete, and a rerun retries it.
 The registry's family rule (R3) has already checked that the judge shares no family
 with the base, the teacher or the filter.
 
@@ -32,7 +35,7 @@ import numpy as np
 from tqdm import tqdm
 
 from bodhi_lora import manifest as mf
-from bodhi_lora.engine import make_engine
+from bodhi_lora.engine import ContextLengthError, make_engine
 from bodhi_lora.grading.epistemic import (STUB_EPISTEMIC_REPLY, aggregate, flatten_grade,
                                           grade_dimensions, messages_to_text)
 from bodhi_lora.grading.harm import HARM_PROMPT_MARKER, STUB_HARM_REPLY, aggregate_harm, grade_harm
@@ -78,12 +81,23 @@ def load_condition_files(ctx: StageContext, seed: int) -> dict[str, dict]:
 
 
 def _parallel(fn, items, concurrency, desc):
-    done, errors = [], []
+    """fn over items -> (results, [(prompt id, error)], prompt ids that did not fit).
+
+    fn returns (result, None) or (None, (prompt id, exception)). A request longer than
+    the grader's context window fails the same way on every rerun, so it is listed apart
+    and does not make the stage incomplete.
+    """
+    done, errors, too_long = [], [], []
     with ThreadPoolExecutor(max_workers=concurrency) as pool:
         for fut in tqdm(as_completed([pool.submit(fn, it) for it in items]), total=len(items), desc=desc):
             ok, err = fut.result()
-            (done.append(ok) if ok is not None else errors.append(err))
-    return done, errors
+            if ok is not None:
+                done.append(ok)
+            elif isinstance(err[1], ContextLengthError):
+                too_long.append(err[0])
+            else:
+                errors.append((err[0], repr(err[1])))
+    return done, errors, sorted(too_long)
 
 
 def grade_dimensions_of(ctx: StageContext, seed: int, files: dict) -> tuple:
@@ -111,19 +125,20 @@ def grade_dimensions_of(ctx: StageContext, seed: int, files: dict) -> tuple:
                     parsed, raw = grade_dimensions(grader, messages_to_text(rows[pid].messages),
                                                    item["response"])
                 except Exception as e:      # one bad request must not stop the condition
-                    return None, (pid, repr(e))
+                    return None, (pid, e)
                 if parsed is None:
                     return {"prompt_id": pid, "response": item["response"], "parse_failure": True,
                             "scores": None, "raw_grade_text": raw}, None
                 return {"prompt_id": pid, "response": item["response"], "parse_failure": False,
                         "scores": flatten_grade(parsed), "raw_grade": parsed}, None
 
-            graded, errors = _parallel(one, data.get("results", []), serving.concurrency,
-                                       f"{condition} [dimensions]")
+            graded, errors, too_long = _parallel(one, data.get("results", []), serving.concurrency,
+                                                 f"{condition} [dimensions]")
             graded.sort(key=lambda g: g["prompt_id"])
             out["configs"].append({"name": condition, "source_file": str(ctx.paths.eval_file(seed, condition)),
                                    "aggregates": aggregate(graded), "n_failed_lookups": 0,
-                                   "n_grade_errors": len(errors), "examples": graded})
+                                   "n_grade_errors": len(errors), "n_too_long": len(too_long),
+                                   "too_long_ids": too_long, "examples": graded})
     return out, engine.settings(), evaluator
 
 
@@ -150,7 +165,7 @@ def judge_of(ctx: StageContext, seed: int, files: dict, judge_id: str) -> tuple:
                     parsed, raw = grade_dimensions(grader, text, item["response"])
                     harm, harm_raw = grade_harm(grader, text, item["response"])
                 except Exception as e:      # one bad request must not stop the condition
-                    return None, (pid, repr(e))
+                    return None, (pid, e)
                 ex = {"prompt_id": pid, "original_score": item.get("score"),
                       "judge_score": rub["overall_score"] if rub else None,
                       "judge_parse_failures": rub["parse_failures"] if rub else 0,
@@ -168,15 +183,16 @@ def judge_of(ctx: StageContext, seed: int, files: dict, judge_id: str) -> tuple:
                     ex["raw_harm_text"] = harm_raw
                 return ex, None
 
-            examples, errors = _parallel(one, data.get("results", []), serving.concurrency,
-                                         f"{condition} [judge {judge_id}]")
+            examples, errors, too_long = _parallel(one, data.get("results", []), serving.concurrency,
+                                                   f"{condition} [judge {judge_id}]")
             examples.sort(key=lambda e: e["prompt_id"])
             judge_scores = [e["judge_score"] for e in examples if e["judge_score"] is not None]
             original = [e["original_score"] for e in examples if e["original_score"] is not None]
             configs.append({"name": condition, "source_file": str(ctx.paths.eval_file(seed, condition)),
                             "source_sha256": mf.sha256_file(ctx.paths.eval_file(seed, condition)),
                             "n_results": len(data.get("results", [])), "n_regraded": len(examples),
-                            "n_grade_errors": len(errors),
+                            "n_grade_errors": len(errors), "n_too_long": len(too_long),
+                            "too_long_ids": too_long,
                             "rubric": {"judge_mean": float(np.mean(judge_scores)) if judge_scores else None,
                                        "original_mean": float(np.mean(original)) if original else None,
                                        "judge_parse_failures": sum(e["judge_parse_failures"] for e in examples)},
@@ -205,7 +221,8 @@ def run(ctx: StageContext, seed: int, judge_id: str | None = None) -> dict:
     errors = defaultdict(int)
     for c in out["configs"]:
         errors[c["name"]] = c["n_grade_errors"]
-    counts = {c["name"]: {"n": len(c["examples"]), "n_grade_errors": c["n_grade_errors"]} for c in out["configs"]}
+    counts = {c["name"]: {"n": len(c["examples"]), "n_grade_errors": c["n_grade_errors"],
+                          "n_too_long": c["n_too_long"]} for c in out["configs"]}
     ctx.write_manifest(path.parent, "grade", seed=seed, name=f"{name}.manifest.json", timer=timer,
                        models={role: model}, engines={role: settings},
                        inputs=[ctx.paths.eval_file(seed, c) for c in files], outputs=[path], counts=counts,

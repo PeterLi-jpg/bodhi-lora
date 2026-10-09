@@ -40,7 +40,7 @@ from pathlib import Path
 from tqdm import tqdm
 
 from bodhi_lora import manifest as mf
-from bodhi_lora.engine import make_engine
+from bodhi_lora.engine import ContextLengthError, make_engine
 from bodhi_lora.grading.rubric import Grader, grade_rubric
 from bodhi_lora.pipeline.context import StageContext, context_from_args, stage_parser
 
@@ -168,7 +168,7 @@ def grade(ctx: StageContext) -> dict:
     grader_model = ctx.reg.models[ctx.cell.grading.filter]
     engine = make_engine(grader_model, serving=flt.serving, stub=ctx.stub,
                          stub_reply=STUB_GRADE_REPLY, log_path=ctx.log_path("vllm_filter.log"))
-    failed = []
+    failed, too_long = [], []
     if todo:
         with engine as eng, open(graded_path, "a") as f:
             grader = Grader(eng)
@@ -178,6 +178,10 @@ def grade(ctx: StageContext) -> dict:
                     rubric = rows[trace["prompt_id"]].rubrics
                     return {**trace, "grade": grade_rubric(grader, trace["messages"], trace["response"],
                                                            rubric)}, None
+                except ContextLengthError:
+                    # Too long for the grader's context window: a rerun would fail the same
+                    # way, so the trace is skipped (never kept) and listed.
+                    return None, (trace["prompt_id"], None)
                 except Exception:
                     return None, (trace["prompt_id"],
                                   "\n".join(traceback.format_exc().strip().splitlines()[-30:]))
@@ -187,7 +191,7 @@ def grade(ctx: StageContext) -> dict:
                 for fut in tqdm(as_completed(futures), total=len(futures), desc="grading"):
                     row, err = fut.result()
                     if row is None:
-                        failed.append(err)
+                        (too_long if err[1] is None else failed).append(err)
                         continue
                     # Appended as they finish, so a crash keeps every finished grade.
                     f.write(json.dumps(row) + "\n")
@@ -206,7 +210,7 @@ def grade(ctx: StageContext) -> dict:
     outputs = [graded_path, out_dir / "kept.jsonl"]
     counts = {"n_traces": len(traces), "n_in_train_pool": len(in_pool),
               "n_outside_train_pool": len(traces) - len(in_pool), "n_graded": len(graded_rows),
-              "n_failed_grading": len(failed), "n_kept": len(kept),
+              "n_failed_grading": len(failed), "n_too_long": len(too_long), "n_kept": len(kept),
               "kept_of_graded": len(kept) / len(graded_rows) if graded_rows else None,
               "grader_parse_failures_total": parse_failures, "grader_rubric_items_total": items}
     if flt.split_policy == "once":
@@ -221,7 +225,8 @@ def grade(ctx: StageContext) -> dict:
                        inputs=[traces_path] + ([reused] if reused else []), outputs=outputs,
                        counts={**counts, "n_grades_reused": sum(1 for g in graded_rows if g.get("grades_from"))},
                        extra={"status": status, "tau": tau_record,
-                              "grades_from": ctx.cell.traces_from if reused else None})
+                              "grades_from": ctx.cell.traces_from if reused else None,
+                              "too_long_ids": sorted(pid for pid, _ in too_long)})
     print(f"filter: tau {tau_record['tau']} ({flt.tau.rule}), kept {len(kept)}/{len(graded_rows)}", flush=True)
     if failed:
         raise SystemExit(f"{len(failed)} traces failed grading; run the stage again to retry them")

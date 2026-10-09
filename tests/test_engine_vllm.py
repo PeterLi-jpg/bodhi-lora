@@ -126,3 +126,30 @@ def test_stub_tokenizer_round_trips_and_continues_raw_text():
     ids = eng.tokenize("the cat saw the dog")
     assert ids[0] == ids[3] and eng.detokenize(ids) == "the cat saw the dog"
     assert eng.continue_ids(ids[:2], max_new_tokens=5).text == "THE CAT"
+
+
+def test_a_context_length_refusal_is_its_own_error(monkeypatch):
+    """vLLM 0.9.2 answers HTTP 400 with "maximum context length" when prompt plus
+    max_tokens exceed max_model_len; the stages skip such items instead of retrying."""
+    import io
+    import urllib.error
+
+    eng = make_engine(MODEL, serving=SERVING)
+
+    def refuse(body, code=400):
+        def urlopen(req, timeout=None):
+            raise urllib.error.HTTPError(req.full_url, code, "Bad Request", {}, io.BytesIO(body.encode()))
+        return urlopen
+
+    msg = ('{"object": "error", "message": "This model\'s maximum context length is 4096 tokens. '
+           'However, you requested 5000 tokens", "type": "BadRequestError", "code": 400}')
+    monkeypatch.setattr(ve.urllib.request, "urlopen", refuse(msg))
+    with pytest.raises(ve.ContextLengthError):
+        eng.complete([{"role": "user", "content": "hi"}], max_new_tokens=8)
+    monkeypatch.setattr(ve.urllib.request, "urlopen", refuse('{"message": "bad model name"}'))
+    with pytest.raises(ve.urllib.error.HTTPError):
+        eng.complete([{"role": "user", "content": "hi"}], max_new_tokens=8)
+    monkeypatch.setattr(ve.urllib.request, "urlopen", refuse(msg, code=500))
+    with pytest.raises(ve.urllib.error.HTTPError) as err:
+        eng.complete([{"role": "user", "content": "hi"}], max_new_tokens=8)
+    assert not isinstance(err.value, ve.ContextLengthError)

@@ -7,12 +7,13 @@ from pathlib import Path
 from typing import Optional, Union
 
 from bodhi_lora.engine.stub import Reply, StubEngine
-from bodhi_lora.engine.vllm import Completion, VLLMEngine, placement_from_env
+from bodhi_lora.engine.vllm import Completion, ContextLengthError, VLLMEngine, placement_from_env
 from bodhi_lora.registry.schema import ModelConfig, Serving
 
 Engine = Union[VLLMEngine, StubEngine]
 
-__all__ = ["Completion", "Engine", "StubEngine", "VLLMEngine", "make_engine", "placement_from_env"]
+__all__ = ["Completion", "ContextLengthError", "Engine", "StubEngine", "VLLMEngine", "make_engine",
+           "placement_from_env"]
 
 
 def make_engine(model: ModelConfig, *, serving: Serving, adapter: Optional[Path] = None,

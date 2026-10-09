@@ -164,6 +164,50 @@ def test_a_recorded_cell_only_gets_judge_regrades_that_read_its_stored_replies(t
     assert manifest["engines"]["judge"]["max_model_len"] == 2048   # grading.judge_serving
 
 
+def test_a_request_too_long_for_the_context_is_listed_not_retried(tmp_path, monkeypatch):
+    """A too-long request fails the same way on every rerun, so it must not leave the
+    stage incomplete; any other failed request must."""
+    from bodhi_lora.engine import ContextLengthError
+    from bodhi_lora.pipeline import grade
+    from bodhi_lora.pipeline.context import StageContext
+
+    configs = fixture_configs(tmp_path)
+    reg, proj = load_registry(configs), project(configs)
+    cell = reg.cells[RECORDED]
+    rows = [json.loads(line) for line in (CONFIGS_DIR.parent / "tests/fixtures/pipeline/tiny_rubric.jsonl")
+            .read_text().splitlines()][:4]
+    for condition in cell.eval.conditions:
+        path = proj.cell(RECORDED).eval_file(1, condition)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps({"config": condition, "results": [
+            {"prompt_id": r["prompt_id"], "response": f"reply to {r['prompt_id']}", "score": 0.5}
+            for r in rows]}))
+    first = rows[0]["prompt_id"]
+    real = grade.grade_dimensions
+
+    def raising(exc):
+        def grade_dimensions(grader, text, response):
+            if response == f"reply to {first}":
+                raise exc
+            return real(grader, text, response)
+        return grade_dimensions
+
+    ctx = StageContext(reg=reg, project=proj, cell=cell, paths=proj.cell(RECORDED), stub=True)
+    monkeypatch.setattr(grade, "grade_dimensions",
+                        raising(ContextLengthError("This model's maximum context length is 2048 tokens.")))
+    grade.run(ctx, 1, "medgemma-27b-text")
+    out = proj.cell(RECORDED).judge_file(1, "medgemma-27b-text")
+    for c in json.loads(out.read_text())["configs"]:
+        assert (c["n_too_long"], c["too_long_ids"], c["n_grade_errors"], len(c["examples"])) == (1, [first], 0, 3)
+    manifest = out.parent / "judge__medgemma-27b-text.manifest.json"
+    assert json.loads(manifest.read_text())["status"] == "complete"
+
+    monkeypatch.setattr(grade, "grade_dimensions", raising(RuntimeError("read timed out")))
+    with pytest.raises(SystemExit, match="run the stage again"):
+        grade.run(ctx, 1, "medgemma-27b-text")
+    assert json.loads(manifest.read_text())["status"] == "incomplete"
+
+
 def test_recorded_and_external_cells_are_refused(reg, tmp_path):
     proj = project(CONFIGS_DIR)
     with pytest.raises(RunError, match="records a past run"):
