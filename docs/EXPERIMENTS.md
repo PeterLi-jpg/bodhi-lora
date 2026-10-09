@@ -103,9 +103,9 @@ prompt-clustered bootstrap intervals, counts and parse failures for both graders
 case, blanket disclaimers with Fisher, length, askers gap, rubric axes, dimension
 correlations, and one drawn example per score level per dimension (FzpA-Q2). The
 spreads of base and adapted active inquiry are reported without any convergence claim
-(HomM-F2, W4). Today only the 2026-05 cell has the full set (`scripts/paper_stats.py`);
-the 2026-07 cells have a subset (`rebuttal/analyses/cell_values.py`). Status: to build
-(analysis lane); data exists.
+(HomM-F2, W4). Status: built (`python -m bodhi_lora analyze`, ARCHITECTURE.md section
+7, which lists the parts not built yet). The 2026-05 cell has tracked tables and
+reproduces the paper's values; the 2026-07 cells need `make extract` after P1 is adopted.
 
 **E02. Physician-label discrimination index.** Answers MR-W4, LxMF-2, HomM-W3. HealthBench
 physicians labelled prompts by whether context is missing
@@ -117,33 +117,37 @@ this study, and physicians made them, which answers the post-hoc objection to th
 labellings of the discussion (D9). Statistic: P(ask given positive) minus P(ask given
 negative) per condition, odds ratio, prompt-clustered and seed-level intervals, and LoRA
 minus Base. Cells: the four HealthBench cells of 2026-05 and 2026-07. The two earlier
-labellings are reported next to it, marked post hoc. GPU: no. Status: to build; must be
-in P1 before it is computed.
+labellings are reported next to it, marked post hoc. GPU: no. Status: built (the
+discrimination index of `analyze`); the physician label stays out of
+`configs/report.yaml` until P1 is adopted.
 
 **E03. Grader-free question rate.** Answers MR-W3, HomM-W3, PROV-7. Share of responses
 with a second-person question, for every cell and condition. Exists for the 2026-05
 cell (`rebuttal/analyses/second_person_questions.py`, which gives 17.9% against 36.7%,
-not the posted 18.4% against 39.6%). GPU: no. Status: to build (uniform).
+not the posted 18.4% against 39.6%). GPU: no. Status: built (the `second_person_q` text
+rule of `configs/report.yaml`, for every cell).
 
 **E04. Format leakage for every cell.** Answers LxMF-4, D11. For each leak rule of the
 protocol used at inference: leak share per condition, the seven dimensions by leak
 status, red flag by length quartile in non-leaked responses. With `finish_length`
 recorded in new runs, truncation is measured directly instead of inferred. Exists for
-the 2026-05 cell (`rebuttal/analyses/interference_mechanism.py`). GPU: no. Status: to
-build (uniform).
+the 2026-05 cell (`rebuttal/analyses/interference_mechanism.py`). GPU: no. Status: built
+(for every leak rule of every protocol a cell uses).
 
 **E05. What the aggregate drop is made of.** Answers HomM-final (consistent aggregate
 drops), withdrawals W7 and W8. Per cell: LoRA minus Base on each HealthBench rubric axis,
 the askers gap, and the cross-cell Holm family of the aggregate drops. Exists in part
 (`rebuttal/analyses/quality_drop.py`, the askers gap in `cell_values.py`). GPU: no.
-Status: to build (uniform).
+Status: built (axes, askers gap, and Holm over the cells of each group).
 
 **E06. Harm proxy.** Answers C33 (in part), HomM-final, FzpA-F2. Share of responses that
 meet at least one negative-point rubric criterion, and the points lost to them, per
 condition, with seed-level contrasts. HealthBench rubrics carry physician-written
 negative criteria (4,133 in Hard); the synthesized rubric has two (dangerous advice,
 false reassurance). This is an LLM-graded proxy, not the physician harm review (E28).
-GPU: no. Status: to build.
+GPU: no. Status: built. The judges also grade harm on Singhal et al.'s extent and
+likelihood axes plus delayed care (`bodhi_lora/grading/harm.py`); the analysis does not
+read those grades yet.
 
 **E07. Deployment-risk criterion.** Answers C10 (the text is done), HomM-final ("when the
 gains justify the loss"), FzpA-F2. A rule per cell, fixed in P1: prefer the adapter over
@@ -157,7 +161,8 @@ Status: to build.
 **E08. Cost from the outputs.** Answers FzpA-S, C25 (in part), LxMF-1. Calls,
 generated tokens and characters per response and condition, and completions lost to
 the context window. The 2026-05 files hold `response_token_count`; new runs add calls
-and tokens over all passes. GPU: no. Status: to build. E20 adds measured time.
+and tokens over all passes. GPU: no. Status: built, except stage times from the
+manifests. E20 adds measured time.
 
 ### Inference only (GPU, no training)
 
@@ -167,8 +172,8 @@ HomM-W3. Re-grade the stored outputs of `healthbench__med42-8b__bodhi__2026-07` 
 family (Gemma-2-27B by default; MedGemma-27B is the clinical choice). Report per-criterion
 kappa against the evaluator and the LoRA minus Base contrasts under the judge. The dagger
 stays. GPU: yes, about 2 to 5 H100-hours per cell, under 1 with the dimensions only
-([RUN_PLAN.md](RUN_PLAN.md) R1). Code: `bodhi_lora/pipeline/grade.py`, dry-run tested. Status: to
-run.
+([RUN_PLAN.md](RUN_PLAN.md) R1). Code: `bodhi_lora/pipeline/grade.py`, dry-run tested. The two
+records list `gemma-2-27b` and also `medgemma-27b-text` (E10). Status: to run.
 
 **E10. Clinical-judge robustness panel.** Answers C26, LxMF-3, HomM-Q4, HomM-W3,
 HomM-F4, MR-W3. Re-grade every cell's stored outputs with clinical judges that pass the
@@ -178,9 +183,15 @@ grading at a fixed family), Aloe-Beta-8B (Llama-3.1 based; the Qwen-based Aloe m
 fail R3), and MedGemma-27B (Gemma, clinical). Per judge: per-criterion kappa against the
 evaluator, weighted kappa on the 0 to 2 dimensions, Pearson r of the rubric score, and
 every contrast recomputed. It does not replace the evaluator. Cells: every existing cell
-and every new one. GPU: yes, about 1 to 5 H100-hours per judge and cell. Status: to build
-(judge lists in the grade stage), then to run. Meditron3-8B has no pinned revision yet
-(BLOCKED.md, "Hugging Face facts"), and Aloe-Beta-8B has no model record yet.
+and every new one. GPU: yes, about 1 to 5 H100-hours per judge and cell. Status: built
+(judge lists in the grade stage, judges run with `--stages grade` on recorded cells),
+then to run. The records name one clinical judge per cell, a choice the experiments lane
+made and the first author may change (BLOCKED.md item 1): `medgemma-27b-text` for every
+base outside the Gemma family, and `phi-4` (general) for the Gemma bases, because no
+clinical model outside Gemma, Llama and Qwen fits (Meditron3-Phi4-14B is a base model by
+its card, and gpt-oss needs vLLM 0.10.1 or later). No record uses Med42-8B, Meditron3-8B
+or Aloe-Beta-8B as a judge: the Meditron3-8B record is stale (BLOCKED.md item 3), and
+Aloe-Beta-8B has no record.
 
 **E11. Contamination probe for every base model and benchmark.** Answers EVAL-12,
 NUM-7. Does the base complete benchmark prompts verbatim more often than a control text?
@@ -188,7 +199,11 @@ NUM-7. Does the base complete benchmark prompts verbatim more often than a contr
 was never kept. Generalize the control text per benchmark, run it for Mistral-Small-24B,
 Med42-8B, BioMistral-7B, Mistral-7B-Instruct and MedGemma-27B on each benchmark they are
 evaluated on, and keep the JSON. GPU: yes, about 1 H100-hour per model and benchmark.
-Status: to build, then to run.
+Status: built, then to run. The probe now continues raw token ids with the served
+tokenizer (no chat template), which differs from the chat-mode probe that Appendix A
+describes. The eight recorded cells and the Mistral-7B-Instruct and Gemma-3-27B cells
+(E21, E24) carry `probe` blocks; the control is HealthBench for the older benchmarks and
+ChatDoctor for HealthBench.
 
 **E12. Prior-work baselines.** Answers MR-W6, HomM-W4, HomM-Q3, HomM-F5, C27, C14, and
 the open item the LxMF rebuttal named. Three inference-time baselines on the unchanged
@@ -196,7 +211,9 @@ base, on each cell's eval prompts, graded like every other condition:
 - `base+clarify`: a clarifying-question instruction. Exists (`bodhi_lora/protocols/instruction.py`).
 - `base+verbalized-confidence`: state confidence in words and as a number, and what
   would change the answer (Lin et al., 2022; Tian et al., 2023). Exists.
-- `base+mediq-abstain`: a MediQ-style abstention step (Li et al., NeurIPS 2024). Pass 1
+- `base+mediq-abstain`: a MediQ-style abstention step (Li et al., NeurIPS 2024). Exists
+  (`bodhi_lora/protocols/abstain.py`; it adapts MediQ's multiple-choice wording to open
+  questions). Pass 1
   rates on a five-level scale, with a short rationale, whether the information is enough
   to answer safely; if it is below the threshold, pass 2 asks the most important question,
   otherwise it answers. This is the paper's Scale plus rationale variant without
@@ -207,8 +224,8 @@ for each baseline, because a prompt can raise asking without targeting it. Cells
 new cell (E13, E16, E25); optional on the 2026-07 cells, which pair with their stored
 Base rows only if the grader repo and the serving settings match the cell record. GPU:
 yes, about 2 to 3 H100-hours per 24-27B cell for the two single-pass baselines
-([RUN_PLAN.md](RUN_PLAN.md) R2), more with the two-pass one. Status: two exist (dry-run tested), one
-to build; all to run.
+([RUN_PLAN.md](RUN_PLAN.md) R2), more with the two-pass one. Status: all three exist (dry-run
+tested); all to run.
 
 **E14. MediQ paired probe: calibration against mimicry.** Answers MR-W4, LxMF-2 directly.
 MediQ (Li et al., NeurIPS 2024; repository licence CC BY 4.0) turns MedQA vignettes into
@@ -222,10 +239,11 @@ Statistic: within-pair difference in asking (evaluator and grader-free count), s
 paired t, McNemar per condition, and the LoRA minus Base difference in differences.
 Draw 200 pairs per seed. Cells: eval-only cells with `adapters_from` the E13 and E16
 cells, for example `mediq-paired__mistral-small-24b__bodhi` (benchmark record
-`mediq-paired`, loader `mediq_paired`). MediQ cases come from MedQA, so check overlap
+`mediq-paired`, loader `paired_context_jsonl`). MediQ cases come from MedQA, so check overlap
 with any MedQA-trained cell (the development split against our train split). GPU: yes,
-about 2 to 4 H100-hours per adapter cell. Status: to build (loader, benchmark record),
-then to run.
+about 2 to 4 H100-hours per adapter cell. Status: built (loader, benchmark record, pair
+draws), then to run. The source file is not pinned yet: `python -m bodhi_lora fetch
+mediq-paired` downloads it (2.6 MB) and prints the sha256 to put in the record.
 
 ### New training runs (GPU)
 
@@ -250,8 +268,8 @@ decision O7). Each gets the eval-only cell `<HB-new>__labelled` for E18 and E19.
 yes, about 15 to 20 H100-hours per cell with all conditions (rough). Status: to run
 after the build.
 
-The proposed record of the first cell. Together with the records it references, it
-passes `load_registry()`.
+The record of the first cell, as in `configs/cells/healthbench__mistral-small-24b__bodhi.yaml`
+(a test checks that each value shown here matches the file):
 
 ```yaml
 # configs/cells/healthbench__mistral-small-24b__bodhi.yaml
@@ -264,7 +282,7 @@ seeds: [42, 7, 13, 99, 101]
 grading:
   filter: qwen2.5-14b
   evaluator: llama-3.1-8b
-  judges: [medgemma-27b-text, meditron3-8b]
+  judges: [medgemma-27b-text]
 traces:
   max_prompts: 4200
   max_new_tokens_per_pass: 2048
@@ -275,6 +293,7 @@ filter:
   serving: {max_model_len: 8192, max_num_seqs: 64, concurrency: 16, request_timeout_s: 180}
 train:
   engine: peft
+  # QLoRA: NF4 weights with bf16 compute and double quantization, to fit one H100.
   quantization: 4bit
   r: 16
   alpha: 32
@@ -290,15 +309,24 @@ train:
   max_seq_length: 4096
   gradient_checkpointing: true
   checkpoint: best_val_loss
+  eval_every: epoch
+  logging_steps: 10
   hardware: 1x H100 80GB
 eval:
-  conditions: [base, base+bodhi, lora, lora+bodhi, base+clarify, base+verbalized-confidence,
-               base+mediq-abstain, base+red-flags-first, lora+red-flags-first]
+  conditions: [base, base+bodhi, lora, lora+bodhi, base+clarify,
+               base+verbalized-confidence, base+mediq-abstain,
+               base+red-flags-first, lora+red-flags-first]
   ids: {policy: per_seed_draw, n: 200}
+  # The base is served as it was trained, 4-bit under a QLoRA adapter (audit REPRO-12).
   base_precision: train
   max_new_tokens: 1024
   max_new_tokens_per_pass: 2048
   serving: {max_model_len: 8192, max_num_seqs: 32, concurrency: 32, request_timeout_s: 900}
+# E20: time and tokens per reply of every condition, one reply at a time, on seed 42.
+bench:
+  n_prompts: 50
+  seeds: [42]
+  serving: {max_model_len: 8192, max_num_seqs: 1, concurrency: 1, request_timeout_s: 900}
 report:
   label: HealthBench-Hard, Mistral-Small-24B
   token: HBMistral
@@ -309,8 +337,8 @@ report:
 clinician framing), C1 (tasks with no missing information). The only MedQA run used a
 preamble that told the model to ask; 035d85f removed it. Cell:
 `medqa-open__mistral-small-24b__bodhi`, plus the rubric's keyed-answer check as an
-accuracy measure. GPU: yes, about 10 H100-hours. Status: to run (benchmark record to
-build).
+accuracy measure. GPU: yes, about 10 H100-hours. Status: to run (the `medqa-open`
+record exists).
 
 **E16. Second teaching protocol.** Answers HomM-W1, HomM-final, MR-F (narrow protocols),
 C29, C12. Ask-first (`bodhi_lora/protocols/ask_first.py`): one call, a three-question plan,
@@ -327,7 +355,8 @@ flag section moved to the start of pass 1 and an instruction that the reply stat
 flags first. Test: `lora+red-flags-first` minus `lora+bodhi` on red flag identification
 and leak share, on the adapters trained with BODHI; `base+red-flags-first` shows the
 effect of the order alone. Cells: E13. Optional: a cell that also teaches with it.
-GPU: yes, inside E13. Status: to build (protocol), then to run.
+GPU: yes, inside E13. Status: built (protocol `red-flags-first`), then to run. Its contrast
+with `lora+bodhi` is not one the analysis makes by rule yet (ARCHITECTURE.md section 7).
 
 **E18. Over-flagging set.** Answers C30, C18, FzpA-W3 (red-flag false positives).
 HealthBench physicians labelled cases emergent, conditionally emergent or not emergent
@@ -338,7 +367,7 @@ and rate on non-emergent prompts (lower is better), the same on emergent prompts
 their difference as a red-flag discrimination index, per condition. Cells: the
 `<HB-new>__labelled` eval-only cells. On the existing cells only the Hard subset is
 clean (8 non-emergent, 48 emergent or conditional); report it as descriptive. GPU: yes,
-inside E13. Status: to build (labels and split), then to run.
+inside E13. Status: built (labels and split), then to run.
 
 The eval-only cell evaluates the E13 adapters on all 775 labelled prompts (453
 emergency-labelled, 322 clinician-user):
@@ -352,7 +381,7 @@ model: mistral-small-24b
 protocol: bodhi
 seeds: [42, 7, 13, 99, 101]
 adapters_from: healthbench__mistral-small-24b__bodhi
-grading: {filter: qwen2.5-14b, evaluator: llama-3.1-8b, judges: [medgemma-27b-text]}
+grading: {filter: qwen2.5-14b, evaluator: llama-3.1-8b}
 eval:
   conditions: [base, base+bodhi, lora, lora+bodhi, lora+red-flags-first]
   ids:
@@ -389,16 +418,17 @@ Two openly available sets instead:
 Not chosen: MedQA (exam vignettes with complete information, E15 covers it), and
 Asclepius or PMC-Patients questions (extraction and summarization over notes, which the
 scope excludes, C1). Cells: `<HB-new>__labelled` for the primary;
-`cqc__<model>__bodhi` eval-only cells for the secondary. GPU: yes, about 2 to 3
-H100-hours per adapter cell for the secondary. Status: to build (CQC loader and record),
-then to run.
+`nlm-clinical-questions__<model>__bodhi` eval-only cells for the secondary. GPU: yes,
+about 2 to 3 H100-hours per adapter cell for the secondary. Status: built (loader
+`xml_records`, record `nlm-clinical-questions`; its four files are not pinned yet,
+`python -m bodhi_lora fetch nlm-clinical-questions` prints the hashes), then to run.
 
 **E20. Measured cost per configuration.** Answers C25, FzpA-S. The run manifests record
 wall-clock time, GPU model and tokens per stage. The `bench` stage times a fixed batch
 of 50 prompts per condition on an otherwise idle GPU, so shared-node queueing does not
 enter the figures. Report training time per seed, and time and tokens per response per
-condition. GPU: yes, inside E13 and E16. Status: to build (timers, `bench` stage from
-`bodhi_lora/pipeline/bench.py`), then to run.
+condition. GPU: yes, inside E13 and E16. Status: built (manifest timers; the `bench` stage
+times the seeds in `bench.seeds` at the eval's token limits), then to run.
 
 **E21. BioMistral null: teacher or student?** Answers HomM-F1, withdrawals W5. One null
 cannot separate teacher strength from model size, instruction tuning or recipe.
@@ -407,7 +437,7 @@ BioMistral-7B, general instruction tuning. (b)
 `healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b`: BioMistral trained on the
 filtered traces of the Mistral-Small-24B cell (`traces_from`). If (b) transfers, the null
 was the teacher; if (a) transfers and (b) does not, it is the student. GPU: yes, about 4
-H100-hours each (no trace generation for b). Status: to build (`traces_from`), then to
+H100-hours each (no trace generation for b). Status: built (`traces_from`), then to
 run.
 
 **E22. Filter ablation.** Answers a posted claim the discussion never corrected ("the
@@ -416,7 +446,8 @@ filter removes the teacher's failures before they reach the weights",
 `healthbench__mistral-small-24b__bodhi`: `__unfiltered` (tau rule `none`, every trace)
 and `__random-same-count` (a random sample as large as the filtered set). Contrasts on the
 dimensions where teacher and student differ (the selectivity table). GPU: yes, about 8
-H100-hours each (traces shared). Status: to build (tau rules), then to run.
+H100-hours each (traces shared). Status: built (tau rules `none` and `random_same_count`;
+both cells reuse the filter grades of the E13 cell), then to run.
 
 **E23. Teacher-trace seed variance.** Answers REPRO-8, HomM-final (consolidation). Today
 seeds vary training and the eval draw, never the teacher traces (greedy decoding, one
@@ -425,13 +456,13 @@ seeds 1 to 3) for the Mistral-Small-24B HealthBench cell; compare teacher behavi
 filter clearance across them. Stage B: one adapter per trace set at a fixed training
 seed, against the five-seed training spread. Cells:
 `healthbench__mistral-small-24b__bodhi__traces-s1` to `-s3`. GPU: yes, about 3 H100-hours
-for A, about 6 more for B. Status: to build (sampled decoding), then to run.
+for A, about 6 more for B. Status: built (sampled decoding with a trace seed), then to run.
 
 **E24. The general twin of MedGemma.** Answers FzpA-W2, MR-W1. Gemma-3-27B-it against
 MedGemma-27B separates clinical tuning from family and size. Cell:
-`healthbench__gemma-3-27b__bodhi`. The family rule removes Gemma judges for it; the
-Llama clinical judges remain. GPU: yes, about 15 H100-hours. Status: to run (model record
-and pin to build). Optional.
+`healthbench__gemma-3-27b__bodhi`. The family rule removes Gemma judges for it; its
+record names `phi-4` (E10). GPU: yes, about 15 H100-hours. Status: to run (model record
+pinned on 2026-10-09; the Gemma licence must be accepted). Optional.
 
 **E25. Uniform reruns on ChatDoctor and MedQuAD.** Answers HomM-Q2, MR-W2, FzpA-Q3 (more
 than one benchmark). `chatdoctor__mistral-small-24b__bodhi` and
@@ -469,13 +500,13 @@ H100-hour figures are rough estimates (section 1).
 | A | judges on the eight existing cells | grade only | E09, E10 | 15-40 |
 | B | `medqa-open__mistral-small-24b__bodhi` | train | E15 | 10 |
 | B | `healthbench__mistral-7b-instruct__bodhi`, `healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b` | train | E21 | 4 each |
-| B | `cqc__mistral-small-24b__bodhi`, `cqc__medgemma-27b-text__bodhi` | eval only | E19 | 2-3 each |
+| B | `nlm-clinical-questions__mistral-small-24b__bodhi`, `nlm-clinical-questions__medgemma-27b-text__bodhi` | eval only | E19 | 2-3 each |
 | B | probes for five base models | probe | E11 | 1 per model and benchmark |
 | B | `healthbench__mistral-small-24b__bodhi__unfiltered`, `__random-same-count` | train | E22 | 8 each |
-| C | `healthbench__mistral-small-24b__bodhi__traces-s1` to `-s3` | traces, then train | E23 | 3-9 |
+| C | `healthbench__mistral-small-24b__bodhi__traces-s1`, `-s2`, `-s3` | traces, then train | E23 | 3-9 |
 | C | `healthbench__gemma-3-27b__bodhi` | train | E24 | 15 |
 | C | `chatdoctor__mistral-small-24b__bodhi`, `medquad__mistral-small-24b__bodhi` | train | E25 | 10-15 each |
-| C | `healthbench__mistral-small-24b__bodhi-no-<component>` (three) | train | E26 | 10 each |
+| C | `healthbench__mistral-small-24b__bodhi-no-calibration`, `-no-questions`, `-no-abstention` | train | E26 | 10 each |
 
 Summed from the rows, Tier A comes to roughly 65 to 115 H100-hours, and Tiers A and B
 to roughly 115 to 170. On the shared host this has no meter; at an on-demand rate of 2 to
@@ -514,7 +545,7 @@ changes already in `paper/main.tex`, with the commitment that records them.
 | FzpA-final | D4 and C6 done; E19; P1 |
 | LxMF-1 | E01 counts and parse failures, E08 lost completions; caption done (C19) |
 | LxMF-2 | E02, E14, E22, E03; exists for the 2026-05 cell |
-| LxMF-3 | E10 (Med42-8B, Meditron3-8B, Aloe-Beta-8B, MedGemma-27B), E09; text done (C13) |
+| LxMF-3 | E10 (MedGemma-27B-text, and Phi-4 for the Gemma bases), E09; text done (C13) |
 | LxMF-4 | E04, E17; truncation measured through `finish_length` in E13 |
 | LxMF-C | done (C16) |
 | HomM-W1, Q1, Q2 | E13, E16, E25, E21, E24; the 2026-07 cells exist |

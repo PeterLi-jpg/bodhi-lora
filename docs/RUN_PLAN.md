@@ -17,14 +17,16 @@ section 5.
    `python -m bodhi_lora list cells` loads it. The experiments lane writes the records.
 3. Every protocol and loader that the record names exists and passes its stub test. The
    runner freezes a record at its first run (`cell.yaml` in the cell folder must match
-   it), so a condition left out at the start needs a new cell later. Today
-   `mediq-abstain`, `red-flags-first`, the `mediq_paired` and `cqc_xml` loaders, and the
-   records of Gemma-3-27B and Aloe-Beta-8B do not exist.
+   it), so a condition left out at the start needs a new cell later. All of them exist
+   since 2026-10-09: `mediq-abstain`, `red-flags-first`, the `paired_context_jsonl` and
+   `xml_records` loaders, and the Gemma-3-27B and Phi-4 records. The MediQ and NLM files
+   are not pinned yet: `python -m bodhi_lora fetch <benchmark>` downloads them and prints
+   the sha256 to put in the benchmark record.
 4. `python -m bodhi_lora run <cell id> --dry-run` passes on the CPU. It prints every GPU
    command and runs the rest with the stub engine.
 5. The GPU machine has `.venv` and `.venv-infer` (`bash setup.sh`), and `HF_TOKEN` has
-   access to the gated models the cell uses: MedGemma, Llama-3.1, and Gemma 2 (licence
-   accepted) for R1. Meditron3-8B needs a pinned revision first (BLOCKED.md).
+   access to the gated models the cell uses: MedGemma (base and judge), Llama-3.1, Gemma 2
+   (licence accepted) for R1, and Gemma 3 for R14.
 6. The checkout on the GPU machine is clean (`git status` shows nothing), so every
    manifest records a clean commit.
 7. The first author chooses where it runs: the shared H100 host or a paid cloud. Not
@@ -42,14 +44,22 @@ python -m bodhi_lora run <cell id> --stages probe,traces,filter,train,eval,grade
 python -m bodhi_lora run <cell id> --stages bench --seeds 42 --gpus 0
 # Judges on a cell that has already run (a recorded cell): adds judge files only.
 python -m bodhi_lora run <recorded cell id> --stages grade --gpus 0
+# One judge of the record only, for example R1 on a Med42-8B cell:
+python -m bodhi_lora run healthbench__med42-8b__bodhi__2026-07 --stages grade --judges gemma-2-27b --gpus 0
 ```
+
+`--stages grade` on a recorded cell runs every judge its record lists. The two Med42-8B
+records list `gemma-2-27b` (R1) and `medgemma-27b-text` (R6), and the set-aside MedQA
+record lists `medgemma-27b-text`, which no run below costs; `--judges` picks one.
 
 The runner runs seeds in parallel, one per GPU, so with five GPUs a cell takes about its
 shared stages plus one seed in wall-clock time. An eval-only cell (`adapters_from`) needs
 the adapters of its source cell on the same machine.
 
-The `bench` stage runs for every seed when it is in the stage list. One seed is enough
-for timing, so the main run leaves it out and the last command runs it for seed 42.
+The `bench` stage runs only for the seeds in the record's `bench.seeds` (seed 42 in
+every planned cell), at the eval's token limits. A run with every stage therefore times
+seed 42 once its eval is done; the separate `--stages bench` command above only matters
+when the timing must wait for an otherwise idle GPU.
 
 ## 3. Cost basis
 
@@ -114,21 +124,21 @@ seeds are 42, 7, 13, 99 and 101 in every cell (three trace sets at one seed in R
 | Run | Items | Cells | Kind | Needs first | H100-h | Basis | Reviewer points |
 |---|---|---|---|---|---|---|---|
 | R1 (A) | E09 | `healthbench__med42-8b__bodhi__2026-07`, `chatdoctor__med42-8b__bodhi__2026-07`, judge `gemma-2-27b` | judges on recorded cells | the two cell folders with their eval files on the GPU machine | 5.1 | 4 conditions x 5 seeds, A4 | D6, EVAL-7, LxMF-3, HomM-W3, HomM-Q4, C26 (part) |
-| R2 (A) | E13, E12, E17, E20 | `healthbench__mistral-small-24b__bodhi`, nine conditions | train | `mediq-abstain` and `red-flags-first` protocols | 14.6 to 19.6; bench 0.4 to 0.6; judges `medgemma-27b-text` 7.1 and `meditron3-8b` 2.5 | the Mistral HealthBench cell of 3.1, A2, A3, A4, A6 | MR-W1, MR-W2, MR-W6, MR-F, FzpA-W2, FzpA-S, HomM-W1, HomM-W4, HomM-Q1 to Q3, HomM-F5, LxMF-4; C9, C25, C27, C31; REPRO-3, REPRO-8, REPRO-12, PROV-11 |
-| R3 (A) | E14 | `mediq-paired__mistral-small-24b__bodhi` on the R2 adapters | eval only | R2; the `mediq_paired` loader and benchmark record | 2.5 to 3.9 (`base`, `lora`); 4.8 to 7.5 with `base+bodhi` and `base+clarify` | 400 prompts per seed, MedQA-preamble cell times, A3 | MR-W4, LxMF-2 |
+| R2 (A) | E13, E12, E17, E20 | `healthbench__mistral-small-24b__bodhi`, nine conditions | train | none left | 14.6 to 19.6; bench 0.4 to 0.6; judge `medgemma-27b-text` 7.1 | the Mistral HealthBench cell of 3.1, A2, A3, A4, A6 | MR-W1, MR-W2, MR-W6, MR-F, FzpA-W2, FzpA-S, HomM-W1, HomM-W4, HomM-Q1 to Q3, HomM-F5, LxMF-4; C9, C25, C27, C31; REPRO-3, REPRO-8, REPRO-12, PROV-11 |
+| R3 (A) | E14 | `mediq-paired__mistral-small-24b__bodhi` on the R2 adapters | eval only | R2; the pinned MediQ file | 2.5 to 3.9 (`base`, `lora`); 4.8 to 7.5 with `base+bodhi` and `base+clarify` | 400 prompts per seed, MedQA-preamble cell times, A3 | MR-W4, LxMF-2 |
 | R4 (A) | E18, E19 (primary set) | `healthbench__mistral-small-24b__bodhi__labelled` on the R2 adapters, 775 prompts | eval only | R2 | 7.7 to 11.9 with `base`, `base+bodhi`, `lora`; 21.0 to 36.3 with the five conditions of EXPERIMENTS.md; a `medgemma-27b-text` judge adds 15.2 | A1 to A3 | C30, C18, FzpA-W3, C32, FzpA-Q3 |
 | R5 (A) | E16, E14 | `healthbench__mistral-small-24b__ask-first` and `mediq-paired__mistral-small-24b__ask-first` | train, then eval only | the cell records | 9.4 to 13.7, and 2.5 to 3.9 | one-call traces at 0.5 to 1 times the BODHI trace time, A2, A3 | HomM-W1, HomM-final, MR-F, C12, C29 |
-| R6 (A) | E10 | judge `medgemma-27b-text` on the Mistral HealthBench, BioMistral, Mistral ChatDoctor and Mistral MedQuAD cells of 2026-07; judge `med42-8b` on the 2026-05 cell | judges on recorded cells | judges added to those five records | 11.6 | 4 conditions x 5 seeds per cell, A4 | C26, LxMF-3, HomM-Q4, HomM-W3, HomM-F4, MR-W3 |
+| R6 (A) | E10 | judge `medgemma-27b-text` on the Mistral HealthBench, BioMistral, Mistral ChatDoctor and Mistral MedQuAD cells of 2026-07; judge `phi-4` on the 2026-05 cell | judges on recorded cells | none left (the records list the judges) | 11.6 | 4 conditions x 5 seeds per cell, A4 | C26, LxMF-3, HomM-Q4, HomM-W3, HomM-F4, MR-W3 |
 | R7 (A) | E13, E12, E17, E20, E14, E18, E19 | `healthbench__medgemma-27b-text__bodhi` (QLoRA), its `__labelled` cell and `mediq-paired__medgemma-27b-text__bodhi` | train, then eval only | open decision O7 | 15.6 to 27.0; bench 0.5 to 0.9; an 8B judge 2.5; labelled 8.1 to 16.1; paired 2.6 to 5.4 | R2 to R4 with A5 | MR-W1 (the clinical base again), continuity with the 2026-05 cell |
 | R8 (B) | E15 | `medqa-open__mistral-small-24b__bodhi` | train | the `medqa-open` record | 15.6 to 18.0 | the MedQA-preamble cell of 3.1, A3 | W12, C1, C24 (follow-through), FzpA-Q3 |
 | R9 (B) | E21 | `healthbench__mistral-7b-instruct__bodhi`, `healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b` | train | R2 (traces) | 4.2 to 6.1, and 4.7 to 6.3 | the Med42-8B and BioMistral-7B HealthBench cells of 3.1, A6 | HomM-F1, withdrawals W5 |
-| R10 (B) | E19 (secondary set) | `cqc__mistral-small-24b__bodhi`, `cqc__medgemma-27b-text__bodhi` | eval only | R2, R7; the `cqc_xml` loader | 1.8 to 2.9, and 1.9 to 3.9 | 200 questions per seed, three conditions, no rubric grading | FzpA-Q3, C32 |
-| R11 (B) | E11 | probes: Mistral-Small-24B on four benchmarks, Med42-8B on two, BioMistral-7B, Mistral-7B-Instruct and MedGemma-27B on HealthBench | probe | a `probe` block in a cell record per model | 2.2 to 4.5 | 0.25 to 0.5 each: 400 short greedy continuations and one vLLM start | EVAL-12, NUM-7 |
+| R10 (B) | E19 (secondary set) | `nlm-clinical-questions__mistral-small-24b__bodhi`, `nlm-clinical-questions__medgemma-27b-text__bodhi` | eval only | R2, R7; the pinned NLM files | 1.8 to 2.9, and 1.9 to 3.9 | 200 questions per seed, three conditions, no rubric grading | FzpA-Q3, C32 |
+| R11 (B) | E11 | probes: Mistral-Small-24B on four benchmarks, Med42-8B on two, BioMistral-7B, Mistral-7B-Instruct and MedGemma-27B on HealthBench | probe | none left (`probe` blocks in the recorded cells; R9 and R14 probe in their own runs) | 2.2 to 4.5 | 0.25 to 0.5 each: 400 short greedy continuations and one vLLM start | EVAL-12, NUM-7 |
 | R12 (B) | E22 | `healthbench__mistral-small-24b__bodhi__unfiltered`, `__random-same-count` | train | R2 (traces) | 8.9 to 10.7, and 5.7 to 7.4 | training on 3,321 or the kept rows; `base` and `lora` only | MR-W4, LxMF-2, the filter claim |
-| R13 (C) | E23 | `healthbench__mistral-small-24b__bodhi__traces-s1` to `-s3` | traces, then train at one seed | sampled decoding | 10.1 to 11.6 | three trace and filter passes, three adapters | REPRO-8, HomM-final |
+| R13 (C) | E23 | `healthbench__mistral-small-24b__bodhi__traces-s1`, `-s2`, `-s3` | traces, then train at one seed | sampled decoding | 10.1 to 11.6 | three trace and filter passes, three adapters | REPRO-8, HomM-final |
 | R14 (C) | E24 | `healthbench__gemma-3-27b__bodhi` | train | the model record and pin | 10.8 to 17.5 | four conditions, A5 | FzpA-W2, MR-W1 |
 | R15 (C) | E25 | `chatdoctor__mistral-small-24b__bodhi`, `medquad__mistral-small-24b__bodhi` | train | seeded pools in the records | 12.1 to 13.7, and 8.5 to 10.0 | the 2026-07 cells of 3.1, A3 | HomM-Q2, MR-W2, FzpA-Q3 |
-| R16 (C) | E26 | `healthbench__mistral-small-24b__bodhi-no-calibration`, `-no-questions`, `-no-abstention` | train | the cell records | 10.0 to 12.5 each | four conditions | none asked |
+| R16 (C) | E26 | `healthbench__mistral-small-24b__bodhi-no-calibration`, `healthbench__mistral-small-24b__bodhi-no-questions`, `healthbench__mistral-small-24b__bodhi-no-abstention` | train | the cell records | 10.0 to 12.5 each | four conditions | none asked |
 
 The labelled cells (R4, R7) cost much more than EXPERIMENTS.md section 4 says, because
 they evaluate 775 prompts per seed. H7 and H11 need only `base` and `lora`, with
@@ -154,9 +164,10 @@ against mimicry (MR-W4, LxMF-2), red flags first (C31), the Med42-8B grader over
 and measured cost (C25). It leaves the second protocol (R5), the clinical judge panel
 (R6), the labelled probes (R4) and the MedGemma rerun (R7) for the next batch.
 
-To add the judges to R2 later: when R2 is complete, its record gets the judge list and
-`report.status: complete`, and `python -m bodhi_lora run healthbench__mistral-small-24b__bodhi --stages grade --gpus 0`
-adds them (7.1 for `medgemma-27b-text`, 2.5 for `meditron3-8b`).
+To leave the judge of R2 for later, run R2 with `--judges none`. When R2 is complete, its
+record gets `report.status: complete`, and
+`python -m bodhi_lora run healthbench__mistral-small-24b__bodhi --stages grade --gpus 0`
+adds the judge (7.1 for `medgemma-27b-text`).
 
 ## 6. Totals
 
@@ -183,7 +194,8 @@ price list. The shared host has no meter, but each run holds a card for its hour
 2. Set `report.status: complete` (or `partial`) in the cell record. From then on the
    runner refuses to run the cell again, except for judge re-grades.
 3. Run the analysis: `python -m bodhi_lora analyze <cell id> --extract`, then
-   `make analyze` and `make report` (ARCHITECTURE.md section 5).
+   `make analyze` (ARCHITECTURE.md section 5). The paper's numbers come from
+   `make numbers` until `python -m bodhi_lora report` is built.
 4. Commit the tracked files: the manifests, `cell.yaml`, the id lists, the response
    tables and the cell's analysis folder. Git ignores the raw outputs by kind.
 5. Read the results only by the rules of ANALYSIS_PLAN.md, and record any change of plan

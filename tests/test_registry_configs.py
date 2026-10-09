@@ -78,6 +78,30 @@ def test_doc_examples_match_the_schema(doc):
         assert rec.id == name
 
 
+def _settings(obj, prefix=""):
+    """{"a": {"b": 1}} -> {"a.b": 1}."""
+    if not isinstance(obj, dict):
+        return {prefix[:-1]: obj}
+    out = {}
+    for k, v in obj.items():
+        out.update(_settings(v, f"{prefix}{k}."))
+    return out
+
+
+@pytest.mark.parametrize("doc", ["docs/ARCHITECTURE.md", "docs/EXPERIMENTS.md"])
+def test_doc_examples_show_the_values_of_their_records(doc):
+    """An example of a record that exists may leave settings out, but each setting it
+    shows has the record's value, so the docs cannot drift from configs/."""
+    for kind, name, body in EXAMPLE.findall((REPO_ROOT / doc).read_text(encoding="utf-8")):
+        path = CONFIGS_DIR / kind / f"{name}.yaml"
+        if not path.is_file():
+            continue
+        shown = _settings(yaml.safe_load(body))
+        record = _settings(yaml.safe_load(path.read_text(encoding="utf-8")))
+        differ = {k: (v, record.get(k, "<not in the record>")) for k, v in shown.items() if record.get(k) != v}
+        assert not differ, f"{doc}, {kind}/{name}: {differ}"
+
+
 def test_every_record_file_is_named_after_its_id():
     for kind in RECORD:
         for path in sorted((CONFIGS_DIR / kind).glob("*.yaml")):

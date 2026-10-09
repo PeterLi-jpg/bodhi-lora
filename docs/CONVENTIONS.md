@@ -42,8 +42,9 @@ never an edit.
 - Enforced by: review step. The plan's commit must be older than the first commit of
   the results it covers. `bodhi_lora/manifest.py` records the commit of each run, so
   the order can be checked. While a cell runs, progress checks read its manifests only,
-  never its scores (ANALYSIS_PLAN.md section 2.5). Not automatic yet: a test that every
-  cell record with status `planned` is named in ANALYSIS_PLAN.md.
+  never its scores (ANALYSIS_PLAN.md section 2.5). `tests/test_plan_coverage.py` fails
+  when a cell record with status `planned` is not named in ANALYSIS_PLAN.md, or when
+  ANALYSIS_PLAN.md, RUN_PLAN.md or EXPERIMENTS.md names a cell id with no record.
 
 ## 4. Inferential language
 
@@ -200,10 +201,12 @@ rule, not from a list in code.
   condition names were code, so a cell with a new protocol could not be analyzed
   (ARCHITECTURE.md section 1).
 - Enforced by: `tests/test_no_hardcode.py` covers `bodhi_lora/analysis/` and
-  `bodhi_lora/report/` like the rest of the package. The analysis lane adds
-  `tests/test_analysis_*.py` and an equivalence test against every superseded output
-  (ARCHITECTURE.md section 10.3). Until that lane lands, `scripts/paper_stats.py` still
-  computes the full set for the 2026-05 cell only; that is a known gap, not a rule.
+  `bodhi_lora/report/` like the rest of the package. `tests/test_analysis_cell.py` checks
+  the contrast rule, the seed-level tests and "not measured" on synthetic tables, and
+  `tests/test_analysis_equivalence.py` checks that the 2026-05 cell's statistics match
+  the outputs they supersede (ARCHITECTURE.md section 10.3). Known gap: the paper's
+  numbers still come from `scripts/paper_stats.py` (`make numbers`) until
+  `python -m bodhi_lora report` is built.
 
 ## Generality rules at a glance
 
@@ -213,8 +216,8 @@ rule, not from a list in code.
 | One runner | rule 12 | `tests/test_pipeline_runner.py`, `make smoke` |
 | One results root | rule 7 | `tests/test_no_hardcode.py`, `tests/test_migration_provenance.py`, `make check` |
 | No names in code | rule 13 | `tests/test_no_hardcode.py` |
-| Uniform analysis | rule 14 | the analysis lane's tests (planned) |
-| Analysis plan before runs | rule 3 | none yet; review step and the run manifests |
+| Uniform analysis | rule 14 | `tests/test_analysis_*.py`, `make analyze` |
+| Analysis plan before runs | rule 3 | `tests/test_plan_coverage.py`; the order of commits is a review step |
 
 ## Also checked on every pull request
 

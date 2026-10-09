@@ -451,8 +451,8 @@ None of these decides a claim. Each is computed the same way for every cell.
 Entries are dated and never edited. Format: date, who, what changed, why, and whether any
 output of a covered cell existed at that time.
 
-No entry yet. Choices left to the first author before adoption (EXPERIMENTS.md section
-6, ARCHITECTURE.md section 12):
+The first author's adoption entry is still to come. Choices left to him before adoption
+(EXPERIMENTS.md section 6, ARCHITECTURE.md section 12):
 
 1. E14 as the primary test of H3 and E02 as the secondary (proposed here), or the reverse.
 2. Margins for E07 (open decision O5). With none, E07 reports intervals only.
@@ -460,3 +460,39 @@ No entry yet. Choices left to the first author before adoption (EXPERIMENTS.md s
    next to them.
 4. The settings of the new cells (EXPERIMENTS.md E13): the `default` HealthBench split,
    the context length of 8,192, and the base served as trained.
+
+5. The choices in the cell records that the experiments lane made after this plan was
+   written (BLOCKED.md item 1, step 4): the judges, the cells with no judge, the probe
+   method and controls, the harm axes, and the wording of two protocols.
+
+### Entries
+
+**2026-10-09, integrate step. Names only; no method changed.** The experiments lane
+wrote the cell records after this plan. Sections 1 to 11 name the cells as below. No
+output of any planned cell existed then: no folder of a planned cell is under
+`results/`.
+
+- Section 9.3: the `cqc` cells are `nlm-clinical-questions__mistral-small-24b__bodhi` and
+  `nlm-clinical-questions__medgemma-27b-text__bodhi` (benchmark record
+  `nlm-clinical-questions`, loader `xml_records`).
+- The record of every planned cell, by question:
+
+| Question | Cells |
+|---|---|
+| H1, H2, H4, H6 (E13, E12, E17) | `healthbench__mistral-small-24b__bodhi`, `healthbench__medgemma-27b-text__bodhi` |
+| H1, H2 (E15, E21, E24, E25) | `medqa-open__mistral-small-24b__bodhi`, `healthbench__mistral-7b-instruct__bodhi`, `healthbench__gemma-3-27b__bodhi`, `chatdoctor__mistral-small-24b__bodhi`, `medquad__mistral-small-24b__bodhi` |
+| H3 (E14) | `mediq-paired__mistral-small-24b__bodhi`, `mediq-paired__medgemma-27b-text__bodhi`, `mediq-paired__mistral-small-24b__ask-first` |
+| H5 (E16) | `healthbench__mistral-small-24b__ask-first` |
+| H7, H11 primary (E18, E19) | `healthbench__mistral-small-24b__bodhi__labelled`, `healthbench__medgemma-27b-text__bodhi__labelled` |
+| H11 secondary (E19) | `nlm-clinical-questions__mistral-small-24b__bodhi`, `nlm-clinical-questions__medgemma-27b-text__bodhi` |
+| H9 (E21) | `healthbench__mistral-7b-instruct__bodhi`, `healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b` |
+| H10 (E22) | `healthbench__mistral-small-24b__bodhi__unfiltered`, `healthbench__mistral-small-24b__bodhi__random-same-count` |
+| E23 | `healthbench__mistral-small-24b__bodhi__traces-s1`, `healthbench__mistral-small-24b__bodhi__traces-s2`, `healthbench__mistral-small-24b__bodhi__traces-s3` |
+| E26 | `healthbench__mistral-small-24b__bodhi-no-calibration`, `healthbench__mistral-small-24b__bodhi-no-questions`, `healthbench__mistral-small-24b__bodhi-no-abstention` |
+| none (the CPU smoke test; `make smoke`, no result) | `tiny-rubric__tiny-random-llama__bodhi` |
+
+- H8 judges, as the records list them: `gemma-2-27b` and `medgemma-27b-text` on the two
+  Med42-8B cells; `phi-4` on the cells with a Gemma base (the 2026-05 cell, the new
+  MedGemma cell and its NLM cell, the Gemma-3 cell); `medgemma-27b-text` on the other
+  recorded cells and the other training and NLM cells. The labelled, MediQ, E22, E23
+  and E26 cells have no judge. Section 8 holds for each judge a record lists.
