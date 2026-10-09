@@ -109,6 +109,11 @@ def test_stub_and_dry_runs_never_write_under_the_results_root(reg, tmp_path, cap
     assert (tmp_path / "scratch" / "dry_run" / SMOKE / "seed_1" / "eval" / "base.json").is_file()
     # The printed GPU commands are those of a GPU run: no scratch folder in them.
     assert "--results-root" not in "".join(line for line in out.splitlines() if "DRY-RUN [gpu" in line)
+    # Naming the results root, or a folder in it, does not get around the rule.
+    for root in (tmp_path / "results", tmp_path / "results" / "sub"):
+        with pytest.raises(RunError, match="may not write under the results root"):
+            run_cell(reg, proj, SMOKE, mode="stub", seeds=[1], results_root=root)
+    assert not (tmp_path / "results").exists()
 
 
 def test_judges_limits_the_judge_steps(reg, tmp_path):

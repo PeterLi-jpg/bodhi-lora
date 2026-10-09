@@ -392,7 +392,14 @@ def run_cell(reg: Registry, proj: Project, cell_id: str, *, stages: Sequence[str
         raise RunError(f"{sorted(not_judges)} are not judges of {cell_id}: {cell.grading.judges}")
     stored = proj.cell(cell_id)
     if results_root is not None:
-        proj = replace(proj, results_root=Path(results_root).resolve())
+        results_root = Path(results_root).resolve()
+        # The scratch rule above holds for a named root too: a stub manifest that says
+        # complete under the results root would make a later GPU run keep stub outputs.
+        if mode != "gpu" and results_root.is_relative_to(proj.results_root.resolve()):
+            raise RunError(f"a {mode} run may not write under the results root "
+                           f"({proj.rel(proj.results_root)}); leave out --results-root or name "
+                           f"a folder outside it")
+        proj = replace(proj, results_root=results_root)
     elif mode != "gpu":
         proj = replace(proj, results_root=(proj.scratch_root / mode).resolve())
     ctx = StageContext(reg=reg, project=proj, cell=cell, paths=proj.cell(cell_id), stub=mode != "gpu")
