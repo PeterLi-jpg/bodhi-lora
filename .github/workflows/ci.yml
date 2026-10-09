@@ -65,21 +65,10 @@ jobs:
       - name: Compile Python sources
         run: python -m compileall -q bodhi_lora scripts
 
-      - name: Check repo hygiene
-        run: |
-          bash scripts/check_no_secrets.sh
-          python scripts/check_doc_paths.py
-
-      - name: Validate YAML configs
-        run: |
-          python - <<'EOF'
-          from pathlib import Path
-          import yaml
-
-          for path in Path("configs").glob("*.yaml"):
-              with open(path) as handle:
-                  yaml.safe_load(handle)
-          EOF
+      # Doc paths, the secrets scan, and the registry: every record in configs/ loads and
+      # passes the family rule (Makefile target check).
+      - name: Check repo hygiene and the registry
+        run: make check
 
       # A clean checkout must rebuild every committed paper number (audit REPRO-6).
       # HealthBench is the one input not in git; fetch downloads it from OpenAI's public

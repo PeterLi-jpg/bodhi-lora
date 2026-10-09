@@ -4,6 +4,7 @@
 #   make paper     both, then paper/build/main.pdf
 #   make test      the test suite
 #   make smoke     the smoke cell on the CPU: every stage, the tiny model trained for real
+#   make check     doc paths, secrets scan, and the registry (every record loads and checks)
 #   make rebuttal  the submitted cell's analysis/*.json (discrimination, leakage, questions)
 #   make cells     results/cross_cell/*.json: added-cell values, paired tests, tau and recipe
 #                  (needs the ignored host copies in the 2026-07 cells)
@@ -22,7 +23,7 @@ MAIN_CELL ?= results/healthbench__medgemma-27b-text__bodhi__2026-05
 FILTER_TRAIN ?= $(MAIN_CELL)/seed_7/filter/train.jsonl
 POSTED_VALUES ?= rebuttal/posted_values.json
 
-.PHONY: numbers figures paper test smoke rebuttal cells kappa derived
+.PHONY: numbers figures paper test smoke check rebuttal cells kappa derived
 
 numbers: $(HB_HARD)
 	$(PYTHON) scripts/paper_stats.py --healthbench "$(HB_HARD)" --posted-values "$(POSTED_VALUES)"
@@ -48,6 +49,13 @@ SMOKE_CELL ?= tiny-rubric__tiny-random-llama__bodhi
 SMOKE_ROOT ?= outputs/smoke
 smoke:
 	$(PYTHON) -m bodhi_lora run $(SMOKE_CELL) --stub-engine --results-root $(SMOKE_ROOT) --force
+
+# list loads every record and runs the family rule before it prints, so a broken
+# record fails here with all its problems listed.
+check:
+	bash scripts/check_no_secrets.sh
+	$(PYTHON) scripts/check_doc_paths.py
+	$(PYTHON) -m bodhi_lora list cells > /dev/null
 
 rebuttal: $(HB_HARD)
 	$(PYTHON) rebuttal/analyses/mimicry_split.py --healthbench "$(HB_HARD)"
