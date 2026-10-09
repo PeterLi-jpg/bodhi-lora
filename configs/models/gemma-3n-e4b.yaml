@@ -1,4 +1,4 @@
-# The old GPU smoke model (configs/lora_gemma_smoke.yaml). No reported number uses it.
+# The model of the old GPU smoke test (removed). No reported number uses it.
 id: gemma-3n-e4b
 hf_id: google/gemma-3n-E4B-it
 revision: c1221e9c62e34a43ab7ffacd1be0ea71f126ef10

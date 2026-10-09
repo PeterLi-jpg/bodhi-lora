@@ -9,7 +9,7 @@ What it reads: README.md, RESULTS.md, REPRODUCIBILITY.md, KNOWN_ISSUES.md, BLOCK
 docs/**/*.md and contributions/**/*.md. In each it takes inline code spans,
 markdown link targets and the words inside fenced code blocks, and keeps the
 ones that look like repo paths: the first path part is a top-level entry of
-the repo (or a root file such as smoke.sh).
+the repo (or a root file such as setup.sh).
 
 A path passes when it is one of these:
   - tracked in git, or a directory that holds tracked files
@@ -85,7 +85,7 @@ for p in TRACKED:
         TRACKED_DIRS.add("/".join(parts[:i]) + "/")
 TOP = {p.split("/", 1)[0] for p in TRACKED} | {k.split("/", 1)[0] for k in PENDING}
 # Top-level output dirs that are ignored on purpose but still worth checking.
-TOP |= {"eval", "checkpoints", "logs", "results", "outputs", "paper"}
+TOP |= {"checkpoints", "logs", "results", "outputs", "paper"}
 
 
 def expand(path: str) -> list[str]:

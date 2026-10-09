@@ -6,7 +6,6 @@ build/
 .pytest_cache/
 
 data/raw/*.jsonl
-!data/raw/high_stakes_prompts.jsonl
 # Per-seed eval draws; scripts/make_bootstrap_eval_ids.py rebuilds them from the seed.
 data/raw/hard_seed_*.json
 data/sft/*.jsonl

@@ -437,25 +437,11 @@ def test_aggregate_computes_means_and_rates(monkeypatch):
     assert agg["appropriate_hedging_rate"] == 0.5
 
 
-# ── chat.py TPU device_map gating (issue: TPU readiness) ─────────────────
-
-def test_chat_device_map_for_host(monkeypatch):
-    chat = import_with_mocks(
-        "scripts.chat",
-        ["torch", "transformers", "peft"],
-        monkeypatch,
-    )
-    # The decision helper is pure boolean; doesn't need TPU detection mocks.
-    assert chat._device_map_for_host(on_tpu=False) == "auto"
-    assert chat._device_map_for_host(on_tpu=True) is None
-
-
 # -- check_dataset_overlap.py leakage gate (issue #60) ----------------------
 #
-# These tests pin the contract that scripts/run_multi_seed.sh now relies on
-# as a preflight gate: contamination MUST exit non-zero, clean MUST exit zero.
-# If either of these flips silently, the multi-seed pipeline starts shipping
-# memorization scores again.
+# These tests pin the contract the launchers rely on as a leakage gate:
+# contamination MUST exit non-zero, clean MUST exit zero. If either of these
+# flips silently, the pipeline starts shipping memorization scores again.
 
 def _import_check_dataset_overlap():
     sys.modules.pop("scripts.check_dataset_overlap", None)

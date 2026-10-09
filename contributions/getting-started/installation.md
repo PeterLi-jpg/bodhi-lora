@@ -52,9 +52,8 @@ Accept the terms on each model card, then `export HF_TOKEN=...`, or keep a token
 ## 5. Check the install
 
 ```bash
-python scripts/preflight.py
+python -m bodhi_lora list cells
 pytest tests/
 ```
 
-`preflight.py` checks the token, model access, the GPU and the required packages in
-under a minute.
+`list` loads and checks every config in `configs/`.

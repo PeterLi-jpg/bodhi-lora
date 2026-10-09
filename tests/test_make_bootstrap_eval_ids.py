@@ -4,8 +4,7 @@ The script generates a deterministic per-seed 200-prompt subset of the
 HealthBench Hard pool for the multi-seed bootstrap eval protocol (issue #60).
 Determinism is what the preflight leakage gate in check_dataset_overlap.py
 relies on: same seed -> same draw, every run, every machine. These tests pin
-that contract plus the small handful of CLI behaviours the four launchers
-(scripts/run_multi_seed.sh, tpu/launch_5seeds*.sh, slurm/eval_lora.sh) depend on.
+that contract plus the small handful of CLI behaviours the launchers depend on.
 """
 
 import importlib

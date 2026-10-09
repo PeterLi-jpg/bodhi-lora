@@ -47,7 +47,7 @@ starting; it left no folder). `rebuttal/results/cell_recipe.json` records each o
   returned 404 on 2026-10-08 (section 7). The early committed adapter comes from an HF-path
   run, not from the evaluated adapters.
 - The paper's hyperparameter table for this cell lists the full recipe that ran.
-- `configs/lora_medgemma27b.yaml` and `configs/lora_medgemma27b_qlora.yaml` are configs
+- `02ac9a3:configs/lora_medgemma27b.yaml` and `configs/lora_medgemma27b_qlora.yaml` are configs
   for the GPU path (r=16, alpha=32). They did not train the submitted adapters.
 
 ### Added cells
@@ -99,12 +99,6 @@ The MedGemma cell has no such mismatch.
   token in `~/.cache/huggingface/token`.
 
 ## 5. Run
-
-Check the wiring first, on any GPU:
-
-```bash
-bash smoke.sh
-```
 
 Run one added cell. The seven paper cells use these MODEL, CONFIG and BENCH values:
 

@@ -308,8 +308,8 @@ Why: none of this ran, because D16 forbids remote changes in the cleanup.
    for it and rerun until the selftest prints `residual hits after rules: 0`.
 3. Repo slug. Rename `bohdi-lora` to `bodhi-lora` in the GitHub settings (D15). Then
    update the URLs in `README.md`, `KNOWN_ISSUES.md`, `contributions/contributing.md`,
-   `contributions/index.md`, `contributions/getting-started/installation.md`,
-   `scripts/launch_gpu.sh` and `scripts/maintenance/purge_history.md`, and run
+   `contributions/index.md`, `contributions/getting-started/installation.md` and
+   `scripts/maintenance/purge_history.md`, and run
    `git remote set-url origin git@github.com:PeterLi-jpg/bodhi-lora.git`.
 4. Hooks. `core.hooksPath` points at a folder that no longer exists, so
    `hooks/commit-msg` and `hooks/pre-push` never ran on this branch. Every commit message

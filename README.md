@@ -55,7 +55,6 @@ data/
   raw/              HealthBench eval ids; benchmark JSONL is downloaded or built here
   rebuttal_cells/   added-cell values from the raw outputs (generated_values.json) and as posted
 docs/               conventions, decision log, reuse and licenses
-gpu/                single-machine GPU launcher and accelerate configs
 hooks/              commit-msg and pre-push hooks (activate once, see below)
 legacy/             frozen launchers of the submitted MedGemma-27B cell (TPU, Modal)
 paper/              canonical paper source (paper/main.tex) and the frozen submission
@@ -63,7 +62,6 @@ rebuttal/           added-cell configs, launchers, analyses and the posted repli
 results_modal/      submitted cell: per-seed eval and epistemic-score JSON
 rebuttal/results/   JSON written by the rebuttal analyses
 scripts/            pipeline stages, statistics, figures, IRR tools, repo checks
-slurm/              SBATCH wrappers for the pipeline stages
 tests/              pytest suite, no GPU needed
 ```
 
@@ -116,7 +114,6 @@ Setup, once per machine:
 python3 -m venv .venv && source .venv/bin/activate
 bash setup.sh                  # installs requirements.txt, runs pip check, downloads HealthBench
 export HF_TOKEN=...            # gated models: MedGemma, Llama-3.1, Mistral
-bash smoke.sh                  # all four stages on a small model, under 10 minutes on one GPU
 ```
 
 One added cell, five seeds:
