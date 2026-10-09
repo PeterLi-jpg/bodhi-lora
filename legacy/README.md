@@ -163,7 +163,7 @@ restores its settings, so these cells stay describable:
 | Grader | NousResearch/Meta-Llama-3.1-8B-Instruct (a re-upload; byte identity with the meta-llama weights is not checked here) | meta-llama/Llama-3.1-8B-Instruct | `61dada9:rebuttal/launch/run_cell.sh:38` |
 | HealthBench eval prompts | one fixed set (`data/raw/hard_200_sample_ids.json`) for every seed; it shares 141 of 200 prompts with the submitted union | a separate 200 per seed | `61dada9:rebuttal/launch/run_cell.sh:97` |
 | Other benchmarks | pool = first 4900 usable rows in HF order; holdout = first 200 ids of that file | n/a | `61dada9:rebuttal/launch/run_cell.sh:113`, `:116-121` |
-| tau | 0.4, except: a non-HealthBench cell with train/raw below 40% was re-filtered at the 22nd-percentile tau. ChatDoctor cleared 97.6% and 96.0%, so it ran at 0.4; MedQuAD cleared 78.4%, the mark of the percentile rule. | 0.4 | `61dada9:rebuttal/launch/run_cell.sh:159-201` |
+| tau | 0.4 in every cell (`rebuttal/results/cell_recipe.json`). The rule re-filters a non-HealthBench cell at the 22nd-percentile tau when its train/raw is below 40%; no cell met it, and no log shows a second cut. MedQuAD kept 78.4% at 0.4, close to what a 22nd-percentile cut keeps, which caused an earlier misreading (`rebuttal/withdrawals.md` W11). | 0.4 | `61dada9:rebuttal/launch/run_cell.sh:159-201` |
 | Train/val split | once per cell, seed 42 | once per seed | `61dada9:rebuttal/launch/run_cell.sh:146-157` |
 | Hardware | one H100 80GB per stage | v6e-8 TPU (train), A100-80GB (eval) | `rebuttal/PLAN.md` |
 | vLLM env | `.venv-infer`, versions not recorded | see section 4 | `61dada9:rebuttal/launch/run_cell.sh:18-22` |

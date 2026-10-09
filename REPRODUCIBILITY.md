@@ -79,7 +79,7 @@ The MedGemma cell has no such mismatch.
 | Eval server | vLLM on Modal A100-80GB, `max_model_len` 4096, `--max-num-seqs` 32 | vLLM 0.9 subprocess on H100, `max_model_len` 8192, `--max-num-seqs` 64 |
 | Eval grader | `meta-llama/Llama-3.1-8B-Instruct` | `NousResearch/Meta-Llama-3.1-8B-Instruct`, a mirror of the same model |
 | Eval prompts | a new 200-prompt draw from HealthBench-Hard per seed | HealthBench: the fixed `data/raw/hard_200_sample_ids.json` for every seed; other benchmarks: the first 200 prompts of the built JSONL |
-| Filter threshold tau | 0.4 | 0.4 in every cell, from the filter logs (`rebuttal/results/cell_recipe.json`). The launcher's rule would re-filter a non-HealthBench cell at the 22nd percentile of the scores when 0.4 keeps under 40% of the traces (`1262448:rebuttal/launch/run_cell.sh:160-200`); no cell met it, and no log shows a second cut |
+| Filter threshold tau | 0.4 | 0.4 in every cell, from the filter logs (`rebuttal/results/cell_recipe.json`). The launcher's rule would re-filter a non-HealthBench cell at the 22nd percentile of the scores when its `train.jsonl` holds under 40% of the raw traces (`1262448:rebuttal/launch/run_cell.sh:160-200`); no cell met it (`refilter_rule_met` in `cell_recipe.json`), and no log shows a second cut |
 | What a seed changes | eval draw, train/val split, LoRA init, data order | LoRA init and data order. One filter pass per cell, and fixed eval prompts |
 | Teacher traces | generated once with greedy decoding | generated once per cell with greedy decoding |
 

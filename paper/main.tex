@@ -1296,10 +1296,15 @@ fixed set of 200 \hbhard{} prompts instead of a draw per seed. The ChatDoctor an
 are the first 200 rows of each file. The evaluator's weights come from a mirror repository, and
 the GPUs are H100 instead of A100. So the seed varies only training in these cells. The filter
 logs give $\tau = \statCellsTau$ in every cell (Table~\ref{tab:cell-filter}). The launcher would
-filter a cell outside HealthBench again at the 22nd percentile of the filter scores if 0.4 kept
-fewer than 40\% of its traces. No cell met that condition, and no run log shows a second cut.
+filter a cell outside HealthBench again at the 22nd percentile of the filter scores if its
+training split held fewer than 40\% of its generated traces. No cell met that condition, and no
+run log shows a second cut. Each run of the launcher writes a new filter log, so each log holds
+the last filter run of its cell. The training count in each log gives the number of optimizer
+steps in the saved trainer files.
 % Per-cell tau, counts and the re-filter check: rebuttal/analyses/cell_recipe.py on the host
-% logs (audit PROV-3). Rule as run: 1262448:rebuttal/launch/run_cell.sh:160-200.
+% logs (audit PROV-3); refilter_rule_met and grad_accumulation_consistent in
+% rebuttal/results/cell_recipe.json. Rule as run: 1262448:rebuttal/launch/run_cell.sh:160-200
+% (train.jsonl lines against raw trace lines, lines 162-164).
 
 \begin{table}[!ht]
 \centering
