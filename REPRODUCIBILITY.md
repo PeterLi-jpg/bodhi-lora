@@ -43,10 +43,11 @@ each one's status.
   `legacy/`.
 - LoRA rank 8 and alpha 16, from repo evidence: the export step in the tunix launcher
   passes `--r 8 --alpha 16`, and the only committed adapter (commit `607440e`, branch
-  `results-temp`) has r=8 and alpha=16. **This is not confirmed** against the
+  `results-temp`) has r=8 and alpha=16. **This cannot be confirmed** against the
   `adapter_config.json` of the five submitted adapters: the GCS bucket that held them
-  returned 404 on 2026-10-08 (section 7). The early committed adapter comes from an HF-path
-  run, not from the evaluated adapters.
+  returned 404 on 2026-10-08, and the adapters are treated as not retained (D19,
+  section 7). The early committed adapter comes from an HF-path run on 838 traces (the
+  2026-04 pilot cell), not from the evaluated adapters.
 - The paper's hyperparameter table for this cell lists the full recipe that ran.
 - `02ac9a3:configs/lora_medgemma27b.yaml` and `02ac9a3:configs/lora_medgemma27b_qlora.yaml`
   were configs for the GPU path (r=16, alpha=32). They did not train the submitted
@@ -78,18 +79,23 @@ the cell records copy every value, and a check on 2026-10-08 compared them field
 The Mistral-Small-24B adapter is trained on a 4-bit base and served on a bf16 base.
 The MedGemma cell has no such mismatch.
 
-## 3. Settings that differ between the submitted and added cells
+## 3. Settings that differ between the cell sets
 
-| Setting | Submitted cell | Added cells |
-|---|---|---|
-| Trainer | tunix on TPU v6e | `bodhi_lora/pipeline/train.py` (transformers, peft, trl) on H100 |
-| LoRA | r=8, alpha=16 (from the code; the saved adapters could not be checked) | r=16, alpha=32 (from the saved adapter configs) |
-| Eval server | vLLM on Modal A100-80GB, `max_model_len` 4096, `--max-num-seqs` 32 | vLLM 0.9 subprocess on H100, `max_model_len` 8192, `--max-num-seqs` 64 |
-| Eval grader | `meta-llama/Llama-3.1-8B-Instruct` | `NousResearch/Meta-Llama-3.1-8B-Instruct`, a mirror of the same model |
-| Eval prompts | a new 200-prompt draw from HealthBench-Hard per seed | HealthBench: the fixed `02ac9a3:data/raw/hard_200_sample_ids.json` for every seed (now `results/*/shared/inputs/eval_ids.json`); other benchmarks: the first 200 prompts of the built JSONL |
-| Filter threshold tau | 0.4 | 0.4 in every cell, from the filter logs (`results/cross_cell/cell_recipe.json`). The launcher's rule would re-filter a non-HealthBench cell at the 22nd percentile of the scores when its `train.jsonl` holds under 40% of the raw traces (`1262448:rebuttal/launch/run_cell.sh:160-200`); no cell met it (`refilter_rule_met` in `cell_recipe.json`), and no log shows a second cut |
-| What a seed changes | eval draw, train/val split, LoRA init, data order | LoRA init and data order. One filter pass per cell, and fixed eval prompts |
-| Teacher traces | generated once with greedy decoding | generated once per cell with greedy decoding |
+`python -m bodhi_lora list cells --settings` prints every setting that differs between
+the cell records. The planned column is the proposal of EXPERIMENTS.md E13; the first
+author fixes it when he adopts docs/ANALYSIS_PLAN.md.
+
+| Setting | Submitted cell (2026-05) | Added cells (2026-07) | Planned cells |
+|---|---|---|---|
+| Trainer | tunix on TPU v6e | `bodhi_lora/pipeline/train.py` (transformers, peft, trl) on H100 | the same, through `python -m bodhi_lora run` |
+| LoRA | r=8, alpha=16 (from the code; the saved adapters cannot be checked) | r=16, alpha=32 (from the saved adapter configs) | r=16, alpha=32, seven projections; QLoRA 4-bit for 24-27B bases |
+| Eval server | vLLM on Modal A100-80GB, `max_model_len` 4096, `--max-num-seqs` 32 | vLLM 0.9 subprocess on H100, `max_model_len` 8192, `--max-num-seqs` 64; the 24B base served in bf16 although trained in 4-bit | vLLM 0.9 subprocess, `max_model_len` 8192; the base served as it was trained |
+| Eval grader | `meta-llama/Llama-3.1-8B-Instruct` | `NousResearch/Meta-Llama-3.1-8B-Instruct`, a mirror of the same model | `meta-llama/Llama-3.1-8B-Instruct`, pinned |
+| HealthBench training pool | the 4,000 prompts outside Hard | the same | the 3,321 that remain after the physician-labelled holdout |
+| Eval prompts | a new 200-prompt draw from HealthBench-Hard per seed | HealthBench: the fixed `02ac9a3:data/raw/hard_200_sample_ids.json` for every seed (now `results/*/shared/inputs/eval_ids.json`); other benchmarks: the first 200 prompts of the built JSONL | a separate random draw of 200 from the eval pool per seed |
+| Filter threshold tau | 0.4 | 0.4 in every cell, from the filter logs (`results/cross_cell/cell_recipe.json`). The launcher's rule would re-filter a non-HealthBench cell at the 22nd percentile of the scores when its `train.jsonl` holds under 40% of the raw traces (`1262448:rebuttal/launch/run_cell.sh:160-200`); no cell met it (`refilter_rule_met` in `cell_recipe.json`), and no log shows a second cut | 0.4, the `fixed` tau rule |
+| What a seed changes | eval draw, train/val split, LoRA init, data order | LoRA init and data order. One filter pass per cell, and fixed eval prompts | eval draw, train/val split, LoRA init, data order |
+| Teacher traces | generated once with greedy decoding | generated once per cell with greedy decoding | the same (E23 tests sampled trace sets) |
 
 ## 4. Environment
 
@@ -100,8 +106,9 @@ The MedGemma cell has no such mismatch.
   transformers. The runner calls `.venv-infer/bin/python` for generation, grading
   and eval. `requirements-infer.txt` pins it. The env that produced the posted cells
   was not frozen (KNOWN_ISSUES).
-- Hardware for an added cell: one H100 80GB per seed. `rebuttal/PLAN.md` estimated 8 to
-  13 hours per 24-27B cell and 5 to 6 hours per 7-8B cell on one card.
+- Hardware for a cell: one H100 80GB per seed. Measured on the shared host, a 2026-07
+  cell took 4.1 to 15.6 H100-hours: 11.2 for Mistral-Small-24B on HealthBench, 4.5 for
+  Med42-8B (docs/RUN_PLAN.md section 3.1 gives every cell and stage).
 - Gated models need Hugging Face access: MedGemma-27B-text-it, Mistral-Small-24B,
   Llama-3.1-8B (or the mirror above), Qwen2.5-14B-Instruct. Set `HF_TOKEN`, or keep a
   token in `~/.cache/huggingface/token`.
@@ -115,10 +122,16 @@ seed the filter split, training, the eval of each condition and the grading. A s
 whose manifest says complete is skipped, so a run resumes where it stopped.
 
 ```bash
-python -m bodhi_lora run <cell id> --gpus 0,1,2,3,4    # one seed per GPU
-python -m bodhi_lora run <cell id> --dry-run           # print the GPU commands; CPU stub for the rest
-python -m bodhi_lora run <cell id> --stages grade      # judge re-grades only, also on a recorded cell
+python -m bodhi_lora run <cell_id> --gpus 0,1,2,3,4              # one seed per GPU
+python -m bodhi_lora run <cell_id> --dry-run                     # print the GPU commands; CPU stub for the rest
+python -m bodhi_lora run <cell_id> --stages grade --gpus 0       # judge re-grades only, also on a recorded cell
+python -m bodhi_lora run <cell_id> --stages bench --seeds 42 --gpus 0   # timing on an idle GPU
+python -m bodhi_lora analyze <cell_id> --extract                 # the response tables and statistics
 ```
+
+No GPU run starts without the first author's go-ahead (D21). docs/RUN_PLAN.md gives the
+order, the commands and the cost of every planned run, and docs/ANALYSIS_PLAN.md fixes
+how each result is read before it exists.
 
 The model stages run as subprocesses in the two environments of `configs/project.yaml`
 (`.venv` for training, `.venv-infer` for vLLM), each pinned to one GPU with its own vLLM
@@ -137,8 +150,10 @@ Check on the first run of a new base model:
   from `mistralai/Mistral-7B-Instruct-v0.1`.
 - New benchmarks: `bodhi_lora/data/loaders.py` stops if it builds 0 rows.
 
-The submitted cell needs TPU quota, a GCS bucket and a Modal account, and costs money.
-Its launchers in `legacy/` are kept to document what ran, not as the path to use.
+The submitted cell ran on TPU quota, a GCS bucket and a Modal account. Its launchers in
+`legacy/` are kept to document what ran, not as a path to use: the project no longer
+uses Modal, and the adapters are not retained (D19). A new run on MedGemma-27B is a new
+cell (open decision O7).
 
 ## 6. What each stage writes
 
@@ -164,7 +179,7 @@ comparable across prompts with different penalty items.
 | HealthBench JSONL | `data/raw/` (ignored) | `bash setup.sh` |
 | ChatDoctor, MedQuAD, MedQA JSONL | `data/raw/` (ignored) | `bodhi_lora/data/loaders.py`, at the pinned dataset revisions; its manifest records the sha256 of each file |
 | Filtered training traces of the submitted cell | the seed-7 split only, `results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_7/filter/train.jsonl` (ignored); the other seeds' traces were on a bucket that returned 404 (results/PROVENANCE.md) | regenerate with stages 1 and 2 |
-| Submitted adapters and trainer states | were at `gs://bohdi-runs-tokyo-micron/prod-v39-tunix-27b-neurips/`; that bucket returned 404 on 2026-10-08, and the project has no buckets | `legacy/modal_eval.py` copied each seed's `checkpoints/best/` and `train.jsonl`/`val.jsonl` into the Modal volume `bohdi-data-cache` (`/data/seed_<N>/`); that volume may still hold them (BLOCKED.md item 3) |
+| Submitted adapters and trainer states | were at `gs://bohdi-runs-tokyo-micron/prod-v39-tunix-27b-neurips/`; that bucket returned 404 on 2026-10-08, and the project has no buckets | not retained (D19); rerun as a new cell to evaluate MedGemma-27B again |
 | Added-cell outputs | `/data/PROJECTS/bohdi/results_rebuttal/` on the shared H100 host; copied on 2026-10-08 and moved into the `results/*__2026-07/` cells (eval JSON gitignored), and to a local archive outside the repo | the sync record below |
 | Added-cell host logs | `/data/PROJECTS/bohdi/logs/` on the host; copied on 2026-10-08 into each cell's `logs/` folder (gitignored) | the sync record below |
 | Returned physician grades | the study coordinator | only de-identified grades go in the repo |
@@ -200,5 +215,5 @@ record them, which `bodhi_lora/manifest.py` does.
 |---|---|---|
 | `401 Unauthorized` from Hugging Face | no token, or no access to a gated model | accept the model terms, set `HF_TOKEN` |
 | CUDA out of memory in training | 24-27B in bf16 | use the QLoRA config or an 80 GB card |
-| `Could not auto-detect response template` | non-standard chat template | set `data.response_template` in the config |
+| `Could not auto-detect response template` | non-standard chat template | set `chat_template.response_template` in the model record |
 | `pip check` fails after install | a shared or base env | use a fresh venv |

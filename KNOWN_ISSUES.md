@@ -13,11 +13,15 @@ Issue numbers such as #5 are GitHub issues on `PeterLi-jpg/bohdi-lora`.
   shared H100 host, and it is gitignored. The repo tracks what the paper needs from it
   (`results/cross_cell/generated_values.json`) and the adapter configs, trainer states and
   eval ids. Rebuilding `generated_values.json` needs the local copy (`make cells`).
-- **The submitted adapter config is not confirmed (HYG-4, D1).** Repo evidence says
-  r=8, alpha=16. The GCS bucket that held the five submitted adapters returned 404 on
-  2026-10-08, so the paper says the values come from the code and could not be checked.
-  `legacy/modal_eval.py` copied each seed's `checkpoints/best/` into the Modal volume
-  `bohdi-data-cache`, which may still hold them (BLOCKED.md item 3).
+- **The submitted adapter config cannot be confirmed (HYG-4, D1, D19).** Repo evidence
+  says r=8, alpha=16. The GCS bucket that held the five submitted adapters returned 404
+  on 2026-10-08, and the adapters are treated as not retained (D19), so the paper says
+  the values come from the code and could not be checked. A new experiment on
+  MedGemma-27B needs a rerun, which is a new cell (open decision O7).
+- **The paper still says a second copy of the adapters may exist.** The Code
+  availability paragraph and checklist items 4, 5, 11 and 13 say "we have not yet checked
+  a second copy", and two comments in `paper/main.tex` point at the Modal volume. Under
+  D19 they must say that the adapters are not retained.
 - **Returned physician grades are not in the repo (PROV-5, EVAL-5).** One of three
   raters returned. `scripts/compute_irr_kappa.py` read that file in place and wrote
   `results/healthbench__medgemma-27b-text__bodhi__2026-05/validation/kappa_results.json`, which names no rater. Nobody else can
@@ -34,10 +38,12 @@ Issue numbers such as #5 are GitHub issues on `PeterLi-jpg/bohdi-lora`.
   disclaimers (`context_seeking_anchor` and `blanket_disclaimers` in
   `paper/generated/numbers.json`).
 - **Med42-8B shares the evaluator's family (EVAL-7, D6).** The cells are marked † and
-  kept out of cross-model statements. `bodhi_lora/pipeline/grade.py` is not run yet;
-  it needs a GPU.
-- **No prior-work baseline has run (EVAL-8).** `bodhi_lora/protocols/` holds the prompt
-  baselines; they need GPU inference on the existing eval sets.
+  kept out of cross-model statements. The judge re-grade is built
+  (`bodhi_lora/pipeline/grade.py`) and waits for the GPU go-ahead (docs/RUN_PLAN.md R1).
+- **No prior-work baseline has run (EVAL-8).** `bodhi_lora/protocols/` holds two of the
+  three prompt baselines; the third (`mediq-abstain`) is to build. They run inside the
+  new cells, so they share the grader and the prompts of the conditions they are
+  compared with (docs/RUN_PLAN.md R2, docs/ANALYSIS_PLAN.md H4).
 - **The MedQA cell has only the preamble run.** Its one run used the old prompt that told
   the model to ask (Base asks in nearly every response), so it measures instruction
   following. The fixed prompt (035d85f) was never run. The paper reports the cell's
@@ -79,19 +85,45 @@ Issue numbers such as #5 are GitHub issues on `PeterLi-jpg/bohdi-lora`.
   their seeds as `["eval"]`, so each holds one seed. They are gitignored and unused;
   `make cells` recomputes from the per-seed files.
 
+### Planned runs
+
+- **The cost estimates rest on shared-host times.** docs/RUN_PLAN.md scales the stage
+  times of the 2026-07 cells, measured on a shared host. The speed of serving a 4-bit
+  base in vLLM, and of a 27B judge, is not measured; the plan gives a range for each. The
+  first run's manifests and its `bench` stage replace the estimates (E20, C25).
+- **The runner evaluates seed-invariant conditions for every seed.** With fixed eval ids
+  and greedy decoding, `base` and `base+bodhi` give the same outputs for each seed, but
+  the runner runs them five times. In the labelled cells that is nearly half of the time.
+- **The eval stage prints scores to its log.** The no-interim-look rule
+  (docs/ANALYSIS_PLAN.md section 2.5) therefore depends on the operator reading
+  manifests, not logs.
+- **No automatic check orders the plan before the results.** Convention 3 relies on a
+  review step and the commits that the run manifests record; no test checks that each
+  planned cell is named in docs/ANALYSIS_PLAN.md.
+
 ### Repo state
 
-- **Rater names, the author block and two tool trailers remain in public history
-  (EVAL-6, HYG-1, HYG-12).** The current tree is clean. The purge is prepared in
-  `scripts/maintenance/purge_history.md` and not run (D16).
+- **Two tool trailers remain in public history (HYG-12).** The repository stays public,
+  and the raters gave consent, so there is no privacy purge of history (D17, D18). A purge
+  of the two trailers only is optional (BLOCKED.md item 4). The current tree is clean.
+- **The hooks are not active in this clone (G14).** `core.hooksPath` points at the
+  repository's old location, so `hooks/commit-msg` and `hooks/pre-push` do not run.
+  Commit messages were checked by hand. The fix is one command (BLOCKED.md item 5).
 - **Scratch and temp branches remain on the remote (HYG-12, HYG-15, HYG-11).** This
-  includes `results-temp`, which holds MedGemma adapter weights and optimizer state.
-  `scripts/maintenance/prune_branches.sh` lists them; `--apply` deletes them (D16).
+  includes `results-temp`, which holds the adapter of the 2026-04 MedGemma pilot (seed
+  42, 838 traces), not a submitted adapter; its weights match the local copy in the pilot
+  cell's train folder. `scripts/maintenance/prune_branches.sh` lists them; `--apply`
+  deletes them after the first author's yes (D16, BLOCKED.md item 4).
 - **The remote slug misspells the name (`bohdi-lora`, D15).** Renaming is a remote
   action and is deferred.
 
 ## Fixed
 
+- **The code was not general (D22).** One registry (`configs/`), one runner
+  (`python -m bodhi_lora run`), one results root (`results/<cell_id>/`) and no model,
+  benchmark or path names in package code, each checked by a test or `make check`
+  (docs/CONVENTIONS.md rules 7 and 11 to 13). The uniform analysis (rule 14) is the
+  analysis lane's work.
 - **Added-cell raw outputs synced (PROV-1, PROV-2, PROV-3; 60c1a54, 5d5890e).** The
   outputs were copied read-only from the GPU host on 2026-10-08. `make cells` computes
   every added-cell value, the paired tests of the aggregate drop and the per-cell tau,

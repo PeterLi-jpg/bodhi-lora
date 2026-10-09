@@ -1,19 +1,22 @@
 # Results
 
-This file says what each result is, where its data lives, which script makes it and
-what state it is in. It holds no effect sizes, p-values or scores. Those come from
-`make numbers` (see [README.md](README.md)), so they cannot drift from the data.
+This file says what each result is, where its data lives, what makes it and what state
+it is in. It holds no effect sizes, p-values or scores. Those come from `make analyze`
+and `make report` (see [README.md](README.md)), so they cannot drift from the data.
 
 Status words used below:
 
-- **raw**: the numbers regenerate from the raw outputs. For the submitted cell the raw
-  outputs are in git (`results/healthbench__medgemma-27b-text__bodhi__2026-05/`). For the added cells the per-seed eval JSON is in the
-  local copy of the host's outputs, in the `results/*__2026-07/` cells (gitignored,
-  about 370 MB); `make cells` turns it into the tracked
-  `results/cross_cell/generated_values.json`, which `make numbers` reads.
+- **raw**: the numbers regenerate from the raw outputs. `make extract` turns each seed's
+  raw eval and grade files into its tracked response table
+  (`results/<cell_id>/seed_<n>/table.csv`), and `make analyze` computes every statistic
+  from the tables. The raw files of the 2026-05 cell are in git today (open decision O2);
+  those of the 2026-07 cells (about 370 MB) are gitignored and kept in the local copy.
 - **posted**: the numbers exist only as posted rebuttal text, transcribed into
   `rebuttal/posted_values.json`. Since the sync of 2026-10-08 no cell is in this
   state; the file stays as the record of what was posted.
+- **planned**: the cell or analysis is designed and its reading is fixed in
+  [docs/ANALYSIS_PLAN.md](docs/ANALYSIS_PLAN.md), but it has not run.
+  [docs/RUN_PLAN.md](docs/RUN_PLAN.md) gives its run.
 - **blocked**: an input is not in the repo. [KNOWN_ISSUES.md](KNOWN_ISSUES.md) says
   what unblocks it.
 
@@ -58,6 +61,17 @@ All cells are in the main evaluation of the paper (D12), including these two:
   have four seeds; the paper reports the cell's aggregate score and leaves the dimensions
   out of Table 3 (withdrawals W12).
 
+## Planned cells
+
+[docs/EXPERIMENTS.md](docs/EXPERIMENTS.md) lists every planned cell and the reviewer
+point it answers. All of them share one set of settings (EXPERIMENTS.md E13), so the
+same analysis applies to each. None has run (D21). The first ones in
+[docs/RUN_PLAN.md](docs/RUN_PLAN.md) are `healthbench__mistral-small-24b__bodhi` (a
+widely used general base, with the prompt baselines and red flags first),
+`mediq-paired__mistral-small-24b__bodhi` (the calibration against mimicry probe on its
+adapters) and `healthbench__mistral-small-24b__bodhi__labelled` (the physician-labelled
+probes for over-flagging and clinician-posed prompts).
+
 ## What the submitted cell holds
 
 Checked on 2026-10-07 against the files now in `results/healthbench__medgemma-27b-text__bodhi__2026-05/`:
@@ -82,16 +96,19 @@ python -c "import json,glob; print(len({r['prompt_id'] for f in glob.glob('resul
 
 | Result | Made by | Status | Rule |
 |---|---|---|---|
-| Aggregate rubric score, LoRA minus Base, every cell | `make cells`, `make numbers` | raw | seed-level paired difference with a t(4) 95% interval; no equivalence claim (D2, D7) |
-| Seven epistemic behaviors | `make numbers` from `results/*/seed_*/grade/epistemic__*.json` (added cells through `make cells`) | raw | LLM-graded; paired t over seeds, Holm over the seven within each contrast; prompt-level d is descriptive (D5, D7) |
-| Physician agreement (kappa) | `scripts/compute_irr_kappa.py` (`make kappa`), output in `results/healthbench__medgemma-27b-text__bodhi__2026-05/validation/kappa_results.json` | raw output committed; per-row grades not in the repo | 1 of 3 raters returned; below the pre-registered 0.6 target; prompt-clustered bootstrap interval (D5) |
-| Blanket disclaimers | `make numbers` | raw | counts per condition with a two-sided Fisher exact p, in the results only (D10) |
-| Grader parse failures | `make numbers` | raw (submitted); not tabulated for the added cells | rate per condition for both graders, and a worst case that scores failures as not met (D13) |
-| Discrimination (asks when information is missing, holds back when it is not) | `rebuttal/analyses/mimicry_split.py`, output in `results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/` | raw | rubric-based and theme-only labelings side by side, both post hoc and exploratory (D9) |
-| Red-flag drop with LoRA plus the BODHI prompt | `rebuttal/analyses/interference_mechanism.py`, output in `results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/` | raw | format leakage, a post hoc diagnosis (D11) |
-| Where the aggregate drop comes from | `rebuttal/responses/drafts/FINDINGS_quality_drop.md`; the paired tests are `rebuttal/analyses/quality_drop.py` | tests raw; per-axis analysis from ad hoc code, not in the repo | per-axis analysis on the added cells; one open problem (KNOWN_ISSUES) |
-| Prior-work prompt baselines | `bodhi_lora/protocols/` | not run (needs GPU inference) | same eval sets and grader as the cells |
-| Med42-8B regrade outside the Llama and Qwen families | `bodhi_lora/pipeline/grade.py` | not run (needs a GPU; the outputs are in the local copy and on the host) | D6 |
-| Per-cell tau, trace counts and adapter recipe | `rebuttal/analyses/cell_recipe.py` (`make cells`), output `results/cross_cell/cell_recipe.json` | raw (host logs and synced adapter files) | PROV-3 |
+| Rubric score, LoRA minus Base, every cell | `make analyze` | raw | seed-level paired difference with a t(4) 95% interval; no equivalence claim (D2, D7) |
+| Seven epistemic behaviors | `make analyze`, from the evaluator's grade files | raw | LLM-graded; paired t over seeds, Holm over the seven within each contrast; prompt-level d is descriptive (D5, D7) |
+| Physician agreement (kappa) | `make kappa` (`scripts/compute_irr_kappa.py`), output in `results/healthbench__medgemma-27b-text__bodhi__2026-05/validation/kappa_results.json` | raw output committed; per-row grades not in the repo | 1 of 3 raters returned; below the pre-registered 0.6 target; prompt-clustered bootstrap interval (D5); the other two raters are deferred (D20) |
+| Blanket disclaimers | `make analyze` | raw | counts per condition with a two-sided Fisher exact p, in the results only (D10) |
+| Grader parse failures | `make analyze` | raw, every cell | rate per condition for both graders, and a worst case that scores failures as not met (D13) |
+| Discrimination with the two post hoc labellings | `make analyze` | raw | rubric-keyword and theme-only labellings side by side, both post hoc and exploratory (D9) |
+| Discrimination with the physician labels (E02) | `make analyze` | planned: fixed in ANALYSIS_PLAN.md section 5.2, not computed on any output yet | the secondary test of calibration against mimicry |
+| Red-flag drop with LoRA plus the BODHI prompt | `make analyze` (format leakage per leak rule) | raw | format leakage, a post hoc diagnosis (D11) |
+| Where the rubric-score drop comes from | `make analyze` (rubric axes and the askers gap) | raw | exploratory (ANALYSIS_PLAN.md section 4); the internal note is `rebuttal/responses/drafts/FINDINGS_quality_drop.md` |
+| Harm proxy (negative rubric criteria met) | `make analyze` | planned (E06) | LLM-graded proxy, not the physician harm review (C33) |
+| Prior-work prompt baselines | `bodhi_lora/protocols/` | planned: two built and stub-tested, one to build; RUN_PLAN.md R2 | compared only inside a cell that ran them (ANALYSIS_PLAN.md H4) |
+| Med42-8B re-grade outside the Llama and Qwen families | `bodhi_lora/pipeline/grade.py` | planned: built, needs a GPU; RUN_PLAN.md R1 | D6, ANALYSIS_PLAN.md H8 |
+| Per-cell tau, trace counts and adapter recipe | the filter logs and the adapter and trainer files of each cell | raw (`results/cross_cell/cell_recipe.json`) | PROV-3 |
+| Measured cost per configuration | the run manifests and the `bench` stage | planned (E20); the 2026-07 host logs give shared-host times only (RUN_PLAN.md section 3.1) | C25 |
 | Training-loss figure | none | removed from the paper | it came from an early run on 838 traces, not the reported adapters (D14) |
-| Calibration (Brier, ECE) | fields in `results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_*/eval/*.json` | not reported | calibration is not a measured property (D3) |
+| Calibration (Brier, ECE) | fields in the raw eval JSON | not reported | calibration is not a measured property (D3) |
