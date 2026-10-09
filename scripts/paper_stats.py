@@ -2210,6 +2210,13 @@ def _pm(r: dict, dp: int, star: bool) -> str:
     return "\\ensuremath{" + s + ("^{*}" if star else "") + "}"
 
 
+def _p_short(p) -> str:
+    """A p-value for a dense table: two significant digits, and "<0.001" below that."""
+    if not _finite(p):
+        return "--"
+    return "\\ensuremath{<0.001}" if p < 0.001 else "\\ensuremath{" + f"{p:.2g}" + "}"
+
+
 def _uniform_groups(cells: list[dict]) -> list[list[dict]]:
     """The submitted cell, the added cells that are kept, and the set-aside cells."""
     groups = ([c for c in cells if c["id"] == MAIN_CELL_ID],
@@ -2251,7 +2258,7 @@ def cell_detail_tables(out, per_table: int = 4) -> dict[str, str]:
     LoRA - Base and LoRA+CoT - LoRA. Four cells per table, so each table fits a page."""
     cells = [c for g in _uniform_groups(out["uniform"]["cells"]) for c in g]
     header = ["", *(COND_LABEL[c] for c in CONDITIONS), "LoRA $-$ Base", "$p_{\\text{Holm}}$",
-              "LoRA+\\bodhi{} $-$ LoRA", "$p_{\\text{Holm}}$"]
+              "\\shortstack[r]{LoRA+\\bodhi{}\\\\$-$ LoRA}", "$p_{\\text{Holm}}$"]
     tables = {}
     for i in range(0, len(cells), per_table):
         blocks = []
@@ -2261,12 +2268,13 @@ def cell_detail_tables(out, per_table: int = 4) -> dict[str, str]:
             mark = "$^{\\dagger}$" if c["same_family_as_evaluator"] else ""
             block = [[f"\\multicolumn{{9}}{{l}}{{\\emph{{{c['benchmark']}, {c['base_model']}}}{mark}{seeds}}}"]]
             for metric, (key, _, dp) in POSTED_METRIC.items():
-                label = "Aggregate score (0--1)" if key == "healthbench" else METRIC[key]["label"]
+                # The caption gives the scales, so the labels stay short enough for a page.
+                label = "Aggregate score" if key == "healthbench" else METRIC[key]["label"].replace(" (0--2)", "")
                 row = [label] + [_num(c["conditions"][cfg][metric]["mean"], dp) for cfg in CONDITIONS]
                 for ctok in ("LoRAvsBase", "LoRACoTvsLoRA"):
                     r = c["contrasts"][ctok][metric]
                     p = r.get("p_holm") if key in SEVEN_DIMS else r["p"]
-                    row += [_pm(r, dp, False), fmt_p(p) if _finite(p) else "--"]
+                    row += [_pm(r, dp, False), _p_short(p)]
                 block.append(row)
             blocks.append(block)
         tables[f"tab_cell_detail_{i // per_table + 1}"] = tabular("lrrrrrrrr", header, blocks,
