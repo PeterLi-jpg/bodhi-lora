@@ -6,7 +6,20 @@ the changes that reviewers and the AC saw us promise. A resubmission must keep t
 why it drops one.
 
 All sources are in `rebuttal/responses/posted/`. The paper lanes fill the Status column. Use
-`to-do`, `done (<commit>)` or `dropped (<reason>)`.
+`done (<commit>)`, `built, awaiting GPU (<run>)`, `to build, then GPU (<run>)`,
+`deferred (<decision>)`, `changed (<reason>)` or `dropped (<reason>)`. A run id such as R2
+refers to `docs/RUN_PLAN.md`; an H id to `docs/ANALYSIS_PLAN.md`, which fixes how the
+result is read before it exists.
+
+## Where each commitment stands (2026-10-08)
+
+| State | Commitments | What is left |
+|---|---|---|
+| done | C1 to C24 | Nothing. The uniform analysis (EXPERIMENTS.md E01) recomputes every number they cite from the response tables. |
+| built, awaiting GPU | C25 (manifests and the `bench` stage), C26 (judges in the grade stage), C27 (two of three baselines), C29 (`ask-first`), C30 (physician emergency labels and the holdout split) | The first author's go-ahead (D21): RUN_PLAN.md R1, R2, R4, R5, R6. |
+| to build, then GPU | C27 (`mediq-abstain`), C31 (`red-flags-first`), C32 (the CQC loader for the secondary set) | The experiments lane, then RUN_PLAN.md R2 and R10. |
+| changed | C30 (labels from HealthBench physicians, not new labelling), C32 (open clinician-posed sets in place of MIMIC and eICU) | The paper states the change and why. |
+| deferred | C28 (the two remaining raters, D20), C33 (the physician harm review, E28) | The first author. The LLM-graded harm proxy (E06) runs on existing outputs meanwhile. |
 
 Kinds:
 - `text`: wording only.
@@ -57,7 +70,7 @@ Kinds:
 | ID | The camera-ready must carry | Kind | Source | Status | Note |
 |---|---|---|---|---|---|
 | C24 | All seven added cells in the main evaluation, including the BioMistral null and the set-aside MedQA cell. | table | `HomM_4_consolidation.md:3` | done (60c1a54, 38b800e) | Table 3 holds all seven added cells, computed from the raw outputs synced on 2026-10-08. The MedQA row has its aggregate score and interval. Its seven dimensions stay out of the table: seed 42's epistemic grading found none of the MedQA prompts, so only 4 of 5 seeds have them. The MedQA run is the preamble run (withdrawals W12), so the cell stays set aside, and Section 4.2, the abstract, the Limitations and Appendix J say why. |
-| C25 | Training and inference cost for each configuration, from per-stage timings measured in isolation. Do not use the shared-node timings. | experiment | `FzpA_1_rebuttal.md:64` | to-do | GPU time |
+| C25 | Training and inference cost for each configuration, from per-stage timings measured in isolation. Do not use the shared-node timings. | experiment | `FzpA_1_rebuttal.md:64` | built, awaiting GPU (R2) | Every run manifest records wall-clock time, GPU and tokens per stage, and the `bench` stage (`bodhi_lora/pipeline/bench.py`) times 50 prompts per condition on an idle GPU (E08, E20). The 2026-07 host logs give shared-node times only; RUN_PLAN.md section 3.1 uses them for planning, not for the paper. |
 
 ## Experiments still owed
 
@@ -66,19 +79,19 @@ data access.
 
 | ID | Commitment | Kind | Source | Status | Note |
 |---|---|---|---|---|---|
-| C26 | A clinical judge as an extra robustness panel next to the primary grader. It does not replace the primary grader. | experiment | `LxMF_1_rebuttal.md:34`, `HomM_1_rebuttal.md:35` | to-do | Named in the Limitations as promised and not run. | For the Med42 cells the judge must be neither Llama nor Qwen (audit EVAL-7). `bodhi_lora/pipeline/grade.py` re-grades stored outputs with such a judge (an LLM, not a clinician). Not run. |
-| C27 | An empirical head-to-head against an inference-time calibration baseline (Tian et al., 2023, is named). | experiment | `HomM_1_rebuttal.md:49`, `HomM_1_rebuttal.md:59`, `HomM_4_consolidation.md:5`, `LxMF_1_rebuttal.md:82` | to-do | Inference only (audit EVAL-8). Code: `bodhi_lora/protocols/instruction.py` and the `clarify` and `verbalized-confidence` protocol records. Stub-tested, not run. |
-| C28 | Complete the three-physician validation: consensus kappa against the pre-registered 0.6 target. | experiment | `HomM_1_rebuttal.md:59`, `HomM_4_consolidation.md:5`, `FzpA_2_followup.md:11`, `LxMF_1_rebuttal.md:82` | to-do | People (audit EVAL-5, PROV-5) |
-| C29 | A second CoT protocol. | experiment | `HomM_1_rebuttal.md:59`, `HomM_4_consolidation.md:5` | to-do | GPU time. Code: `bodhi_lora/protocols/ask_first.py` and the `ask-first` protocol record. Stub-tested, not run. |
-| C30 | A labelled set of prompts with no genuine red flag, to measure over-flagging (the false-positive check on red-flag identification). | experiment | `FzpA_1_rebuttal.md:28`, `FzpA_2_followup.md:23` | to-do | Labelling, then inference |
-| C31 | Surface red flags early in the protocol, before the extended reasoning, and test whether this recovers the LoRA+CoT red-flag gap. | experiment | `LxMF_1_rebuttal.md:50` | to-do | Inference. Named in the Limitations as promised and not run. |
-| C32 | A clinician-posed benchmark (MIMIC or eICU). | experiment | `FzpA_1_rebuttal.md:48` | to-do | Needs credentialed PhysioNet access |
-| C33 | The Appendix C harm grading. | experiment | `FzpA_2_followup.md:23` | to-do | Named as outstanding before patient-facing use, not promised for the camera-ready. |
+| C26 | A clinical judge as an extra robustness panel next to the primary grader. It does not replace the primary grader. | experiment | `LxMF_1_rebuttal.md:34`, `HomM_1_rebuttal.md:35` | built, awaiting GPU (R1, R2, R6) | The grade stage runs each judge a cell record lists (`bodhi_lora/pipeline/grade.py`), and the registry's family rule decides which judges a cell may use. R1 re-grades the Med42 cells with a judge that is neither Llama nor Qwen (EVAL-7); R6 adds a clinical judge to the other existing cells. Read by H8. Meditron3-8B still needs a pinned revision (BLOCKED.md item 3). Still named in the Limitations as promised and not run. |
+| C27 | An empirical head-to-head against an inference-time calibration baseline (Tian et al., 2023, is named). | experiment | `HomM_1_rebuttal.md:49`, `HomM_1_rebuttal.md:59`, `HomM_4_consolidation.md:5`, `LxMF_1_rebuttal.md:82` | built, awaiting GPU (R2); `mediq-abstain` to build | Inference only (audit EVAL-8). `clarify` and `verbalized-confidence` (Tian et al., 2023) are protocol records run by `bodhi_lora/protocols/instruction.py`, stub-tested. A MediQ-style abstention baseline is to build (E12). They run as conditions of the new cells, so they share the grader and prompts of the adapter they are compared with. Read by H4. |
+| C28 | Complete the three-physician validation: consensus kappa against the pre-registered 0.6 target. | experiment | `HomM_1_rebuttal.md:59`, `HomM_4_consolidation.md:5`, `FzpA_2_followup.md:11`, `LxMF_1_rebuttal.md:82` | deferred (D20) | People (audit EVAL-5, PROV-5). The first author deferred the two remaining raters; BLOCKED.md item 6 has the steps for when they resume. D5 stands meanwhile. |
+| C29 | A second CoT protocol. | experiment | `HomM_1_rebuttal.md:59`, `HomM_4_consolidation.md:5` | built, awaiting GPU (R5) | `bodhi_lora/protocols/ask_first.py` and the `ask-first` protocol record, stub-tested. The cell is `healthbench__mistral-small-24b__ask-first` (E16), with the MediQ probe on its adapters. Read by H5. |
+| C30 | A labelled set of prompts with no genuine red flag, to measure over-flagging (the false-positive check on red-flag identification). | experiment | `FzpA_1_rebuttal.md:28`, `FzpA_2_followup.md:23` | changed (labels exist); built, awaiting GPU (R4) | No new labelling: HealthBench physicians already labelled 134 prompts non-emergent and 319 emergent or conditionally emergent. The `emergent-physician` label and the `default` split of the HealthBench record keep all of them out of training, and the labelled eval-only cell evaluates the new adapters on them (E18). Read by H7. |
+| C31 | Surface red flags early in the protocol, before the extended reasoning, and test whether this recovers the LoRA+CoT red-flag gap. | experiment | `LxMF_1_rebuttal.md:50` | to build, then GPU (R2) | Inference. The `red-flags-first` protocol (BODHI with the red-flag section first) is to build; `lora+red-flags-first` and `base+red-flags-first` are conditions of the new cells (E17). Read by H6. Still named in the Limitations as promised and not run. |
+| C32 | A clinician-posed benchmark (MIMIC or eICU). | experiment | `FzpA_1_rebuttal.md:48` | changed (open sets in place of MIMIC and eICU); awaiting GPU (R4), CQC loader to build (R10) | MIMIC and eICU need credentialed PhysioNet access, and D4 makes them future work. In their place: the 322 HealthBench prompts that physicians labelled as written by a health professional (held out of training, R4), and the NLM Clinical Questions Collection (R10) (E19). Read by H11. The paper must say why the promised sets changed. |
+| C33 | The Appendix C harm grading. | experiment | `FzpA_2_followup.md:23` | deferred (E28) | Named as outstanding before patient-facing use, not promised for the camera-ready. The physician review waits for the first author. An LLM-graded proxy, the share of responses that meet a negative rubric criterion (E06), runs on existing outputs without a GPU; it is not the physician review. |
 
 ## Offered, not promised for the paper
 
 - An anonymized link to the code and per-cell outputs for the AC, on request
   (`HomM_3_followup_part2.md:32`). The repo now tracks the per-seed values
-  (`data/rebuttal_cells/generated_values.json`), adapter configs and trainer states. The per-seed
+  (`results/cross_cell/generated_values.json`), adapter configs and trainer states. The per-seed
   eval JSON with full responses (about 370 MB) is copied from the host but gitignored, so sharing
-  it needs a versioned archive first.
+  it needs a versioned archive first (open decision O3).
