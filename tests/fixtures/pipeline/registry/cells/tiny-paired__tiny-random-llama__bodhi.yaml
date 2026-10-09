@@ -1,0 +1,23 @@
+# The twin of the MediQ probe cells (EXPERIMENTS.md E14): the smoke cell's adapters on the
+# paired fixture, whole pairs drawn per seed.
+id: tiny-paired__tiny-random-llama__bodhi
+benchmark: tiny-paired
+model: tiny-random-llama
+protocol: bodhi
+seeds: [1, 2]
+adapters_from: tiny-rubric__tiny-random-llama__bodhi
+grading:
+  filter: qwen2.5-14b
+  evaluator: llama-3.1-8b
+  judges: [medgemma-27b-text]
+eval:
+  conditions: [base, base+bodhi, lora, lora+bodhi]
+  ids: {policy: per_seed_draw, n: 3, unit: pair}
+  base_precision: model
+  max_new_tokens: 64
+  max_new_tokens_per_pass: 64
+  serving: {max_model_len: 1024, max_num_seqs: 4, concurrency: 4, request_timeout_s: 60}
+report:
+  label: Paired fixture cell
+  token: TinyPaired
+  status: planned

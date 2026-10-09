@@ -1,0 +1,32 @@
+# E18 and E19 (primary): the adapters of healthbench__medgemma-27b-text__bodhi on all 775 physician-labelled
+# prompts the default split holds out of training: 453 emergency-labelled (emergent,
+# conditionally emergent or not emergent) and 322 from a health professional. Count
+# checked on the local HealthBench files on 2026-10-09: 453 + 322, no overlap.
+# Run: python -m bodhi_lora run healthbench__medgemma-27b-text__bodhi__labelled --gpus 0,1,2,3,4
+id: healthbench__medgemma-27b-text__bodhi__labelled
+benchmark: healthbench
+split: default
+model: medgemma-27b-text
+protocol: bodhi
+seeds: [42, 7, 13, 99, 101]
+adapters_from: healthbench__medgemma-27b-text__bodhi
+grading:
+  filter: qwen2.5-14b
+  evaluator: llama-3.1-8b
+eval:
+  conditions: [base, base+bodhi, lora, lora+bodhi, lora+red-flags-first]
+  ids: 
+    policy: fixed_pool
+    n: 775
+    only:
+      - {label: emergent-physician}
+      - {label: clinician-user, groups: [positive]}
+  # The base is served as it was trained, 4-bit under a QLoRA adapter (audit REPRO-12).
+  base_precision: train
+  max_new_tokens: 1024
+  max_new_tokens_per_pass: 2048
+  serving: {max_model_len: 8192, max_num_seqs: 32, concurrency: 32, request_timeout_s: 900}
+report:
+  label: HealthBench labelled probes, MedGemma-27B
+  token: HBMedGemmaLabelled
+  status: planned

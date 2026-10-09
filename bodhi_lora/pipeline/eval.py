@@ -11,6 +11,9 @@ rubric. The output, seed_<n>/eval/<condition>.json, keeps the fields of the earl
 result files and adds, per reply, the condition, the protocol, the calls, the tokens
 over all calls and whether a call hit its token limit.
 
+A row with no rubric (a benchmark with rubric: none) gets no rubric grade: its score is
+null and its criteria list is empty, so the dimensions and the text counts still apply.
+
 A non-empty output is never rewritten (a rerun after a crash skips finished conditions);
 an empty file counts as a crashed write and is replaced.
 """
@@ -264,7 +267,11 @@ def run(ctx: StageContext, seed: int, condition: str) -> dict:
             row, out = g["row"], g["out"]
             try:
                 confidence = score_response_confidence(out.token_logprobs)
-                grade_ = grade_rubric(grader, row.messages, out.response, row.rubrics)
+                if row.rubrics:
+                    grade_ = grade_rubric(grader, row.messages, out.response, row.rubrics)
+                else:
+                    grade_ = {"overall_score": None, "tag_scores": {}, "criteria_results": [],
+                              "parse_failures": 0}
                 return {
                     "prompt_id": row.prompt_id, "response": out.response,
                     "score": grade_["overall_score"], "tag_scores": grade_["tag_scores"],

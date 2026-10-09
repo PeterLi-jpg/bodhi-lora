@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Optional
 
 from bodhi_lora import manifest as mf
-from bodhi_lora.data import Row, Split, load_rows
+from bodhi_lora.data import Row, Split, load_rows, read_id_list, split_rows
 from bodhi_lora.paths import CONFIGS_DIR, CellPaths, Project, project
 from bodhi_lora.registry import CellConfig, Registry, load_registry, parse_condition
 from bodhi_lora.registry.schema import ModelConfig, ProtocolConfig, Train
@@ -96,6 +96,17 @@ class StageContext:
     def pools(self) -> Split:
         data = json.loads((self.paths.inputs() / POOLS_FILE).read_text())
         return Split(name=data["split"], train=data["train"], eval=data["eval"], probe=data["probe"])
+
+    def split(self) -> Split:
+        """The pools a run wrote, or, for a recorded cell that has none, the pools its
+        split rule gives (with its fixed eval ids for an eval_ids_only split)."""
+        if (self.paths.inputs() / POOLS_FILE).is_file():
+            return self.pools()
+        rule = self.bench.splits[self.cell.split]
+        fixed = None
+        if rule.method == "eval_ids_only":
+            fixed = read_id_list(self.paths.inputs() / self.cell.eval.ids.file)
+        return split_rows(self.bench, self.cell.split, list(self.rows_by_id().values()), fixed)
 
     def eval_ids(self, seed: int) -> list[str]:
         data = json.loads((self.paths.inputs() / eval_ids_file(seed)).read_text())

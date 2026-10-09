@@ -149,8 +149,18 @@ class HfSource(_Record):
 
 class UrlFile(_Record):
     url: Annotated[str, StringConstraints(pattern=r"^https://")]
-    # A URL can change under us; the hash pins what the runs read.
-    sha256: Sha256
+    # A URL can change under us; the hash pins what the runs read. null only when the
+    # file was not read when the record was written; unpinned_reason then says why,
+    # `fetch` prints the hash to pin, and each run's inputs manifest records the hash
+    # it read.
+    sha256: Optional[Sha256]
+    unpinned_reason: Optional[str] = None
+
+    @model_validator(mode="after")
+    def _pin_or_reason(self) -> "UrlFile":
+        if self.sha256 is None and not self.unpinned_reason:
+            raise ValueError("sha256 is null: give unpinned_reason")
+        return self
 
 
 class UrlSource(_Record):
@@ -293,7 +303,9 @@ class BenchmarkConfig(_Record):
     task: Literal["open_ended", "single_best_answer"]
     # native: expert rubrics come with each row. synthesized: the loader builds the
     # shared multi-criterion rubric with `reference_criterion` as its ground-truth item.
-    rubric: Literal["native", "synthesized"]
+    # none: rows have no rubric (no reference answer); the eval records no rubric score,
+    # and no cell may train on the benchmark, because the filter grades by the rubric.
+    rubric: Literal["native", "synthesized", "none"]
     # Loader field -> candidate source columns, first non-empty wins.
     fields: dict[str, list[str]] = Field(default_factory=dict)
     # Other loader settings (e.g. how many characters of the reference to keep). The
@@ -319,6 +331,8 @@ class BenchmarkConfig(_Record):
             raise ValueError("splits must include 'default'")
         if self.rubric == "synthesized" and not self.reference_criterion:
             raise ValueError("rubric: synthesized needs reference_criterion")
+        if self.rubric != "synthesized" and self.reference_criterion:
+            raise ValueError(f"rubric: {self.rubric} takes no reference_criterion")
         for name, rule in self.splits.items():
             missing = [h.label for h in rule.hold_out if h.label not in self.labels]
             if missing:
@@ -388,6 +402,9 @@ class Grading(_Record):
     # Reason for a cell that breaks the family rule (R1 or R2). The cell is then marked in
     # every table, and a cell with outputs to judge needs a judge from a fourth family.
     same_family_waiver: Optional[str] = None
+    # The judges' engine; null: eval.serving. A judge prompt holds the conversation, the
+    # reply and the grading template, so a cell evaluated with a short context needs more.
+    judge_serving: Optional["Serving"] = None
 
 
 class Serving(_Record):
@@ -401,6 +418,9 @@ class Serving(_Record):
     request_timeout_s: PosInt
     # Pause between two engines. Only the old TPU runtime needed one.
     drain_s: Annotated[float, Field(ge=0)] = 0.0
+
+
+Grading.model_rebuild()
 
 
 class Traces(_Record):
@@ -518,6 +538,10 @@ class EvalIds(_Record):
     # shared/inputs folder (so no results path appears in a config).
     policy: Literal["per_seed_draw", "fixed_pool", "fixed_file"]
     n: PosInt
+    # row: n counts rows. pair: n counts pairs of a paired benchmark (rows that share a
+    # pair id), and both rows of each drawn pair are evaluated, so every seed keeps
+    # whole pairs.
+    unit: Literal["row", "pair"] = "row"
     # When set, draw from the rows of the eval pool and the probe pool that are in
     # these label groups, instead of from the eval pool (a labelled probe set).
     only: list[LabelGroups] = Field(default_factory=list)
@@ -527,6 +551,8 @@ class EvalIds(_Record):
     def _file(self) -> "EvalIds":
         if (self.policy == "fixed_file") != (self.file is not None):
             raise ValueError("policy fixed_file needs file; other policies take none")
+        if self.unit == "pair" and self.policy == "fixed_file":
+            raise ValueError("unit pair draws pairs; a fixed_file list takes unit row")
         return self
 
 
@@ -564,10 +590,14 @@ class Probe(_Record):
 
 
 class Bench(_Record):
-    """Measured time and tokens per condition on a fixed batch of eval prompts."""
+    """Measured time and tokens per condition on a fixed batch of eval prompts. The token
+    limits are the eval's (eval.max_new_tokens, eval.max_new_tokens_per_pass), so the bench
+    times the replies the eval makes."""
 
     n_prompts: PosInt = 50
-    max_new_tokens: PosInt = 512
+    # The seeds whose adapters are timed. Serial timing of every condition is costly, and
+    # a reply's time hardly depends on the training seed, so one seed is the usual choice.
+    seeds: Annotated[list[int], Field(min_length=1)]
     # Skip CUDA-graph capture, as the eval does, so the conditions compare like for like.
     enforce_eager: bool = True
     serving: Serving
@@ -615,6 +645,8 @@ class CellConfig(_Record):
             raise ValueError(f"id {self.id} must start with {self.benchmark}__{self.model}__{self.protocol}")
         if len(set(self.seeds)) != len(self.seeds):
             raise ValueError("seeds repeat")
+        if self.bench is not None and not set(self.bench.seeds) <= set(self.seeds):
+            raise ValueError("bench.seeds must be seeds of the cell")
         uses_lora = any(parse_condition(c)[0] == "lora" for c in self.eval.conditions)
         if self.adapters_from:
             if self.traces or self.filter or self.train or self.traces_from:
@@ -657,6 +689,9 @@ class Interpreters(_Record):
 class ProjectConfig(_Record):
     results_root: RepoPath
     data_root: RepoPath
+    # Stub and dry runs write here, never under results_root: their stage manifests say
+    # complete, and a GPU run under results_root would skip those stages.
+    scratch_root: RepoPath = "outputs"
     python: Interpreters
     # Each GPU stage serves on port vllm_port_base + its GPU index, so stages on
     # different GPUs never collide.
@@ -750,6 +785,9 @@ def validate_registry(reg: Registry) -> None:
             bad(f"split {cell.split!r} is not a split of benchmark {cell.benchmark}")
         elif bench.splits[cell.split].method == "eval_ids_only" and cell.eval.ids.policy != "fixed_file":
             bad(f"split {cell.split} takes its eval pool from the eval ids, so eval.ids.policy must be fixed_file")
+        if bench.rubric == "none" and (cell.traces is not None or cell.train is not None):
+            bad(f"benchmark {cell.benchmark} has no rubric, so the filter cannot grade traces; "
+                "evaluate on it with an adapters_from cell")
         for g in cell.eval.ids.only:
             if g.label not in bench.labels:
                 bad(f"eval.ids.only label {g.label!r} is not a label of benchmark {cell.benchmark}")

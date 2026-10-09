@@ -1,0 +1,136 @@
+<?xml version = "1.0" encoding ="utf-8"?>
+<clinical_question>
+<id_info>
+   <nlm_id>NQ000001</nlm_id>
+   <source>fixture</source>
+</id_info>
+<asker_info>
+   <occupation>Medicine</occupation>
+</asker_info>
+<original_question>
+   What is the first-line treatment for hypertension in a 50-year-old man with diabetes?
+</original_question>
+<short_question>short form</short_question>
+<year_asked>
+    2001 
+</year_asked>
+</clinical_question>
+<?xml version = "1.0" encoding ="utf-8"?>
+<clinical_question>
+<id_info>
+   <nlm_id>NQ000002</nlm_id>
+   <source>fixture</source>
+</id_info>
+<asker_info>
+   <occupation>Nursing</occupation>
+</asker_info>
+<original_question>
+   How long should a patient wait to drive after cataract surgery?
+</original_question>
+<short_question>short form</short_question>
+<year_asked>
+    1999 
+</year_asked>
+</clinical_question>
+<?xml version = "1.0" encoding ="utf-8"?>
+<clinical_question>
+<id_info>
+   <nlm_id>NQ000003</nlm_id>
+   <source>fixture</source>
+</id_info>
+<asker_info>
+   <occupation>Medicine</occupation>
+</asker_info>
+<original_question>
+   Is it safe to give ibuprofen to a patient on warfarin?
+</original_question>
+<short_question>short form</short_question>
+<year_asked>
+    2002 
+</year_asked>
+</clinical_question>
+<?xml version = "1.0" encoding ="utf-8"?>
+<clinical_question>
+<id_info>
+   <nlm_id>NQ000004</nlm_id>
+   <source>fixture</source>
+</id_info>
+<asker_info>
+   <occupation>Pharmacy</occupation>
+</asker_info>
+<original_question>
+   
+</original_question>
+<short_question>short form</short_question>
+<year_asked>
+    2000 
+</year_asked>
+</clinical_question>
+<?xml version = "1.0" encoding ="utf-8"?>
+<clinical_question>
+<id_info>
+   <nlm_id>NQ000005</nlm_id>
+   <source>fixture</source>
+</id_info>
+<asker_info>
+   <occupation>Medicine</occupation>
+</asker_info>
+<original_question>
+   What dose of amoxicillin should a 20 kg child get for otitis media?
+</original_question>
+<short_question>short form</short_question>
+<year_asked>
+    1998 
+</year_asked>
+</clinical_question>
+<?xml version = "1.0" encoding ="utf-8"?>
+<clinical_question>
+<id_info>
+   <nlm_id>NQ000003</nlm_id>
+   <source>fixture</source>
+</id_info>
+<asker_info>
+   <occupation>Medicine</occupation>
+</asker_info>
+<original_question>
+   A duplicate id that the loader must skip?
+</original_question>
+<short_question>short form</short_question>
+<year_asked>
+    2002 
+</year_asked>
+</clinical_question>
+<?xml version = "1.0" encoding ="utf-8"?>
+<clinical_question>
+<id_info>
+   <nlm_id>NQ000006</nlm_id>
+   <source>fixture</source>
+</id_info>
+<asker_info>
+   <occupation>Family Practice</occupation>
+</asker_info>
+<original_question>
+   When should an infant with a fever of 38.5 C be sent to the emergency room?
+</original_question>
+<short_question>short form</short_question>
+<year_asked>
+    2003 
+</year_asked>
+</clinical_question>
+<?xml version = "1.0" encoding ="utf-8"?>
+<clinical_question>
+<id_info>
+   <nlm_id>NQ000007</nlm_id>
+   <source>fixture</source>
+</id_info>
+<asker_info>
+   <occupation>Medicine</occupation>
+</asker_info>
+<original_question>
+   What causes a <b>sudden</b> loss of hearing in one ear?
+</original_question>
+<short_question>short form</short_question>
+<year_asked>
+    2001 
+</year_asked>
+</clinical_question>

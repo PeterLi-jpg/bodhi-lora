@@ -1,0 +1,51 @@
+# E21 (b): BioMistral-7B trained on the teacher traces of the E13 Mistral-Small-24B cell
+# (traces_from), with its filter grades reused. If this transfers, the BioMistral null was
+# the teacher. Run after healthbench__mistral-small-24b__bodhi has its traces and filter.
+# Run: python -m bodhi_lora run healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b --gpus 0,1,2,3,4
+id: healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b
+benchmark: healthbench
+split: default
+model: biomistral-7b
+protocol: bodhi
+seeds: [42, 7, 13, 99, 101]
+traces_from: healthbench__mistral-small-24b__bodhi
+grading:
+  filter: qwen2.5-14b
+  evaluator: llama-3.1-8b
+  judges: [medgemma-27b-text]
+filter:
+  tau: {rule: fixed, value: 0.4}
+  split_policy: per_seed
+  serving: {max_model_len: 8192, max_num_seqs: 64, concurrency: 16, request_timeout_s: 180}
+train:
+  engine: peft
+  # bf16 LoRA: a 7B base fits one H100 unquantized, as in the 2026-07 BioMistral-7B cell.
+  r: 16
+  alpha: 32
+  dropout: 0.05
+  target_modules: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]
+  epochs: 3
+  per_device_batch: 4
+  grad_accum: 4
+  effective_batch: 16
+  lr: 1.0e-4
+  scheduler: cosine
+  warmup_ratio: 0.05
+  max_seq_length: 4096
+  gradient_checkpointing: true
+  checkpoint: best_val_loss
+  eval_every: epoch
+  logging_steps: 10
+  hardware: 1x H100 80GB
+eval:
+  conditions: [base, base+bodhi, lora, lora+bodhi]
+  ids: {policy: per_seed_draw, n: 200}
+  # The base is served as it was trained, 4-bit under a QLoRA adapter (audit REPRO-12).
+  base_precision: train
+  max_new_tokens: 1024
+  max_new_tokens_per_pass: 2048
+  serving: {max_model_len: 8192, max_num_seqs: 32, concurrency: 32, request_timeout_s: 900}
+report:
+  label: HealthBench-Hard, BioMistral-7B, Mistral-Small-24B teacher
+  token: HBBioMistralTeacher
+  status: planned

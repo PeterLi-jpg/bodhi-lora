@@ -1,0 +1,52 @@
+# MediQ as a paired probe of calibration against mimicry (EXPERIMENTS.md E14). MediQ
+# (Li et al., NeurIPS 2024) turns MedQA vignettes into interactive cases: each case has
+# its vignette split into context sentences, the question, the options and the keyed
+# answer. Checked against the official repository on 2026-10-09: data/all_dev_good.jsonl
+# has the keys id, question, context (a list of sentences), context_len, options, answer,
+# answer_idx, explanation, facts and patient; src/patient.py takes the initial
+# information as context[0] when a case has no initial_info key, and none does. Each case
+# gives two prompts with the options removed: complete (every context sentence) and
+# incomplete (the first sentence, MediQ's initial information). The label comes from
+# that construction, not from a grader.
+id: mediq-paired
+title: MediQ iMedQA development cases as complete and incomplete prompt pairs (Li et al., 2024)
+loader: paired_context_jsonl
+source:
+  kind: url
+  files:
+    dev:
+      url: "https://raw.githubusercontent.com/stellalisy/mediQ/63acb4ccbbc082a3a7895b79d27f51204f6f9aa7/data/all_dev_good.jsonl"
+      sha256: null
+      unpinned_reason: >-
+        Not downloaded when the record was written, because no download ran without the first
+        author's go-ahead. The URL names commit 63acb4c, the last commit to touch the file; there
+        the GitHub API gives git blob 77b50e4b685ae5738b0facadad8b73deb26751ec and 2,585,822
+        bytes. Pin the sha256 that python -m bodhi_lora fetch mediq-paired prints.
+license: CC BY 4.0 (the MediQ repository); the vignettes come from MedQA (Jin et al., 2021)
+audience: clinician
+task: single_best_answer
+rubric: synthesized
+fields:
+  question: [question]
+  context: [context]
+  answer: [answer]
+loader_params:
+  initial_sentences: 1
+  reference_max_chars: 400
+id_prefix: mediq
+# The clinician framing of medqa-open, with no cue to ask.
+prompt_template: "You are advising a clinician colleague. Answer the following clinical question.\n\n{context}\n\n{question}"
+reference_criterion: "The assistant's final clinical conclusion is consistent with the correct answer: \"{reference}\"."
+tags: ["theme:mediq", "persona:clinician"]
+splits:
+  # Every row is in the eval pool; nothing trains on this benchmark.
+  default: {method: holdout, pool: {select: all}, holdout: {select: all}}
+labels:
+  incomplete:
+    description: the prompt keeps only MediQ's initial information (the first context sentence); its twin keeps every sentence
+    source: MediQ case construction
+    timing: pre_specified
+    field: variant
+    positive_values: [incomplete]
+    negative_values: [complete]
+    pair_field: pair_id

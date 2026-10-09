@@ -40,3 +40,25 @@ def test_eval_ids_outside_the_population_fail():
 
 def test_normalize_text():
     assert normalize_text("  A  b\nC ") == "a b c"
+
+
+VIGNETTE = ("A 60-year-old man has crushing chest pain for 40 minutes. He is sweating and his blood "
+            "pressure is 90/60 mmHg. The ECG shows ST elevation in leads II, III and aVF.")
+
+
+def test_adapter_gate_catches_a_vignette_under_another_template_and_id():
+    from bodhi_lora.data.leakage import check_adapter_leakage
+
+    trained = {"medqa-1": f"You are advising a clinician colleague. Answer the following clinical "
+                          f"question.\n\n{VIGNETTE} What is the most likely diagnosis?",
+               "medqa-2": "A 7-year-old boy has a sore throat and fever. What is the next step?"}
+    copied = {"mediq-9-complete": f"Clinician question:\n{VIGNETTE}\n\nWhat is the diagnosis?"}
+    with pytest.raises(LeakageError, match="13-word sequences") as e:
+        check_adapter_leakage(trained, copied)
+    assert e.value.report["near_copies_first"] == ["mediq-9-complete"]
+    with pytest.raises(LeakageError, match="are trained prompts"):
+        check_adapter_leakage(trained, {"medqa-2": "anything"})
+    fresh = {"x": "A 25-year-old woman has burning on urination for two days and no fever or "
+                  "flank pain, and she is not pregnant. Which treatment is most appropriate?"}
+    report = check_adapter_leakage(trained, fresh)
+    assert report["passed"] and report["near_copies"] == 0 and report["max_share"] < 0.5

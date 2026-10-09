@@ -7,11 +7,16 @@ Without --judge, the evaluator scores every condition's replies on the seven epi
 dimensions into seed_<n>/grade/epistemic__<evaluator>.json (the format of the earlier
 epistemic_scores.json: configs[] with one entry per condition and its examples).
 
-With --judge, a judge from grading.judges grades the same replies again, on the rubric
-and on the dimensions, into seed_<n>/grade/judge__<judge>.json. Each example keeps the
-evaluator's rubric score next to the judge's, so agreement is computed from this file
-alone. The registry's family rule (R3) has already checked that the judge shares no
-family with the base, the teacher or the filter.
+With --judge, a judge from grading.judges grades the same replies again into
+seed_<n>/grade/judge__<judge>.json, in three parts:
+  rubric      the criteria the evaluator graded, read from the eval file, so the two
+              verdicts pair criterion by criterion; each example keeps both lists of
+              verdicts and both scores, so agreement is computed from this file alone
+  dimensions  the seven epistemic dimensions, with the evaluator's template
+  harm        extent and likelihood of possible harm and delayed care (grading/harm.py)
+A reply whose row has no rubric (a benchmark with rubric: none) gets no rubric part.
+The registry's family rule (R3) has already checked that the judge shares no family
+with the base, the teacher or the filter.
 
 A judge re-grade adds files only, so it also runs on recorded cells (the runner allows
 it there).
@@ -30,6 +35,7 @@ from bodhi_lora import manifest as mf
 from bodhi_lora.engine import make_engine
 from bodhi_lora.grading.epistemic import (STUB_EPISTEMIC_REPLY, aggregate, flatten_grade,
                                           grade_dimensions, messages_to_text)
+from bodhi_lora.grading.harm import HARM_PROMPT_MARKER, STUB_HARM_REPLY, aggregate_harm, grade_harm
 from bodhi_lora.grading.rubric import Grader, grade_rubric
 from bodhi_lora.pipeline.context import StageContext, context_from_args, stage_parser
 
@@ -37,8 +43,27 @@ STUB_RUBRIC_REPLY = '```json\n{"explanation": "stub", "criteria_met": false}\n``
 
 
 def _stub_reply(messages):
-    """A dimension grade for the dimension prompt, a rubric verdict otherwise."""
-    return STUB_EPISTEMIC_REPLY if "epistemic virtues" in messages[-1]["content"] else STUB_RUBRIC_REPLY
+    """A dimension grade, a harm grade or a rubric verdict, by the prompt it answers."""
+    prompt = messages[-1]["content"]
+    if "epistemic virtues" in prompt:
+        return STUB_EPISTEMIC_REPLY
+    return STUB_HARM_REPLY if HARM_PROMPT_MARKER in prompt else STUB_RUBRIC_REPLY
+
+
+def graded_criteria(item: dict, row) -> tuple[list, list | None, list | None]:
+    """The criteria the evaluator graded for one reply, its verdicts, and which verdicts
+    are parse failures (scored not met, so agreement can leave them out).
+
+    Read from the eval file, so a judge grades exactly what the evaluator graded even if
+    a benchmark's rows were rebuilt since. A file without criteria_results falls back
+    to the row's rubric, with no evaluator verdicts.
+    """
+    stored = item.get("criteria_results")
+    if stored:
+        return ([{"criterion": c["criterion"], "points": c["points"], "tags": c.get("tags", [])}
+                 for c in stored], [bool(c["criteria_met"]) for c in stored],
+                [bool(c.get("parse_failed", False)) for c in stored])
+    return row.rubrics, None, None
 
 
 def load_condition_files(ctx: StageContext, seed: int) -> dict[str, dict]:
@@ -103,12 +128,12 @@ def grade_dimensions_of(ctx: StageContext, seed: int, files: dict) -> tuple:
 
 
 def judge_of(ctx: StageContext, seed: int, files: dict, judge_id: str) -> tuple:
-    """A judge's rubric and dimension grades of every condition."""
+    """A judge's rubric, dimension and harm grades of every condition."""
     if judge_id not in ctx.cell.grading.judges:
         raise SystemExit(f"{judge_id} is not a judge of {ctx.cell.id}: {ctx.cell.grading.judges}")
     judge = ctx.reg.models[judge_id]
     rows = ctx.rows_by_id()
-    serving = ctx.cell.eval.serving
+    serving = ctx.cell.grading.judge_serving or ctx.cell.eval.serving
     engine = make_engine(judge, serving=serving, stub=ctx.stub, stub_reply=_stub_reply,
                          log_path=ctx.log_path(f"vllm_judge_{judge_id}_s{seed}.log"))
     configs = []
@@ -118,24 +143,35 @@ def judge_of(ctx: StageContext, seed: int, files: dict, judge_id: str) -> tuple:
             def one(item):
                 pid = item["prompt_id"]
                 row = rows[pid]
+                criteria, evaluator_met, evaluator_failed = graded_criteria(item, row)
+                text = messages_to_text(row.messages)
                 try:
-                    rub = grade_rubric(grader, row.messages, item["response"], row.rubrics)
-                    parsed, raw = grade_dimensions(grader, messages_to_text(row.messages), item["response"])
+                    rub = grade_rubric(grader, row.messages, item["response"], criteria) if criteria else None
+                    parsed, raw = grade_dimensions(grader, text, item["response"])
+                    harm, harm_raw = grade_harm(grader, text, item["response"])
                 except Exception as e:      # one bad request must not stop the condition
                     return None, (pid, repr(e))
                 ex = {"prompt_id": pid, "original_score": item.get("score"),
-                      "judge_score": rub["overall_score"], "judge_parse_failures": rub["parse_failures"],
-                      "judge_criteria_met": [c["criteria_met"] for c in rub["criteria_results"]],
+                      "judge_score": rub["overall_score"] if rub else None,
+                      "judge_parse_failures": rub["parse_failures"] if rub else 0,
+                      "judge_criteria_met": [c["criteria_met"] for c in rub["criteria_results"]] if rub else [],
+                      "judge_criteria_parse_failed": [c["parse_failed"] for c in rub["criteria_results"]] if rub else [],
+                      "evaluator_criteria_met": evaluator_met,
+                      "evaluator_criteria_parse_failed": evaluator_failed,
+                      "criteria_points": [c["points"] for c in criteria],
                       "epistemic_parse_failure": parsed is None,
-                      "scores": flatten_grade(parsed) if parsed is not None else None}
+                      "scores": flatten_grade(parsed) if parsed is not None else None,
+                      "harm_parse_failure": harm is None, "harm": harm}
                 if parsed is None:
                     ex["raw_grade_text"] = raw
+                if harm is None:
+                    ex["raw_harm_text"] = harm_raw
                 return ex, None
 
             examples, errors = _parallel(one, data.get("results", []), serving.concurrency,
                                          f"{condition} [judge {judge_id}]")
             examples.sort(key=lambda e: e["prompt_id"])
-            judge_scores = [e["judge_score"] for e in examples]
+            judge_scores = [e["judge_score"] for e in examples if e["judge_score"] is not None]
             original = [e["original_score"] for e in examples if e["original_score"] is not None]
             configs.append({"name": condition, "source_file": str(ctx.paths.eval_file(seed, condition)),
                             "source_sha256": mf.sha256_file(ctx.paths.eval_file(seed, condition)),
@@ -144,9 +180,12 @@ def judge_of(ctx: StageContext, seed: int, files: dict, judge_id: str) -> tuple:
                             "rubric": {"judge_mean": float(np.mean(judge_scores)) if judge_scores else None,
                                        "original_mean": float(np.mean(original)) if original else None,
                                        "judge_parse_failures": sum(e["judge_parse_failures"] for e in examples)},
-                            "epistemic": aggregate(examples), "examples": examples})
+                            "epistemic": aggregate(examples),
+                            "harm": aggregate_harm([e["harm"] for e in examples]),
+                            "examples": examples})
     out = {"judge_model": judge.hf_id, "judge_id": judge_id, "judge_revision": judge.revision,
-           "parts": ["rubric", "epistemic"], "seed": seed, "stub": ctx.stub, "configs": configs}
+           "judge_family": judge.family, "judge_domain": judge.domain,
+           "parts": ["rubric", "epistemic", "harm"], "seed": seed, "stub": ctx.stub, "configs": configs}
     return out, engine.settings(), judge
 
 

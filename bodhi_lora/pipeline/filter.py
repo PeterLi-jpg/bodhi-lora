@@ -7,7 +7,10 @@ split the kept traces into train and val.
 Grading runs once per cell, with the filter grader, into shared/filter/graded.jsonl.
 Only traces of prompts in the cell's train pool are graded, so a held-out prompt can
 never reach training through a stale trace file (issue #60). A rerun carries existing
-grades forward and grades only what is missing.
+grades forward and grades only what is missing. A cell that trains on another cell's
+traces (traces_from) with the same filter grader starts from that cell's grades, since
+greedy grading of the same traces against the same rubric gives the same verdicts; the
+manifest names the file and its sha256.
 
 tau follows the cell's filter.tau rule, applied to every graded trace:
   fixed                  tau = value
@@ -154,6 +157,11 @@ def grade(ctx: StageContext) -> dict:
     graded_path = out_dir / "graded.jsonl"
     graded = {g["prompt_id"]: g for g in (read_jsonl(graded_path) if graded_path.is_file() else [])
               if g["prompt_id"] in pool and "grade" in g}
+    reused = reusable_grades(ctx)
+    if reused is not None:
+        # Each reused grade names its cell, so a rerun still counts it as reused.
+        graded = {**{g["prompt_id"]: {**g, "grades_from": ctx.cell.traces_from} for g in read_jsonl(reused)
+                     if g["prompt_id"] in pool and "grade" in g}, **graded}
     todo = [t for t in in_pool if t["prompt_id"] not in graded]
     print(f"filter: {len(traces)} traces, {len(in_pool)} in the train pool, "
           f"{len(graded)} already graded, {len(todo)} to grade", flush=True)
@@ -210,12 +218,24 @@ def grade(ctx: StageContext) -> dict:
     status = "incomplete" if failed else "complete"
     ctx.write_manifest(out_dir, "filter", timer=timer, models={"grader": grader_model},
                        config={"filter": flt.model_dump()}, engines={"grader": engine.settings()},
-                       inputs=[traces_path], outputs=outputs, counts=counts,
-                       extra={"status": status, "tau": tau_record})
+                       inputs=[traces_path] + ([reused] if reused else []), outputs=outputs,
+                       counts={**counts, "n_grades_reused": sum(1 for g in graded_rows if g.get("grades_from"))},
+                       extra={"status": status, "tau": tau_record,
+                              "grades_from": ctx.cell.traces_from if reused else None})
     print(f"filter: tau {tau_record['tau']} ({flt.tau.rule}), kept {len(kept)}/{len(graded_rows)}", flush=True)
     if failed:
         raise SystemExit(f"{len(failed)} traces failed grading; run the stage again to retry them")
     return counts
+
+
+def reusable_grades(ctx: StageContext):
+    """The graded traces of the traces_from cell, when it graded with this cell's filter
+    grader; None otherwise."""
+    source = ctx.cell.traces_from
+    if not source or ctx.reg.cells[source].grading.filter != ctx.cell.grading.filter:
+        return None
+    path = ctx.project.cell(source).shared("filter") / "graded.jsonl"
+    return path if path.is_file() else None
 
 
 def split(ctx: StageContext, seed: int) -> dict:

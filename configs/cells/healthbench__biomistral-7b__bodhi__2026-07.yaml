@@ -9,6 +9,10 @@ seeds: [42, 7, 13, 99, 101]
 grading:
   filter: qwen2.5-14b
   evaluator: llama-3.1-8b-nous
+  # E10, the clinical judge panel: MedGemma-27B-text, a clinical model outside the
+  # Qwen and Llama families and the base's family. Run:
+  #   python -m bodhi_lora run healthbench__biomistral-7b__bodhi__2026-07 --stages grade --judges medgemma-27b-text --gpus 0
+  judges: [medgemma-27b-text]
 traces:
   max_prompts: 4200
   max_new_tokens_per_pass: 2048
@@ -48,6 +52,18 @@ eval:
   max_new_tokens: 1024
   max_new_tokens_per_pass: 2048
   serving: {max_model_len: 8192, max_num_seqs: 64, concurrency: 16, request_timeout_s: 180, drain_s: 30}
+# E11: does the base continue this benchmark's eval prompts verbatim more often than
+# ChatDoctor questions (a public 2023 set)? HealthBench appeared in May 2025, after
+# this base, so it cannot be in its pretraining: here the probe checks that the method
+# finds no recall where none is possible.
+# The setting of the paper's Appendix A: 15 + 25 tokens. Run:
+#   python -m bodhi_lora run healthbench__biomistral-7b__bodhi__2026-07 --stages probe --gpus 0
+probe:
+  control: chatdoctor
+  n_prompts: 200
+  prefix_tokens: 15
+  continuation_tokens: 25
+  serving: {max_model_len: 8192, max_num_seqs: 64, concurrency: 32, request_timeout_s: 180}
 report:
   label: HealthBench-Hard, BioMistral-7B
   token: HBBioMistralJul

@@ -1,0 +1,62 @@
+# E13, the uniform HealthBench grid (EXPERIMENTS.md E13), with the E12 baselines, the E17
+# red-flags-first conditions and the E20 bench. The settings are the proposed ones of E13
+# and are fixed in the dated analysis plan (P1) before any run.
+# Run: python -m bodhi_lora run healthbench__mistral-small-24b__bodhi --gpus 0,1,2,3,4
+id: healthbench__mistral-small-24b__bodhi
+benchmark: healthbench
+split: default
+model: mistral-small-24b
+protocol: bodhi
+seeds: [42, 7, 13, 99, 101]
+grading:
+  filter: qwen2.5-14b
+  evaluator: llama-3.1-8b
+  judges: [medgemma-27b-text]
+traces:
+  max_prompts: 4200
+  max_new_tokens_per_pass: 2048
+  serving: {max_model_len: 8192, max_num_seqs: 64, concurrency: 32, request_timeout_s: 180}
+filter:
+  tau: {rule: fixed, value: 0.4}
+  split_policy: per_seed
+  serving: {max_model_len: 8192, max_num_seqs: 64, concurrency: 16, request_timeout_s: 180}
+train:
+  engine: peft
+  # QLoRA: NF4 weights with bf16 compute and double quantization, to fit one H100.
+  quantization: 4bit
+  r: 16
+  alpha: 32
+  dropout: 0.05
+  target_modules: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]
+  epochs: 3
+  per_device_batch: 2
+  grad_accum: 8
+  effective_batch: 16
+  lr: 1.0e-4
+  scheduler: cosine
+  warmup_ratio: 0.05
+  max_seq_length: 4096
+  gradient_checkpointing: true
+  checkpoint: best_val_loss
+  eval_every: epoch
+  logging_steps: 10
+  hardware: 1x H100 80GB
+eval:
+  conditions: [base, base+bodhi, lora, lora+bodhi, base+clarify,
+               base+verbalized-confidence, base+mediq-abstain,
+               base+red-flags-first, lora+red-flags-first]
+  ids: {policy: per_seed_draw, n: 200}
+  # The base is served as it was trained, 4-bit under a QLoRA adapter (audit REPRO-12).
+  base_precision: train
+  max_new_tokens: 1024
+  max_new_tokens_per_pass: 2048
+  serving: {max_model_len: 8192, max_num_seqs: 32, concurrency: 32, request_timeout_s: 900}
+# E20: time and tokens per reply of every condition, one reply at a time, on seed 42.
+bench:
+  n_prompts: 50
+  seeds: [42]
+  serving: {max_model_len: 8192, max_num_seqs: 1, concurrency: 1, request_timeout_s: 900}
+report:
+  label: HealthBench-Hard, Mistral-Small-24B
+  token: HBMistral
+  status: planned

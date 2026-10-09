@@ -4,9 +4,12 @@
 
 The first bench.n_prompts of the seed's eval ids (in a fixed shuffle) are answered one
 at a time, each condition on its own engine, so a latency is the service time of one
-reply and not of a batch. Run it on an otherwise idle GPU: a shared node's queueing
-would enter the times. Output: seed_<n>/bench/bench.json with per-reply seconds, calls
-and generated tokens (from the server's token counts), and their summaries.
+reply and not of a batch. The token limits are the eval's, so each condition is timed
+on the replies the eval makes. Run it on an otherwise idle GPU: a shared node's queueing
+would enter the times (EXPERIMENTS.md E20, commitment C25). Output:
+seed_<n>/bench/bench.json with per-reply seconds, calls, prompt and generated tokens
+(from the server's token counts), and their summaries; the engine start time of each
+condition is kept apart, so it does not enter the per-reply times.
 """
 from __future__ import annotations
 
@@ -23,14 +26,18 @@ from bodhi_lora.pipeline.context import StageContext, context_from_args, stage_p
 from bodhi_lora.protocols import build, decoding_for
 
 
-def summarize(seconds: list[float], tokens: list[int]) -> dict:
+def summarize(seconds: list[float], tokens: list[int], prompt_tokens: list[int] = ()) -> dict:
     arr = np.array(seconds)
     total = float(arr.sum()) if len(arr) else 0.0
     return {
         "n": len(seconds), "seconds": seconds, "completion_tokens": tokens,
+        "prompt_tokens": list(prompt_tokens),
+        "mean_s": float(arr.mean()) if len(arr) else None,
         "median_s": float(np.median(arr)) if len(arr) else None,
         "p90_s": float(np.percentile(arr, 90)) if len(arr) else None,
         "p99_s": float(np.percentile(arr, 99)) if len(arr) else None,
+        "mean_completion_tokens": float(np.mean(tokens)) if len(tokens) else None,
+        "mean_prompt_tokens": float(np.mean(prompt_tokens)) if len(prompt_tokens) else None,
         "throughput_tok_per_s": sum(tokens) / total if total > 0 else None,
     }
 
@@ -47,26 +54,32 @@ def run(ctx: StageContext, seed: int) -> dict:
     rows = ctx.rows_by_id()
     prompts = [rows[pid].messages for pid in ids[:b.n_prompts]]
     out = {"cell": ctx.cell.id, "seed": seed, "n_prompts": len(prompts), "settings": b.model_dump(),
-           "conditions": {}}
+           "max_new_tokens": ctx.cell.eval.max_new_tokens,
+           "max_new_tokens_per_pass": ctx.cell.eval.max_new_tokens_per_pass, "conditions": {}}
     engines = {}
-    for condition in ctx.cell.eval.conditions:
+    ev = ctx.cell.eval
+    for condition in ev.conditions:
         weights, proto_rec = ctx.condition_protocol(condition)
         proto = build(proto_rec, ctx.model)
-        decoding = decoding_for(proto, max_new_tokens=b.max_new_tokens,
-                                max_new_tokens_per_pass=b.max_new_tokens)
+        decoding = decoding_for(proto, max_new_tokens=ev.max_new_tokens,
+                                max_new_tokens_per_pass=ev.max_new_tokens_per_pass)
         adapter = ctx.adapter_dir(seed) if weights == "lora" else None
         engine = make_engine(ctx.model, serving=b.serving, adapter=adapter, quantize=ctx.quantized_base(),
                              stub=ctx.stub, enforce_eager=b.enforce_eager,
                              log_path=ctx.log_path(f"vllm_bench_s{seed}.log"))
-        seconds, tokens, calls = [], [], []
+        seconds, tokens, prompt_tokens, calls = [], [], [], []
+        t_start = time.perf_counter()
         with engine as eng:
+            startup_s = time.perf_counter() - t_start
             for messages in prompts:
                 t0 = time.perf_counter()
                 o = proto.respond(eng, messages, decoding)
                 seconds.append(time.perf_counter() - t0)
                 tokens.append(o.completion_tokens)
+                prompt_tokens.append(o.prompt_tokens)
                 calls.append(o.calls)
-        out["conditions"][condition] = {**summarize(seconds, tokens), "calls": calls}
+        out["conditions"][condition] = {**summarize(seconds, tokens, prompt_tokens), "calls": calls,
+                                        "engine_start_s": startup_s}
         engines[condition] = engine.settings()
         print(f"bench: {condition} median {out['conditions'][condition]['median_s']}", flush=True)
     path = out_dir / "bench.json"

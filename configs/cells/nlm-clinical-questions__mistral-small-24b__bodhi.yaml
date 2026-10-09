@@ -1,0 +1,29 @@
+# E19 (secondary): the adapters of healthbench__mistral-small-24b__bodhi on 200 clinician questions per seed
+# from the NLM Clinical Questions Collection. No reference answers, so no rubric score:
+# the seven dimensions, the judge's harm grades and the text counts. First: python -m
+# bodhi_lora fetch nlm-clinical-questions, and pin the sha256 values it prints.
+# Run: python -m bodhi_lora run nlm-clinical-questions__mistral-small-24b__bodhi --gpus 0,1,2,3,4
+id: nlm-clinical-questions__mistral-small-24b__bodhi
+benchmark: nlm-clinical-questions
+split: default
+model: mistral-small-24b
+protocol: bodhi
+seeds: [42, 7, 13, 99, 101]
+adapters_from: healthbench__mistral-small-24b__bodhi
+grading:
+  filter: qwen2.5-14b
+  evaluator: llama-3.1-8b
+  judges: [medgemma-27b-text]
+eval:
+  conditions: [base, base+bodhi, lora, lora+bodhi, base+clarify,
+               base+verbalized-confidence, base+mediq-abstain]
+  ids: {policy: per_seed_draw, n: 200}
+  # The base is served as it was trained, 4-bit under a QLoRA adapter (audit REPRO-12).
+  base_precision: train
+  max_new_tokens: 1024
+  max_new_tokens_per_pass: 2048
+  serving: {max_model_len: 8192, max_num_seqs: 32, concurrency: 32, request_timeout_s: 900}
+report:
+  label: NLM clinician questions, Mistral-Small-24B
+  token: QuestionsMistral
+  status: planned

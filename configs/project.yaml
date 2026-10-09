@@ -4,6 +4,9 @@
 results_root: results
 # Downloaded and built benchmark files, one folder per benchmark. Ignored by git.
 data_root: data/raw
+# Stub and dry runs (--stub-engine, --dry-run) write here, one folder per mode, unless
+# --results-root names another folder. Ignored by git.
+scratch_root: outputs
 
 python:
   # Training: transformers 4.57.6, peft, trl (requirements.txt).

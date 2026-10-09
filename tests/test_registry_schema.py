@@ -250,3 +250,32 @@ def test_load_registry_from_files(tmp_path):
     write("models", MODELS[0], name="renamed")
     with pytest.raises(RegistryError, match="does not match the file name"):
         load_registry(tmp_path)
+
+
+def test_an_unpinned_url_file_needs_a_reason():
+    unpinned = copy.deepcopy(BENCHMARK)
+    unpinned["source"]["files"]["hard"] = {"url": "https://example.org/hard.jsonl", "sha256": None}
+    with pytest.raises(pydantic.ValidationError, match="unpinned_reason"):
+        BenchmarkConfig.model_validate(unpinned)
+    unpinned["source"]["files"]["hard"]["unpinned_reason"] = "not read yet"
+    BenchmarkConfig.model_validate(unpinned)
+
+
+def test_a_benchmark_without_a_rubric_takes_no_reference_and_no_training():
+    bench = dict(copy.deepcopy(BENCHMARK), rubric="none")
+    BenchmarkConfig.model_validate(bench)
+    with pytest.raises(pydantic.ValidationError, match="takes no reference_criterion"):
+        BenchmarkConfig.model_validate(dict(bench, reference_criterion="matches {reference}"))
+    reg = Registry(models={m["id"]: ModelConfig.model_validate(m) for m in MODELS},
+                   benchmarks={"rubric-bench": BenchmarkConfig.model_validate(bench)},
+                   protocols={p["id"]: ProtocolConfig.model_validate(p) for p in PROTOCOLS},
+                   cells={CELL["id"]: CellConfig.model_validate(CELL)})
+    with pytest.raises(RegistryError, match="has no rubric"):
+        validate_registry(reg)
+
+
+def test_pair_draws_do_not_take_a_fixed_file():
+    bad = copy.deepcopy(CELL)
+    bad["eval"]["ids"] = {"policy": "fixed_file", "n": 200, "file": "eval_ids.json", "unit": "pair"}
+    with pytest.raises(pydantic.ValidationError, match="unit pair"):
+        CellConfig.model_validate(bad)
