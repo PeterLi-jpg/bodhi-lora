@@ -1,0 +1,13 @@
+# The general twin of MedGemma-27B (EXPERIMENTS.md E24): MedGemma-27B-text is built on
+# Gemma 3 27B, so this base separates clinical tuning from family and size. Gated: accept
+# the Gemma license on Hugging Face first. Revision: HEAD of the Hugging Face API on
+# 2026-10-09. The checkpoint is multimodal (image and text); the cell uses text only.
+id: gemma-3-27b
+hf_id: google/gemma-3-27b-it
+revision: 005ad3404e59d6023443cb575daa05336842228a
+last_modified: "2025-03-21"
+family: gemma
+domain: general
+params_b: 27.4
+gated: true
+license: gemma
