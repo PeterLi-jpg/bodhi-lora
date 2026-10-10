@@ -1,6 +1,7 @@
-"""The over-flagging check (commitment C30) and what it rests on: the evaluator's red-flag
-rate, the red-flag-at-stake label of the HealthBench record, and the label rates of the
-discrimination section, on a synthetic table. No rule over the reply text is involved."""
+"""The red-flag rate in each group of the emergency-theme label (the structural stand-in
+for the over-flagging check of commitment C30), the theme-tag labels it rests on, and the
+label rates of the discrimination section, on a synthetic table. No rule reads the reply
+text or the rubric text."""
 from dataclasses import replace
 
 import numpy as np
@@ -25,19 +26,28 @@ def reg():
     return load_registry(CONFIGS_DIR)
 
 
-def test_red_flag_label(reg):
-    rule = reg.benchmarks["healthbench"].labels["red-flag-at-stake"]
-    crit = lambda text, points=5: {"criterion": text, "points": points}  # noqa: E731
-    assert rule.timing == "post_hoc"
-    assert label_value(rule, ["theme:emergency_referrals"], []) is True
-    assert label_value(rule, ["theme:hedging"], [crit("Advises the user to go to the emergency room.")]) is True
-    # A criterion that penalizes needless escalation still marks urgency as at issue, so
-    # the negative group stays prompts whose rubric is silent on urgency.
-    assert label_value(rule, [], [crit("Recommends the ER, which is not needed here.", -6)]) is True
-    assert label_value(rule, [], [crit("Lists warning signs of sepsis.")]) is True
-    assert label_value(rule, ["theme:global_health"], [crit("Explains the vaccine schedule.")]) is False
-    # The physician-agreed tags do not decide it.
-    assert label_value(rule, ["physician_agreed_category:emergent"], [crit("Explains the dose.")]) is False
+def test_theme_labels_read_the_theme_tag_only(reg):
+    labels = reg.benchmarks["healthbench"].labels
+    # The keyword labels of 2026-10-09 are gone.
+    assert "red-flag-at-stake" not in labels and "needs-info-theme-or-rubric" not in labels
+    for name, theme in (("emergency-theme", "theme:emergency_referrals"),
+                        ("needs-info-theme", "theme:context_seeking")):
+        rule = labels[name]
+        assert rule.timing == "post_hoc" and rule.positive_tags == [theme] and not rule.negative_tags
+        assert label_value(rule, [theme]) is True
+        assert label_value(rule, ["theme:hedging"]) is False
+        # A physician-agreed tag does not decide it.
+        assert label_value(rule, ["theme:global_health", "physician_agreed_category:emergent"]) is False
+
+
+def test_a_label_rule_cannot_read_rubric_text():
+    from pydantic import ValidationError
+
+    from bodhi_lora.registry.schema import LabelRule
+
+    with pytest.raises(ValidationError):
+        LabelRule(description="x", source="authors", timing="post_hoc", positive_tags=["theme:x"],
+                  rubric_pattern="(?i)emergency")
 
 
 def test_rates_in_each_label_group(reg, tmp_path):
@@ -45,8 +55,8 @@ def test_rates_in_each_label_group(reg, tmp_path):
     seeds = (1, 2, 3)
     table = synthetic_table(cell, seeds)
     prompts = synthetic_prompts()
-    # p0..p2 may hold a red flag; p3..p5 hold none.
-    prompts["label_red-flag-at-stake"] = [1.0, 1.0, 1.0, 0.0, 0.0, 0.0]
+    # p0..p2 are of the emergency theme; p3..p5 are not.
+    prompts["label_emergency-theme"] = [1.0, 1.0, 1.0, 0.0, 0.0, 0.0]
     table["red_flag_rate"] = 0.0
     table.loc[table["prompt_id"].isin(PROMPTS[:3]), "red_flag_rate"] = 1.0
     # The evaluator gives lora a red-flag score of 2 on p3 in every seed, and on p4 too
@@ -58,7 +68,7 @@ def test_rates_in_each_label_group(reg, tmp_path):
     paths = replace(project(CONFIGS_DIR), results_root=tmp_path).cell(CELL)
     out = analyze_tables(reg, cell, table, prompts, meta, paths, report_config())
 
-    res = out["discrimination"]["red_flag_rate"]["red-flag-at-stake"]
+    res = out["discrimination"]["red_flag_rate"]["emergency-theme"]
     assert res["exploratory"] and res["n_prompts"] == {"positive": 3, "negative": 3}
     base, lo = res["conditions"]["base"], res["conditions"]["lora"]
     assert base["negative_rate"] == 0.0 and base["positive_rate"] == 1.0
@@ -80,7 +90,7 @@ def test_an_unscored_reply_leaves_the_red_flag_rate(reg, tmp_path):
     table = synthetic_table(cell, (1, 2))
     table["red_flag_rate"] = 1.0
     prompts = synthetic_prompts()
-    prompts["label_red-flag-at-stake"] = [1.0, 1.0, 1.0, 0.0, 0.0, 0.0]
+    prompts["label_emergency-theme"] = [1.0, 1.0, 1.0, 0.0, 0.0, 0.0]
     # One negative-group reply of lora has no grade; it must not count as a 0.
     miss = (table["condition"] == "lora") & (table["seed"] == 1) & (table["prompt_id"] == "p5")
     table.loc[miss, "epi_status"] = "parse_failure"
@@ -88,5 +98,5 @@ def test_an_unscored_reply_leaves_the_red_flag_rate(reg, tmp_path):
     meta = [{"n_examples": {c: len(PROMPTS) for c in cell.eval.conditions}} for _ in (1, 2)]
     paths = replace(project(CONFIGS_DIR), results_root=tmp_path).cell(CELL)
     out = analyze_tables(reg, cell, table, prompts, meta, paths, report_config())
-    lo = out["discrimination"]["red_flag_rate"]["red-flag-at-stake"]["conditions"]["lora"]
+    lo = out["discrimination"]["red_flag_rate"]["emergency-theme"]["conditions"]["lora"]
     assert lo["negative_rate"] == 1.0 and lo["n_negative"] == 5

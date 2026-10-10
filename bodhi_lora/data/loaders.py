@@ -77,7 +77,7 @@ def sha256_file(path: Path) -> str:
 def _with_labels(bench: BenchmarkConfig, row: dict, positions: dict) -> Row:
     """A Row from a row dict. Field labels read the dict's own keys (e.g. "variant"), and
     a paired loader's "pair_id" key becomes Row.pair_id."""
-    labels = {name: label_value(rule, row.get("example_tags", []), row.get("rubrics", []), row)
+    labels = {name: label_value(rule, row.get("example_tags", []), row)
               for name, rule in bench.labels.items()}
     return Row(prompt_id=row["prompt_id"], messages=row["prompt"], rubrics=row["rubrics"],
                tags=list(row.get("example_tags", [])), labels=labels, pair_id=row.get("pair_id"),

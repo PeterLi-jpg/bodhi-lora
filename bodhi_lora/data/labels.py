@@ -2,21 +2,23 @@
 
 A label is True (positive), False (negative) or None (unlabelled). Unlabelled rows stay
 out of the label's analyses.
+
+A label reads only structured fields that ship with the dataset: the row's tags or one
+of its fields. It never reads free text (a prompt or a rubric criterion) with a keyword
+list or a regular expression; docs/CONVENTIONS.md rule 15 says why.
 """
-import re
 from typing import Optional
 
 from bodhi_lora.registry.schema import LabelRule
 
 
-def label_value(rule: LabelRule, tags: list[str], rubrics: list[dict],
-                fields: Optional[dict] = None) -> Optional[bool]:
+def label_value(rule: LabelRule, tags: list[str], fields: Optional[dict] = None) -> Optional[bool]:
     """The value of one label on one row.
 
-    Tag rule: positive when the row carries a positive tag or a rubric criterion matches
-    rubric_pattern; negative when it carries a negative tag, or, if the rule lists no
-    negative tags, when it is not positive. A row that is both positive and negative is
-    left unlabelled, so a conflict never decides a group.
+    Tag rule: positive when the row carries a positive tag; negative when it carries a
+    negative tag, or, if the rule lists no negative tags, when it is not positive. A row
+    that is both positive and negative is left unlabelled, so a conflict never decides a
+    group.
     Field rule: the row field's value decides, by positive_values and negative_values.
     """
     if rule.field is not None:
@@ -28,9 +30,6 @@ def label_value(rule: LabelRule, tags: list[str], rubrics: list[dict],
         return None
     tagset = set(tags)
     positive = bool(tagset & set(rule.positive_tags))
-    if rule.rubric_pattern is not None:
-        pattern = re.compile(rule.rubric_pattern)
-        positive = positive or any(pattern.search(r.get("criterion", "")) for r in rubrics)
     if not rule.negative_tags:
         return positive
     negative = bool(tagset & set(rule.negative_tags))

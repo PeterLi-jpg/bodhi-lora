@@ -27,15 +27,18 @@ bootstrap: {resamples: 5000, seed: 0}
 # rate in each group. Only labels listed here are computed. The physician labels of the
 # benchmark records are left out on purpose: the analysis plan keeps them unseen on every
 # cell until its adoption (docs/ANALYSIS_PLAN.md, state at registration; convention 3).
-#   active_inquiry: does the reply ask more where information is missing (decision D9:
-#     both post hoc labellings, side by side).
+# Both labels read the theme tag only (configs/benchmarks/healthbench.yaml says why no
+# other structured field can stand in), and both are post hoc (decision D9).
+#   active_inquiry: does the reply ask more on prompts of the context_seeking theme.
 #   red_flag_rate: the evaluator's red-flag rate (share of replies with red-flag score 2)
-#     on the negative group of red-flag-at-stake is the over-flagging check of C30.
+#     on prompts of the emergency_referrals theme and on the others. The rate on the
+#     others counts warranted flags too, so it is not an over-flagging rate; the test of
+#     over-flagging is H7 on the physician labels (ANALYSIS_PLAN.md section 7.2).
 discrimination:
   - response: active_inquiry
-    labels: [needs-info-theme-or-rubric, needs-info-theme]
+    labels: [needs-info-theme]
   - response: red_flag_rate
-    labels: [red-flag-at-stake]
+    labels: [emergency-theme]
 
 # Response-length quartile edges come from this condition's scored replies.
 length_reference: base
@@ -156,33 +159,32 @@ display:
     chars: 'Reply length (characters)'
     tokens: 'Reply tokens (tokenizer)'
   labels:
-    needs-info-theme-or-rubric: 'needs information (theme or rubric)'
-    needs-info-theme: 'needs information (theme)'
-    red-flag-at-stake: 'red flag at issue'
+    needs-info-theme: 'context-seeking theme'
+    emergency-theme: 'emergency-referral theme'
 
 # The cross-cell table of the checks that need no GPU: every cell of cross_cells gets
 # every column, "--" where the cell has no such value (for example no label on its
 # benchmark, or no tokenizer in the local cache). Paths are into each cell's stats.json.
 cross_table:
-  - group: 'Red-flag rate on prompts with no red flag (\%, post hoc)'
+  - group: 'Red-flag rate outside the emergency theme (\%, post hoc)'
     header: Base
-    value: discrimination.red_flag_rate.red-flag-at-stake.conditions.base.negative_rate
+    value: discrimination.red_flag_rate.emergency-theme.conditions.base.negative_rate
     scale: 100
     decimals: 1
-  - group: 'Red-flag rate on prompts with no red flag (\%, post hoc)'
+  - group: 'Red-flag rate outside the emergency theme (\%, post hoc)'
     header: LoRA
-    value: discrimination.red_flag_rate.red-flag-at-stake.conditions.lora.negative_rate
+    value: discrimination.red_flag_rate.emergency-theme.conditions.lora.negative_rate
     scale: 100
     decimals: 1
-  - group: 'Red-flag rate on prompts with no red flag (\%, post hoc)'
+  - group: 'Red-flag rate outside the emergency theme (\%, post hoc)'
     header: 'LoRA $-$ Base'
-    value: discrimination.red_flag_rate.red-flag-at-stake.contrasts.lora - base.negative_rate.seed_test.diff
-    ci: discrimination.red_flag_rate.red-flag-at-stake.contrasts.lora - base.negative_rate.seed_test.ci95
+    value: discrimination.red_flag_rate.emergency-theme.contrasts.lora - base.negative_rate.seed_test.diff
+    ci: discrimination.red_flag_rate.emergency-theme.contrasts.lora - base.negative_rate.seed_test.ci95
     scale: 100
     decimals: 1
     sign: true
   - header: '\shortstack[r]{Asking index, post hoc\\LoRA $-$ Base (pp)}'
-    value: discrimination.active_inquiry.needs-info-theme-or-rubric.contrasts.lora - base.diff
+    value: discrimination.active_inquiry.needs-info-theme.contrasts.lora - base.diff
     scale: 100
     decimals: 1
     sign: true

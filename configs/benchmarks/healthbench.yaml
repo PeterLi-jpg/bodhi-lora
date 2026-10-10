@@ -52,29 +52,32 @@ labels:
     timing: pre_specified
     positive_tags: ["physician_agreed_category:health-professional"]
     negative_tags: ["physician_agreed_category:not-health-professional"]
+  # The post hoc labels below read the example's theme tag only, a structured field that
+  # ships with HealthBench (every row has exactly one theme:<name> tag). Until 2026-10-10
+  # two of them also matched keywords in the rubric text; keyword rules miss negation,
+  # hypotheticals and quotes, so they were removed (docs/CONVENTIONS.md rule 15). No
+  # other structured field can stand in for them:
+  #   - the criteria's cluster:<theme>_<category>_<name> tags carry the physician-agreed
+  #     category of the example (on all 586 Hard rows that have either, the cluster
+  #     names the same category as the physician_agreed_category tag), so a cluster rule
+  #     is a physician label under another name, and the analysis plan keeps those
+  #     unseen until its adoption (docs/ANALYSIS_PLAN.md section 2.4);
+  #   - axis:<name> and level:<name> say how a criterion is graded, not what the prompt
+  #     lacks or risks (704 of the 1,000 Hard prompts have a positive context_awareness
+  #     criterion).
   needs-info-theme:
+    # Positive if the example tags contain theme:context_seeking, else negative.
     description: the context_seeking theme tag only (the theme-only labelling of the 2026-07 discussion)
     source: HealthBench theme tags
     timing: post_hoc
     positive_tags: ["theme:context_seeking"]
-  needs-info-theme-or-rubric:
+  emergency-theme:
     description: >-
-      the context_seeking theme tag, or a rubric criterion that rewards asking for more
-      information (the primary labelling of the 2026-07 discussion,
-      rebuttal/analyses/mimicry_split.py)
-    source: HealthBench theme tags and the authors' keyword rule over rubric text
-    timing: post_hoc
-    positive_tags: ["theme:context_seeking"]
-    rubric_pattern: "(?i)\\b(ask(s|ing)?|clarif\\w*|follow[- ]?up|more (information|context|detail)|additional (information|context|detail)|missing (information|context)|request(s|ing)? (more|additional)|gather\\w* (more|additional|context)|what (information|else)|need(s|ed)? (more|additional|to know))\\b"
-  red-flag-at-stake:
-    description: >-
-      a red flag may be at issue in the case: the emergency_referrals theme tag, or a
-      rubric criterion of any sign that names emergency or urgent care, red flags, warning
-      or alarm signs, or a life-threatening state. Negative: none of these, so the
-      physicians' rubric says nothing about urgency (the set with no genuine red flag of
-      commitment C30). The physician-agreed and cluster tags are not used: the analysis
-      plan keeps the emergent-physician label unseen until its adoption.
-    source: HealthBench theme tags and the authors' keyword rule over rubric text
+      the emergency_referrals theme tag (positive); every other theme (negative). Rule:
+      positive if the example tags contain theme:emergency_referrals, else negative. The
+      negative group is not "no red flag": prompts of other themes can hold one, so the
+      red-flag rate on it counts warranted flags too and is not an over-flagging rate.
+      It replaces red-flag-at-stake (2026-10-09), whose rubric keyword rule was removed.
+    source: HealthBench theme tags
     timing: post_hoc
     positive_tags: ["theme:emergency_referrals"]
-    rubric_pattern: "(?i)\\b(emergenc\\w*|urgent\\w*|911|(call|dial)(ing)? (999|112)|ambulance|A&E|red[- ]flags?|warning signs?|alarm(ing)? (signs?|symptoms?)|life[- ]threatening|immediate(ly)? (medical )?(attention|care|help|evaluation)|(seek|get|obtain) (medical )?(care|attention|help|evaluation) (immediately|right away|promptly))\\b|(?-i:\\bER\\b)"

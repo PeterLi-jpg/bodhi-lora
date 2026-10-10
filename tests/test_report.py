@@ -29,7 +29,7 @@ def _stats(proj, cid):
 
 
 def test_tokens():
-    assert token("needs-info-theme-or-rubric") == "NeedsInfoThemeOrRubric"
+    assert token("needs-info-theme") == "NeedsInfoTheme"
     assert token("pass1-headers") == "PassOneHeaders"
     assert token("red_flag_rate") == "RedFlagRate"
 
@@ -63,8 +63,8 @@ def test_values_come_from_stats(setup):
             assert macros[f"{t}ActiveInquiryLoRA"] == fmt(r["seed_mean"] * 100, 1)
         d = s["contrasts"]["lora - base"]["metrics"]["rubric_score"]
         assert macros[f"{t}RubricScoreLoRAvsBaseDiff"] == fmt(d["diff"], 3, sign=True)
-        over = s["discrimination"]["red_flag_rate"]["red-flag-at-stake"]
-        name = f"{t}RedFlagRateRedFlagAtStakeNegRateLoRA"
+        over = s["discrimination"]["red_flag_rate"]["emergency-theme"]
+        name = f"{t}RedFlagRateEmergencyThemeNegRateLoRA"
         if "not_measured" in over:
             assert name not in macros
         else:
@@ -78,13 +78,13 @@ def test_cross_table_has_the_same_columns_for_every_cell(setup):
     rows = [line for line in body.splitlines() if line.endswith("\\\\")]
     assert len(rows) == len(cfg.cross_cells)
     assert {line.count(" & ") for line in rows} == {len(cfg.cross_table)}
-    # A cell whose benchmark has no red-flag label shows "--" in the over-flagging columns.
+    # A cell whose benchmark has no emergency-theme label shows "--" in its three columns.
     for cid in cfg.cross_cells:
         s = _stats(proj, cid)
         label = re.escape(reg.cells[cid].report.label)
         line = next(r for r in rows if re.match(label, r))
         cells = line.removesuffix(" \\\\").split(" & ")[1:]
-        over = s["discrimination"]["red_flag_rate"]["red-flag-at-stake"]
+        over = s["discrimination"]["red_flag_rate"]["emergency-theme"]
         if "not_measured" in over:
             assert cells[:3] == ["--"] * 3
         else:

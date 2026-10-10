@@ -252,11 +252,16 @@ class SplitRule(_Record):
 class LabelRule(_Record):
     """A binary label on benchmark rows, made from facts the graders never see.
 
-    Tag or rubric rule: a row is positive when it carries any tag in `positive_tags`,
-    or when any of its rubric criteria matches `rubric_pattern`. It is negative when
-    it carries any tag in `negative_tags`; with no negative tags, every row that is
-    not positive is negative. Other rows are unlabelled and left out of the label's
-    analyses.
+    Tag rule: a row is positive when it carries any tag in `positive_tags`. It is
+    negative when it carries any tag in `negative_tags`; with no negative tags, every
+    row that is not positive is negative. Other rows are unlabelled and left out of the
+    label's analyses.
+
+    A label reads structured fields only (tags, or a field the loader sets). There is no
+    rule over free text such as a rubric criterion: keyword rules miss negation,
+    hypotheticals and quotes (docs/CONVENTIONS.md rule 15). The 2026-10-09 rubric
+    keyword rule was removed on 2026-10-10, and unknown keys are errors, so a record
+    that still has one fails to load.
 
     Field rule (paired probes): the loader sets `field` on each row, and its value
     decides the label. Rows that share the value of `pair_field` form one pair.
@@ -270,7 +275,6 @@ class LabelRule(_Record):
     timing: Literal["pre_specified", "post_hoc"]
     positive_tags: list[str] = Field(default_factory=list)
     negative_tags: list[str] = Field(default_factory=list)
-    rubric_pattern: Optional[str] = None
     field: Optional[str] = None
     positive_values: list[str] = Field(default_factory=list)
     negative_values: list[str] = Field(default_factory=list)
@@ -278,16 +282,14 @@ class LabelRule(_Record):
 
     @model_validator(mode="after")
     def _one_rule(self) -> "LabelRule":
-        tag_rule = bool(self.positive_tags or self.rubric_pattern)
+        tag_rule = bool(self.positive_tags)
         field_rule = self.field is not None
         if tag_rule == field_rule:
-            raise ValueError("give either positive_tags/rubric_pattern or field, not both and not neither")
+            raise ValueError("give either positive_tags or field, not both and not neither")
         if field_rule and not (self.positive_values and self.negative_values):
             raise ValueError("a field rule needs positive_values and negative_values")
         if not field_rule and (self.positive_values or self.negative_values or self.pair_field):
             raise ValueError("positive_values, negative_values and pair_field belong to a field rule")
-        if self.rubric_pattern is not None:
-            re.compile(self.rubric_pattern)
         return self
 
 
