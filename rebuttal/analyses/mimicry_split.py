@@ -1,5 +1,15 @@
 """Rebuttal analysis: calibration vs. template mimicry (meta-review W4, Reviewer LxMF W2).
 
+SUPERSEDED on 2026-10-10. Kept only as the record of how the posted values were made;
+no paper number and no current analysis reads its output. Two of its rules decide what
+text means by keywords, which docs/CONVENTIONS.md rule 15 forbids: CLARIFY_RE labels a
+prompt context-dependent when a rubric criterion contains a clarification keyword, and
+CLINICIAN_RE counts prompts whose first user turn names a clinical role. The posted
+discrimination index (+2.1, +11.0, +10.5 and -3.5 points), the odds ratios and the 4 of
+667 clinician-posed prompts came from them; rebuttal/withdrawals.md W14 and W24 withdraw
+them. The theme-only labelling here is structural, and the uniform analysis computes it
+from the tag alone (label needs-info-theme, python -m bodhi_lora analyze).
+
 LxMF's exact proposal: "isolate samples that genuinely have missing information and
 cannot be answered, and compare with those that can be answered without additional
 information, and observe if CoT or LoRA triggers more inquiry in the former group than

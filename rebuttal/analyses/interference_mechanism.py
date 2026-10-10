@@ -1,5 +1,13 @@
 """Rebuttal analysis: what drives the LoRA+BODHI red-flag drop? (Reviewer LxMF W4)
 
+SUPERSEDED on 2026-10-10. Kept only as the record of how the posted values were made;
+no paper number reads its output. Its nine-marker rule counts two free words,
+DIFFERENTIAL and SCOPE OF/BOUNDAR, that are not headers of the BODHI format, so it reads
+meaning from the text (docs/CONVENTIONS.md rule 15). The posted 54.6% and the numbers
+split by it are withdrawn (rebuttal/withdrawals.md W25). Its seven-header rule
+(PASS1_RE) is the analysis-format leak rule of configs/protocols/bodhi.yaml, which the
+uniform analysis applies to every cell (python -m bodhi_lora analyze).
+
 LxMF: "The claim that CoT and LoRA compete for the same behavioral capacity is
 speculative. The drop in red-flag identification could be caused by context window
 truncation or attention dilution from long outputs, because this combination

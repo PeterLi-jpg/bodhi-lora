@@ -1,5 +1,14 @@
 """Rebuttal analysis: how often does a response ask the reader a question? (FzpA, MR-W3)
 
+SUPERSEDED on 2026-10-10. Kept only as the record of how the posted values were made;
+no paper number and no current analysis reads its output. It decides whether a reply
+asks by a keyword rule (a sentence that ends in "?" and contains "you" or "your"), which
+docs/CONVENTIONS.md rule 15 forbids: it counts quoted and rhetorical questions and misses
+indirect ones. The posted 18.4% and 39.6% and this script's 17.9% and 36.7% are withdrawn
+(rebuttal/withdrawals.md W23). The evaluator's active-inquiry grade is the measure; a
+cross-check by a judge from another family, with a semantic rubric and a hand-label
+gate, is planned (docs/ANALYSIS_PLAN.md section 12, 2026-10-10).
+
 A grader-free check on the active-inquiry shift. The posted replies
 (posted/FzpA_2_followup.md:13, drafts/meta_review_part1.md:27) say the base model asks a
 second-person question in 18.4% of responses and the adapter in 39.6%. No script or

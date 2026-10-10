@@ -5,7 +5,8 @@
 #   make test      the test suite
 #   make smoke     the smoke cell on the CPU: every stage, the tiny model trained for real
 #   make check     doc paths, secrets scan, and the registry (every record loads and checks)
-#   make rebuttal  the submitted cell's analysis/*.json (discrimination, leakage, questions)
+#   make rebuttal  the submitted cell's analysis/*.json of the three discussion scripts: the
+#                  record of how posted values were made, superseded; the paper reads none
 #   make cells     results/cross_cell/*.json: added-cell values, paired tests, tau and recipe
 #                  (needs the ignored host copies in the 2026-07 cells)
 #   make extract   each analyzed cell's seed_*/table.csv from its raw outputs, then make analyze
@@ -70,6 +71,9 @@ extract:
 analyze:
 	$(PYTHON) -m bodhi_lora analyze --all
 
+# The three scripts are kept as the record of how the posted values were made. Each
+# decides meaning by keywords somewhere (docs/CONVENTIONS.md rule 15), so the paper reads
+# none of their outputs (rebuttal/withdrawals.md W23 to W25).
 rebuttal: $(HB_HARD)
 	$(PYTHON) rebuttal/analyses/mimicry_split.py --healthbench "$(HB_HARD)"
 	$(PYTHON) rebuttal/analyses/interference_mechanism.py
