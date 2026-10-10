@@ -59,7 +59,7 @@ class Metric:
 
 def metrics_of(table: pd.DataFrame, cfg: ReportConfig) -> list[Metric]:
     """The metrics of a cell: the dimensions and rates, the rubric score, length, the
-    harm proxy, one rate per text feature, and each rubric axis in the table."""
+    harm proxy, and each rubric axis in the table."""
     out = [Metric(k, EPISTEMIC_KIND.get(k, "score02"), "epistemic",
                   # Lower is better, so the worst case counts a failed grade as a disclaimer.
                   worst=1.0 if k == "blanket_disclaimer" else 0.0) for k in EPISTEMIC]
@@ -68,7 +68,6 @@ def metrics_of(table: pd.DataFrame, cfg: ReportConfig) -> list[Metric]:
             Metric("tokens", "tokens", "response", secondary=True),
             Metric("neg_any", "rate", "response", secondary=True),
             Metric("neg_points_lost", "count", "response", secondary=True)]
-    out += [Metric(name, "rate", "response", secondary=True) for name in sorted(cfg.text_features)]
     out += [Metric(c, "score", "response", secondary=True) for c in sorted(table.columns) if c.startswith("axis_")]
     return out
 
@@ -470,7 +469,7 @@ def discrimination_section(d: CellData, reg: Registry, cfg: ReportConfig, metric
     interval for each rate, the index and the odds ratio; per-seed values with a t
     interval over seeds. Each contrast a - b gets the difference of the indices and of
     each group's rate, with a bootstrap interval and the seed-level paired test. An
-    evaluator response counts scored replies only; a text feature counts every
+    evaluator response counts scored replies only; a response-level rate counts every
     completion (Metric.source).
     """
     bench = reg.benchmarks[d.cell.benchmark]

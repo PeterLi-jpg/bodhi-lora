@@ -1,9 +1,8 @@
 # The uniform analysis (docs/ARCHITECTURE.md section 7).
 #
 # python -m bodhi_lora analyze runs the same statistics on every cell; this file only
-# names what is not a property of one cell: the text rules, the labels the
-# discrimination index uses, the cell groups the paper counts over, and the posted
-# values to check. A new label or group is a change here, not in the code. The report
+# names what is not a property of one cell: the labels the discrimination index uses,
+# the cell groups the paper counts over, and the posted values to check. A new label or group is a change here, not in the code. The report
 # (python -m bodhi_lora report, not built yet) adds its display names and tables here.
 
 # Cells whose outputs are analyzed when they exist. A cell that never ran (not_run) or
@@ -14,25 +13,14 @@ statuses: [complete, partial, pilot]
 # the same resamples.
 bootstrap: {resamples: 5000, seed: 0}
 
-# Grader-free rules over the reply text. Each becomes a 0/1 column of the response table.
-# Patterns ignore case; (?-i:...) makes a part match case.
-#   question: the reply has a sentence that ends in "?" and matches `pattern`, after
-#             markdown emphasis and quote marks are removed (sentences split at
-#             whitespace after . ! ? and at line breaks).
-#   mention:  `pattern` matches anywhere in the reply, after markdown emphasis is removed.
-text_features:
-  second_person_q:
-    kind: question
-    description: a question put to the reader (a sentence ending in "?" with you, your, yours, yourself or yourselves)
-    pattern: '\b(you|your|yours|yourself|yourselves)\b'
-  # Post hoc (2026-10-09), for the over-flagging check of commitment C30. It counts every
-  # mention: a conditional one ("call 911 if ..."), a negated one and a description of a
-  # setting count too. So on prompts with no red flag it is an upper bound on flags
-  # raised without cause. The same rule applies to every condition and cell.
-  escalation:
-    kind: mention
-    description: the reply mentions emergency or urgent care (911, a call to 999 or 112, an emergency room, department, service or number, the ER (not ER/PR or a drug's extended-release ER), A&E, urgent care, an ambulance, or immediate, urgent or emergency medical attention)
-    pattern: '\b911\b|\b(call|dial|phone|ring)(ing)? (999|112)\b|\bemergency (room|department|services?|care|medical (services|care|help|attention|treatment)|number|help|attention|treatment|evaluation|physician|doctor)\b|\b(the|an|nearest|local|or|to|your) (?-i:ER)\b(?!/)|\bA&E\b|\burgent care\b|\bambulance\b|\b(seek|get|obtain) (immediate|urgent|emergency|prompt) (medical )?(care|attention|help|evaluation|treatment)\b|\b(immediate|urgent) medical (attention|care|help|evaluation|treatment)\b|\bgo (to|straight to) (the )?(nearest )?(hospital|emergency)\b|\bcall (for )?(an ambulance|emergency)\b'
+# No rule here reads the reply text. Until 2026-10-10 two keyword rules did (a
+# second-person question rule and an emergency-mention rule); keyword rules miss
+# negation, hypotheticals and quotes, so they were removed (docs/CONVENTIONS.md rule 15,
+# docs/ANALYSIS_PLAN.md section 12). What a reply does comes from the evaluator's grades:
+# active_inquiry for asking and red_flag_rate for red flags. A check by a judge from
+# another family is planned, with a semantic rubric and a hand-label gate
+# (ANALYSIS_PLAN.md section 12, 2026-10-10). tests/test_no_lexicon.py fails if a
+# text rule comes back.
 
 # The discrimination index: P(response | label positive) - P(response | label negative),
 # for each listed label whose groups both occur among a cell's evaluated prompts, with the
@@ -41,12 +29,12 @@ text_features:
 # cell until its adoption (docs/ANALYSIS_PLAN.md, state at registration; convention 3).
 #   active_inquiry: does the reply ask more where information is missing (decision D9:
 #     both post hoc labellings, side by side).
-#   escalation: on the negative group of red-flag-at-stake (prompts with no red flag at
-#     issue), the rate is the over-flagging rate of commitment C30.
+#   red_flag_rate: the evaluator's red-flag rate (share of replies with red-flag score 2)
+#     on the negative group of red-flag-at-stake is the over-flagging check of C30.
 discrimination:
   - response: active_inquiry
     labels: [needs-info-theme-or-rubric, needs-info-theme]
-  - response: escalation
+  - response: red_flag_rate
     labels: [red-flag-at-stake]
 
 # Response-length quartile edges come from this condition's scored replies.
@@ -162,10 +150,9 @@ display:
     scope_bounding: 'Scope bounding (0--2)'
     hedging_quality: 'Hedging quality (0--2)'
     specificity: 'Specificity (0--2)'
+    red_flag_rate: 'Red-flag rate (\%)'
     rubric_score: 'Aggregate score (0--1)'
     neg_any: 'Harm proxy (\%)'
-    second_person_q: 'Grader-free question rate (\%)'
-    escalation: 'Mentions emergency care (\%)'
     chars: 'Reply length (characters)'
     tokens: 'Reply tokens (tokenizer)'
   labels:
@@ -177,20 +164,20 @@ display:
 # every column, "--" where the cell has no such value (for example no label on its
 # benchmark, or no tokenizer in the local cache). Paths are into each cell's stats.json.
 cross_table:
-  - group: 'Mentions emergency care on prompts with no red flag (\%, post hoc)'
+  - group: 'Red-flag rate on prompts with no red flag (\%, post hoc)'
     header: Base
-    value: discrimination.escalation.red-flag-at-stake.conditions.base.negative_rate
+    value: discrimination.red_flag_rate.red-flag-at-stake.conditions.base.negative_rate
     scale: 100
     decimals: 1
-  - group: 'Mentions emergency care on prompts with no red flag (\%, post hoc)'
+  - group: 'Red-flag rate on prompts with no red flag (\%, post hoc)'
     header: LoRA
-    value: discrimination.escalation.red-flag-at-stake.conditions.lora.negative_rate
+    value: discrimination.red_flag_rate.red-flag-at-stake.conditions.lora.negative_rate
     scale: 100
     decimals: 1
-  - group: 'Mentions emergency care on prompts with no red flag (\%, post hoc)'
+  - group: 'Red-flag rate on prompts with no red flag (\%, post hoc)'
     header: 'LoRA $-$ Base'
-    value: discrimination.escalation.red-flag-at-stake.contrasts.lora - base.negative_rate.seed_test.diff
-    ci: discrimination.escalation.red-flag-at-stake.contrasts.lora - base.negative_rate.seed_test.ci95
+    value: discrimination.red_flag_rate.red-flag-at-stake.contrasts.lora - base.negative_rate.seed_test.diff
+    ci: discrimination.red_flag_rate.red-flag-at-stake.contrasts.lora - base.negative_rate.seed_test.ci95
     scale: 100
     decimals: 1
     sign: true

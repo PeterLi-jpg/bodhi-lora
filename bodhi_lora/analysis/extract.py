@@ -6,7 +6,7 @@
     <cell>/analysis/prompts.csv       one row per prompt of the eval pool (or, when the
                                       benchmark rows are not local, per evaluated prompt):
                                       theme, positive rubric points, labels
-    <cell>/analysis/extract.json      how the pool was read, the draw check, feature hashes
+    <cell>/analysis/extract.json      how the pool was read, the draw check, rule hashes
 
 The raw eval and grade JSON are large and stay out of git; the tables are tracked, so
 `analyze` without `--extract` needs nothing else and runs in CI.
@@ -25,9 +25,9 @@ Response table columns (docs/ARCHITECTURE.md section 6):
                axis_<axis> for each rubric axis tag
     evaluator  epi_status (scored, parse_failure, missing, not_graded) and the dimension
                columns of EPISTEMIC, empty unless scored
-    text       one 0/1 column per text feature of configs/report.yaml, and
-               leak_<protocol>__<rule>, the marker count of each leak rule of each protocol
-               the cell uses
+    format     leak_<protocol>__<rule>, the marker count of each leak rule of each protocol
+               the cell uses (the protocol's own section headers or field names, a parser
+               of its fixed format; no column reads meaning from the reply text)
     judges     j_<judge>__rubric_score, j_<judge>__<dimension>, and the 2x2 counts of
                rubric criteria met by the evaluator and the judge (j_<judge>__crit_<ej>)
 
@@ -46,7 +46,7 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 
-from bodhi_lora.analysis.config import ReportConfig, TextFeature
+from bodhi_lora.analysis.config import ReportConfig
 from bodhi_lora.paths import CellPaths, Project
 from bodhi_lora.registry import CellConfig, Registry, condition_from_legacy, parse_condition
 
@@ -131,36 +131,17 @@ def rubric_score(criteria: list[dict], flip_failed_negatives: bool = False) -> f
 STORED_SCORE = {"normalized_score": rubric_score, None: raw_rubric_score}
 
 
-# -- text features ----------------------------------------------------------------------
-
-MARKDOWN = re.compile(r"[*_`#>]+")
-SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+|\n+")
-
-
-class TextRule:
-    """A grader-free 0/1 rule over the reply text (configs/report.yaml text_features)."""
-
-    def __init__(self, feature: TextFeature):
-        self.feature = feature
-        self.pattern = re.compile(feature.pattern, re.IGNORECASE)
-
-    def __call__(self, text: str) -> float:
-        text = MARKDOWN.sub("", text or "")
-        if self.feature.kind == "mention":
-            return float(self.pattern.search(text) is not None)
-        for sentence in SENTENCE_SPLIT.split(text):
-            sentence = sentence.strip().rstrip("\"')]")
-            if sentence.endswith("?") and self.pattern.search(sentence):
-                return 1.0
-        return 0.0
-
+# -- format leakage ---------------------------------------------------------------------
 
 def leak_column(protocol_id: str, rule_id: str) -> str:
     return f"leak_{protocol_id}__{rule_id}"
 
 
 def leak_rules(reg: Registry, cell: CellConfig) -> dict[str, tuple[list[re.Pattern], int]]:
-    """Column -> (markers, threshold) for every leak rule of every protocol the cell uses."""
+    """Column -> (markers, threshold) for every leak rule of every protocol the cell uses.
+
+    A marker is one of the protocol's own section headers or field names (LeakRule), so the
+    count parses the protocol's fixed output format; it reads no meaning from the reply."""
     protocols = {cell.protocol} | {p for c in cell.eval.conditions for p in [parse_condition(c)[1]] if p}
     out = {}
     for pid in sorted(protocols):
@@ -260,7 +241,6 @@ def _judge_columns(judge_id: str, ex: Optional[dict], criteria: list[dict]) -> d
 def seed_table(reg: Registry, cell: CellConfig, paths: CellPaths, seed: int, cfg: ReportConfig,
                tokenizer, project: Project) -> tuple[pd.DataFrame, dict]:
     """The response table of one seed and its meta record."""
-    rules = {name: TextRule(f) for name, f in sorted(cfg.text_features.items())}
     leaks = leak_rules(reg, cell)
     grade_path = paths.grade_file(seed, cell.grading.evaluator)
     grades, grade_counts = _grade_examples(grade_path)
@@ -331,8 +311,6 @@ def seed_table(reg: Registry, cell: CellConfig, paths: CellPaths, seed: int, cfg
             else:
                 row["epi_status"] = "scored"
                 row.update(epistemic_columns(e["scores"]))
-            for name, rule in rules.items():
-                row[name] = rule(r["response"])
             for col, (markers, _threshold) in leaks.items():
                 row[col] = float(sum(1 for m in markers if m.search(r["response"] or "")))
             for jid, jex in judges.items():
@@ -349,8 +327,7 @@ def seed_table(reg: Registry, cell: CellConfig, paths: CellPaths, seed: int, cfg
             df[col] = np.nan
     axes = sorted(c for c in df.columns if c.startswith("axis_"))
     judge_cols = sorted(c for c in df.columns if c.startswith("j_"))
-    columns = (KEY + RESPONSE + RUBRIC + axes + ["epi_status", *EPISTEMIC] + sorted(rules)
-               + list(leaks) + judge_cols)
+    columns = KEY + RESPONSE + RUBRIC + axes + ["epi_status", *EPISTEMIC] + list(leaks) + judge_cols
     order = {c: i for i, c in enumerate(cell.eval.conditions)}
     df = df[columns].sort_values(["condition", "prompt_id"], key=lambda s: s.map(order) if s.name == "condition" else s)
     return df.reset_index(drop=True), meta
@@ -474,9 +451,6 @@ def extract(reg: Registry, cell_id: str, project: Project, cfg: ReportConfig) ->
     prompts, info = prompt_table(reg, cell, paths, project, evaluated, criteria_points)
     write_csv(prompts, paths.analysis() / "prompts.csv")
     record = {"cell": cell_id, "seeds": seeds, "tokenizer": tok_source, "prompts": info,
-              "text_features": {name: {"description": f.description,
-                                       "definition_sha256": _definition_hash(f.model_dump())}
-                                for name, f in sorted(cfg.text_features.items())},
               "leak_rules": {col: _definition_hash([[m.pattern for m in markers], threshold])
                              for col, (markers, threshold) in leak_rules(reg, cell).items()}}
     (paths.analysis() / "extract.json").write_text(json.dumps(record, indent=2, sort_keys=True) + "\n")

@@ -31,7 +31,7 @@ def _stats(proj, cid):
 def test_tokens():
     assert token("needs-info-theme-or-rubric") == "NeedsInfoThemeOrRubric"
     assert token("pass1-headers") == "PassOneHeaders"
-    assert token("second_person_q") == "SecondPersonQ"
+    assert token("red_flag_rate") == "RedFlagRate"
 
 
 def test_macro_names_are_letters_unique_and_named_by_the_cell(setup):
@@ -63,8 +63,8 @@ def test_values_come_from_stats(setup):
             assert macros[f"{t}ActiveInquiryLoRA"] == fmt(r["seed_mean"] * 100, 1)
         d = s["contrasts"]["lora - base"]["metrics"]["rubric_score"]
         assert macros[f"{t}RubricScoreLoRAvsBaseDiff"] == fmt(d["diff"], 3, sign=True)
-        over = s["discrimination"]["escalation"]["red-flag-at-stake"]
-        name = f"{t}EscalationRedFlagAtStakeNegRateLoRA"
+        over = s["discrimination"]["red_flag_rate"]["red-flag-at-stake"]
+        name = f"{t}RedFlagRateRedFlagAtStakeNegRateLoRA"
         if "not_measured" in over:
             assert name not in macros
         else:
@@ -84,7 +84,7 @@ def test_cross_table_has_the_same_columns_for_every_cell(setup):
         label = re.escape(reg.cells[cid].report.label)
         line = next(r for r in rows if re.match(label, r))
         cells = line.removesuffix(" \\\\").split(" & ")[1:]
-        over = s["discrimination"]["escalation"]["red-flag-at-stake"]
+        over = s["discrimination"]["red_flag_rate"]["red-flag-at-stake"]
         if "not_measured" in over:
             assert cells[:3] == ["--"] * 3
         else:

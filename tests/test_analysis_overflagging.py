@@ -1,6 +1,6 @@
-"""The over-flagging check (commitment C30) and the rules it rests on: the escalation
-mention rule of configs/report.yaml, the red-flag-at-stake label of the HealthBench
-record, and the label rates of the discrimination section, on a synthetic table."""
+"""The over-flagging check (commitment C30) and what it rests on: the evaluator's red-flag
+rate, the red-flag-at-stake label of the HealthBench record, and the label rates of the
+discrimination section, on a synthetic table. No rule over the reply text is involved."""
 from dataclasses import replace
 
 import numpy as np
@@ -11,7 +11,6 @@ pytest.importorskip("statsmodels")
 
 from bodhi_lora.analysis import report_config  # noqa: E402
 from bodhi_lora.analysis.cell import analyze_tables  # noqa: E402
-from bodhi_lora.analysis.extract import TextRule  # noqa: E402
 from bodhi_lora.data.labels import label_value  # noqa: E402
 from bodhi_lora.paths import CONFIGS_DIR, project  # noqa: E402
 from bodhi_lora.registry import load_registry  # noqa: E402
@@ -24,31 +23,6 @@ CELL = "healthbench__mistral-small-24b__bodhi__2026-07"
 @pytest.fixture(scope="module")
 def reg():
     return load_registry(CONFIGS_DIR)
-
-
-@pytest.mark.parametrize("text, hit", [
-    ("If the pain spreads to your arm, call 911 right away.", True),
-    ("Go to the nearest emergency department.", True),
-    ("Please seek immediate medical attention if you faint.", True),
-    ("In the UK, call 999.", True),
-    ("Head to the ER now.", True),
-    ("Guanfacine ER 1 mg at night.", False),
-    ("Check the hormone receptor status (ER/PR).", False),
-    ("Consider an **urgent care** clinic.", True),
-    ("Your glucose of 112 mg/dL is a little high.", False),
-    ("Er, that depends on the dose.", False),
-    ("Book a visit with your doctor this week.", False),
-])
-def test_escalation_rule(text, hit):
-    rule = TextRule(report_config().text_features["escalation"])
-    assert rule(text) == float(hit)
-
-
-def test_question_rule_needs_a_question_and_mention_rule_does_not():
-    cfg = report_config().text_features
-    assert TextRule(cfg["second_person_q"])("You should rest.") == 0.0
-    assert TextRule(cfg["second_person_q"])("Do you have a fever?") == 1.0
-    assert TextRule(cfg["escalation"])("Do you need to call 911?") == 1.0
 
 
 def test_red_flag_label(reg):
@@ -73,17 +47,18 @@ def test_rates_in_each_label_group(reg, tmp_path):
     prompts = synthetic_prompts()
     # p0..p2 may hold a red flag; p3..p5 hold none.
     prompts["label_red-flag-at-stake"] = [1.0, 1.0, 1.0, 0.0, 0.0, 0.0]
-    table["escalation"] = 0.0
-    table.loc[table["prompt_id"].isin(PROMPTS[:3]), "escalation"] = 1.0
-    # lora mentions emergency care on p3 in every seed, and on p4 too in seed 2.
+    table["red_flag_rate"] = 0.0
+    table.loc[table["prompt_id"].isin(PROMPTS[:3]), "red_flag_rate"] = 1.0
+    # The evaluator gives lora a red-flag score of 2 on p3 in every seed, and on p4 too
+    # in seed 2.
     lora = table["condition"] == "lora"
-    table.loc[lora & (table["prompt_id"] == "p3"), "escalation"] = 1.0
-    table.loc[lora & (table["seed"] == 2) & (table["prompt_id"] == "p4"), "escalation"] = 1.0
+    table.loc[lora & (table["prompt_id"] == "p3"), "red_flag_rate"] = 1.0
+    table.loc[lora & (table["seed"] == 2) & (table["prompt_id"] == "p4"), "red_flag_rate"] = 1.0
     meta = [{"n_examples": {c: len(PROMPTS) for c in cell.eval.conditions}} for _ in seeds]
     paths = replace(project(CONFIGS_DIR), results_root=tmp_path).cell(CELL)
     out = analyze_tables(reg, cell, table, prompts, meta, paths, report_config())
 
-    res = out["discrimination"]["escalation"]["red-flag-at-stake"]
+    res = out["discrimination"]["red_flag_rate"]["red-flag-at-stake"]
     assert res["exploratory"] and res["n_prompts"] == {"positive": 3, "negative": 3}
     base, lo = res["conditions"]["base"], res["conditions"]["lora"]
     assert base["negative_rate"] == 0.0 and base["positive_rate"] == 1.0
@@ -95,7 +70,23 @@ def test_rates_in_each_label_group(reg, tmp_path):
     ctr = res["contrasts"]["lora - base"]["negative_rate"]
     assert ctr["diff"] == pytest.approx(4 / 9)
     assert ctr["seed_test"]["diff"] == pytest.approx(4 / 9) and ctr["seed_test"]["df"] == 2
-    # The evaluator's active inquiry counts scored replies; a benchmark label it lacks is
-    # not measured with the reason.
-    assert set(out["discrimination"]) == {"active_inquiry", "escalation"}
-    assert np.isfinite(out["contrasts"]["lora - base"]["metrics"]["escalation"]["diff"])
+    # Both responses are the evaluator's grades, so a reply without a grade leaves the rate.
+    assert set(out["discrimination"]) == {"active_inquiry", "red_flag_rate"}
+    assert np.isfinite(out["contrasts"]["lora - base"]["metrics"]["red_flag_rate"]["diff"])
+
+
+def test_an_unscored_reply_leaves_the_red_flag_rate(reg, tmp_path):
+    cell = reg.cells[CELL]
+    table = synthetic_table(cell, (1, 2))
+    table["red_flag_rate"] = 1.0
+    prompts = synthetic_prompts()
+    prompts["label_red-flag-at-stake"] = [1.0, 1.0, 1.0, 0.0, 0.0, 0.0]
+    # One negative-group reply of lora has no grade; it must not count as a 0.
+    miss = (table["condition"] == "lora") & (table["seed"] == 1) & (table["prompt_id"] == "p5")
+    table.loc[miss, "epi_status"] = "parse_failure"
+    table.loc[miss, "red_flag_rate"] = np.nan
+    meta = [{"n_examples": {c: len(PROMPTS) for c in cell.eval.conditions}} for _ in (1, 2)]
+    paths = replace(project(CONFIGS_DIR), results_root=tmp_path).cell(CELL)
+    out = analyze_tables(reg, cell, table, prompts, meta, paths, report_config())
+    lo = out["discrimination"]["red_flag_rate"]["red-flag-at-stake"]["conditions"]["lora"]
+    assert lo["negative_rate"] == 1.0 and lo["n_negative"] == 5

@@ -15,9 +15,8 @@ into paper/generated/numbers.tex with its own, the record into numbers.json unde
 
     tab_cell_<token>.tex    one per analyzed cell: every condition and the two adapter
                             contrasts (LoRA - Base, LoRA - Base+protocol) on the seven
-                            dimensions, the rubric score, the harm proxy, the text
-                            rules, the label rates, the askers gap, format leakage,
-                            length and tokens
+                            dimensions, the rubric score, the harm proxy, the label
+                            rates, the askers gap, format leakage, length and tokens
     tab_cross_cell_checks.tex  one row per cell of report.cross_cells, the columns of
                             report.cross_table, the same for every cell
 """
@@ -39,7 +38,7 @@ from bodhi_lora.report.latex import (MISSING, escape, finite, fmt, fmt_ci, fmt_i
 # Printing scale and decimals of each metric kind (bodhi_lora.analysis.cell.Metric.kind).
 KIND_FORMAT = {"score02": (1.0, 2), "rate": (100.0, 1), "count": (1.0, 2), "score": (1.0, 3),
                "chars": (1.0, 0), "tokens": (1.0, 0)}
-# The metrics that get condition and contrast macros, besides the text rules.
+# The metrics that get condition and contrast macros.
 METRICS = (*SEVEN, "rubric_score", "neg_any", "chars", "tokens")
 CROSS_TABLE = "tab_cross_cell_checks"
 
@@ -109,9 +108,8 @@ class Names:
         return self.d.labels.get(key, escape(key))
 
 
-def _metrics(stats: dict, cfg: ReportConfig) -> list[str]:
-    keys = list(METRICS[:-2]) + sorted(cfg.text_features) + list(METRICS[-2:])
-    return [k for k in keys if k in stats["metrics"]]
+def _metrics(stats: dict) -> list[str]:
+    return [k for k in METRICS if k in stats["metrics"]]
 
 
 # -- macros -----------------------------------------------------------------------------
@@ -126,7 +124,7 @@ def cell_macros(rep: Report, stats: dict, cell: CellConfig, cfg: ReportConfig, s
     for c in conds:
         rep.add(f"{T}Completions{n.cond_token(c)}", fmt_int(counts["per_condition"][c]["completions"]),
                 f"{src}: counts.per_condition.{c}.completions")
-    for m in _metrics(stats, cfg):
+    for m in _metrics(stats):
         scale, dp = KIND_FORMAT[stats["metrics"][m]["kind"]]
         M = token(m)
         for c in conds:
@@ -264,7 +262,6 @@ def cell_table(stats: dict, cell: CellConfig, cfg: ReportConfig, src: str) -> st
     title = [f"\\multicolumn{{{width}}}{{l}}{{\\emph{{{escape(cell.report.label)}}} ({_notes(stats, cell)})}}"]
     seven = [metric_row(m) for m in SEVEN]
     scores = [metric_row(m) for m in ("rubric_score", "neg_any")]
-    text = [metric_row(m) for m in sorted(cfg.text_features) if m in stats["metrics"]]
     # Label rows in the order of the report config; a label the cell's benchmark lacks
     # has no rows here (its reason is in stats.json).
     labels = []
@@ -296,7 +293,7 @@ def cell_table(stats: dict, cell: CellConfig, cfg: ReportConfig, src: str) -> st
     size.append(["Reply tokens (engine, one-pass conditions)"]
                 + [fmt(eng[c]["tokens_engine_mean"], 0) if eng[c]["tokens_engine_n"] else MISSING for c in conds]
                 + [MISSING] * (2 * len(ctrs)))
-    blocks = [[title], seven, scores + text, labels, other, size]
+    blocks = [[title], seven, scores, labels, other, size]
     return tabular("l" + "r" * (width - 1), [header], [b for b in blocks if b], src)
 
 

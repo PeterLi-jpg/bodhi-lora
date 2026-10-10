@@ -2,10 +2,13 @@
 
 pydantic checks the file the way the registry checks its records: unknown keys are
 errors, so a misspelled key fails at load time instead of being ignored.
+
+The config defines no rule over the reply text. What a reply means comes from the
+evaluator's grades, never from a keyword or regular expression (docs/CONVENTIONS.md
+rule 15; tests/test_no_lexicon.py).
 """
 from __future__ import annotations
 
-import re
 from pathlib import Path
 from typing import Literal, Optional
 
@@ -24,24 +27,11 @@ class Bootstrap(_Record):
     seed: int
 
 
-class TextFeature(_Record):
-    # question: a sentence that ends in "?" matches the pattern. mention: the pattern
-    # matches anywhere in the reply.
-    kind: Literal["question", "mention"]
-    description: str
-    pattern: str
-
-    @model_validator(mode="after")
-    def _shape(self) -> "TextFeature":
-        re.compile(self.pattern)
-        return self
-
-
 class Discrimination(_Record):
     """P(response | label positive) - P(response | label negative) for each label.
 
     `response` is a 0/1 column of the response table: an evaluator rate (scored replies
-    only) or a text feature (every completion)."""
+    only) or a rate of every completion, such as the harm proxy neg_any."""
     response: str
     labels: list[RegistryId] = Field(min_length=1)
 
@@ -131,7 +121,6 @@ class Display(_Record):
 class ReportConfig(_Record):
     statuses: list[Literal["complete", "partial", "pilot", "planned"]]
     bootstrap: Bootstrap
-    text_features: dict[str, TextFeature]
     discrimination: list[Discrimination]
     length_reference: str
     cross_cells: list[CellId]
