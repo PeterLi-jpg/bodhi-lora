@@ -570,7 +570,8 @@ traces, filter JSONL, adapter weights, optimizer state, raw eval and grade JSON,
 logs. Today the submitted cell's raw eval JSON (80 MB) is tracked and the added cells'
 (370 MB) is not. Under one rule both are ignored and every cell has a tracked response
 table; history keeps the submitted files at the migration base commit (open decision
-O2).
+O2). The probe and bench outputs match no rule yet, so git tracks them (open decision
+O8).
 
 **The response table.** `results/<cell_id>/seed_<n>/table.csv` has one row per
 (condition, prompt id), and the analysis reads nothing else. `analyze --extract` writes it from the raw files, with
@@ -922,3 +923,9 @@ O6). A record of status `planned` changes no number in the paper.
   experiment on it needs a rerun. On one H100 that means QLoRA (4-bit), which is not the
   bf16 TPU recipe of the 2026-05 cell. The rerun is then a new cell, and the 2026-05
   cell stays the record.
+- **O8. Probe and bench outputs in git.** No `.gitignore` rule covers the probe output
+  (`probe.json` in `shared/probe/`) or the bench output (`bench.json` in the bench folder
+  of each seed), so git tracks both by default. `bench.json` holds times and token
+  counts. `probe.json` holds the match rates and the Fisher test, and also each probed
+  benchmark text and the model's continuation. Decide before the first probe or bench
+  run: track both, or ignore `probe.json` like the raw eval JSON.

@@ -179,8 +179,8 @@ and its conventions fixed. The design of [ARCHITECTURE.md](ARCHITECTURE.md) does
 
 A record of a past run is frozen: the runner refuses to run it again, except to add judge
 re-grades. `legacy/` keeps the launchers of the 2026-05 cell as the record of what ran.
-CONVENTIONS.md rules 3, 7 and 11 to 14 say how each part is enforced. The open choices O1 to O7 in
-ARCHITECTURE.md section 12 stay the first author's.
+CONVENTIONS.md rules 3, 7 and 11 to 14 say how each part is enforced. The open choices in
+ARCHITECTURE.md section 12 (O1 to O8) stay the first author's.
 
 Why: the code had two launch paths, six result locations, analysis that special-cased
 one cell, condition names in code and settings in four places (ARCHITECTURE.md section

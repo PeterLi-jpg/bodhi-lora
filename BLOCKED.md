@@ -28,8 +28,9 @@ Action:
 2. Decide the open choices of [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) section 12
    that are still open: O1 (package name), O2 (raw outputs in git: the default stops
    tracking the 80 MB of the 2026-05 cell), O3 (a versioned archive of all raw outputs,
-   about 450 MB; publishing it is a remote action) and O7 (the MedGemma-27B rerun is a
-   new QLoRA cell).
+   about 450 MB; publishing it is a remote action), O7 (the MedGemma-27B rerun is a
+   new QLoRA cell) and O8 (whether git tracks the probe and bench outputs; the probe
+   output holds benchmark text). Decide O8 before the first probe or bench run.
 3. Read D17 to D22 in [docs/DECISIONS.md](docs/DECISIONS.md). To revise one, add a dated
    entry below it.
 4. Decide the choices the experiments lane made in the cell records (2026-10-09). Each
