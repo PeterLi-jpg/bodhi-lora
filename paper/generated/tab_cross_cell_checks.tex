@@ -2,16 +2,16 @@
 \begin{tabular}{lrrrrrrrrr}
 \toprule
  &  &  & \multicolumn{4}{c}{Format leak, LoRA+P} &  & \multicolumn{2}{c}{Output tokens} \\
-\cmidrule(lr){4-7}\cmidrule(lr){9-10} Cell & \shortstack[r]{Red-flag rate outside\\emergency theme (pp)} & \shortstack[r]{Asking index\\(pp)} & Share (\%) & $n$ leaked & \shortstack[r]{Red flag\\leaked} & \shortstack[r]{Red flag\\clean} & \shortstack[r]{Askers gap\\LoRA} & Base & LoRA \\
+\cmidrule(lr){4-7}\cmidrule(lr){9-10} Cell & \shortstack[r]{Red-flag rate,\\other themes\\(pp)} & \shortstack[r]{Asking\\index (pp)} & \shortstack[r]{Share\\(\%)} & $n$ & \shortstack[r]{Red flag\\leaked} & \shortstack[r]{Red flag\\clean} & \shortstack[r]{Askers gap\\LoRA} & Base & LoRA \\
 \midrule
-HealthBench-Hard, MedGemma-27B & \ensuremath{+6.2\pm2.9} & \ensuremath{+10.0\;[-0.5,\,+20.1]} & \ensuremath{53.2} & \ensuremath{494} & \ensuremath{1.32} & \ensuremath{1.73} & \ensuremath{+0.009\;[-0.015,\,+0.033]} & \ensuremath{753} & \ensuremath{781} \\
-HealthBench-Hard, Mistral-Small-24B & \ensuremath{+39.6\pm1.8} & \ensuremath{+7.6\;[-9.2,\,+23.4]} & \ensuremath{41.1} & \ensuremath{409} & \ensuremath{1.41} & \ensuremath{1.81} & \ensuremath{+0.004\;[-0.023,\,+0.031]} & \ensuremath{361} & \ensuremath{516} \\
-HealthBench-Hard, Med42-8B$^{\dagger}$ & \ensuremath{+10.7\pm4.4} & \ensuremath{+5.9\;[-9.9,\,+21.3]} & \ensuremath{50.1} & \ensuremath{500} & \ensuremath{1.09} & \ensuremath{1.09} & \ensuremath{-0.036\;[-0.067,\,-0.005]} & \ensuremath{256} & \ensuremath{324} \\
-HealthBench-Hard, BioMistral-7B & \ensuremath{+1.8\pm2.0} & \ensuremath{-13.0\;[-26.6,\,-0.3]} & \ensuremath{0.9} & \ensuremath{9} & \ensuremath{0.44} & \ensuremath{0.45} & \ensuremath{-0.002\;[-0.039,\,+0.035]} & \ensuremath{126} & \ensuremath{476} \\
-ChatDoctor, Mistral-Small-24B & -- & -- & \ensuremath{0.0} & \ensuremath{0} & -- & \ensuremath{1.85} & \ensuremath{+0.083\;[+0.052,\,+0.113]} & \ensuremath{361} & \ensuremath{453} \\
-ChatDoctor, Med42-8B$^{\dagger}$ & -- & -- & \ensuremath{0.5} & \ensuremath{5} & \ensuremath{1.80} & \ensuremath{1.34} & \ensuremath{-0.025\;[-0.050,\,-0.001]} & \ensuremath{397} & \ensuremath{300} \\
-MedQuAD, Mistral-Small-24B & -- & -- & \ensuremath{0.2} & \ensuremath{2} & \ensuremath{2.00} & \ensuremath{1.33} & \ensuremath{+0.044\;[+0.022,\,+0.067]} & \ensuremath{282} & \ensuremath{428} \\
+\shortstack[l]{HealthBench-Hard,\\MedGemma-27B} & \ensuremath{+6.2\pm2.9} & \shortstack[r]{\ensuremath{+10.0}\\\ensuremath{[-0.5,\,+20.1]}} & \ensuremath{53.2} & \ensuremath{494} & \ensuremath{1.32} & \ensuremath{1.73} & \shortstack[r]{\ensuremath{+0.009}\\\ensuremath{[-0.015,\,+0.033]}} & \ensuremath{753} & \ensuremath{781} \\
+\shortstack[l]{HealthBench-Hard,\\Mistral-Small-24B} & \ensuremath{+39.6\pm1.8} & \shortstack[r]{\ensuremath{+7.6}\\\ensuremath{[-9.2,\,+23.4]}} & \ensuremath{41.1} & \ensuremath{409} & \ensuremath{1.41} & \ensuremath{1.81} & \shortstack[r]{\ensuremath{+0.004}\\\ensuremath{[-0.023,\,+0.031]}} & \ensuremath{361} & \ensuremath{516} \\
+\shortstack[l]{HealthBench-Hard,\\Med42-8B$^{\dagger}$} & \ensuremath{+10.7\pm4.4} & \shortstack[r]{\ensuremath{+5.9}\\\ensuremath{[-9.9,\,+21.3]}} & \ensuremath{50.1} & \ensuremath{500} & \ensuremath{1.09} & \ensuremath{1.09} & \shortstack[r]{\ensuremath{-0.036}\\\ensuremath{[-0.067,\,-0.005]}} & \ensuremath{256} & \ensuremath{324} \\
+\shortstack[l]{HealthBench-Hard,\\BioMistral-7B} & \ensuremath{+1.8\pm2.0} & \shortstack[r]{\ensuremath{-13.0}\\\ensuremath{[-26.6,\,-0.3]}} & \ensuremath{0.9} & \ensuremath{9} & \ensuremath{0.44} & \ensuremath{0.45} & \shortstack[r]{\ensuremath{-0.002}\\\ensuremath{[-0.039,\,+0.035]}} & \ensuremath{126} & \ensuremath{476} \\
+\shortstack[l]{ChatDoctor,\\Mistral-Small-24B} & -- & -- & \ensuremath{0.0} & \ensuremath{0} & -- & \ensuremath{1.85} & \shortstack[r]{\ensuremath{+0.083}\\\ensuremath{[+0.052,\,+0.113]}} & \ensuremath{361} & \ensuremath{453} \\
+\shortstack[l]{ChatDoctor,\\Med42-8B$^{\dagger}$} & -- & -- & \ensuremath{0.5} & \ensuremath{5} & \ensuremath{1.80} & \ensuremath{1.34} & \shortstack[r]{\ensuremath{-0.025}\\\ensuremath{[-0.050,\,-0.001]}} & \ensuremath{397} & \ensuremath{300} \\
+\shortstack[l]{MedQuAD,\\Mistral-Small-24B} & -- & -- & \ensuremath{0.2} & \ensuremath{2} & \ensuremath{2.00} & \ensuremath{1.33} & \shortstack[r]{\ensuremath{+0.044}\\\ensuremath{[+0.022,\,+0.067]}} & \ensuremath{282} & \ensuremath{428} \\
 \midrule
-MedQA with the asking preamble, Mistral-Small-24B$^{\ddagger}$ & -- & -- & \ensuremath{48.5} & \ensuremath{387} & \ensuremath{1.70} & \ensuremath{1.74} & \ensuremath{-0.001\;[-0.027,\,+0.026]} & \ensuremath{474} & \ensuremath{698} \\
+\shortstack[l]{MedQA with the asking preamble,\\Mistral-Small-24B$^{\ddagger}$} & -- & -- & \ensuremath{48.5} & \ensuremath{387} & \ensuremath{1.70} & \ensuremath{1.74} & \shortstack[r]{\ensuremath{-0.001}\\\ensuremath{[-0.027,\,+0.026]}} & \ensuremath{474} & \ensuremath{698} \\
 \bottomrule
 \end{tabular}

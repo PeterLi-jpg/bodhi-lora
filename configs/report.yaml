@@ -178,13 +178,13 @@ display:
 #   Output tokens: the serving engine's count per reply. Only the one-pass conditions have
 #     one: the two-pass conditions stored their final reply only.
 cross_table:
-  - header: '\shortstack[r]{Red-flag rate outside\\emergency theme (pp)}'
+  - header: '\shortstack[r]{Red-flag rate,\\other themes\\(pp)}'
     value: discrimination.red_flag_rate.emergency-theme.contrasts.lora - base.negative_rate.seed_test.diff
     ci: discrimination.red_flag_rate.emergency-theme.contrasts.lora - base.negative_rate.seed_test.ci95
     scale: 100
     decimals: 1
     sign: true
-  - header: '\shortstack[r]{Asking index\\(pp)}'
+  - header: '\shortstack[r]{Asking\\index (pp)}'
     value: discrimination.active_inquiry.needs-info-theme.contrasts.lora - base.diff
     ci: discrimination.active_inquiry.needs-info-theme.contrasts.lora - base.diff_ci95
     ci_style: range
@@ -192,12 +192,12 @@ cross_table:
     decimals: 1
     sign: true
   - group: 'Format leak, LoRA+P'
-    header: 'Share (\%)'
+    header: '\shortstack[r]{Share\\(\%)}'
     value: leakage.leak_{protocol}__analysis-format.conditions.lora+{protocol}.leaked_share
     scale: 100
     decimals: 1
   - group: 'Format leak, LoRA+P'
-    header: '$n$ leaked'
+    header: '$n$'
     value: leakage.leak_{protocol}__analysis-format.conditions.lora+{protocol}.n_leaked
     decimals: 0
   - group: 'Format leak, LoRA+P'

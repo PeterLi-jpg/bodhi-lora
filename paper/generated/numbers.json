@@ -17285,25 +17285,25 @@
     "cross_table_columns": [
       {
         "group": "",
-        "header": "\\shortstack[r]{Red-flag rate outside\\\\emergency theme (pp)}",
+        "header": "\\shortstack[r]{Red-flag rate,\\\\other themes\\\\(pp)}",
         "value": "discrimination.red_flag_rate.emergency-theme.contrasts.lora - base.negative_rate.seed_test.diff",
         "ci": "discrimination.red_flag_rate.emergency-theme.contrasts.lora - base.negative_rate.seed_test.ci95"
       },
       {
         "group": "",
-        "header": "\\shortstack[r]{Asking index\\\\(pp)}",
+        "header": "\\shortstack[r]{Asking\\\\index (pp)}",
         "value": "discrimination.active_inquiry.needs-info-theme.contrasts.lora - base.diff",
         "ci": "discrimination.active_inquiry.needs-info-theme.contrasts.lora - base.diff_ci95"
       },
       {
         "group": "Format leak, LoRA+P",
-        "header": "Share (\\%)",
+        "header": "\\shortstack[r]{Share\\\\(\\%)}",
         "value": "leakage.leak_{protocol}__analysis-format.conditions.lora+{protocol}.leaked_share",
         "ci": null
       },
       {
         "group": "Format leak, LoRA+P",
-        "header": "$n$ leaked",
+        "header": "$n$",
         "value": "leakage.leak_{protocol}__analysis-format.conditions.lora+{protocol}.n_leaked",
         "ci": null
       },

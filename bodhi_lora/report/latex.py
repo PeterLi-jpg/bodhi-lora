@@ -60,15 +60,19 @@ def fmt_pm(x, ci, dp: int, sign: bool = True) -> str:
     return "\\ensuremath{" + s + "}"
 
 
-def fmt_range(x, ci, dp: int, sign: bool = True) -> str:
+def fmt_range(x, ci, dp: int, sign: bool = True, stack: bool = False) -> str:
     """x followed by both ends of its interval, for an interval that need not be
-    symmetric (a percentile bootstrap)."""
+    symmetric (a percentile bootstrap). With stack, the interval goes on a second line
+    under x, which keeps a table column narrow."""
     if not finite(x):
         return MISSING
-    s = fmt(x, dp, sign).removeprefix("\\ensuremath{").removesuffix("}")
-    if ci and finite(ci[0]) and finite(ci[1]):
-        s += "\\;" + fmt_ci(ci, dp, sign).removeprefix("\\ensuremath{").removesuffix("}")
-    return "\\ensuremath{" + s + "}"
+    value = fmt(x, dp, sign)
+    if not (ci and finite(ci[0]) and finite(ci[1])):
+        return value
+    interval = fmt_ci(ci, dp, sign)
+    if stack:
+        return "\\shortstack[r]{" + value + "\\\\" + interval + "}"
+    return value.removesuffix("}") + "\\;" + interval.removeprefix("\\ensuremath{")
 
 
 def token(name: str) -> str:

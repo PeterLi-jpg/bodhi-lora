@@ -12,7 +12,7 @@ pytest.importorskip("pandas")
 from bodhi_lora.analysis import analyzable, report_config  # noqa: E402
 from bodhi_lora.paths import CONFIGS_DIR, project  # noqa: E402
 from bodhi_lora.registry import load_registry  # noqa: E402
-from bodhi_lora.report import CROSS_TABLE, report  # noqa: E402
+from bodhi_lora.report import CROSS_TABLE, cross_label, report  # noqa: E402
 from bodhi_lora.report.latex import fmt, fmt_pm, fmt_range, token  # noqa: E402
 
 
@@ -30,8 +30,16 @@ def _stats(proj, cid):
 
 def test_range_prints_both_ends_of_an_asymmetric_interval():
     assert fmt_range(0.1, [-0.005, 0.201], 3) == "\\ensuremath{+0.100\\;[-0.005,\\,+0.201]}"
+    assert fmt_range(0.1, [-0.005, 0.201], 3, stack=True) == \
+        "\\shortstack[r]{\\ensuremath{+0.100}\\\\\\ensuremath{[-0.005,\\,+0.201]}}"
     assert fmt_range(0.1, None, 3) == "\\ensuremath{+0.100}"
     assert fmt_range(None, [0, 1], 3) == "--"
+
+
+def test_cross_label_splits_benchmark_from_model():
+    assert cross_label("ChatDoctor, Med42-8B", "$^{\\dagger}$") == \
+        "\\shortstack[l]{ChatDoctor,\\\\Med42-8B$^{\\dagger}$}"
+    assert cross_label("smoke_cell") == "smoke\\_cell"
 
 
 def test_tokens():
@@ -86,8 +94,7 @@ def test_cross_table_has_the_same_columns_for_every_cell(setup):
     assert {line.count(" & ") for line in rows} == {len(cfg.cross_table)}
     for cid in cfg.cross_cells:
         s = _stats(proj, cid)
-        label = re.escape(reg.cells[cid].report.label)
-        line = next(r for r in rows if re.match(label, r))
+        line = next(r for r in rows if r.startswith(cross_label(reg.cells[cid].report.label)[:-1]))
         cells = line.removesuffix(" \\\\").split(" & ")[1:]
         # The red-flag rate outside the emergency theme: a seed-level t interval, plus or
         # minus its half width; "--" where the benchmark has no emergency-theme label.
@@ -101,7 +108,7 @@ def test_cross_table_has_the_same_columns_for_every_cell(setup):
         # The askers gap: a bootstrap interval, printed with both ends.
         i = next(i for i, c in enumerate(cfg.cross_table) if c.value == "askers_gap.lora.gap")
         g = s["askers_gap"]["lora"]
-        assert cells[i] == fmt_range(g["gap"], g["gap_ci95"], 3, sign=True)
+        assert cells[i] == fmt_range(g["gap"], g["gap_ci95"], 3, sign=True, stack=True)
 
 
 def test_a_set_aside_cell_states_why(setup):

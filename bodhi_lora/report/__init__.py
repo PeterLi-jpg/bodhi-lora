@@ -303,6 +303,16 @@ def cell_table(stats: dict, cell: CellConfig, cfg: ReportConfig, src: str) -> st
     return tabular("l" + "r" * (width - 1), [header], [b for b in blocks if b], src)
 
 
+def cross_label(label: str, mark: str = "") -> str:
+    """A cell's label in the cross-cell table, on two lines to keep the first column
+    narrow. Cell labels read "<benchmark>, <base model>"; a label without a comma stays
+    on one line."""
+    head, sep, tail = escape(label).rpartition(", ")
+    if not sep:
+        return escape(label) + mark
+    return "\\shortstack[l]{" + head + ",\\\\" + tail + mark + "}"
+
+
 def cross_table(all_stats: dict, reg: Registry, cfg: ReportConfig, src: str) -> str:
     cols = cfg.cross_table
     # Column groups: one spanning header each, ruled underneath.
@@ -323,14 +333,16 @@ def cross_table(all_stats: dict, reg: Registry, cfg: ReportConfig, src: str) -> 
         cell, stats = reg.cells[cid], all_stats[cid]
         mark = ("$^{\\dagger}$" if cell.grading.same_family_waiver else "") + \
                ("$^{\\ddagger}$" if cell.report.set_aside else "")
-        out = [escape(cell.report.label) + mark]
+        out = [cross_label(cell.report.label, mark)]
         for c in cols:
             value = _get(stats, c.value.format(protocol=cell.protocol))
             x = value * c.scale if finite(value) else None
             if c.ci:
                 ci = _scaled(_get(stats, c.ci.format(protocol=cell.protocol)), c.scale)
-                show = fmt_range if c.ci_style == "range" else fmt_pm
-                out.append(show(x, ci, c.decimals, c.sign))
+                if c.ci_style == "range":
+                    out.append(fmt_range(x, ci, c.decimals, c.sign, stack=True))
+                else:
+                    out.append(fmt_pm(x, ci, c.decimals, c.sign))
             else:
                 out.append(fmt(x, c.decimals, c.sign))
         return out
