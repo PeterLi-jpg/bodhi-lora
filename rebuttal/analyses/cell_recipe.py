@@ -27,7 +27,7 @@ The script checks the two against each other: the train count from the log, the
 per-device batch from trainer_state.json and the optimizer steps per epoch must admit
 one gradient-accumulation value (HF Trainer: steps per epoch =
 ceil(ceil(train / per-device batch) / accumulation)). It writes
-results/cross_cell/cell_recipe.json, which scripts/paper_stats.py reads.
+results/cross_cell/cell_recipe.json; the cells' filter manifests hold the counts it read, and the analysis reads those.
 
 Every run that wrote a folder on the host is listed, including runs that did not finish,
 with a status: "complete" (5 seeds trained), "partial" (fewer seeds) or "not run" (no

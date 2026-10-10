@@ -12,7 +12,7 @@ withdrew, and what we promised. The ledgers are the files that the resubmission 
 | `withdrawals.md` | Every claim that we withdrew or corrected in the discussion, plus posted claims that the audit or a later check found wrong. Each entry has the claim as made, the correction and the statement that the paper must carry. |
 | `commitments.md` | Every promise in the posted replies (C1 to C33), with its source line and a status column for the paper lanes. |
 | `posted_values.json` | Every number that we posted about the rebuttal cells, transcribed with source lines. It is the record of what was posted. |
-| `../results/cross_cell/generated_values.json` | The same numbers computed from the raw outputs (`make cells`); the paper uses these. The section below lists the one posted value they do not match (W21). |
+| `../results/cross_cell/stats.json` | The check of every posted value against the uniform analysis (`posted_check`, `make analyze`); the paper uses the analysis. `../results/cross_cell/generated_values.json` is the record of the first such check, by the removed `cell_values.py`; the section below lists the one posted value that does not match (W21). |
 
 ## Posted replies
 
@@ -68,8 +68,8 @@ Some drafts hold numbers that we never posted. The last section below lists them
 | `analyses/mimicry_split.py` | The discrimination index and the asking odds ratios posted to LxMF. Superseded on 2026-10-10: its rubric and clinician rules are keyword rules (withdrawals W14, W24); kept as the record only. |
 | `analyses/interference_mechanism.py` | The format-leakage analysis posted to LxMF. Superseded on 2026-10-10: its nine-marker rule counts two free words (W25); kept as the record only. |
 | `analyses/second_person_questions.py` | The second-person question count posted to FzpA. Superseded on 2026-10-10: a keyword rule (W23); kept as the record only. |
-| `analyses/quality_drop.py` | The paired t and Holm test behind "all six drops p < 0.02". Needs the synced cells. |
-| `analyses/cell_values.py` | Computes the posted cell values from the synced cells and diffs them against `posted_values.json` (`make cells`). |
+| `analyses/cell_files.py` | Where the three scripts above find a cell's raw outputs. |
+| `analyses/cell_recipe.py`, `analyses/host_runs.py` | The per-cell tau, trace counts and recipe from the host logs (`make cells`): the record of the 2026-07 filter counts. |
 | `analyses/peek_results.py` | Quick look at per-seed results on the host. |
 | `responses/drafts/FINDINGS_quality_drop.md` | Internal analysis of the aggregate drop (paired t, rubric test). Never posted. |
 | `PLAN.md` | The rebuttal plan, now closed. It records what ran and what did not. |
@@ -77,9 +77,12 @@ Some drafts hold numbers that we never posted. The last section below lists them
 
 ## Open
 
-- **Raw outputs of the added cells.** Synced on 2026-10-08 (PROV-1). `make cells` diffs the
-  cell values against `posted_values.json` (one mismatch, W21), runs the paired t (PROV-2;
-  every posted test holds) and reads the per-cell tau and recipe from the host logs (PROV-3).
+- **Raw outputs of the added cells.** Synced on 2026-10-08 (PROV-1). The uniform analysis
+  checks the cell values against `posted_values.json` (one mismatch, W21) and runs the paired
+  t (PROV-2; every posted test holds); `make cells` reads the per-cell tau and recipe from the
+  host logs (PROV-3). `quality_drop.py` and `cell_values.py`, which first did the first two,
+  were removed on 2026-10-10; `tests/test_analysis_equivalence.py` checks that the analysis
+  reproduces their outputs, which stay in `results/cross_cell/` as the record.
   The full responses stay gitignored; versioning them is open (KNOWN_ISSUES).
 - **Scripts for posted numbers.** Each posted analysis now has a script. Two results differ
   from the posts. The second-person count gives 17.9% against 36.7%, not the posted 18.4%
@@ -103,10 +106,12 @@ Some drafts hold numbers that we never posted. The last section below lists them
 
 Two files, with different jobs:
 
-- `../results/cross_cell/generated_values.json` is the source for the paper. `make cells`
-  (`analyses/cell_values.py`) computes it from the raw per-seed outputs of every cell,
-  synced from the GPU host on 2026-10-08, and `make numbers` reads it. It also lists each
-  posted value that differs from the raw outputs (`mismatches`).
+- Each cell's `../results/<cell>/analysis/stats.json` is the source for the paper
+  (`make analyze` from the cell's response tables, `make numbers` from those). The
+  cross-cell statistics check every posted value against it (`posted_check` in
+  `../results/cross_cell/stats.json`). `../results/cross_cell/generated_values.json` is the
+  record of the first check, made on 2026-10-08 by the removed `analyses/cell_values.py`; it
+  lists each posted value that differs from the raw outputs (`mismatches`).
 - `posted_values.json` is the record of what was posted. It lists every number the authors
   posted on OpenReview about the rebuttal cells, plus the posted analyses of the submitted
   cell, as a hand transcription of `responses/posted/` with a source line for each value.
@@ -177,7 +182,8 @@ and the leakage numbers match its `analysis/mimicry_split.json` and
 aggregate means in the paper's cross-cell table match the 4-decimal table in
 `responses/drafts/FINDINGS_quality_drop.md`. These checks show that the transcription matches the
 posts and that the posts agree with each other. Only the raw outputs can show that the
-posted numbers are correct, and `make cells` now does: one mismatch (W21).
+posted numbers are correct, and the posted-value check of the analysis now does: one
+mismatch (W21).
 
 ### Where the raw outputs live
 
@@ -197,7 +203,7 @@ files `base_no_wrapper`, `base_bodhi`, `lora_no_wrapper` and `lora_bodhi` are no
 `epistemic_scores.json` is `grade/epistemic__llama-3.1-8b-nous.json`. The host's
 `multi_seed_summary.json` copies were written before commit 55f6c7c, list their seeds as
 `["eval"]` (a wrong glob) and hold one seed only; they went to the archive, and
-`cell_values.py` recomputes everything from the per-seed files. The teacher traces and
+The analysis recomputes everything from the per-seed files. The teacher traces and
 filter outputs (`sft/`) stayed on the host.
 
 Three host folders are not cells of the paper:
@@ -218,19 +224,20 @@ split of each cell from its filter log, checks them against the trainer states, 
 `results/cross_cell/cell_recipe.json` (PROV-3). Every cell used tau = 0.4, and no log shows
 the 22nd-percentile re-filter.
 
-### How the generated values are checked
+### How the posted values are checked
 
-`analyses/cell_values.py` (`make cells`) reads each cell's per-seed eval and grade files,
-computes every posted metric with the definitions of `scripts/paper_stats.py`, and writes
-`generated_values.json` in the same shape. Then it lists each posted value that differs
-from the generated one at the posted decimals.
+`make extract` reads each cell's per-seed eval and grade files into its response tables,
+and `make analyze` computes every metric from them. The cross-cell step then puts each
+posted value next to the generated seed mean (`posted_check` in
+`results/cross_cell/stats.json`; the names map through `posted` in
+`configs/report.yaml`) and lists each posted value that differs at the posted decimals.
+Until 2026-10-10 `analyses/cell_values.py` did this into `generated_values.json`, which
+stays as the record.
 
 - The metrics are per-seed means over scored responses (epistemic metrics) or over all
   completions (`aggregate`), then the mean and the sample SD over seeds. The posts do not
   say which SD they used. The submitted cell uses the sample SD.
-- Without the local copy of the added cells' raw files, only the submitted cell has data.
-  The script then names the missing cells and writes no file, so the tracked
-  `generated_values.json` stays as it is.
+- The response tables are tracked, so the check runs without the raw files.
 - A seed whose epistemic grading failed has no value for the seven dimensions. The MedQA
   cell has one: seed 42's grading found none of its prompts, so its seven-dimension means
   are null and `per_seed` shows the four seeds that have them.

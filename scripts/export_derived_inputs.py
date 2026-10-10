@@ -1,16 +1,18 @@
-"""Write the small derived inputs that paper_stats.py reads, from the large ignored files.
+"""Write small tracked copies of the scores in two large ignored files.
 
-Two tables in the paper come from files that git ignores because of their size
+Two files that git ignores because of their size hold scores the paper reports
 (<M> is the submitted cell, <pilot> the 2026-04 pilot, both under results/):
 
   <M>/seed_7/filter/train.jsonl      (49 MB: the seed-7 training traces)
   <pilot>/seed_42/eval/<cond>.json   (8 MB: the seed-42 run graded by Qwen2.5-14B)
 
-paper_stats.py needs only the scores in them. This script copies those scores, with
-the prompt ids, into <M>/seed_7/filter/filter_scores.json and
-<pilot>/analysis/qwen_grader_scores.json, which are tracked. So `make numbers` rebuilds
-every number in a clean checkout. The output keeps the source row order, so float sums
-in paper_stats.py match a run on the source files bit for bit.
+This script copies their scores, with the prompt ids, into
+<M>/seed_7/filter/filter_scores.json and <pilot>/analysis/qwen_grader_scores.json,
+which are tracked. The analysis reads the filter scores for the tau table (make
+analyze), so a clean checkout rebuilds every number. The pilot's scores reach the paper
+through its tracked response table now; the copy stays as the record of the scores the
+pilot stored. The output keeps the source row order, so float sums match a run on the
+source files bit for bit.
 
 The derived files hold no response text. Each records the sha256 of its source, so a
 reader with the source file can rerun this script and diff the output. The tracked

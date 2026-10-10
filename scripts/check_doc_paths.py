@@ -9,7 +9,9 @@ What it reads: README.md, RESULTS.md, REPRODUCIBILITY.md, KNOWN_ISSUES.md, BLOCK
 docs/**/*.md and contributions/**/*.md. In each it takes inline code spans,
 markdown link targets and the words inside fenced code blocks, and keeps the
 ones that look like repo paths: the first path part is a top-level entry of
-the repo (or a root file such as setup.sh).
+the repo (or a root file such as setup.sh). It also reads the source comments of
+paper/generated/*.tex, where each macro and table names the file it came from, so a
+reader who follows a number's source does not reach a path that is gone.
 
 A path passes when it is one of these:
   - tracked in git, or a directory that holds tracked files
@@ -185,6 +187,23 @@ def main() -> int:
                 if verbose:
                     print(f"{'ok  ' if ok else 'MISS'} {rel}:{lineno}: {path}")
                 if not ok:
+                    missing.append(f"{rel}:{lineno}: {path}")
+    # The source comments of the generated numbers and tables. Every macro names the same
+    # few files, so each path is checked once.
+    seen: dict[str, bool] = {}
+    for tex in sorted((ROOT / "paper" / "generated").glob("*.tex")):
+        rel = tex.relative_to(ROOT)
+        for lineno, line in enumerate(tex.read_text(encoding="utf-8").splitlines(), 1):
+            if "% " not in line:
+                continue
+            for raw in re.split(r"[\s()]+", line.split("% ", 1)[1]):
+                path = candidate(raw, rel.parent, False, in_fence=True)
+                if path is None:
+                    continue
+                if path not in seen:
+                    seen[path] = exists(path)
+                    checked += 1
+                if not seen[path]:
                     missing.append(f"{rel}:{lineno}: {path}")
     stale = [k for k in PENDING if (k.rstrip("/") in TRACKED or k in TRACKED_DIRS)]
     for k in stale:

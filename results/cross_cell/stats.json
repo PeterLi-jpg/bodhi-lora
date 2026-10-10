@@ -905,6 +905,139 @@
    },
    "token": "AddedOutsideFamily"
   },
+  "family-waiver": {
+   "askers_gap": {
+    "base": {
+     "n_measured": 2,
+     "n_negative": 1,
+     "n_positive": 1
+    },
+    "base+bodhi": {
+     "n_measured": 2,
+     "n_negative": 2,
+     "n_positive": 0
+    },
+    "lora": {
+     "n_measured": 2,
+     "n_negative": 2,
+     "n_positive": 0
+    },
+    "lora+bodhi": {
+     "n_measured": 2,
+     "n_negative": 1,
+     "n_positive": 1
+    }
+   },
+   "cells": [
+    "healthbench__med42-8b__bodhi__2026-07",
+    "chatdoctor__med42-8b__bodhi__2026-07"
+   ],
+   "contrasts": {
+    "base+bodhi - base": {
+     "rubric_score": {
+      "abs_max": 0.0139223,
+      "abs_min": 0.0017381,
+      "max": -0.0017381,
+      "min": -0.0139223,
+      "n_measured": 2,
+      "n_negative": 2,
+      "n_positive": 0,
+      "n_zero": 0,
+      "not_measured": [],
+      "p_holm": {
+       "chatdoctor__med42-8b__bodhi__2026-07": 0.6088,
+       "healthbench__med42-8b__bodhi__2026-07": 0.00943164
+      },
+      "p_holm_max": 0.6088,
+      "p_max": 0.6088
+     }
+    },
+    "lora - base": {
+     "active_inquiry": {
+      "abs_max": 0.835,
+      "abs_min": 0.407,
+      "max": 0.835,
+      "min": 0.407,
+      "n_measured": 2,
+      "n_negative": 0,
+      "n_positive": 2,
+      "n_zero": 0,
+      "not_measured": [],
+      "p_holm": {
+       "chatdoctor__med42-8b__bodhi__2026-07": 3.69998e-07,
+       "healthbench__med42-8b__bodhi__2026-07": 2.12895e-05
+      },
+      "p_holm_max": 2.12895e-05,
+      "p_max": 2.12895e-05
+     },
+     "rubric_score": {
+      "abs_max": 0.041,
+      "abs_min": 0.0130008,
+      "max": -0.0130008,
+      "min": -0.041,
+      "n_measured": 2,
+      "n_negative": 2,
+      "n_positive": 0,
+      "n_zero": 0,
+      "not_measured": [],
+      "p_holm": {
+       "chatdoctor__med42-8b__bodhi__2026-07": 0.000927452,
+       "healthbench__med42-8b__bodhi__2026-07": 0.00344452
+      },
+      "p_holm_max": 0.00344452,
+      "p_max": 0.00344452
+     }
+    },
+    "lora - base+bodhi": {
+     "active_inquiry": {
+      "abs_max": 0.0461106,
+      "abs_min": 0.03,
+      "max": 0.03,
+      "min": -0.0461106,
+      "n_measured": 2,
+      "n_negative": 1,
+      "n_positive": 1,
+      "n_zero": 0,
+      "not_measured": [],
+      "p_holm": {
+       "chatdoctor__med42-8b__bodhi__2026-07": 0.1502,
+       "healthbench__med42-8b__bodhi__2026-07": 0.141189
+      },
+      "p_holm_max": 0.1502,
+      "p_max": 0.1502
+     }
+    }
+   },
+   "description": "cells whose base model shares the evaluator's family (D6)",
+   "n_cells": 2,
+   "recipe": {
+    "adapters": 10,
+    "best_epoch_max": 2.0,
+    "best_epoch_min": 2.0,
+    "effective_batch_consistent": [
+     16
+    ],
+    "grad_accumulation_consistent": [
+     4
+    ],
+    "lora_alpha": 32,
+    "lora_dropout": 0.05,
+    "num_train_epochs": 3,
+    "r": 16,
+    "target_modules": [
+     "down_proj",
+     "gate_proj",
+     "k_proj",
+     "o_proj",
+     "q_proj",
+     "up_proj",
+     "v_proj"
+    ],
+    "tau": 0.4,
+    "train_batch_size": 4
+   },
+   "token": "FamilyWaiver"
+  },
   "outside-family": {
    "askers_gap": {
     "base": {
@@ -1046,7 +1179,7 @@
      "up_proj",
      "v_proj"
     ],
-    "tau": null,
+    "tau": 0.4,
     "train_batch_size": null
    },
    "token": "OutsideFamily"
@@ -1290,7 +1423,7 @@
     "num_train_epochs": null,
     "r": null,
     "target_modules": null,
-    "tau": null,
+    "tau": 0.4,
     "train_batch_size": null
    },
    "token": "Submitted"

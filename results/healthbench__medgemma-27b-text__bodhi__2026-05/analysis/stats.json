@@ -7200,35 +7200,46 @@
  },
  "evaluator": "llama-3.1-8b",
  "filter": {
-  "not_measured_counts": "the cell's filter counts were not recorded",
-  "recorded": null,
-  "recorded_source": null,
+  "kept_pct_of_graded": 78.225,
+  "kept_share_of_graded": 0.78225,
+  "recorded": {
+   "kept": 3129,
+   "raw": 4000,
+   "tau": 0.4
+  },
+  "recorded_source": "paper/submitted/neurips2026/main.tex:117",
   "scores": {
    "min": 0.4,
    "n_train_split": 2816,
    "seed": 7,
    "tau_grid": [
     {
+     "share_of_pool_estimate": 0.78225,
      "share_of_train_split": 1.0,
      "tau": 0.4
     },
     {
+     "share_of_pool_estimate": 0.603355,
      "share_of_train_split": 0.771307,
      "tau": 0.5
     },
     {
+     "share_of_pool_estimate": 0.365013,
      "share_of_train_split": 0.466619,
      "tau": 0.6
     },
     {
+     "share_of_pool_estimate": 0.201952,
      "share_of_train_split": 0.258168,
      "tau": 0.7
     },
     {
+     "share_of_pool_estimate": 0.0936144,
      "share_of_train_split": 0.119673,
      "tau": 0.8
     },
     {
+     "share_of_pool_estimate": 0.0525019,
      "share_of_train_split": 0.0671165,
      "tau": 0.9
     }

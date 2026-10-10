@@ -45,9 +45,9 @@ def test_figure_builder_pins_build_env(monkeypatch):
 
 
 def test_forest_plot_draws_the_clustered_bootstrap_cis(tmp_path, monkeypatch):
-    """D7: the forest plot shows paper_stats' prompt-clustered CIs, not a normal approximation."""
+    """D7: the forest plot shows the analysis' prompt-clustered CIs, not a normal approximation."""
     from scripts import plot_postprocessing as pp
-    numbers = ROOT / "paper" / "generated" / "numbers.json"
+    numbers = ROOT / "results" / "healthbench__medgemma-27b-text__bodhi__2026-05" / "analysis" / "stats.json"
     contrasts = json.loads(numbers.read_text())["contrasts"]
     drawn = []
     real_plot = pp.plt.Axes.plot
@@ -59,7 +59,7 @@ def test_forest_plot_draws_the_clustered_bootstrap_cis(tmp_path, monkeypatch):
     monkeypatch.setattr(pp.plt.Axes, "plot", spy)
     pp.plot_effect_sizes(numbers, tmp_path / "forest.pdf")
     assert (tmp_path / "forest.pdf").stat().st_size > 0
-    rf = contrasts["LoRACoTvsLoRA"]["metrics"]["red_flag"]["d_ci95"]
+    rf = contrasts["lora+bodhi - lora"]["metrics"]["red_flag"]["d_ci95"]
     assert tuple(rf) in drawn
     # Three comparisons x seven dimensions.
     assert len(drawn) == 21

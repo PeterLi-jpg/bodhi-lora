@@ -217,10 +217,10 @@ rule, not from a list in code.
   `tests/test_analysis_equivalence.py` checks that the 2026-05 cell's statistics match
   the outputs they supersede (ARCHITECTURE.md section 10.3), and
   `tests/test_analysis_committed.py` checks that each committed `stats.json` is what
-  `make analyze` writes. Known gap: the paper's numbers still come from
-  `scripts/paper_stats.py` (`make numbers`). It runs `bodhi_lora.report` for the per-cell
-  tables and for the submitted cell's leakage and label numbers, but its cross-cell tables read `results/cross_cell/generated_values.json`, not
-  the cells' `stats.json`, and `make report` is not a target yet.
+  `make analyze` writes. Every number the paper prints comes from `make numbers`
+  (`python -m bodhi_lora report`), which reads only the cells' `stats.json` and the
+  cross-cell statistics; `tests/test_report.py` checks that the committed numbers are
+  what it writes.
 
 ## 15. No keyword measures
 

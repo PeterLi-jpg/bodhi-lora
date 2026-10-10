@@ -20,9 +20,10 @@
         analyze reads only the tracked tables. Each cell gets analysis/stats.json; with
         --all, the cells configs/report.yaml analyzes, then the cross-cell statistics
         when every cell they need has its stats.json.
-    report
-        Says where the report is written: make numbers runs bodhi_lora.report.report
-        through scripts/paper_stats.py into paper/generated/.
+    report [--out-dir DIR]
+        Every number the paper prints (bodhi_lora/report/): the macros, tables and record
+        of paper/generated/, from each cell's analysis/stats.json and the cross-cell
+        statistics. make numbers runs it.
 
 Every command first loads and checks the whole registry, so a broken config fails here
 with every problem listed.
@@ -180,9 +181,19 @@ def cmd_analyze(args, reg: Registry) -> int:
 
 
 def cmd_report(args, reg: Registry) -> int:
-    print("make numbers writes the report: scripts/paper_stats.py calls bodhi_lora.report.report and "
-          "writes its macros and tables into paper/generated/. make figures writes the figures.")
-    return 2
+    from bodhi_lora import analysis, report
+
+    proj = project(args.configs)
+    try:
+        rep = report.report(reg, analysis.report_config(args.configs), proj)
+    except FileNotFoundError as e:
+        raise SystemExit(f"report: {e}")
+    files = report.write(rep, args.out_dir)
+    print(f"report: {proj.rel(args.out_dir)}: {len(rep.macros)} macros, {len(rep.tables)} tables "
+          f"({len(files)} files)")
+    for cid, why in rep.record["not_reported"].items():
+        print(f"  not reported: {cid}: {why}")
+    return 0
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -220,7 +231,9 @@ def build_parser() -> argparse.ArgumentParser:
                    help="first write the response tables from the raw stage outputs")
     p.set_defaults(func=cmd_analyze)
 
-    p = sub.add_parser("report", help="where the paper report is written (make numbers)")
+    p = sub.add_parser("report", help="the paper's macros and tables from the analysis (make numbers)")
+    p.add_argument("--out-dir", type=Path, default=Path(__file__).resolve().parent.parent / "paper" / "generated",
+                   help="where to write numbers.tex, numbers.json and the tables")
     p.set_defaults(func=cmd_report)
     return ap
 

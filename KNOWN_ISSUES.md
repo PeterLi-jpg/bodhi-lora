@@ -166,6 +166,17 @@ Issue numbers such as #5 are GitHub issues on `PeterLi-jpg/bohdi-lora`.
 
 ## Fixed
 
+- **The report step named the cells it reported (2026-10-10).** Table 1, the per-cell
+  tables and most main-body numbers came from `503b975:scripts/paper_stats.py`, which knew four
+  condition names, the submitted cell and a token map of the posted cells, so a new cell
+  reached only the appendix checks table. `python -m bodhi_lora report` (`make numbers`)
+  now writes every macro and table from the cells' `stats.json`, and
+  `configs/report.yaml` names the tables, groups and counts. Every number the paper
+  printed stayed the same, except: two score differences print one more decimal (as the
+  2026-05 cell's always did); set-aside rows carry a double dagger; and the second-grader
+  check of Appendix H. That check compared the pilot's stored score (earned points over
+  positive points) with the normalized score of the other run, so the scales seemed to
+  differ; with one formula r is 0.70, not 0.42.
 - **`make extract` stopped with a TypeError (2026-10-09).** The package function
   `bodhi_lora.analysis.extract` was hidden by its submodule of the same name once the
   submodule was imported, so `analyze --extract` called a module. The function is now

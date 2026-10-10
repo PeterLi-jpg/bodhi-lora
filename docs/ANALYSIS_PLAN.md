@@ -18,7 +18,7 @@ existed at that time. A result that a late change touches is reported as explora
 **State at registration.** No planned cell has run: no folder of a planned cell exists
 under `results/`. No file in the repo joins the HealthBench physician labels (section
 2.4) to a model output: `rebuttal/analyses/mimicry_split.py` labels prompts by rubric
-keywords and the theme tag, and `scripts/paper_stats.py` only counts the speaker tag. So
+keywords and the theme tag, and `1effff4:scripts/paper_stats.py` only counts the speaker tag. So
 the label analyses of H3, H7 and H11 are unseen on every cell, the existing ones too.
 
 ## 1. Questions

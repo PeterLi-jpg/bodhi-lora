@@ -52,7 +52,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from scripts.paper_stats import grade_path  # noqa: E402
+from rebuttal.analyses.cell_files import grade_path  # noqa: E402
 
 # The submitted cell (results/PROVENANCE.md).
 CELL = REPO / "results" / "healthbench__medgemma-27b-text__bodhi__2026-05"

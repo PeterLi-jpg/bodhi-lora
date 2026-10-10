@@ -1,9 +1,12 @@
 """The uniform analysis reproduces the outputs it supersedes (docs/ARCHITECTURE.md 10.3).
 
 It recomputes the 2026-05 cell from its tracked response tables and compares, at the
-stored precision, with the files the old scripts wrote: paper/generated/numbers.json
-(scripts/paper_stats.py) and the cell's mimicry_split.json and interference_mechanism.json
-(rebuttal/analyses/). A mismatch is a finding to
+stored precision, with the files the old scripts wrote: the statistics of
+scripts/paper_stats.py (removed on 2026-10-10; its last numbers.json sections are frozen in
+tests/fixtures/legacy/paper_stats_numbers.json) and the cell's mimicry_split.json and
+interference_mechanism.json (rebuttal/analyses/). It also checks every cell's stats.json
+against the cross-cell records the removed scripts wrote: generated_values.json
+(cell_values.py), quality_drop.json and cell_recipe.json. A mismatch is a finding to
 explain, not a tolerance to raise. Old names map to new ones in the tables below; a
 field the new output names differently is listed there, not skipped.
 
@@ -92,7 +95,7 @@ def compare(old, new, path, problems):
 
 
 def test_numbers_of_the_paper(stats):
-    numbers = json.loads((REPO_ROOT / "paper/generated/numbers.json").read_text())
+    numbers = json.loads((REPO_ROOT / "tests/fixtures/legacy/paper_stats_numbers.json").read_text())
     problems = []
     for section in ("conditions", "contrasts", "worst_case", "blanket_disclaimers", "length_quartiles",
                     "axis_scores", "themes", "counts"):
@@ -153,3 +156,74 @@ def test_the_committed_stats_are_current(stats):
     """results/<cell>/analysis/stats.json is what analyze writes from the tracked tables."""
     committed = json.loads((REPO_ROOT / "results" / CELL / "analysis" / "stats.json").read_text())
     assert json.loads(json.dumps(stats, sort_keys=True)) == committed
+
+
+CROSS = REPO_ROOT / "results" / "cross_cell"
+
+
+def _cell_stats(cid):
+    return json.loads((REPO_ROOT / "results" / cid / "analysis" / "stats.json").read_text())
+
+
+def _cell_of_host_dir():
+    """The host folder of each added cell (results_rebuttal/<run> on the GPU host) -> its cell
+    id, through the posted cell names that generated_values.json and the report config share."""
+    cfg = report_config()
+    gv = json.loads((CROSS / "generated_values.json").read_text())
+    return {c["dir"]: cfg.posted.cells[c["id"]] for c in gv["cells"]}
+
+
+def test_per_seed_means_of_generated_values():
+    """generated_values.json (make cells, removed) held the per-seed means that Table 1 and
+    the per-cell tables printed until 2026-10-10; scripts/paper_stats.py stopped on any
+    difference from stats.json. Every per-seed mean agrees two decimals finer than the paper
+    prints (the file keeps six significant digits)."""
+    cfg = report_config()
+    gv = json.loads((CROSS / "generated_values.json").read_text())
+    problems, n = [], 0
+    for g in gv["cells"]:
+        stats = _cell_stats(cfg.posted.cells[g["id"]])["conditions"]
+        for gc, cond in cfg.posted.conditions.items():
+            for name, m in cfg.posted.metrics.items():
+                ours = stats[m.metric][cond]["per_seed"]
+                for seed, v in g["conditions"][gc][name]["per_seed"].items():
+                    w = ours.get(str(seed))
+                    n += 1
+                    if (v is None) != (w is None) or (v is not None and abs(v - w * m.scale) > 10 ** -(m.decimals + 2)):
+                        problems.append(f"{g['id']} {gc} {name} seed {seed}: {v} against {w}")
+    assert n > 1000 and not problems, "\n".join(problems[:20])
+
+
+def test_aggregate_tests_of_quality_drop():
+    """quality_drop.json (removed script) tested LoRA - Base on the aggregate score per cell."""
+    q = json.loads((CROSS / "quality_drop.json").read_text())
+    cells = _cell_of_host_dir()
+    problems = []
+    for host, r in q["cells"].items():
+        cid = cells[f"results_rebuttal/{host}"]
+        new = _cell_stats(cid)["contrasts"]["lora - base"]["metrics"]["rubric_score"]
+        compare({"diff": r["diff"], "ci95": r["ci95"], "p": r["p"], "df": r["df"]}, new, cid, problems)
+    assert len(q["cells"]) >= 6 and not problems, "\n".join(problems)
+
+
+def test_filter_and_recipe_of_cell_recipe():
+    """cell_recipe.json (make cells) read tau and the trace counts from the host logs and the
+    recipe from the adapter files; the filter manifests and stats.json carry the same."""
+    rec = json.loads((CROSS / "cell_recipe.json").read_text())
+    cells = _cell_of_host_dir()
+    problems, n = [], 0
+    for host, r in rec["cells"].items():
+        cid = cells.get(r["dir"])
+        if cid is None or r["status"] != "complete":
+            continue
+        s = _cell_stats(cid)
+        n += 1
+        compare({k: r["filter"][k] for k in ("tau", "graded", "kept", "train", "val")}, s["filter"]["recorded"],
+                f"{cid}/filter", problems)
+        compare({k: r["adapter"][k] for k in ("r", "lora_alpha", "lora_dropout", "num_train_epochs",
+                                              "train_batch_size", "max_steps")}, s["recipe"], f"{cid}/recipe", problems)
+        if sorted(r["adapter"]["target_modules"]) != s["recipe"]["target_modules"]:
+            problems.append(f"{cid}: target modules")
+        compare({"grad_accumulation_consistent": r["grad_accumulation_consistent"],
+                 "effective_batch_consistent": r["effective_batch_consistent"]}, s["recipe"], f"{cid}/batch", problems)
+    assert n >= 7 and not problems, "\n".join(problems)

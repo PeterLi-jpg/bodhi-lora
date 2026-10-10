@@ -1,8 +1,8 @@
 """LaTeX text for the report: number formats, macro tokens and booktabs tables.
 
-The formats match scripts/paper_stats.py, so a number reads the same in either set of
-macros: fixed decimals in \\ensuremath, "-0.0" printed as "0.0", p-values to two
-significant digits and in scientific form below 0.001.
+The formats are the ones the paper's numbers had since the submission: fixed decimals in
+\\ensuremath, "-0.0" printed as "0.0", p-values to two significant digits and in
+scientific form below 0.001.
 """
 from __future__ import annotations
 

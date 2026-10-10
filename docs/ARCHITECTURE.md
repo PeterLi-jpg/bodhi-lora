@@ -1,12 +1,11 @@
 # Architecture
 
 Design of the resubmission code, written on 2026-10-08 and brought up to date when the
-build lanes merged on 2026-10-09. Sections 3 to 6 and 9 describe code that is in the
-repo. Section 7 is built: `analyze`, and the report module `bodhi_lora.report`, which
-`make numbers` runs through `scripts/paper_stats.py`. The `report` command and
-`make report` are not built, and the numbers that `paper/main.tex` prints still come from
-the older sections of `scripts/paper_stats.py`. Section 11 records how
-the lanes ran. [EXPERIMENTS.md](EXPERIMENTS.md) lists the runs and analyses this design
+build lanes merged on 2026-10-09 and on 2026-10-10. Sections 3 to 7 and 9 describe code
+that is in the repo. Since 2026-10-10 every number that `paper/main.tex` prints comes
+from `python -m bodhi_lora report` (`make numbers`), which reads only the cells'
+`stats.json` and the cross-cell statistics; `503b975:scripts/paper_stats.py` is gone. Section 11
+records how the lanes ran. [EXPERIMENTS.md](EXPERIMENTS.md) lists the runs and analyses this design
 must carry.
 
 ## 1. Why the code changes
@@ -20,16 +19,16 @@ results folder and its own analysis. The result is not general:
   run sat in the ignored results/seed_42/, analysis outputs in `02ac9a3:rebuttal/results/`,
   and copied scores in `02ac9a3:data/derived/` and `02ac9a3:data/rebuttal_cells/`.
   Section 10 records the move into one results root.
-- **Analysis special-cases one cell.** `scripts/paper_stats.py` computes the full
+- **Analysis special-cases one cell.** `02ac9a3:scripts/paper_stats.py` computes the full
   statistics only for the submitted cell (`MAIN_CELL_ID`, a fixed `CONDITIONS` tuple).
-  The added cells get a subset through `rebuttal/analyses/cell_values.py` and
-  `rebuttal/analyses/quality_drop.py`. The discrimination, leakage and question-count
+  The added cells get a subset through `503b975:rebuttal/analyses/cell_values.py` and
+  `503b975:rebuttal/analyses/quality_drop.py`. The discrimination, leakage and question-count
   analyses read `02ac9a3:results_modal/` only.
 - **Conditions are code, not data.** `scripts/aggregate_seeds.py` knows four BODHI
   condition names, so a cell run with `PROTOCOL=ask_first` cannot be aggregated.
 - **Names and paths are literals in code.** The cell table in
   `02ac9a3:rebuttal/launch/run_grid.sh`, the benchmark case statement in
-  `02ac9a3:rebuttal/launch/_common.sh`, the model tokens in `scripts/paper_stats.py`, the
+  `02ac9a3:rebuttal/launch/_common.sh`, the model tokens in `02ac9a3:scripts/paper_stats.py`, the
   dataset-keyed row builders in `02ac9a3:scripts/build_benchmark_jsonl.py`, and
   `DATA_DIR = Path("data/raw")` in three scripts.
 - **Settings live in four places.** `configs/*.yaml`, `02ac9a3:rebuttal/configs/`, the
@@ -282,8 +281,7 @@ install step: the repo root is on `sys.path` for the CLI and for the tests.
 bodhi_lora/
   __init__.py
   __main__.py      python -m bodhi_lora
-  cli.py           subcommands list, fetch, run, analyze, report (report only says
-                   that make numbers writes the report)
+  cli.py           subcommands list, fetch, run, analyze, report
   paths.py         results and data roots from configs/project.yaml; CellPaths
   manifest.py      run manifests                       <- 02ac9a3:scripts/run_manifest.py
   registry/
@@ -310,6 +308,7 @@ bodhi_lora/
     epistemic.py   seven-dimension grader               <- 02ac9a3:scripts/eval_epistemic.py
     harm.py        judge harm axes: extent, likelihood, delayed care (C33 proxy)
   pipeline/
+    context.py     StageContext: what a stage reads, and the stage command line
     runner.py      stage order, seeds, GPU assignment, resume, manifests
     probe.py       contamination probe                  <- 02ac9a3:scripts/contamination_probe.py
     traces.py      teacher traces                       <- 02ac9a3:scripts/generate_traces.py
@@ -324,14 +323,19 @@ bodhi_lora/
     config.py      configs/report.yaml as typed records
     extract.py     raw stage outputs to the per-seed response table and prompts.csv
     stats.py       t interval, paired t, Holm, Fisher, clustered bootstrap, Cohen's d
-                                                        <- scripts/paper_stats.py
+                                                        <- 02ac9a3:scripts/paper_stats.py
     cell.py        every statistic of one cell, judge agreement included
     cross.py       cross-cell groups, Holm over cells, the posted-value check
-  report/          macros, a table per cell and the cross-cell table from every
-                   stats.json; scripts/paper_stats.py calls it and writes the rest of
-                   numbers.tex, numbers.json and tab_*.tex, and
-                   scripts/build_paper_figures.py writes the figures
+  report/
+    __init__.py    report(): every macro and table of paper/generated/; write()
+    cell.py        one cell's macros, its table, and the detail tables of detail_cells
+    cross.py       tables with a row per cell, group counts, recipe, posted values
+    common.py      printed names, paths into stats.json, number formats
+    latex.py       number formats and booktabs tables
 ```
+
+`scripts/build_paper_figures.py` writes the figures; the forest plot reads the cell's
+`stats.json`.
 
 Physician agreement stays in `scripts/compute_irr_kappa.py` (`make kappa`); the analysis
 reads its output, `results/<cell_id>/validation/kappa_results.json`, into the statistics.
@@ -344,8 +348,7 @@ docker modes of `02ac9a3:scripts/_vllm_engine.py` are not carried over; the TPU 
 ### 4.1 Interfaces between modules
 
 The foundation step built these (2026-10-09), and the lanes changed them as noted. A
-change to one lands at the integrate step. The `report` command prints where the report
-is written and exits 2.
+change to one lands at the integrate step.
 
 ```python
 # bodhi_lora.paths
@@ -453,8 +456,9 @@ def extract_cell(reg, cell_id: str, proj=None, cfg=None) -> dict   # raw outputs
 def analyze_cell(reg, cell_id: str, proj=None, cfg=None) -> dict   # tables -> the cell's stats.json
 def analyze_cross(reg, report_cfg=None, proj=None) -> dict    # every cell's stats.json -> the cross-cell one
 
-# bodhi_lora.report (scripts/paper_stats.py calls it; make numbers writes its output)
+# bodhi_lora.report (python -m bodhi_lora report; make numbers)
 def report(reg, cfg, proj) -> Report   # every stats.json -> macros, tables, record for paper/generated/
+def write(rep: Report, out_dir: Path) -> list[str]   # numbers.tex, numbers.json, tab_*.tex
 ```
 
 Stage output formats stay compatible with the files that exist: `results/<cell_id>/seed_<n>/eval/<condition>.json`
@@ -477,7 +481,7 @@ python -m bodhi_lora run <cell_id> [--stages probe,traces,filter,train,eval,grad
                                    [--gpus 0,1] [--judges a,b | --judges none]
                                    [--stub-engine | --dry-run] [--results-root DIR] [--force]
 python -m bodhi_lora analyze (<cell_id> ... | --all) [--extract]
-python -m bodhi_lora report        # says where the report is written (make numbers)
+python -m bodhi_lora report [--out-dir DIR]   # paper/generated/ (make numbers)
 ```
 
 - `list --settings` prints the settings that differ between cells, so a reader sees at
@@ -498,29 +502,29 @@ python -m bodhi_lora report        # says where the report is written (make numb
   so it runs in CI. `--all` takes the cells whose status `configs/report.yaml` lists,
   says which have no tables, and runs the cross-cell statistics once every cell they
   need has its `stats.json`.
-- `report` prints where the report is written and exits 2: `make numbers` runs
-  `scripts/paper_stats.py`, which calls `bodhi_lora.report.report` and writes its macros
-  and tables with its own into `paper/generated/`.
+- `report` writes every macro and table the paper prints into `paper/generated/` (or
+  `--out-dir`), from each analyzed cell's `stats.json` and the cross-cell statistics. It
+  reads no raw output and needs nothing outside git. `configs/report.yaml` names the
+  tables, groups, counts and the cells that get the detail tables.
 
 Makefile targets call the CLI, the repository tools in `scripts/` and the LaTeX build.
-No target runs pipeline code any other way. The paper targets still call the scripts in
-`scripts/` and `rebuttal/analyses/` until `report` exists. The target set when it does:
+No target runs pipeline code any other way. The target set:
 
 | Target | Command |
 |---|---|
 | `make extract` | `python -m bodhi_lora analyze --all --extract` (needs the raw outputs) |
 | `make analyze` | `python -m bodhi_lora analyze --all` |
-| `make report` | `python -m bodhi_lora report` |
-| `make paper` | `make report`, the macro check, then the LaTeX build |
+| `make report`, `make numbers` | `python -m bodhi_lora report` |
+| `make paper` | `make report`, `make figures`, the macro check, then the LaTeX build |
 | `make test` | `pytest` |
 | `make smoke` | `python -m bodhi_lora run <smoke cell> --stub-engine` |
 | `make kappa` | physician agreement from rater files kept outside the repo |
 | `make check` | doc paths, secrets scan, registry load |
 
-Today `make extract`, `make analyze`, `make test`, `make smoke`, `make kappa` and
-`make check` are as above. `make numbers`, `make figures`, `make cells`, `make rebuttal`
-and `make derived` still run the old analysis scripts on the results root; they go away
-when `make analyze` and `make report` reproduce their outputs (10.3).
+Three more targets keep records: `make rebuttal` runs the three discussion scripts whose
+keyword measures are withdrawn (it says so; the paper reads none of their outputs),
+`make cells` reads the 2026-07 host logs into `results/cross_cell/cell_recipe.json`, and
+`make derived` copies the scores of two large ignored files.
 
 ## 6. Results root
 
@@ -662,15 +666,20 @@ families, the teacher strength against the effect, and each cell's marks (family
 waiver, set aside, status). Labels with `timing: post_hoc` are printed as exploratory.
 
 **Report.** `report` turns `results/<cell_id>/analysis/stats.json` and
-`results/cross_cell/stats.json` into macros and tables, and `make numbers` writes them
-into `paper/generated/` (its README lists them). Macro names follow one rule,
-`\stat<CellToken><Metric><Condition><Field>`, with the cell token from `report.token`.
-Each analyzed cell gets the same table, `tab_cell_<token>`; the cross-cell table
-`tab_cross_cell_checks` has the columns `configs/report.yaml` lists under `cross_table`,
-the same for every cell. The macros of `scripts/paper_stats.py` keep their names, so the
-paper builds unchanged; moving `paper/main.tex` to the report's macros is the paper's
-change. Since 2026-10-10 the paper cites `tab_cross_cell_checks` (Table H.6) and the
-report's macros in sections 4.3 and 4.4.
+`results/cross_cell/stats.json` into every macro and table the paper prints, and
+`make numbers` writes them into `paper/generated/` (its README lists them). Macro names
+follow one rule, `\stat<CellToken><Metric><Condition><Field>`, with the cell token from
+`report.token`, or `\statGroup<GroupToken>...` for a group. Each analyzed cell gets the
+same table, `tab_cell_<token>`; the cells of `detail_cells` also get the detail tables
+the paper prints for the submitted cell. Each table of `cross_tables` in
+`configs/report.yaml` (Table 1, the filter table, the checks table) has a row per cell
+of `cross_cells` and the same columns for every cell; `cell_detail_tables` gives every
+cell's metrics by condition. The groups, the `counts`, `compares` and `ranges` of the
+config give the numbers the paper states across cells. So a new cell needs its record,
+its `stats.json` and a line in `cross_cells`, not code (`tests/test_end_to_end.py` runs a
+stub cell through every step). Since 2026-10-10 `paper/main.tex` uses only these macros;
+`503b975:scripts/paper_stats.py`, which wrote the older ones, is removed
+(`tests/test_analysis_equivalence.py` keeps the check that the analysis reproduces it).
 
 **Pre-registration.** Convention 3 still holds. A statistic that has not been computed
 on a cell's outputs before (for example the physician-label discrimination index) goes

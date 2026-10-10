@@ -1,17 +1,18 @@
 # One command from the committed results to the paper's numbers, figures and PDF.
-#   make numbers   paper/generated/{numbers.tex,numbers.json,tab_*.tex}
+#   make report    paper/generated/{numbers.tex,numbers.json,tab_*.tex}, from each cell's
+#                  analysis/stats.json and the cross-cell statistics (make numbers is the same)
 #   make figures   paper/figures/*.pdf
 #   make paper     both, then paper/build/main.pdf
 #   make test      the test suite
 #   make smoke     the smoke cell on the CPU: every stage, the tiny model trained for real
 #   make check     doc paths, secrets scan, and the registry (every record loads and checks)
-#   make rebuttal  the submitted cell's analysis/*.json of the three discussion scripts: the
-#                  record of how posted values were made, superseded; the paper reads none
-#   make cells     results/cross_cell/*.json: added-cell values, paired tests, tau and recipe
-#                  (needs the ignored host copies in the 2026-07 cells)
 #   make extract   each analyzed cell's seed_*/table.csv from its raw outputs, then make analyze
 #   make analyze   results/<cell>/analysis/stats.json for every cell with tables, and the
 #                  cross-cell statistics once every cell they need has its stats
+#   make rebuttal  the submitted cell's analysis/*.json of the three discussion scripts: the
+#                  record of how posted values were made, withdrawn; the paper reads none
+#   make cells     results/cross_cell/cell_recipe.json from the host logs: the record of the
+#                  2026-07 filter counts (needs the ignored host logs)
 #   make kappa     $(MAIN_CELL)/validation/kappa_results.json (needs RATER_FILES)
 #   make derived   the tracked score copies, from the large ignored files they copy
 
@@ -25,12 +26,12 @@ MAIN_CELL ?= results/healthbench__medgemma-27b-text__bodhi__2026-05
 # The seed-7 training traces (49 MB, ignored). make numbers reads only their scores, from
 # the tracked $(MAIN_CELL)/seed_7/filter/filter_scores.json; kappa and derived need the file.
 FILTER_TRAIN ?= $(MAIN_CELL)/seed_7/filter/train.jsonl
-POSTED_VALUES ?= rebuttal/posted_values.json
 
-.PHONY: numbers figures paper test smoke check rebuttal cells kappa derived extract analyze
+.PHONY: report numbers figures paper test smoke check rebuttal cells kappa derived extract analyze
 
-numbers: $(HB_HARD)
-	$(PYTHON) scripts/paper_stats.py --healthbench "$(HB_HARD)" --posted-values "$(POSTED_VALUES)"
+# The report reads only the tracked analysis outputs, so it needs nothing outside git.
+report numbers:
+	$(PYTHON) -m bodhi_lora report
 
 figures: $(HB_HARD)
 	$(PYTHON) scripts/build_paper_figures.py --hb-hard "$(HB_HARD)"
@@ -40,7 +41,7 @@ $(HB_HARD):
 	@echo "$(HB_HARD) not found. Run python -m bodhi_lora fetch healthbench, or pass HB_HARD=<path>."
 	@exit 1
 
-paper: numbers figures
+paper: report figures
 	$(PYTHON) scripts/check_paper_macros.py
 	mkdir -p paper/build
 	tectonic -X compile --outdir paper/build paper/main.tex
@@ -63,8 +64,7 @@ check:
 
 # The uniform analysis (docs/ARCHITECTURE.md section 7). extract reads the raw stage
 # outputs, which git ignores except for the 2026-05 cell; analyze reads only the tracked
-# tables, so it runs in CI. Until python -m bodhi_lora report exists, make numbers still
-# writes the paper's numbers.
+# tables, so it runs in CI, and make report reads only what analyze writes.
 extract:
 	$(PYTHON) -m bodhi_lora analyze --all --extract
 
@@ -73,19 +73,17 @@ analyze:
 
 # The three scripts are kept as the record of how the posted values were made. Each
 # decides meaning by keywords somewhere (docs/CONVENTIONS.md rule 15), so the paper reads
-# none of their outputs (rebuttal/withdrawals.md W23 to W25).
+# none of their outputs (rebuttal/withdrawals.md W23 to W25; tests/test_paper_inputs.py).
 rebuttal: $(HB_HARD)
+	@echo "make rebuttal remakes a record of withdrawn keyword measures (rebuttal/withdrawals.md W23 to W25); the paper reads none of these files."
 	$(PYTHON) rebuttal/analyses/mimicry_split.py --healthbench "$(HB_HARD)"
 	$(PYTHON) rebuttal/analyses/interference_mechanism.py
 	$(PYTHON) rebuttal/analyses/second_person_questions.py
 
-# Reads the added cells' raw eval JSON and host logs in their results/ folders, copied
-# from the GPU host and gitignored (REPRODUCIBILITY.md section 7). cell_values.py diffs
-# the values against $(POSTED_VALUES); cell_recipe.py reads tau, trace counts and the
-# adapter recipe per cell (PROV-3).
+# Reads the host logs of the added cells, copied from the GPU host and gitignored
+# (REPRODUCIBILITY.md section 7): tau, trace counts and the adapter recipe per cell
+# (PROV-3). The cells' filter manifests hold the counts it read; the analysis reads those.
 cells:
-	$(PYTHON) rebuttal/analyses/cell_values.py --posted "$(POSTED_VALUES)"
-	$(PYTHON) rebuttal/analyses/quality_drop.py
 	$(PYTHON) rebuttal/analyses/cell_recipe.py
 
 # The returned rater files carry names, so they stay outside the repo; pass their

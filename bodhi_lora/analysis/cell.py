@@ -691,6 +691,9 @@ def filter_section(cell: CellConfig, paths: CellPaths, seeds: list[int]) -> tupl
     res["recorded_source"] = (shared or {}).get("source")
     if rec.get("kept") and (rec.get("graded") or rec.get("raw")):
         res["kept_share_of_graded"] = _f(rec["kept"] / (rec.get("graded") or rec["raw"]))
+        # The percent from the counts themselves: 100 times the rounded share can land on
+        # the other side of a half (814 of 4,000 is 20.35, not 20.349999...).
+        res["kept_pct_of_graded"] = _f(100 * rec["kept"] / (rec.get("graded") or rec["raw"]))
     if not rec:
         res["not_measured_counts"] = "the cell's filter counts were not recorded"
     graded = _read_json(paths.shared("filter") / "scores.json")

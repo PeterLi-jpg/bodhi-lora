@@ -4,7 +4,7 @@ Saves to paper/figures/:
   ushape_difficulty.pdf      -- failure rate vs. prompt difficulty (pooled 5 seeds)
   axis_breakdown.pdf         -- mean score by HealthBench rubric axis (pooled 5 seeds)
   score_distribution.pdf     -- per-prompt score violin plot (pooled 5 seeds)
-  effect_size_forest.pdf     -- Cohen's d forest plot (reads paper/generated/numbers.json)
+  effect_size_forest.pdf     -- Cohen's d forest plot (reads the cell's analysis/stats.json)
 
 Usage:
     python scripts/plot_postprocessing.py [--data-dir <cell folder>] [--hb-hard data/raw/healthbench/hard.jsonl] [--out-dir paper/figures]
@@ -260,17 +260,18 @@ def plot_score_distribution(health_results, out_path):
 
 # ── Figure 5: Effect size forest plot ────────────────────────────────────────
 
-def plot_effect_sizes(numbers_path, out_path):
+def plot_effect_sizes(stats_path, out_path):
     """
     Cohen's d forest plot for each epistemic dimension.
 
-    d and its 95% CI come from paper/generated/numbers.json (scripts/paper_stats.py):
-    pooled d over the scored responses, CI from a bootstrap that resamples prompt ids.
+    d and its 95% CI come from the cell's analysis/stats.json (python -m bodhi_lora
+    analyze): pooled d over the scored responses, CI from a bootstrap that resamples
+    prompt ids.
     The 5 seed draws overlap (667 unique prompts per 1,000 draws), so a normal-
     approximation CI that treats responses as independent would be too narrow.
     The seed-level paired tests are in the paper's tables; this figure is descriptive.
     """
-    with open(numbers_path) as f:
+    with open(stats_path) as f:
         contrasts = json.load(f)["contrasts"]
 
     dim_keys = [
@@ -284,9 +285,9 @@ def plot_effect_sizes(numbers_path, out_path):
     ]
 
     comparisons = [
-        ("LoRAvsBase",    "LoRA vs Base",                CONFIG_COLORS["lora_no_wrapper"]),
-        ("BaseCoTvsBase", "Base + BODHI vs Base",        "#EE7733"),
-        ("LoRACoTvsLoRA", "LoRA + BODHI vs LoRA",        "#009988"),
+        ("lora - base",       "LoRA vs Base",                CONFIG_COLORS["lora_no_wrapper"]),
+        ("base+bodhi - base", "Base + BODHI vs Base",        "#EE7733"),
+        ("lora+bodhi - lora", "LoRA + BODHI vs LoRA",        "#009988"),
     ]
 
     n_dims = len(dim_keys)
@@ -339,8 +340,9 @@ def main():
     parser.add_argument("--data-dir",  default="results/healthbench__medgemma-27b-text__bodhi__2026-05")
     parser.add_argument("--hb-hard",   default="data/raw/healthbench/hard.jsonl")
     parser.add_argument("--out-dir",   default="paper/figures")
-    # Written by scripts/paper_stats.py (make numbers); the forest plot reads d and its CI.
-    parser.add_argument("--numbers",   default="paper/generated/numbers.json")
+    # The forest plot reads d and its CI from the cell's uniform analysis (make analyze).
+    parser.add_argument("--stats",     default=None,
+                        help="the cell's analysis/stats.json (default: <data-dir>/analysis/stats.json)")
     args = parser.parse_args()
 
     out_dir = Path(args.out_dir)
@@ -373,7 +375,7 @@ def main():
     )
 
     plot_effect_sizes(
-        args.numbers,
+        args.stats or Path(args.data_dir) / "analysis" / "stats.json",
         out_dir / "effect_size_forest.pdf"
     )
 

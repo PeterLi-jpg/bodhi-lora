@@ -2,7 +2,7 @@
 
 The host named each run <bench>__<tag>, where <tag> is the HF repo with "/", ":" and "."
 replaced by "_", and the analyses of the discussion key their outputs by that name.
-scripts/paper_stats.py reads those keys (Appendix J run history), so the analyses keep
+cell_recipe.json keeps those keys (the record of the run history), so the analyses keep
 them. The runs now live in cell folders (results/PROVENANCE.md). Each cell kept the
 host's logs, and its generation log gen_<bench>_<tag>.log names the run.
 """

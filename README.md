@@ -111,19 +111,17 @@ make extract     # the response tables from the raw outputs (needs the gitignore
 | `results/<cell_id>/seed_<n>/table.csv` | the raw eval and grade files of the seed (`make extract`) | one row per condition and prompt; the analysis reads nothing else |
 | `results/<cell_id>/analysis/stats.json` | the cell's response tables (`make analyze`) | the seed is the unit: paired t over seeds, Holm over the seven behaviors within each contrast; prompt-level d is descriptive (D7) |
 | `results/cross_cell/stats.json` | every cell's statistics | the cross-cell families of `configs/report.yaml` |
-| `paper/generated/` | `make numbers` (`scripts/paper_stats.py`, which also runs `bodhi_lora.report` on the two files above) | `scripts/check_paper_macros.py` checks that the paper uses only defined macros |
+| `paper/generated/` | `make numbers` (`python -m bodhi_lora report`, from the two files above) | `scripts/check_paper_macros.py` checks that the paper uses only defined macros |
 | `results/healthbench__medgemma-27b-text__bodhi__2026-05/validation/kappa_results.json` | `make kappa` on the returned rater file, kept outside the repo | per-row grades are not committed (KNOWN_ISSUES) |
 
 Every recorded cell with outputs has tracked tables and a `stats.json`: the eight cells
 of `configs/report.yaml`, the 2026-04 pilot and the partial BioMistral-7B MedQA cell.
 `make analyze` writes each `stats.json` again byte for byte
 (`tests/test_analysis_committed.py`) and reproduces the 2026-05 cell's values
-(`tests/test_analysis_equivalence.py`). `make numbers` turns them into one table per cell
-and a cross-cell table (`tab_cell_<token>`, `tab_cross_cell_checks`). The paper cites the
-cross-cell table as Table H.6 and the cells' macros in sections 4.3 and 4.4. Its other
-numbers still come from the older sections of `scripts/paper_stats.py`, `make figures`
-and `make cells` (docs/ARCHITECTURE.md section 5), and `make numbers` stops if a per-seed
-mean of Table 1 differs from the cell's `stats.json`.
+(`tests/test_analysis_equivalence.py`). `make numbers` turns them into every macro and
+table the paper prints (`paper/generated/README.md`); `configs/report.yaml` names the
+tables, groups and counts, so a new cell needs a record and its `stats.json`, not code.
+`make figures` draws the figures from the raw outputs of the 2026-05 cell.
 
 ## Run the pipeline
 

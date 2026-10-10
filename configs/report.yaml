@@ -1,9 +1,11 @@
-# The uniform analysis (docs/ARCHITECTURE.md section 7).
+# The uniform analysis and its report (docs/ARCHITECTURE.md section 7).
 #
-# python -m bodhi_lora analyze runs the same statistics on every cell; this file only
-# names what is not a property of one cell: the labels the discrimination index uses,
-# the cell groups the paper counts over, and the posted values to check. A new label or group is a change here, not in the code. The report
-# (python -m bodhi_lora report, not built yet) adds its display names and tables here.
+# python -m bodhi_lora analyze runs the same statistics on every cell, and
+# python -m bodhi_lora report (make numbers) turns them into the paper's macros and
+# tables. This file only names what is not a property of one cell: the labels the
+# discrimination index uses, the cell groups and counts the paper states, the tables it
+# prints, and the posted values to check. A new label, group, count or table is a change
+# here, not in the code.
 
 # Cells whose outputs are analyzed when they exist. A cell that never ran (not_run) or
 # is only planned has nothing to read.
@@ -12,6 +14,10 @@ statuses: [complete, partial, pilot]
 # One prompt-clustered bootstrap per cell: every pooled interval of the cell comes from
 # the same resamples.
 bootstrap: {resamples: 5000, seed: 0}
+
+# The level of every count of significant contrasts in the report: the counts below and
+# each cell's DimsUp and DimsDown macros (decisions D2 and D7).
+alpha: 0.05
 
 # No rule here reads the reply text. Until 2026-10-10 two keyword rules did (a
 # second-person question rule and an emergency-mention rule); keyword rules miss
@@ -59,6 +65,12 @@ cross_cells:
   - medquad__mistral-small-24b__bodhi__2026-07
   - medqa-open-preamble__mistral-small-24b__bodhi__2026-07
 
+# Cells whose full detail the paper prints: each gets the tables tab_<kind>_<token> of
+# bodhi_lora/report/cell.py (conditions, per-seed scores, dimensions, contrasts, counts,
+# worst case, disclaimers, bootstrap, axes, length quartiles, themes, gap, tau,
+# physician agreement).
+detail_cells: [healthbench__medgemma-27b-text__bodhi__2026-05]
+
 # Groups of cells that the paper counts over. A group is the cells of cross_cells that
 # match every `where` key, minus `exclude`, or the cells it lists. Keys of where: status
 # (list), model (list), family_waiver (true or false), set_aside (true or false). `token`
@@ -75,6 +87,10 @@ groups:
     token: SetAside
     description: cells set aside, with the reason in their record
     where: {set_aside: true}
+  family-waiver:
+    token: FamilyWaiver
+    description: cells whose base model shares the evaluator's family (D6)
+    where: {family_waiver: true}
   outside-family:
     token: OutsideFamily
     description: complete cells outside the evaluator's family that are not set aside
@@ -118,6 +134,38 @@ group_contrasts:
   - {contrast: lora - base+bodhi, metrics: [active_inquiry]}
   - {contrast: base+bodhi - base, metrics: [rubric_score]}
 
+# Counts the paper states over a group: the cells where the listed metrics move in the
+# given direction in a contrast with p below alpha (test holm: the seven dimensions under
+# Holm within the contrast; test p: the paired t). any: at least one of the metrics.
+# Each count also gets the number of base models and benchmarks of its cells.
+counts:
+  - {token: AskRose, group: outside-family, contrast: lora - base, metrics: [active_inquiry, context_seeking],
+     direction: up}
+  - {token: RedFlagRose, group: outside-family, contrast: lora - base, metrics: [red_flag], direction: up}
+  - {token: ScopeRose, group: outside-family, contrast: lora - base, metrics: [scope_bounding], direction: up}
+  - {token: DimFell, group: outside-family, contrast: lora - base, direction: down, any: true,
+     metrics: [uncertainty_ack, active_inquiry, context_seeking, red_flag, scope_bounding, hedging_quality,
+               specificity]}
+  # The red-flag drop of the 2026-05 cell under LoRA plus the protocol: a lenient test
+  # (unadjusted p) for "the drop repeats", and the Holm test for a rise.
+  - {token: RedFlagProtocolFell, group: added-outside-family, contrast: 'lora+{protocol} - lora',
+     metrics: [red_flag], direction: down, test: p}
+  - {token: RedFlagProtocolRose, group: added-outside-family, contrast: 'lora+{protocol} - lora',
+     metrics: [red_flag], direction: up}
+
+# The cells of a group where one condition's mean stands to another's as stated, compared
+# at the posted precision when decimals is given.
+compares:
+  - {token: AtOrAboveTeacher, group: outside-family, metric: active_inquiry, a: lora, b: 'base+{protocol}',
+     relation: '>=', scale: 100, decimals: 1}
+
+# The smallest and largest value of one statistic over a group's cells.
+ranges:
+  # Base is the same model on the same prompts in every seed of the added cells, so its
+  # spread across seeds is the run-to-run spread of the evaluation.
+  - {token: BaseActiveInquirySD, group: added, value: conditions.active_inquiry.base.seed_sd, scale: 100,
+     decimals: 1}
+
 # Two cells that graded the same base model on the same benchmark with different
 # evaluators: rubric scores on the prompts both drew in `seed`.
 grader_comparisons:
@@ -150,10 +198,21 @@ posted:
     chatdoctor__med42-8b: chatdoctor__med42-8b__bodhi__2026-07
     medquad__mistral-small-24b: medquad__mistral-small-24b__bodhi__2026-07
     medqa__mistral-small-24b: medqa-open-preamble__mistral-small-24b__bodhi__2026-07
+  # Posted values the paper cites where it withdraws or replaces them (\statPosted<token>).
+  cite:
+    - {token: ClinicianPrompts, analysis: clinician_identified_prompts, path: count, integer: true}
+    - {token: MedQAPreambleAI, analysis: medqa_preamble_run, path: base_active_inquiry_pct, integer: true}
+    - {token: SecondPersonBase, analysis: second_person_questions, path: base_pct, decimals: 1}
+    - {token: SecondPersonLoRA, analysis: second_person_questions, path: lora_pct, decimals: 1}
+    - {token: LeakagePctLoRABodhi, analysis: format_leakage, path: lora_cot_leaked_pct, decimals: 1}
+    - {token: DiscriminationBase, analysis: discrimination_index, path: index_pp.base.estimate, decimals: 1,
+       sign: true}
+    - {token: DiscriminationLoRA, analysis: discrimination_index, path: index_pp.lora.estimate, decimals: 1,
+       sign: true}
+    - {token: FewerTokensPct, analysis: cost, path: adapter_fewer_output_tokens_pct, integer: true}
 
-# The report (bodhi_lora.report; make numbers runs it through scripts/paper_stats.py):
-# macros named by each cell's report.token, one table per analyzed cell, and the
-# cross-cell table below. Names the tables print:
+# The report (bodhi_lora.report; make numbers runs it): macros named by each cell's
+# report.token, one table per analyzed cell, and the tables below. Names the tables print:
 display:
   weights: {base: Base, lora: LoRA}
   protocols: {bodhi: '\bodhi{}'}
@@ -166,6 +225,11 @@ display:
     hedging_quality: 'Hedging quality (0--2)'
     specificity: 'Specificity (0--2)'
     red_flag_rate: 'Red-flag rate (\%)'
+    questions: 'Questions per response'
+    scope_bounded_rate: 'Scope-bounded rate (\%)'
+    specificity_rate: 'Specificity rate (\%)'
+    blanket_disclaimer: 'Blanket disclaimer (\%)'
+    appropriate_hedging: 'Appropriate hedging (\%)'
     rubric_score: 'Aggregate score (0--1)'
     neg_any: 'Harm proxy (\%)'
     chars: 'Reply length (characters)'
@@ -173,64 +237,148 @@ display:
   labels:
     needs-info-theme: 'context-seeking theme'
     emergency-theme: 'emergency-referral theme'
+  benchmarks:
+    HealthBench-Hard: HB-Hard
+    MedQA with the asking preamble: MedQA
+  module_order: [q, k, v, o, gate, up, down]
 
-# The cross-cell table of the checks that need no GPU: every cell of cross_cells gets
-# every column, "--" where the cell has no such value (for example no label on its
-# benchmark). Paths are into each cell's stats.json. A t interval prints as plus or minus
-# its half width; a bootstrap interval (ci_style: range) prints both ends, because it need
-# not be symmetric. The paper's appendix table of these checks is this table.
-#   Red-flag rate outside the emergency theme: the seed-level LoRA - Base test. It counts
-#     warranted flags too, so it is not an over-flagging rate (ANALYSIS_PLAN.md section 12,
-#     2026-10-10).
-#   Asking index: LoRA - Base on the context-seeking theme index, prompt-clustered bootstrap.
-#   Format leak: the leak share and count of LoRA+protocol, and the red-flag score of its
-#     leaked and clean replies (the protocol's own Pass 1 headers; D11).
-#   Askers gap: the rubric score of LoRA replies that ask minus those that do not,
-#     prompt-clustered bootstrap; the groups select themselves (W7).
-#   Output tokens: the serving engine's count per reply. Only the one-pass conditions have
-#     one: the two-pass conditions stored their final reply only.
-cross_table:
-  - header: '\shortstack[r]{Red-flag rate,\\other themes\\(pp)}'
-    value: discrimination.red_flag_rate.emergency-theme.contrasts.lora - base.negative_rate.seed_test.diff
-    ci: discrimination.red_flag_rate.emergency-theme.contrasts.lora - base.negative_rate.seed_test.ci95
-    scale: 100
-    decimals: 1
-    sign: true
-  - header: '\shortstack[r]{Asking\\index (pp)}'
-    value: discrimination.active_inquiry.needs-info-theme.contrasts.lora - base.diff
-    ci: discrimination.active_inquiry.needs-info-theme.contrasts.lora - base.diff_ci95
-    ci_style: range
-    scale: 100
-    decimals: 1
-    sign: true
-  - group: 'Format leak, LoRA+P'
-    header: '\shortstack[r]{Share\\(\%)}'
-    value: leakage.leak_{protocol}__analysis-format.conditions.lora+{protocol}.leaked_share
-    scale: 100
-    decimals: 1
-  - group: 'Format leak, LoRA+P'
-    header: '$n$'
-    value: leakage.leak_{protocol}__analysis-format.conditions.lora+{protocol}.n_leaked
-    decimals: 0
-  - group: 'Format leak, LoRA+P'
-    header: '\shortstack[r]{Red flag\\leaked}'
-    value: leakage.leak_{protocol}__analysis-format.conditions.lora+{protocol}.dimensions_leaked.red_flag
-    decimals: 2
-  - group: 'Format leak, LoRA+P'
-    header: '\shortstack[r]{Red flag\\clean}'
-    value: leakage.leak_{protocol}__analysis-format.conditions.lora+{protocol}.dimensions_clean.red_flag
-    decimals: 2
-  - header: '\shortstack[r]{Askers gap\\LoRA}'
-    value: askers_gap.lora.gap
-    ci: askers_gap.lora.gap_ci95
-    ci_style: range
-    decimals: 3
-    sign: true
-  - group: 'Output tokens'
-    header: Base
-    value: cost.conditions.base.tokens_engine_mean
-    decimals: 0
-  - group: 'Output tokens'
-    header: LoRA
-    value: cost.conditions.lora.tokens_engine_mean
-    decimals: 0
+# Tables with one row per cell of cross_cells, every cell with the same columns, "--"
+# where a cell has no such value. Paths are into each cell's stats.json; {protocol}
+# stands for the cell's protocol id. A t interval prints as plus or minus its half width;
+# a bootstrap interval (ci_style: range) prints both ends, because it need not be
+# symmetric. star: a p-value; the cell gets a star when it is below alpha.
+cross_tables:
+  # Table 1 of the paper: the behavior gain and the aggregate cost of every cell.
+  tab_cross_cell:
+    label_columns: [Benchmark, Base model]
+    blocks: [submitted, added-kept, set-aside]
+    columns:
+      - group: 'Active inquiry (\%)'
+        header: Base
+        value: conditions.active_inquiry.base.seed_mean
+        scale: 100
+        decimals: 1
+      - group: 'Active inquiry (\%)'
+        header: LoRA
+        value: conditions.active_inquiry.lora.seed_mean
+        scale: 100
+        decimals: 1
+      - group: 'Active inquiry (\%)'
+        header: 'LoRA $-$ Base'
+        value: contrasts.lora - base.metrics.active_inquiry.diff
+        ci: contrasts.lora - base.metrics.active_inquiry.ci95
+        star: contrasts.lora - base.metrics.active_inquiry.p_holm_within_contrast
+        scale: 100
+        decimals: 1
+        sign: true
+      - group: 'LoRA $-$ Base'
+        header: Context-seeking
+        value: contrasts.lora - base.metrics.context_seeking.diff
+        ci: contrasts.lora - base.metrics.context_seeking.ci95
+        star: contrasts.lora - base.metrics.context_seeking.p_holm_within_contrast
+        decimals: 2
+        sign: true
+      - group: 'LoRA $-$ Base'
+        header: '\shortstack[r]{Red-flag\\identification}'
+        value: contrasts.lora - base.metrics.red_flag.diff
+        ci: contrasts.lora - base.metrics.red_flag.ci95
+        star: contrasts.lora - base.metrics.red_flag.p_holm_within_contrast
+        decimals: 2
+        sign: true
+      - group: 'LoRA $-$ Base'
+        header: '\shortstack[r]{Scope\\bounding}'
+        value: contrasts.lora - base.metrics.scope_bounding.diff
+        ci: contrasts.lora - base.metrics.scope_bounding.ci95
+        star: contrasts.lora - base.metrics.scope_bounding.p_holm_within_contrast
+        decimals: 2
+        sign: true
+      - group: 'LoRA $-$ Base'
+        header: Aggregate
+        value: contrasts.lora - base.metrics.rubric_score.diff
+        ci: contrasts.lora - base.metrics.rubric_score.ci95
+        star: contrasts.lora - base.metrics.rubric_score.p
+        decimals: 3
+        sign: true
+  # The filter and training record of each trained cell (Table F.2 of the paper).
+  tab_cell_filter:
+    label_columns: [Benchmark, Base model]
+    blocks: [added-kept, set-aside]
+    skip_missing: true
+    columns:
+      - {header: '$\tau$', value: filter.recorded.tau, decimals: 1}
+      - {header: Graded, value: filter.recorded.graded, format: int}
+      - {header: 'Kept (\%)', value: filter.kept_pct_of_graded, decimals: 1}
+      - {header: Train, value: filter.recorded.train, format: int}
+      - {header: Val, value: filter.recorded.val, format: int}
+      - {header: Steps, value: recipe.max_steps, format: int}
+      - {header: Epoch, value: recipe.best_epoch_min, upper: recipe.best_epoch_max, format: span}
+  # The cross-cell table of the checks that need no GPU: every cell of cross_cells gets
+  # every column, "--" where the cell has no such value (for example no label on its
+  # benchmark). Paths are into each cell's stats.json. A t interval prints as plus or minus
+  # its half width; a bootstrap interval (ci_style: range) prints both ends, because it need
+  # not be symmetric. The paper's appendix table of these checks is this table.
+  #   Red-flag rate outside the emergency theme: the seed-level LoRA - Base test. It counts
+  #     warranted flags too, so it is not an over-flagging rate (ANALYSIS_PLAN.md section 12,
+  #     2026-10-10).
+  #   Asking index: LoRA - Base on the context-seeking theme index, prompt-clustered bootstrap.
+  #   Format leak: the leak share and count of LoRA+protocol, and the red-flag score of its
+  #     leaked and clean replies (the protocol's own Pass 1 headers; D11).
+  #   Askers gap: the rubric score of LoRA replies that ask minus those that do not,
+  #     prompt-clustered bootstrap; the groups select themselves (W7).
+  #   Output tokens: the serving engine's count per reply. Only the one-pass conditions have
+  #     one: the two-pass conditions stored their final reply only.
+  tab_cross_cell_checks:
+    columns:
+      - header: '\shortstack[r]{Red-flag rate,\\other themes\\(pp)}'
+        value: discrimination.red_flag_rate.emergency-theme.contrasts.lora - base.negative_rate.seed_test.diff
+        ci: discrimination.red_flag_rate.emergency-theme.contrasts.lora - base.negative_rate.seed_test.ci95
+        scale: 100
+        decimals: 1
+        sign: true
+      - header: '\shortstack[r]{Asking\\index (pp)}'
+        value: discrimination.active_inquiry.needs-info-theme.contrasts.lora - base.diff
+        ci: discrimination.active_inquiry.needs-info-theme.contrasts.lora - base.diff_ci95
+        ci_style: range
+        scale: 100
+        decimals: 1
+        sign: true
+      - group: 'Format leak, LoRA+P'
+        header: '\shortstack[r]{Share\\(\%)}'
+        value: leakage.leak_{protocol}__analysis-format.conditions.lora+{protocol}.leaked_share
+        scale: 100
+        decimals: 1
+      - group: 'Format leak, LoRA+P'
+        header: '$n$'
+        value: leakage.leak_{protocol}__analysis-format.conditions.lora+{protocol}.n_leaked
+        decimals: 0
+      - group: 'Format leak, LoRA+P'
+        header: '\shortstack[r]{Red flag\\leaked}'
+        value: leakage.leak_{protocol}__analysis-format.conditions.lora+{protocol}.dimensions_leaked.red_flag
+        decimals: 2
+      - group: 'Format leak, LoRA+P'
+        header: '\shortstack[r]{Red flag\\clean}'
+        value: leakage.leak_{protocol}__analysis-format.conditions.lora+{protocol}.dimensions_clean.red_flag
+        decimals: 2
+      - header: '\shortstack[r]{Askers gap\\LoRA}'
+        value: askers_gap.lora.gap
+        ci: askers_gap.lora.gap_ci95
+        ci_style: range
+        decimals: 3
+        sign: true
+      - group: 'Output tokens'
+        header: Base
+        value: cost.conditions.base.tokens_engine_mean
+        decimals: 0
+      - group: 'Output tokens'
+        header: LoRA
+        value: cost.conditions.lora.tokens_engine_mean
+        decimals: 0
+
+# Every cell's metrics in the four conditions and two contrasts, a few cells to a table
+# (tab_cell_detail_<n>; Appendix I of the paper).
+cell_detail_tables:
+  per_table: 4
+  blocks: [submitted, added-kept, set-aside]
+  contrasts: [lora - base, 'lora+{protocol} - lora']
+  metrics: [active_inquiry, uncertainty_ack, context_seeking, red_flag, scope_bounding, hedging_quality,
+            specificity, rubric_score]

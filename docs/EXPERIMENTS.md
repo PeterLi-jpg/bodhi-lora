@@ -144,7 +144,7 @@ REPLY: line, so the H5 cell gets the same leak columns.
 **E05. What the aggregate drop is made of.** Answers HomM-final (consistent aggregate
 drops), withdrawals W7 and W8. Per cell: LoRA minus Base on each HealthBench rubric axis,
 the askers gap, and the cross-cell Holm family of the aggregate drops. Exists in part
-(`rebuttal/analyses/quality_drop.py`, the askers gap in `cell_values.py`). GPU: no.
+(`503b975:rebuttal/analyses/quality_drop.py`, the askers gap in `503b975:rebuttal/analyses/cell_values.py`). GPU: no.
 Status: built (axes, askers gap, and Holm over the cells of each group).
 
 **E06. Harm proxy.** Answers C33 (in part), HomM-final, FzpA-F2. Share of responses that

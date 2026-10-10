@@ -5918,6 +5918,7 @@
  },
  "evaluator": "llama-3.1-8b-nous",
  "filter": {
+  "kept_pct_of_graded": 99.881,
   "kept_share_of_graded": 0.99881,
   "recorded": {
    "graded": 4200,
