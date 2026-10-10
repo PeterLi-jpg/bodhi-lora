@@ -29,7 +29,7 @@
         "n_grade_errors": 0
       }
     },
-    "file": "/Users/anqipeterli/Desktop/Substrate Labs/Research/BODHI/_wt/analysis2/results/healthbench__biomistral-7b__bodhi__2026-07/seed_99/grade/epistemic__llama-3.1-8b-nous.json",
+    "file": "results/healthbench__biomistral-7b__bodhi__2026-07/seed_99/grade/epistemic__llama-3.1-8b-nous.json",
     "present": true
   },
   "n_examples": {
@@ -46,11 +46,11 @@
   },
   "seed": 99,
   "sources": {
-    "/Users/anqipeterli/Desktop/Substrate Labs/Research/BODHI/_wt/analysis2/results/healthbench__biomistral-7b__bodhi__2026-07/seed_99/eval/base+bodhi.json": "6185496ef50138a8ca6f6e089f61d871b9f5db7ee58eeff71268f4e8c9a94e52",
-    "/Users/anqipeterli/Desktop/Substrate Labs/Research/BODHI/_wt/analysis2/results/healthbench__biomistral-7b__bodhi__2026-07/seed_99/eval/base.json": "132034d36e34e575d0b02bdcd081784030ef7ab88a6c079e0e29b391b5ecf644",
-    "/Users/anqipeterli/Desktop/Substrate Labs/Research/BODHI/_wt/analysis2/results/healthbench__biomistral-7b__bodhi__2026-07/seed_99/eval/lora+bodhi.json": "caead8267dbe013270b368629bb572235cd85becbd93a797abe43f197ad9e8ea",
-    "/Users/anqipeterli/Desktop/Substrate Labs/Research/BODHI/_wt/analysis2/results/healthbench__biomistral-7b__bodhi__2026-07/seed_99/eval/lora.json": "11a921de3ec61451b6995d30736feb2de93f390c8f880444bcf474cc51eb0377",
-    "/Users/anqipeterli/Desktop/Substrate Labs/Research/BODHI/_wt/analysis2/results/healthbench__biomistral-7b__bodhi__2026-07/seed_99/grade/epistemic__llama-3.1-8b-nous.json": "91ca050f53b697ee383e44c29328b93f48bdfb809d4ad986a03c4bb8bb170d3c"
+    "results/healthbench__biomistral-7b__bodhi__2026-07/seed_99/eval/base+bodhi.json": "6185496ef50138a8ca6f6e089f61d871b9f5db7ee58eeff71268f4e8c9a94e52",
+    "results/healthbench__biomistral-7b__bodhi__2026-07/seed_99/eval/base.json": "132034d36e34e575d0b02bdcd081784030ef7ab88a6c079e0e29b391b5ecf644",
+    "results/healthbench__biomistral-7b__bodhi__2026-07/seed_99/eval/lora+bodhi.json": "caead8267dbe013270b368629bb572235cd85becbd93a797abe43f197ad9e8ea",
+    "results/healthbench__biomistral-7b__bodhi__2026-07/seed_99/eval/lora.json": "11a921de3ec61451b6995d30736feb2de93f390c8f880444bcf474cc51eb0377",
+    "results/healthbench__biomistral-7b__bodhi__2026-07/seed_99/grade/epistemic__llama-3.1-8b-nous.json": "91ca050f53b697ee383e44c29328b93f48bdfb809d4ad986a03c4bb8bb170d3c"
   },
   "tokenizer": "tokenizer.json of BioMistral/BioMistral-7B at 9a11e1ffa817c211cbb52ee1fb312dc6b61b40a5 is not in the local Hugging Face cache (fetch it with: huggingface-cli download BioMistral/BioMistral-7B tokenizer.json --revision 9a11e1ffa817c211cbb52ee1fb312dc6b61b40a5)"
 }

@@ -29,7 +29,7 @@
         "n_grade_errors": 0
       }
     },
-    "file": "/Users/anqipeterli/Desktop/Substrate Labs/Research/BODHI/_wt/analysis2/results/healthbench__med42-8b__bodhi__2026-07/seed_42/grade/epistemic__llama-3.1-8b-nous.json",
+    "file": "results/healthbench__med42-8b__bodhi__2026-07/seed_42/grade/epistemic__llama-3.1-8b-nous.json",
     "present": true
   },
   "n_examples": {
@@ -46,11 +46,11 @@
   },
   "seed": 42,
   "sources": {
-    "/Users/anqipeterli/Desktop/Substrate Labs/Research/BODHI/_wt/analysis2/results/healthbench__med42-8b__bodhi__2026-07/seed_42/eval/base+bodhi.json": "b5a9ca0b777f957528e9857f6b4288c8dde6cf68c8b886beef8fbf160369ba58",
-    "/Users/anqipeterli/Desktop/Substrate Labs/Research/BODHI/_wt/analysis2/results/healthbench__med42-8b__bodhi__2026-07/seed_42/eval/base.json": "fb1cd5aabf7dec9f338ab638991a6098145ab44d4b2f0fc3ba1448adc1fe9a4b",
-    "/Users/anqipeterli/Desktop/Substrate Labs/Research/BODHI/_wt/analysis2/results/healthbench__med42-8b__bodhi__2026-07/seed_42/eval/lora+bodhi.json": "25b9efb113d3b88ba3e536c1c602e3e4bacfb256d19149928b1bbdfd46f456b2",
-    "/Users/anqipeterli/Desktop/Substrate Labs/Research/BODHI/_wt/analysis2/results/healthbench__med42-8b__bodhi__2026-07/seed_42/eval/lora.json": "60a04359965579b06c77828b209f733e57580ae837c407a778b34be9bc20ad97",
-    "/Users/anqipeterli/Desktop/Substrate Labs/Research/BODHI/_wt/analysis2/results/healthbench__med42-8b__bodhi__2026-07/seed_42/grade/epistemic__llama-3.1-8b-nous.json": "d17b4c274d6a511f5f9732bc7187277691ae74131d6b492d0730777ccfd654b3"
+    "results/healthbench__med42-8b__bodhi__2026-07/seed_42/eval/base+bodhi.json": "b5a9ca0b777f957528e9857f6b4288c8dde6cf68c8b886beef8fbf160369ba58",
+    "results/healthbench__med42-8b__bodhi__2026-07/seed_42/eval/base.json": "fb1cd5aabf7dec9f338ab638991a6098145ab44d4b2f0fc3ba1448adc1fe9a4b",
+    "results/healthbench__med42-8b__bodhi__2026-07/seed_42/eval/lora+bodhi.json": "25b9efb113d3b88ba3e536c1c602e3e4bacfb256d19149928b1bbdfd46f456b2",
+    "results/healthbench__med42-8b__bodhi__2026-07/seed_42/eval/lora.json": "60a04359965579b06c77828b209f733e57580ae837c407a778b34be9bc20ad97",
+    "results/healthbench__med42-8b__bodhi__2026-07/seed_42/grade/epistemic__llama-3.1-8b-nous.json": "d17b4c274d6a511f5f9732bc7187277691ae74131d6b492d0730777ccfd654b3"
   },
   "tokenizer": "tokenizer.json of m42-health/Llama3-Med42-8B at ceab7e7ee4b9dbde7ba82867f34274db51487d83 is not in the local Hugging Face cache (fetch it with: huggingface-cli download m42-health/Llama3-Med42-8B tokenizer.json --revision ceab7e7ee4b9dbde7ba82867f34274db51487d83)"
 }

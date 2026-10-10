@@ -578,53 +578,6 @@
     ]
    }
   },
-  "escalation": {
-   "base": {
-    "n_pooled": 200,
-    "n_seeds": 1,
-    "per_seed": {
-     "42": 0.145
-    },
-    "pooled_mean": 0.145,
-    "seed_ci95_t": [
-     null,
-     null
-    ],
-    "seed_mean": 0.145,
-    "seed_sd": null,
-    "seeds_missing": []
-   },
-   "base+bodhi": {
-    "n_pooled": 200,
-    "n_seeds": 1,
-    "per_seed": {
-     "42": 0.245
-    },
-    "pooled_mean": 0.245,
-    "seed_ci95_t": [
-     null,
-     null
-    ],
-    "seed_mean": 0.245,
-    "seed_sd": null,
-    "seeds_missing": []
-   },
-   "lora": {
-    "n_pooled": 200,
-    "n_seeds": 1,
-    "per_seed": {
-     "42": 0.2
-    },
-    "pooled_mean": 0.2,
-    "seed_ci95_t": [
-     null,
-     null
-    ],
-    "seed_mean": 0.2,
-    "seed_sd": null,
-    "seeds_missing": []
-   }
-  },
   "hedging_quality": {
    "base": {
     "n_pooled": 0,
@@ -1102,53 +1055,6 @@
     ]
    }
   },
-  "second_person_q": {
-   "base": {
-    "n_pooled": 200,
-    "n_seeds": 1,
-    "per_seed": {
-     "42": 0.185
-    },
-    "pooled_mean": 0.185,
-    "seed_ci95_t": [
-     null,
-     null
-    ],
-    "seed_mean": 0.185,
-    "seed_sd": null,
-    "seeds_missing": []
-   },
-   "base+bodhi": {
-    "n_pooled": 200,
-    "n_seeds": 1,
-    "per_seed": {
-     "42": 0.375
-    },
-    "pooled_mean": 0.375,
-    "seed_ci95_t": [
-     null,
-     null
-    ],
-    "seed_mean": 0.375,
-    "seed_sd": null,
-    "seeds_missing": []
-   },
-   "lora": {
-    "n_pooled": 200,
-    "n_seeds": 1,
-    "per_seed": {
-     "42": 0.28
-    },
-    "pooled_mean": 0.28,
-    "seed_ci95_t": [
-     null,
-     null
-    ],
-    "seed_mean": 0.28,
-    "seed_sd": null,
-    "seeds_missing": []
-   }
-  },
   "specificity": {
    "base": {
     "n_pooled": 0,
@@ -1564,26 +1470,6 @@
       42
      ]
     },
-    "escalation": {
-     "ci90": [
-      null,
-      null
-     ],
-     "ci95": [
-      null,
-      null
-     ],
-     "df": 0,
-     "diff": 0.1,
-     "n_seeds": 1,
-     "not_measured_test": "one seed: no interval and no test",
-     "p": null,
-     "per_seed_diff": [
-      0.1
-     ],
-     "seeds_missing": [],
-     "t": null
-    },
     "hedging_quality": {
      "n_seeds": 0,
      "not_measured": "no value in seed(s) [42]",
@@ -1702,26 +1588,6 @@
      "seeds_missing": [
       42
      ]
-    },
-    "second_person_q": {
-     "ci90": [
-      null,
-      null
-     ],
-     "ci95": [
-      null,
-      null
-     ],
-     "df": 0,
-     "diff": 0.19,
-     "n_seeds": 1,
-     "not_measured_test": "one seed: no interval and no test",
-     "p": null,
-     "per_seed_diff": [
-      0.19
-     ],
-     "seeds_missing": [],
-     "t": null
     },
     "specificity": {
      "n_seeds": 0,
@@ -1924,26 +1790,6 @@
       42
      ]
     },
-    "escalation": {
-     "ci90": [
-      null,
-      null
-     ],
-     "ci95": [
-      null,
-      null
-     ],
-     "df": 0,
-     "diff": 0.055,
-     "n_seeds": 1,
-     "not_measured_test": "one seed: no interval and no test",
-     "p": null,
-     "per_seed_diff": [
-      0.055
-     ],
-     "seeds_missing": [],
-     "t": null
-    },
     "hedging_quality": {
      "n_seeds": 0,
      "not_measured": "no value in seed(s) [42]",
@@ -2062,26 +1908,6 @@
      "seeds_missing": [
       42
      ]
-    },
-    "second_person_q": {
-     "ci90": [
-      null,
-      null
-     ],
-     "ci95": [
-      null,
-      null
-     ],
-     "df": 0,
-     "diff": 0.095,
-     "n_seeds": 1,
-     "not_measured_test": "one seed: no interval and no test",
-     "p": null,
-     "per_seed_diff": [
-      0.095
-     ],
-     "seeds_missing": [],
-     "t": null
     },
     "specificity": {
      "n_seeds": 0,
@@ -2284,26 +2110,6 @@
       42
      ]
     },
-    "escalation": {
-     "ci90": [
-      null,
-      null
-     ],
-     "ci95": [
-      null,
-      null
-     ],
-     "df": 0,
-     "diff": -0.045,
-     "n_seeds": 1,
-     "not_measured_test": "one seed: no interval and no test",
-     "p": null,
-     "per_seed_diff": [
-      -0.045
-     ],
-     "seeds_missing": [],
-     "t": null
-    },
     "hedging_quality": {
      "n_seeds": 0,
      "not_measured": "no value in seed(s) [42]",
@@ -2422,26 +2228,6 @@
      "seeds_missing": [
       42
      ]
-    },
-    "second_person_q": {
-     "ci90": [
-      null,
-      null
-     ],
-     "ci95": [
-      null,
-      null
-     ],
-     "df": 0,
-     "diff": -0.095,
-     "n_seeds": 1,
-     "not_measured_test": "one seed: no interval and no test",
-     "p": null,
-     "per_seed_diff": [
-      -0.095
-     ],
-     "seeds_missing": [],
-     "t": null
     },
     "specificity": {
      "n_seeds": 0,
@@ -2640,441 +2426,11 @@
   "active_inquiry": {
    "needs-info-theme": {
     "not_measured": "both groups are not present among the evaluated prompts"
-   },
-   "needs-info-theme-or-rubric": {
-    "not_measured": "both groups are not present among the evaluated prompts"
    }
   },
-  "escalation": {
-   "red-flag-at-stake": {
-    "conditions": {
-     "base": {
-      "discrimination": 0.218897,
-      "discrimination_ci95": [
-       0.12581,
-       0.320789
-      ],
-      "n_negative": 103,
-      "n_positive": 97,
-      "n_seeds": 1,
-      "negative_rate": 0.038835,
-      "negative_rate_ci95": [
-       0.00925926,
-       0.0808081
-      ],
-      "negative_rate_seed": {
-       "n_seeds": 1,
-       "per_seed": {
-        "42": 0.038835
-       },
-       "seed_ci95_t": [
-        null,
-        null
-       ],
-       "seed_mean": 0.038835,
-       "seeds_missing": []
-      },
-      "odds_ratio": 8.59375,
-      "odds_ratio_ci95": [
-       3.42561,
-       37.7194
-      ],
-      "per_seed": {
-       "42": 0.218897
-      },
-      "positive_rate": 0.257732,
-      "positive_rate_ci95": [
-       0.174419,
-       0.352289
-      ],
-      "positive_rate_seed": {
-       "n_seeds": 1,
-       "per_seed": {
-        "42": 0.257732
-       },
-       "seed_ci95_t": [
-        null,
-        null
-       ],
-       "seed_mean": 0.257732,
-       "seeds_missing": []
-      },
-      "seed_ci95_t": [
-       null,
-       null
-      ],
-      "seed_mean": 0.218897,
-      "seeds_missing": []
-     },
-     "base+bodhi": {
-      "discrimination": 0.304974,
-      "discrimination_ci95": [
-       0.190823,
-       0.419579
-      ],
-      "n_negative": 103,
-      "n_positive": 97,
-      "n_seeds": 1,
-      "negative_rate": 0.0970874,
-      "negative_rate_ci95": [
-       0.0444395,
-       0.156863
-      ],
-      "negative_rate_seed": {
-       "n_seeds": 1,
-       "per_seed": {
-        "42": 0.0970874
-       },
-       "seed_ci95_t": [
-        null,
-        null
-       ],
-       "seed_mean": 0.0970874,
-       "seeds_missing": []
-      },
-      "odds_ratio": 6.25345,
-      "odds_ratio_ci95": [
-       3.10053,
-       15.6695
-      ],
-      "per_seed": {
-       "42": 0.304974
-      },
-      "positive_rate": 0.402062,
-      "positive_rate_ci95": [
-       0.306931,
-       0.505051
-      ],
-      "positive_rate_seed": {
-       "n_seeds": 1,
-       "per_seed": {
-        "42": 0.402062
-       },
-       "seed_ci95_t": [
-        null,
-        null
-       ],
-       "seed_mean": 0.402062,
-       "seeds_missing": []
-      },
-      "seed_ci95_t": [
-       null,
-       null
-      ],
-      "seed_mean": 0.304974,
-      "seeds_missing": []
-     },
-     "lora": {
-      "discrimination": 0.272245,
-      "discrimination_ci95": [
-       0.167315,
-       0.377471
-      ],
-      "n_negative": 103,
-      "n_positive": 97,
-      "n_seeds": 1,
-      "negative_rate": 0.0679612,
-      "negative_rate_ci95": [
-       0.0256098,
-       0.122646
-      ],
-      "negative_rate_seed": {
-       "n_seeds": 1,
-       "per_seed": {
-        "42": 0.0679612
-       },
-       "seed_ci95_t": [
-        null,
-        null
-       ],
-       "seed_mean": 0.0679612,
-       "seeds_missing": []
-      },
-      "odds_ratio": 7.07143,
-      "odds_ratio_ci95": [
-       3.2724,
-       22.0617
-      ],
-      "per_seed": {
-       "42": 0.272245
-      },
-      "positive_rate": 0.340206,
-      "positive_rate_ci95": [
-       0.25,
-       0.43617
-      ],
-      "positive_rate_seed": {
-       "n_seeds": 1,
-       "per_seed": {
-        "42": 0.340206
-       },
-       "seed_ci95_t": [
-        null,
-        null
-       ],
-       "seed_mean": 0.340206,
-       "seeds_missing": []
-      },
-      "seed_ci95_t": [
-       null,
-       null
-      ],
-      "seed_mean": 0.272245,
-      "seeds_missing": []
-     }
-    },
-    "contrasts": {
-     "base+bodhi - base": {
-      "diff": 0.0860775,
-      "diff_ci95": [
-       -0.0497512,
-       0.21629
-      ],
-      "negative_rate": {
-       "diff": 0.0582524,
-       "diff_ci95": [
-        0.0,
-        0.121495
-       ],
-       "seed_test": {
-        "ci90": [
-         null,
-         null
-        ],
-        "ci95": [
-         null,
-         null
-        ],
-        "df": 0,
-        "diff": 0.0582524,
-        "n_seeds": 1,
-        "not_measured_test": "one seed: no interval and no test",
-        "p": null,
-        "per_seed_diff": [
-         0.0582524
-        ],
-        "seeds_missing": [],
-        "t": null
-       }
-      },
-      "positive_rate": {
-       "diff": 0.14433,
-       "diff_ci95": [
-        0.0217333,
-        0.26089
-       ],
-       "seed_test": {
-        "ci90": [
-         null,
-         null
-        ],
-        "ci95": [
-         null,
-         null
-        ],
-        "df": 0,
-        "diff": 0.14433,
-        "n_seeds": 1,
-        "not_measured_test": "one seed: no interval and no test",
-        "p": null,
-        "per_seed_diff": [
-         0.14433
-        ],
-        "seeds_missing": [],
-        "t": null
-       }
-      },
-      "seed_test": {
-       "ci90": [
-        null,
-        null
-       ],
-       "ci95": [
-        null,
-        null
-       ],
-       "df": 0,
-       "diff": 0.0860775,
-       "n_seeds": 1,
-       "not_measured_test": "one seed: no interval and no test",
-       "p": null,
-       "per_seed_diff": [
-        0.0860775
-       ],
-       "seeds_missing": [],
-       "t": null
-      }
-     },
-     "lora - base": {
-      "diff": 0.053348,
-      "diff_ci95": [
-       -0.0485437,
-       0.153796
-      ],
-      "negative_rate": {
-       "diff": 0.0291262,
-       "diff_ci95": [
-        -0.0102041,
-        0.0750067
-       ],
-       "seed_test": {
-        "ci90": [
-         null,
-         null
-        ],
-        "ci95": [
-         null,
-         null
-        ],
-        "df": 0,
-        "diff": 0.0291262,
-        "n_seeds": 1,
-        "not_measured_test": "one seed: no interval and no test",
-        "p": null,
-        "per_seed_diff": [
-         0.0291262
-        ],
-        "seeds_missing": [],
-        "t": null
-       }
-      },
-      "positive_rate": {
-       "diff": 0.0824742,
-       "diff_ci95": [
-        -0.00990099,
-        0.171436
-       ],
-       "seed_test": {
-        "ci90": [
-         null,
-         null
-        ],
-        "ci95": [
-         null,
-         null
-        ],
-        "df": 0,
-        "diff": 0.0824742,
-        "n_seeds": 1,
-        "not_measured_test": "one seed: no interval and no test",
-        "p": null,
-        "per_seed_diff": [
-         0.0824742
-        ],
-        "seeds_missing": [],
-        "t": null
-       }
-      },
-      "seed_test": {
-       "ci90": [
-        null,
-        null
-       ],
-       "ci95": [
-        null,
-        null
-       ],
-       "df": 0,
-       "diff": 0.053348,
-       "n_seeds": 1,
-       "not_measured_test": "one seed: no interval and no test",
-       "p": null,
-       "per_seed_diff": [
-        0.053348
-       ],
-       "seeds_missing": [],
-       "t": null
-      }
-     },
-     "lora - base+bodhi": {
-      "diff": -0.0327295,
-      "diff_ci95": [
-       -0.154761,
-       0.0921474
-      ],
-      "negative_rate": {
-       "diff": -0.0291262,
-       "diff_ci95": [
-        -0.0816327,
-        0.0196078
-       ],
-       "seed_test": {
-        "ci90": [
-         null,
-         null
-        ],
-        "ci95": [
-         null,
-         null
-        ],
-        "df": 0,
-        "diff": -0.0291262,
-        "n_seeds": 1,
-        "not_measured_test": "one seed: no interval and no test",
-        "p": null,
-        "per_seed_diff": [
-         -0.0291262
-        ],
-        "seeds_missing": [],
-        "t": null
-       }
-      },
-      "positive_rate": {
-       "diff": -0.0618557,
-       "diff_ci95": [
-        -0.179259,
-        0.0537634
-       ],
-       "seed_test": {
-        "ci90": [
-         null,
-         null
-        ],
-        "ci95": [
-         null,
-         null
-        ],
-        "df": 0,
-        "diff": -0.0618557,
-        "n_seeds": 1,
-        "not_measured_test": "one seed: no interval and no test",
-        "p": null,
-        "per_seed_diff": [
-         -0.0618557
-        ],
-        "seeds_missing": [],
-        "t": null
-       }
-      },
-      "seed_test": {
-       "ci90": [
-        null,
-        null
-       ],
-       "ci95": [
-        null,
-        null
-       ],
-       "df": 0,
-       "diff": -0.0327295,
-       "n_seeds": 1,
-       "not_measured_test": "one seed: no interval and no test",
-       "p": null,
-       "per_seed_diff": [
-        -0.0327295
-       ],
-       "seeds_missing": [],
-       "t": null
-      }
-     }
-    },
-    "exploratory": true,
-    "n_prompts": {
-     "negative": 103,
-     "positive": 97
-    },
-    "source": "HealthBench theme tags and the authors' keyword rule over rubric text",
-    "timing": "post_hoc"
+  "red_flag_rate": {
+   "emergency-theme": {
+    "not_measured": "both groups are not present among the evaluated prompts"
    }
   }
  },
@@ -3088,49 +2444,6 @@
  "judges": {},
  "leakage": {
   "leak_bodhi__analysis-format": {
-   "conditions": {
-    "base": {
-     "chars_median_clean": null,
-     "chars_median_leaked": null,
-     "dimensions_clean": null,
-     "dimensions_leaked": null,
-     "leaked_share": null,
-     "n_clean": 0,
-     "n_completions": 200,
-     "n_leaked": 0,
-     "n_leaked_completions": 1,
-     "n_scored": 0
-    },
-    "base+bodhi": {
-     "chars_median_clean": null,
-     "chars_median_leaked": null,
-     "dimensions_clean": null,
-     "dimensions_leaked": null,
-     "leaked_share": null,
-     "n_clean": 0,
-     "n_completions": 200,
-     "n_leaked": 0,
-     "n_leaked_completions": 14,
-     "n_scored": 0
-    },
-    "lora": {
-     "chars_median_clean": null,
-     "chars_median_leaked": null,
-     "dimensions_clean": null,
-     "dimensions_leaked": null,
-     "leaked_share": null,
-     "n_clean": 0,
-     "n_completions": 200,
-     "n_leaked": 0,
-     "n_leaked_completions": 0,
-     "n_scored": 0
-    }
-   },
-   "protocol": "bodhi",
-   "rule": "analysis-format",
-   "threshold": 2
-  },
-  "leak_bodhi__pass1-headers": {
    "conditions": {
     "base": {
      "chars_median_clean": null,
@@ -3170,7 +2483,7 @@
     }
    },
    "protocol": "bodhi",
-   "rule": "pass1-headers",
+   "rule": "analysis-format",
    "threshold": 2
   }
  },
@@ -3232,11 +2545,6 @@
    "secondary": false,
    "source": "epistemic"
   },
-  "escalation": {
-   "kind": "rate",
-   "secondary": true,
-   "source": "response"
-  },
   "hedging_quality": {
    "kind": "score02",
    "secondary": false,
@@ -3282,11 +2590,6 @@
    "secondary": false,
    "source": "epistemic"
   },
-  "second_person_q": {
-   "kind": "rate",
-   "secondary": true,
-   "source": "response"
-  },
   "specificity": {
    "kind": "score02",
    "secondary": false,
@@ -3322,6 +2625,18 @@
      "unlabelled": 185
     }
    },
+   "emergency-theme": {
+    "evaluated": {
+     "negative": 187,
+     "positive": 13,
+     "unlabelled": 0
+    },
+    "population": {
+     "negative": 187,
+     "positive": 13,
+     "unlabelled": 0
+    }
+   },
    "emergent-physician": {
     "evaluated": {
      "negative": 2,
@@ -3355,30 +2670,6 @@
     "population": {
      "negative": 164,
      "positive": 36,
-     "unlabelled": 0
-    }
-   },
-   "needs-info-theme-or-rubric": {
-    "evaluated": {
-     "negative": 48,
-     "positive": 152,
-     "unlabelled": 0
-    },
-    "population": {
-     "negative": 48,
-     "positive": 152,
-     "unlabelled": 0
-    }
-   },
-   "red-flag-at-stake": {
-    "evaluated": {
-     "negative": 103,
-     "positive": 97,
-     "unlabelled": 0
-    },
-    "population": {
-     "negative": 103,
-     "positive": 97,
      "unlabelled": 0
     }
    }

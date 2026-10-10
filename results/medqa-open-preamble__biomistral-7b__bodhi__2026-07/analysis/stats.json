@@ -551,68 +551,6 @@
     ]
    }
   },
-  "escalation": {
-   "base": {
-    "n_pooled": 10,
-    "n_seeds": 1,
-    "per_seed": {
-     "42": 0.0
-    },
-    "pooled_mean": 0.0,
-    "seed_ci95_t": [
-     null,
-     null
-    ],
-    "seed_mean": 0.0,
-    "seed_sd": null,
-    "seeds_missing": []
-   },
-   "base+bodhi": {
-    "n_pooled": 10,
-    "n_seeds": 1,
-    "per_seed": {
-     "42": 0.1
-    },
-    "pooled_mean": 0.1,
-    "seed_ci95_t": [
-     null,
-     null
-    ],
-    "seed_mean": 0.1,
-    "seed_sd": null,
-    "seeds_missing": []
-   },
-   "lora": {
-    "n_pooled": 10,
-    "n_seeds": 1,
-    "per_seed": {
-     "42": 0.0
-    },
-    "pooled_mean": 0.0,
-    "seed_ci95_t": [
-     null,
-     null
-    ],
-    "seed_mean": 0.0,
-    "seed_sd": null,
-    "seeds_missing": []
-   },
-   "lora+bodhi": {
-    "n_pooled": 10,
-    "n_seeds": 1,
-    "per_seed": {
-     "42": 0.2
-    },
-    "pooled_mean": 0.2,
-    "seed_ci95_t": [
-     null,
-     null
-    ],
-    "seed_mean": 0.2,
-    "seed_sd": null,
-    "seeds_missing": []
-   }
-  },
   "hedging_quality": {
    "base": {
     "n_pooled": 0,
@@ -1243,68 +1181,6 @@
     ]
    }
   },
-  "second_person_q": {
-   "base": {
-    "n_pooled": 10,
-    "n_seeds": 1,
-    "per_seed": {
-     "42": 0.0
-    },
-    "pooled_mean": 0.0,
-    "seed_ci95_t": [
-     null,
-     null
-    ],
-    "seed_mean": 0.0,
-    "seed_sd": null,
-    "seeds_missing": []
-   },
-   "base+bodhi": {
-    "n_pooled": 10,
-    "n_seeds": 1,
-    "per_seed": {
-     "42": 0.0
-    },
-    "pooled_mean": 0.0,
-    "seed_ci95_t": [
-     null,
-     null
-    ],
-    "seed_mean": 0.0,
-    "seed_sd": null,
-    "seeds_missing": []
-   },
-   "lora": {
-    "n_pooled": 10,
-    "n_seeds": 1,
-    "per_seed": {
-     "42": 0.0
-    },
-    "pooled_mean": 0.0,
-    "seed_ci95_t": [
-     null,
-     null
-    ],
-    "seed_mean": 0.0,
-    "seed_sd": null,
-    "seeds_missing": []
-   },
-   "lora+bodhi": {
-    "n_pooled": 10,
-    "n_seeds": 1,
-    "per_seed": {
-     "42": 0.0
-    },
-    "pooled_mean": 0.0,
-    "seed_ci95_t": [
-     null,
-     null
-    ],
-    "seed_mean": 0.0,
-    "seed_sd": null,
-    "seeds_missing": []
-   }
-  },
   "specificity": {
    "base": {
     "n_pooled": 0,
@@ -1738,26 +1614,6 @@
       42
      ]
     },
-    "escalation": {
-     "ci90": [
-      null,
-      null
-     ],
-     "ci95": [
-      null,
-      null
-     ],
-     "df": 0,
-     "diff": 0.1,
-     "n_seeds": 1,
-     "not_measured_test": "one seed: no interval and no test",
-     "p": null,
-     "per_seed_diff": [
-      0.1
-     ],
-     "seeds_missing": [],
-     "t": null
-    },
     "hedging_quality": {
      "n_seeds": 0,
      "not_measured": "no value in seed(s) [42]",
@@ -1876,26 +1732,6 @@
      "seeds_missing": [
       42
      ]
-    },
-    "second_person_q": {
-     "ci90": [
-      null,
-      null
-     ],
-     "ci95": [
-      null,
-      null
-     ],
-     "df": 0,
-     "diff": 0.0,
-     "n_seeds": 1,
-     "not_measured_test": "one seed: no interval and no test",
-     "p": null,
-     "per_seed_diff": [
-      0.0
-     ],
-     "seeds_missing": [],
-     "t": null
     },
     "specificity": {
      "n_seeds": 0,
@@ -2038,26 +1874,6 @@
       42
      ]
     },
-    "escalation": {
-     "ci90": [
-      null,
-      null
-     ],
-     "ci95": [
-      null,
-      null
-     ],
-     "df": 0,
-     "diff": 0.0,
-     "n_seeds": 1,
-     "not_measured_test": "one seed: no interval and no test",
-     "p": null,
-     "per_seed_diff": [
-      0.0
-     ],
-     "seeds_missing": [],
-     "t": null
-    },
     "hedging_quality": {
      "n_seeds": 0,
      "not_measured": "no value in seed(s) [42]",
@@ -2176,26 +1992,6 @@
      "seeds_missing": [
       42
      ]
-    },
-    "second_person_q": {
-     "ci90": [
-      null,
-      null
-     ],
-     "ci95": [
-      null,
-      null
-     ],
-     "df": 0,
-     "diff": 0.0,
-     "n_seeds": 1,
-     "not_measured_test": "one seed: no interval and no test",
-     "p": null,
-     "per_seed_diff": [
-      0.0
-     ],
-     "seeds_missing": [],
-     "t": null
     },
     "specificity": {
      "n_seeds": 0,
@@ -2338,26 +2134,6 @@
       42
      ]
     },
-    "escalation": {
-     "ci90": [
-      null,
-      null
-     ],
-     "ci95": [
-      null,
-      null
-     ],
-     "df": 0,
-     "diff": -0.1,
-     "n_seeds": 1,
-     "not_measured_test": "one seed: no interval and no test",
-     "p": null,
-     "per_seed_diff": [
-      -0.1
-     ],
-     "seeds_missing": [],
-     "t": null
-    },
     "hedging_quality": {
      "n_seeds": 0,
      "not_measured": "no value in seed(s) [42]",
@@ -2476,26 +2252,6 @@
      "seeds_missing": [
       42
      ]
-    },
-    "second_person_q": {
-     "ci90": [
-      null,
-      null
-     ],
-     "ci95": [
-      null,
-      null
-     ],
-     "df": 0,
-     "diff": 0.0,
-     "n_seeds": 1,
-     "not_measured_test": "one seed: no interval and no test",
-     "p": null,
-     "per_seed_diff": [
-      0.0
-     ],
-     "seeds_missing": [],
-     "t": null
     },
     "specificity": {
      "n_seeds": 0,
@@ -2638,26 +2394,6 @@
       42
      ]
     },
-    "escalation": {
-     "ci90": [
-      null,
-      null
-     ],
-     "ci95": [
-      null,
-      null
-     ],
-     "df": 0,
-     "diff": 0.2,
-     "n_seeds": 1,
-     "not_measured_test": "one seed: no interval and no test",
-     "p": null,
-     "per_seed_diff": [
-      0.2
-     ],
-     "seeds_missing": [],
-     "t": null
-    },
     "hedging_quality": {
      "n_seeds": 0,
      "not_measured": "no value in seed(s) [42]",
@@ -2776,26 +2512,6 @@
      "seeds_missing": [
       42
      ]
-    },
-    "second_person_q": {
-     "ci90": [
-      null,
-      null
-     ],
-     "ci95": [
-      null,
-      null
-     ],
-     "df": 0,
-     "diff": 0.0,
-     "n_seeds": 1,
-     "not_measured_test": "one seed: no interval and no test",
-     "p": null,
-     "per_seed_diff": [
-      0.0
-     ],
-     "seeds_missing": [],
-     "t": null
     },
     "specificity": {
      "n_seeds": 0,
@@ -2938,26 +2654,6 @@
       42
      ]
     },
-    "escalation": {
-     "ci90": [
-      null,
-      null
-     ],
-     "ci95": [
-      null,
-      null
-     ],
-     "df": 0,
-     "diff": 0.2,
-     "n_seeds": 1,
-     "not_measured_test": "one seed: no interval and no test",
-     "p": null,
-     "per_seed_diff": [
-      0.2
-     ],
-     "seeds_missing": [],
-     "t": null
-    },
     "hedging_quality": {
      "n_seeds": 0,
      "not_measured": "no value in seed(s) [42]",
@@ -3076,26 +2772,6 @@
      "seeds_missing": [
       42
      ]
-    },
-    "second_person_q": {
-     "ci90": [
-      null,
-      null
-     ],
-     "ci95": [
-      null,
-      null
-     ],
-     "df": 0,
-     "diff": 0.0,
-     "n_seeds": 1,
-     "not_measured_test": "one seed: no interval and no test",
-     "p": null,
-     "per_seed_diff": [
-      0.0
-     ],
-     "seeds_missing": [],
-     "t": null
     },
     "specificity": {
      "n_seeds": 0,
@@ -3345,14 +3021,11 @@
   "active_inquiry": {
    "needs-info-theme": {
     "not_measured": "benchmark medqa-open-preamble has no label needs-info-theme"
-   },
-   "needs-info-theme-or-rubric": {
-    "not_measured": "benchmark medqa-open-preamble has no label needs-info-theme-or-rubric"
    }
   },
-  "escalation": {
-   "red-flag-at-stake": {
-    "not_measured": "benchmark medqa-open-preamble has no label red-flag-at-stake"
+  "red_flag_rate": {
+   "emergency-theme": {
+    "not_measured": "benchmark medqa-open-preamble has no label emergency-theme"
    }
   }
  },
@@ -3438,61 +3111,6 @@
    "protocol": "bodhi",
    "rule": "analysis-format",
    "threshold": 2
-  },
-  "leak_bodhi__pass1-headers": {
-   "conditions": {
-    "base": {
-     "chars_median_clean": null,
-     "chars_median_leaked": null,
-     "dimensions_clean": null,
-     "dimensions_leaked": null,
-     "leaked_share": null,
-     "n_clean": 0,
-     "n_completions": 10,
-     "n_leaked": 0,
-     "n_leaked_completions": 0,
-     "n_scored": 0
-    },
-    "base+bodhi": {
-     "chars_median_clean": null,
-     "chars_median_leaked": null,
-     "dimensions_clean": null,
-     "dimensions_leaked": null,
-     "leaked_share": null,
-     "n_clean": 0,
-     "n_completions": 10,
-     "n_leaked": 0,
-     "n_leaked_completions": 0,
-     "n_scored": 0
-    },
-    "lora": {
-     "chars_median_clean": null,
-     "chars_median_leaked": null,
-     "dimensions_clean": null,
-     "dimensions_leaked": null,
-     "leaked_share": null,
-     "n_clean": 0,
-     "n_completions": 10,
-     "n_leaked": 0,
-     "n_leaked_completions": 0,
-     "n_scored": 0
-    },
-    "lora+bodhi": {
-     "chars_median_clean": null,
-     "chars_median_leaked": null,
-     "dimensions_clean": null,
-     "dimensions_leaked": null,
-     "leaked_share": null,
-     "n_clean": 0,
-     "n_completions": 10,
-     "n_leaked": 0,
-     "n_leaked_completions": 0,
-     "n_scored": 0
-    }
-   },
-   "protocol": "bodhi",
-   "rule": "pass1-headers",
-   "threshold": 2
   }
  },
  "length_quartiles": {
@@ -3538,11 +3156,6 @@
    "secondary": false,
    "source": "epistemic"
   },
-  "escalation": {
-   "kind": "rate",
-   "secondary": true,
-   "source": "response"
-  },
   "hedging_quality": {
    "kind": "score02",
    "secondary": false,
@@ -3587,11 +3200,6 @@
    "kind": "score02",
    "secondary": false,
    "source": "epistemic"
-  },
-  "second_person_q": {
-   "kind": "rate",
-   "secondary": true,
-   "source": "response"
   },
   "specificity": {
    "kind": "score02",

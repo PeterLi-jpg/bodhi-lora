@@ -2,16 +2,20 @@
 
 It recomputes the 2026-05 cell from its tracked response tables and compares, at the
 stored precision, with the files the old scripts wrote: paper/generated/numbers.json
-(scripts/paper_stats.py) and the cell's mimicry_split.json, interference_mechanism.json
-and second_person_questions.json (rebuttal/analyses/). A mismatch is a finding to
+(scripts/paper_stats.py) and the cell's mimicry_split.json and interference_mechanism.json
+(rebuttal/analyses/). A mismatch is a finding to
 explain, not a tolerance to raise. Old names map to new ones in the tables below; a
 field the new output names differently is listed there, not skipped.
 
-Two old values are not compared, for a stated reason:
-  - interference_mechanism length_control_clean[3].len_median: the old script took the
-    upper middle element of an even count (5395); the new code takes the median (5393.5).
+Some old values are not compared, for a stated reason:
   - mimicry_split groups: the old script counted labels over the base condition's scored
     prompts, so a prompt with no scored base reply showed as null; the rates match.
+  - Values of the keyword rules withdrawn on 2026-10-10 (docs/CONVENTIONS.md rule 15),
+    which the new code no longer computes: mimicry_split primary_theme_or_rubric (a
+    rubric keyword labelling), second_person_questions.json (a keyword question rule),
+    and interference_mechanism's nine-marker rule (leaked_rate, decisive and
+    length_control_clean, whose clean set it defines). The theme-only labelling and the
+    seven-header rule are compared.
 """
 import json
 import math
@@ -117,8 +121,8 @@ def _analysis(name):
 
 def test_rebuttal_analyses_of_the_cell(stats):
     problems = []
-    old = _analysis("mimicry_split.json")["primary_theme_or_rubric"]
-    disc = stats["discrimination"]["active_inquiry"]["needs-info-theme-or-rubric"]
+    old = _analysis("mimicry_split.json")["robustness_theme_only"]
+    disc = stats["discrimination"]["active_inquiry"]["needs-info-theme"]
     for c, v in old["configs"].items():
         compare({k: v[k] for k in ("discrimination", "discrimination_ci95", "odds_ratio", "odds_ratio_ci95")},
                 disc["conditions"][CONDITION[c]], f"mimicry_split/{c}", problems)
@@ -127,37 +131,21 @@ def test_rebuttal_analyses_of_the_cell(stats):
     compare({"diff": old["lora_minus_base_disc"], "diff_ci95": old["lora_minus_base_disc_ci95"]},
             disc["contrasts"]["lora - base"], "mimicry_split/lora_minus_base", problems)
 
+    # The analysis-format rule of the bodhi record is the old script's seven-header rule.
     old = _analysis("interference_mechanism.json")
     leak = stats["leakage"]["leak_bodhi__analysis-format"]["conditions"]
-    headers = stats["leakage"]["leak_bodhi__pass1-headers"]["conditions"]
+    assert set(stats["leakage"]) == {"leak_bodhi__analysis-format"}
     for c, v in old["configs"].items():
         new = CONDITION[c]
-        compare({"n_scored": v["n"], "leaked_share": v["leaked_rate"]}, leak[new], f"interference/{c}", problems)
-        compare(v["leaked_rate_pass1_headers"], headers[new]["leaked_share"], f"interference/{c}/headers",
-                problems)
+        compare({"n_scored": v["n"], "leaked_share": v["leaked_rate_pass1_headers"]}, leak[new],
+                f"interference/{c}", problems)
         compare(v["red_flag_mean"], stats["conditions"]["red_flag"][new]["pooled_mean"], f"interference/{c}/rf",
                 problems)
-    lb, d = leak["lora+bodhi"], old["decisive"]
-    compare({"n_clean": d["n_clean"], "n_leaked": d["n_leaked"], "chars_median_clean": d["len_median_clean"],
-             "chars_median_leaked": d["len_median_leaked"]}, lb, "interference/decisive", problems)
+    lb, d = leak["lora+bodhi"], old["decisive_pass1_headers"]
+    compare({"n_clean": d["n_clean"], "n_leaked": d["n_leaked"]}, lb, "interference/decisive", problems)
     compare([d["lora_bodhi_clean_red_flag"], d["lora_bodhi_leaked_red_flag"]],
             [lb["dimensions_clean"]["red_flag"], lb["dimensions_leaked"]["red_flag"]], "interference/decisive",
             problems)
-    for i, q in enumerate(old["length_control_clean"]):
-        new = lb["clean_red_flag_by_length_quartile"][i]
-        compare({"n": q["n"], "red_flag": q["red_flag"]}, new, f"interference/quartile{i + 1}", problems)
-        if i < 3:   # see the module docstring for the fourth median
-            compare(q["len_median"], new["chars_median"], f"interference/quartile{i + 1}/median", problems)
-
-    old = _analysis("second_person_questions.json")
-    for c, v in old["conditions"].items():
-        new = stats["conditions"]["second_person_q"][CONDITION[c]]
-        compare({"rate": v["rate"], "n": v["n"], "per_seed_rate": v["per_seed_rate"]},
-                {"rate": new["pooled_mean"], "n": new["n_pooled"], "per_seed_rate": new["per_seed"]},
-                f"second_person/{c}", problems)
-    lmb = stats["contrasts"]["lora - base"]["metrics"]["second_person_q"]
-    compare({k: old["lora_minus_base"][k] for k in ("diff", "ci95", "t", "df", "p")}, lmb,
-            "second_person/lora_minus_base", problems)
     assert not problems, "\n".join(problems)
 
 
