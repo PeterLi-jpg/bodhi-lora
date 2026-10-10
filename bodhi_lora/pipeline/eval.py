@@ -284,6 +284,9 @@ def run(ctx: StageContext, seed: int, condition: str) -> dict:
                     "calls": out.calls, "prompt_tokens_total": out.prompt_tokens,
                     "completion_tokens_total": out.completion_tokens,
                     "finish_length": out.finish_length,
+                    # What the protocol recorded about this reply, e.g. an abstain decision;
+                    # format_parsed false marks a reply whose internal format did not parse.
+                    "protocol_metadata": out.metadata,
                 }, None
             except Exception:
                 return None, (row.prompt_id, "\n".join(traceback.format_exc().strip().splitlines()[-30:]))
@@ -344,7 +347,8 @@ def run(ctx: StageContext, seed: int, condition: str) -> dict:
               "grader_rubric_items_total": items,
               "calls": sum(r["calls"] for r in results),
               "completion_tokens_total": sum(r["completion_tokens_total"] for r in results),
-              "n_finish_length": sum(r["finish_length"] for r in results)}
+              "n_finish_length": sum(r["finish_length"] for r in results),
+              "n_format_unparsed": sum(r["protocol_metadata"].get("format_parsed") is False for r in results)}
     ctx.write_manifest(out_path.parent, "eval", seed=seed, name=f"{condition}.manifest.json",
                        timer=timer, models={"policy": ctx.model, "grader": evaluator},
                        config={"condition": condition, "eval": ev.model_dump()},

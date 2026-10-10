@@ -13,22 +13,30 @@ REG = load_registry(CONFIGS_DIR)
 MESSAGES = [{"role": "user", "content": "I feel dizzy when I stand up. Why?"}]
 
 
-@pytest.mark.parametrize("text, score", [
-    ("REASON: age and drugs are unknown.\nDECISION: Somewhat Unconfident", 2),
-    ("REASON: clear case.\nDECISION: Very Confident.", 5),
-    ("DECISION: neither confident nor unconfident", 3),
-    ("DECISION: Neither Confident or Unconfident", 3),
-    ("DECISION: very unconfident", 1),
-    ("I would say somewhat confident", 4),
-    ("no label here", 0),
+@pytest.mark.parametrize("text, score, parsed", [
+    ("REASON: age and drugs are unknown.\nDECISION: Somewhat Unconfident", 2, True),
+    ("REASON: clear case.\nDECISION: Very Confident.", 5, True),
+    ("DECISION: neither confident nor unconfident", 3, True),
+    ("DECISION: Neither Confident or Unconfident", 3, True),
+    ("DECISION: very unconfident", 1, True),
+    ('**DECISION:** "Somewhat Confident"', 4, True),
+    ("REASON: enough facts.\n- DECISION: Very Confident\nThat is all.", 5, True),
+    # No DECISION: field: the free text is not searched for a label.
+    ("I would say somewhat confident", 0, False),
+    ("REASON: I am not very confident about the dose. I would rate myself somewhat unconfident.", 0, False),
+    # A negated or altered label is not the label.
+    ("DECISION: not very confident", 0, False),
+    ("DECISION: Very Confident, but check the dose", 0, False),
+    ("no label here", 0, False),
 ])
-def test_parse_rating_uses_the_mediq_labels(text, score):
-    assert parse_rating(text)[0] == score
+def test_parse_rating_reads_only_the_decision_field(text, score, parsed):
+    assert parse_rating(text)[0::2] == (score, parsed)
 
 
 def test_the_decision_line_wins_over_labels_in_the_reason():
-    score, reason = parse_rating("REASON: I am not very confident about the dose.\nDECISION: Somewhat Unconfident")
-    assert score == 2 and reason.startswith("I am not very confident")
+    score, reason, parsed = parse_rating("REASON: I am not very confident about the dose.\n"
+                                         "DECISION: Somewhat Unconfident")
+    assert (score, parsed) == (2, True) and reason.startswith("I am not very confident")
 
 
 def _run(rating):
@@ -60,6 +68,9 @@ def test_at_the_threshold_it_answers_the_conversation_as_given():
     assert out.analysis.startswith("REASON")
 
 
-def test_an_unreadable_rating_asks():
+def test_an_unreadable_rating_asks_and_says_so():
     out, _ = _run("I cannot say.")
     assert out.metadata["confidence_score"] == 0 and out.metadata["decision"] == "ask"
+    assert out.metadata["format_parsed"] is False
+    out, _ = _run("REASON: no history.\nDECISION: Somewhat Unconfident")
+    assert out.metadata["format_parsed"] is True

@@ -8,6 +8,14 @@ a one-sentence reason and a rating on a five-label scale; src/expert_basics.py
 when the score is below SCALE_THRESHOLD = 4.0, so it asks unless the model is
 "somewhat" or "very" confident. A rating that matches no label scores 0, so it asks.
 
+The rating is read from the DECISION: line only, and that line must name one label in
+full. MediQ's parser also searches the whole reply for a label, so a reason such as
+"I am not very confident" scored 5 and the model answered. A search for words decides
+meaning by keywords and misses negation (docs/CONVENTIONS.md rule 15), so this parser
+reads only the field the rating prompt asks for. A reply with no DECISION: line, or one
+whose decision is not exactly a label ("not very confident"), scores 0 and asks, and its
+metadata says format_parsed false, so the eval output counts these failures.
+
 Here, as an inference-time baseline on the unchanged base (EXPERIMENTS.md E12), with
 two calls like BODHI and no self-consistency:
   pass 1  the record's params.rating_prompt with the conversation: how confident is the
@@ -27,18 +35,20 @@ from bodhi_lora.protocols.ask_first import render_conversation
 from bodhi_lora.protocols.base import CallLog, Decoding, Output, Protocol
 from bodhi_lora.registry.schema import ModelConfig, ProtocolConfig
 
-# MediQ's labels and scores, in the order parse_likert_scale checks them: when a reply
-# names several labels, the first one in this order wins, as in MediQ.
-SCALE = (
-    ("very confident", 5),
-    ("somewhat confident", 4),
-    ("neither confident nor unconfident", 3),
-    ("neither confident or unconfident", 3),
-    ("somewhat unconfident", 2),
-    ("very unconfident", 1),
-)
-_DECISION_RE = re.compile(r"DECISION\s*:\s*(.*)", re.IGNORECASE | re.DOTALL)
-_PUNCT_RE = re.compile(r"[.,;:]")
+# MediQ's labels and their scores. The DECISION: field must be one of them in full.
+SCALE = {
+    "very confident": 5,
+    "somewhat confident": 4,
+    "neither confident nor unconfident": 3,
+    "neither confident or unconfident": 3,
+    "somewhat unconfident": 2,
+    "very unconfident": 1,
+}
+# The DECISION: line of the rating form: at the start of a line, after optional markdown
+# (bold or a bullet), and the rest of that line only.
+_DECISION_RE = re.compile(r"^[ \t*_\->]*DECISION[*_]*\s*:[*_]*[ \t]*(.*)$", re.IGNORECASE | re.MULTILINE)
+# What may wrap the label in the field: quotes, markdown emphasis, end punctuation.
+_WRAP = " \t\"'`*_.,;:!"
 # A field line of the rating form: an upper-case name and a colon at the start of a line.
 _FIELD_RE = re.compile(r"^([A-Z][A-Z ]*[A-Z]):", re.MULTILINE)
 
@@ -54,19 +64,23 @@ class AbstainParams(BaseModel):
     question_prompt: str
 
 
-def parse_rating(text: str) -> tuple[int, str]:
-    """(score, reason) of a pass-1 reply: the label after DECISION:, else anywhere."""
+def parse_rating(text: str) -> tuple[int, str, bool]:
+    """(score, reason, parsed) of a pass-1 reply.
+
+    The score is the label of the DECISION: field, matched in full. With no such field, or
+    a field that is not exactly one label, the score is 0 (so the protocol asks) and
+    parsed is False."""
     reason = ""
     m = re.search(r"REASON\s*:\s*(.*?)(?:\n|DECISION\s*:|$)", text, re.IGNORECASE | re.DOTALL)
     if m:
         reason = m.group(1).strip()
     decision = _DECISION_RE.search(text)
-    part = decision.group(1) if decision else text
-    part = _PUNCT_RE.sub("", part.lower())
-    for label, score in SCALE:
-        if label in part:
-            return score, reason
-    return 0, reason
+    if decision is None:
+        return 0, reason, False
+    label = " ".join(decision.group(1).strip(_WRAP).lower().split())
+    if label in SCALE:
+        return SCALE[label], reason, True
+    return 0, reason, False
 
 
 class Abstain(Protocol):
@@ -88,7 +102,7 @@ class Abstain(Protocol):
         conversation = render_conversation(messages)
         rating = log.chat([{"role": "user", "content":
                             self.params.rating_prompt.format(conversation=conversation)}])
-        score, reason = parse_rating(rating)
+        score, reason, parsed = parse_rating(rating)
         asks = score < self.params.threshold
         if asks:
             reply = log.chat([{"role": "user", "content":
@@ -97,4 +111,4 @@ class Abstain(Protocol):
             reply = log.chat(messages)
         return log.output(reply, rating, {"protocol": self.id, "confidence_score": score,
                                           "reason": reason, "decision": "ask" if asks else "answer",
-                                          "threshold": self.params.threshold})
+                                          "threshold": self.params.threshold, "format_parsed": parsed})

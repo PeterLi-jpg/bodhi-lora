@@ -92,4 +92,4 @@ class AskFirst(Protocol):
         log = CallLog(engine, decoding)
         reply, plan, found = parse_reply(log.chat(build_prompt(messages)))
         return log.output(reply, plan, {"protocol": self.id, "mode": "single_pass",
-                                        "reply_marker_found": found})
+                                        "reply_marker_found": found, "format_parsed": found})

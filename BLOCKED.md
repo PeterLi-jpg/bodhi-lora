@@ -50,7 +50,10 @@ Action:
      benchmarks and ChatDoctor for HealthBench, 100 to 200 prompts each.
    - The judges' harm axes (extent and likelihood from Singhal et al. 2023, plus delayed
      care) are an LLM proxy for C33, not physician review.
-   - `mediq-abstain` adapts MediQ's multiple-choice wording to open questions.
+   - `mediq-abstain` adapts MediQ's multiple-choice wording to open questions. It reads
+     the rating from the DECISION: field only, matched to a full label; MediQ's parser
+     also searches the free text, so "not very confident" scored as "very confident".
+     A rating that does not parse asks, as in MediQ, and the eval output counts it.
      `red-flags-first` moves the red-flag section first and skips its pass-2 line on
      TECHNICAL and HYBRID tasks.
 

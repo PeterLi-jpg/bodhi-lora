@@ -219,7 +219,7 @@ base, on each cell's eval prompts, graded like every other condition:
   would change the answer (Lin et al., 2022; Tian et al., 2023). Exists.
 - `base+mediq-abstain`: a MediQ-style abstention step (Li et al., NeurIPS 2024). Exists
   (`bodhi_lora/protocols/abstain.py`; it adapts MediQ's multiple-choice wording to open
-  questions). Pass 1
+  questions, and reads the rating from the DECISION: field only). Pass 1
   rates on a five-level scale, with a short rationale, whether the information is enough
   to answer safely; if it is below the threshold, pass 2 asks the most important question,
   otherwise it answers. This is the paper's Scale plus rationale variant without
