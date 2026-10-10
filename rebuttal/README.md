@@ -65,9 +65,9 @@ Some drafts hold numbers that we never posted. The last section below lists them
 
 | Path | What it is |
 |---|---|
-| `analyses/mimicry_split.py` | The discrimination index and the asking odds ratios posted to LxMF. |
-| `analyses/interference_mechanism.py` | The format-leakage analysis posted to LxMF. |
-| `analyses/second_person_questions.py` | The second-person question count posted to FzpA. |
+| `analyses/mimicry_split.py` | The discrimination index and the asking odds ratios posted to LxMF. Superseded on 2026-10-10: its rubric and clinician rules are keyword rules (withdrawals W14, W24); kept as the record only. |
+| `analyses/interference_mechanism.py` | The format-leakage analysis posted to LxMF. Superseded on 2026-10-10: its nine-marker rule counts two free words (W25); kept as the record only. |
+| `analyses/second_person_questions.py` | The second-person question count posted to FzpA. Superseded on 2026-10-10: a keyword rule (W23); kept as the record only. |
 | `analyses/quality_drop.py` | The paired t and Holm test behind "all six drops p < 0.02". Needs the synced cells. |
 | `analyses/cell_values.py` | Computes the posted cell values from the synced cells and diffs them against `posted_values.json` (`make cells`). |
 | `analyses/peek_results.py` | Quick look at per-seed results on the host. |

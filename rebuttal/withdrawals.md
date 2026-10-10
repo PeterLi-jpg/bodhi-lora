@@ -3,7 +3,10 @@
 This file lists every claim that the authors corrected or withdrew during the NeurIPS 2026
 discussion of submission 32818. It also lists posted claims that the discussion never
 corrected but that the audit or a later check found wrong (W10, W11, and W14 onward; W21 came
-from the raw outputs synced on 2026-10-08, W22 from the stored outputs on 2026-10-09). Each
+from the raw outputs synced on 2026-10-08, W22 from the stored outputs on 2026-10-09). W23 to
+W25 withdraw posted numbers that came from keyword rules, under the first author's rule of
+2026-10-09 (docs/CONVENTIONS.md rule 15): a keyword rule misses negation, hypotheticals and
+quotes, so it cannot decide what a text means. Each
 entry gives the claim as made, the correction with its source, and the statement the paper
 must carry.
 
@@ -279,6 +282,10 @@ call this format leakage. We do not claim competition for capacity or attention.
 non-leaked subset after the fact, by a format property, so leakage may correlate with prompt
 difficulty.
 
+**Changed 2026-10-10 (W25).** The leakage numbers above came from a rule with two free words.
+With the seven Pass 1 headers only, 53.2% of LoRA+CoT responses leak against 0.0% to 0.8%,
+and the red-flag scores are 1.32 (n = 494) and 1.73 (n = 434). The paper carries these.
+
 ---
 
 ## W10. "n around 985-998 per condition" (not corrected in the discussion)
@@ -417,6 +424,12 @@ The posted 14 came from a keyword rule we did not keep; the tag count replaces i
 benchmark is still mostly patient-facing. Done in `paper/main.tex` (introduction and
 Appendix H, macros `\statHardHealthProfessional`, `\statHardSpeakerTagged`).
 
+**Changed 2026-10-10.** Both keyword counts are withdrawn as measures (docs/CONVENTIONS.md
+rule 15): the posted 14 and the committed `CLINICIAN_RE` count of 4 of 667. A keyword rule
+cannot tell a clinician who writes about a patient from a patient who quotes a doctor. The
+paper no longer cites the 4 of 667, and `rebuttal/analyses/mimicry_split.py` is kept only as a
+record. The tag count stays.
+
 ---
 
 ## W15. "The adapter asks selectively" (corrected after the discussion)
@@ -436,6 +449,11 @@ on self-contained prompts (15.9% to 37.5%, and 17.0% to 43.2%).
 **The paper must say.** We do not show that the adapter learned when to ask, and template
 imitation remains possible. Done in `paper/main.tex`: the Discussion, the Limitations item
 "Selectivity" and Appendix H, which names the posted claim as withdrawn.
+
+**Changed 2026-10-10 (W24).** The rubric-based labelling is withdrawn. The paper keeps the
+theme-tag labelling only: LoRA minus Base +10.0 [-0.5, +20.1], and asking on self-contained
+prompts 17.0% to 43.2%, now from the uniform analysis (`results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/stats.json`,
+`discrimination.active_inquiry.needs-info-theme`).
 
 ---
 
@@ -563,6 +581,80 @@ be counted, and that the posted 58% is withdrawn. Done in section 4.2 and Append
 
 ---
 
+## W23. Second-person questions, 18.4% against 39.6% (withdrawn 2026-10-10, keyword measure)
+
+**Claim as made.** Posted `FzpA_2_followup.md:13`: "counting questions addressed to the reader
+in the second person, the base does so in 18.4% of responses and the adapter in 39.6%, a
+21-point gap where the grader puts it at 28". The reply as it stands in the OpenReview thread
+adds that 27% of the base's questions and 48% of the adapter's go to the reader.
+
+**Why withdrawn.** The count is a keyword rule: a sentence that ends in "?" and contains "you"
+or "your". It counts quoted and rhetorical questions and misses indirect ones ("tell me how
+long it has lasted"), so it cannot decide whether a reply asks. No script gave the posted
+values (audit PROV-7). The committed rule (`rebuttal/analyses/second_person_questions.py`)
+gave 17.9% and 36.7%, and the paper printed those until 2026-10-10; they are withdrawn with
+the posted ones. The rule is gone from `configs/report.yaml`, so no cell has the column now.
+
+**The paper must say.** The posted rate is withdrawn, and the paper gives no count of this
+kind. The evaluator's active-inquiry grade is the measure of asking. A check by a judge from
+another family, with a semantic rubric and a hand-label gate, is specified but has not run
+(docs/ANALYSIS_PLAN.md section 12, 2026-10-10; docs/RUN_PLAN.md R17). Done in Appendix H of
+`paper/main.tex`.
+
+---
+
+## W24. The discrimination index under the rubric-keyword labelling (withdrawn 2026-10-10, keyword measure)
+
+**Claim as made.** Posted `LxMF_1_rebuttal.md:13-28` (Table R1): the discrimination index is
++2.1 points for Base, +11.0 for the wrapper, +10.5 for LoRA and -3.5 for LoRA+CoT, over 508
+"withholding" and 158 self-contained prompts. On self-contained prompts the adapter asks 37.5%
+of the time against Base's 15.9%. The odds ratios of asking are 1.16, 1.54 and 1.56. LoRA minus
+Base is +8.4 [-1.2, +17.9]. `LxMF_1_rebuttal.md:3` and W15 carry the selectivity claim made
+from these numbers.
+
+**Why withdrawn.** The labelling counted a prompt as withholding information when its theme
+tag was context_seeking or when any rubric criterion matched a keyword rule (`CLARIFY_RE` in
+`rebuttal/analyses/mimicry_split.py`: "ask", "clarify", "follow up", "more information" and
+others). A keyword match cannot tell a criterion that rewards asking from one that only
+mentions it, or penalizes it. Every number above rests on that labelling. The theme-only
+labelling of the same reply (+13.2 [+4.1, +21.7] for LoRA, 127 prompts) uses a structured tag
+and stands. The rubric part is gone from `configs/benchmarks/healthbench.yaml`; the
+`cluster:` tags cannot replace it, because they carry the physician labels that the analysis
+plan keeps unseen until its adoption.
+
+**The paper must say.** The theme-tag numbers only, from the uniform analysis: LoRA minus Base
++10.0 [-0.5, +20.1]; asking on self-contained prompts 17.0% under Base and 43.2% under LoRA;
+the adapter's own index +13.2 [+4.1, +21.7] and Base's +3.2 [-4.2, +11.2]. The posted index is
+named as withdrawn. Done in the Discussion and Appendix H of `paper/main.tex`.
+
+---
+
+## W25. Format leakage in 54.6% of LoRA+CoT responses (withdrawn 2026-10-10, keyword measure)
+
+**Claim as made.** Posted `LxMF_1_rebuttal.md:44-46`: 54.6% of LoRA+CoT responses leak the
+Pass 1 format, against 0.2% to 3.0% in the other conditions; red-flag identification is 1.33
+in the leaked subset (n = 507) and 1.73 in the rest (n = 421); within the rest it rises
+across length quartiles, from 1.44 (median 1,508 characters) to 1.87 (median 5,395). The
+leaked responses have a median of 8,564 characters against 3,457.
+
+**Why withdrawn.** The rule counted nine markers: the seven Pass 1 section headers of
+bodhi-llm 0.1.4, and DIFFERENTIAL and SCOPE OF/BOUNDAR. These two are not headers of the
+protocol's format. They are clinical words, so the rule read meaning from the text. In the
+other cells they inflate the rate most: on MedQuAD the LoRA+CoT rate falls from 7.6% to
+0.2% without them, on ChatDoctor with Med42-8B from 2.5% to 0.5%.
+
+**What the outputs give.** With the seven headers only, which the protocol defines (the
+`analysis-format` rule of `configs/protocols/bodhi.yaml`, from the uniform analysis,
+`results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/stats.json`): 53.2% of LoRA+CoT responses leak, against 0.0% to 0.8% in the other
+conditions; red-flag identification is 1.32 in the leaked subset (n = 494) and 1.73 in the
+rest (n = 434), which is above LoRA alone (1.67). The diagnosis of W9 holds under this rule.
+
+**The paper must say.** The seven-header numbers, and that the posted nine-marker rule is
+withdrawn. Done in the abstract, section 4.3 and Appendix H of `paper/main.tex`. The length
+quartiles and medians were not printed in the paper and are withdrawn with the rule.
+
+---
+
 ## Posted claims that the discussion never corrected
 
 The discussion did not withdraw the claims below, but the evidence does not support them. The
@@ -581,7 +673,8 @@ paper lanes must decide on each one.
   BioMistral-7B. The claim holds as posted. It counts the two Med42-8B cells, which the paper
   leaves out of cross-model statements (D6).
 - **Second-person questions, 18.4% against 39.6%.** `FzpA_2_followup.md:13`. No script or
-  output exists. A simple regex gives 17.9% and 37.2% (audit PROV-7).
+  output exists. A simple regex gives 17.9% and 37.2% (audit PROV-7). Withdrawn on
+  2026-10-10 as a keyword measure (W23).
 - **What the physician check covers.** `FzpA_1_rebuttal.md:40` reports kappa = 0.35 right after
   the dimension anchors, as if the physician check graded the seven dimensions. It grades
   HealthBench rubric criteria (`scripts/make_irr_excel.py`, `scripts/compute_irr_kappa.py`).
