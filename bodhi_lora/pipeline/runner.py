@@ -501,11 +501,13 @@ def _add_to_recorded(runner: Runner, stored: CellPaths, stages: Sequence[str], s
     runner.say(f"{ctx.cell.id}: recorded run; adding files only ({', '.join(stages)})")
     if runner.mode != "gpu" and stored.root != ctx.paths.root:
         link_stored_outputs(stored, ctx.paths, ctx.cell, seeds)
-    fetch_benchmarks(ctx, stages)
     shared = [probe_step(ctx)] if "probe" in stages and ctx.cell.probe else []
     steps = [judge_step(ctx, s, j) for s in seeds for j in judges] if "grade" in stages else []
     if runner.mode == "dry_run":
         runner.print_plan(shared, {s: [st for st in steps if st.seed == s] for s in seeds})
+    # After the plan, as in run_cell: a dry run prints its GPU commands even when a
+    # benchmark cannot be fetched here (offline, or a file not pinned yet).
+    fetch_benchmarks(ctx, stages)
     for step in shared + steps:
         runner.run_step(step, runner.gpus[0])
     return ctx.paths.root

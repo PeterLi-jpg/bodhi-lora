@@ -164,6 +164,23 @@ def test_a_recorded_cell_only_gets_judge_regrades_that_read_its_stored_replies(t
     assert manifest["engines"]["judge"]["max_model_len"] == 2048   # grading.judge_serving
 
 
+def test_a_recorded_cell_dry_run_prints_its_plan_before_it_fetches(tmp_path, capsys, monkeypatch):
+    """Offline, the probe's control benchmark cannot be fetched; the GPU commands of the
+    judge re-grade and the probe must be printed before that stops the run."""
+    from bodhi_lora.pipeline import runner
+
+    def offline(ctx, stages):
+        raise ConnectionError("offline")
+
+    monkeypatch.setattr(runner, "fetch_benchmarks", offline)
+    configs = fixture_configs(tmp_path)
+    with pytest.raises(ConnectionError, match="offline"):
+        run_cell(load_registry(configs), project(configs), RECORDED, mode="dry_run",
+                 stages=("probe", "grade"), configs_dir=configs)
+    out = capsys.readouterr().out
+    assert "--judge medgemma-27b-text" in out and "bodhi_lora.pipeline.probe" in out
+
+
 def test_a_request_too_long_for_the_context_is_listed_not_retried(tmp_path, monkeypatch):
     """A too-long request fails the same way on every rerun, so it must not leave the
     stage incomplete; any other failed request must."""
