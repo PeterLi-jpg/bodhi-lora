@@ -15,10 +15,10 @@ Draw rules (Draw in the schema), applied to an ordered list of prompt ids:
 These reproduce the earlier builders exactly: the 2026-07 cells drew their pools and
 holdouts by head, and the seeded pool and holdout were the default of the old launcher.
 
-A benchmark may repeat one prompt under two ids (MedQuAD repeats a question for each of
-its answers). A train row whose prompt text equals that of a row in the eval or probe
-pool leaves the train pool (Split.text_twins), so the two copies cannot fall on both
-sides. The text compare is the leakage gate's (row_text).
+A benchmark may repeat one prompt under two ids (one consumer-health set repeats a
+question for each of its answers). A train row whose prompt text equals that of a row in
+the eval or probe pool leaves the train pool (Split.text_twins), so the two copies cannot
+fall on both sides. The text compare is the leakage gate's (row_text).
 """
 from __future__ import annotations
 
