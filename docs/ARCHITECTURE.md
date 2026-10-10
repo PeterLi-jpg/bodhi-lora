@@ -725,13 +725,21 @@ constants, docstrings and f-string parts. It fails on any of these:
    the `results_root` or `data_root` value of `configs/project.yaml` followed by `/` (so
    `results/` and `data/raw` fail, while the word "data" in a docstring does not).
 4. A file or folder name under `bodhi_lora/` that contains `modal`, `tpu`, `gcs`,
-   `rebuttal`, `submitted`, `posted`, `neurips` or `reviewer`.
+   `rebuttal`, `submitted`, `posted`, `neurips` or `reviewer`. Strings are not checked
+   for these words: a docstring cites "NeurIPS 2024", and the posted-value check is named
+   after the record it reads.
 5. A list or tuple literal whose elements are the seed list `42, 7, 13, 99, 101` in any
    order.
+6. Grader text (the strings of `bodhi_lora/grading/`) that names a protocol id or the
+   package that implements it, as a whole token. The one exception is the evaluator
+   template that graded every recorded cell: it names BODHI, it stays as it was so the
+   recorded grades keep their meaning, and the test pins it by its sha256
+   (KNOWN_ISSUES.md).
 
-Comments are not read, so a comment may still explain why a line exists. There is no
-allow-list; a needed exception is a design change for the integrate lane. Protocol and
-loader implementation keys (`bodhi_llm`, `rubric_jsonl`) are code names and are allowed.
+Comments are not read, so a comment may still explain why a line exists. Apart from the
+pinned template there is no allow-list; a needed exception is a design change. Protocol
+and loader implementation keys (`bodhi_llm`, `rubric_jsonl`) are code names and are
+allowed, and so are the tag prefixes of the row format (`theme:`, `axis:`).
 
 ## 10. Migration map
 

@@ -36,7 +36,7 @@ from tqdm import tqdm
 
 from bodhi_lora import manifest as mf
 from bodhi_lora.engine import ContextLengthError, make_engine
-from bodhi_lora.grading.epistemic import (STUB_EPISTEMIC_REPLY, aggregate, flatten_grade,
+from bodhi_lora.grading.epistemic import (STUB_EPISTEMIC_REPLY, TEMPLATE_SHA256, aggregate, flatten_grade,
                                           grade_dimensions, messages_to_text)
 from bodhi_lora.grading.harm import HARM_PROMPT_MARKER, STUB_HARM_REPLY, aggregate_harm, grade_harm
 from bodhi_lora.grading.rubric import Grader, grade_rubric
@@ -109,6 +109,7 @@ def grade_dimensions_of(ctx: StageContext, seed: int, files: dict) -> tuple:
                          log_path=ctx.log_path(f"vllm_grade_s{seed}.log"))
     out = {"grader_model": evaluator.hf_id, "grader_id": evaluator.id, "seed": seed,
            "run_metadata": {"git_sha": mf.git_state().get("sha"), "grader_revision": evaluator.revision,
+                            "grader_template_sha256": TEMPLATE_SHA256,
                             "max_model_len": serving.max_model_len, "max_num_seqs": serving.max_num_seqs,
                             "concurrency": serving.concurrency,
                             "request_timeout_s": serving.request_timeout_s,
@@ -201,7 +202,8 @@ def judge_of(ctx: StageContext, seed: int, files: dict, judge_id: str) -> tuple:
                             "examples": examples})
     out = {"judge_model": judge.hf_id, "judge_id": judge_id, "judge_revision": judge.revision,
            "judge_family": judge.family, "judge_domain": judge.domain,
-           "parts": ["rubric", "epistemic", "harm"], "seed": seed, "stub": ctx.stub, "configs": configs}
+           "parts": ["rubric", "epistemic", "harm"], "grader_template_sha256": TEMPLATE_SHA256,
+           "seed": seed, "stub": ctx.stub, "configs": configs}
     return out, engine.settings(), judge
 
 

@@ -466,6 +466,10 @@ The first author's adoption entry is still to come. Choices left to him before a
    method and controls, the harm axes, and the wording of two protocols.
 6. The judge classifier of the 2026-10-10 entry: the judge, the rubric text, the
    hand-label sample and the agreement gate.
+7. The evaluator template of the new cells. The frozen template that graded every
+   recorded cell names BODHI, the protocol under test (KNOWN_ISSUES.md). Keep it, so new
+   and recorded grades compare, or write a protocol-neutral template as a new grader
+   version, whose hash each grade file then records.
 
 ### Entries
 

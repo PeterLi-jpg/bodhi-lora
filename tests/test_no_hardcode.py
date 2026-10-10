@@ -5,6 +5,7 @@ and the literal parts of f-strings. Comments are not read, so a comment may stil
 why a line exists. The names come from the registry, so a new record extends the check.
 """
 import ast
+import hashlib
 import re
 from pathlib import Path
 
@@ -21,6 +22,15 @@ PACKAGE = REPO_ROOT / "bodhi_lora"
 RUN_WORDS = ("modal", "tpu", "gcs", "rebuttal", "submitted", "posted", "neurips", "reviewer")
 # Rule 5: the five seeds of the 2026-05 and 2026-07 cells.
 PAPER_SEEDS = [7, 13, 42, 99, 101]
+# Rule 6: grader text names no protocol, so the measuring instrument is neutral to the
+# conditions it grades. The one exception is the evaluator template that graded every
+# recorded cell: it names BODHI, and it stays as it was so that the recorded grades keep
+# their meaning (bodhi_lora/grading/epistemic.py; KNOWN_ISSUES.md). It is pinned by its
+# sha256, so an edit to it, or any new grader text that names a protocol, fails here.
+FROZEN_GRADER_TEXT = {
+    "aa6e2f507de69fd5cad113ebb1f94cd605f129e62f4b3ab727bc73c7e440d313":
+        "the evaluator template of the recorded cells (02ac9a3:scripts/eval_epistemic.py)",
+}
 
 
 def _is_seed_list(node) -> bool:
@@ -99,6 +109,32 @@ def test_no_paper_seed_list_literal():
     assert hits == []
 
 
+def _protocol_names() -> dict[str, re.Pattern]:
+    """Each protocol id and the package that implements it, as a whole token (an
+    underscore joins a token, so bodhi_lora is not bodhi)."""
+    reg = load_registry(CONFIGS_DIR)
+    names = {}
+    for p in reg.protocols.values():
+        for name in [p.id] + ([p.package.split("==")[0]] if p.package else []):
+            names[name] = re.compile(r"(?<![A-Za-z0-9_])" + re.escape(name) + r"(?![A-Za-z0-9_])", re.IGNORECASE)
+    return names
+
+
+def test_no_grader_text_names_a_protocol():
+    names = _protocol_names()
+    hits = []
+    for path in sorted((PACKAGE / "grading").glob("*.py")):
+        for line, text in _strings(path):
+            named = sorted(n for n, pat in names.items() if pat.search(text))
+            if named and hashlib.sha256(text.encode("utf-8")).hexdigest() not in FROZEN_GRADER_TEXT:
+                hits.append(f"{path.relative_to(REPO_ROOT)}:{line}: names {named}")
+    assert hits == [], "grader text names a protocol under test:\n" + "\n".join(hits)
+    # The frozen template still exists, so the exception is not stale.
+    from bodhi_lora.grading.epistemic import TEMPLATE_SHA256
+
+    assert set(FROZEN_GRADER_TEXT) == {TEMPLATE_SHA256}
+
+
 def test_the_check_catches_what_it_should(tmp_path):
     """The rules fire on a module that breaks each one, so a passing run means something."""
     forbidden = _forbidden()
@@ -113,3 +149,7 @@ def test_the_check_catches_what_it_should(tmp_path):
     assert {"benchmark", "model", "results_root", "a"} <= fired
     assert any(_is_seed_list(n) for n in ast.walk(ast.parse(bad.read_text())))
     assert not any(_is_seed_list(n) for n in ast.walk(ast.parse("S = (42, 7, 13)\nT = ('a', None)")))
+    names = _protocol_names()
+    assert names["bodhi"].search("the virtues that BODHI-style prompting aims to instill")
+    assert names["ask-first"].search("Grade it as an ask-first reply.")
+    assert not names["bodhi"].search("see bodhi_lora/grading/epistemic.py")

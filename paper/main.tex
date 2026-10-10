@@ -789,7 +789,13 @@ Scope bounding & risk management & Humble & safe recommendations \\
 \end{table}
 
 The evaluator's prompt (\texttt{bodhi\_lora/grading/epistemic.py}) defines each dimension. We quote its
-anchors and give one example for each dimension.
+anchors and give one example for each dimension. The prompt also names the protocol under test. It
+says it judges ``the epistemic virtues that BODHI-style prompting aims to instill'', and its
+context-seeking definition adds ``BODHI v0.1.3 specifically trains active inquiry'' (we used
+version 0.1.4). The same prompt graded every condition, Base included, and the evaluator does not
+see which condition wrote a response. But an evaluator told what the method aims at may credit
+these behaviors more readily in every condition. We kept the prompt unchanged, so that the grades
+of all cells stay comparable.
 
 \begin{itemize}[leftmargin=*,itemsep=1pt]
     \item \emph{Uncertainty acknowledgment}. Anchor: ``states what is unknown or what missing info

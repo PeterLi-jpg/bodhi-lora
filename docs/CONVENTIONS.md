@@ -180,16 +180,26 @@ except to add judge re-grades, so a new run of the same design is a new cell.
 
 ## 13. No names in code
 
-The package names no model, benchmark, results path, run word or seed list. Each comes
-from a record.
+The package names no model, benchmark, results path or seed list in its strings, no run
+word in a file or folder name, and no protocol in its grader text. Each name comes from
+a record.
 
 - Why: model names, benchmark case statements, seed lists and data paths were literals
-  in code, so a new cell meant editing code (ARCHITECTURE.md section 1).
+  in code, so a new cell meant editing code (ARCHITECTURE.md section 1). A grader that
+  names the protocol under test is not neutral to the conditions it grades.
 - Enforced by: `tests/test_no_hardcode.py` reads every string in `bodhi_lora/` with `ast`
-  and fails on any model or benchmark id from the registry, a results or data path, a
-  file or folder name with a run word (`modal`, `tpu`, `rebuttal`, `submitted` and
-  others), or the five seeds as a literal (ARCHITECTURE.md section 9). It has no allow-list; an exception
-  is a design change.
+  and fails on any model or benchmark id from the registry, a results or data path, or
+  the five seeds as a literal; on a file or folder name with a run word (`modal`, `tpu`,
+  `rebuttal`, `submitted` and others); and on grader text in `bodhi_lora/grading/` that
+  names a protocol id or its package (ARCHITECTURE.md section 9).
+- Not enforced: run words inside strings. A docstring cites "NeurIPS 2024", and the
+  posted-value check of `bodhi_lora/analysis/cross.py` is named after the record it
+  reads; neither ties code to one run's files. The tag prefixes `theme:` and `axis:`
+  that the analysis reads are fields of the row format every loader writes
+  (`bodhi_lora/data/loaders.py`, `bodhi_lora/data/rubric.py`), not benchmark names.
+- Exceptions: one, pinned by its sha256. The evaluator template that graded every
+  recorded cell names BODHI, and it stays as it was (KNOWN_ISSUES.md). Any other
+  exception is a design change.
 
 ## 14. Uniform analysis
 

@@ -21,11 +21,13 @@ methodology, so they are yours.
 Action:
 
 1. Read [docs/ANALYSIS_PLAN.md](docs/ANALYSIS_PLAN.md). Adopt it as it is, or change it
-   with a dated entry in its section 12. Its section 12 lists six open choices: E14 or
+   with a dated entry in its section 12. Its section 12 lists seven open choices: E14 or
    E02 as the primary test of calibration, the E07 margins (O5), whether the new cells
    replace the old ones in the main tables, the settings of the new cells, the
-   choices in the cell records (step 4 below), and the judge classifier of the
-   2026-10-10 entry (its judge, rubric text, hand-label sample and agreement gate).
+   choices in the cell records (step 4 below), the judge classifier of the
+   2026-10-10 entry (its judge, rubric text, hand-label sample and agreement gate), and
+   the evaluator template of the new cells (the frozen one names BODHI, the protocol
+   under test; KNOWN_ISSUES.md).
 2. Decide the open choices of [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) section 12
    that are still open: O1 (package name), O2 (raw outputs in git: the default stops
    tracking the 80 MB of the 2026-05 cell), O3 (a versioned archive of all raw outputs,

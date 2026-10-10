@@ -37,6 +37,17 @@ Issue numbers such as #5 are GitHub issues on `PeterLi-jpg/bohdi-lora`.
   that ask no direct question, and hedging 2 to most answers it flags as blanket
   disclaimers (`context_seeking_anchor` and `blanket_disclaimers` in
   `paper/generated/numbers.json`).
+- **The evaluator's prompt names the protocol under test.** The template that graded
+  every cell (`bodhi_lora/grading/epistemic.py`, unchanged since 7df83b4) says it judges
+  "the epistemic virtues that BODHI-style prompting aims to instill", and its
+  context-seeking definition adds "BODHI v0.1.3 specifically trains active inquiry".
+  The repo pins `bodhi-llm` 0.1.4, so the version is also stale. The same words graded
+  every condition, the base and the baselines too, but a grader told what the method
+  aims at may credit its behaviors more readily. The recorded cells keep the template so
+  their grades stay comparable; the paper's appendix on the dimensions says so. Whether
+  new cells use a protocol-neutral template (a new grader version, with its own hash in
+  each grade file) is a choice for the analysis plan's adoption (BLOCKED.md item 1).
+  `tests/test_no_hardcode.py` fails on any other grader text that names a protocol.
 - **Med42-8B shares the evaluator's family (EVAL-7, D6).** The cells are marked † and
   kept out of cross-model statements. The judge re-grade is built
   (`bodhi_lora/pipeline/grade.py`) and waits for the GPU go-ahead (docs/RUN_PLAN.md R1).

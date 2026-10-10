@@ -1,8 +1,20 @@
 """The seven-dimension grader's parsing and aggregation (bodhi_lora/grading/epistemic.py)."""
 
+import hashlib
 import json
 
 from bodhi_lora.grading import epistemic as ep
+
+# The evaluator template of every recorded cell, 02ac9a3:scripts/eval_epistemic.py.
+FROZEN_TEMPLATE_SHA256 = "aa6e2f507de69fd5cad113ebb1f94cd605f129e62f4b3ab727bc73c7e440d313"
+
+
+def test_the_grader_template_is_the_one_that_graded_the_recorded_cells():
+    """Every reported dimension comes from this text, so it does not change in place. A new
+    template, for example one that does not name the protocol under test, is a new grader
+    version with its own hash (docs/ANALYSIS_PLAN.md section 12)."""
+    assert hashlib.sha256(ep.EPISTEMIC_GRADER_TEMPLATE.encode("utf-8")).hexdigest() == FROZEN_TEMPLATE_SHA256
+    assert ep.TEMPLATE_SHA256 == FROZEN_TEMPLATE_SHA256
 
 
 def test_messages_to_text_handles_strings_and_lists():
