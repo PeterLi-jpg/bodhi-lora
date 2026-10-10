@@ -73,8 +73,8 @@ the record's id:
 
 Two more files hold project settings: `configs/project.yaml` (the results root, the data
 root, and the scratch root where stub and dry runs write) and `configs/report.yaml` (the
-grader-free text rules, the labels of the discrimination index, the cells and groups of
-the cross-cell statistics, and the posted values to check). Nothing in the package names
+labels of the discrimination index, the cells and groups of the cross-cell statistics,
+and the posted values to check; it holds no text rule, CONVENTIONS.md rule 15). Nothing in the package names
 a model, a benchmark or a results path (section 9).
 
 ### 3.1 Validation
@@ -588,7 +588,7 @@ definition). Columns:
 | response | `completed`, `chars`, `tokens`, `calls`, `tokens_total`, `finish_length` |
 | rubric | `rubric_score`, `rubric_items`, `rubric_parse_failures`, `axis_<axis>` for each HealthBench axis, `neg_items_met`, `neg_points_lost` |
 | evaluator dimensions | `epi_scored`, `epi_parse_failure`, `uncertainty_ack`, `active_inquiry`, `context_seeking`, `red_flag`, `scope_bounding`, `hedging_quality`, `specificity`, `questions`, `red_flag_rate`, `scope_bounded_rate`, `specificity_rate`, `blanket_disclaimer`, `appropriate_hedging` |
-| text features | `second_person_q`, `leak_<protocol>_<rule>` (marker count) for each protocol the cell uses |
+| format | `leak_<protocol>_<rule>` (count of the protocol's own headers) for each protocol the cell uses; no column reads meaning from the reply text (CONVENTIONS.md rule 15) |
 | labels | `label_<name>`: 1, 0 or empty |
 | judges | `j_<judge>_<metric>` for the rubric score and the seven dimensions |
 
@@ -644,14 +644,14 @@ get their own Holm correction.
 | Counts: prompts, unique prompts, completions, missing completions, parse failures of both graders | eval, grade | D13, LxMF 1 |
 | Worst case: failed grades scored at the undesirable end | evaluator | D13 |
 | Blanket disclaimers: counts and two-sided Fisher exact test | evaluator | D10 |
-| Discrimination index for every response and label of `configs/report.yaml` with both groups present: the rate in each group, P(response given positive) minus P(response given negative), odds ratio, bootstrap intervals, seed-level intervals, and per contrast the difference of the indices and of each group's rate | labels, evaluator, text | D9, MR-W4 |
-| Over-flagging (post hoc): the escalation mention rate on the negative group of `red-flag-at-stake`, prompts whose theme is not emergency referrals and whose rubric says nothing about urgency | labels, text | C30 |
-| Format leakage for every leak rule of every protocol used: leak share, dimensions by leak status, red flag by length quartile in non-leaked responses | text, evaluator | D11, LxMF 4 |
+| Discrimination index for every response and label of `configs/report.yaml` with both groups present: the rate in each group, P(response given positive) minus P(response given negative), odds ratio, bootstrap intervals, seed-level intervals, and per contrast the difference of the indices and of each group's rate | labels, evaluator | D9, MR-W4 |
+| Red-flag rate by the `emergency-theme` label (post hoc, descriptive): the evaluator's red-flag rate on prompts of the emergency-referrals theme and on the others; not an over-flagging rate (ANALYSIS_PLAN.md section 12, 2026-10-10) | labels, evaluator | C30 |
+| Format leakage for every leak rule of every protocol used: leak share, dimensions by leak status, red flag by length quartile in non-leaked responses | format, evaluator | D11, LxMF 4 |
 | Length and token cost: characters, tokens, calls, total tokens per condition; stage time from manifests | eval, manifests | C25 |
 | Askers gap: rubric score of asking minus non-asking responses within a condition | evaluator | withdrawals W7 |
 | Rubric axes per contrast | rubric | aggregate-cost decomposition |
 | Harm proxy: share of responses that meet at least one negative rubric criterion, and points lost to them | rubric | C33 (proxy only) |
-| Grader-free question rate: share of responses with a second-person question | text | PROV-7 |
+| Judge question rate: share of responses that ask the person for information, by a judge with a semantic rubric, once it passes its hand-label gate (not built; ANALYSIS_PLAN.md section 12, 2026-10-10). The second-person keyword rule it replaces was removed | judge | PROV-7; withdrawals W23 |
 | Teacher: `base+<protocol>` behaviour and filter clearance, tau, kept and raw counts | eval, filter manifest | HomM follow-up Table 2 |
 | Judges: per-criterion kappa against the evaluator, weighted kappa for the 0 to 2 dimensions, Pearson r of the rubric score, and the contrasts recomputed with each judge | judge files | D6, C26 |
 | Dimension correlations | evaluator | FzpA Q1 |
@@ -902,7 +902,9 @@ O6). A record of status `planned` changes no number in the paper.
   blanking it (ANALYSIS_PLAN.md 2.3), added the escalation mention rule, the post hoc
   `red-flag-at-stake` label and the group rates of the discrimination section (the
   over-flagging check of C30, marked exploratory), and built `bodhi_lora.report`, which
-  `make numbers` now runs. No number the paper printed before changed.
+  `make numbers` now runs. No number the paper printed before changed. On 2026-10-10 the
+  escalation rule, the second-person rule and the `red-flag-at-stake` label were removed
+  as keyword rules (CONVENTIONS.md rule 15).
 - Not done, so its "done means" row above still applies: `make report` as its own
   target, the macro rename in `paper/main.tex`, and the removal of the old analysis
   scripts.

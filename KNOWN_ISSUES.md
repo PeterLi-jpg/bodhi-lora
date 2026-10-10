@@ -67,16 +67,25 @@ Issue numbers such as #5 are GitHub issues on `PeterLi-jpg/bohdi-lora`.
   that reward asking, while our grader scores context-seeking up. The working
   hypothesis is that rubric items are prompt-specific and our grader scores generic
   asking. It is untested (`rebuttal/responses/drafts/FINDINGS_quality_drop.md`, section 5).
-- **The discrimination labels were defined after the results (EVAL-10, D9).** Both
-  labelings are reported, both marked post hoc and exploratory.
+- **The discrimination label was defined after the results (EVAL-10, D9).** It reads
+  HealthBench's theme tag only and is marked post hoc and exploratory. The second
+  labelling of the discussion matched keywords in rubric text and was removed on
+  2026-10-10 (CONVENTIONS.md rule 15, withdrawals W24).
 - **Calibration is not measured (#1, D3).** The eval JSON has Brier and ECE fields from
   a token-probability proxy. The paper does not report them.
-- **The over-flagging check is post hoc and coarse (C30).** The label `red-flag-at-stake`
-  and the escalation mention rule were defined on 2026-10-09, after the outputs existed,
-  so the rates are exploratory. The rule counts any mention of emergency or urgent care,
-  conditional and negated ones too ("call 911 if ..."), so on prompts with no red flag
-  it is an upper bound on flags raised without cause. The planned test (H7) reads the
-  physician labels on new cells.
+- **No over-flagging rate on the existing cells (C30).** The post hoc check of 2026-10-09
+  (a keyword rule for emergency mentions on the `red-flag-at-stake` label, itself a
+  keyword rule over rubric text) was removed on 2026-10-10 (CONVENTIONS.md rule 15). What
+  stands in for it is the evaluator's red-flag rate on the two groups of the
+  `emergency-theme` label (the theme tag only). Prompts of other themes can hold a red
+  flag, so the rate outside the theme counts warranted flags too and is not an
+  over-flagging rate. A label from the `cluster:` tags would be the physician label under
+  another name, which the analysis plan keeps unseen, and Hard holds only 8 non-emergent
+  prompts. The planned test (H7) reads the physician labels on the labelled cells.
+- **No count of questions without a grader.** The second-person question rule was a
+  keyword rule and was removed on 2026-10-10 (withdrawals W23). The cross-check of active
+  inquiry is a judge classifier with a hand-label gate, specified in ANALYSIS_PLAN.md
+  section 12 and not run (RUN_PLAN.md R17).
 - **Three models have no tokenizer count.** `analyze --extract` counts reply tokens with
   the model's own tokenizer from the local Hugging Face cache and never downloads. Only
   Mistral-Small-24B's tokenizer is cached, so the MedGemma-27B, Med42-8B and
