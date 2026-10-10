@@ -597,3 +597,20 @@ existing cell that this touches was post hoc before and stays exploratory (secti
      the urgent-care rate: a secondary outcome of H7 beside the red-flag rate, on the
      non-emergent and the emergent prompts.
    - *Cost.* GPU or API time (RUN_PLAN.md, R17). Nothing here has run.
+
+**2026-10-10, paper step. Reporting only; no method changed, and this is not the
+adoption.** The paper now cites the post hoc values of section 10 for every cell of
+`cross_cells` in `configs/report.yaml`, not only for the 2026-05 cell: format leakage by
+the `analysis-format` rule (E04), the askers gap (E05), the output tokens that the serving
+engine counted (E08), the theme-tag discrimination index of `needs-info-theme`, and the
+red-flag rate on the two groups of `emergency-theme` (section 4.4 and Table H.6 of
+`paper/main.tex`, the cross-cell table of `bodhi_lora.report`). This lifts the reporting
+gate of the 2026-10-09 entry for these values. That gate named the `red-flag-at-stake`
+label and the escalation rule; the no-lexicon entry above removed both, and no cited value
+reads the reply text with a keyword rule. Every cited value is marked post hoc and
+descriptive. The paper says that the red-flag rate outside the emergency theme counts
+warranted flags and is not an over-flagging rate; H7 stays the test (section 7.2). No
+physician label was read, no decision rule of sections 3 to 9 changed, and no output of a
+planned cell existed: no folder of a planned cell is under `results/`. At adoption
+(BLOCKED.md item 1), the first author may keep these values in the paper, change their
+wording or take them out.

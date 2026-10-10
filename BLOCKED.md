@@ -60,13 +60,16 @@ The uniform analysis of the existing outputs already ran on 2026-10-09 (`make ex
 of the plan's section 10, with no physician label read. For E02, add
 `needs-info-physician` to the `active_inquiry` entry of `discrimination` in
 `configs/report.yaml`, then run `make analyze` and `make numbers`. Also accept or change
-the 2026-10-10 entry of ANALYSIS_PLAN.md section 12: the keyword rules it removed, the
-`emergency-theme` red-flag rates that stand in for the over-flagging check
-(KNOWN_ISSUES.md), and the judge classifier with its hand-label gate, before any text
-cites them. The paper cites none of the new
-values yet: it reports format leakage, token counts and the discrimination index for the
-2026-05 cell only, and no over-flagging rate. Whether it should cite the added cells'
-values is your call. Then RUN_PLAN.md may start.
+the two 2026-10-10 entries of ANALYSIS_PLAN.md section 12. The no-lexicon entry removed
+the keyword rules, put the `emergency-theme` red-flag rates in place of the over-flagging
+check (KNOWN_ISSUES.md) and specified the judge classifier with its hand-label gate. The
+paper entry records that the paper now cites the post hoc checks of every cell (section
+4.4 and Table H.6 of `paper/main.tex`): format leakage, the red-flag rate outside the
+emergency theme (with the statement that it is not an over-flagging rate), the theme-tag
+asking index, the askers gap and the engine's token counts. The abstract also says that
+no cell shows selective asking. If you do not want these values in the paper, say so:
+they come out of section 4.4, Table H.6, that abstract sentence and CLAIMS.md row 26.
+Then RUN_PLAN.md may start.
 
 ## 2. Go-ahead for GPU runs
 
