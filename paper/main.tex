@@ -60,38 +60,38 @@
 \maketitle
 
 \begin{abstract}
-Careful clinicians ask for missing facts before they advise. They name the warning signs that
-need urgent care, and they say what an answer cannot cover. Clinical language models often answer
-at once instead. We study whether a model can learn these epistemic behaviors into its weights,
-for patient-facing, open-ended clinical questions. We contribute three things. The first is a
+Careful clinicians ask for missing facts before they advise, name the warning signs that need
+urgent care, and say what an answer cannot cover. Clinical language models often answer at once
+instead. We study whether a model can learn these epistemic behaviors into its weights, for
+patient-facing, open-ended clinical questions. We contribute three things. The first is a
 decomposition of epistemic behavior into seven dimensions, such as active inquiry and red-flag
-identification, which an LLM grades from the response text. The second is a recipe. The
-\bodhi{} chain-of-thought (CoT) protocol generates training traces, and a filter grader from one
-model family keeps the good ones. A LoRA adapter learns them, and an evaluator from a second model
-family grades the result. We ran the recipe in \statCellsAll{} cells (a cell is one base model on
-one benchmark) and gave every cell the same seed-level tests. On MedGemma-27B and \hbhard{}
-(\statNSeeds{} seeds, \statUniquePrompts{} unique prompts), the adapter without CoT raises active
-inquiry from \statActiveInquiryBase\% to \statActiveInquiryLoRA\% (difference
-\statActiveInquiryLoRAvsBaseDiff{} percentage points, 95\% CI \statActiveInquiryLoRAvsBaseCI). In
-this cell we detect no change in the aggregate score on the HealthBench rubrics
-(\statHealthBenchLoRAvsBaseDiff, 95\% CI \statHealthBenchLoRAvsBaseCI). Of the \statCellsAll{} cells,
-\statCellsOutside{} have a base model outside the evaluator's family and a prompt that does not
-tell the model to ask.
-In \statCellsOutsideAskRose{} of them, active inquiry and context-seeking both rise
+identification, which an LLM grades from the response text. The second is a recipe. The \bodhi{}
+chain-of-thought (CoT) protocol generates training traces, a filter grader from one model family
+keeps the good ones, and a LoRA adapter learns them. An evaluator from a second family grades the
+result. We ran the recipe in \statCellsAll{} cells (a cell is one base model on one benchmark), with
+the same seed-level tests in each. On MedGemma-27B and \hbhard{} (\statNSeeds{} seeds,
+\statUniquePrompts{} unique prompts), the adapter without CoT raises active inquiry from
+\statActiveInquiryBase\% to \statActiveInquiryLoRA\% (difference \statActiveInquiryLoRAvsBaseDiff{}
+percentage points, 95\% CI \statActiveInquiryLoRAvsBaseCI), and we detect no change in the aggregate
+score on the HealthBench rubrics (\statHealthBenchLoRAvsBaseDiff, 95\% CI
+\statHealthBenchLoRAvsBaseCI). Of the \statCellsAll{} cells, \statCellsOutside{} have a base model
+outside the evaluator's family and a prompt that does not tell the model to ask. In
+\statCellsOutsideAskRose{} of them, on \statCellsOutsideAskRoseModels{} base models and
+\statCellsOutsideAskRoseBenchmarks{} benchmarks, active inquiry and context-seeking both rise
 (Holm-adjusted $p < 0.05$). BioMistral-7B is a null result. In the \statCellsAddedWithAggregate{}
 added cells among them, the aggregate score falls, by \statCellsAddedDropMin{} to
-\statCellsAddedDropMax{} (paired $t$ over seeds, largest $p = \statCellsAddedDropPMax$). So the
-behavior gain comes with an aggregate cost. The \statCellsSameFamily{} Med42-8B cells share the
-evaluator's family, and the MedQA cell used a prompt that told the model to ask. We report these
-cells but leave them out of the counts. The third is a diagnosis in the MedGemma-27B cell. Adding
-the CoT protocol to the adapter changes red-flag identification by \statRedFlagLoRACoTvsLoRADiff{}
-on the 0--2 scale (95\% CI \statRedFlagLoRACoTvsLoRACI; $p_{\text{Holm}} =
-\statRedFlagLoRACoTvsLoRAPHolm$). A post hoc analysis links this drop to the protocol's analysis
-format, which leaks into \statHBMedGemmaMayLeakBodhiAnalysisFormatLoRABodhi\% of the responses. The drop does not repeat in the
-added cells. All scores are LLM-graded. The physician check covers
-only the rubric criteria behind the aggregate score. The one physician who returned grades agrees
-with the evaluator at $\kappa = \statKappaAll$, below the target of 0.6 that we set in advance for
-the filter grader. No physician has checked the seven dimensions.
+\statCellsAddedDropMax{} (paired $t$ over seeds, largest $p = \statCellsAddedDropPMax$). The data do
+not show that the adapter learned when to ask: in no \hbhard{} cell is it detectably more selective
+than the base model. We report the \statCellsSameFamily{} Med42-8B cells, which share the
+evaluator's family, and the MedQA cell, whose prompt told the model to ask, but leave them out of
+the counts. The third is a diagnosis in the MedGemma-27B cell. Adding the CoT protocol to the
+adapter changes red-flag identification by \statRedFlagLoRACoTvsLoRADiff{} on the 0--2 scale (95\%
+CI \statRedFlagLoRACoTvsLoRACI; $p_{\text{Holm}} = \statRedFlagLoRACoTvsLoRAPHolm$). A post hoc
+analysis links this drop to the protocol's analysis format, which leaks into
+\statHBMedGemmaMayLeakBodhiAnalysisFormatLoRABodhi\% of the responses. The drop does not repeat in
+the added cells. All scores are LLM-graded. The one physician who returned grades agrees with the
+evaluator on the rubric criteria at $\kappa = \statKappaAll$, below the target of 0.6 that we set in
+advance for the filter grader. No physician has checked the seven dimensions.
 \end{abstract}
 
 %======================================================================
@@ -141,9 +141,9 @@ Our contributions:
     base models and benchmarks. Every cell gets the same tests, with the seed as the unit
     (\S\ref{sec:cells}). Without CoT at inference, the adapter raises active inquiry and
     context-seeking (Holm-adjusted $p < 0.05$) in \statCellsOutsideAskRose{} of the
-    \statCellsOutside{} cells whose base model is outside the evaluator's family, the
-    MedGemma-27B cell included. The aggregate score falls in all \statCellsAddedWithAggregate{}
-    added cells among them. We report this trade-off next to the gain.
+    \statCellsOutside{} cells with a base model outside the evaluator's family and no prompt that
+    cues asking, the MedGemma-27B cell included. The aggregate score falls in all
+    \statCellsAddedWithAggregate{} added cells among them. We report this trade-off next to the gain.
     \item A diagnosis of a failure mode in the MedGemma-27B cell: adding the CoT protocol to the
     adapter lowers red-flag identification ($p_{\text{Holm}} = \statRedFlagLoRACoTvsLoRAPHolm$ on the
     0--2 score). A post hoc analysis links the drop to the Pass~1 analysis format, which leaks into
