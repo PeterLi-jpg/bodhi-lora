@@ -1649,6 +1649,8 @@ def uniform_section(posted: dict, generated: dict, out, macros) -> dict:
     def rose(c, metric, ctok="LoRAvsBase"):
         return _holm_sig(c["contrasts"][ctok][metric], +1)
 
+    # How far the shift reaches: the base models and benchmarks of the cells where it holds.
+    ask_rose = [c for c in outside if rose(c, "active_inquiry_pct") and rose(c, "context_seeking")]
     base_ai_sd = [c["conditions"]["base_no_wrapper"]["active_inquiry_pct"]["sd"] for c in added]
     base_ai_sd = [x for x in base_ai_sd if _finite(x)]
     counts = {
@@ -1657,7 +1659,9 @@ def uniform_section(posted: dict, generated: dict, out, macros) -> dict:
         "same_family": sum(c["same_family_as_evaluator"] for c in cells),
         "set_aside": sum(c["set_aside"] for c in cells),
         "outside": len(outside),
-        "outside_ask_rose": sum(rose(c, "active_inquiry_pct") and rose(c, "context_seeking") for c in outside),
+        "outside_ask_rose": len(ask_rose),
+        "outside_ask_rose_models": len({c["base_model"] for c in ask_rose}),
+        "outside_ask_rose_benchmarks": len({c["benchmark"] for c in ask_rose}),
         "outside_red_flag_rose": sum(rose(c, "red_flag") for c in outside),
         "outside_scope_rose": sum(rose(c, "scope_bounding") for c in outside),
         "outside_dim_fell": sum(c["dims_fell"] > 0 for c in outside),
@@ -1679,6 +1683,10 @@ def uniform_section(posted: dict, generated: dict, out, macros) -> dict:
     macros.add("CellsOutside", fmt_int(counts["outside"]), what)
     macros.add("CellsOutsideAskRose", fmt_int(counts["outside_ask_rose"]),
                f"{what}: active inquiry and context-seeking both higher under LoRA than Base, Holm p < {ALPHA}")
+    macros.add("CellsOutsideAskRoseModels", fmt_int(counts["outside_ask_rose_models"]),
+               f"{what}: base models of the cells where active inquiry and context-seeking both rose")
+    macros.add("CellsOutsideAskRoseBenchmarks", fmt_int(counts["outside_ask_rose_benchmarks"]),
+               f"{what}: benchmarks of the cells where active inquiry and context-seeking both rose")
     macros.add("CellsOutsideRedFlagRose", fmt_int(counts["outside_red_flag_rose"]),
                f"{what}: red-flag identification higher under LoRA than Base, Holm p < {ALPHA}")
     macros.add("CellsOutsideScopeRose", fmt_int(counts["outside_scope_rose"]),
@@ -1773,6 +1781,43 @@ def uniform_report(out, macros) -> dict[str, str]:
         out["meta"]["inputs"][rep.record["cross_cell"]["stats"]] = rep.record["cross_cell"]["sha256"]
     out["uniform_report"] = rep.record
     return rep.tables
+
+
+def check_cells_match_report(generated: dict) -> int:
+    """Stop when the two sources of the per-cell numbers disagree on any cell.
+
+    Table 1 and the per-cell detail tables read the per-seed condition means of
+    generated_values.json (make cells). The appendix checks table and the macros of each
+    cell read its analysis/stats.json (make analyze). Both come from the same raw outputs,
+    so every per-seed mean must agree; otherwise the paper would print two values for one
+    quantity. configs/report.yaml (posted) maps the cell, condition and metric names.
+    Returns the number of per-seed means compared."""
+    from bodhi_lora.analysis import report_config
+    from bodhi_lora.paths import project
+
+    configs = ROOT / "configs"
+    cfg, proj = report_config(configs), project(configs)
+    n = 0
+    for g in generated["cells"]:
+        cid = cfg.posted.cells[g["id"]]
+        path = proj.cell(cid).analysis() / "stats.json"
+        if not path.is_file():
+            raise SystemExit(f"paper_stats: {g['id']} is in Table 1 but {_rel(path)} is missing; run make analyze")
+        stats_conds = json.loads(path.read_text())["conditions"]
+        for gc, cond in cfg.posted.conditions.items():
+            for name, m in cfg.posted.metrics.items():
+                ours = stats_conds[m.metric][cond]["per_seed"]
+                for seed, v in g["conditions"][gc][name]["per_seed"].items():
+                    w = ours.get(str(seed))
+                    if v is None and w is None:
+                        continue
+                    # generated_values.json keeps six significant digits; check two decimals
+                    # finer than the paper prints, as _check_main_seed_means does.
+                    if v is None or w is None or abs(v - w * m.scale) > 10 ** -(m.decimals + 2):
+                        raise SystemExit(f"paper_stats: {g['id']} {gc} {name} seed {seed}: generated_values.json "
+                                         f"has {v}, {_rel(path)} has {w}; run make cells and make analyze")
+                    n += 1
+    return n
 
 
 def cost_section(stats_path: Path, out, macros) -> None:
@@ -2363,6 +2408,8 @@ def run(results_dir: Path, out_dir: Path, healthbench: Path | None, filter_score
         generality_section(posted, generated, out, macros, recipe)
         if generated is not None:
             uniform_section(posted, generated, out, macros)
+            if with_report:
+                out["uniform"]["per_seed_means_checked_against_report"] = check_cells_match_report(generated)
 
     report_tables = uniform_report(out, macros) if with_report else {}
     tables = build_tables(out, seeds)

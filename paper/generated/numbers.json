@@ -17157,6 +17157,8 @@
       "set_aside": 1,
       "outside": 5,
       "outside_ask_rose": 4,
+      "outside_ask_rose_models": 2,
+      "outside_ask_rose_benchmarks": 3,
       "outside_red_flag_rose": 4,
       "outside_scope_rose": 4,
       "outside_dim_fell": 2,
@@ -17165,7 +17167,8 @@
       "added_red_flag_cot_rose": 1,
       "added_base_ai_sd_min": 0.273861,
       "added_base_ai_sd_max": 2.13307
-    }
+    },
+    "per_seed_means_checked_against_report": 1252
   },
   "uniform_report": {
     "cells": {

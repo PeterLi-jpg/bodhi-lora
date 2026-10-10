@@ -329,7 +329,9 @@ def test_synced_cell_replaces_posted_values_and_gets_a_t_interval(tmp_path):
     # An empty results root, so no synced copy of the other cells is read.
     cv.run(POSTED, tmp_path / "none", {"healthbench__medgemma-27b": M, "healthbench__mistral-small-24b": M}, gen)
     out_dir = tmp_path / "out"
-    out = ps.run(M, out_dir, None, None, None, None, POSTED, gen)
+    # No report: it reads the committed stats.json of each cell, which this fake Mistral
+    # cell does not match by design, so check_cells_match_report would stop the run.
+    out = ps.run(M, out_dir, None, None, None, None, POSTED, gen, with_report=False)
     cells = {c["id"]: c for c in out["generality"]["cells"]}
     m = cells["healthbench__mistral-small-24b"]
     assert m["source"] == "synced"
@@ -417,6 +419,8 @@ def test_every_cell_gets_the_same_statistics(tmp_path):
     # MedGemma, Mistral HB, BioMistral, ChatDoctor Mistral, MedQuAD Mistral; all but
     # BioMistral raise active inquiry and context-seeking after Holm.
     assert (k["all"], k["added"], k["outside"], k["outside_ask_rose"]) == (8, 7, 5, 4)
+    # The four: MedGemma-27B and Mistral-Small-24B, on HealthBench-Hard, ChatDoctor and MedQuAD.
+    assert (k["outside_ask_rose_models"], k["outside_ask_rose_benchmarks"]) == (2, 3)
     # The red-flag counts of LoRA+BODHI against LoRA leave out the Med42-8B cells (D6):
     # Mistral HB, BioMistral, ChatDoctor Mistral and MedQuAD Mistral. Only MedQuAD rises.
     assert (k["added_outside"], k["added_red_flag_cot_fell"], k["added_red_flag_cot_rose"]) == (4, 0, 1)
@@ -454,6 +458,18 @@ def test_main_cell_mismatch_stops_the_run(tmp_path):
     path.write_text(json.dumps(gv))
     with pytest.raises(SystemExit, match="healthbench__medgemma-27b lora_no_wrapper red_flag seed 42"):
         _uniform_run(tmp_path / "out", path)
+
+
+def test_table_1_and_the_report_agree_on_every_cell():
+    # Table 1 reads generated_values.json; the appendix checks table and the per-cell
+    # macros read each cell's stats.json. Every per-seed mean must agree: 8 cells, 4
+    # conditions, 8 metrics, 5 seeds, less the 28 dimension means of MedQA seed 42.
+    gv = json.loads((CROSS / "generated_values.json").read_text())
+    assert ps.check_cells_match_report(gv) == 8 * 4 * 8 * 5 - 4 * 7
+    bio = next(c for c in gv["cells"] if c["id"] == "healthbench__biomistral-7b")
+    bio["conditions"]["lora"]["red_flag"]["per_seed"]["7"] += 0.01
+    with pytest.raises(SystemExit, match="healthbench__biomistral-7b lora red_flag seed 7"):
+        ps.check_cells_match_report(gv)
 
 
 def test_token_counts_come_from_the_uniform_analysis(generated):
