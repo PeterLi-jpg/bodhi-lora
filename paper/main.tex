@@ -616,7 +616,7 @@ baselines is the most important missing experiment (\S\ref{sec:future}).
 \label{sec:limitations}
 
 \emph{One protocol, one method.} We tested one CoT protocol (\bodhi{}) and one fine-tuning method
-(LoRA). We make no claim about others, or about tasks with no missing information to seek, such as
+(LoRA), and make no claim about others or about tasks with no missing information to seek, such as
 closed-form multiple choice, extraction or summarization.
 \emph{Grading.} Every score is LLM-graded. One of three physicians returned grades, on rubric
 criteria only and not on the seven dimensions, and agreement is below the target. On the negative
@@ -647,11 +647,12 @@ the same cells: clarifying questions, verbalized confidence \citep{tian2023just}
 after MediQ \citep{li2024mediq}. (3) Selective asking on paired
 MediQ prompts with and without the missing facts. (4) Over-flagging on the prompts that HealthBench
 physicians labelled not emergent. (5) A one-pass protocol that asks first, and the \bodhi{} protocol
-with its red-flag section first. (6) A clinical judge from a third model family on every cell. (7)
-Filter and teacher ablations, which test the BioMistral-7B hypothesis. (8) Clinician-posed prompts:
+with its red-flag section first. (6) A clinical judge from a third model family on every cell, which
+also checks the active-inquiry grade against hand labels. (7) Filter and teacher ablations, which
+test the BioMistral-7B hypothesis. (8) Clinician-posed prompts:
 the HealthBench prompts that physicians labelled as written by a health professional, and the NLM
 Clinical Questions Collection, open sets in place of MIMIC and eICU, which need credentialed access.
-The discrimination index with the physicians' labels needs no new run, only our adoption of the plan.
+(9) The contamination probe of Appendix~\ref{app:contamination}, with its outputs kept. The discrimination index with the physicians' labels needs no new run, only our adoption of the plan.
 
 \paragraph{Ethics and broader impact.} We use public benchmark data, including questions that
 patients posted online (ChatDoctor), and no patient records. The adapter is a research artifact,
@@ -687,7 +688,7 @@ length of 40 tokens. On those 105, the model produced no exact completion, and t
 overlap was zero tokens. This shows no verbatim memorization where the probe is defined. A
 PubMedQA control gave no usable samples, because its questions are shorter than 40 tokens. We did
 not keep the probe's output file in the repository, so these counts cannot be derived again from
-it. A new run of the probe needs the base model on a GPU.
+it. A new run is future work (\S\ref{sec:future}).
 
 \section{Physician Check: Amended Protocol}
 \label{app:human}
@@ -1309,9 +1310,8 @@ and its posted rate of \statPostedLeakagePctLoRACoT\% for LoRA+\bodhi{}. The rul
 \statPostedSecondPersonBase\% of Base responses and \statPostedSecondPersonLoRA\% of LoRA
 responses had a sentence that ends in a question mark and contains ``you'' or ``your''. Such a rule
 counts quoted and rhetorical questions and misses indirect ones, so we withdraw the rate and report
-no count of this kind. The evaluator's active-inquiry grade is the measure of asking. The release
-specifies a check of it by a judge from another model family, with a written rubric and an
-agreement test against hand labels (\texttt{docs/ANALYSIS\_PLAN.md}); it has not run.
+no count of this kind. The evaluator's active-inquiry grade is the measure of asking. A check of
+it by a judge from another model family is future work (\S\ref{sec:future}).
 
 \paragraph{Checks in every cell.} Table~\ref{tab:checks} gives the checks of \S\ref{sec:checks}
 for every cell, from the response-level outputs of each cell. The theme tags exist only on
@@ -1483,9 +1483,8 @@ without the preamble exists.
 
 \paragraph{Med42-8B cells.} Med42-8B is a Llama-3 model, and the evaluator is
 Llama-3.1-8B-Instruct. This breaks the separation of grader families (\S\ref{sec:method}). We keep
-these cells, mark them, and leave them out of every count across cells. The grade stage of the
-code release can grade their stored responses again with a judge from a third family
-(\S\ref{sec:future}). We have not run it.
+these cells, mark them, and leave them out of every count across cells. A judge from a third
+family for these cells is future work (\S\ref{sec:future}).
 
 \section{Qualitative Examples}
 \label{app:examples}
