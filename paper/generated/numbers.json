@@ -17281,51 +17281,57 @@
     "macros": 2719,
     "cross_table_columns": [
       {
-        "group": "Red-flag rate outside the emergency theme (\\%, post hoc)",
-        "header": "Base",
-        "value": "discrimination.red_flag_rate.emergency-theme.conditions.base.negative_rate",
-        "ci": null
-      },
-      {
-        "group": "Red-flag rate outside the emergency theme (\\%, post hoc)",
-        "header": "LoRA",
-        "value": "discrimination.red_flag_rate.emergency-theme.conditions.lora.negative_rate",
-        "ci": null
-      },
-      {
-        "group": "Red-flag rate outside the emergency theme (\\%, post hoc)",
-        "header": "LoRA $-$ Base",
+        "group": "",
+        "header": "\\shortstack[r]{Red-flag rate outside\\\\emergency theme (pp)}",
         "value": "discrimination.red_flag_rate.emergency-theme.contrasts.lora - base.negative_rate.seed_test.diff",
         "ci": "discrimination.red_flag_rate.emergency-theme.contrasts.lora - base.negative_rate.seed_test.ci95"
       },
       {
         "group": "",
-        "header": "\\shortstack[r]{Asking index, post hoc\\\\LoRA $-$ Base (pp)}",
+        "header": "\\shortstack[r]{Asking index\\\\(pp)}",
         "value": "discrimination.active_inquiry.needs-info-theme.contrasts.lora - base.diff",
+        "ci": "discrimination.active_inquiry.needs-info-theme.contrasts.lora - base.diff_ci95"
+      },
+      {
+        "group": "Format leak, LoRA+P",
+        "header": "Share (\\%)",
+        "value": "leakage.leak_{protocol}__analysis-format.conditions.lora+{protocol}.leaked_share",
         "ci": null
       },
       {
-        "group": "",
-        "header": "\\shortstack[r]{Format leak\\\\LoRA+P (\\%)}",
-        "value": "leakage.leak_{protocol}__analysis-format.conditions.lora+{protocol}.leaked_share",
+        "group": "Format leak, LoRA+P",
+        "header": "$n$ leaked",
+        "value": "leakage.leak_{protocol}__analysis-format.conditions.lora+{protocol}.n_leaked",
+        "ci": null
+      },
+      {
+        "group": "Format leak, LoRA+P",
+        "header": "\\shortstack[r]{Red flag\\\\leaked}",
+        "value": "leakage.leak_{protocol}__analysis-format.conditions.lora+{protocol}.dimensions_leaked.red_flag",
+        "ci": null
+      },
+      {
+        "group": "Format leak, LoRA+P",
+        "header": "\\shortstack[r]{Red flag\\\\clean}",
+        "value": "leakage.leak_{protocol}__analysis-format.conditions.lora+{protocol}.dimensions_clean.red_flag",
         "ci": null
       },
       {
         "group": "",
         "header": "\\shortstack[r]{Askers gap\\\\LoRA}",
         "value": "askers_gap.lora.gap",
+        "ci": "askers_gap.lora.gap_ci95"
+      },
+      {
+        "group": "Output tokens",
+        "header": "Base",
+        "value": "cost.conditions.base.tokens_engine_mean",
         "ci": null
       },
       {
-        "group": "Tokens per reply",
-        "header": "Base+P",
-        "value": "cost.conditions.base+{protocol}.tokens_mean",
-        "ci": null
-      },
-      {
-        "group": "Tokens per reply",
+        "group": "Output tokens",
         "header": "LoRA",
-        "value": "cost.conditions.lora.tokens_mean",
+        "value": "cost.conditions.lora.tokens_engine_mean",
         "ci": null
       }
     ]

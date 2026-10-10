@@ -100,11 +100,14 @@ class CrossColumn(_Record):
     """One column of the cross-cell table: a number of each cell's stats.json.
 
     `value` and `ci` are dotted paths into stats.json; {protocol} stands for the cell's
-    protocol id. `ci` names a t interval, printed as plus or minus its half width."""
+    protocol id. With ci_style "pm", `ci` names a t interval, printed as plus or minus its
+    half width. A bootstrap interval need not be symmetric, so it takes ci_style "range",
+    which prints both ends."""
     group: str = ""
     header: str
     value: str
     ci: Optional[str] = None
+    ci_style: Literal["pm", "range"] = "pm"
     scale: float = 1.0
     decimals: int = Field(ge=0)
     sign: bool = False

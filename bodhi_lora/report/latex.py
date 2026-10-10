@@ -60,6 +60,17 @@ def fmt_pm(x, ci, dp: int, sign: bool = True) -> str:
     return "\\ensuremath{" + s + "}"
 
 
+def fmt_range(x, ci, dp: int, sign: bool = True) -> str:
+    """x followed by both ends of its interval, for an interval that need not be
+    symmetric (a percentile bootstrap)."""
+    if not finite(x):
+        return MISSING
+    s = fmt(x, dp, sign).removeprefix("\\ensuremath{").removesuffix("}")
+    if ci and finite(ci[0]) and finite(ci[1]):
+        s += "\\;" + fmt_ci(ci, dp, sign).removeprefix("\\ensuremath{").removesuffix("}")
+    return "\\ensuremath{" + s + "}"
+
+
 def token(name: str) -> str:
     """An id as letters for a macro name: 'needs-info-theme' -> 'NeedsInfoTheme',
     'pass1-headers' -> 'PassOneHeaders'."""

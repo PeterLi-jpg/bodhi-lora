@@ -32,8 +32,8 @@ from bodhi_lora.analysis.config import ReportConfig
 from bodhi_lora.analysis.extract import SEVEN
 from bodhi_lora.paths import Project
 from bodhi_lora.registry import CellConfig, Registry, parse_condition
-from bodhi_lora.report.latex import (MISSING, escape, finite, fmt, fmt_ci, fmt_int, fmt_p, fmt_pm, tabular,
-                                     token)
+from bodhi_lora.report.latex import (MISSING, escape, finite, fmt, fmt_ci, fmt_int, fmt_p, fmt_pm, fmt_range,
+                                     tabular, token)
 
 # Printing scale and decimals of each metric kind (bodhi_lora.analysis.cell.Metric.kind).
 KIND_FORMAT = {"score02": (1.0, 2), "rate": (100.0, 1), "count": (1.0, 2), "score": (1.0, 3),
@@ -328,8 +328,9 @@ def cross_table(all_stats: dict, reg: Registry, cfg: ReportConfig, src: str) -> 
             value = _get(stats, c.value.format(protocol=cell.protocol))
             x = value * c.scale if finite(value) else None
             if c.ci:
-                out.append(fmt_pm(x, _scaled(_get(stats, c.ci.format(protocol=cell.protocol)), c.scale),
-                                  c.decimals, c.sign))
+                ci = _scaled(_get(stats, c.ci.format(protocol=cell.protocol)), c.scale)
+                show = fmt_range if c.ci_style == "range" else fmt_pm
+                out.append(show(x, ci, c.decimals, c.sign))
             else:
                 out.append(fmt(x, c.decimals, c.sign))
         return out

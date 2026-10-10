@@ -13,7 +13,7 @@ from bodhi_lora.analysis import analyzable, report_config  # noqa: E402
 from bodhi_lora.paths import CONFIGS_DIR, project  # noqa: E402
 from bodhi_lora.registry import load_registry  # noqa: E402
 from bodhi_lora.report import CROSS_TABLE, report  # noqa: E402
-from bodhi_lora.report.latex import fmt, fmt_pm, token  # noqa: E402
+from bodhi_lora.report.latex import fmt, fmt_pm, fmt_range, token  # noqa: E402
 
 
 @pytest.fixture(scope="module")
@@ -26,6 +26,12 @@ def setup():
 
 def _stats(proj, cid):
     return json.loads((proj.cell(cid).analysis() / "stats.json").read_text())
+
+
+def test_range_prints_both_ends_of_an_asymmetric_interval():
+    assert fmt_range(0.1, [-0.005, 0.201], 3) == "\\ensuremath{+0.100\\;[-0.005,\\,+0.201]}"
+    assert fmt_range(0.1, None, 3) == "\\ensuremath{+0.100}"
+    assert fmt_range(None, [0, 1], 3) == "--"
 
 
 def test_tokens():
@@ -78,18 +84,24 @@ def test_cross_table_has_the_same_columns_for_every_cell(setup):
     rows = [line for line in body.splitlines() if line.endswith("\\\\")]
     assert len(rows) == len(cfg.cross_cells)
     assert {line.count(" & ") for line in rows} == {len(cfg.cross_table)}
-    # A cell whose benchmark has no emergency-theme label shows "--" in its three columns.
     for cid in cfg.cross_cells:
         s = _stats(proj, cid)
         label = re.escape(reg.cells[cid].report.label)
         line = next(r for r in rows if re.match(label, r))
         cells = line.removesuffix(" \\\\").split(" & ")[1:]
+        # The red-flag rate outside the emergency theme: a seed-level t interval, plus or
+        # minus its half width; "--" where the benchmark has no emergency-theme label.
         over = s["discrimination"]["red_flag_rate"]["emergency-theme"]
+        i = next(i for i, c in enumerate(cfg.cross_table) if c.value.startswith("discrimination.red_flag_rate"))
         if "not_measured" in over:
-            assert cells[:3] == ["--"] * 3
+            assert cells[i] == "--"
         else:
             t = over["contrasts"]["lora - base"]["negative_rate"]["seed_test"]
-            assert cells[2] == fmt_pm(t["diff"] * 100, [x * 100 for x in t["ci95"]], 1)
+            assert cells[i] == fmt_pm(t["diff"] * 100, [x * 100 for x in t["ci95"]], 1)
+        # The askers gap: a bootstrap interval, printed with both ends.
+        i = next(i for i, c in enumerate(cfg.cross_table) if c.value == "askers_gap.lora.gap")
+        g = s["askers_gap"]["lora"]
+        assert cells[i] == fmt_range(g["gap"], g["gap_ci95"], 3, sign=True)
 
 
 def test_a_set_aside_cell_states_why(setup):

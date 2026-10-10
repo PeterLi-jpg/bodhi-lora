@@ -164,43 +164,61 @@ display:
 
 # The cross-cell table of the checks that need no GPU: every cell of cross_cells gets
 # every column, "--" where the cell has no such value (for example no label on its
-# benchmark, or no tokenizer in the local cache). Paths are into each cell's stats.json.
+# benchmark). Paths are into each cell's stats.json. A t interval prints as plus or minus
+# its half width; a bootstrap interval (ci_style: range) prints both ends, because it need
+# not be symmetric. The paper's appendix table of these checks is this table.
+#   Red-flag rate outside the emergency theme: the seed-level LoRA - Base test. It counts
+#     warranted flags too, so it is not an over-flagging rate (ANALYSIS_PLAN.md section 12,
+#     2026-10-10).
+#   Asking index: LoRA - Base on the context-seeking theme index, prompt-clustered bootstrap.
+#   Format leak: the leak share and count of LoRA+protocol, and the red-flag score of its
+#     leaked and clean replies (the protocol's own Pass 1 headers; D11).
+#   Askers gap: the rubric score of LoRA replies that ask minus those that do not,
+#     prompt-clustered bootstrap; the groups select themselves (W7).
+#   Output tokens: the serving engine's count per reply. Only the one-pass conditions have
+#     one: the two-pass conditions stored their final reply only.
 cross_table:
-  - group: 'Red-flag rate outside the emergency theme (\%, post hoc)'
-    header: Base
-    value: discrimination.red_flag_rate.emergency-theme.conditions.base.negative_rate
-    scale: 100
-    decimals: 1
-  - group: 'Red-flag rate outside the emergency theme (\%, post hoc)'
-    header: LoRA
-    value: discrimination.red_flag_rate.emergency-theme.conditions.lora.negative_rate
-    scale: 100
-    decimals: 1
-  - group: 'Red-flag rate outside the emergency theme (\%, post hoc)'
-    header: 'LoRA $-$ Base'
+  - header: '\shortstack[r]{Red-flag rate outside\\emergency theme (pp)}'
     value: discrimination.red_flag_rate.emergency-theme.contrasts.lora - base.negative_rate.seed_test.diff
     ci: discrimination.red_flag_rate.emergency-theme.contrasts.lora - base.negative_rate.seed_test.ci95
     scale: 100
     decimals: 1
     sign: true
-  - header: '\shortstack[r]{Asking index, post hoc\\LoRA $-$ Base (pp)}'
+  - header: '\shortstack[r]{Asking index\\(pp)}'
     value: discrimination.active_inquiry.needs-info-theme.contrasts.lora - base.diff
+    ci: discrimination.active_inquiry.needs-info-theme.contrasts.lora - base.diff_ci95
+    ci_style: range
     scale: 100
     decimals: 1
     sign: true
-  - header: '\shortstack[r]{Format leak\\LoRA+P (\%)}'
+  - group: 'Format leak, LoRA+P'
+    header: 'Share (\%)'
     value: leakage.leak_{protocol}__analysis-format.conditions.lora+{protocol}.leaked_share
     scale: 100
     decimals: 1
+  - group: 'Format leak, LoRA+P'
+    header: '$n$ leaked'
+    value: leakage.leak_{protocol}__analysis-format.conditions.lora+{protocol}.n_leaked
+    decimals: 0
+  - group: 'Format leak, LoRA+P'
+    header: '\shortstack[r]{Red flag\\leaked}'
+    value: leakage.leak_{protocol}__analysis-format.conditions.lora+{protocol}.dimensions_leaked.red_flag
+    decimals: 2
+  - group: 'Format leak, LoRA+P'
+    header: '\shortstack[r]{Red flag\\clean}'
+    value: leakage.leak_{protocol}__analysis-format.conditions.lora+{protocol}.dimensions_clean.red_flag
+    decimals: 2
   - header: '\shortstack[r]{Askers gap\\LoRA}'
     value: askers_gap.lora.gap
+    ci: askers_gap.lora.gap_ci95
+    ci_style: range
     decimals: 3
     sign: true
-  - group: 'Tokens per reply'
-    header: 'Base+P'
-    value: cost.conditions.base+{protocol}.tokens_mean
+  - group: 'Output tokens'
+    header: Base
+    value: cost.conditions.base.tokens_engine_mean
     decimals: 0
-  - group: 'Tokens per reply'
+  - group: 'Output tokens'
     header: LoRA
-    value: cost.conditions.lora.tokens_mean
+    value: cost.conditions.lora.tokens_engine_mean
     decimals: 0
