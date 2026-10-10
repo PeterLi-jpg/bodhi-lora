@@ -4,5 +4,19 @@ title: 'Ask-first: a three-question plan, then a reply that asks first'
 kind: wrapper
 impl: ask_first
 passes: 1
+# The leak rule is a parser of the protocol's own fixed format, not a word list: its
+# markers are the plan tags and the REPLY: line that the template asks the model to write
+# (AskFirst.format_fields). The trained reply is the text after REPLY:, so a reply that
+# repeats two of them has copied the internal format (EXPERIMENTS.md E04 for H5).
+# tests/test_no_lexicon.py fails if a marker is a free word.
+leak_rules:
+  analysis-format:
+    description: two or more of the three format markers of the ask-first template, the
+      plan tags and the REPLY line
+    markers:
+    - <plan>
+    - </plan>
+    - 'REPLY\s*:'
+    threshold: 2
 reference: 'Second teaching protocol of this repo (EXPERIMENTS.md E16); one call, the reply
   after a REPLY: line'

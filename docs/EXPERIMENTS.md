@@ -138,7 +138,8 @@ recorded in new runs, truncation is measured directly instead of inferred. Exist
 the 2026-05 cell (`rebuttal/analyses/interference_mechanism.py`, whose posted nine-marker
 rule counted two free words and is withdrawn, W25). GPU: no. Status: built (for every leak
 rule of every protocol a cell uses; a leak marker must be one of the protocol's own
-headers, `tests/test_no_lexicon.py`).
+headers, `tests/test_no_lexicon.py`). The `ask-first` record counts its plan tags and
+REPLY: line, so the H5 cell gets the same leak columns.
 
 **E05. What the aggregate drop is made of.** Answers HomM-final (consistent aggregate
 drops), withdrawals W7 and W8. Per cell: LoRA minus Base on each HealthBench rubric axis,

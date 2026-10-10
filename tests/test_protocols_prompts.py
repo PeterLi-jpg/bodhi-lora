@@ -99,3 +99,13 @@ def test_ask_first_makes_one_call_with_the_whole_conversation():
     assert out.metadata["protocol"] == "ask-first" and out.metadata["reply_marker_found"] is True
     # The tokens count the whole generation, plan included.
     assert out.completion_tokens == 6 and not out.finish_length
+
+
+def test_ask_first_format_fields_are_the_ones_its_template_asks_for():
+    """The leak rule of the ask-first record may only count these (tests/test_no_lexicon.py)."""
+    from bodhi_lora.protocols.ask_first import ASK_FIRST_TEMPLATE, FORMAT_FIELDS
+
+    proto = build(REG.protocols["ask-first"], REG.models["mistral-small-24b"])
+    assert proto.format_fields() == FORMAT_FIELDS == ("<plan>", "</plan>", "REPLY:")
+    assert all(f in ASK_FIRST_TEMPLATE for f in FORMAT_FIELDS)
+    assert set(REG.protocols["ask-first"].leak_rules) == {"analysis-format"}

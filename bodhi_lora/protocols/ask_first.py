@@ -47,6 +47,9 @@ Conversation:
 
 _PLAN_RE = re.compile(r"<plan>(.*?)</plan>", re.DOTALL | re.IGNORECASE)
 _REPLY_RE = re.compile(r"^\s*\**REPLY:\**\s*", re.MULTILINE)
+# The fixed format the template asks for: the plan tags and the reply line. A reply that
+# repeats them has copied the internal format (the leak rule of the ask-first record).
+FORMAT_FIELDS = ("<plan>", "</plan>", "REPLY:")
 
 
 def render_conversation(messages) -> str:
@@ -87,6 +90,10 @@ class AskFirst(Protocol):
 
     def __init__(self, protocol: ProtocolConfig, model: ModelConfig):
         self.id = protocol.id
+
+    def format_fields(self) -> tuple[str, ...]:
+        """The plan tags and the REPLY: line of the template's fixed format."""
+        return FORMAT_FIELDS
 
     def respond(self, engine, messages: list, decoding: Decoding) -> Output:
         log = CallLog(engine, decoding)
