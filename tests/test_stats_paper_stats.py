@@ -183,15 +183,26 @@ def test_axis_scores(generated):
     assert round(ax["communication_quality"]["lora_bodhi"], 3) == 0.246
 
 
-def test_kappa_and_rebuttal_macros(generated):
+def test_kappa_and_leakage_macros(generated):
     d = generated[1]
     assert _macro(d, "KappaAll") == "0.35"
     assert _macro(d, "KappaAllN") == "509"
     # The pre-registered comparison was against the Qwen filter grader (10 filter traces).
     assert _macro(d, "KappaFilter") == "0.30"
     assert _macro(d, "KappaFilterN") == "125"
-    assert _macro(d, "LeakagePctLoRACoT") == "54.6"
-    assert _macro(d, "AskOddsRatioPrimaryLoRA") == "1.54"
+    # Leakage by the seven Pass 1 headers of the protocol record, from the uniform analysis.
+    assert _macro(d, "HBMedGemmaMayLeakBodhiAnalysisFormatLoRABodhi") == "53.2"
+    assert _macro(d, "HBMedGemmaMayLeakBodhiAnalysisFormatLoRABodhiN") == "494"
+
+
+@pytest.mark.parametrize("name", ["LeakagePctLoRACoT", "LeakagePassOnePctLoRACoT", "AskOddsRatioPrimaryLoRA",
+                                  "DiscriminationPrimaryLoRAvsBase", "SecondPersonPctLoRA",
+                                  "ClinicianKeywordPrompts"])
+def test_no_macro_comes_from_a_keyword_analysis(generated, name):
+    """The nine-marker leakage, the rubric-keyword labelling, the second-person count and the
+    clinician keyword count are withdrawn (rebuttal/withdrawals.md W14, W23 to W25)."""
+    with pytest.raises(KeyError):
+        _macro(generated[1], name)
 
 
 def test_every_macro_has_a_source_comment(generated):

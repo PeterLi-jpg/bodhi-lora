@@ -87,7 +87,7 @@ cells but leave them out of the counts. The third is a diagnosis in the MedGemma
 the CoT protocol to the adapter changes red-flag identification by \statRedFlagLoRACoTvsLoRADiff{}
 on the 0--2 scale (95\% CI \statRedFlagLoRACoTvsLoRACI; $p_{\text{Holm}} =
 \statRedFlagLoRACoTvsLoRAPHolm$). A post hoc analysis links this drop to the protocol's analysis
-format, which leaks into \statLeakagePctLoRACoT\% of the responses. The drop does not repeat in the
+format, which leaks into \statHBMedGemmaMayLeakBodhiAnalysisFormatLoRABodhi\% of the responses. The drop does not repeat in the
 added cells. All scores are LLM-graded. The physician check covers
 only the rubric criteria behind the aggregate score. The one physician who returned grades agrees
 with the evaluator at $\kappa = \statKappaAll$, below the target of 0.6 that we set in advance for
@@ -507,15 +507,16 @@ the Holm family). Against Base, we detect no difference for LoRA+\bodhi{} on the
 aggregate score of LoRA+\bodhi{} differs from LoRA by \statHealthBenchLoRACoTvsLoRADiff{}
 (\statHealthBenchLoRACoTvsLoRACI).
 
-A post hoc analysis points to format leakage. A response leaks when it has at least two of nine
-markers of the analysis format: the seven Pass~1 headers, ``differential'' and ``scope of''.
-\statLeakagePctLoRACoT\% of LoRA+\bodhi{} responses leak, against \statLeakagePctBase\% to
-\statLeakagePctBaseCoT\% in the other conditions (Figure~\ref{fig:interference} shows one case).
-Leaked responses score \statRedFlagLeaked{} on red-flag identification ($n =
-\statLeakageNLoRACoT$). The others score \statRedFlagClean{} ($n = \statLeakageNCleanLoRACoT$),
-and LoRA scores \statRedFlagLoRA{}. The seven Pass~1 headers alone give nearly the same split
-(Appendix~\ref{app:robustness}). We defined the leakage split by a property of the
-format, after we saw the results. So leakage may also follow prompt difficulty. We do not claim
+A post hoc analysis points to format leakage. A response leaks when it repeats at least two of
+the seven Pass~1 section headers, such as ``RED FLAGS:''. The protocol defines these headers, so
+the rule reads no other words.
+\statHBMedGemmaMayLeakBodhiAnalysisFormatLoRABodhi\% of LoRA+\bodhi{} responses leak, against \statHBMedGemmaMayLeakBodhiAnalysisFormatBase\% to
+\statHBMedGemmaMayLeakBodhiAnalysisFormatBaseBodhi\% in the other conditions (Figure~\ref{fig:interference} shows one case).
+Leaked responses score \statHBMedGemmaMayLeakBodhiAnalysisFormatLoRABodhiRedFlagLeaked{} on red-flag identification ($n =
+\statHBMedGemmaMayLeakBodhiAnalysisFormatLoRABodhiN$). The others score \statHBMedGemmaMayLeakBodhiAnalysisFormatLoRABodhiRedFlagClean{} ($n =
+\statHBMedGemmaMayLeakBodhiAnalysisFormatLoRABodhiNClean$), and LoRA scores \statRedFlagLoRA{}. We withdraw our posted rule,
+which also counted two words that are not headers (Appendix~\ref{app:robustness}).
+We defined the leakage split by a property of the format, after we saw the results. So leakage may also follow prompt difficulty. We do not claim
 that the adapter and the protocol compete for capacity.
 
 The drop does not repeat in the added cells. There, red-flag identification under LoRA+\bodhi{}
@@ -550,9 +551,8 @@ safe to just start antidepressants i feel really down lately'', Base lists what 
 but asks nothing. LoRA asks how long the user has felt down, about sleep, appetite and self-harm,
 and gives a crisis line (Appendix~\ref{app:examples}). Active inquiry and context-seeking help only where facts are
 missing and the user can give them. We do not show that the adapter asks only there. It also asks
-more on prompts that our two post hoc labelings call self-contained
-(\statAskSelfContainedPrimaryBase\% to \statAskSelfContainedPrimaryLoRA\%;
-\statAskSelfContainedThemeOnlyBase\% to \statAskSelfContainedThemeOnlyLoRA\%), and the interval for
+more on prompts outside HealthBench's context-seeking theme (\statHBMedGemmaMayActiveInquiryNeedsInfoThemeNegRateBase\% to
+\statHBMedGemmaMayActiveInquiryNeedsInfoThemeNegRateLoRA\%), and the interval for
 its gain in selectivity over Base includes zero (Appendix~\ref{app:robustness}). So the adapter may
 imitate a template of asking. Scope bounding and
 red-flag identification apply to any clinical question. Outside the evaluator's family, the rise in active inquiry is largest on
@@ -1267,52 +1267,47 @@ $r = \statShiftCorrSpecificity$. The adapter can change active inquiry on a prom
 changing the other dimensions.
 
 \paragraph{Asking where context is missing (post hoc, exploratory).} We split the
-\statUniquePrompts{} prompts into two groups. One group needs context that the user has not given,
-and the other group is self-contained. We used two labelings, both defined after the results. The
-first uses the HealthBench theme tag or a keyword match on the rubric. The second uses the theme
-tag alone. The discrimination index is the active-inquiry rate on context-dependent prompts minus
+\statUniquePrompts{} prompts by HealthBench's theme tag, a field of the benchmark. The
+\statHBMedGemmaMayActiveInquiryNeedsInfoThemePosPrompts{} prompts of the context-seeking theme test whether a reply seeks missing
+context; we call the other \statHBMedGemmaMayActiveInquiryNeedsInfoThemeNegPrompts{} prompts self-contained. We chose this split after
+the results. The discrimination index is the active-inquiry rate on context-seeking prompts minus
 the rate on self-contained prompts. LoRA $-$ Base on this index is
-\statDiscriminationPrimaryLoRAvsBase{} percentage points (95\% CI
-\statDiscriminationPrimaryLoRAvsBaseCI, bootstrap over prompts) with the first labeling. It is
-\statDiscriminationThemeOnlyLoRAvsBase{} percentage points
-(\statDiscriminationThemeOnlyLoRAvsBaseCI) with the second. Both intervals include zero, so we do
-not claim that the adapter asks selectively. The adapter also asks more on self-contained prompts:
-\statAskSelfContainedPrimaryBase\% under Base against \statAskSelfContainedPrimaryLoRA\% under LoRA
-with the first labeling, and \statAskSelfContainedThemeOnlyBase\% against
-\statAskSelfContainedThemeOnlyLoRA\% with the second. Our posted replies claimed selective asking,
-from the adapter's own index (\statDiscriminationPrimaryLoRA{} points,
-\statDiscriminationPrimaryLoRACI) against Base's (\statDiscriminationPrimaryBase{} points,
-\statDiscriminationPrimaryBaseCI). That compares each condition with zero, not the two conditions
-with each other. We withdraw the claim: the data do not show that the adapter learned when to ask,
-and template imitation remains possible.
+\statHBMedGemmaMayActiveInquiryNeedsInfoThemeIndexLoRAvsBaseDiff{} percentage points (95\% CI \statHBMedGemmaMayActiveInquiryNeedsInfoThemeIndexLoRAvsBaseCI, bootstrap
+over prompts). The interval includes zero, so we do not claim that the adapter asks selectively.
+The adapter also asks more on self-contained prompts: \statHBMedGemmaMayActiveInquiryNeedsInfoThemeNegRateBase\% under Base against
+\statHBMedGemmaMayActiveInquiryNeedsInfoThemeNegRateLoRA\% under LoRA. Our posted replies claimed selective asking from the adapter's own
+index (\statPostedDiscriminationLoRA{} points) against Base's (\statPostedDiscriminationBase{}
+points). That compares each condition with zero, not the two conditions with each other, and its
+labeling also counted a prompt as context-seeking when a rubric criterion contained a keyword such
+as ``ask'' or ``clarify''. A keyword match cannot tell a criterion that rewards asking from one
+that only mentions it, so we withdraw that labeling and the claim. With the theme tag, the
+adapter's own index is \statHBMedGemmaMayActiveInquiryNeedsInfoThemeIndexLoRA{} points (\statHBMedGemmaMayActiveInquiryNeedsInfoThemeIndexLoRACI) and Base's is
+\statHBMedGemmaMayActiveInquiryNeedsInfoThemeIndexBase{} points (\statHBMedGemmaMayActiveInquiryNeedsInfoThemeIndexBaseCI). The data do not show that the adapter learned
+when to ask, and template imitation remains possible.
 
 \paragraph{Clinician-posed prompts.} Our posted reply said that \statPostedClinicianPrompts{} of
 the \statHardPrompts{} \hbhard{} prompts identify the speaker as a clinician. That count came from
-a keyword audit whose rule we did not keep, and no committed script reproduces it. The committed
-keyword rule (\texttt{rebuttal/analyses/mimicry\_split.py}) finds \statClinicianKeywordPrompts{}
-of the \statMimicryEvalPrompts{} evaluated prompts. HealthBench's own tag marks
+a keyword audit whose rule we did not keep, and no committed script reproduces it. A keyword rule
+cannot tell a clinician who writes about a patient from a patient who quotes a doctor, so we report
+no keyword count. HealthBench's own tag marks
 \statHardHealthProfessional{} of the \statHardPrompts{} prompts as written by a health
 professional, among the \statHardSpeakerTagged{} prompts that carry the tag. The tag count
 replaces the posted value.
 
-\paragraph{Format leakage with the Pass~1 headers only.} The leakage rule of
-\S\ref{sec:interference} counts nine markers. Two of them, ``differential'' and ``scope of'', are
-not Pass~1 headers. They come from the Pass~2 instructions and the SOAP-note drafts that leaked
-responses often continue into. With the seven Pass~1 headers alone and the same threshold of two,
-\statLeakagePassOnePctLoRACoT\% of LoRA+\bodhi{} responses leak, against
-\statLeakagePassOnePctBase\% to \statLeakagePassOnePctBaseCoT\% in the other conditions. Leaked
-responses score \statRedFlagLeakedPassOne{} on red-flag identification ($n =
-\statLeakagePassOneNLoRACoT$), and the others score \statRedFlagCleanPassOne{} ($n =
-\statLeakagePassOneNCleanLoRACoT$). Our posted replies used the nine-marker rule.
+\paragraph{Format leakage: the posted rule.} Our posted replies counted a response as leaked when
+it had at least two of nine markers: the seven Pass~1 headers and the words ``differential'' and
+``scope of''. These two words are not part of the protocol's format, and they occur in ordinary
+clinical text. A rule that counts them reads meaning from the words of a reply, so we withdraw it
+and its posted rate of \statPostedLeakagePctLoRACoT\% for LoRA+\bodhi{}. The rule of
+\S\ref{sec:interference} counts the seven headers only.
 
-\paragraph{Questions without the evaluator.} A text heuristic with no grader
-(\texttt{rebuttal/analyses/second\_person\_questions.py}) removes markdown and splits each response
-into sentences. It counts a response when one sentence ends in a question mark and contains
-``you'' or ``your''. Over all responses, it finds such a question in \statSecondPersonPctBase\% of
-Base responses and \statSecondPersonPctLoRA\% of LoRA responses. The rate depends on how the text
-is split into sentences, so we read only its direction. Our posted reply gave \statPostedSecondPersonBase\% and
-\statPostedSecondPersonLoRA\%. The committed script does not reproduce those values, and the values
-here replace them.
+\paragraph{Questions without the evaluator.} Our posted reply gave a second-person question rate:
+\statPostedSecondPersonBase\% of Base responses and \statPostedSecondPersonLoRA\% of LoRA
+responses had a sentence that ends in a question mark and contains ``you'' or ``your''. Such a rule
+counts quoted and rhetorical questions and misses indirect ones, so we withdraw the rate and report
+no count of this kind. The evaluator's active-inquiry grade is the measure of asking. The release
+specifies a check of it by a judge from another model family, with a written rubric and an
+agreement test against hand labels (\texttt{docs/ANALYSIS\_PLAN.md}); it has not run.
 
 \section{Difficulty, Axis and Score Distributions}
 \label{app:ushape}

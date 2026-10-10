@@ -59,22 +59,19 @@
       "data/derived/seed_42_qwen_grader_scores.json": "cd6dadc8be1fef7c6d2e01d62b71cca1f418784893633d461262a3d0c416bc15",
       "results_modal/irr/kappa_results.json": "194b39fe7522dcffdce270bcf59bd9f2d094e57c08b570c3c5fcd08cb86d8535",
       "rebuttal/results/cell_recipe.json": "197039221cd0595918d1b29154a4fdcf775d326fae2acace9d2c679ba7407a63",
-      "rebuttal/results/interference_mechanism.json": "b85713aab71610aec4f3c0e95077db6319a1ff2895eb9796a5b94df369a4af81",
-      "rebuttal/results/mimicry_split.json": "0d62757fb6ca4409fb1797004daf13170d1939700a7f9f3ed59374521ab6e769",
       "rebuttal/results/quality_drop.json": "9fea3707877b0cdb48ceff3c1c5a7419e28dc68064f1162bdc0e073cdf113f69",
-      "rebuttal/results/second_person_questions.json": "d84862d8bddef8119f084722629b24336155a40a431d2da7af0fb3bcd539060a",
-      "results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/stats.json": "ccba918178c8870ec1b08e6fc18b6fcb5af5102508f7fbb6283f1445ef0f3142",
+      "results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/stats.json": "a5b2f5bd892b6f0c6069c737a4bd831c1fa11e5e2e463e291844199a61f75763",
       "data/rebuttal_cells/posted_values.json": "860fad299d02fd1200efaaf6bbe66deec7800c28df40a3895b2ab97929dcbfc0",
       "data/rebuttal_cells/generated_values.json": "e0572f374779634e4d6eb6596fd808bc0cd74ef597c7ff3ebdd7778580a69ba1",
-      "results/healthbench__mistral-small-24b__bodhi__2026-07/analysis/stats.json": "ec24068e60397508ce7b3530f7d8f95bac4d8bbf155b798cf160fb43f2e6dc30",
-      "results/healthbench__med42-8b__bodhi__2026-07/analysis/stats.json": "ffae3add6fd07fa241bbb25111da5e09afec06224402ef6c83d843209969053c",
-      "results/healthbench__biomistral-7b__bodhi__2026-07/analysis/stats.json": "0896c13288e4556f2be6e92b944fcf67bf8e330fa38fe03db6b6ee682d68232b",
-      "results/chatdoctor__mistral-small-24b__bodhi__2026-07/analysis/stats.json": "50fb808aa9fe48f4d414e5617d100f8209f37997a3a8d81def7a208cad2a6320",
-      "results/chatdoctor__med42-8b__bodhi__2026-07/analysis/stats.json": "c7de9f0b10c626adfa62a8171c5ff14f86488846ffd5a94117b740117d1663f9",
-      "results/medquad__mistral-small-24b__bodhi__2026-07/analysis/stats.json": "9ad2936ad8456657cb45c3472e1338a33a67e3cdeeca9382ad7426e61f4c9be9",
-      "results/medqa-open-preamble__mistral-small-24b__bodhi__2026-07/analysis/stats.json": "9bbbb4595053e95f92d563bba07e7625c042e123e08ee749dc59e4f44d4d2359",
-      "results/healthbench__medgemma-27b-text__bodhi__2026-04/analysis/stats.json": "0936e344a69a034c284a03416d75349d1de5c766980ec75d9c329fd02fce9940",
-      "results/medqa-open-preamble__biomistral-7b__bodhi__2026-07/analysis/stats.json": "8854760bafbfc4faa264d2469128bbd2bbea0bcae7c3458179276549f9e869ad",
+      "results/healthbench__mistral-small-24b__bodhi__2026-07/analysis/stats.json": "b2b64e7f53ba39e43aa87ffa5549035d7d8a2d088147e4a920e96cc42322d85e",
+      "results/healthbench__med42-8b__bodhi__2026-07/analysis/stats.json": "67a717a0a4ab5b8b8b40dc7300eab01c6762618ecdcdcc474273a6d0f524f7c8",
+      "results/healthbench__biomistral-7b__bodhi__2026-07/analysis/stats.json": "c914a661f2bb6c9bda556920302a000452bb9714d7710455fd56734ec7036a82",
+      "results/chatdoctor__mistral-small-24b__bodhi__2026-07/analysis/stats.json": "2ea3290ddd45bb7e6256ffbec93a496e0f8c8be232dff67b06db644e8ba34168",
+      "results/chatdoctor__med42-8b__bodhi__2026-07/analysis/stats.json": "cd224fe0788692b53a473afe7c7e28546375206e942ab168959e1b5bedc79c69",
+      "results/medquad__mistral-small-24b__bodhi__2026-07/analysis/stats.json": "bfd6155ad26599ab2f2cf4e5f8cf919793b9cf3e018cb154afa5ec2a3b94fc0d",
+      "results/medqa-open-preamble__mistral-small-24b__bodhi__2026-07/analysis/stats.json": "87031c85f726407da66a96686c9caa657c1f9716d78b57a2ca2c39ae3b40ca6d",
+      "results/healthbench__medgemma-27b-text__bodhi__2026-04/analysis/stats.json": "dcb1739fdbf6154a933b4942d5e2dd28b2be1291194197b3b1df4112002ed606",
+      "results/medqa-open-preamble__biomistral-7b__bodhi__2026-07/analysis/stats.json": "ea3851b5c85892f96c8b902b6bc249f9e3b064bf96df781e659c91fae51ce06b",
       "results/cross_cell/stats.json": "ea5ac36a0f5b09ece47806b8807b56559c4d92444b985345390131cd1487e896"
     }
   },
@@ -5905,293 +5902,6 @@
     "inter_physician": {
       "pairs": [],
       "note": "needs at least 2 raters"
-    }
-  },
-  "rebuttal_analyses": {
-    "interference_mechanism": {
-      "configs": {
-        "base_no_wrapper": {
-          "n": 998,
-          "leaked_rate": 0.00200401,
-          "red_flag_mean": 1.52204,
-          "len_median": 3574,
-          "leaked_rate_pass1_headers": 0.0
-        },
-        "base_bodhi": {
-          "n": 947,
-          "leaked_rate": 0.0295671,
-          "red_flag_mean": 1.65998,
-          "len_median": 3629,
-          "leaked_rate_pass1_headers": 0.00844773
-        },
-        "lora_no_wrapper": {
-          "n": 985,
-          "leaked_rate": 0.0182741,
-          "red_flag_mean": 1.67208,
-          "len_median": 3647,
-          "leaked_rate_pass1_headers": 0.00812183
-        },
-        "lora_bodhi": {
-          "n": 928,
-          "leaked_rate": 0.546336,
-          "red_flag_mean": 1.51185,
-          "len_median": 6217,
-          "leaked_rate_pass1_headers": 0.532328
-        }
-      },
-      "decisive": {
-        "lora_red_flag": 1.67208,
-        "lora_bodhi_clean_red_flag": 1.73159,
-        "lora_bodhi_leaked_red_flag": 1.32939,
-        "n_clean": 421,
-        "n_leaked": 507,
-        "len_median_clean": 3457,
-        "len_median_leaked": 8564
-      },
-      "decisive_pass1_headers": {
-        "lora_bodhi_clean_red_flag": 1.72811,
-        "lora_bodhi_leaked_red_flag": 1.32186,
-        "n_clean": 434,
-        "n_leaked": 494
-      },
-      "length_control_clean": [
-        {
-          "quartile": 1,
-          "len_median": 1508,
-          "red_flag": 1.4381,
-          "n": 105
-        },
-        {
-          "quartile": 2,
-          "len_median": 3097,
-          "red_flag": 1.78095,
-          "n": 105
-        },
-        {
-          "quartile": 3,
-          "len_median": 3958,
-          "red_flag": 1.8381,
-          "n": 105
-        },
-        {
-          "quartile": 4,
-          "len_median": 5395,
-          "red_flag": 1.86792,
-          "n": 106
-        }
-      ]
-    },
-    "mimicry_split": {
-      "n_eval_prompts": 667,
-      "clinician_posed_heuristic": 4,
-      "primary_theme_or_rubric": {
-        "groups": {
-          "context_dependent": 508,
-          "self_contained": 158,
-          "null": 1
-        },
-        "configs": {
-          "base_no_wrapper": {
-            "context_dependent_rate": 0.180052,
-            "self_contained_rate": 0.159292,
-            "discrimination": 0.0207598,
-            "discrimination_ci95": [
-              -0.050467,
-              0.0873273
-            ],
-            "odds_ratio": 1.15894,
-            "odds_ratio_ci95": [
-              0.721664,
-              2.0232
-            ]
-          },
-          "base_bodhi": {
-            "context_dependent_rate": 0.503374,
-            "self_contained_rate": 0.393204,
-            "discrimination": 0.11017,
-            "discrimination_ci95": [
-              0.0206467,
-              0.198895
-            ],
-            "odds_ratio": 1.56418,
-            "odds_ratio_ci95": [
-              1.08633,
-              2.28598
-            ]
-          },
-          "lora_no_wrapper": {
-            "context_dependent_rate": 0.479632,
-            "self_contained_rate": 0.375,
-            "discrimination": 0.104632,
-            "discrimination_ci95": [
-              0.0173169,
-              0.188758
-            ],
-            "odds_ratio": 1.5362,
-            "odds_ratio_ci95": [
-              1.0728,
-              2.2134
-            ]
-          },
-          "lora_bodhi": {
-            "context_dependent_rate": 0.793151,
-            "self_contained_rate": 0.828283,
-            "discrimination": -0.0351321,
-            "discrimination_ci95": [
-              -0.100808,
-              0.0315567
-            ],
-            "odds_ratio": 0.794944,
-            "odds_ratio_ci95": [
-              0.484613,
-              1.21089
-            ]
-          }
-        },
-        "lora_minus_base_disc": 0.0838723,
-        "lora_minus_base_disc_ci95": [
-          -0.0121196,
-          0.178755
-        ]
-      },
-      "robustness_theme_only": {
-        "groups": {
-          "self_contained": 539,
-          "context_dependent": 127,
-          "null": 1
-        },
-        "configs": {
-          "base_no_wrapper": {
-            "context_dependent_rate": 0.201087,
-            "self_contained_rate": 0.169533,
-            "discrimination": 0.0315538,
-            "discrimination_ci95": [
-              -0.0416513,
-              0.112133
-            ],
-            "odds_ratio": 1.23297,
-            "odds_ratio_ci95": [
-              0.729221,
-              1.99488
-            ]
-          },
-          "base_bodhi": {
-            "context_dependent_rate": 0.572222,
-            "self_contained_rate": 0.457627,
-            "discrimination": 0.114595,
-            "discrimination_ci95": [
-              0.024321,
-              0.211415
-            ],
-            "odds_ratio": 1.58538,
-            "odds_ratio_ci95": [
-              1.10222,
-              2.38235
-            ]
-          },
-          "lora_no_wrapper": {
-            "context_dependent_rate": 0.563536,
-            "self_contained_rate": 0.431592,
-            "discrimination": 0.131944,
-            "discrimination_ci95": [
-              0.041235,
-              0.216801
-            ],
-            "odds_ratio": 1.70043,
-            "odds_ratio_ci95": [
-              1.18008,
-              2.42552
-            ]
-          },
-          "lora_bodhi": {
-            "context_dependent_rate": 0.784884,
-            "self_contained_rate": 0.804233,
-            "discrimination": -0.0193491,
-            "discrimination_ci95": [
-              -0.0934372,
-              0.0531924
-            ],
-            "odds_ratio": 0.888158,
-            "odds_ratio_ci95": [
-              0.584389,
-              1.43126
-            ]
-          }
-        },
-        "lora_minus_base_disc": 0.10039,
-        "lora_minus_base_disc_ci95": [
-          -0.00465026,
-          0.200903
-        ]
-      }
-    },
-    "second_person_questions": {
-      "definition": "sentence ending in '?' with a second-person pronoun, markdown stripped; denominator = all completions",
-      "conditions": {
-        "base_no_wrapper": {
-          "count": 179,
-          "n": 1000,
-          "rate": 0.179,
-          "per_seed_rate": {
-            "7": 0.185,
-            "13": 0.205,
-            "42": 0.19,
-            "99": 0.155,
-            "101": 0.16
-          }
-        },
-        "base_bodhi": {
-          "count": 346,
-          "n": 957,
-          "rate": 0.361546,
-          "per_seed_rate": {
-            "7": 0.39267,
-            "13": 0.350515,
-            "42": 0.341969,
-            "99": 0.398936,
-            "101": 0.324607
-          }
-        },
-        "lora_no_wrapper": {
-          "count": 367,
-          "n": 1000,
-          "rate": 0.367,
-          "per_seed_rate": {
-            "7": 0.4,
-            "13": 0.36,
-            "42": 0.355,
-            "99": 0.34,
-            "101": 0.38
-          }
-        },
-        "lora_bodhi": {
-          "count": 627,
-          "n": 959,
-          "rate": 0.653806,
-          "per_seed_rate": {
-            "7": 0.635417,
-            "13": 0.673469,
-            "42": 0.703704,
-            "99": 0.649215,
-            "101": 0.60733
-          }
-        }
-      },
-      "posted": {
-        "base_no_wrapper": 0.184,
-        "lora_no_wrapper": 0.396,
-        "source": "rebuttal/responses/posted/FzpA_2_followup.md:13; rebuttal/responses/drafts/meta_review_part1.md:27"
-      },
-      "lora_minus_base": {
-        "diff": 0.188,
-        "ci95": [
-          0.151906,
-          0.224094
-        ],
-        "t": 14.4615,
-        "df": 4,
-        "p": 0.000132915
-      }
     }
   },
   "cost": {
@@ -17463,7 +17173,7 @@
         "token": "HBMedGemmaMay",
         "label": "HealthBench-Hard, MedGemma-27B",
         "stats": "results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/stats.json",
-        "sha256": "ccba918178c8870ec1b08e6fc18b6fcb5af5102508f7fbb6283f1445ef0f3142",
+        "sha256": "a5b2f5bd892b6f0c6069c737a4bd831c1fa11e5e2e463e291844199a61f75763",
         "in_cross_table": true,
         "set_aside": null,
         "family_waiver": null
@@ -17472,7 +17182,7 @@
         "token": "HBMistralJul",
         "label": "HealthBench-Hard, Mistral-Small-24B",
         "stats": "results/healthbench__mistral-small-24b__bodhi__2026-07/analysis/stats.json",
-        "sha256": "ec24068e60397508ce7b3530f7d8f95bac4d8bbf155b798cf160fb43f2e6dc30",
+        "sha256": "b2b64e7f53ba39e43aa87ffa5549035d7d8a2d088147e4a920e96cc42322d85e",
         "in_cross_table": true,
         "set_aside": null,
         "family_waiver": null
@@ -17481,7 +17191,7 @@
         "token": "HBMedFortyTwoJul",
         "label": "HealthBench-Hard, Med42-8B",
         "stats": "results/healthbench__med42-8b__bodhi__2026-07/analysis/stats.json",
-        "sha256": "ffae3add6fd07fa241bbb25111da5e09afec06224402ef6c83d843209969053c",
+        "sha256": "67a717a0a4ab5b8b8b40dc7300eab01c6762618ecdcdcc474273a6d0f524f7c8",
         "in_cross_table": true,
         "set_aside": null,
         "family_waiver": "Run before the family rule existed; the base shares the evaluator's Llama-3 family (D6)."
@@ -17490,7 +17200,7 @@
         "token": "HBBioMistralJul",
         "label": "HealthBench-Hard, BioMistral-7B",
         "stats": "results/healthbench__biomistral-7b__bodhi__2026-07/analysis/stats.json",
-        "sha256": "0896c13288e4556f2be6e92b944fcf67bf8e330fa38fe03db6b6ee682d68232b",
+        "sha256": "c914a661f2bb6c9bda556920302a000452bb9714d7710455fd56734ec7036a82",
         "in_cross_table": true,
         "set_aside": null,
         "family_waiver": null
@@ -17499,7 +17209,7 @@
         "token": "CDMistralJul",
         "label": "ChatDoctor, Mistral-Small-24B",
         "stats": "results/chatdoctor__mistral-small-24b__bodhi__2026-07/analysis/stats.json",
-        "sha256": "50fb808aa9fe48f4d414e5617d100f8209f37997a3a8d81def7a208cad2a6320",
+        "sha256": "2ea3290ddd45bb7e6256ffbec93a496e0f8c8be232dff67b06db644e8ba34168",
         "in_cross_table": true,
         "set_aside": null,
         "family_waiver": null
@@ -17508,7 +17218,7 @@
         "token": "CDMedFortyTwoJul",
         "label": "ChatDoctor, Med42-8B",
         "stats": "results/chatdoctor__med42-8b__bodhi__2026-07/analysis/stats.json",
-        "sha256": "c7de9f0b10c626adfa62a8171c5ff14f86488846ffd5a94117b740117d1663f9",
+        "sha256": "cd224fe0788692b53a473afe7c7e28546375206e942ab168959e1b5bedc79c69",
         "in_cross_table": true,
         "set_aside": null,
         "family_waiver": "Run before the family rule existed; the base shares the evaluator's Llama-3 family (D6)."
@@ -17517,7 +17227,7 @@
         "token": "MQMistralJul",
         "label": "MedQuAD, Mistral-Small-24B",
         "stats": "results/medquad__mistral-small-24b__bodhi__2026-07/analysis/stats.json",
-        "sha256": "9ad2936ad8456657cb45c3472e1338a33a67e3cdeeca9382ad7426e61f4c9be9",
+        "sha256": "bfd6155ad26599ab2f2cf4e5f8cf919793b9cf3e018cb154afa5ec2a3b94fc0d",
         "in_cross_table": true,
         "set_aside": null,
         "family_waiver": null
@@ -17526,7 +17236,7 @@
         "token": "MedQAPreMistralJul",
         "label": "MedQA with the asking preamble, Mistral-Small-24B",
         "stats": "results/medqa-open-preamble__mistral-small-24b__bodhi__2026-07/analysis/stats.json",
-        "sha256": "9bbbb4595053e95f92d563bba07e7625c042e123e08ee749dc59e4f44d4d2359",
+        "sha256": "87031c85f726407da66a96686c9caa657c1f9716d78b57a2ca2c39ae3b40ca6d",
         "in_cross_table": true,
         "set_aside": "The prompt preamble told the model to ask, so the cell measured instruction-following (withdrawals W12).",
         "family_waiver": null
@@ -17535,7 +17245,7 @@
         "token": "HBMedGemmaApr",
         "label": "HealthBench-Hard pilot, MedGemma-27B",
         "stats": "results/healthbench__medgemma-27b-text__bodhi__2026-04/analysis/stats.json",
-        "sha256": "0936e344a69a034c284a03416d75349d1de5c766980ec75d9c329fd02fce9940",
+        "sha256": "dcb1739fdbf6154a933b4942d5e2dd28b2be1291194197b3b1df4112002ed606",
         "in_cross_table": false,
         "set_aside": null,
         "family_waiver": "A pilot run before the asymmetric grading design; the filter grader also graded the eval."
@@ -17544,7 +17254,7 @@
         "token": "MedQAPreBioMistralJul",
         "label": "MedQA with the asking preamble, BioMistral-7B",
         "stats": "results/medqa-open-preamble__biomistral-7b__bodhi__2026-07/analysis/stats.json",
-        "sha256": "8854760bafbfc4faa264d2469128bbd2bbea0bcae7c3458179276549f9e869ad",
+        "sha256": "ea3851b5c85892f96c8b902b6bc249f9e3b064bf96df781e659c91fae51ce06b",
         "in_cross_table": false,
         "set_aside": null,
         "family_waiver": null
@@ -17568,30 +17278,30 @@
       "tab_cell_MedQAPreMistralJul",
       "tab_cross_cell_checks"
     ],
-    "macros": 3254,
+    "macros": 2719,
     "cross_table_columns": [
       {
-        "group": "Mentions emergency care on prompts with no red flag (\\%, post hoc)",
+        "group": "Red-flag rate outside the emergency theme (\\%, post hoc)",
         "header": "Base",
-        "value": "discrimination.escalation.red-flag-at-stake.conditions.base.negative_rate",
+        "value": "discrimination.red_flag_rate.emergency-theme.conditions.base.negative_rate",
         "ci": null
       },
       {
-        "group": "Mentions emergency care on prompts with no red flag (\\%, post hoc)",
+        "group": "Red-flag rate outside the emergency theme (\\%, post hoc)",
         "header": "LoRA",
-        "value": "discrimination.escalation.red-flag-at-stake.conditions.lora.negative_rate",
+        "value": "discrimination.red_flag_rate.emergency-theme.conditions.lora.negative_rate",
         "ci": null
       },
       {
-        "group": "Mentions emergency care on prompts with no red flag (\\%, post hoc)",
+        "group": "Red-flag rate outside the emergency theme (\\%, post hoc)",
         "header": "LoRA $-$ Base",
-        "value": "discrimination.escalation.red-flag-at-stake.contrasts.lora - base.negative_rate.seed_test.diff",
-        "ci": "discrimination.escalation.red-flag-at-stake.contrasts.lora - base.negative_rate.seed_test.ci95"
+        "value": "discrimination.red_flag_rate.emergency-theme.contrasts.lora - base.negative_rate.seed_test.diff",
+        "ci": "discrimination.red_flag_rate.emergency-theme.contrasts.lora - base.negative_rate.seed_test.ci95"
       },
       {
         "group": "",
         "header": "\\shortstack[r]{Asking index, post hoc\\\\LoRA $-$ Base (pp)}",
-        "value": "discrimination.active_inquiry.needs-info-theme-or-rubric.contrasts.lora - base.diff",
+        "value": "discrimination.active_inquiry.needs-info-theme.contrasts.lora - base.diff",
         "ci": null
       },
       {

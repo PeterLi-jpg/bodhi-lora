@@ -1,8 +1,10 @@
 # Claims ledger for paper/main.tex
 
 Every number and claim in the abstract, the introduction and the results of `paper/main.tex`,
-with the macro that prints it, the function in `scripts/paper_stats.py` that writes the macro,
-and the input file. `make numbers` rebuilds every macro; nothing in this table is typed into
+with the macro that prints it, the function in `scripts/paper_stats.py` (or, for a
+`\statHBMedGemmaMay...` macro, in `bodhi_lora/report/`, which `make numbers` runs) that
+writes the macro, and the input file. No number comes from a keyword rule
+(docs/CONVENTIONS.md rule 15). `make numbers` rebuilds every macro; nothing in this table is typed into
 the paper by hand unless the Kind column says so.
 
 The paper-level claim ledger, with the status of each claim made in the submission and the
@@ -43,7 +45,7 @@ Before the move to the results root these were `results_modal/`, `data/rebuttal_
 | 5 cells outside the evaluator's family and not set aside; active inquiry and context-seeking both rise (Holm p < 0.05) in 4 | `\statCellsOutside`, `\statCellsOutsideAskRose` | `uniform_section` | GV (per-seed means; `paired_test` and `holm` of `bodhi_lora/analysis/stats.py`) | computed |
 | Aggregate falls in all 4, by 0.014 to 0.086, largest paired t p = 0.016 | `\statCellsAddedWithAggregate`, `\statCellsAddedDropMin`, `\statCellsAddedDropMax`, `\statCellsAddedDropPMax` | `generality_section` | GV | computed |
 | Adding CoT to the adapter changes red-flag identification by -0.161 [-0.262, -0.059] on the 0-2 score, Holm-adjusted p = 0.058 (the rate, -20.6 points, is a secondary measure stated in section 4.3) | `\statRedFlagLoRACoTvsLoRADiff`, `...CI`, `...PHolm` | `compare_conditions` | RM | computed |
-| Format leakage in 54.6% of LoRA+BODHI answers | `\statLeakagePctLoRACoT` | `rebuttal_section` | `results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/interference_mechanism.json` | computed |
+| Format leakage in 53.2% of LoRA+BODHI answers (at least 2 of the 7 Pass 1 headers) | `\statHBMedGemmaMayLeakBodhiAnalysisFormatLoRABodhi` | `bodhi_lora.report.cell_macros` | `results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/stats.json` (`leakage.leak_bodhi__analysis-format`) | computed (post hoc; the posted 54.6% is withdrawn, W25) |
 | The red-flag drop does not repeat in the added cells | none in the abstract; section 4.3 gives the counts | `uniform_section` | GV | computed (see the section 4.3 rows) |
 | The 2 Med42-8B cells share the evaluator's family and the MedQA cell's prompt told the model to ask, so the counts leave them out | `\statCellsSameFamily` | `uniform_section` | the `same_family_as_evaluator` and `set_aside` flags of each cell in PV | design (D6; the MedQA run identity: withdrawals W12) |
 | Physician agreement kappa 0.35, target 0.6 set in advance for the filter grader, on rubric criteria only; no physician graded the seven dimensions | `\statKappaAll`; 0.6 is the target in the plan of 2026-04-29 | `kappa_section` | `results/healthbench__medgemma-27b-text__bodhi__2026-05/validation/kappa_results.json`, computed by `make kappa` from the returned rater file, which carries a name and is kept outside the repo; row design in `scripts/make_irr_excel.py` | computed from an input outside the repo (audit NUM-2): the committed `IRR-clinicians/` sheets are blank, so the value cannot be recomputed from the repo |
@@ -55,7 +57,7 @@ Before the move to the results root these were `results_modal/`, `data/rebuttal_
 |---|---|---|---|---|
 | The two passes overran the context on 4.3% of prompts | `\statCompletionDropPctBaseCoT` | `counts_and_failures` | RM | computed |
 | 40 of 1,000 Hard prompts tagged as written by a health professional; 63 carry the tag (lower bound) | `\statHardHealthProfessional`, `\statHardSpeakerTagged`, `\statHardPrompts` | `speaker_tags`, `difficulty_range` | `data/raw/healthbench/hard.jsonl` (`physician_agreed_category` tags) | computed; HealthBench is a public download |
-| Posted 14 of 1,000 (Appendix H, as corrected); the committed keyword rule finds 4 of 667 evaluated prompts | `\statPostedClinicianPrompts`, `\statClinicianKeywordPrompts`, `\statMimicryEvalPrompts` | `generality_section`, `rebuttal_section` | PV; `results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/mimicry_split.json` | posted (not reproduced; withdrawals W14); computed |
+| Posted 14 of 1,000 (Appendix H), from a keyword audit; withdrawn, and no keyword count replaces it | `\statPostedClinicianPrompts` | `generality_section` | PV | posted (withdrawals W14) |
 | 8 cells, 7 of them added; active inquiry and context-seeking rise in 4 of the 5 cells outside the evaluator's family; aggregate falls in all 4 added cells among them | `\statCellsAll`, `\statCellsAdded`, `\statCellsOutsideAskRose`, `\statCellsOutside`, `\statCellsAddedWithAggregate` | `uniform_section`, `generality_section` | GV | computed |
 | BODHI expansion "Balanced, Open-minded, Diagnostic, Humble, Inquisitive" | none | | the cited BMJ paper (docs/DECISIONS.md, D15 note) | design |
 | Pass 1 has seven fields: task type, audience, best assessment, key uncertainties, questions to ask, red flags, safe recommendations | none | | `bodhi/prompts.py` in bodhi-llm 0.1.4 (pinned in `requirements.txt`) | design |
@@ -126,9 +128,9 @@ Before the move to the results root these were `results_modal/`, `data/rebuttal_
 | Red-flag rate -20.6 points [-29.8, -11.4], p = 0.0034 | `\statRedFlagRateLoRACoTvsLoRADiff`, `...CI`, `...P` | `compare_conditions` | RM | computed |
 | Against Base: no detected difference on the score, lower on the rate | `\statRedFlagLoRACoTvsBaseDiff`, `...CI`, `\statRedFlagRateLoRACoTvsBaseDiff`, `...CI` | `compare_conditions` | RM | computed |
 | Aggregate LoRA+BODHI minus LoRA -0.008 [-0.020, +0.004] | `\statHealthBenchLoRACoTvsLoRADiff`, `...CI` | `compare_conditions` | RM | computed |
-| Leakage 54.6% against 0.2% to 3.0%: at least 2 of 9 analysis-format markers (the 7 Pass 1 headers, "differential", "scope of") | `\statLeakagePct<Cond>` | `rebuttal_section` | `results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/interference_mechanism.json` | computed |
-| Seven Pass 1 headers only (Appendix H): 53.2% against 0.0% to 0.8%; red flag 1.32 (n = 494) and 1.73 (n = 434) | `\statLeakagePassOnePct<Cond>`, `\statRedFlagLeakedPassOne`, `\statRedFlagCleanPassOne`, `\statLeakagePassOneN...` | `rebuttal_section` | `results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/interference_mechanism.json` | computed |
-| Red flag 1.33 (n = 507) leaked, 1.73 (n = 421) not leaked | `\statRedFlagLeaked`, `\statRedFlagClean`, `\statLeakageNLoRACoT`, `\statLeakageNCleanLoRACoT` | `rebuttal_section` | `results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/interference_mechanism.json` | computed |
+| Leakage 53.2% against 0.0% to 0.8%: at least 2 of the 7 Pass 1 section headers, the `analysis-format` rule of `configs/protocols/bodhi.yaml` | `\statHBMedGemmaMayLeakBodhiAnalysisFormat<Cond>` | `bodhi_lora.report.cell_macros` | `results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/stats.json` | computed (post hoc) |
+| Posted nine-marker rule (Appendix H): 54.6%, two of its markers free words; withdrawn | `\statPostedLeakagePctLoRACoT` | `generality_section` | PV | posted (withdrawals W25) |
+| Red flag 1.32 (n = 494) leaked, 1.73 (n = 434) not leaked | `\statHBMedGemmaMayLeakBodhiAnalysisFormatLoRABodhiRedFlagLeaked`, `...RedFlagClean`, `...LoRABodhiN`, `...LoRABodhiNClean` | `bodhi_lora.report.cell_macros` | `results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/stats.json` | computed (post hoc) |
 | The drop does not repeat in the added cells: LoRA+BODHI below LoRA (p < 0.05) in 0 of the 4 added cells outside the evaluator's family, above it (Holm p < 0.05) in 1 | `\statCellsAddedRedFlagCoTFell`, `\statCellsAddedRedFlagCoTRose`, `\statCellsAddedOutside` | `uniform_section` | GV (per-seed means; `paired_test` and `holm` of `bodhi_lora/analysis/stats.py`) | computed |
 
 ## Discussion
@@ -140,7 +142,8 @@ Before the move to the results root these were `results_modal/`, `data/rebuttal_
 | Antidepressant example: Base asks nothing, LoRA asks about duration, intensity, sleep, appetite, energy, concentration and self-harm, and gives a crisis line | none (qualitative) | | `results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_99/eval/{base,lora}.json` and `grade/epistemic__llama-3.1-8b.json`, prompt `2c915b71` | computed (read by hand; quoted in Appendix K) |
 | Table 2: prior approaches compared on what they change, inference cost, what they need and their target | none | | the cited papers | design (positioning, not a measurement) |
 | Second protocol implemented, not run (section 5.3) | none | | `bodhi_lora/protocols/ask_first.py` | design |
-| The adapter also asks more on self-contained prompts (15.9% to 37.5%; 17.0% to 43.2%); its gain in discrimination over Base includes zero (+8.4 [-1.2, +17.9]; +10.0 [-0.5, +20.1]); posted selectivity claim withdrawn | `\statAskSelfContained<Labeling><Cond>`, `\statDiscrimination<Labeling>LoRAvsBase`, `...CI`, `\statDiscrimination<Labeling><Cond>`, `...CI` | `rebuttal_section` | `results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/mimicry_split.json` | computed (post hoc labelings; withdrawals W15) |
+| The adapter also asks more on prompts outside the context-seeking theme (17.0% to 43.2%); its gain in discrimination over Base includes zero (+10.0 [-0.5, +20.1]); the adapter's own index +13.2 [+4.1, +21.7], Base's +3.2 [-4.2, +11.2]; the posted index (+10.5, +2.1) and its rubric-keyword labelling withdrawn | `\statHBMedGemmaMayActiveInquiryNeedsInfoThemeNegRate<Cond>`, `\statHBMedGemmaMayActiveInquiryNeedsInfoThemeIndexLoRAvsBaseDiff`, `...CI`, `\statHBMedGemmaMayActiveInquiryNeedsInfoThemeIndex<Cond>`, `...CI`, `...PosPrompts`, `...NegPrompts`, `\statPostedDiscrimination<Cond>` | `bodhi_lora.report.cell_macros`, `generality_section` | `results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/stats.json` (`discrimination.active_inquiry.needs-info-theme`); PV | computed (post hoc theme-tag label; withdrawals W15, W24) |
+| Posted second-person question rate 18.4% and 39.6% (Appendix H), a keyword rule; withdrawn, and no count of this kind replaces it | `\statPostedSecondPersonBase`, `\statPostedSecondPersonLoRA` | `generality_section` | PV | posted (withdrawals W23) |
 | Prior work compared: MediQ, CRAFT-MD, AMIE, R-Tuning, linguistic calibration (section 2, Table 2) | none | | the cited papers; venues checked against Crossref and arXiv on 2026-10-08 | design (positioning) |
 
 ## Appendix numbers that are not computed here

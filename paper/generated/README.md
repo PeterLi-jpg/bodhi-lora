@@ -25,8 +25,7 @@ Then replace the body of a table with `\input{generated/tab_<name>}`.
 |---|---|---|
 | `<M>/seed_*/eval/`, `<M>/seed_*/grade/` | yes | every number about the submitted cell |
 | `<M>/validation/kappa_results.json` | yes | `tab_kappa`, `\statKappa*` |
-| `<M>/analysis/{interference_mechanism,mimicry_split,second_person_questions}.json` | yes | leakage, discrimination, odds ratio and second-person macros |
-| `<M>/analysis/stats.json` | yes (`make analyze`) | `\statTokensEngine*` |
+| `<M>/analysis/stats.json` | yes (`make analyze`) | `\statTokensEngine*`; through the report, the leakage and theme-label macros of the submitted cell (`\statHBMedGemmaMayLeak*`, `\statHBMedGemmaMayActiveInquiryNeedsInfoTheme*`). The three discussion analyses in `<M>/analysis/` are no longer read (withdrawals W23 to W25) |
 | `results/<cell>/analysis/stats.json`, every analyzed cell | yes (`make analyze`) | `tab_cell_<token>`, `tab_cross_cell_checks`, `\stat<token>*` |
 | `results/cross_cell/stats.json` | yes (`make analyze`) | `\statGroup*` |
 | `<M>/seed_7/filter/filter_scores.json` | yes | `tab_tau_calibration`, `\statFilter*`, `\statTrainHardOverlapSeedSeven` |
@@ -133,18 +132,17 @@ Macro names start with the cell record's `report.token`, then the statistic:
 
 `<T>` is the cell token (for example `HBMistralJul`), `<C>` a condition (`Base`,
 `BaseBodhi`, `LoRA`, `LoRABodhi`), `<Metric>` a metric key in CamelCase
-(`ActiveInquiry`, `RubricScore`, `Escalation`, `SecondPersonQ`), `<Label>` a label id in
-CamelCase. A value the cell lacks has no macro, so a paper that uses one fails the macro
+(`ActiveInquiry`, `RubricScore`, `RedFlagRate`), `<Label>` a label id in CamelCase. A value the cell lacks has no macro, so a paper that uses one fails the macro
 check instead of printing a wrong number.
 
-The over-flagging rate of commitment C30 is
-`\stat<T>EscalationRedFlagAtStakeNegRate<C>`: the share of replies that mention
-emergency or urgent care, on prompts whose theme is not emergency referrals and whose
-rubric says nothing about urgency. Both the rule (`configs/report.yaml`,
-`text_features.escalation`) and the label (`configs/benchmarks/healthbench.yaml`,
-`red-flag-at-stake`) are post hoc, so these numbers are exploratory. The rule counts
-conditional and negated mentions too, so it is an upper bound on flags raised without
-cause.
+`\stat<T>RedFlagRateEmergencyThemeNegRate<C>` is the evaluator's red-flag rate on prompts
+outside HealthBench's emergency-referrals theme. The label (`emergency-theme` in
+`configs/benchmarks/healthbench.yaml`) reads the theme tag only and is post hoc, so these
+numbers are exploratory. Prompts of other themes can hold a red flag, so the rate is not
+an over-flagging rate. Format leakage of each leak rule is `\stat<T>Leak<Protocol><Rule><C>`
+(share of scored replies), with `N` and `NClean` (counts) and `RedFlagLeaked` and
+`RedFlagClean` (red-flag score of each group) after it. No macro comes from a keyword rule
+(docs/CONVENTIONS.md rule 15).
 
 Token counts come from the model's own tokenizer, read from the local Hugging Face
 cache at the pinned revision. Only the Mistral-Small-24B tokenizer is in that cache

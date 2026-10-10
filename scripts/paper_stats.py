@@ -33,10 +33,12 @@ Optional (each table that needs one is skipped with a message if it is absent):
   <M>/seed_7/filter/filter_scores.json     filter scores of the seed-7 training split
                                            (tau table)
   <M>/validation/kappa_results.json        physician kappa (kappa table)
-  <M>/analysis/{mimicry_split,interference_mechanism,second_person_questions}.json
-                                           rebuttal analyses (leakage, odds ratios)
   <M>/analysis/stats.json                  the uniform analysis of the cell (make analyze);
-                                           only its token counts are read
+                                           its token counts are read here, and the report
+                                           (bodhi_lora.report) writes its leakage and label
+                                           macros. The three discussion scripts' outputs in
+                                           <M>/analysis/ are not read: each decides meaning by
+                                           keywords somewhere (docs/CONVENTIONS.md rule 15)
   rebuttal/posted_values.json              rebuttal cells (generality tables)
   results/cross_cell/generated_values.json per-seed means of every cell (make cells); a
                                            cell found here replaces its posted values,
@@ -1103,74 +1105,6 @@ def kappa_section(path: Path, out, macros):
                "filter-trace rows graded unsure, excluded from kappa")
 
 
-def rebuttal_section(rdir: Path, out, macros):
-    """Numbers from the committed rebuttal analysis outputs, where present."""
-    res = {}
-    im = rdir / "interference_mechanism.json"
-    if im.is_file():
-        d = json.load(open(im))
-        res["interference_mechanism"] = d
-        for cfg in CONDITIONS:
-            macros.add(f"LeakagePct{COND_TOKEN[cfg]}", fmt(100 * d["configs"][cfg]["leaked_rate"], 1),
-                       "rebuttal/results/interference_mechanism.json: share of scored responses with >=2 of "
-                       "9 analysis-format markers (7 Pass-1 headers, DIFFERENTIAL, SCOPE OF/BOUNDAR)")
-            macros.add(f"LeakagePassOnePct{COND_TOKEN[cfg]}",
-                       fmt(100 * d["configs"][cfg]["leaked_rate_pass1_headers"], 1),
-                       "same rule with the 7 Pass-1 headers only")
-        dec = d["decisive"]
-        macros.add("LeakageNLoRACoT", fmt_int(dec["n_leaked"]), "leaked LoRA+CoT responses")
-        macros.add("LeakageNCleanLoRACoT", fmt_int(dec["n_clean"]), "non-leaked LoRA+CoT responses")
-        macros.add("RedFlagLeaked", fmt(dec["lora_bodhi_leaked_red_flag"], 2), "red-flag (0-2), leaked LoRA+CoT")
-        macros.add("RedFlagClean", fmt(dec["lora_bodhi_clean_red_flag"], 2), "red-flag (0-2), non-leaked LoRA+CoT")
-        dp1 = d["decisive_pass1_headers"]
-        macros.add("LeakagePassOneNLoRACoT", fmt_int(dp1["n_leaked"]), "leaked LoRA+CoT responses, 7 Pass-1 headers only")
-        macros.add("LeakagePassOneNCleanLoRACoT", fmt_int(dp1["n_clean"]),
-                   "non-leaked LoRA+CoT responses, 7 Pass-1 headers only")
-        macros.add("RedFlagLeakedPassOne", fmt(dp1["lora_bodhi_leaked_red_flag"], 2),
-                   "red-flag (0-2), leaked LoRA+CoT, 7 Pass-1 headers only")
-        macros.add("RedFlagCleanPassOne", fmt(dp1["lora_bodhi_clean_red_flag"], 2),
-                   "red-flag (0-2), non-leaked LoRA+CoT, 7 Pass-1 headers only")
-    ms = rdir / "mimicry_split.json"
-    if ms.is_file():
-        d = json.load(open(ms))
-        res["mimicry_split"] = d
-        macros.add("ClinicianKeywordPrompts", fmt_int(d["clinician_posed_heuristic"]),
-                   "rebuttal/results/mimicry_split.json: evaluated prompts whose first user turn matches "
-                   "CLINICIAN_RE (explicit self-identification)")
-        macros.add("MimicryEvalPrompts", fmt_int(d["n_eval_prompts"]),
-                   "rebuttal/results/mimicry_split.json: unique evaluated prompts")
-        for label, tok in (("primary_theme_or_rubric", "Primary"), ("robustness_theme_only", "ThemeOnly")):
-            sec = d[label]
-            macros.add(f"Discrimination{tok}LoRAvsBase", fmt(100 * sec["lora_minus_base_disc"], 1, sign=True),
-                       f"rebuttal/results/mimicry_split.json [{label}]: LoRA minus Base discrimination (pp)")
-            lo, hi = sec["lora_minus_base_disc_ci95"]
-            macros.add(f"Discrimination{tok}LoRAvsBaseCI", fmt_ci(100 * lo, 100 * hi, 1),
-                       "prompt-clustered bootstrap 95% CI (pp)")
-            for cfg in CONDITIONS:
-                c = sec["configs"][cfg]
-                ct = COND_TOKEN[cfg]
-                macros.add(f"AskSelfContained{tok}{ct}", fmt(100 * c["self_contained_rate"], 1),
-                           f"[{label}] active-inquiry rate on self-contained prompts (percent)")
-                macros.add(f"AskContextDependent{tok}{ct}", fmt(100 * c["context_dependent_rate"], 1),
-                           f"[{label}] active-inquiry rate on context-dependent prompts (percent)")
-                macros.add(f"Discrimination{tok}{ct}", fmt(100 * c["discrimination"], 1, sign=True),
-                           f"[{label}] context-dependent minus self-contained asking rate (pp)")
-                lo, hi = c["discrimination_ci95"]
-                macros.add(f"Discrimination{tok}{ct}CI", fmt_ci(100 * lo, 100 * hi, 1),
-                           "prompt-clustered bootstrap 95% CI (pp)")
-                if "odds_ratio" in c:
-                    macros.add(f"AskOddsRatio{tok}{COND_TOKEN[cfg]}", fmt(c["odds_ratio"], 2),
-                               f"[{label}] odds ratio of asking, context-dependent vs self-contained")
-    sp = rdir / "second_person_questions.json"
-    if sp.is_file():
-        d = json.load(open(sp))
-        res["second_person_questions"] = d
-        for cfg in CONDITIONS:
-            macros.add(f"SecondPersonPct{COND_TOKEN[cfg]}", fmt(100 * d["conditions"][cfg]["rate"], 1),
-                       "rebuttal/results/second_person_questions.json: completions with a second-person question")
-    out["rebuttal_analyses"] = res
-
-
 def load_posted_values(path: Path) -> dict:
     """Read data/rebuttal_cells/posted_values.json and check its shape."""
     with open(path) as f:
@@ -1611,6 +1545,17 @@ def generality_section(posted: dict, generated: dict | None, out, macros, recipe
                    f"{SRC_POSTED}: posted share of Base completions with a second-person question (percent)")
         macros.add("PostedSecondPersonLoRA", fmt(v["lora_pct"], 1),
                    f"{SRC_POSTED}: posted share of LoRA completions with a second-person question (percent)")
+    # Two posted values of keyword rules, cited only where the paper withdraws them.
+    if "format_leakage" in an:
+        macros.add("PostedLeakagePctLoRACoT", fmt(an["format_leakage"]["lora_cot_leaked_pct"], 1),
+                   f"{SRC_POSTED}: posted share (percent) of LoRA+CoT responses with two of nine markers, "
+                   "two of them free words (withdrawn, W25)")
+    if "discrimination_index" in an:
+        v = an["discrimination_index"]["index_pp"]
+        for cond, tok in (("base", "Base"), ("lora", "LoRA")):
+            macros.add(f"PostedDiscrimination{tok}", fmt(v[cond]["estimate"], 1, sign=True),
+                       f"{SRC_POSTED}: posted discrimination index (points) under the labelling with a "
+                       "rubric keyword rule (withdrawn, W24)")
     if "askers_minus_non_askers" in an:
         v = an["askers_minus_non_askers"]
         for key, tok in (("positive_cells", "Positive"), ("negative_cells", "Negative"),
@@ -2329,10 +2274,11 @@ def _rel(path: Path) -> str:
         return path.name
 
 
-# The analyses of the discussion. They were written into rebuttal/results/, and the
-# outputs still name them so; they now live in the submitted cell's analysis folder and in
-# results/cross_cell/.
-CELL_ANALYSES = ("interference_mechanism.json", "mimicry_split.json", "second_person_questions.json")
+# The cross-cell analyses of the discussion. They were written into rebuttal/results/, and
+# the outputs still name them so; they now live in results/cross_cell/. The submitted
+# cell's three discussion analyses (mimicry_split, interference_mechanism and
+# second_person_questions) are no longer read: the leakage and label numbers come from the
+# uniform analysis (rebuttal/withdrawals.md W23 to W25).
 CROSS_ANALYSES = ("cell_recipe.json", "quality_drop.json")
 
 
@@ -2384,15 +2330,12 @@ def run(results_dir: Path, out_dir: Path, healthbench: Path | None, filter_score
     if optional(kappa, "kappa table", "results_modal/irr/kappa_results.json"):
         kappa_section(kappa, out, macros)
     if cell_analysis is not None and cell_analysis.is_dir():
-        files = {n: cell_analysis / n for n in CELL_ANALYSES}
-        if cross_cell is not None:
-            files.update({n: cross_cell / n for n in CROSS_ANALYSES})
+        files = {n: cross_cell / n for n in CROSS_ANALYSES} if cross_cell is not None else {}
         for name in sorted(files):
             if files[name].is_file():
                 out["meta"]["inputs"][f"rebuttal/results/{name}"] = _sha256(files[name])
-        rebuttal_section(cell_analysis, out, macros)
-        # The uniform analysis of the submitted cell (make analyze). Only its token counts
-        # are read here; the paper's other numbers of this cell still come from above.
+        # The uniform analysis of the submitted cell (make analyze). Its token counts are
+        # read here; its leakage and label numbers reach the paper through the report.
         stats_path = cell_analysis / "stats.json"
         if stats_path.is_file():
             out["meta"]["inputs"][_rel(stats_path)] = _sha256(stats_path)
@@ -2400,7 +2343,7 @@ def run(results_dir: Path, out_dir: Path, healthbench: Path | None, filter_score
         else:
             print(f"SKIP token counts: {stats_path} not found (make analyze)")
     else:
-        print(f"SKIP rebuttal analyses: {cell_analysis} not found")
+        print(f"SKIP the submitted cell's analysis: {cell_analysis} not found")
     if optional(posted_values, "generality table (rebuttal cells)", "data/rebuttal_cells/posted_values.json"):
         posted = load_posted_values(posted_values)
         generated = None

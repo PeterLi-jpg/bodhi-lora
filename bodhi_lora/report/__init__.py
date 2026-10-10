@@ -184,8 +184,14 @@ def cell_macros(rep: Report, stats: dict, cell: CellConfig, cfg: ReportConfig, s
     for col, r in stats["leakage"].items():
         L = f"{T}Leak{token(r['protocol'])}{token(r['rule'])}"
         for c in conds:
-            rep.add(f"{L}{n.cond_token(c)}", fmt(_x(r["conditions"][c]["leaked_share"], 100), 1),
-                    f"{src}: leakage.{col}.conditions.{c}.leaked_share (% of scored replies)")
+            rc, where = r["conditions"][c], f"{src}: leakage.{col}.conditions.{c}"
+            C = n.cond_token(c)
+            rep.add(f"{L}{C}", fmt(_x(rc["leaked_share"], 100), 1), f"{where}.leaked_share (% of scored replies)")
+            rep.add(f"{L}{C}N", fmt_int(rc["n_leaked"]), f"{where}.n_leaked (scored replies that leak)")
+            rep.add(f"{L}{C}NClean", fmt_int(rc["n_clean"]), f"{where}.n_clean (scored replies that do not)")
+            for g, G in (("leaked", "Leaked"), ("clean", "Clean")):
+                rep.add(f"{L}{C}RedFlag{G}", fmt((rc.get(f"dimensions_{g}") or {}).get("red_flag"), 2),
+                        f"{where}.dimensions_{g}.red_flag (0-2, pooled over seeds)")
     for c, r in stats["askers_gap"].items():
         rep.add(f"{T}AskersGap{n.cond_token(c)}", fmt(r.get("gap"), 3, sign=True), f"{src}: askers_gap.{c}.gap")
         rep.add(f"{T}AskersGap{n.cond_token(c)}CI", fmt_ci(r.get("gap_ci95"), 3), "prompt-clustered bootstrap interval")
