@@ -562,35 +562,33 @@ ChatDoctor with Med42-8B (\statHBMedGemmaMayTokensEngineLoRA{} against
 \label{sec:discussion}
 %======================================================================
 
-\paragraph{The trade-off.} The adapter changes how the model responds. It asks more, names warning
-signs more often and bounds its scope. Its aggregate cost is not detectable in the MedGemma-27B
-cell and is \statCellsAddedDropMin{} to \statCellsAddedDropMax{} in the added cells outside the
-evaluator's family. We suggest one criterion for when the
-gain is worth the cost. The harm of a missed question or warning sign must be larger than the harm
-of a less complete answer. Patient-facing triage meets this criterion more often than reference
-look-up, because advice built on missing facts can delay care. MedQuAD is a reference set. On
-MedQuAD, the cost is the largest of the added cells, and the gain is the smallest among the cells
-where active inquiry rises. A deployment should measure both on its own prompts before it chooses.
+\paragraph{The trade-off.} The adapter asks more, names warning signs more often and bounds its
+scope. Its aggregate cost is not detectable in the MedGemma-27B cell and is
+\statCellsAddedDropMin{} to \statCellsAddedDropMax{} in the added cells outside the evaluator's
+family. We suggest one criterion for when the gain is worth the cost: the harm of a missed question
+or warning sign must be larger than the harm of a less complete answer. Patient-facing triage meets
+this criterion more often than reference look-up, because advice built on missing facts can delay
+care. Outside the evaluator's family, the rise in active inquiry is largest on ChatDoctor, which has
+unedited patient messages (\statCellChatDoctorMistralBaseActiveInquiry\% to
+\statCellChatDoctorMistralLoRAActiveInquiry\%). MedQuAD is a reference set of short questions. There
+the rise is the smallest among the cells where active inquiry rises
+(\statCellMedQuADMistralBaseActiveInquiry\% to \statCellMedQuADMistralLoRAActiveInquiry\%), and the
+cost is the largest. A deployment should measure both on its own prompts.
 
-\paragraph{What these behaviors mean clinically.} Each dimension maps to a clinical practice.
-\emph{Active inquiry} is history-taking: getting the facts that decide the answer before giving
-it. \emph{Red-flag identification} is recognizing presentations that need escalation, not
-reassurance. \emph{Scope bounding} is declining to advise past the available evidence, so that a
-confident answer does not replace an examination. \emph{Hedging quality} separates a
-qualification that carries information from a blanket disclaimer that carries none. To ``is it
-safe to just start antidepressants i feel really down lately'', Base lists what to tell a doctor
-but asks nothing. LoRA asks how long the user has felt down, about sleep, appetite and self-harm,
-and gives a crisis line (Appendix~\ref{app:examples}). Active inquiry and context-seeking help only where facts are
-missing and the user can give them. We do not show that the adapter asks only there. It also asks
-more on prompts outside HealthBench's context-seeking theme (\statHBMedGemmaMayActiveInquiryNeedsInfoThemeNegRateBase\% to
-\statHBMedGemmaMayActiveInquiryNeedsInfoThemeNegRateLoRA\%), and the interval for
-its gain in selectivity over Base includes zero (Appendix~\ref{app:robustness}). So the adapter may
-imitate a template of asking. Scope bounding and
-red-flag identification apply to any clinical question. Outside the evaluator's family, the rise in active inquiry is largest on
-ChatDoctor, which has unedited patient messages (\statCellChatDoctorMistralBaseActiveInquiry\% to
-\statCellChatDoctorMistralLoRAActiveInquiry\%). Among the cells where active inquiry rises, the
-rise is smallest on MedQuAD, which has short reference questions
-(\statCellMedQuADMistralBaseActiveInquiry\% to \statCellMedQuADMistralLoRAActiveInquiry\%).
+\paragraph{What these behaviors mean clinically.} \emph{Active inquiry} is history-taking: getting
+the facts that decide the answer before giving it. \emph{Red-flag identification} is recognizing
+presentations that need escalation, not reassurance. \emph{Scope bounding} is declining to advise
+past the available evidence, so that a confident answer does not replace an examination.
+\emph{Hedging quality} separates a qualification that carries information from a blanket disclaimer
+that carries none. To ``is it safe to just start antidepressants i feel really down lately'', Base
+lists what to tell a doctor but asks nothing. LoRA asks how long the user has felt down, about
+sleep, appetite and self-harm, and gives a crisis line (Appendix~\ref{app:examples}). Active inquiry
+and context-seeking help only where facts are missing and the user can give them. We do not show
+that the adapter asks only there. With MedGemma-27B it also asks more on prompts outside
+HealthBench's context-seeking theme (\statHBMedGemmaMayActiveInquiryNeedsInfoThemeNegRateBase\% to
+\statHBMedGemmaMayActiveInquiryNeedsInfoThemeNegRateLoRA\%), and its asking index does not rise
+detectably in any cell (\S\ref{sec:checks}). So the adapter may imitate a template of asking. Scope
+bounding and red-flag identification apply to any clinical question.
 
 \subsection{Comparison to Prior Calibration Approaches}
 \label{sec:prior}
@@ -600,7 +598,7 @@ rise is smallest on MedQuAD, which has short reference questions
 \caption{The recipe next to prior approaches (a positioning, not a measurement). Inference cost is
 per response, relative to one plain generation pass.}
 \label{tab:prior}
-\footnotesize
+\scriptsize
 \setlength{\tabcolsep}{2.5pt}
 \begin{tabular}{lllll}
 \toprule
@@ -622,73 +620,62 @@ This recipe & weights & one pass & the protocol, a rubric, a grader & epistemic 
 
 Table~\ref{tab:prior} places the recipe next to prior approaches. Prompted methods
 \citep{tian2023just, li2024mediq} act at every call. The recipe changes the weights, which removes
-that cost and also the option to turn the behavior off. The weight-level methods for confidence
-and abstention \citep{lin2022teaching, zhang2024rtuning} need answers with known correctness, and
-STaR \citep{zelikman2022star} filters on correctness. We filter on rubric quality, so the target is
-behavior and not facts. Constitutional AI \citep{bai2022constitutional} moves a prompted behavior
-into the weights through self-critique, and AMIE \citep{tu2025amie} learns to ask through
-simulated multi-turn dialogue. We tested one single-turn protocol on patient-facing questions. This
-comparison is an argument, not a measurement. A head-to-head comparison with prompt baselines is
-the most important missing experiment (\S\ref{sec:future}).
+that cost and also the option to turn the behavior off. The weight-level methods for confidence and
+abstention \citep{lin2022teaching, zhang2024rtuning} need answers with known correctness, and STaR
+\citep{zelikman2022star} filters on correctness. We filter on rubric quality, so the target is
+behavior, not facts. AMIE \citep{tu2025amie} learns to ask from simulated dialogue; we tested one
+single-turn protocol. This comparison is an argument, not a measurement; a test against prompt
+baselines is the most important missing experiment (\S\ref{sec:future}).
 
 \subsection{Limitations}
 \label{sec:limitations}
 
 \emph{One protocol, one method.} We tested one CoT protocol (\bodhi{}) and one fine-tuning method
-(LoRA). We make no claim about other protocols, other methods, or tasks with no missing information to
-seek, such as closed-form multiple choice, extraction or summarization.
-\emph{Grading.} Every score is LLM-graded. The physician check covers rubric criteria only. One of
-three physicians returned grades, and agreement is below the target. On the negative criteria
-(dangerous advice, failure to escalate), agreement is at chance ($\kappa = \statKappaNegative$,
-\statKappaNegativeCI). The physicians are co-authors. No physician graded the seven dimensions. The
-evaluator does not always follow its anchors. Its prompt names the \bodhi{} protocol and says that
-it trains active inquiry, which may favor responses in the protocol's style, although it is not
-told the condition.
-\emph{Selectivity.} We do not show that the adapter learned when to ask (\S\ref{sec:discussion}).
-Our posted replies claimed that it asks selectively; we withdraw that claim.
-\emph{Cells.} The added cells used another training stack, recipe and evaluation settings than
-the MedGemma-27B cell. So a difference between the two can come from the settings, and not only
-from the base model or the benchmark. The Mistral-Small-24B adapters were trained against a 4-bit
-base and evaluated on the bfloat16 base. The Med42-8B cells share the evaluator's family, and the
-only MedQA run used a prompt that cues asking, so these cells do not test the recipe.
-\emph{Design.} Red-flag identification measures sensitivity only; we report no measure of
-over-flagging. The seeds vary training and the evaluation draw but not the teacher traces.
-Decoding was greedy. We ran no ablation over $\tau$, rank or data size, and no arm without the
-filter, so we cannot attribute any effect to the filter. We did not time training or inference per
-configuration on dedicated hardware. The MedGemma-27B adapters were not retained, so their LoRA
-configuration comes from the training code, and no saved file can confirm it.
-\emph{Analyses.} We report the leakage split, the token counts and the discrimination index for
-the MedGemma-27B cell only.
+(LoRA). We make no claim about others, or about tasks with no missing information to seek, such as
+closed-form multiple choice, extraction or summarization.
+\emph{Grading.} Every score is LLM-graded. One of three physicians returned grades, on rubric
+criteria only and not on the seven dimensions, and agreement is below the target. On the negative
+criteria (dangerous advice, failure to escalate), it is at chance ($\kappa = \statKappaNegative$,
+\statKappaNegativeCI). The physicians are co-authors. The evaluator does not always follow its
+anchors, and its prompt names the \bodhi{} protocol and says that it trains active inquiry, which may
+favor responses in the protocol's style, although it is not told the condition.
+\emph{Selectivity.} We do not show that the adapter learned when to ask (\S\ref{sec:checks}), and we
+withdraw the claim of our posted replies that it asks selectively.
+\emph{Cells.} The added cells used another training stack, recipe and evaluation settings, so a
+difference from the MedGemma-27B cell can come from the settings. The Mistral-Small-24B adapters
+were trained against a 4-bit base and evaluated on the bfloat16 base.
+\emph{Design.} Red-flag identification measures sensitivity only, and our check of over-flagging
+(\S\ref{sec:checks}) cannot tell a real warning sign from a false one. The seeds do not vary the
+teacher traces, and decoding was greedy. We ran no ablation over $\tau$, rank or data size, and no
+arm without the filter, so we cannot attribute any effect to the filter. We did not time training
+or inference on dedicated hardware. The MedGemma-27B adapters were not retained, so no saved file
+can confirm their configuration. The checks of \S\ref{sec:checks} are post hoc and use theme tags,
+not the physicians' labels.
 
 \subsection{Future Work}
 \label{sec:future}
 
-The code release has the following experiments built and checked on the CPU, but not run. Most
-need GPU time. The file \texttt{docs/ANALYSIS\_PLAN.md} in the release fixes how each result will
-be read before its outputs exist. (1) One set of settings for Mistral-Small-24B and MedGemma-27B on
-\hbhard{}, so that the two cells differ only in the base model. (2) Prompt baselines in the same
-cells as the adapter: a prompt that asks for clarifying questions, a verbalized-confidence prompt
-\citep{tian2023just} and an abstention prompt after MediQ \citep{li2024mediq}. (3) A test of
-selective asking on paired MediQ prompts with and without the missing facts. (4) Over-flagging:
-red-flag identification on the prompts that HealthBench physicians labelled not emergent. (5) A
-second, one-pass protocol that asks first, and the \bodhi{} protocol with its red-flag section
-first. (6) A clinical judge from a third model family on every cell, the Med42-8B cells included.
-(7) Filter and teacher ablations, which test the BioMistral-7B hypothesis. (8) Clinician-posed
-prompts: the HealthBench prompts that physicians labelled as written by a health professional, and
-the NLM Clinical Questions Collection. We chose these open sets because MIMIC and eICU need
-credentialed access. Three analyses need no new run: the discrimination index
-with the physicians' labels on every \hbhard{} cell, and format leakage and output tokens in the
-added cells.
+The code release has these experiments built and checked on the CPU, but not run. Most need GPU
+time, and \texttt{docs/ANALYSIS\_PLAN.md} fixes how each result will be read before it exists.
+(1) One set of settings for Mistral-Small-24B and MedGemma-27B on \hbhard{}. (2) Prompt baselines in
+the same cells: clarifying questions, verbalized confidence \citep{tian2023just} and abstention
+after MediQ \citep{li2024mediq}. (3) Selective asking on paired
+MediQ prompts with and without the missing facts. (4) Over-flagging on the prompts that HealthBench
+physicians labelled not emergent. (5) A one-pass protocol that asks first, and the \bodhi{} protocol
+with its red-flag section first. (6) A clinical judge from a third model family on every cell. (7)
+Filter and teacher ablations, which test the BioMistral-7B hypothesis. (8) Clinician-posed prompts:
+the HealthBench prompts that physicians labelled as written by a health professional, and the NLM
+Clinical Questions Collection, open sets in place of MIMIC and eICU, which need credentialed access.
+The discrimination index with the physicians' labels needs no new run, only our adoption of the plan.
 
 \paragraph{Ethics and broader impact.} We use public benchmark data, including questions that
 patients posted online (ChatDoctor), and no patient records. The adapter is a research artifact,
-not a tool for unsupervised clinical use. The main risk is hedging or asking that delays urgent
-care, so we report red-flag identification for each condition. The drop under LoRA+\bodhi{}
-motivates the clinician harm review in Appendix~\ref{app:harm}, which is not yet done. The adapter needs gated access to MedGemma-27B and inherits its license.
+not a tool for unsupervised clinical use. Its main risk is hedging or asking that delays urgent
+care. The red-flag drop under LoRA+\bodhi{} motivates the clinician harm review of
+Appendix~\ref{app:harm}, not yet done.
 
-\paragraph{Code availability.} Code, evaluation outputs and analysis scripts:
-\codeurl{}. The five MedGemma-27B adapters were not retained, so we cannot release them. The
-repository holds the adapter configurations and trainer states of the added cells.
+\paragraph{Code availability.} Code, evaluation outputs and analysis scripts: \codeurl{}. The
+MedGemma-27B adapters were not retained; the repository holds the adapter files of the added cells.
 
 \begin{ack}
 Funding: None declared.
