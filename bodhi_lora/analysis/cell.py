@@ -693,6 +693,14 @@ def filter_section(cell: CellConfig, paths: CellPaths, seeds: list[int]) -> tupl
         res["kept_share_of_graded"] = _f(rec["kept"] / (rec.get("graded") or rec["raw"]))
     if not rec:
         res["not_measured_counts"] = "the cell's filter counts were not recorded"
+    graded = _read_json(paths.shared("filter") / "scores.json")
+    if graded and graded.get("rows"):
+        # Every graded trace's score (the filter stage writes it since 2026-10-10): the
+        # share at or above each tau is exact, not an estimate from a train split.
+        s = np.asarray([x for _, x in graded["rows"] if x is not None], dtype=float)
+        res["graded_scores"] = {"n": int(len(s)), "min": _f(s.min()), "median": _f(np.median(s)),
+                                "tau_grid": [{"tau": tau, "share_of_graded": float((s >= tau - 1e-12).mean())}
+                                             for tau in TAU_GRID]}
     train_ids = None
     for seed in seeds + [s for s in cell.seeds if s not in seeds]:
         f = paths.stage(seed, "filter") / "filter_scores.json"

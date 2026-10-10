@@ -201,13 +201,19 @@ def grade(ctx: StageContext) -> dict:
         print(f"  failed {pid}:\n{tb}", file=sys.stderr)
     graded_rows = sorted(graded.values(), key=lambda g: g["prompt_id"])
     write_jsonl(graded_path, graded_rows)
+    # The score of each graded trace, without its text, in a file git tracks (no ignore
+    # rule covers it), so tau can be calibrated again from the repository alone.
+    scores_path = out_dir / "scores.json"
+    scores_path.write_text(json.dumps({"score_field": SCORE_FIELD, "columns": ["prompt_id", "score"],
+                                       "rows": [[g["prompt_id"], g["grade"][SCORE_FIELD]] for g in graded_rows]})
+                           + "\n")
     parse_failures = sum(g["grade"]["parse_failures"] for g in graded_rows)
     items = sum(len(g["grade"]["criteria_results"]) for g in graded_rows)
     if items and parse_failures > 0.05 * items:
         print(f"WARNING: grader parse failures {parse_failures}/{items} exceed 5%", file=sys.stderr)
     kept, tau_record = apply_tau(graded_rows, flt.tau, flt.val_ratio, len(in_pool))
     write_jsonl(out_dir / "kept.jsonl", sorted(kept, key=lambda g: g["prompt_id"]))
-    outputs = [graded_path, out_dir / "kept.jsonl"]
+    outputs = [graded_path, scores_path, out_dir / "kept.jsonl"]
     counts = {"n_traces": len(traces), "n_in_train_pool": len(in_pool),
               "n_outside_train_pool": len(traces) - len(in_pool), "n_graded": len(graded_rows),
               "n_failed_grading": len(failed), "n_too_long": len(too_long), "n_kept": len(kept),
