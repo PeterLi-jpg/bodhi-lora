@@ -160,22 +160,19 @@ not tested it.
 \label{sec:related}
 %======================================================================
 
-\paragraph{Calibration and confidence in language models.} \citet{kadavath2022language} showed
-that large models are well calibrated on multiple-choice questions. They also showed that models
-can be trained to predict whether they know an answer. After tuning with human feedback
-\citep{ouyang2022training}, token probabilities are poorly calibrated. Confidence stated in words
-is often better \citep{tian2023just}, although it still tends toward overconfidence
-\citep{xiong2024can}. \citet{lin2022teaching} fine-tuned a model to state its confidence in words.
-These works target numerical confidence. We target behaviors in the response (hedging, asking, declining), and we do not measure
-calibration in the statistical sense. A model can have a low expected calibration error and still
-omit the safety-netting questions that a clinician would ask.
+\paragraph{Calibration and confidence in language models.} Large models are well calibrated on
+multiple-choice questions and can learn to predict whether they know an answer
+\citep{kadavath2022language}. After tuning with human feedback \citep{ouyang2022training},
+confidence stated in words is often better calibrated than token probabilities
+\citep{tian2023just}, but still too high \citep{xiong2024can}, and \citet{lin2022teaching} trained a
+model to state it. These works target numerical confidence. We target behaviors in the response
+(hedging, asking, declining) and do not measure calibration in the statistical sense.
 
 \paragraph{Clinical epistemic behaviors.} \citet{simpkin2016tolerating} argue that clinicians must
-learn to act well under uncertainty that they cannot remove, instead of seeking false certainty.
-Safety-netting, which tells patients what to watch for and when to return \citep{jones2019safety},
-is a core clinical skill. Our red-flag and scope-bounding dimensions put it into a grading rubric.
-\citet{wornow2023shaky} review clinical foundation models. They find that most are evaluated on
-tasks that say little about their value to health systems.
+learn to act well under uncertainty that they cannot remove. Safety-netting tells patients what to
+watch for and when to return \citep{jones2019safety}; our red-flag and scope-bounding dimensions
+put it into a grading rubric. Most clinical foundation models are evaluated on tasks that say
+little about their value to health systems \citep{wornow2023shaky}.
 
 \paragraph{Asking and abstaining.} MediQ \citep{li2024mediq} and CRAFT-MD \citep{johri2025craftmd}
 find that clinical LLMs gather missing facts poorly in interactive consultations. AMIE
@@ -193,18 +190,16 @@ referral) and negative criteria (dangerous advice, false reassurance, failure to
 HealthBench penalizes both overconfidence and unhelpful hedging. We use its grading protocol.
 
 \paragraph{Training on model-generated data.} Chain-of-thought prompting \citep{wei2022chain}
-changes behavior at inference, at a cost in tokens on every call. Constitutional AI
-\citep{bai2022constitutional} and STaR \citep{zelikman2022star} move a prompted or self-generated
-behavior into the weights (\S\ref{sec:prior}). Self-play and
-self-rewarding methods \citep{chen2024selfplay, yuan2024selfrewarding} train on the model's own
-samples, often with a preference objective such as DPO \citep{rafailov2023direct}. Process reward
-models \citep{lightman2024lets} grade single reasoning steps; our filter grades whole responses.
-RLAIF \citep{lee2024rlaif} shows that AI labels can stand in for human ones. In standard and
-chain-of-thought distillation \citep{hinton2015distilling, ho2023large, magister2023teaching}, a
-larger teacher trains a smaller student. Here the teacher and the student are the same model under
-different inference conditions. We use LoRA \citep{hu2022lora} to change behavior, not to add
-knowledge. LoRA variants include QLoRA \citep{dettmers2023qlora}, DoRA \citep{liu2024dora} and
-rsLoRA \citep{kalajdzievski2023scaling}.
+costs tokens on every call. Constitutional AI \citep{bai2022constitutional} and STaR
+\citep{zelikman2022star} move a prompted or self-generated behavior into the weights
+(\S\ref{sec:prior}). Self-play and self-rewarding methods \citep{chen2024selfplay,
+yuan2024selfrewarding} train on the model's own samples, often with DPO \citep{rafailov2023direct}.
+Process reward models \citep{lightman2024lets} grade single reasoning steps, and RLAIF
+\citep{lee2024rlaif} uses AI labels in place of human ones. In distillation \citep{hinton2015distilling,
+ho2023large, magister2023teaching}, a larger teacher trains a smaller student; here both are the
+same model under different inference conditions. We use LoRA \citep{hu2022lora} to change
+behavior, not to add knowledge; variants include QLoRA \citep{dettmers2023qlora}, DoRA
+\citep{liu2024dora} and rsLoRA \citep{kalajdzievski2023scaling}.
 
 %======================================================================
 \section{Method}
@@ -265,12 +260,12 @@ for all five seeds. This threshold removes failures. It does not select only the
 (Table~\ref{tab:tau-calibration}). We did not run an ablation over $\tau$.
 
 \paragraph{Separate grader families.} The family that selects the training data (Qwen2.5-14B) does
-not grade the results (Llama-3.1-8B; our first runs used one family for both). This removes the most direct route to circularity, a metric that partly measures agreement with the
-filter grader. It does not rule out grading preferences that the two families share, and it gives
-no clinical validity. We used general instruction models, as HealthBench does
-\citep{healthbench2025}, because the design rule was family separation. We did not test whether a
-clinically tuned grader would grade differently. Two of the added cells (\S\ref{sec:cells}) use
-Med42-8B \citep{christophe2024med42}, a Llama-3 model, so they break this separation.
+not grade the results (Llama-3.1-8B; our first runs used one family for both). This removes the
+most direct route to circularity, a metric that partly measures agreement with the filter grader.
+It does not rule out grading preferences that the two families share, and it gives no clinical
+validity. As HealthBench does \citep{healthbench2025}, we used general instruction models, because
+the design rule was family separation; we did not test a clinically tuned grader. Two added cells
+use Med42-8B \citep{christophe2024med42}, a Llama-3 model, so they break this separation.
 
 \subsection{LoRA Fine-Tuning}
 
@@ -278,15 +273,13 @@ Med42-8B \citep{christophe2024med42}, a Llama-3 model, so they break this separa
 % (gs://.../prod-v39-tunix-27b-neurips); evidence per value is in the comments of
 % Table~\ref{tab:hparams}. Not confirmed against the saved adapters: the GCS bucket
 % returned 404 on 2026-10-08, and the adapters are treated as not retained (DECISIONS.md D19).
-We fine-tune MedGemma-27B with LoRA ($r{=}8$, $\alpha{=}16$, dropout 0.05) on the attention query,
-key and value projections. The loss uses response tokens only. Training uses JAX (tunix) on one TPU
-v6e-8 host per seed, with the base sharded over the 8 chips (FSDP). The optimizer is AdamW at a
-constant learning rate of $10^{-4}$, with no warmup and no decay. Each optimizer step uses 64
-examples, and the maximum sequence length is 2,048 tokens. Training runs for 300 optimizer steps.
-The exported checkpoint is step 250 or 300 (5.7 to 6.8 epochs); we could not check which. We train 5 adapters (seeds 42, 7, 13, 99, 101).
-Table~\ref{tab:hparams} in Appendix~\ref{app:hparams} gives the full configuration. The added cells
-(\S\ref{sec:cells}) used another training stack and recipe: PyTorch with PEFT and TRL on one H100
-GPU, with $r{=}\statCellsLoRARank$ and $\alpha{=}\statCellsLoRAAlpha$ (Table~\ref{tab:hparams-cells}).
+We fine-tune MedGemma-27B with LoRA ($r{=}8$, $\alpha{=}16$) on the attention query, key and value
+projections, with the loss on response tokens only. Training uses JAX (tunix) on one TPU v6e-8
+host per seed, with AdamW at a constant learning rate of $10^{-4}$ for 300 optimizer steps of 64
+examples. We train 5 adapters (seeds 42, 7, 13, 99, 101). Table~\ref{tab:hparams} gives the full
+configuration, which we read from the training code, because the adapters were not retained. The
+added cells (\S\ref{sec:cells}) used another stack and recipe: PyTorch with PEFT and TRL on one
+H100 GPU, with $r{=}\statCellsLoRARank$ and $\alpha{=}\statCellsLoRAAlpha$ (Table~\ref{tab:hparams-cells}).
 
 \subsection{Evaluation}
 \label{sec:eval}
@@ -296,18 +289,17 @@ and its four conditions share that draw. No \hbhard{} prompt is used in training
 overlap. The \statPromptEvaluations{} draws per condition cover \statUniquePrompts{} unique
 prompts, and \statRepeatedPrompts{} prompts appear in more than one seed. A seed sets the LoRA
 initialization, the data order, the dropout masks, the train/validation split and the evaluation
-draw. It does not vary the teacher traces or their filter scores. We generated the traces once and
-graded them with greedy decoding. The added cells of \S\ref{sec:cells} evaluate one fixed set of
-200 prompts in every seed, so there the seed varies only training (Appendix~\ref{app:generality}).
+draw. It does not vary the teacher traces or their filter scores, which we made once with greedy
+decoding. The added cells (\S\ref{sec:cells}) evaluate one fixed set of 200 prompts in every seed,
+so there the seed varies only training.
 
 \paragraph{Conditions.} The $2 \times 2$ design has four conditions per seed: Base, Base+\bodhi{}
 (the base model with the CoT protocol, which is also the teacher), LoRA (no CoT) and LoRA+\bodhi{}.
 
 \paragraph{Grading.} The evaluator, Llama-3.1-8B-Instruct, grades every response twice. The rubric
-grading judges each HealthBench rubric criterion, and Eq.~\ref{eq:score} gives the aggregate score.
-The epistemic grading scores the seven epistemic dimensions. Generation ran in vLLM on A100-80GB
-GPUs (Modal), with a 4,096-token context and greedy decoding. The adapter was merged into the base
-weights.
+grading judges each HealthBench rubric criterion (Eq.~\ref{eq:score} gives the aggregate score), and
+the epistemic grading scores the seven dimensions. Generation ran in vLLM on A100-80GB GPUs
+(Modal), with a 4,096-token context, greedy decoding and the adapter merged into the base weights.
 
 \paragraph{Seven epistemic dimensions.} The epistemic grading scores six dimensions from 0 to 2:
 uncertainty acknowledgment, context-seeking, red-flag identification, scope bounding, specificity
@@ -318,55 +310,48 @@ direct clarifying question. The dimensions cover three functions. \emph{Self-ass
 what the model does and does not know. \emph{Information-seeking} (active inquiry,
 context-seeking) asks whether it gathers missing facts before it advises
 \citep{simpkin2016tolerating}. \emph{Risk management} (red-flag identification, scope bounding)
-covers safety-netting \citep{jones2019safety}. Every dimension is visible in the response text,
-without clinical outcomes. The anchors in the evaluator's prompt address the user (for example
-``Are you experiencing chest pain right now?''). So no dimension assumes a clinician reader.
-Appendix~\ref{app:dimensions} quotes the anchors and gives an example for each dimension. The
+covers safety-netting \citep{jones2019safety}. Every dimension is visible in the response text.
+The anchors in the evaluator's prompt address the user (``Are you experiencing chest pain right
+now?''), so no dimension assumes a clinician reader. Appendix~\ref{app:dimensions} quotes the anchors and gives an example for each dimension. The
 evaluator does not always follow its anchors. Context-seeking also credits responses that only
 discuss missing facts (Appendix~\ref{app:dimensions}), so active inquiry is the stricter measure
 of asking.
 
-\paragraph{Where the dimensions come from.} We chose the seven dimensions by informal consensus in
-the author group, which includes three practising physicians. We based the choice on the
-literature above. We used no formal method (no Delphi round, no content-validity index). We left
-out empathy and depth of patient education, because they mix what is said with how well the
+\paragraph{Where the dimensions come from.} We chose the seven dimensions from the literature
+above, by informal consensus in the author group, which includes three practising physicians. We
+used no formal method (no Delphi round, no content-validity index). We left out empathy and depth of patient education, because they mix what is said with how well the
 response represents uncertainty. By design, the dimensions follow the behaviors that the protocol
-asks for. So they test whether the adapter learned those behaviors, not whether the behaviors help
-patients. Appendix~\ref{app:dimensions} maps the dimensions to the \bodhi{} components.
+asks for, so they test whether the adapter learned those behaviors, not whether the behaviors help
+patients (Appendix~\ref{app:dimensions} maps them to the \bodhi{} components).
 
-\paragraph{Statistical analysis.} The seed is the unit of inference. The submitted version of this
-paper treated responses as independent; this version does not. For each contrast between two
-conditions, we take the five per-seed differences of condition means. We report their mean with a
-95\% $t$ interval (4 df) and a paired $t$-test. Within each contrast, Holm's method
-\citep{holm1979simple} corrects for
-the seven dimensions; we write the adjusted value as $p_{\text{Holm}}$. The rates of
-Table~\ref{tab:epistemic} are secondary and outside this family. The red-flag and scope-bounded
-rates are the shares of responses graded 2, and the specificity rate is the share that gives a
-concrete number. Pooled Cohen's $d$ over
+\paragraph{Statistical analysis.} The seed is the unit of inference; the submitted version treated
+responses as independent. For each contrast between two conditions, we take the five per-seed
+differences of condition means. We report their mean with a 95\% $t$ interval (4 df) and a paired
+$t$-test. Within each contrast, Holm's method \citep{holm1979simple} corrects for the seven
+dimensions; we write the adjusted value as $p_{\text{Holm}}$. The rates of
+Table~\ref{tab:epistemic} (shares of responses graded 2, or that give a concrete number) are
+secondary and outside this family. Pooled Cohen's $d$ over
 responses is descriptive. Its 95\% interval comes from a bootstrap that resamples prompt ids,
 because the draws overlap. We set no equivalence margin, so a non-significant difference is not
 evidence that two conditions are equal. We apply these tests to every cell in the same way, from
-the per-seed means of each condition (Appendix~\ref{app:perseed}). The pooled $d$ and the bootstrap
-use the response-level outputs, which we analyzed for the MedGemma-27B cell only.
-Table~\ref{tab:seed-contrasts} in Appendix~\ref{app:stats} gives every contrast of that cell.
+the per-seed means of each condition (Appendix~\ref{app:perseed}). The pooled $d$ and the
+bootstrap intervals use the response-level outputs. We report pooled $d$ for the MedGemma-27B cell
+only, with every contrast of that cell (Table~\ref{tab:seed-contrasts}).
 
-\paragraph{Grading failures.} In the epistemic grading, we could not parse the evaluator's output
-for \statEpistemicParseFailPctBase\% to \statEpistemicParseFailPctMax\% of the responses that it
-wrote a row for, depending on the condition (Table~\ref{tab:counts}). These responses are left out of the epistemic
-means. A worst-case analysis gives every failed or missing grade the worst value of its scale
-(Table~\ref{tab:worst-case}). In the rubric grading, the evaluator failed on at most
-\statHealthBenchParseFailPctMaxRun\% of the criteria in any run. A failed criterion counts as not
-met.
+\paragraph{Grading failures.} The evaluator's epistemic grade did not parse for
+\statEpistemicParseFailPctBase\% to \statEpistemicParseFailPctMax\% of the responses it wrote a row
+for, by condition (Table~\ref{tab:counts}). These responses are left out of the epistemic means, and
+a worst-case analysis gives each failed or missing grade the worst value of its scale
+(Table~\ref{tab:worst-case}). In the rubric grading, at most \statHealthBenchParseFailPctMaxRun\% of
+the criteria in any run failed; a failed criterion counts as not met.
 
 \paragraph{Physician check.} The check that we specified in the repository on 2026-04-29 needed at
-least two physicians and $\kappa \geq 0.6$ between the filter grader and their consensus. As run, the check grades HealthBench rubric criteria,
-which give the aggregate score and the filter score. It does not grade the seven dimensions. Of the
-three physicians, \statKappaRaters{} returned grades. On \statKappaAllN{} criterion rows from
-\statKappaPrompts{} prompts, Cohen's $\kappa$ \citep{cohen1960coefficient} between that physician
-and the evaluator is
-\statKappaAll{} (95\% CI \statKappaAllCI, bootstrap over prompts). This is below the target.
-Appendix~\ref{app:human} records this amendment. No physician graded the seven dimensions. So
-every epistemic result in this paper is LLM-graded and not clinically validated.
+least two physicians and $\kappa \geq 0.6$ between the filter grader and their consensus. As run, it
+grades the HealthBench rubric criteria behind the aggregate and filter scores, not the seven
+dimensions. Of the three physicians, \statKappaRaters{} returned grades. On \statKappaAllN{}
+criterion rows from \statKappaPrompts{} prompts, Cohen's $\kappa$ \citep{cohen1960coefficient}
+between that physician and the evaluator is \statKappaAll{} (95\% CI \statKappaAllCI, bootstrap over
+prompts), below the target (Appendix~\ref{app:human}). So every epistemic result is LLM-graded.
 
 %======================================================================
 \section{Results}
