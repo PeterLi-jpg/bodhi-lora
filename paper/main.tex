@@ -379,36 +379,35 @@ every epistemic result in this paper is LLM-graded and not clinically validated.
 \begin{table}[t]
 \centering
 \caption{Behavior gain and aggregate cost in every cell, with the same statistics for each cell.
-Active inquiry under Base and LoRA is the mean of the five seed means. Each LoRA $-$ Base value is
-the mean of the five per-seed differences, $\pm$ half of its 95\% $t$ interval (4 df). $^{*}$:
-$p < 0.05$. For the four dimensions, $p$ is Holm-adjusted over the seven dimensions of the cell;
-for the aggregate score, it comes from the paired $t$-test. The first row is the MedGemma-27B cell.
-The added cells used another training stack, recipe and evaluation settings
-(Appendix~\ref{app:generality}). Appendix~\ref{app:perseed} gives all seven dimensions in all four
-conditions of each cell. $^{\dagger}$The base model shares the evaluator's Llama-3 family, which
-breaks the grader-separation rule, so these cells are left out of every count across cells. The
-last row is set aside, because its prompt told the model to ask (see text). Its dimensions use the
-\statCellMedQAMistralEpistemicSeeds{} seeds that have dimension grades.}
+Base and LoRA: mean of the five seed means. LoRA $-$ Base: mean of the five per-seed differences,
+$\pm$ half of its 95\% $t$ interval (4 df). $^{*}$: $p < 0.05$, Holm-adjusted over the seven
+dimensions for the four dimensions, paired $t$ for the aggregate score. The first row is the
+MedGemma-27B cell; the added cells used another stack, recipe and evaluation settings
+(Appendix~\ref{app:generality}). Appendix~\ref{app:perseed} gives every dimension in every
+condition. $^{\dagger}$Base model in the evaluator's Llama-3 family, left out of every count across
+cells. The last row is set aside, because its prompt told the model to ask; its dimensions use the
+\statCellMedQAMistralEpistemicSeeds{} seeds with dimension grades.}
 \label{tab:cells}
 \scriptsize
 \setlength{\tabcolsep}{1.5pt}
 \input{generated/tab_cross_cell}
 \end{table}
 
-A cell is one base model on one benchmark. The MedGemma-27B cell on \hbhard{} is the cell of the
-submitted version. After the submission we ran the recipe in \statCellsAdded{} added cells
-(Table~\ref{tab:cells}). Mistral-Small-24B, Med42-8B and BioMistral-7B
-\citep{labrak2024biomistral} ran on \hbhard{}. Mistral-Small-24B and Med42-8B ran on ChatDoctor
-\citep{li2023chatdoctor}, which has questions that real patients asked physicians online.
-Mistral-Small-24B also ran on MedQuAD \citep{benabacha2019medquad}, which has NIH consumer-health
-questions, and on MedQA-USMLE as open-ended questions. The added cells used another training
-stack, recipe and evaluation settings, including 4-bit QLoRA for Mistral-Small-24B and an
-8,192-token context (Appendix~\ref{app:generality}). We computed every value from the raw outputs
-of each cell, with the same tests for every cell (\S\ref{sec:eval}).
+The MedGemma-27B cell on \hbhard{} is the cell of the submitted version. After the submission we
+ran the recipe in \statCellsAdded{} added cells (Table~\ref{tab:cells}): Mistral-Small-24B, Med42-8B
+and BioMistral-7B \citep{labrak2024biomistral} on \hbhard{}; Mistral-Small-24B and Med42-8B on
+ChatDoctor \citep{li2023chatdoctor}, questions that real patients asked physicians online; and
+Mistral-Small-24B on MedQuAD \citep{benabacha2019medquad}, NIH consumer-health questions, and on
+MedQA-USMLE as open-ended questions. These cells used another training stack, recipe and evaluation
+settings, including 4-bit QLoRA for Mistral-Small-24B and an 8,192-token context
+(Appendix~\ref{app:generality}). Every value comes from the raw outputs of each cell, with the same
+tests for every cell (\S\ref{sec:eval}).
 
 \paragraph{Behavior.} Of the \statCellsAll{} cells, \statCellsOutside{} have a base model outside
 the evaluator's family and are not set aside, the MedGemma-27B cell included. In \statCellsOutsideAskRose{} of them,
-active inquiry and context-seeking both rise under LoRA with $p_{\text{Holm}} < 0.05$.
+active inquiry and context-seeking both rise under LoRA with $p_{\text{Holm}} < 0.05$. These
+cells cover \statCellsOutsideAskRoseModels{} base models (MedGemma-27B and Mistral-Small-24B) and
+\statCellsOutsideAskRoseBenchmarks{} benchmarks. Our claim of generality goes no further than these cells.
 Red-flag identification rises in \statCellsOutsideRedFlagRose{} of them and scope bounding in
 \statCellsOutsideScopeRose. BioMistral-7B is a null result. Of its seven dimensions,
 \statCellHBBioMistralDimsRose{} rise and \statCellHBBioMistralDimsFell{} fall with
@@ -417,7 +416,7 @@ $p_{\text{Holm}} < 0.05$, and active inquiry goes from \statCellHBBioMistralBase
 (\statCellHBBioMistralBaseCoTActiveInquiry\%), and its filter kept the fewest traces
 (\statCellHBBioMistralFilterClearance\%). Our hypothesis is that the recipe needs a teacher whose
 traces the filter keeps at a usable rate. One null cannot separate this from model size,
-instruction tuning, or a configuration that does not suit a 7B model. We have not tested it. The
+instruction tuning or a setting that does not suit a 7B model, and we have not tested it. The
 gain also has costs on single dimensions. In \statCellsOutsideDimFell{} cells, one dimension falls
 with $p_{\text{Holm}} < 0.05$: uncertainty acknowledgment on ChatDoctor
 (\statCellChatDoctorMistralUncertaintyAckLoRAvsBaseDiff) and specificity on MedQuAD
@@ -427,34 +426,31 @@ adapter reaches or passes its teacher's active inquiry in \statCellsAtOrAboveTea
 
 \paragraph{Aggregate score.} The aggregate score falls under LoRA in all
 \statCellsAddedWithAggregate{} added cells outside the evaluator's family, by
-\statCellsAddedDropMin{} to \statCellsAddedDropMax. In paired $t$-tests over the five seeds, the
-largest two-sided $p$ of these drops is \statCellsAddedDropPMax. Each stays significant after Holm
-correction over the \statCellsHolmFamily{} added cells that are not set aside (largest
-$p_{\text{Holm}} = \statCellsAddedDropPHolmMax$), as our posted tests said. In the MedGemma-27B cell
+\statCellsAddedDropMin{} to \statCellsAddedDropMax. The largest two-sided paired $p$ of these drops
+is \statCellsAddedDropPMax, and each stays significant after Holm correction over the
+\statCellsHolmFamily{} added cells that are not set aside (largest $p_{\text{Holm}} =
+\statCellsAddedDropPHolmMax$), as our posted tests said. In the MedGemma-27B cell
 we detect no change (\S\ref{sec:main}). In BioMistral-7B, the score fell without a rise in asking,
-so a rubric penalty on asking cannot be the whole cause. Within the adapter's own responses, those
-that ask do not score consistently lower than those that answer. This comparison is self-selected
-and only suggestive (Appendix~\ref{app:generality}). So in the added cells, the adapter buys more
-inquiry at a cost in aggregate score.
+so a rubric penalty on asking cannot be the whole cause. In no cell outside the evaluator's
+family do the adapter's responses that ask score detectably lower than those that answer
+(Table~\ref{tab:checks}). This comparison is self-selected and only suggestive. So in the added
+cells, the adapter buys more inquiry at a cost in aggregate score.
 
 \paragraph{Cells we do not count.} The \statCellsSameFamily{} Med42-8B cells ($\dagger$) show the
-same pattern. But Med42-8B is a Llama-3 model like the evaluator, which breaks the separation of
-grader families (\S\ref{sec:method}), so we leave these cells out of every count above. MedQA is a
-single-best-answer exam, and its rubric grades agreement with a keyed answer. The only run of this
-cell used a prompt that told the model to ask for missing information. Base asked in
-\statCellMedQAMistralBaseActiveInquirySeedMin\% to \statCellMedQAMistralBaseActiveInquirySeedMax\%
-of responses per graded seed, and LoRA asked less. So the cell measures instruction following, and
-we set it aside. Its aggregate score rose by \statCellMedQAMistralAggregateDiff{} (95\% CI
-\statCellMedQAMistralAggregateDiffCI). This is the rise that our posted replies reported
-(Appendix~\ref{app:generality}).
+same pattern, but Med42-8B is a Llama-3 model like the evaluator, which breaks the separation of
+grader families (\S\ref{sec:method}). MedQA is a single-best-answer exam, and its rubric grades
+agreement with a keyed answer. Its only run used a prompt that told the model to ask for missing
+information: Base asked in \statCellMedQAMistralBaseActiveInquirySeedMin\% to
+\statCellMedQAMistralBaseActiveInquirySeedMax\% of responses per graded seed, and LoRA asked less.
+So the cell measures instruction following. Its aggregate score rose by
+\statCellMedQAMistralAggregateDiff{} (95\% CI \statCellMedQAMistralAggregateDiffCI), the rise that
+our posted replies reported (Appendix~\ref{app:generality}). We leave these cells out of every count.
 
 \subsection{The MedGemma-27B Cell}
 \label{sec:main}
 
-Appendix~\ref{app:perseed} gives this cell's aggregate score in the four conditions
-(Table~\ref{tab:main}) and its seven dimensions with the secondary rates (Table~\ref{tab:epistemic}).
-
-\paragraph{Behavior.} Against Base, the adapter without CoT raises active inquiry by
+\paragraph{Behavior.} Tables~\ref{tab:main} and~\ref{tab:epistemic} give this cell in the four
+conditions. Against Base, the adapter without CoT raises active inquiry by
 \statActiveInquiryLoRAvsBaseDiff{} percentage points (95\% CI \statActiveInquiryLoRAvsBaseCI;
 $p_{\text{Holm}} = \statActiveInquiryLoRAvsBasePHolm$). It also raises context-seeking by
 \statContextSeekingLoRAvsBaseDiff{} (\statContextSeekingLoRAvsBaseCI; $p_{\text{Holm}} =
@@ -467,30 +463,23 @@ $p_{\text{Holm}} = \statActiveInquiryLoRAvsBasePHolm$). It also raises context-s
 \statHedgingQualityLoRAvsBasePHolm$ and \statSpecificityLoRAvsBasePHolm). We detect no change in
 uncertainty acknowledgment (\statUncertaintyAckLoRAvsBaseDiff, \statUncertaintyAckLoRAvsBaseCI).
 Under the worst case for grading failures, the four rises stay positive with $p \leq
-\statScopeBoundingLoRAvsBaseWorstCaseP$ (Table~\ref{tab:worst-case}). Appendix~\ref{app:stats}
-gives pooled Cohen's $d$.
+\statScopeBoundingLoRAvsBaseWorstCaseP$ (Table~\ref{tab:worst-case}). The rise in active inquiry
+appears in every quartile of response length (Appendix~\ref{app:robustness}). Blanket disclaimers are too rare to
+compare: \statBlanketDisclaimerCountBase{} in \statNScoredBase{} graded Base responses and
+\statBlanketDisclaimerCountLoRA{} in \statNScoredLoRA{} LoRA responses (Fisher exact $p =
+\statBlanketDisclaimerFisherPLoRA$).
 
 \paragraph{Against the teacher.} On active inquiry, LoRA differs from Base+\bodhi{} by
 \statActiveInquiryLoRAvsBaseCoTDiff{} percentage points (95\% CI
-\statActiveInquiryLoRAvsBaseCoTCI), so we cannot call the two equal. The adapter needs one
-generation pass and lost no prompts. The teacher needs two passes and gave no response on
-\statCompletionDropPctBaseCoT\% of prompts.
+\statActiveInquiryLoRAvsBaseCoTCI), so we cannot call the two equal. The adapter lost no prompts;
+the teacher gave no response on \statCompletionDropPctBaseCoT\% of them.
 
 \paragraph{Aggregate score.} In this cell, the aggregate score changes by
 \statHealthBenchLoRAvsBaseDiff{} under the adapter (95\% CI \statHealthBenchLoRAvsBaseCI; $p =
-\statHealthBenchLoRAvsBaseP$). We detect no change. But the lower end of the interval,
-\statHealthBenchLoRAvsBaseCILow, leaves room for a small drop. Over pooled responses, the rubric
-accuracy axis moves from \statAxisAccuracyBase{} to \statAxisAccuracyLoRA{}, and the completeness
-axis moves from \statAxisCompletenessBase{} to \statAxisCompletenessLoRA{} (Table~\ref{tab:axis}
-gives all five axes).
-
-\paragraph{Disclaimers, length and tokens.} Blanket disclaimers are too rare to compare. Base gave
-\statBlanketDisclaimerCountBase{} in \statNScoredBase{} graded responses, and LoRA gave
-\statBlanketDisclaimerCountLoRA{} in \statNScoredLoRA{} (Fisher exact $p =
-\statBlanketDisclaimerFisherPLoRA$). The rise in active inquiry appears in every quartile of
-response length (Appendix~\ref{app:robustness}). A LoRA response has \statTokensEngineLoRA{} output
-tokens on average, and a Base response has \statTokensEngineBase. The two-pass conditions did not
-store their first pass, so we cannot count their tokens.
+\statHealthBenchLoRAvsBaseP$). We detect no change, but the lower end of the interval leaves room
+for a small drop. Over pooled responses, the rubric accuracy axis moves from
+\statAxisAccuracyBase{} to \statAxisAccuracyLoRA{} and completeness from
+\statAxisCompletenessBase{} to \statAxisCompletenessLoRA{} (Table~\ref{tab:axis}).
 
 \subsection{The CoT Protocol on the Adapter}
 \label{sec:interference}
@@ -515,16 +504,58 @@ the rule reads no other words.
 Leaked responses score \statHBMedGemmaMayLeakBodhiAnalysisFormatLoRABodhiRedFlagLeaked{} on red-flag identification ($n =
 \statHBMedGemmaMayLeakBodhiAnalysisFormatLoRABodhiN$). The others score \statHBMedGemmaMayLeakBodhiAnalysisFormatLoRABodhiRedFlagClean{} ($n =
 \statHBMedGemmaMayLeakBodhiAnalysisFormatLoRABodhiNClean$), and LoRA scores \statRedFlagLoRA{}. We withdraw our posted rule,
-which also counted two words that are not headers (Appendix~\ref{app:robustness}).
-We defined the leakage split by a property of the format, after we saw the results. So leakage may also follow prompt difficulty. We do not claim
-that the adapter and the protocol compete for capacity.
+which also counted two words that are not headers (Appendix~\ref{app:robustness}). We defined the
+split by a property of the format after we saw the results, so leakage may also follow prompt
+difficulty. We do not claim that the adapter and the protocol compete for capacity.
 
 The drop does not repeat in the added cells. There, red-flag identification under LoRA+\bodhi{}
 is lower than under LoRA with $p < 0.05$ in \statCellsAddedRedFlagCoTFell{} of the
 \statCellsAddedOutside{} added cells outside the evaluator's family, and higher with
-$p_{\text{Holm}} < 0.05$ in \statCellsAddedRedFlagCoTRose{} (Appendix~\ref{app:perseed}). These cells differ from the
-MedGemma-27B cell in base model, recipe and context length, so we cannot say why. We do not
-report leakage in them here (\S\ref{sec:future}). The adapter is meant to run without the protocol.
+$p_{\text{Holm}} < 0.05$ in \statCellsAddedRedFlagCoTRose{} (Appendix~\ref{app:perseed}). The format
+still leaks on \hbhard{}: in \statHBMistralJulLeakBodhiAnalysisFormatLoRABodhi\% of LoRA+\bodhi{}
+responses with Mistral-Small-24B and \statHBMedFortyTwoJulLeakBodhiAnalysisFormatLoRABodhi\% with
+Med42-8B, but almost never with BioMistral-7B or on ChatDoctor and MedQuAD (Table~\ref{tab:checks}).
+With Mistral-Small-24B, leaked responses also score lower on red-flag identification
+(\statHBMistralJulLeakBodhiAnalysisFormatLoRABodhiRedFlagLeaked{} against
+\statHBMistralJulLeakBodhiAnalysisFormatLoRABodhiRedFlagClean), yet the mean of the condition does
+not fall below LoRA; with Med42-8B the two groups score almost the same. So leakage does not
+explain why only the MedGemma-27B cell shows the drop. The cells differ in base model, recipe and
+context length.
+
+\subsection{Post Hoc Checks in Every Cell}
+\label{sec:checks}
+
+Three questions about the gain need no new run: over-flagging, selective asking and cost.
+Table~\ref{tab:checks} gives each check for every cell. The checks are post hoc and descriptive, and
+their labels are HealthBench theme tags.
+
+\paragraph{Over-flagging.} The red-flag grade credits warning signs and does not penalize false
+ones. We have no labelled test of false flags (\S\ref{sec:future}). On the \hbhard{} prompts outside
+HealthBench's emergency-referrals theme, LoRA raises the red-flag rate by
+\statHBMedGemmaMayRedFlagRateEmergencyThemeNegRateLoRAvsBaseDiff{} percentage points with
+MedGemma-27B (95\% CI \statHBMedGemmaMayRedFlagRateEmergencyThemeNegRateLoRAvsBaseCI) and by
+\statHBMistralJulRedFlagRateEmergencyThemeNegRateLoRAvsBaseDiff{} with Mistral-Small-24B
+(\statHBMistralJulRedFlagRateEmergencyThemeNegRateBase\% to
+\statHBMistralJulRedFlagRateEmergencyThemeNegRateLoRA\%). A prompt outside this theme can still hold
+a real warning sign, so these rises are not rates of false flags. They show that the gain is not
+limited to emergency prompts.
+
+\paragraph{Selective asking.} The discrimination index is the active-inquiry rate on prompts of
+HealthBench's context-seeking theme minus the rate on the other prompts. LoRA $-$ Base on this
+index is \statHBMedGemmaMayActiveInquiryNeedsInfoThemeIndexLoRAvsBaseDiff{} points with MedGemma-27B
+(95\% CI \statHBMedGemmaMayActiveInquiryNeedsInfoThemeIndexLoRAvsBaseCI, bootstrap over prompts)
+and \statHBMistralJulActiveInquiryNeedsInfoThemeIndexLoRAvsBaseDiff{}
+(\statHBMistralJulActiveInquiryNeedsInfoThemeIndexLoRAvsBaseCI) with Mistral-Small-24B. With
+BioMistral-7B it falls (\statHBBioMistralJulActiveInquiryNeedsInfoThemeIndexLoRAvsBaseDiff,
+\statHBBioMistralJulActiveInquiryNeedsInfoThemeIndexLoRAvsBaseCI). So in no
+cell do the data show that the adapter learned when to ask.
+
+\paragraph{Cost.} The adapter needs one generation pass, and the protocol needs two. The two-pass
+conditions stored only their final response, so we cannot count their tokens. By the serving
+engine's count, LoRA responses have more output tokens than Base responses in every cell except
+ChatDoctor with Med42-8B (\statHBMedGemmaMayTokensEngineLoRA{} against
+\statHBMedGemmaMayTokensEngineBase{} with MedGemma-27B). We did not time training or inference
+(\S\ref{sec:limitations}).
 
 %======================================================================
 \section{Discussion}
@@ -1283,7 +1314,8 @@ as ``ask'' or ``clarify''. A keyword match cannot tell a criterion that rewards 
 that only mentions it, so we withdraw that labeling and the claim. With the theme tag, the
 adapter's own index is \statHBMedGemmaMayActiveInquiryNeedsInfoThemeIndexLoRA{} points (\statHBMedGemmaMayActiveInquiryNeedsInfoThemeIndexLoRACI) and Base's is
 \statHBMedGemmaMayActiveInquiryNeedsInfoThemeIndexBase{} points (\statHBMedGemmaMayActiveInquiryNeedsInfoThemeIndexBaseCI). The data do not show that the adapter learned
-when to ask, and template imitation remains possible.
+when to ask, and template imitation remains possible. Table~\ref{tab:checks} gives LoRA $-$ Base on
+this index in the other \hbhard{} cells; no interval lies above zero.
 
 \paragraph{Clinician-posed prompts.} Our posted reply said that \statPostedClinicianPrompts{} of
 the \statHardPrompts{} \hbhard{} prompts identify the speaker as a clinician. That count came from
@@ -1308,6 +1340,35 @@ counts quoted and rhetorical questions and misses indirect ones, so we withdraw 
 no count of this kind. The evaluator's active-inquiry grade is the measure of asking. The release
 specifies a check of it by a judge from another model family, with a written rubric and an
 agreement test against hand labels (\texttt{docs/ANALYSIS\_PLAN.md}); it has not run.
+
+\paragraph{Checks in every cell.} Table~\ref{tab:checks} gives the checks of \S\ref{sec:checks}
+for every cell, from the response-level outputs of each cell. The theme tags exist only on
+HealthBench. In the added \hbhard{} cells, every seed evaluates the same
+\statHBMistralJulActiveInquiryNeedsInfoThemePosPrompts{} prompts of the context-seeking theme and
+\statHBMistralJulRedFlagRateEmergencyThemePosPrompts{} prompts of the emergency-referrals theme, so
+the intervals that rest on these groups are wide. Where few responses leak, the red-flag score of
+the leaked responses rests on the count in the table.
+
+\begin{table}[!ht]
+\centering
+\caption{Post hoc checks in every cell (\S\ref{sec:checks}). Red-flag rate: LoRA $-$ Base on the
+share of responses with red-flag grade 2, on the \hbhard{} prompts outside the emergency-referrals
+theme, $\pm$ half of the 95\% $t$ interval over seeds. Asking index: LoRA $-$ Base on the
+discrimination index, with the 95\% bootstrap interval over prompts. Format leak: the share and
+count of LoRA+\bodhi{} (LoRA+P) responses that repeat at least two Pass~1 headers, and the red-flag
+grade (0--2) of the leaked and the other (clean) responses. Askers gap: aggregate score of the LoRA
+responses that ask minus that of the others, pooled over seeds, with the 95\% bootstrap interval.
+Output tokens: mean per response, counted by the serving engine; the two-pass conditions have no
+count. --: no such value. $^{\dagger}$Base model in the evaluator's family. $^{\ddagger}$Set aside
+(\S\ref{sec:cells}).}
+\label{tab:checks}
+\scriptsize
+\setlength{\tabcolsep}{2pt}
+% Each row has two lines (the cell label, a bootstrap interval under its estimate), so the
+% rows get more height to keep them apart.
+\renewcommand{\arraystretch}{1.6}
+\input{generated/tab_cross_cell_checks}
+\end{table}
 
 \section{Difficulty, Axis and Score Distributions}
 \label{app:ushape}
@@ -1413,10 +1474,14 @@ the adapter's own responses, the prompts where it asks do not score consistently
 prompts where it answers. We take the aggregate score of the responses that ask minus that of
 the responses that do not, pooled over seeds. In the \statCellsAddedCompared{} added cells outside the evaluator's
 family, this gap is positive in \statCellsAddedAskersGapPositive{} and
-\statCellHBBioMistralAskersGap{} in BioMistral-7B. Our posted count also had the two Med42-8B cells,
-where the gap is \statCellHBMedFortyTwoAskersGap{} and \statCellChatDoctorMedFortyTwoAskersGap. In
-BioMistral-7B, active inquiry did not rise, yet the aggregate score changed by
-\statCellHBBioMistralAggregateDiff.
+\statCellHBBioMistralAskersGap{} in BioMistral-7B. With its bootstrap interval over prompts
+(Table~\ref{tab:checks}), the gap lies above zero on ChatDoctor
+(\statCDMistralJulAskersGapLoRACI) and MedQuAD (\statMQMistralJulAskersGapLoRACI), and its interval
+includes zero in the other cells outside the evaluator's family. Our posted count also had the two
+Med42-8B cells, where the gap is \statCellHBMedFortyTwoAskersGap{} and
+\statCellChatDoctorMedFortyTwoAskersGap, with intervals below zero
+(\statHBMedFortyTwoJulAskersGapLoRACI{} and \statCDMedFortyTwoJulAskersGapLoRACI). In BioMistral-7B,
+active inquiry did not rise, yet the aggregate score changed by \statCellHBBioMistralAggregateDiff.
 
 \paragraph{All seven dimensions.} Tables~\ref{tab:cell-detail-1} and~\ref{tab:cell-detail-2}
 give every dimension in each cell. On MedQuAD, Base+\bodhi{}
