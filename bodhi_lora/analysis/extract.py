@@ -15,7 +15,8 @@ The raw eval and grade JSON are large and stay out of git; the tables are tracke
 
 Response table columns (docs/ARCHITECTURE.md section 6):
 
-    key        cell, seed, condition, prompt_id
+    key        cell, seed, condition, prompt_id, pair_id (the rows of one pair of a paired
+               benchmark share it; empty for other benchmarks and in older files)
     response   chars; tokens (the model's own tokenizer on the reply, when its
                tokenizer.json is in the local Hugging Face cache); tokens_engine (the count
                the serving engine stored, single-call conditions only); calls, tokens_total,
@@ -63,7 +64,7 @@ EPISTEMIC = (
 SEVEN = ("uncertainty_ack", "active_inquiry", "context_seeking", "red_flag", "scope_bounding",
          "hedging_quality", "specificity")
 
-KEY = ["cell", "seed", "condition", "prompt_id"]
+KEY = ["cell", "seed", "condition", "prompt_id", "pair_id"]
 RESPONSE = ["chars", "tokens", "tokens_engine", "calls", "tokens_total", "finish_length"]
 RUBRIC = ["rubric_score", "rubric_score_worst", "rubric_items", "rubric_parse_failures",
           "neg_items_met", "neg_points_lost"]
@@ -289,7 +290,7 @@ def seed_table(reg: Registry, cell: CellConfig, paths: CellPaths, seed: int, cfg
             score = float(r["score"]) if stored == "normalized_score" else rubric_score(criteria)
             neg_met = [c for c in criteria if c["points"] < 0 and c["criteria_met"]]
             row = {"cell": cell.id, "seed": seed, "condition": condition, "prompt_id": r["prompt_id"],
-                   "chars": float(len(r["response"])),
+                   "pair_id": r.get("pair_id"), "chars": float(len(r["response"])),
                    "tokens": float(tokens[i]) if tokens is not None else float("nan"),
                    "tokens_engine": float(r["response_token_count"]) if r.get("response_token_count") else float("nan"),
                    "calls": _num(r.get("calls")),
@@ -442,7 +443,7 @@ def read_table(path: Path) -> pd.DataFrame:
     # round_trip: the default float parser can be off in the last bit, and the
     # equivalence checks compare at full precision.
     return pd.read_csv(path, float_precision="round_trip", keep_default_na=True,
-                       dtype={"prompt_id": str, "theme": str})
+                       dtype={"prompt_id": str, "pair_id": str, "theme": str})
 
 
 def extract(reg: Registry, cell_id: str, project: Project, cfg: ReportConfig) -> dict:

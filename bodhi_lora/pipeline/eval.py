@@ -273,7 +273,7 @@ def run(ctx: StageContext, seed: int, condition: str) -> dict:
                     grade_ = {"overall_score": None, "tag_scores": {}, "criteria_results": [],
                               "parse_failures": 0}
                 return {
-                    "prompt_id": row.prompt_id, "response": out.response,
+                    "prompt_id": row.prompt_id, "pair_id": row.pair_id, "response": out.response,
                     "score": grade_["overall_score"], "tag_scores": grade_["tag_scores"],
                     "criteria_results": grade_["criteria_results"],
                     "parse_failures": grade_["parse_failures"],

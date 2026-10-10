@@ -629,7 +629,8 @@ because a prompt can appear in several seeds' draws.
 
 **Contrasts.** Built from the cell's conditions by rule: every condition minus `base`;
 `lora` minus `base+<protocol>`; `lora+<protocol>` minus `lora`; `lora` minus each
-`base+<baseline>`. Holm runs over the seven dimensions within each contrast. The rubric
+`base+<baseline>`. A cell record adds a contrast the rule does not make under
+`report.contrasts`, such as `lora+red-flags-first - lora+bodhi` (H6). Holm runs over the seven dimensions within each contrast. The rubric
 score and the rates are secondary and outside the Holm family. Cross-cell families (for
 example LoRA minus Base on the rubric score over the cells named in `configs/report.yaml`)
 get their own Holm correction.
@@ -692,8 +693,11 @@ E08); no physician label is read, and E02 with `needs-info-physician` still wait
 the plan's adoption (BLOCKED.md item 1). Not built yet, each needed by the analysis plan before its cells exist: the
 weighted kappa and dimension contrasts under a judge (H8), the judges' harm grades
 (C33), the probe and bench outputs (E11, E20), stage times from the manifests (E08),
-contrasts between cells (H9, H10, E24), the paired-probe statistics (H3 through E14), and
-`lora+red-flags-first` minus `lora+bodhi` (H6), which the contrast rule does not make.
+and contrasts between cells (H9, H10, E24). Built on 2026-10-10 and tested on synthetic
+tables only: the paired probe of H3 (`paired_probe` in `stats.json`: Delta per condition
+and seed, the difference in differences per contrast, the exact McNemar tables), from the
+`pair_id` column of the response table and a label whose rule pairs rows; the declared
+contrasts of `report.contrasts` (H5, H6); and the seed-level contrasts of the leak share.
 
 ## 8. What stays outside the package
 

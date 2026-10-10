@@ -2424,6 +2424,9 @@
  },
  "discrimination": {
   "active_inquiry": {
+   "incomplete": {
+    "not_measured": "benchmark healthbench has no label incomplete"
+   },
    "needs-info-theme": {
     "not_measured": "both groups are not present among the evaluated prompts"
    }
@@ -2451,6 +2454,20 @@
      "dimensions_clean": null,
      "dimensions_leaked": null,
      "leaked_share": null,
+     "leaked_share_seed": {
+      "n_seeds": 0,
+      "per_seed": {
+       "42": null
+      },
+      "seed_ci95_t": [
+       null,
+       null
+      ],
+      "seed_mean": null,
+      "seeds_missing": [
+       42
+      ]
+     },
      "n_clean": 0,
      "n_completions": 200,
      "n_leaked": 0,
@@ -2463,6 +2480,20 @@
      "dimensions_clean": null,
      "dimensions_leaked": null,
      "leaked_share": null,
+     "leaked_share_seed": {
+      "n_seeds": 0,
+      "per_seed": {
+       "42": null
+      },
+      "seed_ci95_t": [
+       null,
+       null
+      ],
+      "seed_mean": null,
+      "seeds_missing": [
+       42
+      ]
+     },
      "n_clean": 0,
      "n_completions": 200,
      "n_leaked": 0,
@@ -2475,11 +2506,48 @@
      "dimensions_clean": null,
      "dimensions_leaked": null,
      "leaked_share": null,
+     "leaked_share_seed": {
+      "n_seeds": 0,
+      "per_seed": {
+       "42": null
+      },
+      "seed_ci95_t": [
+       null,
+       null
+      ],
+      "seed_mean": null,
+      "seeds_missing": [
+       42
+      ]
+     },
      "n_clean": 0,
      "n_completions": 200,
      "n_leaked": 0,
      "n_leaked_completions": 0,
      "n_scored": 0
+    }
+   },
+   "contrasts": {
+    "base+bodhi - base": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora - base": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
+    },
+    "lora - base+bodhi": {
+     "n_seeds": 0,
+     "not_measured": "no value in seed(s) [42]",
+     "seeds_missing": [
+      42
+     ]
     }
    },
    "protocol": "bodhi",
@@ -2611,6 +2679,7 @@
    "source": "epistemic"
   }
  },
+ "paired_probe": {},
  "prompts": {
   "labels": {
    "emergency-theme": {

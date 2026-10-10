@@ -5702,6 +5702,9 @@
  },
  "discrimination": {
   "active_inquiry": {
+   "incomplete": {
+    "not_measured": "benchmark healthbench has no label incomplete"
+   },
    "needs-info-theme": {
     "conditions": {
      "base": {
@@ -7262,6 +7265,22 @@
      },
      "dimensions_leaked": null,
      "leaked_share": 0.0,
+     "leaked_share_seed": {
+      "n_seeds": 5,
+      "per_seed": {
+       "101": 0.0,
+       "13": 0.0,
+       "42": 0.0,
+       "7": 0.0,
+       "99": 0.0
+      },
+      "seed_ci95_t": [
+       0.0,
+       0.0
+      ],
+      "seed_mean": 0.0,
+      "seeds_missing": []
+     },
      "n_clean": 1000,
      "n_completions": 1000,
      "n_leaked": 0,
@@ -7304,6 +7323,22 @@
      },
      "dimensions_leaked": null,
      "leaked_share": 0.0,
+     "leaked_share_seed": {
+      "n_seeds": 5,
+      "per_seed": {
+       "101": 0.0,
+       "13": 0.0,
+       "42": 0.0,
+       "7": 0.0,
+       "99": 0.0
+      },
+      "seed_ci95_t": [
+       0.0,
+       0.0
+      ],
+      "seed_mean": 0.0,
+      "seeds_missing": []
+     },
      "n_clean": 1000,
      "n_completions": 1000,
      "n_leaked": 0,
@@ -7346,6 +7381,22 @@
      },
      "dimensions_leaked": null,
      "leaked_share": 0.0,
+     "leaked_share_seed": {
+      "n_seeds": 5,
+      "per_seed": {
+       "101": 0.0,
+       "13": 0.0,
+       "42": 0.0,
+       "7": 0.0,
+       "99": 0.0
+      },
+      "seed_ci95_t": [
+       0.0,
+       0.0
+      ],
+      "seed_mean": 0.0,
+      "seeds_missing": []
+     },
      "n_clean": 1000,
      "n_completions": 1000,
      "n_leaked": 0,
@@ -7396,11 +7447,144 @@
       "uncertainty_ack": 1.875
      },
      "leaked_share": 0.00800801,
+     "leaked_share_seed": {
+      "n_seeds": 5,
+      "per_seed": {
+       "101": 0.005,
+       "13": 0.00502513,
+       "42": 0.0,
+       "7": 0.0,
+       "99": 0.03
+      },
+      "seed_ci95_t": [
+       -0.00757588,
+       0.0235859
+      ],
+      "seed_mean": 0.00800503,
+      "seeds_missing": []
+     },
      "n_clean": 991,
      "n_completions": 1000,
      "n_leaked": 8,
      "n_leaked_completions": 8,
      "n_scored": 999
+    }
+   },
+   "contrasts": {
+    "base+bodhi - base": {
+     "ci90": [
+      0.0,
+      0.0
+     ],
+     "ci95": [
+      0.0,
+      0.0
+     ],
+     "df": 4,
+     "diff": 0.0,
+     "n_seeds": 5,
+     "p": null,
+     "per_seed_diff": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "seeds_missing": [],
+     "t": null
+    },
+    "lora - base": {
+     "ci90": [
+      0.0,
+      0.0
+     ],
+     "ci95": [
+      0.0,
+      0.0
+     ],
+     "df": 4,
+     "diff": 0.0,
+     "n_seeds": 5,
+     "p": null,
+     "per_seed_diff": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "seeds_missing": [],
+     "t": null
+    },
+    "lora - base+bodhi": {
+     "ci90": [
+      0.0,
+      0.0
+     ],
+     "ci95": [
+      0.0,
+      0.0
+     ],
+     "df": 4,
+     "diff": 0.0,
+     "n_seeds": 5,
+     "p": null,
+     "per_seed_diff": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "seeds_missing": [],
+     "t": null
+    },
+    "lora+bodhi - base": {
+     "ci90": [
+      -0.00395851,
+      0.0199686
+     ],
+     "ci95": [
+      -0.00757588,
+      0.0235859
+     ],
+     "df": 4,
+     "diff": 0.00800503,
+     "n_seeds": 5,
+     "p": 0.226891,
+     "per_seed_diff": [
+      0.0,
+      0.00502513,
+      0.0,
+      0.03,
+      0.005
+     ],
+     "seeds_missing": [],
+     "t": 1.42646
+    },
+    "lora+bodhi - lora": {
+     "ci90": [
+      -0.00395851,
+      0.0199686
+     ],
+     "ci95": [
+      -0.00757588,
+      0.0235859
+     ],
+     "df": 4,
+     "diff": 0.00800503,
+     "n_seeds": 5,
+     "p": 0.226891,
+     "per_seed_diff": [
+      0.0,
+      0.00502513,
+      0.0,
+      0.03,
+      0.005
+     ],
+     "seeds_missing": [],
+     "t": 1.42646
     }
    },
    "protocol": "bodhi",
@@ -7632,6 +7816,7 @@
    "source": "epistemic"
   }
  },
+ "paired_probe": {},
  "prompts": {
   "labels": {
    "emergency-theme": {

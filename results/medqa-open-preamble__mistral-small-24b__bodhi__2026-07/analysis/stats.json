@@ -5903,6 +5903,9 @@
  },
  "discrimination": {
   "active_inquiry": {
+   "incomplete": {
+    "not_measured": "benchmark medqa-open-preamble has no label incomplete"
+   },
    "needs-info-theme": {
     "not_measured": "benchmark medqa-open-preamble has no label needs-info-theme"
    }
@@ -5983,6 +5986,24 @@
      },
      "dimensions_leaked": null,
      "leaked_share": 0.0,
+     "leaked_share_seed": {
+      "n_seeds": 4,
+      "per_seed": {
+       "101": 0.0,
+       "13": 0.0,
+       "42": null,
+       "7": 0.0,
+       "99": 0.0
+      },
+      "seed_ci95_t": [
+       0.0,
+       0.0
+      ],
+      "seed_mean": 0.0,
+      "seeds_missing": [
+       42
+      ]
+     },
      "n_clean": 800,
      "n_completions": 1000,
      "n_leaked": 0,
@@ -6033,6 +6054,24 @@
       "uncertainty_ack": 2.0
      },
      "leaked_share": 0.0212766,
+     "leaked_share_seed": {
+      "n_seeds": 4,
+      "per_seed": {
+       "101": 0.015,
+       "13": 0.015,
+       "42": null,
+       "7": 0.0301508,
+       "99": 0.025
+      },
+      "seed_ci95_t": [
+       0.00925999,
+       0.0333154
+      ],
+      "seed_mean": 0.0212877,
+      "seeds_missing": [
+       42
+      ]
+     },
      "n_clean": 782,
      "n_completions": 1000,
      "n_leaked": 17,
@@ -6083,6 +6122,24 @@
       "uncertainty_ack": 2.0
      },
      "leaked_share": 0.00876095,
+     "leaked_share_seed": {
+      "n_seeds": 4,
+      "per_seed": {
+       "101": 0.01,
+       "13": 0.0,
+       "42": null,
+       "7": 0.01,
+       "99": 0.015
+      },
+      "seed_ci95_t": [
+       -0.00126123,
+       0.0187612
+      ],
+      "seed_mean": 0.00875,
+      "seeds_missing": [
+       42
+      ]
+     },
      "n_clean": 792,
      "n_completions": 1000,
      "n_leaked": 7,
@@ -6133,11 +6190,151 @@
       "uncertainty_ack": 2.0
      },
      "leaked_share": 0.482456,
+     "leaked_share_seed": {
+      "n_seeds": 4,
+      "per_seed": {
+       "101": 0.615,
+       "13": 0.315,
+       "42": null,
+       "7": 0.562814,
+       "99": 0.437186
+      },
+      "seed_ci95_t": [
+       0.268785,
+       0.696215
+      ],
+      "seed_mean": 0.4825,
+      "seeds_missing": [
+       42
+      ]
+     },
      "n_clean": 413,
      "n_completions": 1000,
      "n_leaked": 385,
      "n_leaked_completions": 481,
      "n_scored": 798
+    }
+   },
+   "contrasts": {
+    "base+bodhi - base": {
+     "ci90": [
+      0.0123934,
+      0.030182
+     ],
+     "ci95": [
+      0.00925999,
+      0.0333154
+     ],
+     "df": 3,
+     "diff": 0.0212877,
+     "n_seeds": 4,
+     "p": 0.0110698,
+     "per_seed_diff": [
+      0.0301508,
+      0.015,
+      0.025,
+      0.015
+     ],
+     "seeds_missing": [
+      42
+     ],
+     "t": 5.63258
+    },
+    "lora - base": {
+     "ci90": [
+      0.00134687,
+      0.0161531
+     ],
+     "ci95": [
+      -0.00126123,
+      0.0187612
+     ],
+     "df": 3,
+     "diff": 0.00875,
+     "n_seeds": 4,
+     "p": 0.0689035,
+     "per_seed_diff": [
+      0.01,
+      0.0,
+      0.015,
+      0.01
+     ],
+     "seeds_missing": [
+      42
+     ],
+     "t": 2.78152
+    },
+    "lora - base+bodhi": {
+     "ci90": [
+      -0.020202,
+      -0.00487333
+     ],
+     "ci95": [
+      -0.0229022,
+      -0.0021732
+     ],
+     "df": 3,
+     "diff": -0.0125377,
+     "n_seeds": 4,
+     "p": 0.0309458,
+     "per_seed_diff": [
+      -0.0201508,
+      -0.015,
+      -0.01,
+      -0.005
+     ],
+     "seeds_missing": [
+      42
+     ],
+     "t": -3.84973
+    },
+    "lora+bodhi - base": {
+     "ci90": [
+      0.324462,
+      0.640538
+     ],
+     "ci95": [
+      0.268785,
+      0.696215
+     ],
+     "df": 3,
+     "diff": 0.4825,
+     "n_seeds": 4,
+     "p": 0.00555536,
+     "per_seed_diff": [
+      0.562814,
+      0.315,
+      0.437186,
+      0.615
+     ],
+     "seeds_missing": [
+      42
+     ],
+     "t": 7.18496
+    },
+    "lora+bodhi - lora": {
+     "ci90": [
+      0.319822,
+      0.627678
+     ],
+     "ci95": [
+      0.265593,
+      0.681907
+     ],
+     "df": 3,
+     "diff": 0.47375,
+     "n_seeds": 4,
+     "p": 0.00542855,
+     "per_seed_diff": [
+      0.552814,
+      0.315,
+      0.422186,
+      0.605
+     ],
+     "seeds_missing": [
+      42
+     ],
+     "t": 7.24302
     }
    },
    "protocol": "bodhi",
@@ -6369,6 +6566,7 @@
    "source": "epistemic"
   }
  },
+ "paired_probe": {},
  "prompts": {
   "labels": {},
   "n_evaluated": 200,

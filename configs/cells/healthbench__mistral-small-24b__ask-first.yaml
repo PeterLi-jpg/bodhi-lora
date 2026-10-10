@@ -57,3 +57,7 @@ report:
   label: HealthBench-Hard, Mistral-Small-24B, ask-first
   token: HBMistralAskFirst
   status: planned
+  # A contrast the analysis rule does not make. H5 (ANALYSIS_PLAN.md section 6.2): the two
+  # teachers on the same prompts.
+  contrasts:
+    - base+ask-first - base+bodhi

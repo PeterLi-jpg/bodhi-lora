@@ -27,16 +27,21 @@ bootstrap: {resamples: 5000, seed: 0}
 # rate in each group. Only labels listed here are computed. The physician labels of the
 # benchmark records are left out on purpose: the analysis plan keeps them unseen on every
 # cell until its adoption (docs/ANALYSIS_PLAN.md, state at registration; convention 3).
-# Both labels read the theme tag only (configs/benchmarks/healthbench.yaml says why no
-# other structured field can stand in), and both are post hoc (decision D9).
-#   active_inquiry: does the reply ask more on prompts of the context_seeking theme.
+# The two HealthBench labels read the theme tag only (configs/benchmarks/healthbench.yaml
+# says why no other structured field can stand in), and both are post hoc (decision D9).
+# `incomplete` is the label of the MediQ paired probe (configs/benchmarks/mediq-paired.yaml):
+# it comes from how each pair was built, and its rule pairs the rows, so a cell on that
+# benchmark also gets the paired statistics of ANALYSIS_PLAN.md section 5.1 (H3). No cell
+# with that benchmark has run.
+#   active_inquiry: does the reply ask more on prompts of the context_seeking theme, or on
+#     the incomplete row of a pair than on the complete one.
 #   red_flag_rate: the evaluator's red-flag rate (share of replies with red-flag score 2)
 #     on prompts of the emergency_referrals theme and on the others. The rate on the
 #     others counts warranted flags too, so it is not an over-flagging rate; the test of
 #     over-flagging is H7 on the physician labels (ANALYSIS_PLAN.md section 7.2).
 discrimination:
   - response: active_inquiry
-    labels: [needs-info-theme]
+    labels: [needs-info-theme, incomplete]
   - response: red_flag_rate
     labels: [emergency-theme]
 

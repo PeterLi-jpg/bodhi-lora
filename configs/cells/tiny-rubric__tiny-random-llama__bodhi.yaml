@@ -61,3 +61,7 @@ report:
   label: Smoke test
   token: Smoke
   status: planned
+  # A contrast the analysis rule does not make (H6), so the smoke run takes the path
+  # of a declared contrast.
+  contrasts:
+    - lora+red-flags-first - lora+bodhi

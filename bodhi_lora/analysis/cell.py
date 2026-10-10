@@ -14,7 +14,8 @@ bootstrap per cell (stats.ClusterBootstrap).
 
 Contrasts come from the cell's conditions by rule: every condition minus base; lora
 minus base+<protocol>; lora+<protocol> minus lora; lora minus each base+<baseline>
-(a prompt protocol that is not the cell's protocol). Holm runs over the seven
+(a prompt protocol that is not the cell's protocol). The cell record may add others
+(report.contrasts), each one the analysis plan names. Holm runs over the seven
 dimensions within each contrast, and over the seven dimensions of every contrast.
 """
 from __future__ import annotations
@@ -73,7 +74,8 @@ def metrics_of(table: pd.DataFrame, cfg: ReportConfig) -> list[Metric]:
 
 
 def contrasts_of(cell: CellConfig, reg: Registry) -> list[tuple[str, str]]:
-    """(a, b) pairs, a minus b, by the rule in the module docstring."""
+    """(a, b) pairs, a minus b, by the rule in the module docstring, then the cell
+    record's own (report.contrasts)."""
     conds = list(cell.eval.conditions)
     out = [(c, "base") for c in conds if c != "base" and "base" in conds]
     own = f"base+{cell.protocol}"
@@ -85,6 +87,9 @@ def contrasts_of(cell: CellConfig, reg: Registry) -> list[tuple[str, str]]:
         w, p = parse_condition(c)
         if w == "base" and p and p != cell.protocol and "lora" in conds:
             out.append(("lora", c))
+    for k in cell.report.contrasts:
+        a, _, b = k.partition(" - ")
+        out.append((a.strip(), b.strip()))
     seen, uniq = set(), []
     for pair in out:
         if pair not in seen:
@@ -546,13 +551,18 @@ def _leak_threshold(reg: Registry, col: str) -> int:
     return reg.protocols[pid].leak_rules[rid].threshold
 
 
-def leakage(d: CellData, reg: Registry) -> dict:
+def leakage(d: CellData, reg: Registry, pairs) -> dict:
+    """Per leak rule: the leak share of each condition (pooled over scored replies, and
+    per seed), the dimensions by leak status, red flag by length quartile among clean
+    replies, and each contrast of the per-seed leak shares (H6 secondary)."""
     cols = sorted(c for c in d.table.columns if c.startswith("leak_"))
     res = {}
     for col in cols:
         pid, _, rid = col.removeprefix("leak_").partition("__")
         thr = _leak_threshold(reg, col)
-        out = {"protocol": pid, "rule": rid, "threshold": thr, "conditions": {}}
+        out = {"protocol": pid, "rule": rid, "threshold": thr, "conditions": {}, "contrasts": {}}
+        sc_all = d.scored.assign(v=(d.scored[col] >= thr).astype(float))
+        share = d.seed_means(sc_all[["seed", "condition", "prompt_id", "v"]])
         for c in d.conditions:
             allc = d.table[d.table["condition"] == c]
             sc = d.scored[d.scored["condition"] == c]
@@ -575,8 +585,71 @@ def leakage(d: CellData, reg: Registry) -> dict:
                 r["clean_red_flag_by_length_quartile"] = [
                     {"n": int((bins == i).sum()), "red_flag": _f(rf[bins == i].mean()) if (bins == i).any() else None,
                      "chars_median": _f(np.median(ch[bins == i])) if (bins == i).any() else None} for i in range(4)]
+            r["leaked_share_seed"] = _seed_summary(share[c].to_numpy(dtype=float), d.seeds)
             out["conditions"][c] = r
+        for a, b in pairs:
+            out["contrasts"][contrast_key(a, b)] = paired(share, a, b, d.seeds)
         res[col] = out
+    return res
+
+
+def paired_probe_section(d: CellData, reg: Registry, cfg: ReportConfig, metrics: list[Metric], pairs) -> dict:
+    """The paired probe of docs/ANALYSIS_PLAN.md section 5.1 (H3, E14).
+
+    For each discrimination label whose rule pairs rows (LabelRule.pair_field), and each
+    condition c and seed s: Delta(c, s) is the mean over the seed's pairs of (response on
+    the positive row minus response on the negative row). A pair leaves a condition and
+    seed when either row has no value (an evaluator response counts scored replies only);
+    the counts say how many. Each contrast a - b gets the difference in differences
+    DiD(s) = Delta(a, s) - Delta(b, s), tested over seeds (section 2.1). Descriptive: per
+    condition and seed, the 2x2 table of the two rows' 0/1 responses and its exact
+    McNemar p.
+    """
+    bench = reg.benchmarks[d.cell.benchmark]
+    by_key = {m.key: m for m in metrics}
+    t = d.table
+    res = {}
+    for spec in cfg.discrimination:
+        for lab in spec.labels:
+            rule = bench.labels.get(lab)
+            if rule is None or rule.pair_field is None:
+                continue
+            col = f"label_{lab}"
+            if col not in d.prompts or t["pair_id"].isna().all():
+                res.setdefault(spec.response, {})[lab] = {
+                    "not_measured": "no pair ids in the response table, or no label column in prompts.csv"}
+                continue
+            group = dict(zip(d.prompts["prompt_id"], d.prompts[col]))
+            pair_of = t.drop_duplicates("prompt_id").set_index("prompt_id")["pair_id"]
+            frame = d.frame(by_key[spec.response])
+            frame = frame.assign(g=frame["prompt_id"].map(group), pair=frame["prompt_id"].map(pair_of))
+            frame = frame[frame["g"].notna() & frame["pair"].notna()]
+            idx = ["seed", "condition", "pair"]
+            both = pd.concat({"pos": frame[frame["g"] == 1].set_index(idx)["v"],
+                              "neg": frame[frame["g"] == 0].set_index(idx)["v"]}, axis=1).dropna()
+            complete = {k: w for k, w in both.groupby(level=["seed", "condition"])}
+            drawn = t[t["pair_id"].notna()].groupby(["seed", "condition"])["pair_id"].nunique()
+            out = {"timing": rule.timing, "source": rule.source, "exploratory": rule.timing == "post_hoc",
+                   "conditions": {}, "contrasts": {}}
+            delta = {}
+            for c in d.conditions:
+                per_seed, n_pairs, dropped, mcn = [], {}, {}, {}
+                for seed in d.seeds:
+                    w = complete.get((seed, c), both.iloc[0:0])
+                    n_pairs[str(seed)] = int(len(w))
+                    dropped[str(seed)] = int(drawn.get((seed, c), 0)) - int(len(w))
+                    per_seed.append(float((w["pos"] - w["neg"]).mean()) if len(w) else float("nan"))
+                    if len(w) and by_key[spec.response].kind == "rate":
+                        pos, neg = w["pos"].to_numpy() == 1, w["neg"].to_numpy() == 1
+                        table = [[int((pos & neg).sum()), int((pos & ~neg).sum())],
+                                 [int((~pos & neg).sum()), int((~pos & ~neg).sum())]]
+                        mcn[str(seed)] = {"table": table, "exact_p": _f(st.mcnemar_exact_p(table))}
+                delta[c] = np.asarray(per_seed, dtype=float)
+                out["conditions"][c] = {"delta": _seed_summary(delta[c], d.seeds), "n_pairs": n_pairs,
+                                        "n_pairs_dropped": dropped, "mcnemar": mcn}
+            for a, b in pairs:
+                out["contrasts"][contrast_key(a, b)] = {"did": _seed_test(delta[a], delta[b], d.seeds)}
+            res.setdefault(spec.response, {})[lab] = out
     return res
 
 
@@ -741,8 +814,9 @@ def analyze_tables(reg: Registry, cell: CellConfig, table: pd.DataFrame, prompts
         "axis_scores": axis_section(d),
         "prompts": prompts_section(d, train_ids, _read_json(paths.analysis() / "extract.json")),
         "themes": themes_section(d),
-        "leakage": leakage(d, reg),
+        "leakage": leakage(d, reg, pairs),
         "discrimination": discrimination_section(d, reg, cfg, metrics, pairs, boot),
+        "paired_probe": paired_probe_section(d, reg, cfg, metrics, pairs),
         "askers_gap": askers_gap_section(d, boot),
         "filter": filt,
         "recipe": recipe_section(cell, paths, filt),

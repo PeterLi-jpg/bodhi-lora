@@ -5702,6 +5702,9 @@
  },
  "discrimination": {
   "active_inquiry": {
+   "incomplete": {
+    "not_measured": "benchmark chatdoctor has no label incomplete"
+   },
    "needs-info-theme": {
     "not_measured": "benchmark chatdoctor has no label needs-info-theme"
    }
@@ -5785,6 +5788,22 @@
      },
      "dimensions_leaked": null,
      "leaked_share": 0.0,
+     "leaked_share_seed": {
+      "n_seeds": 5,
+      "per_seed": {
+       "101": 0.0,
+       "13": 0.0,
+       "42": 0.0,
+       "7": 0.0,
+       "99": 0.0
+      },
+      "seed_ci95_t": [
+       0.0,
+       0.0
+      ],
+      "seed_mean": 0.0,
+      "seeds_missing": []
+     },
      "n_clean": 1000,
      "n_completions": 1000,
      "n_leaked": 0,
@@ -5835,6 +5854,22 @@
       "uncertainty_ack": 2.0
      },
      "leaked_share": 0.003,
+     "leaked_share_seed": {
+      "n_seeds": 5,
+      "per_seed": {
+       "101": 0.0,
+       "13": 0.005,
+       "42": 0.0,
+       "7": 0.0,
+       "99": 0.01
+      },
+      "seed_ci95_t": [
+       -0.00255289,
+       0.00855289
+      ],
+      "seed_mean": 0.003,
+      "seeds_missing": []
+     },
      "n_clean": 997,
      "n_completions": 1000,
      "n_leaked": 3,
@@ -5877,6 +5912,22 @@
      },
      "dimensions_leaked": null,
      "leaked_share": 0.0,
+     "leaked_share_seed": {
+      "n_seeds": 5,
+      "per_seed": {
+       "101": 0.0,
+       "13": 0.0,
+       "42": 0.0,
+       "7": 0.0,
+       "99": 0.0
+      },
+      "seed_ci95_t": [
+       0.0,
+       0.0
+      ],
+      "seed_mean": 0.0,
+      "seeds_missing": []
+     },
      "n_clean": 1000,
      "n_completions": 1000,
      "n_leaked": 0,
@@ -5927,11 +5978,144 @@
       "uncertainty_ack": 2.0
      },
      "leaked_share": 0.004,
+     "leaked_share_seed": {
+      "n_seeds": 5,
+      "per_seed": {
+       "101": 0.005,
+       "13": 0.01,
+       "42": 0.0,
+       "7": 0.0,
+       "99": 0.005
+      },
+      "seed_ci95_t": [
+       -0.00119425,
+       0.00919425
+      ],
+      "seed_mean": 0.004,
+      "seeds_missing": []
+     },
      "n_clean": 996,
      "n_completions": 1000,
      "n_leaked": 4,
      "n_leaked_completions": 4,
      "n_scored": 1000
+    }
+   },
+   "contrasts": {
+    "base+bodhi - base": {
+     "ci90": [
+      -0.00126369,
+      0.00726369
+     ],
+     "ci95": [
+      -0.00255289,
+      0.00855289
+     ],
+     "df": 4,
+     "diff": 0.003,
+     "n_seeds": 5,
+     "p": 0.208,
+     "per_seed_diff": [
+      0.0,
+      0.005,
+      0.0,
+      0.01,
+      0.0
+     ],
+     "seeds_missing": [],
+     "t": 1.5
+    },
+    "lora - base": {
+     "ci90": [
+      0.0,
+      0.0
+     ],
+     "ci95": [
+      0.0,
+      0.0
+     ],
+     "df": 4,
+     "diff": 0.0,
+     "n_seeds": 5,
+     "p": null,
+     "per_seed_diff": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "seeds_missing": [],
+     "t": null
+    },
+    "lora - base+bodhi": {
+     "ci90": [
+      -0.00726369,
+      0.00126369
+     ],
+     "ci95": [
+      -0.00855289,
+      0.00255289
+     ],
+     "df": 4,
+     "diff": -0.003,
+     "n_seeds": 5,
+     "p": 0.208,
+     "per_seed_diff": [
+      0.0,
+      -0.005,
+      0.0,
+      -0.01,
+      0.0
+     ],
+     "seeds_missing": [],
+     "t": -1.5
+    },
+    "lora+bodhi - base": {
+     "ci90": [
+      1.16799e-05,
+      0.00798832
+     ],
+     "ci95": [
+      -0.00119425,
+      0.00919425
+     ],
+     "df": 4,
+     "diff": 0.004,
+     "n_seeds": 5,
+     "p": 0.0993007,
+     "per_seed_diff": [
+      0.0,
+      0.01,
+      0.0,
+      0.005,
+      0.005
+     ],
+     "seeds_missing": [],
+     "t": 2.13809
+    },
+    "lora+bodhi - lora": {
+     "ci90": [
+      1.16799e-05,
+      0.00798832
+     ],
+     "ci95": [
+      -0.00119425,
+      0.00919425
+     ],
+     "df": 4,
+     "diff": 0.004,
+     "n_seeds": 5,
+     "p": 0.0993007,
+     "per_seed_diff": [
+      0.0,
+      0.01,
+      0.0,
+      0.005,
+      0.005
+     ],
+     "seeds_missing": [],
+     "t": 2.13809
     }
    },
    "protocol": "bodhi",
@@ -6163,6 +6347,7 @@
    "source": "epistemic"
   }
  },
+ "paired_probe": {},
  "prompts": {
   "labels": {},
   "n_evaluated": 200,

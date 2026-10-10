@@ -88,6 +88,15 @@ def fisher_p(k1: int, n1: int, k2: int, n2: int) -> float:
     return float(stats.fisher_exact([[k1, n1 - k1], [k2, n2 - k2]]).pvalue)
 
 
+def mcnemar_exact_p(table) -> float:
+    """Exact McNemar p of a paired 2x2 table [[both, first only], [second only, neither]]:
+    the binomial test on the two discordant counts (statsmodels 0.14,
+    statsmodels.stats.contingency_tables.mcnemar with exact=True)."""
+    from statsmodels.stats.contingency_tables import mcnemar
+
+    return float(mcnemar(table, exact=True).pvalue)
+
+
 def welch_p(a, b) -> float:
     """Welch's t-test p, which treats every value as independent (descriptive only)."""
     with np.errstate(all="ignore"):

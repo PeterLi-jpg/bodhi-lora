@@ -5735,6 +5735,9 @@
  },
  "discrimination": {
   "active_inquiry": {
+   "incomplete": {
+    "not_measured": "benchmark medquad has no label incomplete"
+   },
    "needs-info-theme": {
     "not_measured": "benchmark medquad has no label needs-info-theme"
    }
@@ -5815,6 +5818,22 @@
      },
      "dimensions_leaked": null,
      "leaked_share": 0.0,
+     "leaked_share_seed": {
+      "n_seeds": 5,
+      "per_seed": {
+       "101": 0.0,
+       "13": 0.0,
+       "42": 0.0,
+       "7": 0.0,
+       "99": 0.0
+      },
+      "seed_ci95_t": [
+       0.0,
+       0.0
+      ],
+      "seed_mean": 0.0,
+      "seeds_missing": []
+     },
      "n_clean": 996,
      "n_completions": 1000,
      "n_leaked": 0,
@@ -5865,6 +5884,22 @@
       "uncertainty_ack": 2.0
      },
      "leaked_share": 0.00100301,
+     "leaked_share_seed": {
+      "n_seeds": 5,
+      "per_seed": {
+       "101": 0.00502513,
+       "13": 0.0,
+       "42": 0.0,
+       "7": 0.0,
+       "99": 0.0
+      },
+      "seed_ci95_t": [
+       -0.00178537,
+       0.00379542
+      ],
+      "seed_mean": 0.00100503,
+      "seeds_missing": []
+     },
      "n_clean": 996,
      "n_completions": 1000,
      "n_leaked": 1,
@@ -5907,6 +5942,22 @@
      },
      "dimensions_leaked": null,
      "leaked_share": 0.0,
+     "leaked_share_seed": {
+      "n_seeds": 5,
+      "per_seed": {
+       "101": 0.0,
+       "13": 0.0,
+       "42": 0.0,
+       "7": 0.0,
+       "99": 0.0
+      },
+      "seed_ci95_t": [
+       0.0,
+       0.0
+      ],
+      "seed_mean": 0.0,
+      "seeds_missing": []
+     },
      "n_clean": 1000,
      "n_completions": 1000,
      "n_leaked": 0,
@@ -5957,11 +6008,144 @@
       "uncertainty_ack": 2.0
      },
      "leaked_share": 0.002,
+     "leaked_share_seed": {
+      "n_seeds": 5,
+      "per_seed": {
+       "101": 0.0,
+       "13": 0.0,
+       "42": 0.0,
+       "7": 0.005,
+       "99": 0.005
+      },
+      "seed_ci95_t": [
+       -0.00140044,
+       0.00540044
+      ],
+      "seed_mean": 0.002,
+      "seeds_missing": []
+     },
      "n_clean": 998,
      "n_completions": 1000,
      "n_leaked": 2,
      "n_leaked_completions": 2,
      "n_scored": 1000
+    }
+   },
+   "contrasts": {
+    "base+bodhi - base": {
+     "ci90": [
+      -0.00113753,
+      0.00314758
+     ],
+     "ci95": [
+      -0.00178537,
+      0.00379542
+     ],
+     "df": 4,
+     "diff": 0.00100503,
+     "n_seeds": 5,
+     "p": 0.373901,
+     "per_seed_diff": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.00502513
+     ],
+     "seeds_missing": [],
+     "t": 1.0
+    },
+    "lora - base": {
+     "ci90": [
+      0.0,
+      0.0
+     ],
+     "ci95": [
+      0.0,
+      0.0
+     ],
+     "df": 4,
+     "diff": 0.0,
+     "n_seeds": 5,
+     "p": null,
+     "per_seed_diff": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "seeds_missing": [],
+     "t": null
+    },
+    "lora - base+bodhi": {
+     "ci90": [
+      -0.00314758,
+      0.00113753
+     ],
+     "ci95": [
+      -0.00379542,
+      0.00178537
+     ],
+     "df": 4,
+     "diff": -0.00100503,
+     "n_seeds": 5,
+     "p": 0.373901,
+     "per_seed_diff": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      -0.00502513
+     ],
+     "seeds_missing": [],
+     "t": -1.0
+    },
+    "lora+bodhi - base": {
+     "ci90": [
+      -0.000610968,
+      0.00461097
+     ],
+     "ci95": [
+      -0.00140044,
+      0.00540044
+     ],
+     "df": 4,
+     "diff": 0.002,
+     "n_seeds": 5,
+     "p": 0.177808,
+     "per_seed_diff": [
+      0.005,
+      0.0,
+      0.0,
+      0.005,
+      0.0
+     ],
+     "seeds_missing": [],
+     "t": 1.63299
+    },
+    "lora+bodhi - lora": {
+     "ci90": [
+      -0.000610968,
+      0.00461097
+     ],
+     "ci95": [
+      -0.00140044,
+      0.00540044
+     ],
+     "df": 4,
+     "diff": 0.002,
+     "n_seeds": 5,
+     "p": 0.177808,
+     "per_seed_diff": [
+      0.005,
+      0.0,
+      0.0,
+      0.005,
+      0.0
+     ],
+     "seeds_missing": [],
+     "t": 1.63299
     }
    },
    "protocol": "bodhi",
@@ -6193,6 +6377,7 @@
    "source": "epistemic"
   }
  },
+ "paired_probe": {},
  "prompts": {
   "labels": {},
   "n_evaluated": 200,

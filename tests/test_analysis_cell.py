@@ -36,7 +36,7 @@ def synthetic_table(cell, seeds=(1, 2, 3)):
     for s in seeds:
         for ci, c in enumerate(cell.eval.conditions):
             for pi, p in enumerate(PROMPTS):
-                row = {"cell": cell.id, "seed": s, "condition": c, "prompt_id": p,
+                row = {"cell": cell.id, "seed": s, "condition": c, "prompt_id": p, "pair_id": np.nan,
                        "chars": 100.0 + 10 * ci + pi, "tokens": np.nan, "tokens_engine": np.nan,
                        "calls": np.nan, "tokens_total": np.nan, "finish_length": 0.0,
                        "rubric_score": 0.5 + 0.01 * ci, "rubric_score_worst": 0.5,
@@ -77,7 +77,23 @@ def test_contrasts_come_from_the_conditions_by_rule(reg):
     # lora minus each other base+<prompt protocol>; nothing else, and no pair twice.
     expected = ([(c, "base") for c in conds if c != "base"] + [("lora", own), (f"lora+{cell.protocol}", "lora")]
                 + [("lora", c) for c in baselines])
-    assert sorted(pairs) == sorted(expected) and len(pairs) == len(set(pairs))
+    # Then the record's own contrasts, which the rule does not make (H6 here).
+    declared = [tuple(x.strip() for x in k.split(" - ")) for k in cell.report.contrasts]
+    assert declared == [("lora+red-flags-first", "lora+bodhi")] and not set(declared) & set(expected)
+    assert pairs == list(dict.fromkeys(pairs)) and pairs[-len(declared):] == declared
+    assert sorted(pairs) == sorted(expected + declared)
+
+
+def test_a_declared_contrast_must_name_two_conditions_of_the_cell(reg):
+    from pydantic import ValidationError
+
+    from bodhi_lora.registry.schema import CellConfig
+
+    data = reg.cells[SMOKE].model_dump()
+    for bad in ["lora+red-flags-first - lora+clarify", "lora+bodhi", "lora - lora"]:
+        data["report"]["contrasts"] = [bad]
+        with pytest.raises(ValidationError, match="report.contrasts"):
+            CellConfig.model_validate(data)
 
 
 def test_seed_level_test_and_holm_family(reg, tmp_path):
@@ -166,3 +182,60 @@ def test_extract_runs_through_the_command_line():
 
     with pytest.raises(SystemExit, match="no eval outputs"):
         cli.main(["analyze", "--extract", SMOKE])
+
+
+PAIRED = "mediq-paired__mistral-small-24b__bodhi"
+
+
+def test_the_paired_probe_gives_delta_and_the_difference_in_differences(reg, tmp_path):
+    """docs/ANALYSIS_PLAN.md 5.1: Delta(c, s) is the mean over pairs of (ask on the
+    incomplete row minus ask on the complete row); DiD(s) = Delta(lora, s) - Delta(base, s);
+    a pair whose other row has no grade leaves that condition and seed."""
+    cell = reg.cells[PAIRED]
+    seeds, n_pairs = (1, 2, 3), 6
+    ids = [(f"q{k}-{v}", f"q{k}", v) for k in range(n_pairs) for v in ("complete", "incomplete")]
+    rows = []
+    for s in seeds:
+        for c in cell.eval.conditions:
+            for pid, pair, variant in ids:
+                k = int(pair[1:])
+                # base asks on the first s pairs whatever is missing; lora also asks on
+                # every incomplete row.
+                ask = float(k < s or (c == "lora" and variant == "incomplete"))
+                row = {"cell": cell.id, "seed": s, "condition": c, "prompt_id": pid, "pair_id": pair,
+                       "chars": 100.0, "tokens": np.nan, "tokens_engine": np.nan, "calls": np.nan,
+                       "tokens_total": np.nan, "finish_length": 0.0, "rubric_score": 0.5,
+                       "rubric_score_worst": 0.5, "rubric_items": 1.0, "rubric_parse_failures": 0.0,
+                       "neg_items_met": 0.0, "neg_points_lost": 0.0, "epi_status": "scored"}
+                row.update({k2: 1.0 for k2 in EPISTEMIC})
+                row["active_inquiry"] = ask
+                rows.append(row)
+    table = pd.DataFrame(rows)[KEY + RESPONSE + RUBRIC + ["epi_status", *EPISTEMIC]]
+    # Seed 3: the lora grade of pair q5's complete row failed, so q5 leaves lora in seed 3.
+    hit = (table["seed"] == 3) & (table["condition"] == "lora") & (table["prompt_id"] == "q5-complete")
+    table.loc[hit, "epi_status"] = "parse_failure"
+    table.loc[hit, list(EPISTEMIC)] = np.nan
+    prompts = pd.DataFrame({"prompt_id": [i for i, _, _ in ids], "in_population": 1.0, "evaluated": 1.0,
+                            "theme": None, "rubric_points_pos": 1.0,
+                            "label_incomplete": [float(v == "incomplete") for _, _, v in ids]})
+    meta = [{"n_examples": {c: len(ids) for c in cell.eval.conditions}} for _ in seeds]
+    paths = replace(project(CONFIGS_DIR), results_root=tmp_path).cell(PAIRED)
+    out = analyze_tables(reg, cell, table, prompts, meta, paths, report_config())
+    probe = out["paired_probe"]["active_inquiry"]["incomplete"]
+    base, lora = probe["conditions"]["base"], probe["conditions"]["lora"]
+    assert base["delta"]["per_seed"] == {"1": 0.0, "2": 0.0, "3": 0.0}
+    # lora asks on every incomplete row: the pairs base did not ask on add 1 each.
+    expected = {"1": 5 / 6, "2": 4 / 6, "3": 2 / 5}
+    assert lora["delta"]["per_seed"] == pytest.approx(expected)
+    assert lora["n_pairs"]["3"] == 5 and lora["n_pairs_dropped"]["3"] == 1 and lora["n_pairs_dropped"]["1"] == 0
+    did = probe["contrasts"]["lora - base"]["did"]
+    res = stats.ttest_1samp(list(expected.values()), 0.0)
+    assert did["diff"] == pytest.approx(np.mean(list(expected.values()))) and did["p"] == pytest.approx(res.pvalue)
+    # McNemar, seed 1, lora: 1 pair asks on both rows, 5 on the incomplete row only.
+    assert lora["mcnemar"]["1"]["table"] == [[1, 5], [0, 0]]
+    assert lora["mcnemar"]["1"]["exact_p"] == pytest.approx(stats.binomtest(0, 5).pvalue)
+    # The plain discrimination index of the same label is there too, and a HealthBench
+    # cell gets no paired statistics.
+    assert "conditions" in out["discrimination"]["active_inquiry"]["incomplete"]
+    smoke = run(reg, synthetic_table(reg.cells[SMOKE]), tmp_path)
+    assert smoke["paired_probe"] == {}

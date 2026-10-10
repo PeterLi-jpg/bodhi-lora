@@ -637,6 +637,11 @@ class Report(_Record):
     # Why the cell stays out of the main statements, if it does.
     set_aside: Optional[str] = None
     notes: str = ""
+    # Contrasts the analysis adds to the ones its rule makes from the conditions
+    # (bodhi_lora/analysis/cell.py, contrasts_of): each "<condition> - <condition>" over
+    # eval.conditions, for a contrast the analysis plan names that the rule does not
+    # make, such as lora+red-flags-first - lora+bodhi (H6).
+    contrasts: list[str] = Field(default_factory=list)
 
 
 class CellConfig(_Record):
@@ -668,6 +673,11 @@ class CellConfig(_Record):
             raise ValueError("seeds repeat")
         if self.bench is not None and not set(self.bench.seeds) <= set(self.seeds):
             raise ValueError("bench.seeds must be seeds of the cell")
+        for k in self.report.contrasts:
+            a, sep, b = (x.strip() for x in k.partition(" - "))
+            if not sep or a == b or not {a, b} <= set(self.eval.conditions):
+                raise ValueError(f"report.contrasts {k!r}: write '<condition> - <condition>' with two "
+                                 "different conditions of eval.conditions")
         uses_lora = any(parse_condition(c)[0] == "lora" for c in self.eval.conditions)
         if self.adapters_from:
             if self.traces or self.filter or self.train or self.traces_from:
