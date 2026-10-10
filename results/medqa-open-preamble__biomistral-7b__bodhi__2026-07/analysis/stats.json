@@ -3226,6 +3226,7 @@
   "labels": {},
   "n_evaluated": 10,
   "n_population": null,
+  "population_labels": {},
   "rubric_points_pos_max": 13.0,
   "rubric_points_pos_min": 13.0
  },

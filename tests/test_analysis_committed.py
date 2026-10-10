@@ -49,3 +49,14 @@ def test_committed_cross_cell_stats_are_current(tmp_path):
                 dst.write_text(src.read_text())
     fresh = analyze_cross(REG, replace(PROJ, results_root=tmp_path), CFG)
     assert json.loads(json.dumps(fresh, sort_keys=True)) == json.loads(committed_path.read_text())
+
+
+@pytest.mark.parametrize("cell_id", CELLS)
+def test_prompts_tables_hold_only_the_listed_labels(cell_id):
+    """The plan keeps the labels that configs/report.yaml does not list (the physician
+    labels among them) unseen until its adoption, so no tracked prompts.csv carries them
+    next to the outcome tables (docs/ANALYSIS_PLAN.md section 12, 2026-10-10)."""
+    listed = {lab for spec in CFG.discrimination for lab in spec.labels}
+    header = (PROJ.cell(cell_id).analysis() / "prompts.csv").read_text().split("\n", 1)[0].split(",")
+    extra = sorted(c for c in header if c.startswith("label_") and c.removeprefix("label_") not in listed)
+    assert not extra, f"{cell_id}: prompts.csv has unlisted label columns {extra}"

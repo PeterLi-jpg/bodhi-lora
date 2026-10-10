@@ -643,3 +643,17 @@ Every other condition of these cells, and every condition of the other cells, ke
 count. Where a count changed and at least 385 replies leak, the red-flag grades of the
 leaked and the clean replies move by at most 0.004. Where 12 or fewer replies leak, the
 grade of the leaked replies rests on those few and moves by up to 0.17.
+
+**2026-10-10, labels out of the prompts tables. No method changed, and this is not the
+adoption.** Since 2026-10-09 each cell's tracked `analysis/prompts.csv` held a column for
+every label of its benchmark, the physician labels of section 2.4 among them, next to the
+per-seed outcome tables, and its `stats.json` gave each label's group counts among the
+evaluated prompts (the counts that section 2.4 already states per seed). No code joined a
+physician label to an output, and no statistic of an output by physician label was
+computed, so the label analyses of H3, H7 and H11 stay unseen. But the join was one merge
+away. Now `prompts.csv` has a column only for the labels that `configs/report.yaml`
+lists (today the two theme labels), and `stats.json` gives every other label's counts
+over the eval population only, from `analysis/extract.json`
+(`tests/test_analysis_committed.py` checks it). Git history keeps the earlier files. The
+adoption entry adds a label to `configs/report.yaml` when its analysis may run. No output
+of any planned cell existed: no folder of a planned cell is under `results/`.

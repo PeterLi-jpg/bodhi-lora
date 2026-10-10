@@ -395,7 +395,10 @@ def axis_section(d: CellData) -> dict:
             for a in axes}
 
 
-def prompts_section(d: CellData, filter_train_ids: Optional[set]) -> dict:
+def prompts_section(d: CellData, filter_train_ids: Optional[set], extract_rec: Optional[dict]) -> dict:
+    """Counts of the eval population and the evaluated prompts. Label groups among the
+    evaluated prompts only for the labels of prompts.csv (the report config's); every
+    label's population counts from the extract record (the benchmark rows, no output)."""
     p = d.prompts
     ev = p[p["evaluated"] == 1]
     res = {"n_population": int(p["in_population"].sum()) if p["in_population"].notna().any() else None,
@@ -410,6 +413,8 @@ def prompts_section(d: CellData, filter_train_ids: Optional[set]) -> dict:
                            "unlabelled": int(p[col].isna().sum())},
             "evaluated": {"positive": int((ev[col] == 1).sum()), "negative": int((ev[col] == 0).sum()),
                           "unlabelled": int(ev[col].isna().sum())}}
+    labels = ((extract_rec or {}).get("prompts") or {}).get("labels") or {}
+    res["population_labels"] = {k: v["population"] for k, v in sorted(labels.items()) if "population" in v}
     if filter_train_ids is not None and res["n_population"]:
         res["filter_train_overlap_with_population"] = len(filter_train_ids & set(p.loc[p["in_population"] == 1, "prompt_id"]))
     return res
@@ -734,7 +739,7 @@ def analyze_tables(reg: Registry, cell: CellConfig, table: pd.DataFrame, prompts
         "shift_correlations": shift_correlations_section(d, pairs),
         "context_seeking_anchor": context_seeking_anchor_section(d),
         "axis_scores": axis_section(d),
-        "prompts": prompts_section(d, train_ids),
+        "prompts": prompts_section(d, train_ids, _read_json(paths.analysis() / "extract.json")),
         "themes": themes_section(d),
         "leakage": leakage(d, reg),
         "discrimination": discrimination_section(d, reg, cfg, metrics, pairs, boot),

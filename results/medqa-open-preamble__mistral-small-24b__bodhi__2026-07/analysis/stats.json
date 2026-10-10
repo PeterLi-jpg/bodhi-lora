@@ -6373,6 +6373,7 @@
   "labels": {},
   "n_evaluated": 200,
   "n_population": null,
+  "population_labels": {},
   "rubric_points_pos_max": 29.0,
   "rubric_points_pos_min": 29.0
  },

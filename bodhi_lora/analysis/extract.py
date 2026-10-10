@@ -5,8 +5,10 @@
                                       condition, the grader's error counts, the tokenizer
     <cell>/analysis/prompts.csv       one row per prompt of the eval pool (or, when the
                                       benchmark rows are not local, per evaluated prompt):
-                                      theme, positive rubric points, labels
-    <cell>/analysis/extract.json      how the pool was read, the draw check, rule hashes
+                                      theme, positive rubric points, and the labels that
+                                      configs/report.yaml lists
+    <cell>/analysis/extract.json      how the pool was read, the draw check, rule hashes,
+                                      and the population counts of every label
 
 The raw eval and grade JSON are large and stay out of git; the tables are tracked, so
 `analyze` without `--extract` needs nothing else and runs in CI.
@@ -341,13 +343,19 @@ def _theme(tags) -> Optional[str]:
     return themes[0] if themes else None
 
 
-def prompt_table(reg: Registry, cell: CellConfig, paths: CellPaths, project: Project,
+def prompt_table(reg: Registry, cell: CellConfig, paths: CellPaths, project: Project, cfg: ReportConfig,
                  evaluated: dict[int, set[str]], criteria_points: dict[str, float]) -> tuple[pd.DataFrame, dict]:
     """One row per prompt of the eval population, with its theme, points and labels.
 
     The population comes from the benchmark rows when they are in the data root (no
     download). Otherwise only the evaluated prompts are known, and their positive points
     come from the criteria stored with the eval outputs.
+
+    Only the labels that the report config lists get a column. The analysis plan keeps
+    the other labels (the physician labels among them) unseen until its adoption, and a
+    tracked column next to the outcome tables would make the join one merge away
+    (docs/ANALYSIS_PLAN.md section 12, 2026-10-10). The record keeps every label's
+    population counts, which say nothing about any output.
     """
     from bodhi_lora.data import DataError, SplitError, eval_ids, eval_population, read_id_list, \
         load_rows, split_rows
@@ -392,12 +400,18 @@ def prompt_table(reg: Registry, cell: CellConfig, paths: CellPaths, project: Pro
                        "theme": [_theme(by_id[p].tags) for p in ids],
                        "rubric_points_pos": [float(sum(r["points"] for r in by_id[p].rubrics if r["points"] > 0))
                                              for p in ids]})
-    for name in sorted(bench.labels):
-        df[f"label_{name}"] = [None if by_id[p].labels[name] is None else float(by_id[p].labels[name])
-                               for p in ids]
-    info["labels"] = {name: {"timing": rule.timing, "source": rule.source,
-                             "definition_sha256": _definition_hash(rule.model_dump())}
-                      for name, rule in sorted(bench.labels.items())}
+    listed = {lab for spec in cfg.discrimination for lab in spec.labels}
+    info["labels"] = {}
+    for name, rule in sorted(bench.labels.items()):
+        values = [by_id[p].labels[name] for p in ids]
+        info["labels"][name] = {"timing": rule.timing, "source": rule.source,
+                                "definition_sha256": _definition_hash(rule.model_dump()),
+                                "in_prompts_table": name in listed,
+                                "population": {"positive": sum(v is True for v in values),
+                                               "negative": sum(v is False for v in values),
+                                               "unlabelled": sum(v is None for v in values)}}
+        if name in listed:
+            df[f"label_{name}"] = [None if v is None else float(v) for v in values]
     return df, info
 
 
@@ -452,7 +466,7 @@ def extract(reg: Registry, cell_id: str, project: Project, cfg: ReportConfig) ->
             for r in data["results"]:
                 criteria_points[r["prompt_id"]] = float(sum(c["points"] for c in r["criteria_results"]
                                                              if c["points"] > 0))
-    prompts, info = prompt_table(reg, cell, paths, project, evaluated, criteria_points)
+    prompts, info = prompt_table(reg, cell, paths, project, cfg, evaluated, criteria_points)
     write_csv(prompts, paths.analysis() / "prompts.csv")
     record = {"cell": cell_id, "seeds": seeds, "tokenizer": tok_source, "prompts": info,
               "leak_rules": {col: _definition_hash([[m.pattern for m in markers], threshold])

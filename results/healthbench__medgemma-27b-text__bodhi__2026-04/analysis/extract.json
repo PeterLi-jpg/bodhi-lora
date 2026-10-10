@@ -15,26 +15,56 @@
     "labels": {
       "clinician-user": {
         "definition_sha256": "8b602729aeec5c6429fba959fe7006fba0f8d800b405eece183de0d37a7afb99",
+        "in_prompts_table": false,
+        "population": {
+          "negative": 5,
+          "positive": 10,
+          "unlabelled": 185
+        },
         "source": "HealthBench physician-agreed categories",
         "timing": "pre_specified"
       },
       "emergency-theme": {
         "definition_sha256": "d1ed849efdb041186cfa1f80f6883ab8677b223bfd048e04dc8613277e7d50f4",
+        "in_prompts_table": true,
+        "population": {
+          "negative": 187,
+          "positive": 13,
+          "unlabelled": 0
+        },
         "source": "HealthBench theme tags",
         "timing": "post_hoc"
       },
       "emergent-physician": {
         "definition_sha256": "a4410875befb21fc5a6471bba5fdc7c6bb89b6ba0390723af33b6a0d41ba096e",
+        "in_prompts_table": false,
+        "population": {
+          "negative": 2,
+          "positive": 10,
+          "unlabelled": 188
+        },
         "source": "HealthBench physician-agreed categories",
         "timing": "pre_specified"
       },
       "needs-info-physician": {
         "definition_sha256": "c06012df6b3bd85432e100ae23d9e5c12c08897bda51216dcbcba12524bc1167",
+        "in_prompts_table": false,
+        "population": {
+          "negative": 19,
+          "positive": 46,
+          "unlabelled": 135
+        },
         "source": "HealthBench physician-agreed categories",
         "timing": "pre_specified"
       },
       "needs-info-theme": {
         "definition_sha256": "bf7d1528a06041ef1f681deaa35ac4db82b9e8d889e0789fb6b34b7fb0046ee2",
+        "in_prompts_table": true,
+        "population": {
+          "negative": 164,
+          "positive": 36,
+          "unlabelled": 0
+        },
         "source": "HealthBench theme tags",
         "timing": "post_hoc"
       }

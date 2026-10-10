@@ -2613,18 +2613,6 @@
  },
  "prompts": {
   "labels": {
-   "clinician-user": {
-    "evaluated": {
-     "negative": 5,
-     "positive": 10,
-     "unlabelled": 185
-    },
-    "population": {
-     "negative": 5,
-     "positive": 10,
-     "unlabelled": 185
-    }
-   },
    "emergency-theme": {
     "evaluated": {
      "negative": 187,
@@ -2635,30 +2623,6 @@
      "negative": 187,
      "positive": 13,
      "unlabelled": 0
-    }
-   },
-   "emergent-physician": {
-    "evaluated": {
-     "negative": 2,
-     "positive": 10,
-     "unlabelled": 188
-    },
-    "population": {
-     "negative": 2,
-     "positive": 10,
-     "unlabelled": 188
-    }
-   },
-   "needs-info-physician": {
-    "evaluated": {
-     "negative": 19,
-     "positive": 46,
-     "unlabelled": 135
-    },
-    "population": {
-     "negative": 19,
-     "positive": 46,
-     "unlabelled": 135
     }
    },
    "needs-info-theme": {
@@ -2676,6 +2640,33 @@
   },
   "n_evaluated": 200,
   "n_population": 200,
+  "population_labels": {
+   "clinician-user": {
+    "negative": 5,
+    "positive": 10,
+    "unlabelled": 185
+   },
+   "emergency-theme": {
+    "negative": 187,
+    "positive": 13,
+    "unlabelled": 0
+   },
+   "emergent-physician": {
+    "negative": 2,
+    "positive": 10,
+    "unlabelled": 188
+   },
+   "needs-info-physician": {
+    "negative": 19,
+    "positive": 46,
+    "unlabelled": 135
+   },
+   "needs-info-theme": {
+    "negative": 164,
+    "positive": 36,
+    "unlabelled": 0
+   }
+  },
   "rubric_points_pos_max": 205.0,
   "rubric_points_pos_min": 8.0
  },
