@@ -323,7 +323,7 @@ prompts repeat across seeds (audit CLAIM-10).
   3 epochs. Mistral-Small-24B was trained with 4-bit QLoRA and served on a bf16 base.
 - The submitted MedGemma adapters very likely used r = 8 and alpha = 16 (tunix path). The GCS
   check in HYG-4 cannot run: the bucket returned 404 on 2026-10-08. The paper says the values come
-  from the code and could not be checked against the saved files (BLOCKED.md item 3).
+  from the code and could not be checked against the saved files (D1, D19).
 - The eval settings differ from the submitted cell: context window 8,192 against 4,096 tokens,
   64 against 32 concurrent sequences, one fixed set of 200 HealthBench prompts for all seeds
   against a new draw per seed, grader weights from a mirror repo, and H100 against A100.

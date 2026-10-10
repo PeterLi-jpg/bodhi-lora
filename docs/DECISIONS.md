@@ -115,8 +115,9 @@ Why: a history rewrite and remote branch deletion change public state, which is 
   launcher, config and exporter in `legacy/`, the early committed adapter at 607440e (an
   HF-path run, not an evaluated adapter), and possibly the Modal volume `bohdi-data-cache`,
   into which `legacy/modal_eval.py` (lines 119 and 435-447) copied each seed's `checkpoints/best/` and
-  `train.jsonl`/`val.jsonl` (BLOCKED.md item 3). The added cells' recipe is now read from
-  their synced adapter and trainer files (`results/cross_cell/cell_recipe.json`, Table F.2).
+  `train.jsonl`/`val.jsonl` (old BLOCKED.md item 3, dropped by D19). The added cells'
+  recipe is now read from their synced adapter and trainer files
+  (`results/cross_cell/cell_recipe.json`, Table F.2).
 - D6, after the sync (2026-10-08). The askers-minus-non-askers count is now made without
   the Med42-8B cells (Appendix J). The Med42-8B cells stay in the Holm family of the
   aggregate tests (the six added cells that are not set aside), as in the posted tests; that
