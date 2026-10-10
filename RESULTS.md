@@ -2,8 +2,8 @@
 
 This file says what each result is, where its data lives, what makes it and what state
 it is in. It holds no effect sizes, p-values or scores. Those come from `make analyze`
-and, for the paper, `make numbers` until `python -m bodhi_lora report` is built (see
-[README.md](README.md)), so they cannot drift from the data.
+and, for the paper, `make numbers` (see [README.md](README.md)), so they cannot drift
+from the data.
 
 Status words used below:
 

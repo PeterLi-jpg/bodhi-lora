@@ -165,8 +165,9 @@ Issue numbers such as #5 are GitHub issues on `PeterLi-jpg/bohdi-lora`.
   (`python -m bodhi_lora run`), one results root (`results/<cell_id>/`) and no model,
   benchmark or path names in package code, each checked by a test or `make check`
   (docs/CONVENTIONS.md rules 7 and 11 to 13). The uniform analysis (rule 14) is
-  `python -m bodhi_lora analyze`; the paper report on top of it is not built yet, so
-  `make numbers` still writes the paper's numbers.
+  `python -m bodhi_lora analyze`, and `bodhi_lora.report` turns its output into tables
+  and macros through `make numbers`. The paper does not cite those yet: its numbers
+  still come from the older sections of `scripts/paper_stats.py`.
 - **Added-cell raw outputs synced (PROV-1, PROV-2, PROV-3; 60c1a54, 5d5890e).** The
   outputs were copied read-only from the GPU host on 2026-10-08. `make cells` computes
   every added-cell value, the paired tests of the aggregate drop and the per-cell tau,

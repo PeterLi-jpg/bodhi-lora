@@ -243,8 +243,9 @@ price list. The shared host has no meter, but each run holds a card for its hour
 2. Set `report.status: complete` (or `partial`) in the cell record. From then on the
    runner refuses to run the cell again, except for judge re-grades.
 3. Run the analysis: `python -m bodhi_lora analyze <cell id> --extract`, then
-   `make analyze` (ARCHITECTURE.md section 5). The paper's numbers come from
-   `make numbers` until `python -m bodhi_lora report` is built.
+   `make analyze` (ARCHITECTURE.md section 5). Then `make numbers` writes the cell's
+   table (`tab_cell_<token>`) and macros. Add the cell to `cross_cells` in
+   `configs/report.yaml` to put it in the cross-cell table.
 4. Commit the tracked files: the manifests, `cell.yaml`, the id lists, the response
    tables and the cell's analysis folder. Git ignores the raw outputs by kind.
 5. Read the results only by the rules of ANALYSIS_PLAN.md, and record any change of plan

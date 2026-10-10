@@ -2,8 +2,10 @@
 
 Design of the resubmission code, written on 2026-10-08 and brought up to date when the
 build lanes merged on 2026-10-09. Sections 3 to 6 and 9 describe code that is in the
-repo. Section 7 is built up to `analyze`; the report (`python -m bodhi_lora report`) is
-not built yet, so `make numbers` still writes the paper's numbers. Section 11 records how
+repo. Section 7 is built: `analyze`, and the report module `bodhi_lora.report`, which
+`make numbers` runs through `scripts/paper_stats.py`. The `report` command and
+`make report` are not built, and the numbers that `paper/main.tex` prints still come from
+the older sections of `scripts/paper_stats.py`. Section 11 records how
 the lanes ran. [EXPERIMENTS.md](EXPERIMENTS.md) lists the runs and analyses this design
 must carry.
 
@@ -280,7 +282,8 @@ install step: the repo root is on `sys.path` for the CLI and for the tests.
 bodhi_lora/
   __init__.py
   __main__.py      python -m bodhi_lora
-  cli.py           subcommands list, fetch, run, analyze, report (report not built)
+  cli.py           subcommands list, fetch, run, analyze, report (report only says
+                   that make numbers writes the report)
   paths.py         results and data roots from configs/project.yaml; CellPaths
   manifest.py      run manifests                       <- 02ac9a3:scripts/run_manifest.py
   registry/
@@ -324,9 +327,10 @@ bodhi_lora/
                                                         <- scripts/paper_stats.py
     cell.py        every statistic of one cell, judge agreement included
     cross.py       cross-cell groups, Holm over cells, the posted-value check
-  report/          not built: numbers.tex, numbers.json, tab_*.tex and figures from the
-                   analysis outputs (scripts/paper_stats.py and
-                   scripts/build_paper_figures.py write them until then)
+  report/          macros, a table per cell and the cross-cell table from every
+                   stats.json; scripts/paper_stats.py calls it and writes the rest of
+                   numbers.tex, numbers.json and tab_*.tex, and
+                   scripts/build_paper_figures.py writes the figures
 ```
 
 Physician agreement stays in `scripts/compute_irr_kappa.py` (`make kappa`); the analysis
@@ -340,8 +344,8 @@ docker modes of `02ac9a3:scripts/_vllm_engine.py` are not carried over; the TPU 
 ### 4.1 Interfaces between modules
 
 The foundation step built these (2026-10-09), and the lanes changed them as noted. A
-change to one lands at the integrate step. `report` is a stub that raises
-`NotImplementedError`.
+change to one lands at the integrate step. The `report` command prints where the report
+is written and exits 2.
 
 ```python
 # bodhi_lora.paths
