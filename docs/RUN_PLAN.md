@@ -3,7 +3,9 @@
 **Needs the first author's go-ahead.** No GPU job runs until he says so (DECISIONS.md,
 2026-10-08). Nothing in this file has run. Dated 2026-10-08. On 2026-10-09 sections 3
 to 6 were updated to cost the cell records as they stand. On 2026-10-10 R17 was added,
-the judge classifier that replaces the withdrawn keyword rules.
+the judge classifier that replaces the withdrawn keyword rules, R11 lost the MedQuAD
+probe, which cannot run, and the MedQuAD split of R15 began to leave out repeated
+questions, so that its dry run passes the leakage gate.
 
 This is the ordered list of GPU work from [EXPERIMENTS.md](EXPERIMENTS.md), with the
 command, the cells, the seeds, an H100-hour estimate and its basis for each run, and the
@@ -162,11 +164,11 @@ seeds and probe. The judges that a record lists have their own column, because
 | R8 (B) | E15 | `medqa-open__mistral-small-24b__bodhi`, seven conditions | train | none left | 17.4 to 20.6 | 5.0 (`medgemma-27b-text`) | the MedQA-preamble cell of 3.1 and three baseline conditions, A2, A3 | W12, C1, C24 (follow-through), FzpA-Q3 |
 | R9 (B) | E21 | `healthbench__mistral-7b-instruct__bodhi` with its probe, `healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b` | train | R2 (traces) | 4.5 to 6.6, and 4.7 to 6.3 | 3.5 and 4.0 (`medgemma-27b-text`) | the Med42-8B and BioMistral-7B HealthBench cells of 3.1, A6, A8 | HomM-F1, withdrawals W5 |
 | R10 (B) | E19 (secondary set) | `nlm-clinical-questions__mistral-small-24b__bodhi`, `nlm-clinical-questions__medgemma-27b-text__bodhi`, seven conditions each | eval only | R2, R7; the pinned NLM files | 4.8 to 8.0, and 5.1 to 11.1 | 3.3 (`medgemma-27b-text`) and 2.1 (`phi-4`) | 200 questions per seed at the Mistral HealthBench times, no rubric grading, A2, A3, A5 | FzpA-Q3, C32 |
-| R11 (B) | E11 | probes on eight recorded cells: Mistral-Small-24B on four benchmarks, Med42-8B on two, BioMistral-7B and MedGemma-27B on HealthBench | probe | none left (`probe` blocks in the recorded cells; R9 and R14 probe in their own runs) | 2.0 to 4.0 | none | A8 | EVAL-12, NUM-7 |
+| R11 (B) | E11 | probes on seven recorded cells: Mistral-Small-24B on HealthBench, ChatDoctor and MedQA, Med42-8B on two benchmarks, BioMistral-7B and MedGemma-27B on HealthBench. Not MedQuAD: its questions are shorter than the 40 tokens the probe needs (at most 21 tokens in the eval pool with the Mistral tokenizer; 1 of 14,979 rows reaches 40), so its record has no probe block | probe | none left (`probe` blocks in the recorded cells; R9 and R14 probe in their own runs) | 1.8 to 3.5 | none | A8 | EVAL-12, NUM-7 |
 | R12 (B) | E22 | `healthbench__mistral-small-24b__bodhi__unfiltered`, `__random-same-count` | train | R2 (traces) | 8.9 to 10.7, and 5.7 to 7.4 | none | training on 3,321 or the kept rows; `base` and `lora` only | MR-W4, LxMF-2, the filter claim |
 | R13 (C) | E23 | `healthbench__mistral-small-24b__bodhi__traces-s1`, `-s2`, `-s3` | traces, then train at one seed | none left | 10.1 to 11.6 | none | three trace and filter passes, three adapters | REPRO-8, HomM-final |
 | R14 (C) | E24 | `healthbench__gemma-3-27b__bodhi` with its probe | train | none left | 11.1 to 18.0 | 2.6 (`phi-4`) | four conditions, A5, A8 | FzpA-W2, MR-W1 |
-| R15 (C) | E25 | `chatdoctor__mistral-small-24b__bodhi`, `medquad__mistral-small-24b__bodhi`, seven conditions each | train | none left | 13.7 to 15.9, and 9.9 to 11.8 | 4.6 and 3.8 (`medgemma-27b-text`) | the 2026-07 cells of 3.1 and three baseline conditions, A2, A3 | HomM-Q2, MR-W2, FzpA-Q3 |
+| R15 (C) | E25 | `chatdoctor__mistral-small-24b__bodhi`, `medquad__mistral-small-24b__bodhi`, seven conditions each. MedQuAD repeats questions under several ids; since 2026-10-10 the split leaves a train row out when its text equals a held-out row's (20 rows), and the dry run passes the leakage gate. The trace count stays at `max_prompts`, so the cost does not change | train | none left | 13.7 to 15.9, and 9.9 to 11.8 | 4.6 and 3.8 (`medgemma-27b-text`) | the 2026-07 cells of 3.1 and three baseline conditions, A2, A3 | HomM-Q2, MR-W2, FzpA-Q3 |
 | R16 (C) | E26 | `healthbench__mistral-small-24b__bodhi-no-calibration`, `healthbench__mistral-small-24b__bodhi-no-questions`, `healthbench__mistral-small-24b__bodhi-no-abstention` | train | none left | 10.0 to 12.5 each | none | four conditions | none asked |
 | R17 (B) | E03, H1 and H7 secondary (ANALYSIS_PLAN.md section 12, 2026-10-10) | the judge classifier on the eight cells of `cross_cells` in `configs/report.yaml`; on a planned cell, after its grade stage | classify, on recorded cells | the classify stage (not built); the 300 hand labels (no GPU) | none | 5 to 9 | one call per reply at each cell's judge speed: the dimension times of 3.1, A4 | MR-W3, HomM-W3, PROV-7, C30; withdrawals W23 |
 
@@ -232,11 +234,11 @@ adds the judge (9.2 for `medgemma-27b-text`).
 | Minimal first batch, R3 with `base` and `lora` only | 24.1 to 30.8 | 48 to 123 dollars |
 | Tier A | 158.6 to 249.4 | 317 to 998 dollars |
 | Tier A, labelled cells with three conditions | 130.7 to 189.5 | 261 to 758 dollars |
-| Tiers A and B | 234.4 to 350.9 | 469 to 1,404 dollars |
-| All tiers | 320.0 to 456.7 | 640 to 1,827 dollars |
+| Tiers A and B | 234.2 to 350.4 | 468 to 1,402 dollars |
+| All tiers | 319.8 to 456.2 | 640 to 1,825 dollars |
 
 The rows for Tiers A and B and for all tiers include R17 (Tier B, 5 to 9 H100-hours),
-added on 2026-10-10. The minimal batch holds one judge, R1. Every other row includes every judge that its
+added on 2026-10-10. On the same day R11 lost the MedQuAD probe (0.25 to 0.5). The minimal batch holds one judge, R1. Every other row includes every judge that its
 records list: 77.7 H100-hours over all tiers, 49.0 of them in Tier A. Most of the rise from the first
 version of this plan (2026-10-08) comes from what the records hold: the judges' harm
 call, seven conditions in the paired and NLM cells, five in the labelled cells, and the

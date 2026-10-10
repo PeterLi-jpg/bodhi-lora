@@ -14,17 +14,22 @@ Draw rules (Draw in the schema), applied to an ordered list of prompt ids:
           then sorted. Sorting first makes the draw independent of the source order.
 These reproduce the earlier builders exactly: the 2026-07 cells drew their pools and
 holdouts by head, and the seeded pool and holdout were the default of the old launcher.
+
+A benchmark may repeat one prompt under two ids (MedQuAD repeats a question for each of
+its answers). A train row whose prompt text equals that of a row in the eval or probe
+pool leaves the train pool (Split.text_twins), so the two copies cannot fall on both
+sides. The text compare is the leakage gate's (row_text).
 """
 from __future__ import annotations
 
 import json
 import random
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
 from bodhi_lora.data.labels import in_groups
-from bodhi_lora.data.loaders import SOURCE, Row
+from bodhi_lora.data.loaders import SOURCE, Row, row_text
 from bodhi_lora.registry.schema import BenchmarkConfig, CellConfig, Draw, LabelGroups
 
 
@@ -38,6 +43,8 @@ class Split:
     train: list[str]
     eval: list[str]
     probe: list[str]
+    # Rows left out of the train pool because their prompt text equals a held-out row's.
+    text_twins: list[str] = field(default_factory=list)
 
 
 def draw(ids: list[str], rule: Draw, *, short_ok: bool) -> list[str]:
@@ -93,8 +100,11 @@ def split_rows(bench: BenchmarkConfig, split_name: str, rows: list[Row],
         held = set(eval_pool)
         train = [pid for pid in pool if pid not in held]
     probe = _held_out(by_id, train, rule.hold_out)
-    return Split(name=split_name, train=[p for p in train if p not in probe], eval=eval_pool,
-                 probe=[p for p in train if p in probe])
+    held_text = {row_text(by_id[p]) for p in eval_pool} | {row_text(by_id[p]) for p in probe}
+    twins = [p for p in train if p not in probe and row_text(by_id[p]) in held_text]
+    gone = probe | set(twins)
+    return Split(name=split_name, train=[p for p in train if p not in gone], eval=eval_pool,
+                 probe=[p for p in train if p in probe], text_twins=twins)
 
 
 def eval_population(cell: CellConfig, split: Split, rows_by_id: dict[str, Row]) -> list[str]:

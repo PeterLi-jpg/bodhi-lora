@@ -95,7 +95,8 @@ class StageContext:
 
     def pools(self) -> Split:
         data = json.loads((self.paths.inputs() / POOLS_FILE).read_text())
-        return Split(name=data["split"], train=data["train"], eval=data["eval"], probe=data["probe"])
+        return Split(name=data["split"], train=data["train"], eval=data["eval"], probe=data["probe"],
+                     text_twins=data.get("text_twins", []))
 
     def split(self) -> Split:
         """The pools a run wrote, or, for a recorded cell that has none, the pools its

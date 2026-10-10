@@ -208,9 +208,10 @@ Med42-8B, BioMistral-7B, Mistral-7B-Instruct and MedGemma-27B on each benchmark 
 evaluated on, and keep the JSON. GPU: yes, about 1 H100-hour per model and benchmark.
 Status: built, then to run. The probe now continues raw token ids with the served
 tokenizer (no chat template), which differs from the chat-mode probe that Appendix A
-describes. The eight recorded cells and the Mistral-7B-Instruct and Gemma-3-27B cells
+describes. Seven recorded cells and the Mistral-7B-Instruct and Gemma-3-27B cells
 (E21, E24) carry `probe` blocks; the control is HealthBench for the older benchmarks and
-ChatDoctor for HealthBench.
+ChatDoctor for HealthBench. The MedQuAD cell has none: no question of its eval pool
+reaches the 40 tokens the probe needs (RUN_PLAN.md, R11).
 
 **E12. Prior-work baselines.** Answers MR-W6, HomM-W4, HomM-Q3, HomM-F5, C27, C14, and
 the open item the LxMF rebuttal named. Three inference-time baselines on the unchanged

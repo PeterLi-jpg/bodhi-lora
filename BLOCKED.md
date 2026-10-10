@@ -87,8 +87,8 @@ Action: say which runs may start, where, and when.
 - The minimal first batch (RUN_PLAN.md section 5) is about 32 to 43 H100-hours: the
   Med42-8B judge re-grade, the uniform Mistral-Small-24B cell with the baselines, and the
   MediQ paired probe on its adapters. With the paired record cut to `base` and `lora`, it
-  is 24 to 31. Tier A is about 159 to 249; all tiers about 315 to 448, of which the
-  judges are about 78. RUN_PLAN.md costs each cell record as it stands, and its section 4
+  is 24 to 31. Tier A is about 159 to 249; Tiers A and B about 234 to 350; all tiers
+  about 320 to 456, of which the judges are about 78 (RUN_PLAN.md section 6). RUN_PLAN.md costs each cell record as it stands, and its section 4
   lists the smaller records that would cost less.
 - Where: the shared H100 host or a paid cloud. Not Modal (D19).
 - Before the first run: `bash setup.sh` on the GPU machine, an `HF_TOKEN` with access to

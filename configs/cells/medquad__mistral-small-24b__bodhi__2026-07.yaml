@@ -57,20 +57,12 @@ eval:
   max_new_tokens: 1024
   max_new_tokens_per_pass: 2048
   serving: {max_model_len: 8192, max_num_seqs: 64, concurrency: 16, request_timeout_s: 180, drain_s: 30}
-# E11: does the base continue this benchmark's eval prompts verbatim more often than
-# HealthBench prompts? HealthBench appeared in May 2025, after this base, so it
-# cannot be in its pretraining and gives the rate of recall by chance. The eval pool
-# has 200 rows, so 100 are probed.
-# Many MedQuAD questions may be shorter than 40 tokens; the stage then stops and
-# says how many rows were long enough, and n_prompts must go down.
-# The setting of the paper's Appendix A: 15 + 25 tokens. Run:
-#   python -m bodhi_lora run medquad__mistral-small-24b__bodhi__2026-07 --stages probe --gpus 0
-probe:
-  control: healthbench
-  n_prompts: 100
-  prefix_tokens: 15
-  continuation_tokens: 25
-  serving: {max_model_len: 8192, max_num_seqs: 64, concurrency: 32, request_timeout_s: 180}
+# No contamination probe (E11). The probe needs prompts of at least 40 tokens (15 to
+# prompt, 25 to compare), and MedQuAD questions are short: with this base's tokenizer
+# the 200 eval questions have at most 21 tokens (median 12), and 1 of all 14,979 rows
+# reaches 40 (counted on 2026-10-10). This is the failure of the PubMedQA control in the
+# paper's Appendix A. A probe of this benchmark needs another probe text, which would
+# be a change to the analysis plan (docs/RUN_PLAN.md, R11).
 report:
   label: MedQuAD, Mistral-Small-24B
   token: MQMistralJul

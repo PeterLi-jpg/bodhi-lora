@@ -124,7 +124,8 @@ def prepare(ctx: StageContext, fetch: bool = True) -> dict:
         fixed = read_id_list(path)
     split = split_rows(bench, cell.split, rows, fixed if rule.method == "eval_ids_only" else None)
     _write_once(inputs / POOLS_FILE, {"split": split.name, "rule": rule.model_dump(mode="json"),
-                                      "train": split.train, "eval": split.eval, "probe": split.probe},
+                                      "train": split.train, "eval": split.eval, "probe": split.probe,
+                                      "text_twins": split.text_twins},
                 "pools")
     ids = {}
     for seed in cell.seeds:
@@ -137,7 +138,8 @@ def prepare(ctx: StageContext, fetch: bool = True) -> dict:
                     f"eval ids of seed {seed}")
     ctx._rows = by_id
     counts = {"n_rows": len(rows), "n_train_pool": len(split.train), "n_eval_pool": len(split.eval),
-              "n_probe_pool": len(split.probe), "n_eval_ids": {str(s): len(v) for s, v in ids.items()}}
+              "n_probe_pool": len(split.probe), "n_train_text_twins": len(split.text_twins),
+              "n_eval_ids": {str(s): len(v) for s, v in ids.items()}}
     ctx.write_manifest(inputs, "inputs", counts=counts,
                        config={"benchmark": bench.id, "split": cell.split, "eval_ids": cell.eval.ids.model_dump()},
                        outputs=[inputs / POOLS_FILE] + [inputs / eval_ids_file(s) for s in cell.seeds],

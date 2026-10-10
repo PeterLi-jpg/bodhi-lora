@@ -62,6 +62,28 @@ def test_label_hold_out_moves_rows_to_the_probe_pool(reg):
     assert set(split.train) | set(split.probe) == {f"tiny-{i:03d}" for i in range(7, 25)}
 
 
+def test_a_train_row_with_a_held_out_rows_text_leaves_the_train_pool(reg):
+    """MedQuAD repeats a question under several ids. The copy in the train pool goes, so
+    the leakage gate, which compares the same texts, cannot fail on it after the traces
+    are made."""
+    from dataclasses import replace
+
+    from bodhi_lora.data.loaders import row_text
+
+    bench = reg.benchmarks["tiny-rubric"]
+    rows = load_rows(bench, REPO_ROOT, fetch=False)
+    by_id = {r.prompt_id: r for r in rows}
+    held = by_id["tiny-001"]
+    # tiny-010 asks tiny-001's question again, in other case and spacing.
+    text = held.messages[-1]["content"]
+    twin = replace(by_id["tiny-010"], messages=[{"role": "user", "content": "  " + text.upper() + " "}])
+    rows = [twin if r.prompt_id == "tiny-010" else r for r in rows]
+    split = split_rows(bench, "default", rows)
+    assert row_text(twin) == row_text(held) and "tiny-001" in split.eval
+    assert split.text_twins == ["tiny-010"] and "tiny-010" not in split.train + split.probe
+    assert split_rows(bench, "default", load_rows(bench, REPO_ROOT, fetch=False)).text_twins == []
+
+
 def test_per_seed_draw_is_deterministic_sorted_and_inside_the_pool(reg):
     cell = reg.cells["tiny-rubric__tiny-random-llama__bodhi"]
     bench = reg.benchmarks[cell.benchmark]
