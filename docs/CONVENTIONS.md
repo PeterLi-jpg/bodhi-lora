@@ -3,7 +3,8 @@
 Rules 1 to 10 were adopted on 2026-10-07. They come from section 4 of the audit of that
 date, which traced most of the review's complaints to missing conventions. Rules 11 to 14
 were adopted on 2026-10-08 with the architecture (D22): they keep the code general, so
-that a new model, benchmark or protocol is a new record and not new code. Each rule says
+that a new model, benchmark or protocol is a new record and not new code. Rule 15 was set
+by the first author on 2026-10-09 and applied on 2026-10-10. Each rule says
 why it exists and how this repo enforces it: a test, a hook, a make target, or a review
 step that a person must do before merging or posting. Where a rule has no automatic
 check yet, it says so.
@@ -208,8 +209,39 @@ rule, not from a list in code.
   `tests/test_analysis_committed.py` checks that each committed `stats.json` is what
   `make analyze` writes. Known gap: the paper's numbers still come from
   `scripts/paper_stats.py` (`make numbers`). It runs `bodhi_lora.report` for the per-cell
-  tables, but its cross-cell tables read `results/cross_cell/generated_values.json`, not
+  tables and for the submitted cell's leakage and label numbers, but its cross-cell tables read `results/cross_cell/generated_values.json`, not
   the cells' `stats.json`, and `make report` is not a target yet.
+
+## 15. No keyword measures
+
+No measurement decides what text means with a hard-coded word list, a keyword regular
+expression or a lexicon. This holds for replies, prompts and rubric criteria alike.
+Allowed:
+
+- structured fields and tags that ship with a dataset (for example HealthBench's theme
+  tags);
+- a parser of a fixed output format that the protocol itself defines, such as the BODHI
+  Pass 1 section headers, the `DECISION:` and `REPLY:` fields or the `<plan>` block, frozen
+  in the protocol record or the code;
+- JSON parsing of a grader's output.
+
+Where only free text exists, meaning comes from a pinned judge model with a semantic
+rubric and no keyword list, checked against hand labels with an agreement gate fixed
+before it runs (ANALYSIS_PLAN.md section 12, 2026-10-10).
+
+- Why: keyword rules miss negation, hypotheticals and quotes ("no need to call 911"
+  counts as a referral, a quoted question counts as asking), and a hostile reviewer
+  attacks them first. Posted numbers that came from such rules are withdrawn
+  (`rebuttal/withdrawals.md` W14 and W23 to W25).
+- Enforced by: `tests/test_no_lexicon.py`. It fails when a config has a key that holds a
+  text pattern or word list (only the `markers` of a protocol's leak rules may), when a
+  leak marker is not one of the protocol's own headers or field names
+  (`Protocol.format_fields`, matched whole up to a plural ending), and when the analysis
+  or label code compiles a regular expression from a literal. The report config and the
+  label rule have no field for a pattern, and their schemas forbid unknown keys. The
+  scripts in `rebuttal/analyses/` that made the withdrawn numbers stay as a record,
+  marked superseded, and nothing that feeds the paper reads their outputs. Review step: a
+  new measure of what a reply says is an evaluator or judge field, never a pattern.
 
 ## Generality rules at a glance
 
@@ -221,6 +253,7 @@ rule, not from a list in code.
 | No names in code | rule 13 | `tests/test_no_hardcode.py` |
 | Uniform analysis | rule 14 | `tests/test_analysis_*.py`, `make analyze` |
 | Analysis plan before runs | rule 3 | `tests/test_plan_coverage.py`; the order of commits is a review step |
+| No keyword measures | rule 15 | `tests/test_no_lexicon.py` |
 
 ## Also checked on every pull request
 
