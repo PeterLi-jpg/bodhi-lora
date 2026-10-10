@@ -502,8 +502,8 @@ responses with Mistral-Small-24B and \statHBMedFortyTwoJulLeakBodhiAnalysisForma
 Med42-8B, but almost never with BioMistral-7B or on ChatDoctor and MedQuAD (Table~\ref{tab:checks}).
 With Mistral-Small-24B, leaked responses also score lower on red-flag identification
 (\statHBMistralJulLeakBodhiAnalysisFormatLoRABodhiRedFlagLeaked{} against
-\statHBMistralJulLeakBodhiAnalysisFormatLoRABodhiRedFlagClean), yet the mean of the condition does
-not fall below LoRA; with Med42-8B the two groups score almost the same. So leakage does not
+\statHBMistralJulLeakBodhiAnalysisFormatLoRABodhiRedFlagClean), yet the mean of the condition is
+not detectably below LoRA; with Med42-8B the two groups score almost the same. So leakage does not
 explain why only the MedGemma-27B cell shows the drop. The cells differ in base model, recipe and
 context length.
 
