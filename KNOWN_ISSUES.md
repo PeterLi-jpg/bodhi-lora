@@ -81,7 +81,9 @@ Issue numbers such as #5 are GitHub issues on `PeterLi-jpg/bohdi-lora`.
   flag, so the rate outside the theme counts warranted flags too and is not an
   over-flagging rate. A label from the `cluster:` tags would be the physician label under
   another name, which the analysis plan keeps unseen, and Hard holds only 8 non-emergent
-  prompts. The planned test (H7) reads the physician labels on the labelled cells.
+  prompts. The planned test (H7) reads the physician labels on the labelled cells. The
+  paper reports the rate outside the theme as a descriptive check (section 4.4) and says
+  that it is not an over-flagging rate.
 - **No count of questions without a grader.** The second-person question rule was a
   keyword rule and was removed on 2026-10-10 (withdrawals W23). The cross-check of active
   inquiry is a judge classifier with a hand-label gate, specified in ANALYSIS_PLAN.md
@@ -175,8 +177,10 @@ Issue numbers such as #5 are GitHub issues on `PeterLi-jpg/bohdi-lora`.
   benchmark or path names in package code, each checked by a test or `make check`
   (docs/CONVENTIONS.md rules 7 and 11 to 13). The uniform analysis (rule 14) is
   `python -m bodhi_lora analyze`, and `bodhi_lora.report` turns its output into tables
-  and macros through `make numbers`. The paper does not cite those yet: its numbers
-  still come from the older sections of `scripts/paper_stats.py`.
+  and macros through `make numbers`. The paper cites the cross-cell table (Table H.6)
+  and the per-cell macros in sections 4.3 and 4.4. Table 1 and the per-cell detail tables
+  still come from `make cells`; `make numbers` stops if the two sources disagree on a
+  per-seed mean.
 - **Added-cell raw outputs synced (PROV-1, PROV-2, PROV-3; 60c1a54, 5d5890e).** The
   outputs were copied read-only from the GPU host on 2026-10-08. `make cells` computes
   every added-cell value, the paired tests of the aggregate drop and the per-cell tau,

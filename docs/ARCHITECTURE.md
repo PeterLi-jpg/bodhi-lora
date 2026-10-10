@@ -668,7 +668,8 @@ Each analyzed cell gets the same table, `tab_cell_<token>`; the cross-cell table
 `tab_cross_cell_checks` has the columns `configs/report.yaml` lists under `cross_table`,
 the same for every cell. The macros of `scripts/paper_stats.py` keep their names, so the
 paper builds unchanged; moving `paper/main.tex` to the report's macros is the paper's
-change.
+change. Since 2026-10-10 the paper cites `tab_cross_cell_checks` (Table H.6) and the
+report's macros in sections 4.3 and 4.4.
 
 **Pre-registration.** Convention 3 still holds. A statistic that has not been computed
 on a cell's outputs before (for example the physician-label discrimination index) goes

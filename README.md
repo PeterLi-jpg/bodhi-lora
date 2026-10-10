@@ -119,10 +119,11 @@ of `configs/report.yaml`, the 2026-04 pilot and the partial BioMistral-7B MedQA 
 `make analyze` writes each `stats.json` again byte for byte
 (`tests/test_analysis_committed.py`) and reproduces the 2026-05 cell's values
 (`tests/test_analysis_equivalence.py`). `make numbers` turns them into one table per cell
-and a cross-cell table (`tab_cell_<token>`, `tab_cross_cell_checks`), but the paper
-cites none of these yet. Its numbers still come from the older sections of
-`scripts/paper_stats.py`, `make figures` and `make cells` (docs/ARCHITECTURE.md
-section 5).
+and a cross-cell table (`tab_cell_<token>`, `tab_cross_cell_checks`). The paper cites the
+cross-cell table as Table H.6 and the cells' macros in sections 4.3 and 4.4. Its other
+numbers still come from the older sections of `scripts/paper_stats.py`, `make figures`
+and `make cells` (docs/ARCHITECTURE.md section 5), and `make numbers` stops if a per-seed
+mean of Table 1 differs from the cell's `stats.json`.
 
 ## Run the pipeline
 

@@ -455,6 +455,11 @@ theme-tag labelling only: LoRA minus Base +10.0 [-0.5, +20.1], and asking on sel
 prompts 17.0% to 43.2%, now from the uniform analysis (`results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/stats.json`,
 `discrimination.active_inquiry.needs-info-theme`).
 
+**Changed 2026-10-10 (paper).** The paper gives the index in every HealthBench cell
+(section 4.4, Table H.6): in none is LoRA minus Base detectably above zero, and with
+BioMistral-7B it falls. The abstract says that the data do not show that the adapter
+learned when to ask.
+
 ---
 
 ## W16. The BODHI expansion and the dimension mapping (changed after the discussion)
@@ -577,7 +582,9 @@ counts the protocol's tokens, and no script or output gives 58%
 
 **The paper must say.** The engine's counts for Base and LoRA, that the two-pass conditions cannot
 be counted, and that the posted 58% is withdrawn. Done in section 4.2 and Appendix H of
-`paper/main.tex` (ab58ee5), with the posted value from `rebuttal/posted_values.json`.
+`paper/main.tex` (ab58ee5), with the posted value from `rebuttal/posted_values.json`. Since
+2026-10-10, section 4.4 and Table H.6 give the engine's counts for Base and LoRA in every
+cell.
 
 ---
 
@@ -651,7 +658,9 @@ rest (n = 434), which is above LoRA alone (1.67). The diagnosis of W9 holds unde
 
 **The paper must say.** The seven-header numbers, and that the posted nine-marker rule is
 withdrawn. Done in the abstract, section 4.3 and Appendix H of `paper/main.tex`. The length
-quartiles and medians were not printed in the paper and are withdrawn with the rule.
+quartiles and medians were not printed in the paper and are withdrawn with the rule. Since
+2026-10-10, section 4.3 and Table H.6 give leakage in every cell under the seven-header
+rule.
 
 ---
 
