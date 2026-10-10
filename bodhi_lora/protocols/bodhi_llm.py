@@ -234,6 +234,13 @@ class BodhiLLM(Protocol):
             raise RuntimeError("bodhi-llm has no BODHI._get_response_prompt; the reply "
                                "instruction cannot reach pass 2 (update bodhi_lora/protocols/bodhi_llm.py)")
 
+    def format_fields(self) -> tuple[str, ...]:
+        """The numbered pass-1 section headers of this record's analysis prompt, in order:
+        the seven of the medical prompt, fewer under an ablation, the five of the general
+        prompt under no_domain_framing."""
+        template = self.config.analysis_template or render_analysis_prompt(_PLACEHOLDER, domain=self.config.domain)
+        return tuple(m.group(2) + ":" for line in template.splitlines() if (m := _SECTION_RE.match(line)))
+
     def respond(self, engine, messages: list, decoding: Decoding) -> Output:
         log = CallLog(engine, decoding)
         # A BODHI object per reply: it holds the call function, and replies run in

@@ -80,6 +80,17 @@ class Protocol:
     def respond(self, engine, messages: list, decoding: Decoding) -> Output:
         raise NotImplementedError
 
+    def format_fields(self) -> tuple[str, ...]:
+        """The section headers and field names of the protocol's own fixed internal format,
+        each with its colon, e.g. "RED FLAGS:".
+
+        A leak rule of the protocol record may match only these: then the leak count
+        parses a format the protocol itself defines, and reads no meaning from the reply
+        (docs/CONVENTIONS.md rule 15, tests/test_no_lexicon.py). A protocol with no such
+        format has none.
+        """
+        return ()
+
 
 class Identity(Protocol):
     """No protocol: one call with the conversation as given."""

@@ -39,6 +39,8 @@ SCALE = (
 )
 _DECISION_RE = re.compile(r"DECISION\s*:\s*(.*)", re.IGNORECASE | re.DOTALL)
 _PUNCT_RE = re.compile(r"[.,;:]")
+# A field line of the rating form: an upper-case name and a colon at the start of a line.
+_FIELD_RE = re.compile(r"^([A-Z][A-Z ]*[A-Z]):", re.MULTILINE)
 
 
 class AbstainParams(BaseModel):
@@ -75,6 +77,11 @@ class Abstain(Protocol):
     def __init__(self, protocol: ProtocolConfig, model: ModelConfig):
         self.id = protocol.id
         self.params = AbstainParams.model_validate(protocol.params)
+
+    def format_fields(self) -> tuple[str, ...]:
+        """The field names the record's rating prompt asks pass 1 to write (REASON:,
+        DECISION:)."""
+        return tuple(name + ":" for name in _FIELD_RE.findall(self.params.rating_prompt))
 
     def respond(self, engine, messages: list, decoding: Decoding) -> Output:
         log = CallLog(engine, decoding)

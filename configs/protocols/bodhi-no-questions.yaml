@@ -9,31 +9,21 @@ params:
   # Which component to remove from the medical prompt (bodhi_llm.ABLATIONS); none is the
   # full protocol.
   ablate: no_questions
+# The leak rule is a parser of the protocol's own fixed format, not a word list: each
+# marker is one of the numbered pass-1 section headers that this record's analysis
+# prompt asks the model to write (BodhiLLM.format_fields), matched whole up to a plural
+# ending. A reply that repeats two of them has copied the analysis format. No marker is
+# a free word; tests/test_no_lexicon.py fails if one is (docs/CONVENTIONS.md rule 15).
 leak_rules:
   analysis-format:
-    description: 'two or more of the nine analysis-format markers: the seven pass-1 section
-      headers of bodhi-llm 0.1.4, plus DIFFERENTIAL and SCOPE OF/BOUNDAR, which leaked replies
-      often continue into (the posted 54.6% used all nine)'
+    description: two or more of the six pass-1 section headers left when section 5, QUESTIONS TO ASK,
+      is removed
     markers:
     - TASK TYPE
     - KEY UNCERTAINT
     - SAFE RECOMMENDATION
     - 'RED FLAGS?\s*:'
     - WHAT I THINK
-    - QUESTIONS TO ASK
-    - 'AUDIENCE\s*:'
-    - DIFFERENTIAL
-    - SCOPE (OF|BOUNDAR)
-    threshold: 2
-  pass1-headers:
-    description: two or more of the seven pass-1 section headers only (audit NUM-4)
-    markers:
-    - TASK TYPE
-    - KEY UNCERTAINT
-    - SAFE RECOMMENDATION
-    - 'RED FLAGS?\s*:'
-    - WHAT I THINK
-    - QUESTIONS TO ASK
     - 'AUDIENCE\s*:'
     threshold: 2
 reference: 'BODHI (bodhi-llm 0.1.4, https://github.com/sebasmos/bodhi-llms): pass 1 writes

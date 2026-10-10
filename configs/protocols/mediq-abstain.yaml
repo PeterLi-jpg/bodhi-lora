@@ -28,6 +28,9 @@ params:
     {conversation}
 
     You do not have the information you need to answer safely yet. Ask the person one short, specific question about the most important missing fact. Write only the question.
+# The leak rule is a parser of the protocol's own fixed format, not a word list: its
+# markers are the two field names the rating prompt above asks pass 1 to write
+# (Abstain.format_fields). tests/test_no_lexicon.py fails if a marker is a free word.
 leak_rules:
   rating-format:
     description: both lines of the pass-1 rating form, REASON and DECISION

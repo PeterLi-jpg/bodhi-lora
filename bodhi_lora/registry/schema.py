@@ -351,10 +351,16 @@ class BenchmarkConfig(_Record):
 # ---------------------------------------------------------------------------
 
 class LeakRule(_Record):
-    """When a response counts as leaking the protocol's internal format."""
+    """When a response counts as leaking the protocol's internal format.
+
+    A parser of the protocol's own fixed format, not a word list: each marker is one of
+    the section headers or field names the protocol asks its internal call to write
+    (Protocol.format_fields), matched whole up to a plural ending. A free word or phrase
+    is not a marker (docs/CONVENTIONS.md rule 15); tests/test_no_lexicon.py checks every
+    record."""
 
     description: str
-    # Case-insensitive regular expressions.
+    # Case-insensitive regular expressions, one per header or field name.
     markers: Annotated[list[str], Field(min_length=1)]
     # A response leaks when at least this many markers match.
     threshold: PosInt = 2
