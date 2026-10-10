@@ -28,6 +28,7 @@ import json
 import os
 import re
 import shutil
+import tempfile
 import urllib.request
 from urllib.parse import urlparse
 import xml.etree.ElementTree as ET
@@ -64,6 +65,25 @@ class Row:
 
 class DataError(RuntimeError):
     """A benchmark source is missing, changed, or could not be built."""
+
+
+def _replace_atomically(path: Path, write: Callable, mode: str = "w") -> None:
+    """Write a file through a temporary file of its own in the same folder, then rename it
+    into place. Two runs that build the same benchmark at once each write their own
+    temporary file, so neither renames the other's away (a fixed name such as rows.part
+    did), and a reader never sees half a file."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    kwargs = {} if "b" in mode else {"encoding": "utf-8"}
+    with tempfile.NamedTemporaryFile(mode, dir=path.parent, prefix=path.name + ".", suffix=".part",
+                                     delete=False, **kwargs) as fh:
+        tmp = Path(fh.name)
+        try:
+            write(fh)
+        except BaseException:
+            fh.close()
+            tmp.unlink()
+            raise
+    os.replace(tmp, path)
 
 
 def sha256_file(path: Path) -> str:
@@ -103,12 +123,9 @@ def source_file(bench: BenchmarkConfig, key: str, data_root: Path, fetch: bool =
         if not path.is_file():
             if not fetch:
                 raise DataError(f"{path} is missing; run python -m bodhi_lora fetch {bench.id}")
-            path.parent.mkdir(parents=True, exist_ok=True)
-            tmp = path.with_suffix(".part")
             print(f"downloading {bench.id} {key} -> {path}", flush=True)
-            with urllib.request.urlopen(f.url) as r, open(tmp, "wb") as out:
-                shutil.copyfileobj(r, out)
-            os.replace(tmp, path)
+            with urllib.request.urlopen(f.url) as r:
+                _replace_atomically(path, lambda out: shutil.copyfileobj(r, out), "wb")
     else:
         raise DataError(f"{bench.id}: source kind {src.kind} has no files")
     got = sha256_file(path)
@@ -267,15 +284,10 @@ def load_hf_qa(bench: BenchmarkConfig, data_root: Path, fetch: bool = True,
         rows, counts = build_hf_qa_rows(bench, (source_rows or _hf_rows)(bench.source))
         if not rows:
             raise DataError(f"{bench.id}: no usable rows; check the record's fields against the source columns")
-        folder.mkdir(parents=True, exist_ok=True)
-        tmp = cache.with_suffix(".part")
-        with open(tmp, "w", encoding="utf-8") as fh:
-            for row in rows:
-                fh.write(json.dumps(row) + "\n")
-        os.replace(tmp, cache)
+        _replace_atomically(cache, lambda fh: fh.writelines(json.dumps(row) + "\n" for row in rows))
         meta = {"benchmark": bench.id, "build_key": key, "source": bench.source.model_dump(),
                 "counts": counts, "sha256": sha256_file(cache)}
-        meta_path.write_text(json.dumps(meta, indent=2) + "\n")
+        _replace_atomically(meta_path, lambda fh: fh.write(json.dumps(meta, indent=2) + "\n"))
     out = []
     with open(cache, encoding="utf-8") as fh:
         for index, line in enumerate(fh):

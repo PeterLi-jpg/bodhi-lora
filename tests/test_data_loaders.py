@@ -6,6 +6,8 @@ template before 035d85f). The config-driven loader must give the same rows, byte
 byte, so the eval ids of those cells still name the same prompts.
 """
 import json
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
@@ -65,6 +67,23 @@ def test_hf_cache_is_built_once_and_rebuilt_when_the_record_changes(reg, tmp_pat
     assert len(calls) == 2, "a record change rebuilds the cache"
     with pytest.raises(DataError, match="fetch"):
         load_hf_qa(changed.model_copy(update={"id_prefix": "x"}), tmp_path, fetch=False)
+
+
+def test_two_runs_can_build_the_same_cache_at_once(reg, tmp_path):
+    """Parallel dry runs of cells on one benchmark both build its cache. With a fixed
+    temporary name, one run renamed the other's file away (FileNotFoundError)."""
+    bench = reg.benchmarks["chatdoctor"]
+    both_read = threading.Barrier(2)
+
+    def fake_source(src):
+        both_read.wait(timeout=10)
+        return SOURCES["chatdoctor"]
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        runs = [pool.submit(load_hf_qa, bench, tmp_path, source_rows=fake_source) for _ in range(2)]
+        ids = [[r.prompt_id for r in run.result()] for run in runs]
+    assert ids[0] == ids[1] == [r["prompt_id"] for r in EXPECTED["chatdoctor"]["rows"]]
+    assert sorted(p.name for p in (tmp_path / "chatdoctor").iterdir()) == ["rows.jsonl", "rows.manifest.json"]
 
 
 def test_local_rubric_rows_carry_labels_and_positions(reg):
