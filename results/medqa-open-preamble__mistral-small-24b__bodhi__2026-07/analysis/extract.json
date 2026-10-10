@@ -5,7 +5,7 @@
   },
   "prompts": {
     "benchmark": "medqa-open-preamble",
-    "rows": "not available: /Users/anqipeterli/Desktop/Substrate Labs/Research/BODHI/BOHDI/data/raw/medqa-open-preamble/rows.jsonl is missing or stale; run python -m bodhi_lora fetch medqa-open-preamble",
+    "rows": "not available: data/raw/medqa-open-preamble/rows.jsonl is missing or stale; run python -m bodhi_lora fetch medqa-open-preamble",
     "split": "head"
   },
   "seeds": [

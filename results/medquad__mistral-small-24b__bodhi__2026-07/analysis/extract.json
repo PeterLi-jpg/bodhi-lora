@@ -5,7 +5,7 @@
   },
   "prompts": {
     "benchmark": "medquad",
-    "rows": "not available: /Users/anqipeterli/Desktop/Substrate Labs/Research/BODHI/BOHDI/data/raw/medquad/rows.jsonl is missing or stale; run python -m bodhi_lora fetch medquad",
+    "rows": "not available: data/raw/medquad/rows.jsonl is missing or stale; run python -m bodhi_lora fetch medquad",
     "split": "head"
   },
   "seeds": [

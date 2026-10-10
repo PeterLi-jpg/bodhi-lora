@@ -5,7 +5,7 @@
   },
   "prompts": {
     "benchmark": "chatdoctor",
-    "rows": "not available: /Users/anqipeterli/Desktop/Substrate Labs/Research/BODHI/BOHDI/data/raw/chatdoctor/rows.jsonl is missing or stale; run python -m bodhi_lora fetch chatdoctor",
+    "rows": "not available: data/raw/chatdoctor/rows.jsonl is missing or stale; run python -m bodhi_lora fetch chatdoctor",
     "split": "head"
   },
   "seeds": [

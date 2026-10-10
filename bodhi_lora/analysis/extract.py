@@ -358,7 +358,10 @@ def prompt_table(reg: Registry, cell: CellConfig, paths: CellPaths, project: Pro
     try:
         rows = load_rows(bench, project.data_root, fetch=False)
     except DataError as e:
-        info["rows"] = f"not available: {e}"
+        # The error names the data file by its absolute path. The record is tracked, so it
+        # names the path from the repository root: the same on every machine, and no home
+        # folder in a public file.
+        info["rows"] = "not available: " + str(e).replace(f"{project.repo_root.resolve()}/", "")
         df = pd.DataFrame({"prompt_id": every, "in_population": np.nan, "evaluated": 1.0,
                            "theme": None, "rubric_points_pos": [criteria_points.get(p, np.nan) for p in every]})
         return df, info

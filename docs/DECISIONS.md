@@ -43,7 +43,7 @@ Why: Med42-8B is built on Llama-3, the evaluator's family, and the planned mitig
 
 Why: "n≈1,000 per condition" counted responses over 667 unique prompts, the main and added cells used different units, and the correction family was never stated. [CLAIM-10, REPRO-8, EVAL-13]
 
-**D8** Canonical paper: paper/main.tex. The submitted version is frozen at paper/submitted/neurips2026/ (source only, anonymous). All other copies move out of the repo to /Users/anqipeterli/Desktop/Substrate Labs/Research/BODHI/_archive/paper_copies_2026-10-07/.
+**D8** Canonical paper: paper/main.tex. The submitted version is frozen at paper/submitted/neurips2026/ (source only, anonymous). All other copies move out of the repo to the archive folder next to it, `../_archive/paper_copies_2026-10-07/`.
 
 Why: the repo held seven copies of main.tex in five versions, and none was the committed submitted source. [HYG-9, CLAIM-4, CLAIM-5]
 
