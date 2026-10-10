@@ -39,6 +39,20 @@ def _stats(diff, p):
             "askers_gap": {"lora": {"gap": diff}}}
 
 
+def test_a_new_complete_cell_joins_the_rule_groups_but_not_the_added_ones(setup):
+    """A cell run later and put in cross_cells must not change what the paper says about
+    the cells added in the 2026-07 discussion; it does join a statement about every cell."""
+    reg, cfg, cells = setup
+    new = reg.cells["healthbench__mistral-small-24b__bodhi"]
+    new = new.model_copy(update={"report": new.report.model_copy(update={"status": "complete"})})
+    group = {gid: members(g, cells + [new], reg) for gid, g in cfg.groups.items()}
+    assert new.id in group["outside-family"]
+    for gid in cfg.groups:
+        if gid.startswith("added"):
+            assert new.id not in group[gid], gid
+    assert group["added"] == [c.id for c in cells if c.id != "healthbench__medgemma-27b-text__bodhi__2026-05"]
+
+
 def test_group_summary_counts_directions_and_runs_holm_over_cells(setup):
     _, cfg, _ = setup
     all_stats = {"a": _stats(0.2, 0.01), "b": _stats(-0.1, 0.04), "c": _stats(0.05, 0.5)}

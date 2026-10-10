@@ -143,6 +143,11 @@ class ReportConfig(_Record):
         tokens = [g.token for g in self.groups.values()] + [g.token for g in self.grader_comparisons]
         if len(set(tokens)) != len(tokens):
             raise ValueError("group and comparison tokens repeat")
+        for gid, g in self.groups.items():
+            # A listed cell outside cross_cells would drop out of its group without a word.
+            outside = sorted(set(g.cells) - set(self.cross_cells))
+            if outside:
+                raise ValueError(f"group {gid} lists cells that are not in cross_cells: {outside}")
         return self
 
 

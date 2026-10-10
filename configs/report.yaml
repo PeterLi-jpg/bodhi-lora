@@ -62,7 +62,10 @@ cross_cells:
 # Groups of cells that the paper counts over. A group is the cells of cross_cells that
 # match every `where` key, minus `exclude`, or the cells it lists. Keys of where: status
 # (list), model (list), family_waiver (true or false), set_aside (true or false). `token`
-# names the group in macros.
+# names the group in macros. A group defined by a rule takes in every new cell of
+# cross_cells that matches it, which is right for a statement about every cell. The
+# groups of the cells added in the 2026-07 discussion list their cells, so a cell added
+# later cannot change what the paper says about those.
 groups:
   submitted:
     token: Submitted
@@ -79,30 +82,34 @@ groups:
   added:
     token: Added
     description: the complete cells added in the 2026-07 discussion
-    where: {status: [complete]}
-    exclude: [healthbench__medgemma-27b-text__bodhi__2026-05]
+    cells: [healthbench__mistral-small-24b__bodhi__2026-07, healthbench__med42-8b__bodhi__2026-07,
+            healthbench__biomistral-7b__bodhi__2026-07, chatdoctor__mistral-small-24b__bodhi__2026-07,
+            chatdoctor__med42-8b__bodhi__2026-07, medquad__mistral-small-24b__bodhi__2026-07,
+            medqa-open-preamble__mistral-small-24b__bodhi__2026-07]
   added-kept:
     token: AddedKept
     description: the added cells that are not set aside (the Holm family of the aggregate tests)
-    where: {status: [complete], set_aside: false}
-    exclude: [healthbench__medgemma-27b-text__bodhi__2026-05]
+    cells: [healthbench__mistral-small-24b__bodhi__2026-07, healthbench__med42-8b__bodhi__2026-07,
+            healthbench__biomistral-7b__bodhi__2026-07, chatdoctor__mistral-small-24b__bodhi__2026-07,
+            chatdoctor__med42-8b__bodhi__2026-07, medquad__mistral-small-24b__bodhi__2026-07]
   added-outside-family:
     token: AddedOutsideFamily
     description: the added cells outside the evaluator's family that are not set aside
-    where: {status: [complete], family_waiver: false, set_aside: false}
-    exclude: [healthbench__medgemma-27b-text__bodhi__2026-05]
+    cells: [healthbench__mistral-small-24b__bodhi__2026-07, healthbench__biomistral-7b__bodhi__2026-07,
+            chatdoctor__mistral-small-24b__bodhi__2026-07, medquad__mistral-small-24b__bodhi__2026-07]
   added-mistral:
     token: AddedMistral
     description: the added Mistral-Small-24B cells
-    where: {status: [complete], model: [mistral-small-24b]}
+    cells: [healthbench__mistral-small-24b__bodhi__2026-07, chatdoctor__mistral-small-24b__bodhi__2026-07,
+            medquad__mistral-small-24b__bodhi__2026-07, medqa-open-preamble__mistral-small-24b__bodhi__2026-07]
   added-med42:
     token: AddedMedFortyTwo
     description: the added Med42-8B cells
-    where: {status: [complete], model: [med42-8b]}
+    cells: [healthbench__med42-8b__bodhi__2026-07, chatdoctor__med42-8b__bodhi__2026-07]
   added-biomistral:
     token: AddedBioMistral
     description: the added BioMistral-7B cells
-    where: {status: [complete], model: [biomistral-7b]}
+    cells: [healthbench__biomistral-7b__bodhi__2026-07]
 
 # For each group: per contrast and metric, how many cells move each way, the range of
 # the differences, and Holm over the group's cells of the seed-level p-values.
