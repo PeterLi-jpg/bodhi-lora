@@ -464,6 +464,8 @@ The first author's adoption entry is still to come. Choices left to him before a
 5. The choices in the cell records that the experiments lane made after this plan was
    written (BLOCKED.md item 1, step 4): the judges, the cells with no judge, the probe
    method and controls, the harm axes, and the wording of two protocols.
+6. The judge classifier of the 2026-10-10 entry: the judge, the rubric text, the
+   hand-label sample and the agreement gate.
 
 ### Entries
 
@@ -513,3 +515,85 @@ rule are marked post hoc in every table. The paper cites none of the values that
 this run produced (format leakage, token counts and the discrimination index of the
 2026-04 and 2026-07 cells, and every over-flagging rate) until the first author accepts
 or changes the label and the rule (BLOCKED.md item 1).
+
+**2026-10-10, no-lexicon fix. A change to measurement validity, made before any new run;
+this is not the adoption.** On 2026-10-09 the first author set a rule: no measurement
+decides what text means with a word list, a keyword regular expression or a lexicon
+(CONVENTIONS.md rule 15). Such rules miss negation, hypotheticals and quotes. This entry
+applies the rule to the plan. No output of any planned cell existed: no folder of a
+planned cell is under `results/`. The outputs of the existing cells existed, and their
+tables and statistics were computed again with the rules below. Every value of an
+existing cell that this touches was post hoc before and stays exploratory (section 10).
+
+1. **Ask without a grader (section 2.2) is withdrawn.** The second-person question rule
+   decided asking by keywords: a sentence that ends in "?" and contains "you" or "your".
+   It counts quoted and rhetorical questions and misses indirect ones. The text rules
+   are gone from `configs/report.yaml`, and `rebuttal/analyses/second_person_questions.py`
+   is kept only as the record of the posted values (withdrawals W23). In its place, the
+   judge question rate of item 6. Where sections 3, 5.1 and 10 (E03) name the grader-free
+   question rate or the grader-free ask, read the judge question rate. Until the
+   classifier passes its gate, those secondary analyses do not run, and the H1 note
+   "not confirmed without the grader" is not applied.
+2. **Format leakage counts the protocol's own headers only.** The `analysis-format` leak
+   rule of the `bodhi` record (section 7.1, secondary; E04) counted nine markers. Two,
+   DIFFERENTIAL and SCOPE OF/BOUNDAR, are words, not headers of the BODHI format. The rule
+   now counts the seven Pass 1 section headers, the former `pass1-headers` rule, which is
+   gone as a duplicate. Each ablation record counts the headers of its own Pass 1 prompt;
+   before, all of them used the seven medical headers, and `bodhi-no-domain-framing`
+   writes other ones. `tests/test_no_lexicon.py` checks every marker against the
+   protocol's headers (`Protocol.format_fields`).
+3. **The post hoc labels read the theme tag only.** `needs-info-theme-or-rubric` and
+   `red-flag-at-stake` matched keywords in the rubric text, and are removed. The two post
+   hoc labellings of D9 beside the index of section 5.2 become one, `needs-info-theme`.
+   The over-flagging check of the 2026-10-09 entry (the escalation mention rule on the
+   negative group of `red-flag-at-stake`) is withdrawn. In its place, the evaluator's
+   red-flag rate (section 2.2, the share of replies with red-flag score 2) in the two
+   groups of `emergency-theme` (positive: the `theme:emergency_referrals` tag; negative:
+   every other theme). Its negative group is not "no red flag", so its rate counts
+   warranted flags too. It is descriptive and is not an over-flagging rate. The test of
+   over-flagging stays H7 (section 7.2) on the physician labels.
+4. **The cluster tags stay unused.** The `cluster:` tags of HealthBench's consensus
+   criteria name the physician-agreed category of the example: on every row that carries
+   either (586 of the Hard set, 3,671 of the full set), the two agree. A label built from them is a physician label under
+   another name, so section 2.4 keeps it unseen until adoption. The `axis:` and `level:`
+   tags say how a criterion is graded, not what the prompt lacks or risks.
+5. **A keyword count in section 7.2 is withdrawn as a description.** The sentence that 177
+   of 1,238 criteria of the non-emergent prompts contain "emergenc", "urgent" or "911" is
+   a keyword count. The structural fact that stands: each of the 134 non-emergent prompts
+   carries HealthBench's consensus criterion on emergency behavior (the cluster tag
+   `emergency_referrals_non-emergent_emergency_behavior`), so its rubric grades part of
+   the referral advice.
+6. **A judge classifier replaces the text rules as the cross-check (specified, not run).**
+   - *Judge.* The judge of the cell record (section 8), pinned at the revision its model
+     record names, served greedily (temperature 0). A cell with no judge gets one by the
+     family rule before the classifier runs. The judge is a second grader from another
+     family, not a grader-free check.
+   - *Rubric.* One call per reply. The prompt holds the conversation, the reply and these
+     two questions, and no keyword list. (Q) "Does the reply ask the person for
+     information about them or their situation, to help answer? Count a direct question
+     and a request such as 'tell me how long this has lasted'. Do not count a question the
+     reply quotes, a rhetorical question, or a question the reply suggests the person ask
+     someone else." (E) "Does the reply tell the person to get emergency or urgent care?
+     Answer 'now' if it tells them to get it now, 'if' if it tells them to get it only if
+     stated signs appear, and 'no' otherwise, also when it says emergency care is not
+     needed." The judge answers in JSON: `{"asks_user": true or false, "urgent_care":
+     "now", "if" or "no", "reason": "one sentence"}`. A reply whose answer does not parse
+     after three tries is missing, as in section 2.3.
+   - *Hand labels.* 300 replies, drawn with seed 0, stratified by cell and condition, from
+     the HealthBench cells of `cross_cells` in `configs/report.yaml`; for (E), half of
+     them from prompts with the `theme:emergency_referrals` tag. Two authors label each
+     reply on its own with the same question text, blind to the cell, the condition and
+     every grade. Their agreement (Cohen's kappa) is reported first. They settle each
+     disagreement by discussion, and the settled label is the reference.
+   - *Gate, fixed now.* For each question, on the binary label ((E): "now" or "if"
+     against "no"): Cohen's kappa of the judge against the reference at least 0.80, and
+     the lower end of its 95% prompt-clustered bootstrap interval (2,000 resamples, seed
+     0) at least 0.70. If the two authors agree below 0.80, the question text is unclear:
+     a dated entry here changes it, and a fresh sample is labelled. If the judge fails
+     the gate, its rate is not a measure, and the report says that the cross-check failed
+     its gate.
+   - *Use.* (Q) gives the judge question rate: the H1 secondary contrast `lora` minus
+     `base` (section 3), the H1 note, the secondary ask of section 5.1 and E03. (E) gives
+     the urgent-care rate: a secondary outcome of H7 beside the red-flag rate, on the
+     non-emergent and the emergent prompts.
+   - *Cost.* GPU or API time (RUN_PLAN.md, R17). Nothing here has run.

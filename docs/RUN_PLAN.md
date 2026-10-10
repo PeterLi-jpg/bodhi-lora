@@ -2,7 +2,8 @@
 
 **Needs the first author's go-ahead.** No GPU job runs until he says so (DECISIONS.md,
 2026-10-08). Nothing in this file has run. Dated 2026-10-08. On 2026-10-09 sections 3
-to 6 were updated to cost the cell records as they stand.
+to 6 were updated to cost the cell records as they stand. On 2026-10-10 R17 was added,
+the judge classifier that replaces the withdrawn keyword rules.
 
 This is the ordered list of GPU work from [EXPERIMENTS.md](EXPERIMENTS.md), with the
 command, the cells, the seeds, an H100-hour estimate and its basis for each run, and the
@@ -167,6 +168,19 @@ seeds and probe. The judges that a record lists have their own column, because
 | R14 (C) | E24 | `healthbench__gemma-3-27b__bodhi` with its probe | train | none left | 11.1 to 18.0 | 2.6 (`phi-4`) | four conditions, A5, A8 | FzpA-W2, MR-W1 |
 | R15 (C) | E25 | `chatdoctor__mistral-small-24b__bodhi`, `medquad__mistral-small-24b__bodhi`, seven conditions each | train | none left | 13.7 to 15.9, and 9.9 to 11.8 | 4.6 and 3.8 (`medgemma-27b-text`) | the 2026-07 cells of 3.1 and three baseline conditions, A2, A3 | HomM-Q2, MR-W2, FzpA-Q3 |
 | R16 (C) | E26 | `healthbench__mistral-small-24b__bodhi-no-calibration`, `healthbench__mistral-small-24b__bodhi-no-questions`, `healthbench__mistral-small-24b__bodhi-no-abstention` | train | none left | 10.0 to 12.5 each | none | four conditions | none asked |
+| R17 (B) | E03, H1 and H7 secondary (ANALYSIS_PLAN.md section 12, 2026-10-10) | the judge classifier on the eight cells of `cross_cells` in `configs/report.yaml`; on a planned cell, after its grade stage | classify, on recorded cells | the classify stage (not built); the 300 hand labels (no GPU) | none | 5 to 9 | one call per reply at each cell's judge speed: the dimension times of 3.1, A4 | MR-W3, HomM-W3, PROV-7, C30; withdrawals W23 |
+
+**R17, the judge classifier.** It replaces the keyword rules that the 2026-10-10 entry of
+ANALYSIS_PLAN.md withdrew: a pinned judge answers, for each reply, whether it asks the
+person for information and whether it sends them to urgent care, with a semantic rubric
+and no keyword list. Its rates count only if it passes the hand-label gate of that entry
+(Cohen's kappa at least 0.80 against two authors' settled labels, lower bound at least
+0.70). The hand labels need no GPU and come first. The runner has no classify stage yet;
+building it is code work, and its stub test must pass on the CPU (section 1, step 3).
+Each recorded cell has about 4,000 replies. At the 8B evaluator's dimension times of 3.1
+and a judge three times slower (A4), a cell costs 0.6 to 1.1 H100-hours with its vLLM
+starts; the eight cells cost about 5 to 9. An API judge is the other route; its price
+was not checked.
 
 **Smaller records.** Some records cost more than the primary tests of
 [ANALYSIS_PLAN.md](ANALYSIS_PLAN.md) need. A record can change only before its cell first
@@ -218,10 +232,11 @@ adds the judge (9.2 for `medgemma-27b-text`).
 | Minimal first batch, R3 with `base` and `lora` only | 24.1 to 30.8 | 48 to 123 dollars |
 | Tier A | 158.6 to 249.4 | 317 to 998 dollars |
 | Tier A, labelled cells with three conditions | 130.7 to 189.5 | 261 to 758 dollars |
-| Tiers A and B | 229.4 to 341.9 | 459 to 1,368 dollars |
-| All tiers | 315.0 to 447.7 | 630 to 1,791 dollars |
+| Tiers A and B | 234.4 to 350.9 | 469 to 1,404 dollars |
+| All tiers | 320.0 to 456.7 | 640 to 1,827 dollars |
 
-The minimal batch holds one judge, R1. Every other row includes every judge that its
+The rows for Tiers A and B and for all tiers include R17 (Tier B, 5 to 9 H100-hours),
+added on 2026-10-10. The minimal batch holds one judge, R1. Every other row includes every judge that its
 records list: 77.7 H100-hours over all tiers, 49.0 of them in Tier A. Most of the rise from the first
 version of this plan (2026-10-08) comes from what the records hold: the judges' harm
 call, seven conditions in the paired and NLM cells, five in the labelled cells, and the

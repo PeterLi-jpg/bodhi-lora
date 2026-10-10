@@ -21,10 +21,11 @@ methodology, so they are yours.
 Action:
 
 1. Read [docs/ANALYSIS_PLAN.md](docs/ANALYSIS_PLAN.md). Adopt it as it is, or change it
-   with a dated entry in its section 12. Its section 12 lists five open choices: E14 or
+   with a dated entry in its section 12. Its section 12 lists six open choices: E14 or
    E02 as the primary test of calibration, the E07 margins (O5), whether the new cells
-   replace the old ones in the main tables, the settings of the new cells, and the
-   choices in the cell records (step 4 below).
+   replace the old ones in the main tables, the settings of the new cells, the
+   choices in the cell records (step 4 below), and the judge classifier of the
+   2026-10-10 entry (its judge, rubric text, hand-label sample and agreement gate).
 2. Decide the open choices of [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) section 12
    that are still open: O1 (package name), O2 (raw outputs in git: the default stops
    tracking the 80 MB of the 2026-05 cell), O3 (a versioned archive of all raw outputs,
@@ -59,8 +60,10 @@ The uniform analysis of the existing outputs already ran on 2026-10-09 (`make ex
 of the plan's section 10, with no physician label read. For E02, add
 `needs-info-physician` to the `active_inquiry` entry of `discrimination` in
 `configs/report.yaml`, then run `make analyze` and `make numbers`. Also accept or change
-the post hoc `red-flag-at-stake` label and the escalation rule behind the over-flagging
-rates (KNOWN_ISSUES.md) before any text cites them. The paper cites none of the new
+the 2026-10-10 entry of ANALYSIS_PLAN.md section 12: the keyword rules it removed, the
+`emergency-theme` red-flag rates that stand in for the over-flagging check
+(KNOWN_ISSUES.md), and the judge classifier with its hand-label gate, before any text
+cites them. The paper cites none of the new
 values yet: it reports format leakage, token counts and the discrimination index for the
 2026-05 cell only, and no over-flagging rate. Whether it should cite the added cells'
 values is your call. Then RUN_PLAN.md may start.

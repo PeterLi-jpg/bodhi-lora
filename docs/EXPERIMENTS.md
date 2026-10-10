@@ -116,23 +116,29 @@ positives and 113 negatives. The graders never see these labels, the labels pred
 this study, and physicians made them, which answers the post-hoc objection to the two
 labellings of the discussion (D9). Statistic: P(ask given positive) minus P(ask given
 negative) per condition, odds ratio, prompt-clustered and seed-level intervals, and LoRA
-minus Base. Cells: the four HealthBench cells of 2026-05 and 2026-07. The two earlier
-labellings are reported next to it, marked post hoc. GPU: no. Status: built (the
+minus Base. Cells: the four HealthBench cells of 2026-05 and 2026-07. The theme-tag
+labelling of the discussion is reported next to it, marked post hoc; the other one matched
+keywords in rubric text and was removed on 2026-10-10 (withdrawals W24). GPU: no. Status: built (the
 discrimination index of `analyze`); the physician label stays out of
 `configs/report.yaml` until P1 is adopted.
 
-**E03. Grader-free question rate.** Answers MR-W3, HomM-W3, PROV-7. Share of responses
-with a second-person question, for every cell and condition. Exists for the 2026-05
-cell (`rebuttal/analyses/second_person_questions.py`, which gives 17.9% against 36.7%,
-not the posted 18.4% against 39.6%). GPU: no. Status: built (the `second_person_q` text
-rule of `configs/report.yaml`, for every cell).
+**E03. Judge question rate.** Answers MR-W3, HomM-W3, PROV-7. Share of responses that ask
+the person for information, by a judge from another family with a semantic rubric and no
+keyword list, for every cell and condition; it counts only if the judge passes a
+hand-label agreement gate (ANALYSIS_PLAN.md section 12, 2026-10-10). Until 2026-10-10 this
+was a grader-free keyword rule (a sentence with "?" and "you" or "your",
+`rebuttal/analyses/second_person_questions.py`); it was removed with its values, the
+posted 18.4% against 39.6% and the scripted 17.9% against 36.7% (withdrawals W23). GPU or
+API: yes (RUN_PLAN.md R17). Status: specified; the classify stage is not built.
 
 **E04. Format leakage for every cell.** Answers LxMF-4, D11. For each leak rule of the
 protocol used at inference: leak share per condition, the seven dimensions by leak
 status, red flag by length quartile in non-leaked responses. With `finish_length`
 recorded in new runs, truncation is measured directly instead of inferred. Exists for
-the 2026-05 cell (`rebuttal/analyses/interference_mechanism.py`). GPU: no. Status: built
-(for every leak rule of every protocol a cell uses).
+the 2026-05 cell (`rebuttal/analyses/interference_mechanism.py`, whose posted nine-marker
+rule counted two free words and is withdrawn, W25). GPU: no. Status: built (for every leak
+rule of every protocol a cell uses; a leak marker must be one of the protocol's own
+headers, `tests/test_no_lexicon.py`).
 
 **E05. What the aggregate drop is made of.** Answers HomM-final (consistent aggregate
 drops), withdrawals W7 and W8. Per cell: LoRA minus Base on each HealthBench rubric axis,
@@ -235,7 +241,8 @@ of open-ended prompts with the options removed: complete (all facts) and incompl
 (initial information only). The label comes from the construction, not from us or a
 grader. Calibration predicts that the adapter asks more on the incomplete prompt than on
 its complete twin, by more than the base does; mimicry predicts that asking rises on both.
-Statistic: within-pair difference in asking (evaluator and grader-free count), seed-level
+Statistic: within-pair difference in asking (evaluator, and the judge question rate of E03
+once it passes its gate), seed-level
 paired t, McNemar per condition, and the LoRA minus Base difference in differences.
 Draw 200 pairs per seed. Cells: eval-only cells with `adapters_from` the E13 and E16
 cells, for example `mediq-paired__mistral-small-24b__bodhi` (benchmark record
@@ -366,8 +373,10 @@ needed for it. The new split keeps all 453 out of training. Statistics: red-flag
 and rate on non-emergent prompts (lower is better), the same on emergent prompts, and
 their difference as a red-flag discrimination index, per condition. Cells: the
 `<HB-new>__labelled` eval-only cells. On the existing cells only the Hard subset is
-clean (8 non-emergent, 48 emergent or conditional); report it as descriptive. GPU: yes,
-inside E13. Status: built (labels and split), then to run.
+clean (8 non-emergent, 48 emergent or conditional); report it as descriptive. Beside the
+red-flag rate, the urgent-care rate of the judge classifier (ANALYSIS_PLAN.md section 12,
+2026-10-10) once it passes its gate; no keyword rule. GPU: yes, inside E13. Status: built
+(labels and split), then to run.
 
 The eval-only cell evaluates the E13 adapters on all 775 labelled prompts (453
 emergency-labelled, 322 clinician-user):
@@ -413,8 +422,8 @@ Two openly available sets instead:
   et al., 2004): 4,654 questions that clinicians asked at the point of care, in four XML
   sets, public on the NLM data server. It is truly external and clinician-posed, and the
   questions are short and often lack patient context, so they test context-seeking.
-  Its limits: no reference answers, so only the seven dimensions and the grader-free
-  counts apply; the questions date from 1991 to 2003. Check the terms page before use.
+  Its limits: no reference answers, so only the seven dimensions and the judge rates
+  of E03 apply; the questions date from 1991 to 2003. Check the terms page before use.
 Not chosen: MedQA (exam vignettes with complete information, E15 covers it), and
 Asclepius or PMC-Patients questions (extraction and summarization over notes, which the
 scope excludes, C1). Cells: `<HB-new>__labelled` for the primary;
@@ -525,7 +534,7 @@ changes already in `paper/main.tex`, with the commitment that records them.
 | MR-W1 | E13 (a general base), E24, E19; text: scope is patient-facing Q&A (D4, C6, done) |
 | MR-W2 | E16, E17, E13, E25; text: recipe plus decomposition, not a framework (C1, C2, C12, done) |
 | MR-W3 | E09, E10, E02, E03, E14, E06; E27 deferred; text: grader limits (C13, done) |
-| MR-W4 | E02, E14, E22, E03; the 2026-05 discrimination analysis exists (`results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/mimicry_split.json`) |
+| MR-W4 | E02, E14, E22, E03; the 2026-05 discrimination index with the theme-tag label exists (`results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/stats.json`); the posted rubric-keyword labelling is withdrawn (withdrawals W24) |
 | MR-W5 | text done (C5, C10, C20); E07 makes the criterion operational; E01 tables |
 | MR-W6 | E12; text: prior-work subsection and table (C15, done) |
 | MR-F | P1, E01, E13 (one set of settings), E12, E16; every corrected claim in the paper (C11, done) |
