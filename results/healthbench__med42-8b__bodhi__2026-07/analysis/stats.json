@@ -7322,103 +7322,103 @@
      "n_scored": 998
     },
     "lora": {
-     "chars_median_clean": 1503.5,
-     "chars_median_leaked": 1577.5,
+     "chars_median_clean": 1502.0,
+     "chars_median_leaked": 1957.0,
      "clean_red_flag_by_length_quartile": [
       {
-       "chars_median": 1004.0,
-       "n": 247,
-       "red_flag": 0.769231
+       "chars_median": 999.5,
+       "n": 248,
+       "red_flag": 0.770161
       },
       {
-       "chars_median": 1362.0,
+       "chars_median": 1360.0,
        "n": 247,
-       "red_flag": 1.01215
+       "red_flag": 1.0
       },
       {
-       "chars_median": 1648.0,
-       "n": 247,
-       "red_flag": 1.00405
+       "chars_median": 1643.0,
+       "n": 248,
+       "red_flag": 1.00403
       },
       {
-       "chars_median": 2243.0,
-       "n": 247,
-       "red_flag": 1.32794
+       "chars_median": 2240.0,
+       "n": 250,
+       "red_flag": 1.328
       }
      ],
      "dimensions_clean": {
-      "active_inquiry": 0.526316,
-      "context_seeking": 1.40283,
-      "hedging_quality": 1.63968,
-      "red_flag": 1.02834,
-      "scope_bounding": 1.78846,
-      "specificity": 1.30668,
-      "uncertainty_ack": 1.97166
+      "active_inquiry": 0.523666,
+      "context_seeking": 1.40081,
+      "hedging_quality": 1.64048,
+      "red_flag": 1.02618,
+      "scope_bounding": 1.78852,
+      "specificity": 1.30614,
+      "uncertainty_ack": 1.9718
      },
      "dimensions_leaked": {
-      "active_inquiry": 0.416667,
-      "context_seeking": 1.25,
-      "hedging_quality": 1.83333,
-      "red_flag": 0.833333,
-      "scope_bounding": 1.91667,
-      "specificity": 1.33333,
+      "active_inquiry": 0.714286,
+      "context_seeking": 1.42857,
+      "hedging_quality": 1.85714,
+      "red_flag": 1.0,
+      "scope_bounding": 2.0,
+      "specificity": 1.42857,
       "uncertainty_ack": 2.0
      },
-     "leaked_share": 0.012,
-     "n_clean": 988,
+     "leaked_share": 0.007,
+     "n_clean": 993,
      "n_completions": 1000,
-     "n_leaked": 12,
-     "n_leaked_completions": 12,
+     "n_leaked": 7,
+     "n_leaked_completions": 7,
      "n_scored": 1000
     },
     "lora+bodhi": {
-     "chars_median_clean": 1581.0,
-     "chars_median_leaked": 2824.5,
+     "chars_median_clean": 1587.0,
+     "chars_median_leaked": 2850.0,
      "clean_red_flag_by_length_quartile": [
       {
-       "chars_median": 1097.5,
-       "n": 124,
-       "red_flag": 0.701613
+       "chars_median": 1100.0,
+       "n": 127,
+       "red_flag": 0.685039
       },
       {
-       "chars_median": 1447.0,
-       "n": 124,
-       "red_flag": 1.08871
+       "chars_median": 1455.0,
+       "n": 127,
+       "red_flag": 1.11811
       },
       {
-       "chars_median": 1761.0,
-       "n": 125,
-       "red_flag": 1.208
+       "chars_median": 1777.0,
+       "n": 127,
+       "red_flag": 1.18898
       },
       {
        "chars_median": 2603.0,
-       "n": 125,
-       "red_flag": 1.352
+       "n": 127,
+       "red_flag": 1.34646
       }
      ],
      "dimensions_clean": {
-      "active_inquiry": 0.73494,
-      "context_seeking": 1.77108,
-      "hedging_quality": 1.61446,
-      "red_flag": 1.08835,
-      "scope_bounding": 1.75904,
-      "specificity": 1.26104,
-      "uncertainty_ack": 1.99197
+      "active_inquiry": 0.740157,
+      "context_seeking": 1.77559,
+      "hedging_quality": 1.61417,
+      "red_flag": 1.08465,
+      "scope_bounding": 1.76181,
+      "specificity": 1.25787,
+      "uncertainty_ack": 1.99213
      },
      "dimensions_leaked": {
-      "active_inquiry": 0.95,
-      "context_seeking": 1.984,
-      "hedging_quality": 1.97,
-      "red_flag": 1.094,
-      "scope_bounding": 1.982,
-      "specificity": 1.738,
+      "active_inquiry": 0.94898,
+      "context_seeking": 1.98367,
+      "hedging_quality": 1.97755,
+      "red_flag": 1.09796,
+      "scope_bounding": 1.98367,
+      "specificity": 1.75102,
       "uncertainty_ack": 2.0
      },
-     "leaked_share": 0.501002,
-     "n_clean": 498,
+     "leaked_share": 0.490982,
+     "n_clean": 508,
      "n_completions": 1000,
-     "n_leaked": 500,
-     "n_leaked_completions": 502,
+     "n_leaked": 490,
+     "n_leaked_completions": 492,
      "n_scored": 998
     }
    },

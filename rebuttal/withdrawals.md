@@ -660,7 +660,10 @@ rest (n = 434), which is above LoRA alone (1.67). The diagnosis of W9 holds unde
 withdrawn. Done in the abstract, section 4.3 and Appendix H of `paper/main.tex`. The length
 quartiles and medians were not printed in the paper and are withdrawn with the rule. Since
 2026-10-10, section 4.3 and Table H.6 give leakage in every cell under the seven-header
-rule.
+rule. Also since 2026-10-10, the rule counts a header only where a header starts (the start
+of a line, after optional markdown, a bullet or a section number), so a sentence such as
+"which is a key uncertainty" no longer counts. The MedGemma-27B values above do not change;
+`docs/ANALYSIS_PLAN.md` section 12 lists the cells whose counts do.
 
 ---
 

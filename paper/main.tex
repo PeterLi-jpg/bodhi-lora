@@ -482,8 +482,9 @@ aggregate score of LoRA+\bodhi{} differs from LoRA by \statHealthBenchLoRACoTvsL
 (\statHealthBenchLoRACoTvsLoRACI).
 
 A post hoc analysis points to format leakage. A response leaks when it repeats at least two of
-the seven Pass~1 section headers, such as ``RED FLAGS:''. The protocol defines these headers, so
-the rule reads no other words.
+the seven Pass~1 section headers, such as ``RED FLAGS:''. The protocol defines these headers, and
+the rule counts one only where a header starts: at the start of a line, after optional markdown, a
+bullet or a section number. So the same words inside a sentence do not count.
 \statHBMedGemmaMayLeakBodhiAnalysisFormatLoRABodhi\% of LoRA+\bodhi{} responses leak, against \statHBMedGemmaMayLeakBodhiAnalysisFormatBase\% to
 \statHBMedGemmaMayLeakBodhiAnalysisFormatBaseBodhi\% in the other conditions (Figure~\ref{fig:interference} shows one case).
 Leaked responses score \statHBMedGemmaMayLeakBodhiAnalysisFormatLoRABodhiRedFlagLeaked{} on red-flag identification ($n =

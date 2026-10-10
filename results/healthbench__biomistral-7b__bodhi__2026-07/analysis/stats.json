@@ -7353,8 +7353,8 @@
      "n_scored": 1000
     },
     "lora+bodhi": {
-     "chars_median_clean": 4969.0,
-     "chars_median_leaked": 9335.0,
+     "chars_median_clean": 4976.0,
+     "chars_median_leaked": 9151.0,
      "clean_red_flag_by_length_quartile": [
       {
        "chars_median": 570.0,
@@ -7367,9 +7367,9 @@
        "red_flag": 0.890688
       },
       {
-       "chars_median": 7988.0,
-       "n": 247,
-       "red_flag": 0.299595
+       "chars_median": 7992.5,
+       "n": 248,
+       "red_flag": 0.298387
       },
       {
        "chars_median": 10267.0,
@@ -7378,28 +7378,28 @@
       }
      ],
      "dimensions_clean": {
-      "active_inquiry": 0.10404,
-      "context_seeking": 0.276768,
-      "hedging_quality": 0.585859,
-      "red_flag": 0.452525,
-      "scope_bounding": 0.684848,
-      "specificity": 0.584848,
-      "uncertainty_ack": 1.16364
+      "active_inquiry": 0.103935,
+      "context_seeking": 0.276488,
+      "hedging_quality": 0.585267,
+      "red_flag": 0.452069,
+      "scope_bounding": 0.684157,
+      "specificity": 0.584258,
+      "uncertainty_ack": 1.16246
      },
      "dimensions_leaked": {
-      "active_inquiry": 0.222222,
-      "context_seeking": 0.888889,
-      "hedging_quality": 0.777778,
-      "red_flag": 0.444444,
-      "scope_bounding": 0.777778,
-      "specificity": 0.333333,
-      "uncertainty_ack": 1.66667
+      "active_inquiry": 0.25,
+      "context_seeking": 1.0,
+      "hedging_quality": 0.875,
+      "red_flag": 0.5,
+      "scope_bounding": 0.875,
+      "specificity": 0.375,
+      "uncertainty_ack": 1.875
      },
-     "leaked_share": 0.00900901,
-     "n_clean": 990,
+     "leaked_share": 0.00800801,
+     "n_clean": 991,
      "n_completions": 1000,
-     "n_leaked": 9,
-     "n_leaked_completions": 9,
+     "n_leaked": 8,
+     "n_leaked_completions": 8,
      "n_scored": 999
     }
    },

@@ -614,3 +614,32 @@ physician label was read, no decision rule of sections 3 to 9 changed, and no ou
 planned cell existed: no folder of a planned cell is under `results/`. At adoption
 (BLOCKED.md item 1), the first author may keep these values in the paper, change their
 wording or take them out.
+
+**2026-10-10, leak rule at a header position. A change to how a secondary measure is
+read, made before any new run; this is not the adoption.** The `analysis-format` leak
+rules (section 7.1, secondary; E04) searched each marker anywhere in a reply, in any
+case, so a sentence such as "which is a key uncertainty" counted as the header KEY
+UNCERTAINTIES. CONVENTIONS.md rule 15 allows only a parser of the protocol's own format,
+so the rule now counts a marker only where a header starts: at the start of a line, after
+optional markdown, a bullet or a section number (`LeakRule.patterns` in
+`bodhi_lora/registry/schema.py`; `tests/test_no_lexicon.py` checks it). The markers and
+thresholds did not change. No output of any planned cell existed: no folder of a planned
+cell is under `results/`. The outputs of the existing cells existed, and `make extract`
+and `make analyze` ran again on them. The values stay post hoc and exploratory
+(section 10). Graded replies that leak, before and after:
+
+| Cell | Condition | Before | After |
+|---|---|---|---|
+| `healthbench__medgemma-27b-text__bodhi__2026-05` | every condition | 0, 8, 8, 494 | unchanged (494 of 928, 53.2%) |
+| `healthbench__mistral-small-24b__bodhi__2026-07` | `lora+bodhi` | 409 of 994 (41.1%) | 408 (41.0%) |
+| `healthbench__med42-8b__bodhi__2026-07` | `lora` | 12 of 1,000 (1.2%) | 7 (0.7%) |
+| `healthbench__med42-8b__bodhi__2026-07` | `lora+bodhi` | 500 of 998 (50.1%) | 490 (49.1%) |
+| `healthbench__biomistral-7b__bodhi__2026-07` | `lora+bodhi` | 9 of 999 (0.9%) | 8 (0.8%) |
+| `chatdoctor__med42-8b__bodhi__2026-07` | `base+bodhi` | 4 of 1,000 (0.4%) | 3 (0.3%) |
+| `chatdoctor__med42-8b__bodhi__2026-07` | `lora+bodhi` | 5 of 1,000 (0.5%) | 4 (0.4%) |
+| `medqa-open-preamble__mistral-small-24b__bodhi__2026-07` | `lora+bodhi` | 387 of 798 (48.5%) | 385 (48.2%) |
+
+Every other condition of these cells, and every condition of the other cells, keeps its
+count. Where a count changed and at least 385 replies leak, the red-flag grades of the
+leaked and the clean replies move by at most 0.004. Where 12 or fewer replies leak, the
+grade of the leaked replies rests on those few and moves by up to 0.17.

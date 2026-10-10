@@ -140,13 +140,14 @@ def leak_column(protocol_id: str, rule_id: str) -> str:
 def leak_rules(reg: Registry, cell: CellConfig) -> dict[str, tuple[list[re.Pattern], int]]:
     """Column -> (markers, threshold) for every leak rule of every protocol the cell uses.
 
-    A marker is one of the protocol's own section headers or field names (LeakRule), so the
-    count parses the protocol's fixed output format; it reads no meaning from the reply."""
+    A marker is one of the protocol's own section headers or field names, counted only
+    where a header starts (LeakRule.patterns), so the count parses the protocol's fixed
+    output format; it reads no meaning from the reply."""
     protocols = {cell.protocol} | {p for c in cell.eval.conditions for p in [parse_condition(c)[1]] if p}
     out = {}
     for pid in sorted(protocols):
         for rid, rule in sorted(reg.protocols[pid].leak_rules.items()):
-            out[leak_column(pid, rid)] = ([re.compile(m, re.IGNORECASE) for m in rule.markers], rule.threshold)
+            out[leak_column(pid, rid)] = (rule.patterns(), rule.threshold)
     return out
 
 

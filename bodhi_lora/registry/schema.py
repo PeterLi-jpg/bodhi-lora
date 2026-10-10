@@ -350,14 +350,21 @@ class BenchmarkConfig(_Record):
 # Protocols
 # ---------------------------------------------------------------------------
 
+# Where a header of a protocol's format starts: the start of a line, then any run of
+# markdown heading marks, emphasis, a quote mark, a bullet or a section number ("4." or
+# "4)"), each followed by optional spaces. "**4. KEY UNCERTAINTIES:**" and
+# "- RED FLAGS:" start here; the same words inside a sentence do not.
+LEAK_HEADER_START = r"^[ \t]*(?:(?:#{1,6}|[*_]{1,3}|[-+>\u2022]|\d{1,2}[.)])[ \t]*)*"
+
+
 class LeakRule(_Record):
     """When a response counts as leaking the protocol's internal format.
 
     A parser of the protocol's own fixed format, not a word list: each marker is one of
     the section headers or field names the protocol asks its internal call to write
-    (Protocol.format_fields), matched whole up to a plural ending. A free word or phrase
-    is not a marker (docs/CONVENTIONS.md rule 15); tests/test_no_lexicon.py checks every
-    record."""
+    (Protocol.format_fields), matched whole up to a plural ending, and only where a
+    header starts (LEAK_HEADER_START). A free word or phrase is not a marker
+    (docs/CONVENTIONS.md rule 15); tests/test_no_lexicon.py checks every record."""
 
     description: str
     # Case-insensitive regular expressions, one per header or field name.
@@ -367,9 +374,15 @@ class LeakRule(_Record):
 
     @model_validator(mode="after")
     def _compiles(self) -> "LeakRule":
-        for m in self.markers:
-            re.compile(m)
+        self.patterns()
         return self
+
+    def patterns(self) -> list[re.Pattern]:
+        """Each marker, anchored where a header starts. Until 2026-10-10 the analysis
+        searched a marker anywhere, so prose such as "which is a key uncertainty"
+        counted as a header (docs/ANALYSIS_PLAN.md section 12, 2026-10-10)."""
+        return [re.compile(LEAK_HEADER_START + "(?:" + m + ")", re.IGNORECASE | re.MULTILINE)
+                for m in self.markers]
 
 
 class ProtocolConfig(_Record):

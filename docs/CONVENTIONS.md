@@ -236,8 +236,10 @@ before it runs (ANALYSIS_PLAN.md section 12, 2026-10-10).
 - Enforced by: `tests/test_no_lexicon.py`. It fails when a config has a key that holds a
   text pattern or word list (only the `markers` of a protocol's leak rules may), when a
   leak marker is not one of the protocol's own headers or field names
-  (`Protocol.format_fields`, matched whole up to a plural ending), and when the analysis
-  or label code compiles a regular expression from a literal. The report config and the
+  (`Protocol.format_fields`, matched whole up to a plural ending), when a marker counts
+  outside a header position (the start of a line, after optional markdown, a bullet or a
+  section number; `LeakRule.patterns`), and when the analysis or label code compiles a
+  regular expression from a literal. The report config and the
   label rule have no field for a pattern, and their schemas forbid unknown keys. The
   scripts in `rebuttal/analyses/` that made the withdrawn numbers stay as a record,
   marked superseded, and nothing that feeds the paper reads their outputs. Review step: a

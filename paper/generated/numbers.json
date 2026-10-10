@@ -63,13 +63,13 @@
       "results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/stats.json": "a5b2f5bd892b6f0c6069c737a4bd831c1fa11e5e2e463e291844199a61f75763",
       "data/rebuttal_cells/posted_values.json": "860fad299d02fd1200efaaf6bbe66deec7800c28df40a3895b2ab97929dcbfc0",
       "data/rebuttal_cells/generated_values.json": "e0572f374779634e4d6eb6596fd808bc0cd74ef597c7ff3ebdd7778580a69ba1",
-      "results/healthbench__mistral-small-24b__bodhi__2026-07/analysis/stats.json": "b2b64e7f53ba39e43aa87ffa5549035d7d8a2d088147e4a920e96cc42322d85e",
-      "results/healthbench__med42-8b__bodhi__2026-07/analysis/stats.json": "67a717a0a4ab5b8b8b40dc7300eab01c6762618ecdcdcc474273a6d0f524f7c8",
-      "results/healthbench__biomistral-7b__bodhi__2026-07/analysis/stats.json": "c914a661f2bb6c9bda556920302a000452bb9714d7710455fd56734ec7036a82",
+      "results/healthbench__mistral-small-24b__bodhi__2026-07/analysis/stats.json": "eaec393e860d5e84f207ec6cf6f7b9b259eea144116f93456644f584b59cfb58",
+      "results/healthbench__med42-8b__bodhi__2026-07/analysis/stats.json": "0a2d21957dd1ae47f9c27eb649a4abc8399741f40b00163fab6f5ae74952fa89",
+      "results/healthbench__biomistral-7b__bodhi__2026-07/analysis/stats.json": "a7cfec69a16715cf34ba949519878a7e102ff88178192daf8169f3bc099f390c",
       "results/chatdoctor__mistral-small-24b__bodhi__2026-07/analysis/stats.json": "2ea3290ddd45bb7e6256ffbec93a496e0f8c8be232dff67b06db644e8ba34168",
-      "results/chatdoctor__med42-8b__bodhi__2026-07/analysis/stats.json": "cd224fe0788692b53a473afe7c7e28546375206e942ab168959e1b5bedc79c69",
+      "results/chatdoctor__med42-8b__bodhi__2026-07/analysis/stats.json": "fe3068244f4aa7c099f16a4f4015263760e8a988e55d9bbffe97c07eaa030631",
       "results/medquad__mistral-small-24b__bodhi__2026-07/analysis/stats.json": "bfd6155ad26599ab2f2cf4e5f8cf919793b9cf3e018cb154afa5ec2a3b94fc0d",
-      "results/medqa-open-preamble__mistral-small-24b__bodhi__2026-07/analysis/stats.json": "87031c85f726407da66a96686c9caa657c1f9716d78b57a2ca2c39ae3b40ca6d",
+      "results/medqa-open-preamble__mistral-small-24b__bodhi__2026-07/analysis/stats.json": "abb65b6a88376c671f8e07c2e70e995f0dc1e125985669a3349954548ddfdd19",
       "results/healthbench__medgemma-27b-text__bodhi__2026-04/analysis/stats.json": "dcb1739fdbf6154a933b4942d5e2dd28b2be1291194197b3b1df4112002ed606",
       "results/medqa-open-preamble__biomistral-7b__bodhi__2026-07/analysis/stats.json": "ea3851b5c85892f96c8b902b6bc249f9e3b064bf96df781e659c91fae51ce06b",
       "results/cross_cell/stats.json": "ea5ac36a0f5b09ece47806b8807b56559c4d92444b985345390131cd1487e896"
@@ -17185,7 +17185,7 @@
         "token": "HBMistralJul",
         "label": "HealthBench-Hard, Mistral-Small-24B",
         "stats": "results/healthbench__mistral-small-24b__bodhi__2026-07/analysis/stats.json",
-        "sha256": "b2b64e7f53ba39e43aa87ffa5549035d7d8a2d088147e4a920e96cc42322d85e",
+        "sha256": "eaec393e860d5e84f207ec6cf6f7b9b259eea144116f93456644f584b59cfb58",
         "in_cross_table": true,
         "set_aside": null,
         "family_waiver": null
@@ -17194,7 +17194,7 @@
         "token": "HBMedFortyTwoJul",
         "label": "HealthBench-Hard, Med42-8B",
         "stats": "results/healthbench__med42-8b__bodhi__2026-07/analysis/stats.json",
-        "sha256": "67a717a0a4ab5b8b8b40dc7300eab01c6762618ecdcdcc474273a6d0f524f7c8",
+        "sha256": "0a2d21957dd1ae47f9c27eb649a4abc8399741f40b00163fab6f5ae74952fa89",
         "in_cross_table": true,
         "set_aside": null,
         "family_waiver": "Run before the family rule existed; the base shares the evaluator's Llama-3 family (D6)."
@@ -17203,7 +17203,7 @@
         "token": "HBBioMistralJul",
         "label": "HealthBench-Hard, BioMistral-7B",
         "stats": "results/healthbench__biomistral-7b__bodhi__2026-07/analysis/stats.json",
-        "sha256": "c914a661f2bb6c9bda556920302a000452bb9714d7710455fd56734ec7036a82",
+        "sha256": "a7cfec69a16715cf34ba949519878a7e102ff88178192daf8169f3bc099f390c",
         "in_cross_table": true,
         "set_aside": null,
         "family_waiver": null
@@ -17221,7 +17221,7 @@
         "token": "CDMedFortyTwoJul",
         "label": "ChatDoctor, Med42-8B",
         "stats": "results/chatdoctor__med42-8b__bodhi__2026-07/analysis/stats.json",
-        "sha256": "cd224fe0788692b53a473afe7c7e28546375206e942ab168959e1b5bedc79c69",
+        "sha256": "fe3068244f4aa7c099f16a4f4015263760e8a988e55d9bbffe97c07eaa030631",
         "in_cross_table": true,
         "set_aside": null,
         "family_waiver": "Run before the family rule existed; the base shares the evaluator's Llama-3 family (D6)."
@@ -17239,7 +17239,7 @@
         "token": "MedQAPreMistralJul",
         "label": "MedQA with the asking preamble, Mistral-Small-24B",
         "stats": "results/medqa-open-preamble__mistral-small-24b__bodhi__2026-07/analysis/stats.json",
-        "sha256": "87031c85f726407da66a96686c9caa657c1f9716d78b57a2ca2c39ae3b40ca6d",
+        "sha256": "abb65b6a88376c671f8e07c2e70e995f0dc1e125985669a3349954548ddfdd19",
         "in_cross_table": true,
         "set_aside": "The prompt preamble told the model to ask, so the cell measured instruction-following (withdrawals W12).",
         "family_waiver": null

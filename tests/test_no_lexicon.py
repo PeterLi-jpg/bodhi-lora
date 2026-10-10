@@ -9,13 +9,15 @@ gate. The one kind of text pattern a config may hold is a parser of a format the
 itself defines: a leak rule whose markers are the protocol's own section headers or field
 names.
 
-Three checks:
+Four checks:
   1. No config file has a key that holds text patterns or word lists, except the markers
      of a protocol record's leak rules.
   2. Every leak marker is one of the protocol's own format fields (Protocol.format_fields),
      matched whole up to a plural ending of at most three letters, so it is a header and
      not a word inside one, and never a free word.
-  3. The analysis and label code compiles no regular expression from a string literal; the
+  3. The analysis counts a marker only where a header starts (LeakRule.patterns): the same
+     words inside a sentence are prose, not the format.
+  4. The analysis and label code compiles no regular expression from a string literal; the
      only patterns it compiles are the leak markers of the protocol records.
 """
 import ast
@@ -98,6 +100,36 @@ def test_leak_markers_are_the_protocols_own_format_fields(reg):
             for marker in rule.markers:
                 if not any(re.fullmatch(marker + HEADER_TAIL, f, re.IGNORECASE) for f in fields):
                     problems.append(f"{pid}.{rid}: {marker!r} is none of the protocol's fields {fields}")
+    assert not problems, "\n".join(problems)
+
+
+def test_leak_markers_count_only_where_a_header_starts(reg):
+    pytest.importorskip("bodhi")
+    from bodhi_lora.analysis.extract import leak_rules
+    from bodhi_lora.protocols import build
+
+    model = next(iter(reg.models.values()))
+    problems = []
+    for pid, proto in sorted(reg.protocols.items()):
+        fields = build(proto, model).format_fields()
+        for rid, rule in sorted(proto.leak_rules.items()):
+            pats = rule.patterns()
+            for f in fields:
+                at_header = [f"{f} x", f"4. {f} x", f"**{f}** x", f"  - {f} x", f"### 2) {f} x",
+                             f"Intro.\n{f} x"]
+                in_prose = [f"It says {f} here.", f"Intro. {f} x", f"(see {f})"]
+                hits = [m for m, p in zip(rule.markers, pats) if all(p.search(t) for t in at_header)]
+                if not hits and any(re.fullmatch(m + HEADER_TAIL, f, re.IGNORECASE) for m in rule.markers):
+                    problems.append(f"{pid}.{rid}: no marker counts the header {f!r} at a header start")
+                for t in in_prose:
+                    if any(p.search(t) for p in pats):
+                        problems.append(f"{pid}.{rid}: a marker counts {t!r}, which is prose")
+    # The analysis compiles exactly these patterns, and nothing looser.
+    cell = reg.cells["healthbench__medgemma-27b-text__bodhi__2026-05"]
+    for col, (pats, _) in leak_rules(reg, cell).items():
+        rule = reg.protocols["bodhi"].leak_rules[col.split("__", 1)[1]]
+        if [p.pattern for p in pats] != [p.pattern for p in rule.patterns()]:
+            problems.append(f"{col}: extract compiles other patterns than LeakRule.patterns")
     assert not problems, "\n".join(problems)
 
 
