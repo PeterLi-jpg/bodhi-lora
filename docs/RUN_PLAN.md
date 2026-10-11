@@ -5,7 +5,9 @@
 to 6 were updated to cost the cell records as they stand. On 2026-10-10 R17 was added,
 the judge classifier that replaces the withdrawn keyword rules, R11 lost the MedQuAD
 probe, which cannot run, and the MedQuAD split of R15 began to leave out repeated
-questions, so that its dry run passes the leakage gate.
+questions, so that its dry run passes the leakage gate. On 2026-10-11 the first author
+adopted the analysis plan, R17 got its stage (`classify`), dry runs stopped downloading
+anything, and section 4.1 records the dry run of every run.
 
 This is the ordered list of GPU work from [EXPERIMENTS.md](EXPERIMENTS.md), with the
 command, the cells, the seeds, an H100-hour estimate and its basis for each run, and the
@@ -16,7 +18,7 @@ section 5.
 ## 1. Before any run
 
 1. The first author adopts [ANALYSIS_PLAN.md](ANALYSIS_PLAN.md), or changes it in its
-   section 12 (convention 3). No run starts before that.
+   section 12 (convention 3). Done on 2026-10-11 (section 12, the adoption entry).
 2. The cell record exists in `configs/` with `report.status: planned`, and
    `python -m bodhi_lora list cells` loads it. The experiments step writes the records.
 3. Every protocol and loader that the record names exists and passes its stub test. The
@@ -25,9 +27,11 @@ section 5.
    since 2026-10-09: `mediq-abstain`, `red-flags-first`, the `paired_context_jsonl` and
    `xml_records` loaders, and the Gemma-3-27B and Phi-4 records. The MediQ and NLM files
    are not pinned yet: `python -m bodhi_lora fetch <benchmark>` downloads them and prints
-   the sha256 to put in the benchmark record.
+   the sha256 to put in the benchmark record. The downloads need the first author's
+   go-ahead (BLOCKED.md item 2).
 4. `python -m bodhi_lora run <cell id> --dry-run` passes on the CPU. It prints every GPU
-   command and runs the rest with the stub engine.
+   command and runs the rest with the stub engine. It never downloads: a benchmark that is
+   not in the data root stops it, after the GPU commands, with the fetch command.
 5. The GPU machine has `.venv` and `.venv-infer` (`bash setup.sh`), and `HF_TOKEN` has
    access to the gated models the cell uses: MedGemma (base and judge), Llama-3.1, Gemma 2
    (licence accepted) for R1, and Gemma 3 for R14.
@@ -52,6 +56,8 @@ python -m bodhi_lora run <cell id> --stages bench --seeds 42 --gpus 0
 python -m bodhi_lora run <recorded cell id> --stages grade --gpus 0
 # One judge of the record only, for example R1 on a Med42-8B cell:
 python -m bodhi_lora run healthbench__med42-8b__bodhi__2026-07 --stages grade --judges gemma-2-27b --gpus 0
+# The judge classifier of R17 (only when --stages names it): adds classify files only.
+python -m bodhi_lora run <cell id> --stages classify --judges <judge> --gpus 0
 ```
 
 `--stages grade` on a recorded cell runs every judge its record lists. The two Med42-8B
@@ -172,15 +178,20 @@ seeds and probe. The judges that a record lists have their own column, because
 | R14 (C) | E24 | `healthbench__gemma-3-27b__bodhi` with its probe | train | none left | 11.1 to 18.0 | 2.6 (`phi-4`) | four conditions, A5, A8 | FzpA-W2, MR-W1 |
 | R15 (C) | E25 | `chatdoctor__mistral-small-24b__bodhi`, `medquad__mistral-small-24b__bodhi`, seven conditions each. MedQuAD repeats questions under several ids; since 2026-10-10 the split leaves a train row out when its text equals a held-out row's (20 rows), and the dry run passes the leakage gate. The trace count stays at `max_prompts`, so the cost does not change | train | none left | 13.7 to 15.9, and 9.9 to 11.8 | 4.6 and 3.8 (`medgemma-27b-text`) | the 2026-07 cells of 3.1 and three baseline conditions, A2, A3 | HomM-Q2, MR-W2, FzpA-Q3 |
 | R16 (C) | E26 | `healthbench__mistral-small-24b__bodhi-no-calibration`, `healthbench__mistral-small-24b__bodhi-no-questions`, `healthbench__mistral-small-24b__bodhi-no-abstention` | train | none left | 10.0 to 12.5 each | none | four conditions | none asked |
-| R17 (B) | E03, H1 and H7 secondary (ANALYSIS_PLAN.md section 12, 2026-10-10) | the judge classifier on the eight cells of `cross_cells` in `configs/report.yaml`; on a planned cell, after its grade stage | classify, on recorded cells | the classify stage (not built); the 300 hand labels (no GPU) | none | 5 to 9 | one call per reply at each cell's judge speed: the dimension times of 3.1, A4 | MR-W3, HomM-W3, PROV-7, C30; withdrawals W23 |
+| R17 (B) | E03, H1 and H7 secondary (ANALYSIS_PLAN.md section 12, 2026-10-10) | the judge classifier on the eight cells of `cross_cells` in `configs/report.yaml`; on a planned cell, after its grade stage | classify, on recorded cells | the 300 hand labels (two authors, no GPU) | none | 5 to 9 | one call per reply at each cell's judge speed: the dimension times of 3.1, A4 | MR-W3, HomM-W3, PROV-7, C30; withdrawals W23 |
 
 **R17, the judge classifier.** It replaces the keyword rules that the 2026-10-10 entry of
 ANALYSIS_PLAN.md withdrew: a pinned judge answers, for each reply, whether it asks the
 person for information and whether it sends them to urgent care, with a semantic rubric
 and no keyword list. Its rates count only if it passes the hand-label gate of that entry
 (Cohen's kappa at least 0.80 against two authors' settled labels, lower bound at least
-0.70). The hand labels need no GPU and come first. The runner has no classify stage yet;
-building it is code work, and its stub test must pass on the CPU (section 1, step 3).
+0.70). The hand labels need no GPU and come first. The stage exists since 2026-10-11
+(`bodhi_lora/pipeline/classify.py`, the template and the gate in
+`bodhi_lora/grading/classify.py`; `tests/test_grading_classify.py` and the stub run in
+`tests/test_end_to_end.py`). Each of the eight cells already lists a judge, so the command
+per cell is `python -m bodhi_lora run <cell id> --stages classify --judges <its judge>
+--gpus 0`; the Med42-8B cells list two judges, and `--judges` picks one. The runner runs
+the stage only when `--stages` names it, so no other run here includes it.
 Each recorded cell has about 4,000 replies. At the 8B evaluator's dimension times of 3.1
 and a judge three times slower (A4), a cell costs 0.6 to 1.1 H100-hours with its vLLM
 starts; the eight cells cost about 5 to 9. An API judge is the other route; its price
@@ -203,6 +214,37 @@ runs, because the runner freezes it then. Each change below is the first author'
 The runner also evaluates `base` again for every seed, although with fixed eval ids and
 greedy decoding its output is the same for each seed. A runner option to evaluate such a
 condition once would save nearly half of the time of a labelled cell with three conditions.
+
+### 4.1 Dry runs on 2026-10-11
+
+Each run's dry run, at seed 42, on this machine, into a scratch results root
+(`python -m bodhi_lora run <cell id> --dry-run --seeds 42 --results-root <scratch>`; on a
+recorded cell with `--stages grade`, `classify` or `probe` and its `--judges`). A dry run
+prints every GPU command, then runs the CPU steps with the stub engine and does not train.
+
+| Run | Dry run |
+|---|---|
+| R1 | passes (both Med42-8B cells, `--stages grade --judges gemma-2-27b`; the stub judge grades the stored replies) |
+| R2 | passes |
+| R3 | stops after the GPU commands: the MediQ file is not local (fetch needs the go-ahead, BLOCKED.md item 2) |
+| R4 | passes |
+| R5 | the training cell passes; its paired cell stops at the MediQ fetch, as R3 |
+| R6 | passes (checked on the 2026-05 cell with `phi-4` and the MedQuAD cell with `medgemma-27b-text`) |
+| R7 | the training cell and its labelled cell pass; its paired cell stops at the MediQ fetch, as R3 |
+| R8 | stops after the GPU commands: the MedQA rows are built from Hugging Face, which is a download (`python -m bodhi_lora fetch medqa-open`, go-ahead needed) |
+| R9 | both cells pass |
+| R10 | both cells stop after the GPU commands: the NLM files are not local (fetch needs the go-ahead) |
+| R11 | passes (checked on the Mistral-Small-24B HealthBench cell, `--stages probe`) |
+| R12 | both cells pass |
+| R13 | all three cells pass |
+| R14 | passes |
+| R15 | both cells pass |
+| R16 | all three cells pass |
+| R17 | passes (checked on two cells, `--stages classify --judges medgemma-27b-text`) |
+
+Until 2026-10-11 a dry run downloaded a missing benchmark, so the MedQA dry run passed by
+downloading it; now a dry run never downloads. After the fetches, rerun the five dry runs
+that stop.
 
 ## 5. Minimal first batch
 
@@ -264,8 +306,10 @@ price list. The shared host has no meter, but each run holds a card for its hour
 3. Run the analysis: `python -m bodhi_lora analyze <cell id> --extract`, then
    `make analyze` (ARCHITECTURE.md section 5). Then `make numbers` writes the cell's
    table (`tab_cell_<token>`) and macros. Add the cell to `cross_cells` in
-   `configs/report.yaml` to put it in Table 1, the other cross-cell tables and the
-   rule-based groups; no code changes.
+   `configs/report.yaml`, and to a group that each cross-cell table prints in its
+   `blocks` (or to that table's `leave_out`, to keep it out on purpose): the tables list
+   groups, and the report stops while a cross cell is in none of a table's blocks. The
+   rule-based groups take the cell in by themselves. No code changes.
 4. Commit the tracked files: the manifests, `cell.yaml`, the id lists, the response
    tables and the cell's analysis folder. Git ignores the raw outputs by kind.
 5. Read the results only by the rules of ANALYSIS_PLAN.md, and record any change of plan

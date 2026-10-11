@@ -725,3 +725,41 @@ folder of a planned cell is under `results/`. The label analyses of H3, H7 and H
 run as sections 5, 7 and 9 say. To run E02 on the existing outputs, add
 `needs-info-physician` to the `active_inquiry` entry of `discrimination` in
 `configs/report.yaml`, then run `make analyze` and `make numbers`.
+
+**2026-10-11, after the adoption. E02 ran on the existing outputs; E05 and E07 got their
+tables; the judge classifier got its stage. No method changed.** This records what ran
+after the adoption entry above, by the plan as adopted. No output of any planned cell
+existed: no folder of a planned cell is under `results/`.
+
+1. **E02 (section 5.2).** `needs-info-physician` joined the `active_inquiry` entry of
+   `discrimination` in `configs/report.yaml`, the step the adoption entry names, and
+   `make extract`, `make analyze` and `make numbers` ran. This is the first time any code
+   joined a physician label to an output. Family F6 (section 2.7) is the group
+   `e02-existing` of `configs/report.yaml`, with Holm over its three cells (`families`).
+   LoRA - Base on the index, seed-level paired t: MedGemma-27B (2026-05) +3.4 points,
+   95% interval [-16.5, +23.3], Holm p 0.66; Mistral-Small-24B (2026-07) -4.2
+   [-12.6, +4.1], Holm p 0.46; BioMistral-7B (2026-07) -13.9 [-16.4, -11.4], Holm p
+   0.0003. By section 5.2 the result is "not detected" in all three, and in BioMistral-7B
+   the index falls. Med42-8B on HealthBench, reported outside the family: +4.0
+   [-9.1, +17.1]. The 2026-05 draws hold 132 positive and 80 negative evaluated prompts;
+   each 2026-07 cell evaluates the same 46 and 19 in every seed, so its seed-level test
+   covers training only. Section 5.3 applies: 5.1 has not run, so the paper keeps its
+   sentence that it has no evidence of selective asking and reports 5.2 beside it
+   (section 4.4 and Table C.1 of `paper/main.tex`).
+2. **E05 (section 4, secondary).** The Holm correction over the rubric axes within a
+   contrast, which section 4 names, was not computed before; `stats.json` now has it
+   (`p_holm_axes`), and Table H.2 of the paper gives LoRA - Base on each axis for every
+   cell. Exploratory, as section 4 says.
+3. **E07 (adoption choice 2: no margins).** Table C.1 gives the parts of the criterion
+   that the outputs measure, each as an interval: the harm proxy (E06), red-flag
+   identification and the E02 index. The over-flagging part (H7) needs R4.
+4. **The judge classifier of the 2026-10-10 no-lexicon entry, item 6.** The `classify`
+   stage and the gate are built (`bodhi_lora/pipeline/classify.py`,
+   `bodhi_lora/grading/classify.py`); the question text is the entry's, word for word, and a
+   test checks it against this file. No hand label and no judge answer exist.
+5. **A record, not a method.** The response tables gained a `response_sha256` column (16
+   hex digits of each reply's sha256), so the grader comparison of `configs/report.yaml`
+   now counts the shared prompts with the same reply. The 2026-04 pilot and the 2026-05
+   cell share 43 prompts in seed 42; their Base replies are the same in 6 and their LoRA
+   replies in none, so that comparison is not a second grader on the same replies. The
+   paper says so (Appendix H); R6 is the second grader on the same replies.

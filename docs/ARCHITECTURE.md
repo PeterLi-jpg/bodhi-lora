@@ -84,8 +84,16 @@ Each record checks its own fields (examples: a fixed tau needs a value; a QLoRA 
 served on a full-precision base needs a stated reason, audit REPRO-12; a cell id must
 start with its benchmark, model and protocol). `load_registry()` reads every file,
 checks that each file name is its id, and then `validate_registry()` checks the
-references between files and the grader-family rule. All problems are reported in one
-error.
+references between files and the grader-family rule. Since 2026-10-11 it also checks
+each record against the code that reads it: a benchmark's loader key, source kind,
+`loader_params`, the fields and prompt template its loader reads, its id prefix and its
+rubric kind (`record_problems()` in `bodhi_lora/data/loaders.py`), and a protocol's
+`impl` key and kind (`PROTOCOL_IMPLS`, which `bodhi_lora/protocols/__init__.py` checks
+against its classes at import). All problems are reported in one error. When rows load,
+a label whose rule gives no positive or no negative row in the whole benchmark stops the
+load (`broken_labels()`): such a rule reads a field the loader never sets, and every
+analysis of it would quietly have nothing. An `hf_qa` benchmark can tag rows from a
+structured column (`loader_params.tag_fields`), so a label can read it without code.
 
 The grader-family rule (`family_problems()`, convention 5 in
 [CONVENTIONS.md](CONVENTIONS.md), decision D6):
@@ -477,11 +485,11 @@ condition names (`base_no_wrapper`, `lora_bodhi`) map to the new ones by one rul
 ```
 python -m bodhi_lora list [models|benchmarks|protocols|cells] [--settings]
 python -m bodhi_lora fetch <benchmark> ...
-python -m bodhi_lora run <cell_id> [--stages probe,traces,filter,train,eval,grade,bench] [--seeds 42 7]
-                                   [--gpus 0,1] [--judges a,b | --judges none]
+python -m bodhi_lora run <cell_id> [--stages probe,traces,filter,train,eval,grade,classify,bench]
+                                   [--seeds 42 7] [--gpus 0,1] [--judges a,b | --judges none]
                                    [--stub-engine | --dry-run] [--results-root DIR] [--force]
-python -m bodhi_lora analyze (<cell_id> ... | --all) [--extract]
-python -m bodhi_lora report [--out-dir DIR]   # paper/generated/ (make numbers)
+python -m bodhi_lora analyze (<cell_id> ... | --all) [--extract] [--results-root DIR]
+python -m bodhi_lora report [--out-dir DIR] [--results-root DIR]   # paper/generated/ (make numbers)
 ```
 
 - `list --settings` prints the settings that differ between cells, so a reader sees at
@@ -491,12 +499,18 @@ python -m bodhi_lora report [--out-dir DIR]   # paper/generated/ (make numbers)
   CPU stub for generation and grading and runs everything else for real. `--dry-run`
   first prints the GPU command of every step, then runs like `--stub-engine` without
   training. Neither needs a token or a GPU, and both write under the scratch root of
-  `configs/project.yaml`, never under the results root. The smoke cell in
+  `configs/project.yaml`, never under the results root. A dry run never downloads: a
+  benchmark that is not in the data root stops it, after the GPU commands, with the fetch
+  command (since 2026-10-11). The smoke cell in
   `configs/cells/` has a tiny public base model, so `make smoke` trains it for real on
   the CPU.
 - `run --judges a,b` runs only those judges of the cell in the grade stage;
   `--judges none` runs the evaluator only. On a recorded cell, `--stages grade` adds
-  judge files and `--stages probe` adds the contamination probe; nothing else runs.
+  judge files, `--stages classify` adds the judge classifier's answers and `--stages
+  probe` adds the contamination probe; nothing else runs. The `classify` stage runs only
+  when `--stages` names it (docs/RUN_PLAN.md R17).
+- `analyze` and `report` take `--results-root`, so a stub or smoke run under the scratch
+  root can be analyzed and reported without editing `configs/project.yaml`.
 - `analyze --extract` reads the raw stage outputs (local, ignored by git) and writes the
   per-seed response tables. `analyze` without `--extract` reads only the tracked tables,
   so it runs in CI. `--all` takes the cells whose status `configs/report.yaml` lists,
@@ -589,12 +603,10 @@ manifests, `cell.yaml`, ids, `scores.json`, `adapter_config.json`, `trainer_stat
 eval and grade JSON, logs. Today the submitted cell's raw eval JSON (80 MB) is tracked
 and the added cells' (370 MB) is not. Under one rule both are ignored and every cell has
 a tracked response table; history keeps the submitted files at the migration base commit
-(open decision O2). `make figures` reads those raw files today: `ushape_difficulty`,
-`axis_breakdown` and `score_distribution` directly, and `epistemic_bar` and
-`epistemic_seeds` through the cell's
-`results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/cross_seed_aggregate.json`.
-So the default of O2 must first point the figure scripts at the response tables and
-`stats.json`. The probe and bench outputs match no rule yet, so git tracks them (open
+(open decision O2). `make figures` reads those raw files today for `ushape_difficulty`,
+`axis_breakdown` and `score_distribution`; `epistemic_bar`, `epistemic_seeds` and
+`effect_size_forest` read the cell's `analysis/stats.json` (since 2026-10-11). So the
+default of O2 must first point the three raw-file figures at the response tables. The probe and bench outputs match no rule yet, so git tracks them (open
 decision O8).
 
 **The response table.** `results/<cell_id>/seed_<n>/table.csv` has one row per
@@ -607,7 +619,7 @@ evaluator's grade counts, and the tokenizer used. Columns
 | Group | Columns |
 |---|---|
 | key | `cell`, `seed`, `condition`, `prompt_id`, `pair_id` (rows of one pair of a paired benchmark share it; empty otherwise) |
-| response | `chars`, `tokens` (the model's tokenizer), `tokens_engine` (the serving engine's count, one-call conditions), `calls`, `tokens_total`, `finish_length` |
+| response | `chars`, `tokens` (the model's tokenizer), `tokens_engine` (the serving engine's count, one-call conditions), `calls`, `tokens_total`, `finish_length`, `response_sha256` (the first 16 hex digits of the reply's sha256, so two runs compare without the text) |
 | rubric | `rubric_score`, `rubric_score_worst`, `rubric_items`, `rubric_parse_failures`, `neg_items_met`, `neg_points_lost`, `axis_<axis>` for each rubric axis tag |
 | evaluator | `epi_status` (`scored`, `parse_failure`, `missing`, `not_graded`); `uncertainty_ack`, `active_inquiry`, `context_seeking`, `red_flag`, `scope_bounding`, `specificity`, `hedging_quality`, `questions`, `red_flag_rate`, `scope_bounded_rate`, `specificity_rate`, `blanket_disclaimer`, `appropriate_hedging`, empty unless scored |
 | format | `leak_<protocol>__<rule>`: how many markers of the rule match where a header starts, for each leak rule of each protocol the cell uses; no column reads meaning from the reply text (CONVENTIONS.md rule 15) |
@@ -682,16 +694,22 @@ get their own Holm correction.
 | Format leakage for every leak rule of every protocol used: leak share, dimensions by leak status, red flag by length quartile in non-leaked responses | format, evaluator | D11, LxMF 4 |
 | Length and token cost: characters, tokens, calls, total tokens per condition; stage time from manifests | eval, manifests | C25 |
 | Askers gap: rubric score of asking minus non-asking responses within a condition | evaluator | withdrawals W7 |
-| Rubric axes per contrast | rubric | aggregate-cost decomposition |
+| Rubric axes per contrast, with Holm over the cell's axes within the contrast (`p_holm_axes`, E05) | rubric | aggregate-cost decomposition |
 | Harm proxy: share of responses that meet at least one negative rubric criterion, and points lost to them | rubric | C33 (proxy only) |
-| Judge question rate: share of responses that ask the person for information, by a judge with a semantic rubric, once it passes its hand-label gate (not built; ANALYSIS_PLAN.md section 12, 2026-10-10). The second-person keyword rule it replaces was removed | judge | PROV-7; withdrawals W23 |
-| Teacher: `base+<protocol>` behaviour and filter clearance, tau, kept and raw counts | eval, filter manifest | HomM follow-up Table 2 |
+| Judge question rate: share of responses that ask the person for information, by a judge with a semantic rubric, once it passes its hand-label gate (ANALYSIS_PLAN.md section 12, 2026-10-10). The `classify` stage and the gate are built (2026-10-11); the analysis does not read the classify files until the gate passes. The second-person keyword rule it replaces was removed | judge | PROV-7; withdrawals W23 |
+| Teacher: `base+<protocol>` behaviour and filter clearance, tau, kept and raw counts; for an eval-only cell (`adapters_from`), the filter and recipe of the source cell, which `from_cell` names | eval, filter manifest | HomM follow-up Table 2 |
 | Judges: per-criterion kappa against the evaluator, weighted kappa for the 0 to 2 dimensions, Pearson r of the rubric score, and the contrasts recomputed with each judge | judge files | D6, C26 |
 | Dimension correlations | evaluator | FzpA Q1 |
 
 **Cross-cell.** One row per cell for each contrast and statistic, the cross-cell Holm
 families, the teacher strength against the effect, and each cell's marks (family
 waiver, set aside, status). Labels with `timing: post_hoc` are printed as exploratory.
+A group contrast may write `{protocol}` for each cell's own protocol id (for example
+`lora - base+{protocol}`), so a cell on another protocol is measured against its own
+teacher. `families` of `configs/report.yaml` names a correction family of
+ANALYSIS_PLAN.md section 2.7: Holm over a group's cells of one p-value path (F6, the E02
+test, is the first). The grader comparison counts the shared prompts whose replies are
+the same in both cells (`response_sha256` of the response tables).
 
 **Report.** `report` turns `results/<cell_id>/analysis/stats.json` and
 `results/cross_cell/stats.json` into every macro and table the paper prints, and
@@ -701,10 +719,17 @@ follow one rule, `\stat<CellToken><Metric><Condition><Field>`, with the cell tok
 same table, `tab_cell_<token>`; the cells of `detail_cells` also get the detail tables
 the paper prints for the submitted cell. Each table of `cross_tables` in
 `configs/report.yaml` (Table 1, the filter table, the checks table) has a row per cell
-of `cross_cells` and the same columns for every cell; `cell_detail_tables` gives every
-cell's metrics by condition. The groups, the `counts`, `compares` and `ranges` of the
-config give the numbers the paper states across cells. So a new cell needs its record,
-its `stats.json` and a line in `cross_cells`, not code (`tests/test_end_to_end.py` runs a
+of `cross_cells` and the same columns for every cell; a path may write `{protocol}` and
+`{leak_rule}` (that protocol's one leak rule). A table that lists groups in `blocks` must
+place every cross cell in a block or name it in `leave_out`, or the report stops: a group
+that lists its cells does not take in a new cell. `cell_detail_tables` gives every
+cell's metrics by condition role (`base`, `base+{protocol}`, `lora`, `lora+{protocol}`),
+so cells on different protocols share columns, and each block row names its protocol
+when they differ. Every table row must fill its colspec (`tabular()` refuses one that
+does not), and the detail tables of a cell take their columns from the cell's own
+conditions. The groups, the `counts`, `compares` and `ranges` of the config give the
+numbers the paper states across cells. So a new cell needs its record, its `stats.json`,
+a line in `cross_cells` and a group that the tables print, not code (`tests/test_end_to_end.py` runs a
 stub cell through every step). Since 2026-10-10 `paper/main.tex` uses only these macros;
 `503b975:scripts/paper_stats.py`, which wrote the older ones, is removed
 (`tests/test_analysis_equivalence.py` keeps the check that the analysis reproduces it).
@@ -726,8 +751,9 @@ cells, and the posted-value check. Every recorded cell with outputs has tracked 
 and a `stats.json` (the eight cells of `report.cross_cells`, the 2026-04 pilot and the
 partial BioMistral-7B MedQA cell), and `results/cross_cell/stats.json` exists. These
 are the descriptive and exploratory items of ANALYSIS_PLAN.md section 10 (E01 to E05,
-E08); no physician label is read. E02 with `needs-info-physician` may run since the plan's
-adoption on 2026-10-11, and has not run yet (BLOCKED.md item 1). Not built yet, each needed by the analysis plan before its cells exist: the
+E08). Since the plan's adoption on 2026-10-11, E02 with `needs-info-physician` has run
+(ANALYSIS_PLAN.md section 12, the entry after the adoption), and E07 is a table of
+intervals (Table C.1 of the paper). Not built yet, each needed by the analysis plan before its cells exist: the
 weighted kappa and dimension contrasts under a judge (H8), the judges' harm grades
 (C33), the probe and bench outputs (E11, E20), stage times from the manifests (E08),
 and contrasts between cells (H9, H10, E24). Built on 2026-10-10 and tested on synthetic
@@ -742,7 +768,7 @@ contrasts of `report.contrasts` (H5, H6); and the seed-level contrasts of the le
 |---|---|---|
 | `rebuttal/` | The review record: `rebuttal/responses/posted/`, `rebuttal/responses/drafts/`, `rebuttal/withdrawals.md`, `rebuttal/commitments.md`, `rebuttal/posted_values.json` (moved from `02ac9a3:data/rebuttal_cells/`), `rebuttal/README.md`, `rebuttal/PLAN.md`, `rebuttal/COVERAGE.md` | `02ac9a3:rebuttal/launch/`, `02ac9a3:rebuttal/configs/` and `02ac9a3:rebuttal/results/` went (code into the package, settings into cell records, outputs superseded). `rebuttal/analyses/` stays as the record of how the posted values were made (`make rebuttal`, `make cells`); the package reads none of it. Its `peek_results.py` went on 2026-10-11: it read a layout no cell has. The unposted internal note on the aggregate drop moved to `rebuttal/responses/drafts/FINDINGS_quality_drop.md`, and the candidate references to `paper/prior_work_candidates.bib`. |
 | `legacy/` | The launcher, trainer, exporter, config and eval script of the 2026-05 cell, the old lock file, and `README.md`. `legacy/scripts/prefetch_gemma_safetensors.py` joined them: it is TPU-era tooling (blob 3d21545 at 8262d49), though the frozen launcher does not call it; the trainer downloads the weights itself. | Nothing else. The 2026-07 launcher is cited by commit (`61dada9:rebuttal/launch/run_cell.sh`), not copied. |
-| `scripts/` | Repository tools that are not pipeline steps: `check_doc_paths.py`, `check_no_secrets.sh`, `check_paper_macros.py`, `export_anonymous.sh`, `scripts/maintenance/` (until the trailer purge of BLOCKED.md item 4 is done), the physician sheet tools `make_irr_excel.py`, `make_tiebreaker_excel.py` and `compute_irr_kappa.py` (`make kappa`), `export_derived_inputs.py` (`make derived`), the one-off `migrate_results.py`, and the figure scripts `build_paper_figures.py`, `plot_postprocessing.py`, `plot_epistemic_figures.py` and `aggregate_cross_seed.py` (`make figures`). | Every pipeline and analysis script (section 10). On 2026-10-11 the scripts that no make target, command or live script called went: `aggregate_seeds.py` and `eval_ushape.py` (the 2026-07 launcher ran them; cited as `61dada9:scripts/aggregate_seeds.py`), `grader_correlation.py`, `plot_ushape.py`, `plot_training.py` and `rubric_diff.py`, and the shared-host tool `gpu_lease.sh` (`854761f:scripts/gpu_lease.sh`). No shims: the Makefile and the CLI are the only entry points, and docs cite module paths. |
+| `scripts/` | Repository tools that are not pipeline steps: `check_doc_paths.py`, `check_no_secrets.sh`, `check_paper_macros.py`, `export_anonymous.sh`, `scripts/maintenance/` (until the trailer purge of BLOCKED.md item 4 is done), the physician sheet tools `make_irr_excel.py`, `make_tiebreaker_excel.py` and `compute_irr_kappa.py` (`make kappa`), `export_derived_inputs.py` (`make derived`), the one-off `migrate_results.py`, and the figure scripts `build_paper_figures.py`, `plot_postprocessing.py` and `plot_epistemic_figures.py` (`make figures`, for the first detail cell of `configs/report.yaml`). | Every pipeline and analysis script (section 10). On 2026-10-11 the scripts that no make target, command or live script called went: `aggregate_seeds.py` and `eval_ushape.py` (the 2026-07 launcher ran them; cited as `61dada9:scripts/aggregate_seeds.py`), `grader_correlation.py`, `plot_ushape.py`, `plot_training.py` and `rubric_diff.py`, and the shared-host tool `gpu_lease.sh` (`854761f:scripts/gpu_lease.sh`); later that day `aggregate_cross_seed.py` (`4b05c30:scripts/aggregate_cross_seed.py`), once the figures read `stats.json`. No shims: the Makefile and the CLI are the only entry points, and docs cite module paths. |
 | `paper/` | The paper source and `paper/generated/`. | Nothing. |
 
 `02ac9a3:slurm/`, `02ac9a3:gpu/`, `02ac9a3:run_all.sh`, `02ac9a3:smoke.sh` and
@@ -948,8 +974,9 @@ the paper.
   so reviewers can check any table. Publishing it is a remote action.
 - **O4. The dated analysis plan.** Closed on 2026-10-11: the first author adopted
   ANALYSIS_PLAN.md as written (its section 12, adoption entry).
-- **O5. Margins for the deployment-risk criterion** (EXPERIMENTS.md E07). Without them
-  the criterion reports intervals only.
+- **O5. Margins for the deployment-risk criterion** (EXPERIMENTS.md E07). Closed on
+  2026-10-11: the adoption sets none, so the criterion reports intervals only (Table C.1
+  of the paper).
 - **O6. GPU priorities.** EXPERIMENTS.md section 4 groups the runs in tiers, and
   RUN_PLAN.md costs each one. No GPU runs until you say so.
 - **O7. The MedGemma-27B rerun.** Its adapters are treated as not retained, so every new
@@ -962,3 +989,10 @@ the paper.
   counts. `probe.json` holds the match rates and the Fisher test, and also each probed
   benchmark text and the model's continuation. Decide before the first probe or bench
   run: track both, or ignore `probe.json` like the raw eval JSON.
+- **O9. A merged-weights condition in the timing bench.** The bench serves the adapter
+  unmerged (vLLM `--enable-lora`, eager mode), as the 2026-07 cells were evaluated; the
+  paper argues for one pass with merged weights, as the 2026-05 cell was evaluated.
+  Decide before R2 whether the bench also times merged weights (code not built).
+- **O10. The evaluator template of the new cells** (ANALYSIS_PLAN.md section 12,
+  choice 7): keep the frozen template, which names BODHI, or add a protocol-neutral one
+  as a new grader version. The code has only the frozen one.

@@ -217,7 +217,7 @@ D-numbers refer to [DECISIONS.md](DECISIONS.md). Issue numbers such as #5 are Gi
   benchmark or path names in package code, each checked by a test or `make check`
   (docs/CONVENTIONS.md rules 7 and 11 to 13). The uniform analysis (rule 14) is
   `python -m bodhi_lora analyze`, and `bodhi_lora.report` turns its output into tables
-  and macros through `make numbers`. The paper cites the cross-cell table (Table H.6)
+  and macros through `make numbers`. The paper cites the cross-cell table (Table H.7)
   and the per-cell macros in sections 4.3 and 4.4. Table 1 and the per-cell detail tables
   still come from `make cells`; `make numbers` stops if the two sources disagree on a
   per-seed mean.

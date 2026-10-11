@@ -82,13 +82,19 @@ Short labels for each concern. The full text is in the OpenReview thread and in
 **P1. Dated analysis plan.** Answers MR-F, HomM-final (claims built during the
 discussion), convention 3. Fix the metrics, unit, tests, correction families, contrasts,
 label definitions and any margin before a new run, and before a new statistic is computed
-on existing outputs. GPU: no. Status: drafted as [ANALYSIS_PLAN.md](ANALYSIS_PLAN.md)
-(proposed, 2026-10-08); the first author adopts or changes it. Everything below that is
-"to run", and E02, depends on it.
+on existing outputs. GPU: no. Status: adopted by the first author on 2026-10-11
+([ANALYSIS_PLAN.md](ANALYSIS_PLAN.md) section 12).
 
 **P2. Citation check before submission.** The program chairs' checker flagged 0 of 22
 references. Run the `.bib` check again on the resubmission bibliography. GPU: no.
-Status: to run (CPU).
+Status: ran on 2026-10-11 on all 45 entries of `paper/references.bib` (CrossRef, Semantic
+Scholar and OpenAlex): 16 verified, 18 found in one index, 11 not found. Every entry not
+verified was then checked by hand. The 11 "not found" are parser misses on titles that
+start with a braced word, and each is on arXiv or CrossRef with its title and authors,
+except `mistral2025small`, a model card with no index entry. One title was wrong and is
+fixed: QLoRA's is "Efficient Finetuning of Quantized LLMs". The "no author overlap"
+flags (`bodhiplos2026`, `qwen2024qwen25`) are accents and a team name; CrossRef lists the
+same first authors for the PLOS paper. Run it again after any new reference.
 
 ### Analyses of the existing outputs (no GPU)
 
@@ -118,9 +124,10 @@ labellings of the discussion (D9). Statistic: P(ask given positive) minus P(ask 
 negative) per condition, odds ratio, prompt-clustered and seed-level intervals, and LoRA
 minus Base. Cells: the four HealthBench cells of 2026-05 and 2026-07. The theme-tag
 labelling of the discussion is reported next to it, marked post hoc; the other one matched
-keywords in rubric text and was removed on 2026-10-10 (withdrawals W24). GPU: no. Status: built (the
-discrimination index of `analyze`); the physician label stays out of
-`configs/report.yaml` until P1 is adopted.
+keywords in rubric text and was removed on 2026-10-10 (withdrawals W24). GPU: no. Status: ran on 2026-10-11 after the adoption, on the three cells of family F6
+with Holm across them (ANALYSIS_PLAN.md section 12, the entry after the adoption):
+"not detected" in all three, and in BioMistral-7B the index falls. In the paper:
+section 4.4 and Table C.1.
 
 **E03. Judge question rate.** Answers MR-W3, HomM-W3, PROV-7. Share of responses that ask
 the person for information, by a judge from another family with a semantic rubric and no
@@ -129,7 +136,8 @@ hand-label agreement gate (ANALYSIS_PLAN.md section 12, 2026-10-10). Until 2026-
 was a grader-free keyword rule (a sentence with "?" and "you" or "your",
 `rebuttal/analyses/second_person_questions.py`); it was removed with its values, the
 posted 18.4% against 39.6% and the scripted 17.9% against 36.7% (withdrawals W23). GPU or
-API: yes (RUN_PLAN.md R17). Status: specified; the classify stage is not built.
+API: yes (RUN_PLAN.md R17). Status: built on 2026-10-11 (the `classify` stage and the gate,
+stub-tested); the 300 hand labels are not made, and nothing has run.
 
 **E04. Format leakage for every cell.** Answers LxMF-4, D11. For each leak rule of the
 protocol used at inference: leak share per condition, the seven dimensions by leak
@@ -145,14 +153,16 @@ REPLY: line, so the H5 cell gets the same leak columns.
 drops), withdrawals W7 and W8. Per cell: LoRA minus Base on each HealthBench rubric axis,
 the askers gap, and the cross-cell Holm family of the aggregate drops. Exists in part
 (`503b975:rebuttal/analyses/quality_drop.py`, the askers gap in `503b975:rebuttal/analyses/cell_values.py`). GPU: no.
-Status: built (axes, askers gap, and Holm over the cells of each group).
+Status: built (axes with Holm over the axes of a cell, askers gap, and Holm over the
+cells of each group). In the paper since 2026-10-11: Table H.2 and section 4.1.
 
 **E06. Harm proxy.** Answers C33 (in part), HomM-final, FzpA-F2. Share of responses that
 meet at least one negative-point rubric criterion, and the points lost to them, per
 condition, with seed-level contrasts. HealthBench rubrics carry physician-written
 negative criteria (4,133 in Hard); the synthesized rubric has two (dangerous advice,
 false reassurance). This is an LLM-graded proxy, not the physician harm review (E28).
-GPU: no. Status: built. The judges also grade harm on Singhal et al.'s extent and
+GPU: no. Status: built; in the paper since 2026-10-11 (Table C.1, section 4.1, the
+Ethics paragraph). The judges also grade harm on Singhal et al.'s extent and
 likelihood axes plus delayed care (`bodhi_lora/grading/harm.py`); the analysis does not
 read those grades yet.
 
@@ -163,7 +173,9 @@ the base for a setting when (a) the harm proxy (E06) does not rise beyond a marg
 that lack information (E02, E14), and (d) over-flagging (E18) does not rise beyond a
 margin. The analysis reports each part with its interval. The margins are the first
 author's decision (open decision O5); without them it reports intervals only. GPU: no.
-Status: to build.
+Status: built on 2026-10-11 as intervals only, because the adoption sets no margins:
+Table C.1 of the paper gives (a), (b) and (c, the E02 part); (c, E14) and (d) wait for
+R3 and R4.
 
 **E08. Cost from the outputs.** Answers FzpA-S, C25 (in part), LxMF-1. Calls,
 generated tokens and characters per response and condition, and completions lost to

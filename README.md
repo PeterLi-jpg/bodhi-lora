@@ -126,7 +126,7 @@ its status and marks.
 | Planned | the cells of docs/EXPERIMENTS.md | `python -m bodhi_lora run` | none yet; docs/RUN_PLAN.md orders them |
 
 Records of past runs are frozen. The runner refuses to run them again, except to add
-judge re-grades, so new outputs never mix with old ones; a new run of the same design is
+judge re-grades, the judge classifier and the contamination probe, so new outputs never mix with old ones; a new run of the same design is
 a new cell. [docs/REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md) gives each cell's settings
 and how the 2026-05 and 2026-07 settings differ.
 

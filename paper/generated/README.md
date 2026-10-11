@@ -44,7 +44,9 @@ resamples prompt ids (docs/ANALYSIS_PLAN.md section 2.1).
 | Table | What |
 |---|---|
 | `tab_cross_cell` | Table 1: active inquiry and four LoRA - Base contrasts in every cell of `report.cross_cells` (`cross_tables` in `configs/report.yaml`) |
-| `tab_cross_cell_checks` | the post hoc checks of every cell (Table H.6) |
+| `tab_cross_cell_checks` | the post hoc checks of every cell (Table H.7) |
+| `tab_cross_cell_axes` | LoRA - Base on each rubric axis of every cell, Holm over the axes (Table H.2, E05) |
+| `tab_cross_cell_risk` | the parts of the deployment criterion in every cell: harm proxy, red flag, physician-label asking index (Table C.1, E06, E07, E02) |
 | `tab_cell_filter` | the filter and training record of each trained cell |
 | `tab_cell_detail_<n>` | every cell's metrics in the four conditions, with two contrasts, four cells to a table |
 | `tab_cell_<token>` | one per analyzed cell: every condition, the two adapter contrasts, labels, leakage, length |

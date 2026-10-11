@@ -21,7 +21,7 @@ of [ANALYSIS_PLAN.md](ANALYSIS_PLAN.md) section 12 records it: the plan as writt
 E14 as the primary test of H3 and E02 as the secondary, no E07 margins, the choices in the
 cell records as they stand (the judges, the cells with no judge, the probe method, the
 harm axes, the protocol wording) and the 2026-10-10 entries. So the paper keeps the post
-hoc values of section 4.4, Table H.6 and the abstract sentence on selective asking.
+hoc values of section 4.4, Table H.7 (Table H.6 until 2026-10-11) and the abstract sentence on selective asking.
 Check the entry; to change any of it, add a dated entry below it. RUN_PLAN.md may start
 once item 2 says so.
 
@@ -39,15 +39,30 @@ Still yours:
    cells replace the 2026-05 and 2026-07 cells in the main tables) before the first new
    cell is analyzed, and choice 7 (keep the frozen evaluator template, which names BODHI,
    or write a protocol-neutral one as a new grader version) before the first new cell is
-   graded.
+   graded. The code has only the frozen template; a second one is a small change
+   (a template version key in the cell record's grading block), made only if you choose it.
+4. The timing bench of R2 serves the adapter unmerged (vLLM `--enable-lora`, eager mode,
+   the 4-bit base for QLoRA), as the 2026-07 cells were evaluated. The paper's argument is
+   one pass with merged weights, as the 2026-05 cell was evaluated. Decide before R2
+   whether the bench also times a merged-weights condition; it needs code and about
+   50 GB of disk for the merged 24B weights, and is not built.
 
-Next in the repo, not blocked on you: E02 on the existing outputs. Add
-`needs-info-physician` to the `active_inquiry` entry of `discrimination` in
-`configs/report.yaml`, then run `make analyze` and `make numbers`.
+Done on 2026-10-11, after your adoption: E02 ran on the existing outputs (the
+`needs-info-physician` label in `configs/report.yaml`, `make extract`, `make analyze`,
+`make numbers`). LoRA - Base on the physician-label index is not positive in any of the
+three cells of family F6; with BioMistral-7B it falls (Holm-adjusted p below 0.05). The
+paper cites it in section 4.4 and Table C.1. The deployment criterion (E07) is in Table
+C.1 as intervals only, as the adoption says.
 
 ## 2. Go-ahead for GPU runs
 
-Why: no GPU job runs until you say so (D21). [RUN_PLAN.md](RUN_PLAN.md) lists
+Why: no GPU job runs until you say so (D21).
+
+How many GPUs: one H100 80GB runs any planned stage (the 2026-07 cells trained and
+evaluated on one card per seed), and the runner runs one seed per GPU. So five H100s run a
+five-seed cell in about the time of its shared stages plus one seed; one H100 runs the
+same work at about five times the wall-clock time. The H100-hours below do not change
+with the number of cards. [RUN_PLAN.md](RUN_PLAN.md) lists
 every run in order, with its command, cells, seeds, H100-hour estimate and the reviewer
 points it answers.
 
@@ -67,7 +82,13 @@ Action: say which runs may start, where, and when.
   Before R3 and R10, `python -m bodhi_lora fetch mediq-paired` and
   `python -m bodhi_lora fetch nlm-clinical-questions` download the MediQ file (2.6 MB) and
   the four NLM XML files and print their sha256 values; put them in the benchmark
-  records and commit.
+  records and commit. These downloads need your go-ahead too, and so does
+  `python -m bodhi_lora fetch medqa-open` for R8 (it builds the MedQA rows from Hugging
+  Face). A dry run never downloads (since 2026-10-11), so until then the dry runs of those
+  cells stop at the fetch command: R3, the paired cells of R5 and R7, R8 and R10. Every
+  other run's dry run passes (RUN_PLAN.md section 4.1).
+- The judge classifier (R17) has its stage since 2026-10-11. Its gate needs 300 hand
+  labels from two authors first (ANALYSIS_PLAN.md section 12, 2026-10-10).
 - The estimates scale the measured 2026-07 stage times (RUN_PLAN.md section 3). The
   speed of a 4-bit base in vLLM and of the judges is not measured, so each run has a
   range. The run manifests of the first batch replace the estimates.
@@ -106,14 +127,18 @@ there is no privacy purge (D18).
    temp branch, `origin/results-temp`, holds the 2026-04 pilot adapter (seed 42, 838
    traces), not a submitted adapter. Its weights have the same git blob as the local copy
    in `results/healthbench__medgemma-27b-text__bodhi__2026-04/seed_42/train/`.
-3. **Optional: remove the two AI-tool trailers** (`cf72766` and its twin `72a428b`),
-   and nothing else (D18). Follow `scripts/maintenance/purge_history.md` with four
-   changes: skip steps 2 and 3 (no name map); in step 4 write only the `co-authored-by`
-   line into `messages.txt` (no path list, no callback); in step 6 pass only
-   `--replace-message "$SECURE/messages.txt"` to `git filter-repo`; in step 7 run only the
-   `co-authored-by` check. Every commit id from the first rewritten commit onward
-   changes, and commit links in the OpenReview replies stop working. Skipping this is a
-   valid choice.
+3. **Remove the two AI-tool trailers** (`cf72766` and its twin `72a428b`), and nothing
+   else (D18). On 2026-10-11 you asked for this purge. It is not done: it rewrites the
+   history of `main` and of this branch (`cf72766` is an ancestor of both, and of 17
+   other local or remote refs), and it needs a force-push, so it waits for your yes on
+   each. The four other `Co-authored-by` lines in history name a human collaborator and
+   stay. Follow `scripts/maintenance/purge_history.md` with four
+   changes: skip steps 2 and 3 (no name map); in step 4 write only its `co-authored-by`
+   rule into `messages.txt` (the regex line that matches Claude or Anthropic; no path list,
+   no callback), so the human co-author lines stay; in step 6 pass only `--replace-message "$SECURE/messages.txt"` to
+   `git filter-repo`; in step 7 check that `git log --all -i --grep=noreply@anthropic`
+   lists nothing. Every commit id from the first rewritten commit onward changes, and
+   commit links in the OpenReview replies stop working.
 4. **Optional: rename the repository** `bohdi-lora` to `bodhi-lora` (D15). Then update
    the URLs in `README.md`, `docs/KNOWN_ISSUES.md`, `CONTRIBUTING.md`,
    `docs/INSTALL.md`, `pyproject.toml` and `scripts/maintenance/purge_history.md`, and run

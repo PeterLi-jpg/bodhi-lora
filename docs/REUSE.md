@@ -46,4 +46,4 @@ read them at the source before you redistribute anything.
 The filter grader (Qwen) and the evaluator (Llama) come from different families, so
 the model that picks the training data does not score the results. Med42-8B is a Llama-3
 model, so its cells break this rule. They are marked †, and
-`bodhi_lora/pipeline/grade.py` regrades them with a judge from neither family.
+`bodhi_lora/pipeline/grade.py` can regrade them with a judge from neither family (docs/RUN_PLAN.md R1, not yet run).
