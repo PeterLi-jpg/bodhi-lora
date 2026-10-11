@@ -17,7 +17,7 @@ so (2026-10-08). The two remaining physician raters are deferred.
 |---|---|
 | exists | The code and an output exist in the repo. Uniform analysis may still have to recompute it. |
 | to build | Code must be written. CPU only, unless the GPU column says yes. |
-| to run | The code exists or the build lanes write it; the run needs a GPU or people. |
+| to run | The code exists or the build steps write it; the run needs a GPU or people. |
 | deferred | Waits on people, by the first author's decision. |
 | text | Wording only. Done items cite the commitment (`rebuttal/commitments.md`). |
 
@@ -192,7 +192,7 @@ evaluator, weighted kappa on the 0 to 2 dimensions, Pearson r of the rubric scor
 every contrast recomputed. It does not replace the evaluator. Cells: every existing cell
 and every new one. GPU: yes, about 1 to 5 H100-hours per judge and cell. Status: built
 (judge lists in the grade stage, judges run with `--stages grade` on recorded cells),
-then to run. The records name one clinical judge per cell, a choice the experiments lane
+then to run. The records name one clinical judge per cell, a choice the experiments step
 made and the first author may change (BLOCKED.md item 1): `medgemma-27b-text` for every
 base outside the Gemma family, and `phi-4` (general) for the Gemma bases, because no
 clinical model outside Gemma, Llama and Qwen fits (Meditron3-Phi4-14B is a base model by

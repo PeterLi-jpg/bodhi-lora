@@ -1,11 +1,11 @@
 # Architecture
 
 Design of the resubmission code, written on 2026-10-08 and brought up to date when the
-build lanes merged on 2026-10-09 and on 2026-10-10. Sections 3 to 7 and 9 describe code
+build steps merged on 2026-10-09 and on 2026-10-10. Sections 3 to 7 and 9 describe code
 that is in the repo. Since 2026-10-10 every number that `paper/main.tex` prints comes
 from `python -m bodhi_lora report` (`make numbers`), which reads only the cells'
 `stats.json` and the cross-cell statistics; `503b975:scripts/paper_stats.py` is gone. Section 11
-records how the lanes ran. [EXPERIMENTS.md](EXPERIMENTS.md) lists the runs and analyses this design
+records how the steps ran. [EXPERIMENTS.md](EXPERIMENTS.md) lists the runs and analyses this design
 must carry.
 
 ## 1. Why the code changes
@@ -101,7 +101,7 @@ The grader-family rule (`family_problems()`, convention 5 in
 
 ### 3.2 Examples
 
-These show the shape. The foundation lane copies the values from `02ac9a3:configs/families.yaml`,
+These show the shape. The foundation step copied the values from `02ac9a3:configs/families.yaml`,
 `02ac9a3:rebuttal/configs/`, `02ac9a3:rebuttal/launch/_common.sh` and `legacy/README.md`, and checks
 each against its source. Together with the records they reference (the graders, the
 `bodhi` protocol), the examples pass `load_registry()` as written.
@@ -128,7 +128,7 @@ title: HealthBench (Arora et al., 2025)
 loader: rubric_jsonl
 source:
   kind: url
-  # sha256 of the copies setup.sh downloaded to the data root; the data lane checks
+  # sha256 of the copies setup.sh downloaded to the data root; the data step checks
   # them against a fresh download.
   files:
     full:
@@ -255,7 +255,7 @@ A cell whose adapters were trained outside this package records the recipe with
 whose adapters it evaluates, and has no `traces`, `filter` or `train` block. A teacher
 swap sets `traces_from` to the cell whose teacher traces it trains on.
 
-Fields the experiments lane added (each is checked by the schema):
+Fields the experiments step added (each is checked by the schema):
 
 - `grading.judge_serving`: the judges' engine settings; null means `eval.serving`. A
   judge prompt holds the conversation, the reply and the template, so it can need a
@@ -340,14 +340,14 @@ bodhi_lora/
 Physician agreement stays in `scripts/compute_irr_kappa.py` (`make kappa`); the analysis
 reads its output, `results/<cell_id>/validation/kappa_results.json`, into the statistics.
 
-The arrows name the existing file whose logic each module reuses. Each lane moves the
+The arrows name the existing file whose logic each module reuses. Each step moved the
 file with `git mv` and then edits it, so `git log --follow` keeps the history. The TPU
 docker modes of `02ac9a3:scripts/_vllm_engine.py` are not carried over; the TPU path stays in
 `legacy/` as the record of the 2026-05 cell.
 
 ### 4.1 Interfaces between modules
 
-The foundation step built these (2026-10-09), and the lanes changed them as noted. A
+The foundation step built these (2026-10-09), and the later steps changed them as noted. A
 change to one lands at the integrate step.
 
 ```python
@@ -541,28 +541,38 @@ results/
     cell.yaml               the resolved cell record the run used
     manifest.json           cell manifest: settings, family check, stage index
     shared/
-      inputs/               pool and holdout ids, eval ids per seed, source sha256
-      traces/               teacher traces when every seed shares them
-      filter/               filter grades when every seed shares them
+      inputs/               pool and holdout ids, eval ids per seed, leakage report
+      traces/               teacher traces when every seed shares them (ignored)
+      filter/               manifest.json, scores.json (tracked); graded.jsonl, kept.jsonl,
+                            and train.jsonl and val.jsonl under split_policy once (ignored)
       probe/                contamination probe
     seed_<n>/
       traces/  manifest.json   (points to shared/traces, or holds the seed's traces)
-      filter/  manifest.json   train.jsonl val.jsonl (ignored)  scores.csv
+      filter/  manifest.json   train.jsonl val.jsonl under split_policy per_seed (ignored)
       train/   manifest.json   adapter_config.json trainer_state.json   weights (ignored)
       eval/    manifest.json   <condition>.json (ignored)
       grade/   manifest.json   epistemic__<grader>.json judge__<judge>.json (ignored)
       table.csv                the per-response table (tracked)
+      table.meta.json          its record (tracked)
     analysis/
       stats.json            every statistic of the cell
+      prompts.csv           one row per prompt of the eval population
+      extract.json          how the prompts were read, the draw check, rule and label hashes
     validation/             physician grading sheets and kappa, where a cell has them
     logs/                   stage logs (ignored)
 ```
 
-Until the analysis lane lands, `results/cross_cell/` and the 2026-05 cell's analysis folder
-hold the moved outputs of the old scripts (10.2), and that cell's `seed_7/filter/` holds
-`filter_scores.json` in place of `scores.csv`. The cells recorded before the package have
-a manifest per stage folder that lists the files the move kept, with status `recorded` or
-`not_kept`; they are not resume markers, because the runner never reruns those cells.
+The filter stage writes `scores.json` in its shared folder: the score of every graded
+trace, with its prompt id and no text, so tau can be calibrated again from tracked files.
+The cells recorded before the package have no `scores.json`; their filter counts are in
+`results/*/shared/filter/manifest.json` under `recorded` (read from the host logs for the 2026-07
+cells, from the submitted paper for the 2026-05 cell), and the 2026-05 cell keeps the
+scores of its seed-7 train split in
+`results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_7/filter/filter_scores.json`. `results/cross_cell/`
+and the 2026-05 cell's analysis folder also keep the outputs of the removed scripts as a
+record (10.2). The recorded cells have a manifest per stage folder that lists the files
+the move kept, with status `recorded` or `not_kept`; they are not resume markers, because
+the runner never reruns those cells.
 
 Every seed has all five stage folders, each with a `manifest.json`. A stage that does
 not depend on the seed (teacher traces from greedy decoding, filter grades) writes its
@@ -572,32 +582,40 @@ own folder. In an eval-only cell the traces, filter and train manifests point to
 cell whose adapters it uses.
 
 **Tracked and ignored.** The rule depends on the kind of file, never on the cell. Tracked:
-manifests, `cell.yaml`, ids, `scores.csv`, `adapter_config.json`, `trainer_state.json`,
-`table.csv`, the analysis and validation folders, `PROVENANCE.md`, `provenance.json`. Ignored:
-traces, filter JSONL, adapter weights, optimizer state, raw eval and grade JSON,
-logs. Today the submitted cell's raw eval JSON (80 MB) is tracked and the added cells'
-(370 MB) is not. Under one rule both are ignored and every cell has a tracked response
-table; history keeps the submitted files at the migration base commit (open decision
-O2). The probe and bench outputs match no rule yet, so git tracks them (open decision
-O8).
+manifests, `cell.yaml`, ids, `scores.json`, `adapter_config.json`, `trainer_state.json`,
+`table.csv` and `table.meta.json`, the analysis and validation folders, `PROVENANCE.md`,
+`provenance.json`. Ignored: traces, filter JSONL, adapter weights, optimizer state, raw
+eval and grade JSON, logs. Today the submitted cell's raw eval JSON (80 MB) is tracked
+and the added cells' (370 MB) is not. Under one rule both are ignored and every cell has
+a tracked response table; history keeps the submitted files at the migration base commit
+(open decision O2). The probe and bench outputs match no rule yet, so git tracks them
+(open decision O8).
 
 **The response table.** `results/<cell_id>/seed_<n>/table.csv` has one row per
-(condition, prompt id), and the analysis reads nothing else. `analyze --extract` writes it from the raw files, with
-`table.meta.json` beside it (sha256 of each source file, and a hash of each text-feature
-definition). Columns:
+(condition, prompt id). `analyze --extract` writes it from the raw files, with
+`table.meta.json` beside it: the cell and seed, the sha256 of each source file, the
+completions and drawn examples of each condition, the stored score formula, the
+evaluator's grade counts, and the tokenizer used. Columns
+(`bodhi_lora/analysis/extract.py`):
 
 | Group | Columns |
 |---|---|
-| key | `cell`, `seed`, `condition`, `prompt_id`, `pair_id` |
-| response | `completed`, `chars`, `tokens`, `calls`, `tokens_total`, `finish_length` |
-| rubric | `rubric_score`, `rubric_items`, `rubric_parse_failures`, `axis_<axis>` for each HealthBench axis, `neg_items_met`, `neg_points_lost` |
-| evaluator dimensions | `epi_scored`, `epi_parse_failure`, `uncertainty_ack`, `active_inquiry`, `context_seeking`, `red_flag`, `scope_bounding`, `hedging_quality`, `specificity`, `questions`, `red_flag_rate`, `scope_bounded_rate`, `specificity_rate`, `blanket_disclaimer`, `appropriate_hedging` |
-| format | `leak_<protocol>_<rule>` (count of the protocol's own headers) for each protocol the cell uses; no column reads meaning from the reply text (CONVENTIONS.md rule 15) |
-| labels | `label_<name>`: 1, 0 or empty |
-| judges | `j_<judge>_<metric>` for the rubric score and the seven dimensions |
+| key | `cell`, `seed`, `condition`, `prompt_id`, `pair_id` (rows of one pair of a paired benchmark share it; empty otherwise) |
+| response | `chars`, `tokens` (the model's tokenizer), `tokens_engine` (the serving engine's count, one-call conditions), `calls`, `tokens_total`, `finish_length` |
+| rubric | `rubric_score`, `rubric_score_worst`, `rubric_items`, `rubric_parse_failures`, `neg_items_met`, `neg_points_lost`, `axis_<axis>` for each rubric axis tag |
+| evaluator | `epi_status` (`scored`, `parse_failure`, `missing`, `not_graded`); `uncertainty_ack`, `active_inquiry`, `context_seeking`, `red_flag`, `scope_bounding`, `specificity`, `hedging_quality`, `questions`, `red_flag_rate`, `scope_bounded_rate`, `specificity_rate`, `blanket_disclaimer`, `appropriate_hedging`, empty unless scored |
+| format | `leak_<protocol>__<rule>`: how many markers of the rule match where a header starts, for each leak rule of each protocol the cell uses; no column reads meaning from the reply text (CONVENTIONS.md rule 15) |
+| judges | `j_<judge>__rubric_score`, `j_<judge>__<dimension>`, and `j_<judge>__crit_<e><j>`, the 2x2 counts of rubric criteria met by the evaluator and the judge |
 
-A value a legacy file does not have (for example `finish_length`) is empty, and the
-analysis reports it as not measured for that cell.
+The labels of a prompt are in `results/*/analysis/prompts.csv`, not in the table: `label_<name>`
+(1, 0 or empty) for each label that `configs/report.yaml` lists, with the prompt's theme
+and positive rubric points. The other labels of the benchmark have only their
+population counts, in `extract.json` (ANALYSIS_PLAN.md section 12, 2026-10-10).
+`extract.json` also holds the hash of each leak rule's patterns and each label's
+definition. The analysis reads the tables, `prompts.csv`, `extract.json`, the filter and
+train records and the validation file, and no raw output. A value a legacy file does
+not have (for example `finish_length`) is empty, and the analysis reports it as not
+measured for that cell.
 
 **Manifests.** `bodhi_lora/manifest.py` keeps what `02ac9a3:scripts/run_manifest.py` records
 today (resolved config and sha256, git commit and dirty diff hash, package versions,
@@ -605,16 +623,20 @@ model ids with family and revision, adapter and id-list hashes, stage counts, ha
 host name) and adds wall-clock time, GPU model and count, and token totals per stage.
 The cost analysis reads these.
 
-**Provenance.** `results/provenance.json` holds one entry per old file:
-`{"old": <path>, "new": <path or null>, "kind": "moved" | "extracted" | "superseded" |
-"archived", "sha256_old", "sha256_new", "tracked_before", "tracked_after", "note"}`.
-`moved` files are byte-identical. `extracted` means a value was read out of the file
-into a manifest (for example tau and counts from a host filter log). `superseded` means
-an analysis output that `make analyze` now regenerates; the note names the statistic
-that replaces it. `archived` means the file went to the archive folder next to the repo.
-`results/PROVENANCE.md` explains the mapping in prose and lists the host runs that left
-no folder. A test checks that every path tracked at the migration base commit under the
-old roots has an entry, and that each `moved` file's sha256 matches.
+**Provenance.** `results/provenance.json` is a list with one entry per old file:
+`{"old": <path>, "new": [<path>, ...], "kind": "moved" | "archived" | "merged", "note",
+"sha256", "bytes", "tracked_before", "tracked_after"}`. `new` is a list because one old
+file can have several homes (the shared eval id list went to five cells). `moved` files
+are byte-identical, and `sha256` is the hash at both places; the note says when a moved
+file is an output that the analysis now supersedes (10.2). `archived` means the file went
+to the archive folder next to the repo. `merged` means its text joined another file
+(`02ac9a3:data/rebuttal_cells/README.md` into `rebuttal/README.md`). Values read out of a host log
+into a manifest leave the log `moved`; the manifest names its source. Config files that
+records replaced (10.2) have no entry: git history keeps them. `results/PROVENANCE.md`
+explains the mapping in prose and lists the host runs that left no folder.
+`tests/test_migration_provenance.py` checks that every path tracked at the migration
+base commit under the old roots has an entry with a known kind, and that each `moved`
+file's sha256 matches.
 
 ## 7. Uniform analysis
 
@@ -683,7 +705,7 @@ stub cell through every step). Since 2026-10-10 `paper/main.tex` uses only these
 
 **Pre-registration.** Convention 3 still holds. A statistic that has not been computed
 on a cell's outputs before (for example the physician-label discrimination index) goes
-into the dated analysis plan before anyone runs it on real outputs. The build lanes test
+into the dated analysis plan before anyone runs it on real outputs. The build steps test
 the analysis code on fixtures and synthetic tables only.
 
 **State on 2026-10-09.** `analyze` computes, for every cell with tables: the dimensions,
@@ -817,8 +839,8 @@ replaces it once it reproduces its values (10.3).
 | `02ac9a3:data/rebuttal_cells/posted_values.json` | `rebuttal/posted_values.json` | moved |
 | `02ac9a3:data/rebuttal_cells/README.md` | `rebuttal/README.md` | merged |
 | smoke outputs in checkpoints/, data/sft/ and eval/smoke/ (ignored) | archive | archived |
-| `02ac9a3:configs/families.yaml` | `configs/models/*.yaml` | superseded |
-| the old configs/lora_*.yaml files, `02ac9a3:rebuttal/configs/` | `train` blocks of `configs/cells/*.yaml` | superseded |
+| `02ac9a3:configs/families.yaml` | `configs/models/*.yaml` | replaced; git history keeps it (no provenance entry) |
+| the old configs/lora_*.yaml files, `02ac9a3:rebuttal/configs/` | `train` blocks of `configs/cells/*.yaml` | replaced; git history keeps them (no provenance entry) |
 
 The ignored copy in `../_remote_sync/results_rebuttal` stays where it is; each of its
 files has the sha256 of a file that moved (results/PROVENANCE.md).
@@ -832,104 +854,81 @@ Run on the regenerated files, `make numbers` writes the same `numbers.tex` and t
 ### 10.3 Equivalence before removal
 
 An old analysis file is removed only after `make analyze` reproduces its values. The
-analysis lane adds a test that compares the new statistics with each superseded file at
+analysis step adds a test that compares the new statistics with each superseded file at
 its stored precision: the files marked superseded in 10.2 and the macros in
 `paper/generated/numbers.tex`. A mismatch is a finding to explain, not a tolerance to
 raise.
 
-Done for the 2026-05 cell: `tests/test_analysis_equivalence.py` recomputes it from its
-tracked tables and matches `paper/generated/numbers.json` (conditions, contrasts, worst
+Done on 2026-10-10. `tests/test_analysis_equivalence.py` recomputes the 2026-05 cell from
+its tracked tables and matches the last statistics of `503b975:scripts/paper_stats.py`
+(frozen in `tests/fixtures/legacy/paper_stats_numbers.json`: conditions, contrasts, worst
 case, disclaimers, length quartiles, axes, themes, counts, the context-seeking anchor,
-shift correlations, reply size, tau calibration) and the cell's `mimicry_split.json`,
-`interference_mechanism.json` and `second_person_questions.json`. Two old values differ
-by definition, and the test says why: the median of an even count, and a group count the
-old script took over the base condition only. Not done: the cross-cell files
-(`generated_values.json`, `quality_drop.json`, `cell_recipe.json`), which need the
-2026-07 tables, so no old script or Makefile target has been removed.
+shift correlations, reply size, tau calibration) and the cell's `mimicry_split.json` and
+`interference_mechanism.json`. It also matches every cell's `stats.json` against the
+cross-cell files: the per-seed means of `generated_values.json`, the aggregate tests of
+`quality_drop.json`, and the filter counts and recipe of `cell_recipe.json`. Two old
+values differ by definition, and the test says why: the median of an even count, and a
+group count the old script took over the base condition only. Then `503b975:scripts/paper_stats.py`,
+`503b975:rebuttal/analyses/cell_values.py` and `503b975:rebuttal/analyses/quality_drop.py` were removed.
+Their outputs stay as the record. Every number the paper printed stayed the same, except
+the second-grader check of Appendix H, which had compared two score formulas
+(KNOWN_ISSUES.md), and two score differences printed with one more decimal.
 
-## 11. Build lanes
+## 11. How the code was built
 
-The plan of seven lanes ran differently. One foundation step built the registry, the
-package, the pipeline and the results root, and did the move of section 10, so the data,
-protocols, pipeline and migrate lanes are done. Three lanes follow, in parallel, each in
-its own worktree and local branch made from the foundation's last commit. Each lane
-writes only the paths it owns, keeps `make test` and `make check` green at each commit,
-and runs no GPU job and no paid compute: GPU work is written down as commands with a
-cost estimate for the first author to approve (O6). A change to a path a lane does not
-own goes in its report and lands at the integrate step.
+The code was built in steps, each on a local branch from the step before and merged into
+`cleanup/resubmission`. Each step kept `make test` and `make check` green at each commit
+and ran no GPU job and no paid compute: GPU work is written down as commands with a cost
+estimate for the first author to approve (O6). The first author decides every
+methodology question (O4, O5, O6), and a record of status `planned` changes no number in
+the paper.
 
-| Lane | Branch | Worktree |
-|---|---|---|
-| analysis | `gen/lane-analysis` | `../_wt/analysis` (removed after the merge) |
-| experiments | `gen/lane-experiments` | `../_wt/experiments` (removed after the merge) |
-| plans | `gen/lane-plans` | `../_wt/plans` (removed after the merge) |
+1. **Foundation** (2026-10-09): the registry with records for every model, benchmark,
+   protocol and cell; `python -m bodhi_lora list`, `fetch` and `run`; the stub engine and
+   the smoke cell; the move into the results root with its provenance check;
+   `make check`; the no-hardcode test.
+2. **Experiments**: the stages, protocols, loaders and graders, built against the stub
+   engine and dry runs, and the records of the planned cells (status `planned`).
+3. **Plans**: EXPERIMENTS.md, the decisions, the claims, the draft of the dated analysis
+   plan, BLOCKED.md and the records of the review.
+4. **Analysis**: extract, analyze and the report, built against synthetic tables and
+   then the migrated outputs.
+5. **Integration**: the merges; `make test`, `make smoke`, `make check`, `make numbers` and
+   `make paper`; this document and `PENDING` in `scripts/check_doc_paths.py`; and the check
+   of every staged diff against the clinician names file.
 
-### 11.1 Ownership
+### 11.1 Done means
 
-| Lane | Owns (writes) | Tests it owns |
-|---|---|---|
-| foundation (done) | `bodhi_lora/{__init__,__main__,cli,paths,manifest}.py`, `bodhi_lora/registry/`, `bodhi_lora/engine/`, `configs/`, `results/` (the move, `PROVENANCE.md`, `provenance.json`, the recorded manifests), `scripts/migrate_results.py`, `.gitignore`, `Makefile`, `.github/workflows/` | `tests/test_registry_*.py`, `tests/test_no_hardcode.py`, `tests/test_engine_*.py`, `tests/test_manifest.py`, `tests/test_migration_*.py` |
-| analysis | `bodhi_lora/analysis/`, `bodhi_lora/report/`, the `analyze` and `report` commands, `configs/report.yaml`, `paper/generated/`, macro names in `paper/main.tex` and `paper/checklist.tex`, `scripts/check_paper_macros.py`, the analysis scripts in `scripts/` and `rebuttal/analyses/` (to replace them), `results/*/analysis/`, `results/*/seed_*/table.csv`, `results/cross_cell/` | `tests/test_analysis_*.py`, the report's tests, and the old `tests/test_stats_*.py`, `tests/test_analyses_*.py`, `tests/test_aggregate_seeds.py` until their scripts go |
-| experiments | `bodhi_lora/pipeline/`, `bodhi_lora/grading/`, `bodhi_lora/protocols/`, `bodhi_lora/data/`, new records in `configs/cells/`, `configs/protocols/`, `configs/benchmarks/` and `configs/models/` (status `planned`), `tests/fixtures/pipeline/` | `tests/test_pipeline_*.py`, `tests/test_protocols_*.py`, `tests/test_data_*.py`, `tests/test_grading_*.py` |
-| plans | `docs/EXPERIMENTS.md`, `docs/DECISIONS.md`, `docs/CLAIMS.md`, drafts of the dated analysis plan in `docs/` (O4), `BLOCKED.md`, `KNOWN_ISSUES.md`, `RESULTS.md`, `REPRODUCIBILITY.md`, `README.md`, the records in `rebuttal/` | none |
-| integrate (last) | `docs/ARCHITECTURE.md`, `scripts/check_doc_paths.py`, `scripts/README.md`, `setup.sh`, and any shared path a lane asked for | runs every test |
-
-The plans lane drafts; the first author decides every methodology question (O4, O5,
-O6). A record of status `planned` changes no number in the paper.
-
-### 11.2 Order and hand-offs
-
-1. **foundation** (done 2026-10-09): the registry with records for every model,
-   benchmark, protocol and cell; `python -m bodhi_lora list`, `fetch` and `run`; the
-   stub engine and the smoke cell; the move into the results root with its provenance
-   check; `make check`; the no-hardcode test.
-2. **analysis, experiments, plans** in parallel. Analysis builds against synthetic
-   tables in its fixtures and then the migrated outputs. Experiments builds against the
-   stub engine and dry runs. Plans needs only the docs.
-3. Merge order: plans, experiments, analysis. A new cell record from experiments needs
-   its plan entry; analysis reads every record at the end.
-4. **integrate** last. It merges the lanes, runs `make test`, `make smoke`,
-   `make check`, `make numbers` (or `make analyze` and `make report` once they exist) and
-   `make paper`, updates this document and `PENDING` in `scripts/check_doc_paths.py`,
-   and checks every staged diff against the clinician names file.
-
-### 11.3 Done means
-
-| Lane | Acceptance check, run and reported with its output |
+| Step | Acceptance check, run and reported with its output |
 |---|---|
 | foundation | `python -m bodhi_lora list cells` lists every cell; `make test`, `make smoke`, `make check` pass; `make numbers` writes `paper/generated/` byte for byte as before the move; `tests/test_migration_provenance.py` passes. |
-| analysis | `make analyze` and `make report` reproduce every value in `paper/generated/` and every superseded file at its stored precision (10.3), from the migrated outputs; the old analysis scripts and their Makefile targets are then removed. |
+| analysis | `make analyze` and `make report` reproduce every value in `paper/generated/` and every superseded file at its stored precision (10.3), from the migrated outputs; the old analysis scripts and their Makefile targets are then removed. Done on 2026-10-10. |
 | experiments | Every planned cell in [EXPERIMENTS.md](EXPERIMENTS.md) with fixed settings has a record that loads, and `python -m bodhi_lora run <cell> --dry-run` prints its GPU commands; each GPU item is listed with its command and an H100-hour estimate. |
 | plans | A draft of the dated analysis plan for the first author, and every EXPERIMENTS.md entry tied to a cell record, a decision or a BLOCKED.md item. |
-| integrate | All of the above from a clean checkout of the merged branch, and `scripts/check_doc_paths.py` passes with no `PENDING` entry left for a path that now exists. |
+| integration | All of the above from a clean checkout of the merged branch, and `scripts/check_doc_paths.py` passes with no `PENDING` entry left for a path that now exists. |
 
-### 11.4 How the lanes ended (2026-10-09)
+### 11.2 How the steps ended
 
-- **plans** and **experiments** merged as their branches stood. The integrate step then
+- **Plans** and **experiments** merged as they stood (2026-10-09). Integration then
   brought the docs in line with the records (cell ids, loader keys, judges), stopped a
-  stub or dry run from writing under the results root through `--results-root`, and
-  made traces, filter and grade skip a request that does not fit the context window
-  instead of asking for a rerun that would fail the same way.
-- **analysis** stopped before its first commit. The integrate step reviewed its work,
-  checked it against the outputs it supersedes (10.3), and committed the extract and
-  analyze parts on `gen/lane-analysis` before the merge. It left out two parts: a post
-  hoc red-flag label with an over-flagging rate computed on the 2026-05 outputs
+  stub or dry run from writing under the results root through `--results-root`, and made
+  traces, filter and grade skip a request that does not fit the context window instead
+  of asking for a rerun that would fail the same way.
+- The first **analysis** attempt stopped before its first commit. Integration reviewed
+  its work, checked it against the outputs it supersedes (10.3), and committed the extract
+  and analyze parts. It left out two parts, kept in the archive folder next to the repo:
+  a post hoc red-flag label with an over-flagging rate computed on the 2026-05 outputs
   (convention 3: the analysis plan reads over-flagging from the physician labels, H7),
-  and the unfinished report module. Both are kept outside the repo in
-  `../_archive/analysis_lane_wip_2026-10-09/`.
-- **analysis, second attempt** (`gen/lane-analysis-2`) fixed `make extract` (the
-  package function `extract` was hidden by its submodule of the same name), ran extract
-  and analyze on every cell with outputs, read the stored score formula of files without
-  `score_metric` (the 2026-04 pilot), let a missing seed leave a statistic instead of
-  blanking it (ANALYSIS_PLAN.md 2.3), added the escalation mention rule, the post hoc
-  `red-flag-at-stake` label and the group rates of the discrimination section (the
-  over-flagging check of C30, marked exploratory), and built `bodhi_lora.report`, which
-  `make numbers` now runs. No number the paper printed before changed. On 2026-10-10 the
-  escalation rule, the second-person rule and the `red-flag-at-stake` label were removed
-  as keyword rules (CONVENTIONS.md rule 15).
-- Not done, so its "done means" row above still applies: `make report` as its own
-  target, the macro rename in `paper/main.tex`, and the removal of the old analysis
-  scripts.
+  and the unfinished report module.
+- The second **analysis** attempt fixed `make extract` (the package function `extract`
+  was hidden by its submodule of the same name), ran extract and analyze on every cell
+  with outputs, read the stored score formula of files without `score_metric` (the
+  2026-04 pilot), let a missing seed leave a statistic instead of blanking it
+  (ANALYSIS_PLAN.md 2.3), and built the first part of `bodhi_lora.report`. On 2026-10-10
+  the keyword rules it had added were removed (CONVENTIONS.md rule 15).
+- On 2026-10-10 the report took over every number of the paper (`python -m bodhi_lora
+  report`, `make report`), `paper/main.tex` moved to its macros, and the old analysis
+  scripts went (10.3).
 
 ## 12. Open decisions for the first author
 

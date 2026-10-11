@@ -10,7 +10,7 @@ withdrew, and what we promised. The ledgers are the files that the resubmission 
 | File | What it holds |
 |---|---|
 | `withdrawals.md` | Every claim that we withdrew or corrected in the discussion, plus posted claims that the audit or a later check found wrong. Each entry has the claim as made, the correction and the statement that the paper must carry. |
-| `commitments.md` | Every promise in the posted replies (C1 to C33), with its source line and a status column for the paper lanes. |
+| `commitments.md` | Every promise in the posted replies (C1 to C33), with its source line and a status column for the paper work. |
 | `posted_values.json` | Every number that we posted about the rebuttal cells, transcribed with source lines. It is the record of what was posted. |
 | `../results/cross_cell/stats.json` | The check of every posted value against the uniform analysis (`posted_check`, `make analyze`); the paper uses the analysis. `../results/cross_cell/generated_values.json` is the record of the first such check, by the removed `cell_values.py`; the section below lists the one posted value that does not match (W21). |
 

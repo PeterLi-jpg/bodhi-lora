@@ -5,7 +5,7 @@ each "the camera-ready will" and each "the paper will". The paper was rejected, 
 the changes that reviewers and the AC saw us promise. A resubmission must keep them or say
 why it drops one.
 
-All sources are in `rebuttal/responses/posted/`. The paper lanes fill the Status column. Use
+All sources are in `rebuttal/responses/posted/`. The paper work fills the Status column. Use
 `done (<commit>)`, `built, awaiting GPU (<run>)`, `to build, then GPU (<run>)`,
 `deferred (<decision>)`, `changed (<reason>)` or `dropped (<reason>)`. A run id such as R2
 refers to `docs/RUN_PLAN.md`; an H id to `docs/ANALYSIS_PLAN.md`, which fixes how the

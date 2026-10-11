@@ -18,7 +18,7 @@ section 5.
 1. The first author adopts [ANALYSIS_PLAN.md](ANALYSIS_PLAN.md), or changes it in its
    section 12 (convention 3). No run starts before that.
 2. The cell record exists in `configs/` with `report.status: planned`, and
-   `python -m bodhi_lora list cells` loads it. The experiments lane writes the records.
+   `python -m bodhi_lora list cells` loads it. The experiments step writes the records.
 3. Every protocol and loader that the record names exists and passes its stub test. The
    runner freezes a record at its first run (`cell.yaml` in the cell folder must match
    it), so a condition left out at the start needs a new cell later. All of them exist

@@ -15,7 +15,7 @@ Nothing here was pushed, and no remote state changed.
 ## 1. Adopt the analysis plan and the open design choices
 
 Why: convention 3 needs a dated plan before any new run, and before the physician-label
-analyses run on the existing outputs. The plans lane drafted it; the choices in it are
+analyses run on the existing outputs. The plans step drafted it; the choices in it are
 methodology, so they are yours.
 
 Action:
@@ -36,7 +36,7 @@ Action:
    output holds benchmark text). Decide O8 before the first probe or bench run.
 3. Read D17 to D22 in [docs/DECISIONS.md](docs/DECISIONS.md). To revise one, add a dated
    entry below it.
-4. Decide the choices the experiments lane made in the cell records (2026-10-09). Each
+4. Decide the choices the experiments step made in the cell records (2026-10-09). Each
    is in the records now; change a record before its cell runs, because the runner
    freezes it then.
    - Judges (E10): `medgemma-27b-text` for every base outside Gemma, `phi-4` (general)

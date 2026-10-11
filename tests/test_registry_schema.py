@@ -1,7 +1,7 @@
 """The registry schema (bodhi_lora/registry/schema.py): what it accepts and what it refuses.
 
 The records below follow the examples in docs/ARCHITECTURE.md. They are built in
-memory so the test does not depend on the configs/ files the build lanes write.
+memory so the test does not depend on the configs/ files the build steps write.
 """
 import copy
 

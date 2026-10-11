@@ -55,23 +55,25 @@ in `seed_<n>/train/checkpoint-<k>/`.
 - Four host logs that belong to several cells or none: the grid driver, the two install
   logs and one re-grade driver log.
 
-## What the analysis lane replaces
+## What the analysis replaces
 
-These moved files are analysis outputs, kept byte for byte because `make numbers` reads
-them: `analysis/cross_seed_aggregate.*`, `analysis/mimicry_split.json`,
-`analysis/interference_mechanism.json` and `analysis/second_person_questions.json` of the
-2026-05 cell, the pilot's `analysis/qwen_grader_scores.json`, the 2026-05 cell's
-`seed_7/filter/filter_scores.json`, and `cross_cell/{quality_drop,cell_recipe,generated_values}.json`.
-`make analyze` replaces each one once it reproduces its values (ARCHITECTURE section 10.3).
+These moved files are analysis outputs, kept byte for byte: `analysis/cross_seed_aggregate.*`,
+`analysis/mimicry_split.json`, `analysis/interference_mechanism.json` and
+`analysis/second_person_questions.json` of the 2026-05 cell, the pilot's
+`analysis/qwen_grader_scores.json`, the 2026-05 cell's `seed_7/filter/filter_scores.json`,
+and `cross_cell/{quality_drop,cell_recipe,generated_values}.json`. Since 2026-10-10 the
+paper's numbers come from `make analyze` and `make numbers` (`python -m bodhi_lora
+report`), which reproduce these values (ARCHITECTURE section 10.3). The analysis still
+reads `filter_scores.json` (the tau table); the others stay as the record of the removed
+scripts and of the posted values.
 
 The scripts that wrote these files now read the cell folders. On 2026-10-09, `make
 rebuttal` wrote the three 2026-05 analyses byte for byte, and `make cells` wrote
 `quality_drop.json` byte for byte. `generated_values.json` and `cell_recipe.json` came out
 with the same values; only the folder and log paths they record differ, and
 `n_eval_ids` is 200 for the three HealthBench cells, which now hold their eval ids. With
-those two files rebuilt, `make numbers` writes the same `numbers.tex` and tables;
-`numbers.json` differs only in the input hashes and the recipe paths it copies. The
-tracked copies stay as they were moved until the analysis lane replaces them.
+those two files rebuilt, the old `make numbers` wrote the same `numbers.tex` and tables;
+`numbers.json` differed only in the input hashes and the recipe paths it copied.
 
 ## Facts taken out of the old files
 

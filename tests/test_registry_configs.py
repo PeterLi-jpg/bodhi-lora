@@ -67,7 +67,7 @@ EXAMPLE = re.compile(r"```yaml\n# configs/(\w+)/([^\n]+)\.yaml\n(.*?)```", re.DO
 def test_doc_examples_match_the_schema(doc):
     """Each example record in the design docs validates against its record class.
 
-    The examples may name records that a build lane has not written yet, so only the
+    The examples may name records that a build step has not written yet, so only the
     shape is checked here, not the references.
     """
     text = (REPO_ROOT / doc).read_text(encoding="utf-8")

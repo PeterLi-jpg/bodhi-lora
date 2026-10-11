@@ -19,9 +19,9 @@ correction that exists only in a reply does not count.
   checked against the official PDF (commit 416113b on `cleanup/resubmission`). The earlier
   `paper/neurips_submission/main.tex` is a later working copy and is archived.
 - **Posted:** `rebuttal/responses/posted/<file>.md:<line>`.
-- **Live paper:** `paper/main.tex` at commit 61dada9. The paper lanes will move these lines.
+- **Live paper:** `paper/main.tex` at commit 61dada9. Later paper edits will move these lines.
 
-Each "must say" text is plain wording for the paper lanes to adapt. Numbers in it come from
+Each "must say" text is plain wording for the paper to adapt. Numbers in it come from
 the posted replies (see `rebuttal/posted_values.json`) or from files in this repo.
 
 ---
@@ -676,7 +676,7 @@ of a line, after optional markdown, a bullet or a section number), so a sentence
 ## Posted claims that the discussion never corrected
 
 The discussion did not withdraw the claims below, but the evidence does not support them. The
-paper lanes must decide on each one.
+paper must decide on each one.
 
 - **"the filter removes the teacher's failures before they reach the weights"**
   (`HomM_1_rebuttal.md:25`; `LxMF_1_rebuttal.md:76` says "the quality filter"), live paper `paper/main.tex:777-778`. The

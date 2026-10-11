@@ -133,7 +133,7 @@ set of each submitted `base_no_wrapper.json`; this was checked for all 5 seeds.
 3. Stages 4 and 5: set `GCS_BASE` in `modal_eval.py:54` to the new run and
    `modal run modal_eval.py::run_all`.
 
-Both steps cost money (TPU and Modal). Nothing in this lane ran them.
+Both steps cost money (TPU and Modal). Nothing in this cleanup ran them.
 
 ## 6. requirements.lock.txt
 
