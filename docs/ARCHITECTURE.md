@@ -536,7 +536,8 @@ No target runs pipeline code any other way. The target set:
 | `make check` | doc paths, secrets scan, registry load |
 
 Three more targets keep records: `make rebuttal` runs the three discussion scripts whose
-keyword measures are withdrawn (it says so; the paper reads none of their outputs),
+keyword measures are withdrawn on the submitted cell's ignored raw files (it says so; the
+paper reads none of their outputs),
 `make cells` reads the 2026-07 host logs into `results/cross_cell/cell_recipe.json`, and
 `make derived` copies the scores of two large ignored files.
 

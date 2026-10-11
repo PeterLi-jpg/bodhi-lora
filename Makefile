@@ -11,6 +11,7 @@
 #                  cross-cell statistics once every cell they need has its stats
 #   make rebuttal  the submitted cell's analysis/withdrawn/*.json of the three discussion
 #                  scripts: the record of how posted values were made; the paper reads none
+#                  (needs the cell's ignored raw eval and grade files)
 #   make cells     results/cross_cell/cell_recipe.json from the host logs: the record of the
 #                  2026-07 filter counts (needs the ignored host logs)
 #   make kappa     $(MAIN_CELL)/validation/kappa_results.json (needs RATER_FILES and ANSWER_KEY)

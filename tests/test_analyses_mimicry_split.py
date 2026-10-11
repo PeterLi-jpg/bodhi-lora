@@ -16,6 +16,9 @@ import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 HARD = ROOT / "data" / "raw" / "healthbench" / "hard.jsonl"
+# The script reads the 2026-05 cell's raw eval and grade JSON, which git ignores since
+# 2026-10-11 (open decision O2), so a checkout without them skips the golden values.
+RAW_PRESENT = any((ROOT / "results" / "healthbench__medgemma-27b-text__bodhi__2026-05").glob("seed_*/eval/base.json"))
 
 
 def _load():
@@ -72,6 +75,7 @@ def test_bootstrap_resamples_prompts_and_returns_or_ci():
 
 
 @pytest.mark.skipif(not HARD.is_file(), reason="data/raw/healthbench/hard.jsonl not present")
+@pytest.mark.skipif(not RAW_PRESENT, reason="the 2026-05 raw eval files are not in this checkout")
 def test_golden_values_on_committed_results(tmp_path, monkeypatch):
     ms = _load()
     out = tmp_path / "mimicry_split.json"
