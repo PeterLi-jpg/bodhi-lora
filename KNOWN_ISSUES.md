@@ -141,9 +141,10 @@ Issue numbers such as #5 are GitHub issues on `PeterLi-jpg/bohdi-lora`.
   name no cell without a record.
 - **`analyze` does not compute every planned statistic yet.** The weighted kappa and the
   dimension contrasts under a judge (H8), the judges' harm grades (C33), the probe and
-  bench outputs (E11, E20), stage times from the manifests, contrasts between cells (H9,
-  H10, E24), the paired-probe statistics (E14) and the H6 contrast are missing
-  (docs/ARCHITECTURE.md section 7). Each is needed only once its cell has run.
+  bench outputs (E11, E20), stage times from the manifests and contrasts between cells
+  (H9, H10, E24) are missing (docs/ARCHITECTURE.md section 7). Each is needed only once
+  its cell has run. The paired-probe statistics (E14) and the declared contrasts of H5
+  and H6 are built since 2026-10-10 and tested on synthetic tables and stub runs only.
 
 ### Repo state
 

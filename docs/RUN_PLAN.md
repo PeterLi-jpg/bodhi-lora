@@ -262,7 +262,8 @@ price list. The shared host has no meter, but each run holds a card for its hour
 3. Run the analysis: `python -m bodhi_lora analyze <cell id> --extract`, then
    `make analyze` (ARCHITECTURE.md section 5). Then `make numbers` writes the cell's
    table (`tab_cell_<token>`) and macros. Add the cell to `cross_cells` in
-   `configs/report.yaml` to put it in the cross-cell table.
+   `configs/report.yaml` to put it in Table 1, the other cross-cell tables and the
+   rule-based groups; no code changes.
 4. Commit the tracked files: the manifests, `cell.yaml`, the id lists, the response
    tables and the cell's analysis folder. Git ignores the raw outputs by kind.
 5. Read the results only by the rules of ANALYSIS_PLAN.md, and record any change of plan
