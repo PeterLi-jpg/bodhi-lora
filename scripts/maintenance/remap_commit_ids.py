@@ -25,6 +25,7 @@ from __future__ import annotations
 import re
 import subprocess
 import sys
+from functools import lru_cache
 from pathlib import Path
 
 TOKEN = re.compile(r"(?<![0-9A-Za-z])[0-9a-f]{7,40}(?![0-9A-Za-z])")
@@ -45,6 +46,7 @@ def read_map(path: Path) -> dict[str, str]:
     return out
 
 
+@lru_cache(maxsize=None)
 def short(new: str, length: int) -> str:
     """The new id at the token's length, longer only if that prefix is ambiguous here."""
     for n in range(length, 41):
@@ -61,7 +63,10 @@ def main() -> int:
         return 2
     mapping = read_map(Path(sys.argv[1]))
     apply = "--apply" in sys.argv[2:]
-    olds = sorted(mapping)
+    # Every token is at least 7 digits, so the first 7 pick the candidates.
+    by_prefix: dict[str, list[str]] = {}
+    for old in mapping:
+        by_prefix.setdefault(old[:7], []).append(old)
     changed_files = replacements = 0
     for name in git("ls-files", "-z").split("\0"):
         path = Path(name)
@@ -77,7 +82,7 @@ def main() -> int:
             def swap(m: re.Match) -> str:
                 nonlocal hit, replacements
                 tok = m.group(0)
-                matches = [o for o in olds if o.startswith(tok)]
+                matches = [o for o in by_prefix.get(tok[:7], []) if o.startswith(tok)]
                 if len(matches) != 1:
                     return tok
                 new = short(mapping[matches[0]], len(tok))

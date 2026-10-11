@@ -6,8 +6,9 @@
 # these steps:
 #   1. export the tracked files of REF (default HEAD) with `git archive`
 #   2. drop paths that reviewers do not need (EXCLUDE below)
-#   3. redact identities in every text file and inside .xlsx/.docx members
-#   4. scan everything that is left; exit 1 if any identity remains
+#   3. redact identities in every text file and inside .xlsx/.docx members, and
+#      replace each commit id of this repository with <commit>
+#   4. scan everything that is left; exit 1 if any identity or commit id remains
 #   5. make one commit by "Anonymous Authors" (skip with --no-git)
 #
 # Usage:
@@ -75,7 +76,12 @@ for p in "${EXCLUDE[@]}"; do
 done
 
 # Steps 3 and 4. Python handles the binary formats and the regexes.
-python3 - "$out" "$deny_file" <<'PY'
+# Every commit id of this repository: the public repo can be found from any of them
+# (GitHub searches commits by hash), and the copy has no history to resolve them.
+commits_file="$(mktemp)"
+trap 'rm -f "$commits_file"' EXIT
+git -C "$repo" rev-list --all > "$commits_file"
+python3 - "$out" "$deny_file" "$commits_file" <<'PY'
 import io
 import re
 import sys
@@ -84,6 +90,22 @@ from pathlib import Path
 
 out = Path(sys.argv[1])
 deny_file = sys.argv[2]
+# Commit ids by their first 7 digits, the shortest form the docs cite.
+COMMITS = {}
+for c in Path(sys.argv[3]).read_text().split():
+    COMMITS.setdefault(c[:7], []).append(c)
+HEX = re.compile(r"(?<![0-9A-Za-z])[0-9a-f]{7,40}(?![0-9A-Za-z])")
+
+def is_commit(tok):
+    return any(c.startswith(tok) for c in COMMITS.get(tok[:7], ()))
+
+def redact_commits(s):
+    return HEX.sub(lambda m: "<commit>" if is_commit(m.group(0)) else m.group(0), s)
+
+# The response tables hold prompt ids and reply hashes, never a commit, and an 8-digit
+# prompt id could match a commit prefix by chance, so commit ids are not looked for there
+# or inside office files.
+NO_COMMIT_SCAN = {".csv"}
 
 def keep_case(word):
     # bohdi -> bodhi with the original capitals, so BOHDI_DIR stays an
@@ -202,6 +224,8 @@ def redact_file(path):
     except UnicodeDecodeError:
         return False  # binary; the gate still scans its raw bytes
     new = redact_text(text)
+    if path.suffix.lower() not in NO_COMMIT_SCAN:
+        new = redact_commits(new)
     if new != text:
         path.write_text(new, encoding="utf-8")
         return True
@@ -232,6 +256,10 @@ for p in files:
             for m in EMAIL.finditer(line):
                 if not EMAIL_OK.match(m.group(0)):
                     problems.append(f"{label}:{lineno}: email: {m.group(0)!r}")
+            if p.suffix.lower() not in NO_COMMIT_SCAN | OFFICE:
+                for m in HEX.finditer(line):
+                    if is_commit(m.group(0)):
+                        problems.append(f"{label}:{lineno}: commit id: {m.group(0)!r}")
             if MODEL_OUTPUT.match(label):
                 continue
             for k, pat in enumerate(deny, 1):
