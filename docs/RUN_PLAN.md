@@ -191,7 +191,11 @@ and no keyword list. Its rates count only if it passes the hand-label gate of th
 `tests/test_end_to_end.py`). Each of the eight cells already lists a judge, so the command
 per cell is `python -m bodhi_lora run <cell id> --stages classify --judges <its judge>
 --gpus 0`; the Med42-8B cells list two judges, and `--judges` picks one. The runner runs
-the stage only when `--stages` names it, so no other run here includes it.
+the stage only when `--stages` names it, so no other run here includes it. Not built: a
+tool that draws the 300 replies and writes the labelling sheet. The plan fixes the seed,
+the cells, the strata (cell and condition) and the half from emergency-theme prompts, but
+not how the 300 split over the 16 strata; that split is the first author's to fix in a
+dated entry before the draw.
 Each recorded cell has about 4,000 replies. At the 8B evaluator's dimension times of 3.1
 and a judge three times slower (A4), a cell costs 0.6 to 1.1 H100-hours with its vLLM
 starts; the eight cells cost about 5 to 9. An API judge is the other route; its price

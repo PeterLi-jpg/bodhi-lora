@@ -88,7 +88,9 @@ Action: say which runs may start, where, and when.
   cells stop at the fetch command: R3, the paired cells of R5 and R7, R8 and R10. Every
   other run's dry run passes (RUN_PLAN.md section 4.1).
 - The judge classifier (R17) has its stage since 2026-10-11. Its gate needs 300 hand
-  labels from two authors first (ANALYSIS_PLAN.md section 12, 2026-10-10).
+  labels from two authors first (ANALYSIS_PLAN.md section 12, 2026-10-10). Before the
+  draw, fix in a dated plan entry how the 300 replies split over the 16 strata (four
+  HealthBench cells, four conditions); the plan leaves that open.
 - The estimates scale the measured 2026-07 stage times (RUN_PLAN.md section 3). The
   speed of a 4-bit base in vLLM and of the judges is not measured, so each run has a
   range. The run manifests of the first batch replace the estimates.
