@@ -85,7 +85,7 @@ analysis reproduces both.
 |---|---|---|---|---|
 | Table E.3 (score, t interval, pooled n, n per seed) | `tab_main_healthbench.tex` | `detail_tables` | MS | computed |
 | Table E.4 (seven dimensions, rates, scored n) | `tab_epistemic.tex` | `detail_tables` | MS | computed |
-| Figure E.1 (two panels) | `paper/figures/epistemic_bar.pdf` | `scripts/plot_epistemic_figures.py` | `results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/cross_seed_aggregate.json` | computed |
+| Figure E.1 (two panels) | `paper/figures/epistemic_bar.pdf` | `scripts/plot_epistemic_figures.py` | `results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/stats.json` (seed means and SD across seeds) | computed |
 | Active inquiry, context-seeking, red flag, scope: diff, CI, Holm p; the four effects keep Holm-adjusted p <= 0.0065 | `\stat<Dim>LoRAvsBaseDiff`, `...CI`, `...PHolm`, `\statHBMedGemmaMayScopeBoundingLoRAvsBasePHolm` (the largest of the four) | `cell_macros` | MS | computed |
 | Output tokens per response from the serving engine, Base and LoRA (Appendix H; section 4.4 prints the same values through the report macros) | `\statHBMedGemmaMayTokensEngineBase`, `\statHBMedGemmaMayTokensEngineLoRA` | `cell_macros` | `results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/stats.json` (`cost`, written by `make analyze`) | computed |
 | Questions per response 0.45 to 1.16 | `\statHBMedGemmaMayQuestionsBase`, `\statHBMedGemmaMayQuestionsLoRA` | `cell_macros` | MS | computed |

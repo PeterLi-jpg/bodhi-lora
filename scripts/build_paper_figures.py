@@ -94,19 +94,13 @@ def maybe_remove(path: Path, root: Path) -> None:
         print(f"Removed legacy figure -> {path.relative_to(root)}")
 
 
-# The submitted cell, whose results the paper's figures show.
-MAIN_CELL = "results/healthbench__medgemma-27b-text__bodhi__2026-05"
-
-
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--tex", default="paper/main.tex")
     parser.add_argument("--out-dir", default="paper/figures")
-    parser.add_argument(
-        "--aggregate",
-        default=f"{MAIN_CELL}/analysis/cross_seed_aggregate.json",
-    )
-    parser.add_argument("--data-dir", default=MAIN_CELL)
+    # The cell whose figures the paper prints: the first detail cell of
+    # configs/report.yaml, so a new main cell is a config change, not a code change.
+    parser.add_argument("--cell", default=None)
     parser.add_argument("--hb-hard", default="data/raw/healthbench/hard.jsonl")
     parser.add_argument(
         "--clean-legacy",
@@ -118,8 +112,11 @@ def main() -> int:
     root = Path(__file__).resolve().parent.parent
     tex_path = (root / args.tex).resolve()
     out_dir = (root / args.out_dir).resolve()
-    aggregate = (root / args.aggregate).resolve()
-    data_dir = (root / args.data_dir).resolve()
+    sys.path.insert(0, str(root))
+    from scripts.plot_epistemic_figures import default_cell
+
+    cell = args.cell or default_cell()
+    data_dir = (root / "results" / cell).resolve()
     hb_hard = (root / args.hb_hard).resolve()
 
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -134,8 +131,8 @@ def main() -> int:
         [
             python,
             str(root / "scripts" / "plot_epistemic_figures.py"),
-            "--aggregate",
-            str(aggregate),
+            "--cell",
+            cell,
             "--out-dir",
             str(out_dir),
         ],

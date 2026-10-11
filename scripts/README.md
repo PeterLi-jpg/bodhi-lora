@@ -10,9 +10,8 @@ scripts here are the tools that are not pipeline steps. Each one has a caller:
 | `check_no_secrets.sh` | `make check`, CI, `hooks/pre-commit` | no token or key in a tracked file |
 | `check_paper_macros.py` | `make paper`, CI | the paper uses only defined macros |
 | `build_paper_figures.py` | `make figures` | every figure of the paper, with the two plot scripts below; Figure 1 from `paper/figures/pipeline_standalone.tex` |
-| `plot_postprocessing.py` | `build_paper_figures.py` | the difficulty, axis and score-distribution figures, from the 2026-05 cell's raw outputs |
-| `plot_epistemic_figures.py` | `build_paper_figures.py` | Figure E.1, from the 2026-05 cell's cross-seed summary |
-| `aggregate_cross_seed.py` | `make figures` | that cross-seed summary (`analysis/cross_seed_aggregate.json`) |
+| `plot_postprocessing.py` | `build_paper_figures.py` | the difficulty, axis and score-distribution figures, from the detail cell's raw outputs, and the forest plot from its `stats.json` |
+| `plot_epistemic_figures.py` | `build_paper_figures.py` | Figure E.1 and the per-seed figure, from the detail cell's `analysis/stats.json` (configs/report.yaml `detail_cells`) |
 | `compute_irr_kappa.py` | `make kappa` | physician agreement, from rater files and an answer key kept outside the repo |
 | `make_irr_excel.py`, `make_tiebreaker_excel.py` | by hand (docs/BLOCKED.md item 6) | the physician grading sheets |
 | `export_derived_inputs.py` | `make derived` | the tracked score copies, from the large ignored files they copy |
@@ -43,3 +42,7 @@ Git history keeps every removed script.
   analysis replaces them. `grader_correlation.py`, `plot_ushape.py` (`plot_postprocessing.py`
   draws the difficulty figure itself), `plot_training.py` (no figure uses it),
   `rubric_diff.py` and the shared-host GPU lease tool `gpu_lease.sh` had no caller.
+- 2026-10-11, later: `aggregate_cross_seed.py` and its test. Figure E.1 now reads the
+  detail cell's `stats.json`, the numbers the tables print, so no target needs the
+  cross-seed summary (`4b05c30:scripts/aggregate_cross_seed.py` is the last version; its
+  output `analysis/cross_seed_aggregate.*` stays as a moved record, results/PROVENANCE.md).
