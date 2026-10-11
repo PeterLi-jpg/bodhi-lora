@@ -70,7 +70,6 @@ Some drafts hold numbers that we never posted. The last section below lists them
 | `analyses/second_person_questions.py` | The second-person question count posted to FzpA. Superseded on 2026-10-10: a keyword rule (W23); kept as the record only. |
 | `analyses/cell_files.py` | Where the three scripts above find a cell's raw outputs. |
 | `analyses/cell_recipe.py`, `analyses/host_runs.py` | The per-cell tau, trace counts and recipe from the host logs (`make cells`): the record of the 2026-07 filter counts. |
-| `analyses/peek_results.py` | Quick look at per-seed results on the host. |
 | `responses/drafts/FINDINGS_quality_drop.md` | Internal analysis of the aggregate drop (paired t, rubric test). Never posted. |
 | `PLAN.md` | The rebuttal plan, now closed. It records what ran and what did not. |
 | `COVERAGE.md` | Each reviewer concern, how we answered it, and the open item that remains. |

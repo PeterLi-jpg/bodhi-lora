@@ -1,7 +1,7 @@
 # One command from the committed results to the paper's numbers, figures and PDF.
 #   make report    paper/generated/{numbers.tex,numbers.json,tab_*.tex}, from each cell's
 #                  analysis/stats.json and the cross-cell statistics (make numbers is the same)
-#   make figures   paper/figures/*.pdf
+#   make figures   paper/figures/*.pdf, and the 2026-05 cell's cross-seed summary they read
 #   make paper     both, then paper/build/main.pdf
 #   make test      the test suite
 #   make smoke     the smoke cell on the CPU: every stage, the tiny model trained for real
@@ -33,7 +33,11 @@ FILTER_TRAIN ?= $(MAIN_CELL)/seed_7/filter/train.jsonl
 report numbers:
 	$(PYTHON) -m bodhi_lora report
 
+# Figure E.1 reads the 2026-05 cell's cross-seed summary, so it is made first from the
+# cell's raw outputs (tracked while open decision O2 stands, docs/ARCHITECTURE.md
+# section 12); the other figures read those raw outputs directly.
 figures: $(HB_HARD)
+	$(PYTHON) scripts/aggregate_cross_seed.py > /dev/null
 	$(PYTHON) scripts/build_paper_figures.py --hb-hard "$(HB_HARD)"
 
 # Runs only when the file is missing: stop with the fix instead of a traceback.

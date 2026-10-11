@@ -39,7 +39,7 @@ read them at the source before you redistribute anything.
 | BioMistral-7B | `BioMistral/BioMistral-7B` | see upstream | base model, added cell |
 | Qwen2.5-14B-Instruct | `Qwen/Qwen2.5-14B-Instruct` | see upstream | filter grader, stage 2 |
 | Llama-3.1-8B-Instruct | `meta-llama/Llama-3.1-8B-Instruct`, mirror `NousResearch/Meta-Llama-3.1-8B-Instruct` | Llama 3.1 Community License | evaluator, stages 4 and 5 |
-| Gemma-3n-E4B | `google/gemma-3n-E4B-it` | Gemma terms | smoke test only |
+| tiny-random-llama | `hf-internal-testing/tiny-random-LlamaForCausalLM` | see upstream | smoke cell only (`make smoke`) |
 
 ## Grader families
 

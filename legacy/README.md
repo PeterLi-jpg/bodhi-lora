@@ -5,8 +5,8 @@ from a TPU training path and a Modal eval path. Commit ef5b923 deleted both from
 this branch. This directory restores them from history, unchanged except for
 two reworded comments (section 1), so the submitted cell can be read and, in
 principle, run again. The current GPU
-pipeline (`scripts/`, `rebuttal/launch/`) is a different recipe. Section 4 lists
-the differences.
+pipeline (`bodhi_lora/`, `python -m bodhi_lora run`) is a different recipe. Section 4
+lists the differences.
 
 Nothing here runs from this directory as it is. Section 5 says how to run it.
 

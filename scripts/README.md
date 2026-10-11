@@ -1,24 +1,45 @@
 # scripts/
 
-The pipeline and the uniform analysis live in the `bodhi_lora` package
-(`python -m bodhi_lora run` and `analyze`). The scripts here are repository tools and the
-paper scripts that `make numbers`, `make figures` and `make cells` run until
-`python -m bodhi_lora report` reproduces their outputs. The TPU-era weight prefetch tool moved to `legacy/scripts/`
-on 2026-10-09.
+The pipeline, the uniform analysis and the report live in the `bodhi_lora` package
+(`python -m bodhi_lora run`, `analyze` and `report`; `make numbers` is the report). The
+scripts here are the tools that are not pipeline steps. Each one has a caller:
 
-On 2026-10-08 the shell launchers that no reported number came from (`gpu/`, `slurm/`,
-`run_all.sh`, `smoke.sh`, `run_multi_seed.sh`, `launch_gpu.sh`, `run_ablation_seeds.sh`,
-`regrade_empty_seeds.sh`) and the manual tools `analyze_traces.py`, `chat.py`,
-`compare_eval_runs.py`, `eval_high_stakes.py`, `preflight.py`,
-`prepare_clinician_grading.py` and `regrade_with_secondary.py` were removed. Git history
-keeps them. `draw_pipeline_figure.py` was removed the same day. It drew an old version of Figure 1
-that said training excluded only a 200-prompt holdout. Training excludes all 1,000
-HealthBench-Hard prompts, and Figure 1 is built from `paper/figures/pipeline_standalone.tex`.
+| Script | Run by | What it does |
+|---|---|---|
+| `check_doc_paths.py` | `make check`, CI | every repo path the docs name exists |
+| `check_no_secrets.sh` | `make check`, CI | no token or key in a tracked file |
+| `check_paper_macros.py` | `make paper`, CI | the paper uses only defined macros |
+| `build_paper_figures.py` | `make figures` | every figure of the paper, with the two plot scripts below; Figure 1 from `paper/figures/pipeline_standalone.tex` |
+| `plot_postprocessing.py` | `build_paper_figures.py` | the difficulty, axis and score-distribution figures, from the 2026-05 cell's raw outputs |
+| `plot_epistemic_figures.py` | `build_paper_figures.py` | Figure E.1, from the 2026-05 cell's cross-seed summary |
+| `aggregate_cross_seed.py` | `make figures` | that cross-seed summary (`analysis/cross_seed_aggregate.json`) |
+| `compute_irr_kappa.py` | `make kappa` | physician agreement, from rater files and an answer key kept outside the repo |
+| `make_irr_excel.py`, `make_tiebreaker_excel.py` | by hand (BLOCKED.md item 6) | the physician grading sheets |
+| `export_derived_inputs.py` | `make derived` | the tracked score copies, from the large ignored files they copy |
+| `export_anonymous.sh` | by hand (convention 10) | the anonymous reviewer copy |
+| `migrate_results.py` | ran once, 2026-10-09 | the move into one results root; every migrated manifest names it (results/PROVENANCE.md) |
+| `maintenance/` | by hand (BLOCKED.md item 4) | branch pruning and the history purge; goes once the purge is done |
 
-On 2026-10-10 the hedge lexicon `_hedging_metric.py` and `analyze_hedge_rate.py`, which
-used it, were removed with their tests. They decided whether a reply hedges by matching a
-word list ("might", "see a doctor" and others), which misses negation, quotes and context
-(docs/CONVENTIONS.md rule 15). Nothing called them, and no paper or reply number came from
-them; the only output was the 2026-04 pilot's `hedge_rate.json`, archived in the move to
-one results root (results/PROVENANCE.md). The evaluator's hedging-quality grade is the
-measure. Git history keeps them.
+## What went
+
+Git history keeps every removed script.
+
+- 2026-10-08: the shell launchers that no reported number came from (`gpu/`, `slurm/`,
+  `run_all.sh`, `smoke.sh`, `run_multi_seed.sh`, `launch_gpu.sh`, `run_ablation_seeds.sh`,
+  `regrade_empty_seeds.sh`) and the manual tools `analyze_traces.py`, `chat.py`,
+  `compare_eval_runs.py`, `eval_high_stakes.py`, `preflight.py`,
+  `prepare_clinician_grading.py` and `regrade_with_secondary.py`. `draw_pipeline_figure.py`
+  went the same day: it drew an old Figure 1 that said training excluded only a
+  200-prompt holdout. Training excludes all 1,000 HealthBench-Hard prompts, and Figure 1 is
+  built from `paper/figures/pipeline_standalone.tex`.
+- 2026-10-09: the TPU-era weight prefetch tool moved to `legacy/scripts/`.
+- 2026-10-10: the hedge lexicon `_hedging_metric.py` and `analyze_hedge_rate.py`, with
+  their tests. They decided whether a reply hedges by matching a word list, which misses
+  negation, quotes and context (docs/CONVENTIONS.md rule 15). No paper or reply number came
+  from them. The evaluator's hedging-quality grade is the measure.
+- 2026-10-11: the scripts that no make target, command or live script called, with the
+  tests that alone kept them alive. `aggregate_seeds.py` and `eval_ushape.py` summarized
+  seeds for the 2026-07 launcher (`61dada9:scripts/aggregate_seeds.py`); the uniform
+  analysis replaces them. `grader_correlation.py`, `plot_ushape.py` (`plot_postprocessing.py`
+  draws the difficulty figure itself), `plot_training.py` (no figure uses it),
+  `rubric_diff.py` and the shared-host GPU lease tool `gpu_lease.sh` had no caller.

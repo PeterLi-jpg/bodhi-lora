@@ -47,7 +47,7 @@ Accept the terms on each model card, then `export HF_TOKEN=...`, or keep a token
 | `BioMistral/BioMistral-7B` | base model, added cell |
 | `Qwen/Qwen2.5-14B-Instruct` | filter grader, stage 2 |
 | `meta-llama/Llama-3.1-8B-Instruct` | evaluator, stages 4 and 5 (the added cells use the `NousResearch/Meta-Llama-3.1-8B-Instruct` mirror) |
-| `google/gemma-3n-E4B-it` | smoke test |
+| `hf-internal-testing/tiny-random-LlamaForCausalLM` | smoke cell (`make smoke`), no token needed |
 
 ## 5. Check the install
 
