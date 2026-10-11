@@ -106,10 +106,6 @@ REDACT = [
      "a HealthBench grader fork (link withheld for review)"),
     (re.compile(r"https?://github\.com/sebasmos/bodhi-llms?\b[\w./-]*", re.I),
      "https://pypi.org/project/bodhi-llm/"),
-    # Branch-policy lines name the scratch-branch prefixes of the team's tools.
-    (re.compile(r"a `claude/\*` or `worktree-agent\*` branch"), "a scratch branch"),
-    (re.compile(r"`claude/\*` and `worktree-agent\*` pushes"), "scratch-branch pushes"),
-    (re.compile(r"the remote `claude/\*` and `worktree-agent\*` branches"), "the remote scratch branches"),
     (re.compile(r"github\.com([/:])(PeterLi-jpg|sebasmos)/", re.I), r"github.com\1anonymous/"),
     (re.compile(r"\b(PeterLi-jpg|sebasmos)\b", re.I), "anonymous"),
     (re.compile(r"\banqipeter[\w.+-]*@[\w.-]+", re.I), "anonymous@example.org"),

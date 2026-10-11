@@ -134,33 +134,46 @@ there is no privacy purge (D18).
    time. The CI step that downloads HealthBench, runs `make numbers` and diffs
    `paper/generated/` has never run off this machine. Check it with `gh pr checks` or the
    Actions tab.
-2. **Delete the scratch branches.** Done on 2026-10-11: the remote `claude/*` and
-   `worktree-agent*` branches are deleted. `scripts/maintenance/prune_branches.sh --apply`
-   also deletes the temp branches and the branches already merged into the mainline; this
-   checkout has not fetched since, so whether those went too is not confirmed here. One
-   temp branch, `origin/results-temp`, holds the 2026-04 pilot adapter (seed 42, 838
-   traces), not a submitted adapter. Its weights have the same git blob as the local copy
-   in `results/healthbench__medgemma-27b-text__bodhi__2026-04/seed_42/train/`.
-3. **Remove the two AI-tool trailers** (`cf72766` and its twin `72a428b`), and nothing
-   else (D18). On 2026-10-11 you asked for this purge. It is not done: it rewrites the
-   history of `main` and of this branch (`cf72766` is an ancestor of both, and of 17
-   other local or remote refs), and it needs a force-push, so it waits for your yes on
-   each. The four other `Co-authored-by` lines in history name a human collaborator and
-   stay. Follow `scripts/maintenance/purge_history.md` with four
-   changes: skip steps 2 and 3 (no name map); in step 4 write only its `co-authored-by`
-   rule into `messages.txt` (the regex line that matches Claude or Anthropic; no path list,
-   no callback), so the human co-author lines stay; in step 6 pass only `--replace-message "$SECURE/messages.txt"` to
-   `git filter-repo`; in step 7 check that `git log --all -i --grep=noreply@anthropic`
-   lists nothing. Every commit id from the first rewritten commit onward changes, and
-   commit links in the OpenReview replies stop working.
+2. **Delete the scratch branches.** Done on 2026-10-11: the remote scratch branches (the
+   name prefixes that `hooks/pre-push` rejects) are deleted.
+   `scripts/maintenance/prune_branches.sh --apply` also deletes the temp branches and the
+   branches already merged into the mainline; this checkout has not fetched since, so
+   whether those went too is not confirmed here. One temp branch, `origin/results-temp`,
+   holds the 2026-04 pilot adapter (seed 42, 838 traces), not a submitted adapter. Its
+   weights have the same git blob as the local copy in
+   `results/healthbench__medgemma-27b-text__bodhi__2026-04/seed_42/train/`. Keep
+   `origin/results-scaffold`: it is the only branch that holds aa7eec4, the commit that
+   dates the physician-check plan to 2026-04-29 (`paper/NUMBERS.md`, withdrawals W19). The
+   prune script lists it as unmerged and does not delete it.
+3. **Remove the two tool trailers** (`cf72766` and its twin `72a428b`), and nothing else
+   (D18). On 2026-10-11 you asked for this purge. It is not done: it rewrites the history
+   of `main` and of this branch (`cf72766` is in 20 refs, local and remote, the stash
+   among them; `72a428b` is in `origin/results-scaffold`, after aa7eec4, which keeps its
+   id), and it needs a force-push, so it waits for your yes on each. The four other
+   `Co-authored-by` lines in history name a human collaborator and stay. Follow
+   `scripts/maintenance/purge_history.md` with five changes: skip steps 2 and 3 (no name
+   map); in step 4 write only its trailer rule into `messages.txt` (the `printf` line; no
+   path list, no callback), so the human co-author lines stay; in step 6 pass only
+   `--replace-message "$SECURE/messages.txt"` to `git filter-repo`; in step 7 run only the
+   trailer check (the `--grep` line), which must list nothing; then step 7b, which
+   rewrites the commit ids that tracked files cite and runs `make check` and `make test`
+   before the push. Without step 7b, `scripts/check_doc_paths.py` fails on most
+   `<commit>:<path>` references, and the pre-commit hook blocks every later commit. Every
+   commit id from the first rewritten commit onward changes, and commit links in the
+   OpenReview replies stop working.
 4. **Optional: rename the repository** `bohdi-lora` to `bodhi-lora` (D15). Then update
    the URLs in `README.md`, `docs/KNOWN_ISSUES.md`, `CONTRIBUTING.md`,
    `docs/INSTALL.md`, `pyproject.toml` and `scripts/maintenance/purge_history.md`, and run
    `git remote set-url origin git@github.com:PeterLi-jpg/bodhi-lora.git`.
-5. **Local-only refs.** Check, then delete, `refs/codex/*`, `refs/original/*` and the tags
-   `backup-before-email-rewrite*`. Run `git worktree prune` for the stale
-   `/private/tmp/bohdi-main` entry. The merged branches `cleanup/lane-*` can go with
-   `git branch -d`.
+5. **Local-only refs.** Check, then delete, the backup refs and tags that
+   `scripts/maintenance/purge_history.md` step 9 lists. Run `git worktree prune` for the
+   stale `/private/tmp/bohdi-main` entry. The merged branches `cleanup/lane-*` can go with
+   `git branch -d`. One stash is left, `stash@{0}`, "interrupted integrator WIP 2026-10-09
+   (paper table fitting)", on 52e080d: it changes `paper/main.tex` (462 lines),
+   `paper/generated/numbers.tex`, `paper/generated/numbers.json` and the removed
+   `503b975:scripts/paper_stats.py`. Its paper text is older than the current tables.
+   Drop it (`git stash drop`) or recover what you need from it before the purge, which
+   rewrites it too.
 
 ## 5. The hooks path (done 2026-10-11 in this clone)
 

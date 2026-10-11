@@ -130,8 +130,8 @@ local and are never pushed. No commit carries a coding-assistant trailer or ment
 
 - Why: the rebuttal ran on a branch planned never to merge, and scratch branches and a
   tool trailer reached the public remote (HYG-5, HYG-12, HYG-15).
-- Enforced by: `hooks/pre-push` rejects `claude/*` and `worktree-agent*` pushes, pushed
-  commits with tool traces, and machine-hostname identities. `hooks/commit-msg` rejects
+- Enforced by: `hooks/pre-push` rejects pushes of scratch branches (the name prefixes it
+  lists), pushed commits with tool traces, and machine-hostname identities. `hooks/commit-msg` rejects
   tool trailers and mentions. Activate both with `git config core.hooksPath hooks`.
   `scripts/maintenance/prune_branches.sh` lists stale branches and deletes them with
   `--apply`.

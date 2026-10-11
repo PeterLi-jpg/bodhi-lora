@@ -23,7 +23,8 @@ It does not remove:
   cached views until GitHub Support purges them (step 8).
 
 Every commit id from the first rewritten commit onward changes. Commit links in
-OpenReview replies stop working.
+OpenReview replies stop working, and the ids that tracked files cite must be rewritten
+before the push (step 7b).
 
 ## Step 0. Before you start
 
@@ -155,9 +156,33 @@ git rev-list --all --count     # compare with backup.git; a few emptied commits 
 The first `grep -c` counts path hits, so a short token can match inside a longer
 word (`flash`). Read any hit before you decide it is a name.
 
+## Step 7b. Rewrite the commit ids that tracked files cite
+
+filter-repo rewrites the ids in commit messages, not in files. On 2026-10-11 the tracked
+files cited 64 commits, 47 of them after `cf72766`, and 78 of the 83 `<commit>:<path>`
+references point at those 47. `scripts/check_doc_paths.py` checks each of them with
+`git cat-file`, and `make check`, CI and `hooks/pre-commit` run it, so without this step
+every later commit fails the hook. The run manifests under `results/` also cite the
+commit they ran at. `filter-repo/commit-map` in the rewritten repository maps old ids to
+new ones:
+
+```bash
+git clone "$SECURE/purge.git" "$SECURE/work" && cd "$SECURE/work"
+git checkout cleanup/resubmission        # then the same for main, if it cites ids
+python3 scripts/maintenance/remap_commit_ids.py "$SECURE/purge.git/filter-repo/commit-map"           # read every line
+python3 scripts/maintenance/remap_commit_ids.py "$SECURE/purge.git/filter-repo/commit-map" --apply
+git config core.hooksPath hooks
+make check && make test
+git commit -am "docs: cite the commit ids of the rewritten history"
+git push "$SECURE/purge.git" HEAD:cleanup/resubmission
+```
+
+`make check` must pass, and `make test` must pass with the same skips as before the
+rewrite, before step 8.
+
 ## Step 8. Push and clean the server
 
-Only after the first author says so:
+Only after the first author says so, and only after step 7b:
 
 ```bash
 cd "$SECURE/purge.git"

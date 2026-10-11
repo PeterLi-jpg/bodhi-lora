@@ -10,14 +10,14 @@ scripts here are the tools that are not pipeline steps. Each one has a caller:
 | `check_no_secrets.sh` | `make check`, CI, `hooks/pre-commit` | no token or key in a tracked file |
 | `check_paper_macros.py` | `make paper`, CI | the paper uses only defined macros |
 | `build_paper_figures.py` | `make figures` | every figure of the paper, with the two plot scripts below; Figure 1 from `paper/figures/pipeline_standalone.tex` |
-| `plot_postprocessing.py` | `build_paper_figures.py` | the difficulty, axis and score-distribution figures, from the detail cell's raw outputs, and the forest plot from its `stats.json` |
+| `plot_postprocessing.py` | `build_paper_figures.py` | the difficulty, axis and score-distribution figures, from the detail cell's response tables (`seed_*/table.csv`), and the forest plot from its `stats.json` |
 | `plot_epistemic_figures.py` | `build_paper_figures.py` | Figure E.1 and the per-seed figure, from the detail cell's `analysis/stats.json` (configs/report.yaml `detail_cells`) |
 | `compute_irr_kappa.py` | `make kappa` | physician agreement, from rater files and an answer key kept outside the repo |
 | `make_irr_excel.py`, `make_tiebreaker_excel.py` | by hand (docs/BLOCKED.md item 6) | the physician grading sheets |
 | `export_derived_inputs.py` | `make derived` | the tracked score copies, from the large ignored files they copy |
 | `export_anonymous.sh` | by hand (convention 10) | the anonymous reviewer copy |
 | `migrate_results.py` | ran once, 2026-10-09 | the move into one results root; every migrated manifest names it (results/PROVENANCE.md) |
-| `maintenance/` | by hand (docs/BLOCKED.md item 4) | branch pruning and the history purge; goes once the purge is done |
+| `maintenance/` | by hand (docs/BLOCKED.md item 4) | branch pruning, the history purge, and `remap_commit_ids.py`, which rewrites the commit ids that tracked files cite after the purge; goes once the purge is done |
 
 ## What went
 

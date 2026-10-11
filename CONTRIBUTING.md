@@ -20,7 +20,7 @@ pre-commit framework is not used: it refuses to install while `core.hooksPath` i
 - `hooks/pre-commit` runs the secrets scan and the doc path check (about 7 seconds).
 - `hooks/commit-msg` rejects a commit message that names a coding assistant or carries
   its trailer (`Co-Authored-By` for a tool, "Generated with").
-- `hooks/pre-push` rejects a push of a `claude/*` or `worktree-agent*` branch, a pushed
+- `hooks/pre-push` rejects a push of a scratch branch (the name prefixes it lists), a pushed
   commit whose message fails `commit-msg`, and a commit whose author or committer email
   is a machine hostname (`*.local`). That last one means git identity was never set.
   Deleting a scratch branch on the remote is allowed.
