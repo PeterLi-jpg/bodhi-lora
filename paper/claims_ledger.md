@@ -59,7 +59,7 @@ analysis reproduces both.
 | Posted 14 of 1,000 (Appendix H), from a keyword audit; withdrawn, and no keyword count replaces it | `\statPostedClinicianPrompts` | `count_macros` | PV | posted (withdrawals W14) |
 | 8 cells, 7 of them added; active inquiry and context-seeking rise in 4 of the 5 cells with a base model outside the evaluator's family and no prompt that cues asking; aggregate falls in all 4 added cells among them | `\statCrossCells`, `\statGroupAddedCells`, `\statGroupOutsideFamilyAskRose`, `\statGroupOutsideFamilyCells`, `\statGroupAddedOutsideFamilyRubricScoreLoRAvsBaseMeasured` | `count_macros`, `count_macros` | CS | computed |
 | BODHI expansion "Balanced, Open-minded, Diagnostic, Humble, Inquisitive" | none | | the cited BMJ paper (docs/DECISIONS.md, D15 note) | design |
-| Pass 1 has seven fields: task type, audience, best assessment, key uncertainties, questions to ask, red flags, safe recommendations | none | | `bodhi/prompts.py` in bodhi-llm 0.1.4 (pinned in `requirements.txt`) | design |
+| Pass 1 has seven fields: task type, audience, best assessment, key uncertainties, questions to ask, red flags, safe recommendations | none | | `bodhi/prompts.py` in bodhi-llm 0.1.4 (pinned in `pyproject.toml`) | design |
 
 ## Method and evaluation
 

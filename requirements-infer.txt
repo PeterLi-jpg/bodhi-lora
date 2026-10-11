@@ -1,5 +1,6 @@
 # Inference env (.venv-infer): vLLM serving for the probe, traces, filter, eval,
-# grade and bench stages (bodhi_lora/pipeline/). The runner starts them with
+# grade and bench stages (bodhi_lora/pipeline/). It is separate from the training
+# env of pyproject.toml because vLLM 0.9.2 cannot import with transformers 4.57.6. The runner starts them with
 # python.infer of configs/project.yaml (default .venv-infer/bin/python).
 #
 # vllm: the submitted eval image asked for vllm>=0.6.5,<0.10
@@ -9,8 +10,8 @@
 # 2026), so both ranges resolved to 0.9.2. No pip freeze from either run is in
 # the repo to confirm it.
 vllm==0.9.2
-# vllm 0.9.2 requires torch==2.7.0 (its PyPI metadata). requirements.txt pins
-# the same torch.
+# vllm 0.9.2 requires torch==2.7.0 (its PyPI metadata). The train extra of
+# pyproject.toml pins the same torch.
 torch==2.7.0
 # vllm 0.9.2 requires transformers>=4.51.1. Its ovis config registers "aimv2"
 # without exist_ok, and transformers 4.54 and later ship their own aimv2, so
@@ -29,6 +30,5 @@ pyyaml>=6.0,<7.0
 # so both envs share the floor.
 pydantic>=2.10,<3
 tqdm>=4.65
-# rebuttal/launch/run_cell.sh runs scripts/aggregate_seeds.py with this env, and it
-# computes its t interval with scipy.
+# The probe stage computes its Fisher test with scipy (bodhi_lora/pipeline/probe.py).
 scipy>=1.11,<2.0

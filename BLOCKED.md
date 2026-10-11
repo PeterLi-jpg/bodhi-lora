@@ -243,7 +243,7 @@ and C28.
   whether to keep that self-citation.
 - **Clean-environment install.** The dependency pins were never installed in a fresh
   environment (it downloads packages):
-  `python3 -m venv /tmp/v && /tmp/v/bin/pip install -r requirements-dev.txt && /tmp/v/bin/python -m pytest -q`.
+  `python3 -m venv /tmp/v && /tmp/v/bin/pip install -e '.[train,dev]' && /tmp/v/bin/python -m pytest -q`.
 - **Names file.** `../_wt/.clinician_names.txt` starts with a blank line. The grep on this
   machine ignores a blank pattern; GNU grep without `-w` would match every line. Delete
   the blank line.

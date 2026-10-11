@@ -15,7 +15,8 @@ gives the design and an example of each record.
 
 API used: pydantic 2.x (BaseModel, ConfigDict(extra="forbid", frozen=True),
 model_validator(mode="after"), Field(discriminator=...)), per the pydantic v2 docs
-pages "Models", "Validators" and "Unions". requirements*.txt pin pydantic>=2.10,<3,
+pages "Models", "Validators" and "Unions". pyproject.toml and requirements-infer.txt pin
+pydantic>=2.10,<3,
 the floor vLLM 0.9.2 already needs.
 """
 from __future__ import annotations
@@ -709,7 +710,7 @@ class Interpreters(_Record):
     """The Python of each environment.
 
     Training needs a newer transformers than the vLLM release that serves the models
-    allows, so training and inference run in two environments (requirements.txt and
+    allows, so training and inference run in two environments (pyproject.toml and
     requirements-infer.txt). CPU dry runs use the current interpreter instead.
     """
 

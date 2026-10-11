@@ -140,8 +140,10 @@ make smoke                                      # the smoke cell on the CPU, tra
 ```
 
 Setup, once per machine: `bash setup.sh` builds the training environment (`.venv`,
-`requirements.txt`) and the vLLM environment (`.venv-infer`, `requirements-infer.txt`),
-and `export HF_TOKEN=...` gives access to the gated models (MedGemma, Llama-3.1, Gemma).
+`pip install -e '.[train,gpu,dev]'` from `pyproject.toml`) and the vLLM environment
+(`.venv-infer`, `requirements-infer.txt`), and `export HF_TOKEN=...` gives access to the
+gated models (MedGemma, Llama-3.1, Gemma). Install editable: the package finds
+`configs/` and `results/` next to its folder.
 
 A run writes `results/<cell_id>/`, with a manifest in every stage folder
 (`bodhi_lora/manifest.py`): resolved settings, git commit and dirty flag, library

@@ -2,7 +2,7 @@
 
     python -m bodhi_lora.pipeline.train --cell <cell id> --seed N
 
-Runs in the training environment (requirements.txt), on one GPU, or on the CPU for the
+Runs in the training environment (the train extra of pyproject.toml), on one GPU, or on the CPU for the
 smoke cell. The recipe is the cell's train block and the model record's chat-template
 facts; the resolved recipe goes into the manifest. The seed's adapter is saved in
 seed_<n>/train/ (adapter_config.json, the weights and trainer_state.json), with the

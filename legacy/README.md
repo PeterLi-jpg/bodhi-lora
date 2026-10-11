@@ -142,9 +142,9 @@ tunix or bitsandbytes entry, so it is not a freeze of any environment that
 produced a reported number: the Modal eval image had torch below 2.9 and vllm,
 and the TPU trainer needed jax and tunix. Its header names
 `tpu/setup_tpu.sh` as a source of truth, so it belongs to the submission era.
-It moved here so that the root no longer holds a lock that contradicts
-`requirements.txt` (torch 2.7.0). The root now has `requirements.txt` (training
-env) and `requirements-infer.txt` (vLLM env).
+It moved here so that the root no longer holds a lock that contradicts the
+training pins (torch 2.7.0). The root now has `pyproject.toml` (training and
+analysis env) and `requirements-infer.txt` (vLLM env).
 
 ## 7. The posted rebuttal cells
 

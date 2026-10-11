@@ -21,8 +21,8 @@ source .venv/bin/activate
 bash setup.sh
 ```
 
-`setup.sh` warns if you install into a shared or base Python, installs
-`requirements.txt`, runs `python -m pip check`, makes the working folders and downloads
+`setup.sh` warns if you install into a shared or base Python, runs
+`pip install -e '.[train,gpu,dev]'` (pins in `pyproject.toml`), runs `python -m pip check`, makes the working folders and downloads
 HealthBench into `data/raw/`. On macOS, pip prints `Ignoring autoawq` and
 `Ignoring bitsandbytes`; both are Linux-only, so this is expected.
 

@@ -99,9 +99,9 @@ author fixes it when he adopts docs/ANALYSIS_PLAN.md.
 
 ## 4. Environment
 
-- Training: `requirements.txt` in a `.venv` (torch 2.7.0, transformers 4.57.6,
-  peft 0.19.1, trl 0.11.4, bodhi-llm 0.1.4). `bash setup.sh` installs it and runs
-  `pip check`.
+- Training: the `train` extra of `pyproject.toml` in a `.venv` (torch 2.7.0,
+  transformers 4.57.6, peft 0.19.1, trl 0.11.4, bodhi-llm 0.1.4). `bash setup.sh` runs
+  `pip install -e '.[train,gpu,dev]'` and `pip check`.
 - Inference: a second env, `.venv-infer`, for vLLM 0.9.2, which needs an older
   transformers. The runner calls `.venv-infer/bin/python` for generation, grading
   and eval. `requirements-infer.txt` pins it. The env that produced the posted cells

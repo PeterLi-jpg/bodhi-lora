@@ -1,6 +1,7 @@
 #!/bin/bash
-# Run this once after cloning, inside the training virtualenv (.venv). It also builds
-# the vLLM env (.venv-infer) on Linux and downloads HealthBench to the data root.
+# Run this once after cloning, inside the training virtualenv (.venv). It installs the
+# package editable with its train, gpu and dev extras (pyproject.toml), builds the vLLM
+# env (.venv-infer) on Linux and downloads HealthBench to the data root.
 set -euo pipefail
 
 cd "$(dirname "$0")"
@@ -36,7 +37,8 @@ python --version
 mkdir -p data/raw
 
 python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
+# Editable, so bodhi_lora finds configs/ and results/ next to it (bodhi_lora/paths.py).
+python -m pip install -e '.[train,gpu,dev]'
 
 # vLLM serving needs its own env (requirements-infer.txt explains why). vLLM
 # wheels are Linux and CUDA only, so a Mac or CPU dev box skips this step.

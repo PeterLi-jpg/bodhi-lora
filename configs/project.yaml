@@ -9,7 +9,7 @@ data_root: data/raw
 scratch_root: outputs
 
 python:
-  # Training: transformers 4.57.6, peft, trl (requirements.txt).
+  # Training: transformers 4.57.6, peft, trl (the train extra of pyproject.toml).
   train: .venv/bin/python
   # Serving and grading: vLLM 0.9.2 needs transformers below 4.54 (requirements-infer.txt).
   infer: .venv-infer/bin/python
