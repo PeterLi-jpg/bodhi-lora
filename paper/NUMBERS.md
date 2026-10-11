@@ -1,4 +1,4 @@
-# Claims ledger for paper/main.tex
+# Number map for paper/main.tex
 
 Every number and claim in the abstract, the introduction and the results of `paper/main.tex`,
 with the macro that prints it, the function of `bodhi_lora/report/` that writes the macro

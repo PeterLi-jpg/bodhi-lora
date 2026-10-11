@@ -20,14 +20,20 @@ exception is `figures/pipeline.pdf`, which is tracked. Its source is
 
 ## Numbers
 
-Numbers in the paper come from `paper/generated/`. The stats scripts write that
-folder; see its README. Do not type a result into `main.tex` by hand. A table that
-still holds typed numbers must be changed to `\input` the generated file.
+Numbers in the paper come from `paper/generated/`. `make numbers`
+(`python -m bodhi_lora report`) writes that folder; see its README. Do not type a result
+into `main.tex` by hand. A table that still holds typed numbers must be changed to
+`\input` the generated file.
 
-`claims_ledger.md` maps every number and claim in the abstract, introduction and
+[NUMBERS.md](NUMBERS.md) maps every number and claim in the abstract, introduction and
 results to its macro, the function that writes it and the input file. It also lists
 the few numbers that are design settings, transcribed from the posted replies, or not
-reproducible from the repository. Update it when the text changes.
+reproducible from the repository. Update it when the text changes. The claim-level
+ledger, with the status of each claim, is [docs/CLAIMS.md](../docs/CLAIMS.md).
+
+`prior_work_candidates.bib` is a record, not a build input: the candidate references
+found for meta-review weakness W6. The five that the paper cites were merged into
+`references.bib` on 2026-10-08.
 
 ## Frozen submission
 

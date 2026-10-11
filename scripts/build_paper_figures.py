@@ -40,7 +40,6 @@ LEGACY_FIGURES = (
 
 SUPPORTING_ASSETS = (
     "pipeline.pdf",
-    "pipeline.tex",
     "pipeline_standalone.tex",
     "score_distribution.pdf",
 )
