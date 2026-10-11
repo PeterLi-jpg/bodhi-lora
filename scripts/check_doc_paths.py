@@ -237,11 +237,16 @@ def main() -> int:
         for lineno, line in enumerate(tex.read_text(encoding="utf-8").splitlines(), 1):
             line = re.sub(r"(?<!\\)%.*", "", line)
             for raw in TEXTT.findall(line):
-                path = candidate(raw.replace("\\_", "_"), Path(rel).parent, False)
+                # \allowbreak lets a long path wrap; it is not part of the path.
+                raw = re.sub(r"\\allowbreak\s*", "", raw).replace("\\_", "_")
+                path = candidate(raw, Path(rel).parent, False)
                 if path is None:
                     continue
                 checked += 1
-                if not exists(path):
+                ok = exists(path)
+                if verbose:
+                    print(f"{'ok  ' if ok else 'MISS'} {rel}:{lineno}: {path}")
+                if not ok:
                     missing.append(f"{rel}:{lineno}: {path}")
     stale = [k for k in PENDING if (k.rstrip("/") in TRACKED or k in TRACKED_DIRS)]
     for k in stale:
