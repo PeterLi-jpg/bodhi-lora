@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Run the repo checks that need no Python packages before each commit: the secrets scan
+# and the doc path check (make check runs both, plus the registry).
+#
+# Activate once per clone (the hooks live in the repo, not in .git/hooks):
+#   git config core.hooksPath hooks
+#
+# The pre-commit framework cannot share this setup: it refuses to install while
+# core.hooksPath is set, so the repo keeps its hooks here instead.
+set -euo pipefail
+
+cd "$(git rev-parse --show-toplevel)"
+bash scripts/check_no_secrets.sh
+python3 scripts/check_doc_paths.py

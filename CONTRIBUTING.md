@@ -13,9 +13,11 @@ git config core.hooksPath hooks
 
 Then follow [docs/INSTALL.md](docs/INSTALL.md).
 
-The last line activates the two hooks in `hooks/`. Git does not run hooks from a
-tracked folder until you point `core.hooksPath` at it, so every clone needs it once.
+The last line activates the three hooks in `hooks/`. Git does not run hooks from a
+tracked folder until you point `core.hooksPath` at it, so every clone needs it once. The
+pre-commit framework is not used: it refuses to install while `core.hooksPath` is set.
 
+- `hooks/pre-commit` runs the secrets scan and the doc path check (about 7 seconds).
 - `hooks/commit-msg` rejects a commit message that names a coding assistant or carries
   its trailer (`Co-Authored-By` for a tool, "Generated with").
 - `hooks/pre-push` rejects a push of a `claude/*` or `worktree-agent*` branch, a pushed
@@ -26,14 +28,14 @@ tracked folder until you point `core.hooksPath` at it, so every clone needs it o
 ## Before a pull request
 
 ```bash
-pytest tests/                         # no GPU needed
-bash scripts/check_no_secrets.sh      # Hugging Face, OpenAI and AWS token shapes
-python scripts/check_doc_paths.py     # every path a doc names must exist
+make check     # secrets scan, doc paths, and every record in configs/ loads and checks
+make test      # pytest suite, no GPU needed
 ```
 
-CI runs the same checks, plus `py_compile` on `scripts/`, a YAML check on `configs/`
-and shellcheck. Optional: `pip install pre-commit && pre-commit install` runs the
-whitespace, large-file and secret checks on each commit.
+CI (`.github/workflows/ci.yml`) runs `make check` and the tests, compiles `bodhi_lora/`
+and `scripts/`, and rebuilds `paper/generated/` from the checkout with `make numbers`,
+failing on any difference. `.github/workflows/lint.yml` runs shellcheck on the shell
+scripts and hooks.
 
 ## Pull requests
 

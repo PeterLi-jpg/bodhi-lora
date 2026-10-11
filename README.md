@@ -59,7 +59,7 @@ bodhi_lora/         the package: registry, engine, data, protocols, grading, pip
 configs/            the registry: one YAML record per model, benchmark, protocol and cell
 data/raw/           benchmark files, downloaded or built here (gitignored)
 docs/               architecture, experiments, analysis plan, run plan, conventions, decisions, claims
-hooks/              commit-msg and pre-push hooks (activate once, see below)
+hooks/              pre-commit, commit-msg and pre-push hooks (activate once, see below)
 legacy/             frozen launchers of the 2026-05 MedGemma-27B cell (TPU training, Modal eval)
 paper/              the paper source (paper/main.tex), paper/generated/ and the frozen submission
 rebuttal/           the review record: posted replies, withdrawals, commitments, posted values
@@ -188,8 +188,8 @@ its 2,816 prompts and 0 overlap with the 667 eval prompts.
 
 ## Contributing
 
-Activate the hooks once per clone. They block commit messages with tool trailers and
-pushes of scratch branches:
+Activate the hooks once per clone. They run the secrets and doc path checks before each
+commit, and block commit messages with tool trailers and pushes of scratch branches:
 
 ```bash
 git config core.hooksPath hooks

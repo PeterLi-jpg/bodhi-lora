@@ -26,4 +26,4 @@ jobs:
         run: |
           shellcheck setup.sh scripts/check_no_secrets.sh \
             scripts/export_anonymous.sh scripts/maintenance/prune_branches.sh \
-            hooks/commit-msg hooks/pre-push
+            hooks/commit-msg hooks/pre-push hooks/pre-commit

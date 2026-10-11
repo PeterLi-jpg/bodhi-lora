@@ -6,8 +6,8 @@ scripts here are the tools that are not pipeline steps. Each one has a caller:
 
 | Script | Run by | What it does |
 |---|---|---|
-| `check_doc_paths.py` | `make check`, CI | every repo path the docs name exists |
-| `check_no_secrets.sh` | `make check`, CI | no token or key in a tracked file |
+| `check_doc_paths.py` | `make check`, CI, `hooks/pre-commit` | every repo path the docs name exists |
+| `check_no_secrets.sh` | `make check`, CI, `hooks/pre-commit` | no token or key in a tracked file |
 | `check_paper_macros.py` | `make paper`, CI | the paper uses only defined macros |
 | `build_paper_figures.py` | `make figures` | every figure of the paper, with the two plot scripts below; Figure 1 from `paper/figures/pipeline_standalone.tex` |
 | `plot_postprocessing.py` | `build_paper_figures.py` | the difficulty, axis and score-distribution figures, from the 2026-05 cell's raw outputs |
