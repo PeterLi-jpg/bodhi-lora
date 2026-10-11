@@ -67,7 +67,7 @@ def test_macro_names_are_letters_unique_and_named_by_the_cell(setup):
     assert len(names) == len(set(names))
     assert all(re.fullmatch(r"[A-Za-z]+", n) for n in names)
     tokens = {reg.cells[c].report.token for c in rep.record["cells"]}
-    tokens |= {"Group", "Posted", "CrossCells"} | {g.token for g in cfg.grader_comparisons}
+    tokens |= {"Group", "Posted", "CrossCells", "Family"} | {g.token for g in cfg.grader_comparisons}
     assert all(any(n.startswith(t) for t in tokens) for n in names)
     # every macro names its source in stats.json
     assert all(src for _, _, src in rep.macros)
@@ -200,3 +200,44 @@ def test_a_macro_name_is_letters_and_made_once():
         rep.add("Ok", "2", "x")
     rep.add("Missing", "--", "x")
     assert [m[0] for m in rep.macros] == ["Ok"]
+
+
+def test_a_table_row_that_does_not_fill_its_columns_is_an_error():
+    """GEN-1 of the 2026-10-11 audit: a fixed colspec under a cell with other conditions
+    made LaTeX that does not compile; tabular() now refuses it where the report is made."""
+    from bodhi_lora.report.latex import columns_of, row_width, tabular
+
+    assert columns_of("l@{}p{3cm}rr|c") == 5
+    assert row_width(["\\multicolumn{3}{l}{x}", "a"]) == 4
+    tabular("lrr", [["a", "b", "c"]], [[["1", "2", "3"]]], "test")
+    with pytest.raises(ValueError, match="fills 4 columns"):
+        tabular("lrr", [["a", "b", "c"]], [[["1", "2", "3", "4"]]], "test")
+
+
+def test_a_cross_cell_outside_every_block_stops_the_report(setup):
+    """GEN-3: a cell added to cross_cells but to no group a table prints must not drop out
+    of the table while the rule-based counts count it."""
+    from bodhi_lora.report.cross import _ordered
+
+    reg, cfg, proj = setup[:3]
+    members = {gid: [c for c in cfg.cross_cells if c != cfg.cross_cells[1]] for gid in cfg.groups}
+    with pytest.raises(ValueError, match="in none of its blocks"):
+        _ordered(cfg, members, ["submitted"], reg, [], "tab_test")
+    every = list(cfg.cross_cells)
+    assert _ordered(cfg, {"g": every}, ["g"], reg, [], "tab_test") == [every]
+    assert _ordered(cfg, {"g": every[:-1]}, ["g"], reg, every[-1:], "tab_test") == [every[:-1]]
+
+
+def test_a_path_takes_the_cells_own_protocol_and_leak_rule(setup):
+    """GEN-6: {protocol} and {leak_rule} resolve per cell, so a cell on another protocol
+    is measured with its own rule."""
+    from bodhi_lora.report.common import with_protocol
+
+    reg = setup[0]
+    cell = reg.cells["healthbench__mistral-small-24b__ask-first"]
+    stats = {"leakage": {"leak_ask-first__plan-format": {}, "leak_bodhi__analysis-format": {}}}
+    path = "leakage.leak_{protocol}__{leak_rule}.conditions.lora+{protocol}"
+    assert with_protocol(path, cell, stats) == "leakage.leak_ask-first__plan-format.conditions.lora+ask-first"
+    # Two rules of the cell's protocol: no guess, the path stays unresolved.
+    stats["leakage"]["leak_ask-first__other"] = {}
+    assert "{leak_rule}" in with_protocol(path, cell, stats)

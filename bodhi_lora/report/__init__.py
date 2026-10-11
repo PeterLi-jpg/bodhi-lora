@@ -31,8 +31,8 @@ from bodhi_lora.analysis.config import ReportConfig
 from bodhi_lora.paths import Project
 from bodhi_lora.registry import Registry
 from bodhi_lora.report.cell import cell_macros, cell_table, detail_tables
-from bodhi_lora.report.cross import (cell_detail_tables, count_macros, cross_table, grader_macros, group_macros,
-                                     posted_macros)
+from bodhi_lora.report.cross import (cell_detail_tables, count_macros, cross_table, family_macros, grader_macros,
+                                     group_macros, posted_macros)
 from bodhi_lora.report.latex import MISSING
 
 
@@ -98,9 +98,10 @@ def report(reg: Registry, cfg: ReportConfig, proj: Project) -> Report:
     count_macros(rep, all_stats, members, reg, cfg, cross["groups"])
     grader_macros(rep, cross, reg, cfg, src)
     posted_macros(rep, cross, cfg, src)
+    family_macros(rep, cross, all_stats, reg, cfg, src)
     every = f"{proj.rel(proj.results_root)}/*/analysis/stats.json"
     for name, spec in cfg.cross_tables.items():
-        rep.tables[name] = cross_table(spec, all_stats, members, reg, cfg, every)
+        rep.tables[name] = cross_table(spec, all_stats, members, reg, cfg, every, name)
     rep.tables.update(cell_detail_tables(all_stats, members, reg, cfg, f"{every} (conditions, contrasts)"))
     rep.record = {"cells": cells_rec, "not_reported": missing, "inputs": dict(sorted(inputs.items())),
                   "tables": sorted(rep.tables), "macros": len(rep.macros)}

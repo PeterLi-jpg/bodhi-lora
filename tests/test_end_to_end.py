@@ -40,8 +40,10 @@ def _report_config(configs):
                        "metrics": ["active_inquiry"], "direction": "up"}]
     data["compares"], data["ranges"], data["grader_comparisons"] = [], [], []
     data["posted"] = None
+    data["families"] = []
     for table in data["cross_tables"].values():
         table["blocks"] = ["kept"] if table.get("blocks") else []
+        table["leave_out"] = []
     data["cell_detail_tables"]["blocks"] = ["kept"]
     (configs / "report.yaml").write_text(yaml.safe_dump(data, sort_keys=False))
     return load_report_config(configs / "report.yaml")
@@ -55,7 +57,8 @@ def run(tmp_path_factory):
     root = proj.scratch_root / "stub"
     run_cell(reg, proj, SMOKE, mode="stub", stages=("traces", "filter", "eval", "grade"), configs_dir=configs,
              results_root=root)
-    run_cell(reg, proj, PAIRED, mode="stub", stages=("eval", "grade"), configs_dir=configs, results_root=root)
+    run_cell(reg, proj, PAIRED, mode="stub", stages=("eval", "grade", "classify"), configs_dir=configs,
+             results_root=root)
     proj = replace(proj, results_root=root)
     cfg = _report_config(configs)
     for cid in (SMOKE, PAIRED):
@@ -82,6 +85,29 @@ def test_the_stages_write_what_the_analysis_reads(run):
     header = paths.table(1).read_text().split("\n", 1)[0].split(",")
     assert header[:5] == ["cell", "seed", "condition", "prompt_id", "pair_id"]
     assert any(c.startswith("leak_ask-first__") for c in header) and any(c.startswith("leak_bodhi__") for c in header)
+
+
+def test_the_judge_classifier_answers_for_every_reply(run):
+    """R17's stage on the stub engine: one answer per stored reply of every condition, the
+    template's hash recorded, and the gate marked as not passed."""
+    reg, proj, cfg, rep, out = run
+    judge = reg.cells[PAIRED].grading.judges[0]
+    for seed in reg.cells[PAIRED].seeds:
+        data = json.loads((proj.cell(PAIRED).stage(seed, "classify") / f"classify__{judge}.json").read_text())
+        assert data["gate"].startswith("not passed") and len(data["template_sha256"]) == 64
+        for c in data["configs"]:
+            n = len(json.loads(proj.cell(PAIRED).eval_file(seed, c["name"]).read_text())["results"])
+            assert len(c["examples"]) == c["rates"]["n_parsed"] == n > 0
+            assert c["rates"]["asks_user_rate"] == 0.0 and c["rates"]["urgent_care_no_share"] == 1.0
+
+
+def test_an_eval_only_cell_reports_the_filter_of_its_adapters(run):
+    """An adapters_from cell trained nothing itself; its filter section is the source
+    cell's, and says so (GEN-12 of the 2026-10-11 audit)."""
+    reg, proj, cfg, rep, out = run
+    filt = _stats(proj, PAIRED)["filter"]
+    assert filt["from_cell"] == SMOKE
+    assert filt["graded_scores"]["n"] == _stats(proj, SMOKE)["filter"]["graded_scores"]["n"]
 
 
 def test_the_analysis_makes_every_statistic_the_records_ask_for(run):

@@ -213,6 +213,15 @@ def _discrimination(rep, n: Names, T: str, stats: dict, src: str) -> None:
                 rk, K = r["contrasts"][k], n.ctr_token(k)
                 rep.add(f"{P}Index{K}Diff", fmt(x(rk["diff"], 100), 1, sign=True), f"{where}.contrasts.{k}.diff (pp)")
                 rep.add(f"{P}Index{K}CI", fmt_ci(scaled(rk["diff_ci95"], 100), 1), "prompt-clustered bootstrap interval")
+                # The seed-level test of the index difference: the test of E02
+                # (docs/ANALYSIS_PLAN.md section 5.2); the pooled difference above is descriptive.
+                t = rk.get("seed_test") or {}
+                if finite(t.get("diff")):
+                    w = f"{where}.contrasts.{k}.seed_test"
+                    rep.add(f"{P}Index{K}SeedDiff", fmt(t["diff"] * 100, 1, sign=True),
+                            f"{w}.diff, over {t['n_seeds']} seeds (pp)")
+                    rep.add(f"{P}Index{K}SeedCI", fmt_ci(scaled(t["ci95"], 100), 1), f"{w}.ci95, t({t['df']})")
+                    rep.add(f"{P}Index{K}SeedP", fmt_p(t.get("p")), f"{w}.p, paired t over seeds")
                 for g in ("positive", "negative"):
                     G = "Pos" if g == "positive" else "Neg"
                     t = rk[f"{g}_rate"]["seed_test"]
@@ -411,6 +420,10 @@ def detail_tables(stats: dict, cell: CellConfig, cfg: ReportConfig, src: str) ->
     cond, per = stats["conditions"], stats["counts"]["per_condition"]
     ns = len(seeds)
     own = f"base+{cell.protocol}"
+    # One column per condition, whatever the cell's conditions are (four in the 2x2
+    # design, more where prompt baselines run); a table that needs a condition the cell
+    # lacks is left out instead of printing under the wrong header.
+    by_cond = "c" * len(conds)
     out = {}
 
     def label(m: str) -> str:
@@ -437,7 +450,7 @@ def detail_tables(stats: dict, cell: CellConfig, cfg: ReportConfig, src: str) ->
         blocks.append([[label(k) + " " + DIRECTION.get(k, "$\\uparrow$")]
                        + [_mean_sd(cond[k][c], *KIND_FORMAT[_kind(stats, k)]) for c in conds] for k in keys])
     blocks.append([["Scored responses (pooled)"] + [fmt_int(per[c]["epistemic_scored"]) for c in conds]])
-    out[f"tab_dimensions_{T}"] = tabular("lcccc", [["Dimension"] + [n.cond(c) for c in conds]], blocks,
+    out[f"tab_dimensions_{T}"] = tabular("l" + by_cond, [["Dimension"] + [n.cond(c) for c in conds]], blocks,
                                          f"{src}: conditions (mean of seed means, SD across seeds)")
 
     blocks = []
@@ -491,18 +504,25 @@ def detail_tables(stats: dict, cell: CellConfig, cfg: ReportConfig, src: str) ->
     axes = stats["axis_scores"]
     if axes:
         rows = [[escape(a)] + [f"{axes[a][c]:.3f}" for c in conds] for a in axes]
-        out[f"tab_axes_{T}"] = tabular("lrrrr", [["Axis"] + [n.cond(c) for c in conds]], [rows],
+        out[f"tab_axes_{T}"] = tabular("l" + "r" * len(conds), [["Axis"] + [n.cond(c) for c in conds]], [rows],
                                        f"{src}: axis_scores (mean over pooled completions)")
 
-    gap_header = f"$|${n.cond('lora')}$-${n.cond(own)}$|$"
-    rows = []
-    for m in GAP_METRICS:
-        mean = {c: cond[m][c]["seed_mean"] for c in conds}
-        rows.append([label(m).replace("(\\%)", "(rate)")] + [f"{mean[c]:.3f}" for c in conds]
-                    + [f"{abs(mean['lora'] - mean[own]):.3f}", fmt(mean["lora"] - mean["base"], 3, sign=True)])
-    out[f"tab_gap_{T}"] = tabular("lrrrrrr", [["Dimension"] + [n.cond(c) for c in conds]
-                                              + [gap_header, f"{n.cond('lora')}$-${n.cond('base')}"]], [rows],
-                                  f"{src}: conditions (mean of seed means; rates as proportions)")
+    if {"base", "lora", own} <= set(conds):
+        gap_header = f"$|${n.cond('lora')}$-${n.cond(own)}$|$"
+        rows = []
+        def plain(v) -> str:
+            return f"{v:.3f}" if finite(v) else MISSING
+
+        for m in GAP_METRICS:
+            mean = {c: cond[m][c]["seed_mean"] for c in conds}
+            both = finite(mean["lora"]) and finite(mean["base"]) and finite(mean[own])
+            rows.append([label(m).replace("(\\%)", "(rate)")] + [plain(mean[c]) for c in conds]
+                        + [plain(abs(mean["lora"] - mean[own]) if both else None),
+                           fmt(mean["lora"] - mean["base"] if both else None, 3, sign=True)])
+        out[f"tab_gap_{T}"] = tabular("l" + "r" * (len(conds) + 2),
+                                      [["Dimension"] + [n.cond(c) for c in conds]
+                                       + [gap_header, f"{n.cond('lora')}$-${n.cond('base')}"]], [rows],
+                                      f"{src}: conditions (mean of seed means; rates as proportions)")
 
     rows = []
     for c in conds:
@@ -521,17 +541,18 @@ def detail_tables(stats: dict, cell: CellConfig, cfg: ReportConfig, src: str) ->
     out[f"tab_disclaimers_{T}"] = tabular("lrrr", [["Condition", "Blanket disclaimers", "\\%",
                                                     "Fisher $p$ vs Base"]], [rows], f"{src}: blanket_disclaimers")
 
-    rows = []
-    for m in (*SEVEN, "blanket_disclaimer", "rubric_score"):
-        scale, _ = KIND_FORMAT[_kind(stats, m)]
-        ddp = DIFF_DECIMALS[_kind(stats, m)]
-        rep_ = stats["contrasts"]["lora - base"]["metrics"][m]
-        wc = stats["worst_case"][m]["contrasts"]["lora - base"]
-        rows.append([label(m), fmt(x(rep_["diff"], scale), ddp, sign=True), fmt_p(rep_.get("p")),
-                     fmt(x(wc.get("diff"), scale), ddp, sign=True), fmt_p(wc.get("p"))])
-    out[f"tab_worst_case_{T}"] = tabular(
-        "lrrrr", [["Dimension", f"{n.cond('lora')}$-${n.cond('base')}", "$p$", "Worst case", "$p$"]], [rows],
-        f"{src}: contrasts and worst_case (worst case: failed or missing grades take the worst value)")
+    if "lora - base" in stats["contrasts"]:
+        rows = []
+        for m in (*SEVEN, "blanket_disclaimer", "rubric_score"):
+            scale, _ = KIND_FORMAT[_kind(stats, m)]
+            ddp = DIFF_DECIMALS[_kind(stats, m)]
+            rep_ = stats["contrasts"]["lora - base"]["metrics"][m]
+            wc = (stats["worst_case"].get(m) or {}).get("contrasts", {}).get("lora - base") or {}
+            rows.append([label(m), fmt(x(rep_.get("diff"), scale), ddp, sign=True), fmt_p(rep_.get("p")),
+                         fmt(x(wc.get("diff"), scale), ddp, sign=True), fmt_p(wc.get("p"))])
+        out[f"tab_worst_case_{T}"] = tabular(
+            "lrrrr", [["Dimension", f"{n.cond('lora')}$-${n.cond('base')}", "$p$", "Worst case", "$p$"]], [rows],
+            f"{src}: contrasts and worst_case (worst case: failed or missing grades take the worst value)")
 
     themes = stats["themes"]
     if "not_measured" not in themes:
@@ -539,7 +560,7 @@ def detail_tables(stats: dict, cell: CellConfig, cfg: ReportConfig, src: str) ->
         order = sorted(themes, key=lambda th: (-themes[th]["n_evaluated"], th))
         rows = [[f"\\texttt{{{escape(th)}}}", fmt_int(themes[th]["n_evaluated"])]
                 + [f"{100 * themes[th]['conditions'][c]['rate']:.1f}" for c in conds] for th in order]
-        out[f"tab_themes_{T}"] = tabular("lrrrrr", [["Theme", "$n$ prompts"] + [n.cond(c) for c in conds]], [rows],
+        out[f"tab_themes_{T}"] = tabular("lr" + "r" * len(conds), [["Theme", "$n$ prompts"] + [n.cond(c) for c in conds]], [rows],
                                          f"{src}: themes (n = unique evaluated prompts)")
 
     scores = (stats["filter"] or {}).get("scores")

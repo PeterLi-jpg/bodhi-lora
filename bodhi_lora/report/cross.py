@@ -22,16 +22,29 @@ RECIPE = (("tau", "Tau", 1), ("r", "Rank", None), ("lora_alpha", "Alpha", None),
           ("adapters", "Adapters", None))
 
 
-def _ordered(cfg: ReportConfig, members: dict[str, list[str]], blocks: list[str], reg: Registry) -> list[list[str]]:
-    """Cells in blocks: one per listed group, or the kept cells and then the set-aside ones."""
+def _ordered(cfg: ReportConfig, members: dict[str, list[str]], blocks: list[str], reg: Registry,
+             leave_out: list[str] = (), name: str = "") -> list[list[str]]:
+    """Cells in blocks: one per listed group, or the kept cells and then the set-aside ones.
+
+    A cell of cross_cells that is in no block and not in leave_out stops the report: a
+    group that lists its cells does not take in a cell added to cross_cells later, and
+    the table would drop it without a word while a rule-based count still counts it."""
     if blocks:
-        return [[c for c in cfg.cross_cells if c in members[g]] for g in blocks]
-    kept = [c for c in cfg.cross_cells if not reg.cells[c].report.set_aside]
-    aside = [c for c in cfg.cross_cells if reg.cells[c].report.set_aside]
+        out = [[c for c in cfg.cross_cells if c in members[g]] for g in blocks]
+        placed = {c for block in out for c in block}
+        dropped = [c for c in cfg.cross_cells if c not in placed and c not in leave_out]
+        if dropped:
+            raise ValueError(f"{name}: cells of cross_cells in none of its blocks {blocks}: {dropped}. Add "
+                             "each to a group the table prints, or to the table's leave_out "
+                             "(configs/report.yaml)")
+        return out
+    kept = [c for c in cfg.cross_cells if not reg.cells[c].report.set_aside and c not in leave_out]
+    aside = [c for c in cfg.cross_cells if reg.cells[c].report.set_aside and c not in leave_out]
     return [kept, aside]
 
 
-def cross_table(spec: CrossTable, all_stats: dict, members: dict, reg: Registry, cfg: ReportConfig, src: str) -> str:
+def cross_table(spec: CrossTable, all_stats: dict, members: dict, reg: Registry, cfg: ReportConfig, src: str,
+                name: str = "cross table") -> str:
     """A table with one row per cell, the same columns for every cell."""
     n = Names(cfg)
     cols = spec.columns
@@ -51,7 +64,7 @@ def cross_table(spec: CrossTable, all_stats: dict, members: dict, reg: Registry,
     header = (list(spec.label_columns) or ["Cell"]) + [c.header for c in cols]
 
     def value(cell, stats, c):
-        v = get(stats, with_protocol(c.value, cell))
+        v = get(stats, with_protocol(c.value, cell, stats))
         return v * c.scale if finite(v) else None
 
     def entry(cell, stats, c) -> str:
@@ -59,13 +72,13 @@ def cross_table(spec: CrossTable, all_stats: dict, members: dict, reg: Registry,
         if c.format == "int":
             return fmt_int(v) if v is not None else MISSING
         if c.format == "span":
-            hi = get(stats, with_protocol(c.upper, cell))
+            hi = get(stats, with_protocol(c.upper, cell, stats))
             if v is None or not finite(hi):
                 return MISSING
             a, b = int(round(v)), int(round(hi * c.scale))
             return str(a) if a == b else f"{a}--{b}"
         if c.ci:
-            ci = scaled(get(stats, with_protocol(c.ci, cell)), c.scale)
+            ci = scaled(get(stats, with_protocol(c.ci, cell, stats)), c.scale)
             if c.ci_style == "interval":
                 text = fmt_ci(ci, c.decimals, c.sign) if v is not None else MISSING
             elif c.ci_style == "range":
@@ -75,7 +88,7 @@ def cross_table(spec: CrossTable, all_stats: dict, members: dict, reg: Registry,
         else:
             text = fmt(v, c.decimals, c.sign)
         if c.star:
-            text = star(text, get(stats, with_protocol(c.star, cell)), cfg.alpha)
+            text = star(text, get(stats, with_protocol(c.star, cell, stats)), cfg.alpha)
         return text
 
     def row(cid: str):
@@ -90,7 +103,7 @@ def cross_table(spec: CrossTable, all_stats: dict, members: dict, reg: Registry,
         return label + [entry(cell, stats, c) for c in cols]
 
     blocks = [[r for r in (row(c) for c in block) if r is not None]
-              for block in _ordered(cfg, members, spec.blocks, reg)]
+              for block in _ordered(cfg, members, spec.blocks, reg, spec.leave_out, name)]
     note = ("dagger: base model in the evaluator's family; double dagger: set aside, reason in the cell's "
             "table; -- : the cell has no such value")
     if rules:
@@ -117,36 +130,49 @@ def _p_short(p) -> str:
 
 
 def cell_detail_tables(all_stats: dict, members: dict, reg: Registry, cfg: ReportConfig, src: str) -> dict[str, str]:
-    """Every cell's metrics in each condition and a few contrasts, a few cells to a table."""
+    """Every cell's metrics in each condition and a few contrasts, a few cells to a table.
+
+    The columns are roles (base, base+{protocol}, lora, lora+{protocol}), filled from
+    each cell's own conditions, so a cell on another protocol fills them too, and each
+    contrast is that cell's own. When the cells of a table do not share one protocol, the
+    headers say P and each cell's block row names its protocol."""
     spec = cfg.cell_detail_tables
     if spec is None:
         return {}
     n = Names(cfg)
-    cells = [c for block in _ordered(cfg, members, spec.blocks, reg) for c in block]
-    first = reg.cells[cells[0]]
-    ctrs = [with_protocol(k, first) for k in spec.contrasts]
-    # The columns are the first cell's conditions; a cell without one shows "--" there.
-    conds = all_stats[cells[0]]["conditions_order"]
-
-    def head(k: str) -> str:
-        a, b = contrast_pair(k)
-        # A contrast whose first condition carries a protocol is long: two lines.
-        return f"\\shortstack[r]{{{n.cond(a)}\\\\$-$ {n.cond(b)}}}" if "+" in a else n.ctr(k)
-
-    header = [""] + [n.cond(c) for c in conds]
-    for k in ctrs:
-        header += [head(k), "$p_{\\text{Holm}}$"]
-    width = len(header)
+    cells = [c for block in _ordered(cfg, members, spec.blocks, reg, spec.leave_out, "cell_detail_tables")
+             for c in block]
     tables = {}
     for i in range(0, len(cells), spec.per_table):
+        part = cells[i:i + spec.per_table]
+        protocols = {reg.cells[c].protocol for c in part}
+        shared = protocols.pop() if len(protocols) == 1 else None
+
+        def name(role: str) -> str:
+            # One protocol in the table: its name; several: P, named in each block row.
+            return n.cond(role.replace("{protocol}", shared)) if shared else \
+                n.cond(role.replace("{protocol}", "p")).replace("+p", "+P")
+
+        def head(k: str) -> str:
+            a, b = contrast_pair(k)
+            # A contrast whose first condition carries a protocol is long: two lines.
+            return f"\\shortstack[r]{{{name(a)}\\\\$-$ {name(b)}}}" if "+" in a else f"{name(a)} $-$ {name(b)}"
+
+        header = [""] + [name(c) for c in spec.conditions]
+        for k in spec.contrasts:
+            header += [head(k), "$p_{\\text{Holm}}$"]
+        width = len(header)
         blocks = []
-        for cid in cells[i:i + spec.per_table]:
+        for cid in part:
             cell, stats = reg.cells[cid], all_stats[cid]
+            conds = [with_protocol(c, cell) for c in spec.conditions]
             have = [c for c in conds if c in stats["conditions_order"]]
-            graded = min(stats["conditions"][m][c]["n_seeds"] for c in have for m in spec.metrics if m in SEVEN)
+            graded = min((stats["conditions"][m][c]["n_seeds"] for c in have for m in spec.metrics if m in SEVEN),
+                         default=0)
             seeds = len(stats["seeds"])
             note = f" ({graded} of {seeds} seeds have dimension grades)" if graded < seeds else ""
-            block = [[f"\\multicolumn{{{width}}}{{l}}{{\\emph{{{escape(cell.report.label)}}}{marks(cell)}{note}}}"]]
+            proto = "" if shared else f", protocol {n.d.protocols.get(cell.protocol, escape(cell.protocol))}"
+            block = [[f"\\multicolumn{{{width}}}{{l}}{{\\emph{{{escape(cell.report.label)}}}{marks(cell)}{proto}{note}}}"]]
             for m in spec.metrics:
                 scale, dp = KIND_FORMAT[stats["metrics"][m]["kind"]]
                 row = [n.metric_short(m)] + [fmt(x(get(stats, f"conditions.{m}.{c}.seed_mean"), scale), dp)
@@ -160,6 +186,21 @@ def cell_detail_tables(all_stats: dict, members: dict, reg: Registry, cfg: Repor
         tables[f"tab_cell_detail_{i // spec.per_table + 1}"] = tabular(
             "l" + "r" * (width - 1), [header], blocks, src)
     return tables
+
+
+def family_macros(rep, cross: dict, all_stats: dict, reg: Registry, cfg: ReportConfig, src: str) -> None:
+    """The correction families of configs/report.yaml: how many cells move each way with
+    the Holm-adjusted p below alpha, and each cell's adjusted p. A cell's adjusted p is
+    also put under cross.families.<token> in its stats, for the table columns."""
+    for tok, f in (cross.get("families") or {}).items():
+        where = f"{src}: families.{tok}"
+        rep.add(f"Family{tok}Cells", fmt_int(len(f["cells"])), f"{where}.cells (cells tested)")
+        rep.add(f"Family{tok}Up", fmt_int(f["n_up"]), f"{where}.n_up (positive, Holm p < {cfg.alpha})")
+        rep.add(f"Family{tok}Down", fmt_int(f["n_down"]), f"{where}.n_down (negative, Holm p < {cfg.alpha})")
+        for cid, r in f["cells"].items():
+            all_stats[cid].setdefault("cross", {}).setdefault("families", {})[tok] = r
+            rep.add(f"{reg.cells[cid].report.token}Family{tok}PHolm", fmt_p(r["p_holm"]),
+                    f"{where}.cells.{cid}.p_holm, Holm over the family's cells")
 
 
 # -- macros -----------------------------------------------------------------------------
@@ -278,6 +319,9 @@ def grader_macros(rep, cross: dict, reg: Registry, cfg: ReportConfig, src: str) 
         for c, rc in r["conditions"].items():
             C = n.cond_token(c)
             rep.add(f"{tok}R{C}", fmt(rc["pearson_r"], 2), f"{where}.conditions.{c}.pearson_r")
+            if "n_same_reply" in rc:
+                rep.add(f"{tok}SameReply{C}", fmt_int(rc["n_same_reply"]),
+                        f"{where}.conditions.{c}.n_same_reply (shared prompts with the same reply in both runs)")
             for side, S in (("first", "First"), ("second", "Second")):
                 rep.add(f"{tok}Mean{S}{C}", fmt(rc[f"mean_{side}"], 3), f"{where}.conditions.{c}.mean_{side}")
                 if f"minus_base_{side}" in rc:

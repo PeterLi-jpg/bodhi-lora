@@ -34,9 +34,18 @@ def scaled(ci, scale: float):
     return [v * scale if finite(v) else None for v in ci] if ci else None
 
 
-def with_protocol(text: str, cell: CellConfig) -> str:
-    """A config string with {protocol} standing for the cell's protocol id."""
-    return text.replace("{protocol}", cell.protocol)
+def with_protocol(text: str, cell: CellConfig, stats: Optional[dict] = None) -> str:
+    """A config string with {protocol} standing for the cell's protocol id and, given the
+    cell's stats.json, {leak_rule} for the one leak rule of that protocol. A protocol
+    with no leak rule, or with several, leaves {leak_rule} in place, so the path finds
+    nothing and the table prints "--" (each protocol's rules are in its record)."""
+    text = text.replace("{protocol}", cell.protocol)
+    if "{leak_rule}" in text and stats is not None:
+        prefix = f"leak_{cell.protocol}__"
+        rules = [k.removeprefix(prefix) for k in stats.get("leakage", {}) if k.startswith(prefix)]
+        if len(rules) == 1:
+            text = text.replace("{leak_rule}", rules[0])
+    return text
 
 
 def contrast_pair(contrast: str) -> tuple[str, str]:
@@ -51,7 +60,8 @@ class Names:
         self.d = cfg.display
 
     def cond_token(self, condition: str) -> str:
-        weights, proto = parse_condition(condition)
+        # {protocol} (a config string for every cell's own protocol) is the token Protocol.
+        weights, proto = parse_condition(condition.replace("{protocol}", "protocol"))
         return token(self.d.weights.get(weights, weights)) + (token(proto) if proto else "")
 
     def ctr_token(self, contrast: str) -> str:
