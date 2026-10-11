@@ -696,7 +696,9 @@ get their own Holm correction.
 | Discrimination index for every response and label of `configs/report.yaml` with both groups present: the rate in each group, P(response given positive) minus P(response given negative), odds ratio, bootstrap intervals, seed-level intervals, and per contrast the difference of the indices and of each group's rate | labels, evaluator | D9, MR-W4 |
 | Red-flag rate by the `emergency-theme` label (post hoc, descriptive): the evaluator's red-flag rate on prompts of the emergency-referrals theme and on the others; not an over-flagging rate (ANALYSIS_PLAN.md section 12, 2026-10-10) | labels, evaluator | C30 |
 | Format leakage for every leak rule of every protocol used: leak share, dimensions by leak status, red flag by length quartile in non-leaked responses | format, evaluator | D11, LxMF 4 |
-| Length and token cost: characters, tokens, calls, total tokens per condition; stage time from manifests | eval, manifests | C25 |
+| Length and token cost: characters, tokens, calls, total tokens per condition | eval | C25 |
+| Measured cost (`bench`): service time per reply on an idle GPU (median, mean, p90), calls and tokens per condition and seed, and per contrast the ratio of the medians; `stage_times`: wall-clock seconds and GPUs of every stage from its manifests (E08, E20) | bench, manifests | C25, FzpA-S |
+| Contamination probe (`probe`): exact-completion rate on the benchmark and the control text, and the stage's Fisher test, from the probe stage's `probe.json`, so a `families` entry can run Holm over the probed cells (F7, E11) | probe | EVAL-12, NUM-7 |
 | Askers gap: rubric score of asking minus non-asking responses within a condition | evaluator | withdrawals W7 |
 | Rubric axes per contrast, with Holm over the cell's axes within the contrast (`p_holm_axes`, E05) | rubric | aggregate-cost decomposition |
 | Harm proxy: share of responses that meet at least one negative rubric criterion, and points lost to them | rubric | C33 (proxy only) |
@@ -760,11 +762,11 @@ E08). Since the plan's adoption on 2026-10-11, E02 with `needs-info-physician` h
 intervals (Table C.1 of the paper). Built on 2026-10-11 and tested on synthetic tables
 and a stub run only (`tests/test_analysis_cell.py`, `tests/test_end_to_end.py`): the
 judge analysis of H8 (weighted kappa with intervals, the contrasts under each judge and
-their decisions). No recorded cell has a judge file yet, so its section says "not
-measured". Not built yet, each needed by the analysis plan before its cells exist: the
-judges' harm grades (C33), the probe and bench outputs (E11, E20), stage times from the
-manifests (E08), the contrasts between cells (H9, H10, E24) and the tool that draws the
-300 replies for the judge classifier's hand labels (R17). Built on 2026-10-10 and tested on synthetic
+their decisions), and the readers of the probe, the bench and the stage manifests (E11,
+E20, E08). No recorded cell has those files yet, so their sections say "not measured".
+Not built yet, each needed by the analysis plan before its cells exist: the judges' harm
+grades (C33), the contrasts between cells (H9, H10, E24) and the tool that draws the 300
+replies for the judge classifier's hand labels (R17). Built on 2026-10-10 and tested on synthetic
 tables only: the paired probe of H3 (`paired_probe` in `stats.json`: Delta per condition
 and seed, the difference in differences per contrast, the exact McNemar tables), from the
 `pair_id` column of the response table and a label whose rule pairs rows; the declared

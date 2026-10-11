@@ -69,6 +69,9 @@
    "lora+bodhi": 0.263267
   }
  },
+ "bench": {
+  "not_measured": "no bench.json in the cell's seed folders"
+ },
  "blanket_disclaimers": {
   "all_conditions": {
    "flagged": 5,
@@ -8633,6 +8636,9 @@
   }
  },
  "paired_probe": {},
+ "probe": {
+  "not_measured": "no probe.json in the cell's shared/probe folder"
+ },
  "prompts": {
   "filter_train_overlap_with_population": 0,
   "labels": {
@@ -8762,6 +8768,9 @@
     "specificity": 0.0283674
    }
   }
+ },
+ "stage_times": {
+  "not_measured": "no stage manifest of this cell records a time"
  },
  "status": "complete",
  "themes": {

@@ -33,7 +33,7 @@ import pandas as pd
 from bodhi_lora.analysis import stats as st
 from bodhi_lora.analysis.config import ReportConfig
 from bodhi_lora.analysis.extract import EPISTEMIC, SEVEN, read_table
-from bodhi_lora.paths import CellPaths, Project
+from bodhi_lora.paths import STAGES, CellPaths, Project
 from bodhi_lora.registry import CellConfig, Registry, parse_condition
 
 TAU_GRID = (0.4, 0.5, 0.6, 0.7, 0.8, 0.9)
@@ -778,6 +778,78 @@ def recipe_section(cell: CellConfig, paths: CellPaths, filt: dict) -> dict:
     return res
 
 
+def probe_section(paths: CellPaths) -> dict:
+    """The contamination probe of the cell's base model (E11), as the probe stage wrote it
+    in shared/probe/probe.json: the exact-completion rate on the benchmark and on the
+    control text, and the stage's two-sided Fisher test. Copied here so that a correction
+    family across cells (F7, configs/report.yaml `families`) can read it."""
+    p = _read_json(paths.shared("probe") / "probe.json")
+    if p is None:
+        return {"not_measured": "no probe.json in the cell's shared/probe folder"}
+    keep = ("n", "n_rows_in_set", "n_exact_match", "exact_match_rate", "mean_prefix_overlap_tokens")
+    b, c = p["benchmark"], p["control"]
+    res = {"model": p.get("model"), "model_revision": p.get("model_revision"), "method": p.get("method"),
+           "benchmark_id": p.get("benchmark_id"), "control_id": p.get("control_id"),
+           "benchmark": {k: b.get(k) for k in keep}, "control": {k: c.get(k) for k in keep},
+           "fisher_p": _f(p.get("fisher_p_value")), "test": p.get("test_used")}
+    if b.get("exact_match_rate") is not None and c.get("exact_match_rate") is not None:
+        res["rate_diff"] = _f(b["exact_match_rate"] - c["exact_match_rate"])
+    return res
+
+
+def bench_section(d: CellData, paths: CellPaths, pairs) -> dict:
+    """Measured inference cost (E20, C25): the bench stage's service time per reply, one
+    reply at a time on its own engine, per condition and seed (bench/bench.json), and for
+    each contrast the ratio and difference of the median times. Only the bench times an
+    idle GPU; the stage times below include whatever else ran on the node."""
+    runs = {s: b for s in d.cell.seeds if (b := _read_json(paths.stage(s, "bench") / "bench.json")) is not None}
+    if not runs:
+        return {"not_measured": "no bench.json in the cell's seed folders"}
+    res = {"seeds": sorted(runs), "n_prompts": {str(s): b["n_prompts"] for s, b in runs.items()},
+           "conditions": {}, "contrasts": {}}
+    for c in d.conditions:
+        res["conditions"][c] = {
+            str(s): {"median_s": _f(r.get("median_s")), "mean_s": _f(r.get("mean_s")), "p90_s": _f(r.get("p90_s")),
+                     "mean_calls": _f(np.mean(r["calls"])) if r.get("calls") else None,
+                     "mean_completion_tokens": _f(r.get("mean_completion_tokens")),
+                     "mean_prompt_tokens": _f(r.get("mean_prompt_tokens")),
+                     "throughput_tok_per_s": _f(r.get("throughput_tok_per_s")),
+                     "engine_start_s": _f(r.get("engine_start_s"))}
+            for s, b in runs.items() if (r := b["conditions"].get(c)) is not None}
+    for a, b in pairs:
+        out = {}
+        for s, ra in res["conditions"].get(a, {}).items():
+            rb = res["conditions"].get(b, {}).get(s)
+            if rb and ra["median_s"] is not None and rb["median_s"]:
+                out[s] = {"median_s_ratio": _f(ra["median_s"] / rb["median_s"]),
+                          "median_s_diff": _f(ra["median_s"] - rb["median_s"])}
+        res["contrasts"][contrast_key(a, b)] = out
+    return res
+
+
+def stage_times_section(cell: CellConfig, paths: CellPaths) -> dict:
+    """Wall-clock seconds and the GPUs of each stage, from the stage manifests (E08, C25):
+    the shared stages once per cell, the others per seed (a folder with several manifests,
+    such as eval with one per condition, sums them). The manifests of the recorded cells
+    were written after their runs and hold no times, so for them this says so."""
+    def read(folder: Path) -> Optional[dict]:
+        ms = [m for f in sorted(folder.glob("*manifest.json")) if "time" in (m := json.loads(f.read_text()))]
+        if not ms:
+            return None
+        gpus = sorted({g.get("name") for m in ms for g in (m.get("hardware") or {}).get("gpus", []) if g.get("name")})
+        return {"seconds": _f(sum(m["time"]["seconds"] for m in ms)), "n_manifests": len(ms), "gpus": gpus}
+
+    shared = {st_: r for st_ in STAGES if (r := read(paths.shared(st_))) is not None}
+    per_seed = {}
+    for st_ in STAGES:
+        rows = {str(s): r for s in cell.seeds if (r := read(paths.stage(s, st_))) is not None}
+        if rows:
+            per_seed[st_] = rows
+    if not shared and not per_seed:
+        return {"not_measured": "no stage manifest of this cell records a time"}
+    return {"shared": shared, "per_seed": per_seed}
+
+
 def _judge_decision(evaluator: dict, judge: dict, alpha: float) -> str:
     """One contrast under a judge against the same contrast under the evaluator
     (docs/ANALYSIS_PLAN.md section 8): confirmed when the judge's Holm-adjusted p is below
@@ -918,6 +990,9 @@ def analyze_tables(reg: Registry, cell: CellConfig, table: pd.DataFrame, prompts
         "filter": filt,
         "recipe": recipe,
         "judges": judges_section(d, pairs, boot, contrasts, cfg.alpha),
+        "probe": probe_section(paths),
+        "bench": bench_section(d, paths, pairs),
+        "stage_times": stage_times_section(cell, paths),
     }
     kappa = _read_json(paths.validation() / "kappa_results.json")
     out["validation"] = kappa if kappa is not None else {"not_measured": "no physician agreement file"}

@@ -154,12 +154,13 @@ D-numbers refer to [DECISIONS.md](DECISIONS.md). Issue numbers such as #5 are Gi
   review step and the commits that the run manifests record. `tests/test_plan_coverage.py`
   checks only that each planned cell is named in docs/ANALYSIS_PLAN.md and that the plans
   name no cell without a record.
-- **`analyze` does not compute every planned statistic yet.** The weighted kappa and the
-  dimension contrasts under a judge (H8), the judges' harm grades (C33), the probe and
-  bench outputs (E11, E20), stage times from the manifests and contrasts between cells
-  (H9, H10, E24) are missing (docs/ARCHITECTURE.md section 7). Each is needed only once
-  its cell has run. The paired-probe statistics (E14) and the declared contrasts of H5
-  and H6 are built since 2026-10-10 and tested on synthetic tables and stub runs only.
+- **`analyze` does not compute every planned statistic yet.** The judges' harm grades
+  (C33) and the contrasts between cells (H9, H10, E24) are missing, and so is the tool
+  that draws the 300 replies for R17's hand labels (docs/ARCHITECTURE.md section 7). Each
+  is needed only once its cell has run. The paired-probe statistics (E14) and the
+  declared contrasts of H5 and H6 (since 2026-10-10), and the H8 judge analysis and the
+  probe, bench and stage-time readers (since 2026-10-11), are tested on synthetic tables
+  and stub runs only.
 
 ### Repo state
 

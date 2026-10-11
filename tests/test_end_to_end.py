@@ -56,8 +56,8 @@ def run(tmp_path_factory):
     reg, proj = load_registry(configs), project(configs)
     # A stub run may not write under the results root (runner), so the cells share a scratch root.
     root = proj.scratch_root / "stub"
-    run_cell(reg, proj, SMOKE, mode="stub", stages=("traces", "filter", "eval", "grade"), configs_dir=configs,
-             results_root=root)
+    run_cell(reg, proj, SMOKE, mode="stub", stages=("probe", "traces", "filter", "eval", "grade", "bench"),
+             configs_dir=configs, results_root=root)
     run_cell(reg, proj, PAIRED, mode="stub", stages=("eval", "grade", "classify"), configs_dir=configs,
              results_root=root)
     proj = replace(proj, results_root=root)
@@ -123,6 +123,26 @@ def test_the_analysis_makes_every_statistic_the_records_ask_for(run):
     assert set(paired["conditions"]) == set(reg.cells[PAIRED].eval.conditions)
     assert sum(paired["conditions"]["base"]["n_pairs"].values()) > 0
     assert "did" in paired["contrasts"]["lora - base"]
+
+
+def test_the_analysis_reads_the_probe_the_bench_and_the_stage_times(run):
+    """The outputs that only planned runs make (E11, E20, E08) reach stats.json from the
+    files the stages wrote, so the first GPU run needs no new analysis code."""
+    reg, proj, cfg, rep, out = run
+    s = _stats(proj, SMOKE)
+    probe = json.loads((proj.cell(SMOKE).shared("probe") / "probe.json").read_text())
+    assert s["probe"]["fisher_p"] == probe["fisher_p_value"]
+    assert s["probe"]["benchmark"]["n"] == probe["benchmark"]["n"] > 0
+    bench = json.loads((proj.cell(SMOKE).stage(1, "bench") / "bench.json").read_text())
+    assert s["bench"]["seeds"] == [1]
+    for c in reg.cells[SMOKE].eval.conditions:
+        assert s["bench"]["conditions"][c]["1"]["median_s"] == pytest.approx(bench["conditions"][c]["median_s"])
+    ratio = s["bench"]["contrasts"]["lora - base"]["1"]["median_s_ratio"]
+    assert ratio == pytest.approx(bench["conditions"]["lora"]["median_s"] / bench["conditions"]["base"]["median_s"])
+    times = s["stage_times"]
+    assert {"traces", "filter", "probe"} <= set(times["shared"])
+    assert set(times["per_seed"]["eval"]) == {"1", "2"} and times["per_seed"]["bench"]["1"]["seconds"] >= 0
+    assert times["per_seed"]["eval"]["1"]["n_manifests"] == len(reg.cells[SMOKE].eval.conditions)
 
 
 def test_the_judge_analysis_runs_on_a_stub_judge(run):

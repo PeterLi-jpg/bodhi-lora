@@ -46,6 +46,9 @@
    "lora": 0.19322
   }
  },
+ "bench": {
+  "not_measured": "no bench.json in the cell's seed folders"
+ },
  "blanket_disclaimers": {
   "all_conditions": {
    "flagged": 0,
@@ -2698,6 +2701,9 @@
   }
  },
  "paired_probe": {},
+ "probe": {
+  "not_measured": "no probe.json in the cell's shared/probe folder"
+ },
  "prompts": {
   "labels": {
    "emergency-theme": {
@@ -2821,6 +2827,9 @@
     "specificity": null
    }
   }
+ },
+ "stage_times": {
+  "not_measured": "no stage manifest of this cell records a time"
  },
  "status": "pilot",
  "themes": {
