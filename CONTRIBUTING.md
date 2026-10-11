@@ -33,8 +33,8 @@ make test      # pytest suite, no GPU needed
 ```
 
 CI (`.github/workflows/ci.yml`) runs `make check` and the tests, compiles `bodhi_lora/`
-and `scripts/`, and rebuilds `paper/generated/` from the checkout with `make numbers`,
-failing on any difference. `.github/workflows/lint.yml` runs shellcheck on the shell
+and `scripts/`, rebuilds `paper/generated/` from the checkout with `make numbers`,
+failing on any difference, and rebuilds the figures with `make figures`. `.github/workflows/lint.yml` runs shellcheck on the shell
 scripts and hooks.
 
 ## Pull requests

@@ -62,10 +62,10 @@ jobs:
           git diff --exit-code paper/generated
           python scripts/check_paper_macros.py
 
+      # Every figure the paper includes, from the tracked results and the HealthBench file
+      # fetched above. Without tectonic, Figure 1 keeps its tracked pipeline.pdf.
+      - name: Rebuild the paper figures
+        run: make figures
+
       - name: Run tests
-        run: |
-          if [ -d tests ]; then
-            python -m pytest tests/
-          else
-            echo "tests/ not present; skipping pytest"
-          fi
+        run: python -m pytest

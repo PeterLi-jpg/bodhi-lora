@@ -168,7 +168,10 @@ location to its new one.
 - Git tracks, in every cell: the manifests, `cell.yaml`, the eval id lists, the adapter
   configs and trainer states, the response tables and the analysis and validation
   folders. Git ignores traces, raw eval and grade JSON, adapter weights and logs. The
-  rule depends on the kind of file, never on the cell.
+  rule depends on the kind of file, with one exception while open decision O2 stands
+  (docs/ARCHITECTURE.md section 12): the 2026-05 cell's raw eval and grade JSON (25 files,
+  about 80 MB) stay tracked, because `make figures` draws five of the paper's seven
+  figures from them.
 - `results/healthbench__medgemma-27b-text__bodhi__2026-05/validation/`: the blank physician
   grading sheets and the instructions. The answer key and the returned sheets are not in
   the repo.

@@ -581,14 +581,21 @@ shared path and its sha256. A cell that samples traces per seed writes them in t
 own folder. In an eval-only cell the traces, filter and train manifests point to the
 cell whose adapters it uses.
 
-**Tracked and ignored.** The rule depends on the kind of file, never on the cell. Tracked:
+**Tracked and ignored.** The rule depends on the kind of file, with one exception while O2
+stands (below). Tracked:
 manifests, `cell.yaml`, ids, `scores.json`, `adapter_config.json`, `trainer_state.json`,
 `table.csv` and `table.meta.json`, the analysis and validation folders, `PROVENANCE.md`,
 `provenance.json`. Ignored: traces, filter JSONL, adapter weights, optimizer state, raw
 eval and grade JSON, logs. Today the submitted cell's raw eval JSON (80 MB) is tracked
 and the added cells' (370 MB) is not. Under one rule both are ignored and every cell has
 a tracked response table; history keeps the submitted files at the migration base commit
-(open decision O2). The probe and bench outputs match no rule yet, so git tracks them
+(open decision O2). `make figures` reads those raw files today: `ushape_difficulty`,
+`axis_breakdown` and `score_distribution` directly, and `epistemic_bar` and
+`epistemic_seeds` through the cell's
+`results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/cross_seed_aggregate.json`.
+So the default of O2 must
+first point the figure scripts at the response tables and `stats.json`. The probe and bench
+outputs match no rule yet, so git tracks them
 (open decision O8).
 
 **The response table.** `results/<cell_id>/seed_<n>/table.csv` has one row per
