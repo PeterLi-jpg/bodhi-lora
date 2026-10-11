@@ -674,3 +674,22 @@ each pair was built, joins the labels of `configs/report.yaml`, so the `mediq-pa
 cells keep it in their prompts table. No output of any planned cell existed, and no
 existing cell has a paired benchmark or a declared contrast, so no statistic of an
 existing cell changed.
+
+**2026-10-10, who lifts a gate. A rule for this section; no method changed, and this is
+not the adoption.** An entry here can keep a value out of the paper until the first
+author accepts it: the 2026-10-09 entry kept the format leakage, token counts and
+discrimination index of the 2026-04 and 2026-07 cells out of the paper on those terms.
+Only the first author's adoption entry, or a later entry of his, lifts such a gate. The
+2026-10-10 paper-step entry says that it lifts the 2026-10-09 gate; it could not, because
+it is not his. The paper text that cites those values (section 4.4, Table H.6, and the
+abstract sentence on selective asking) stays as a draft that waits for the adoption:
+BLOCKED.md item 1 asks him to keep it, change it or take it out. The adoption entry must
+also fix choice 1 above (E14 or E02 as the primary test of H3) before any GPU run.
+
+**2026-10-10, the seeds of E23. A record of what the cell records say; no method
+changed.** Section 2.1 says that every planned cell uses the seeds 42, 7, 13, 99 and 101.
+The three trace-seed cells of E23 (`healthbench__mistral-small-24b__bodhi__traces-s1`,
+`-s2` and `-s3`) each train one adapter at seed 42 (`seeds: [42]` in their records). Each
+varies the teacher traces, and the five training seeds of
+`healthbench__mistral-small-24b__bodhi` give the spread they are read against (section
+10, E23). They are the one exception. No output of any planned cell existed.

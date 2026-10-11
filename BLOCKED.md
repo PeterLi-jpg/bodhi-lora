@@ -64,8 +64,11 @@ The uniform analysis of the existing outputs already ran on 2026-10-09 (`make ex
 `make analyze`; tables and statistics committed): the descriptive and exploratory items
 of the plan's section 10, with no physician label read. For E02, add
 `needs-info-physician` to the `active_inquiry` entry of `discrimination` in
-`configs/report.yaml`, then run `make analyze` and `make numbers`. Also accept or change
-the two 2026-10-10 entries of ANALYSIS_PLAN.md section 12. The no-lexicon entry removed
+`configs/report.yaml`, then run `make analyze` and `make numbers`. Fix choice 1 (E14 or
+E02 as the primary test of H3) in the adoption entry; RUN_PLAN.md may not start without
+it. Also accept or change the 2026-10-10 entries of ANALYSIS_PLAN.md section 12. Only your
+entry lifts a gate that an entry sets for you (the 2026-10-10 entry on gates), so the
+paper's citations below are a draft until you decide. The no-lexicon entry removed
 the keyword rules, put the `emergency-theme` red-flag rates in place of the over-flagging
 check (KNOWN_ISSUES.md) and specified the judge classifier with its hand-label gate. The
 paper entry records that the paper now cites the post hoc checks of every cell (section
