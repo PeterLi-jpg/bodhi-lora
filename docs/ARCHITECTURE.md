@@ -726,8 +726,8 @@ cells, and the posted-value check. Every recorded cell with outputs has tracked 
 and a `stats.json` (the eight cells of `report.cross_cells`, the 2026-04 pilot and the
 partial BioMistral-7B MedQA cell), and `results/cross_cell/stats.json` exists. These
 are the descriptive and exploratory items of ANALYSIS_PLAN.md section 10 (E01 to E05,
-E08); no physician label is read, and E02 with `needs-info-physician` still waits for
-the plan's adoption (BLOCKED.md item 1). Not built yet, each needed by the analysis plan before its cells exist: the
+E08); no physician label is read. E02 with `needs-info-physician` may run since the plan's
+adoption on 2026-10-11, and has not run yet (BLOCKED.md item 1). Not built yet, each needed by the analysis plan before its cells exist: the
 weighted kappa and dimension contrasts under a judge (H8), the judges' harm grades
 (C33), the probe and bench outputs (E11, E20), stage times from the manifests (E08),
 and contrasts between cells (H9, H10, E24). Built on 2026-10-10 and tested on synthetic

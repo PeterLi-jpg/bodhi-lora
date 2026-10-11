@@ -632,8 +632,8 @@ others). A keyword match cannot tell a criterion that rewards asking from one th
 mentions it, or penalizes it. Every number above rests on that labelling. The theme-only
 labelling of the same reply (+13.2 [+4.1, +21.7] for LoRA, 127 prompts) uses a structured tag
 and stands. The rubric part is gone from `configs/benchmarks/healthbench.yaml`; the
-`cluster:` tags cannot replace it, because they carry the physician labels that the analysis
-plan keeps unseen until its adoption.
+`cluster:` tags cannot replace it, because they carry the physician labels, which only the
+label analyses of the analysis plan may read (unseen until its adoption on 2026-10-11).
 
 **The paper must say.** The theme-tag numbers only, from the uniform analysis: LoRA minus Base
 +10.0 [-0.5, +20.1]; asking on self-contained prompts 17.0% under Base and 43.2% under LoRA;

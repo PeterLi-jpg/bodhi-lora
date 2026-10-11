@@ -58,7 +58,8 @@ D-numbers refer to [DECISIONS.md](DECISIONS.md). Issue numbers such as #5 are Gi
   aims at may credit its behaviors more readily. The recorded cells keep the template so
   their grades stay comparable; the paper's appendix on the dimensions says so. Whether
   new cells use a protocol-neutral template (a new grader version, with its own hash in
-  each grade file) is a choice for the analysis plan's adoption (BLOCKED.md item 1).
+  each grade file) is the first author's choice 7 of the analysis plan, which its adoption on
+  2026-10-11 left open (BLOCKED.md item 1).
   `tests/test_no_hardcode.py` fails on any other grader text that names a protocol.
 - **Med42-8B shares the evaluator's family (EVAL-7, D6).** The cells are marked † and
   kept out of cross-model statements. The judge re-grade is built
