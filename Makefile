@@ -66,8 +66,8 @@ check:
 	$(PYTHON) -m bodhi_lora list cells > /dev/null
 
 # The uniform analysis (docs/ARCHITECTURE.md section 7). extract reads the raw stage
-# outputs, which git ignores except for the 2026-05 cell; analyze reads only the tracked
-# tables, so it runs in CI, and make report reads only what analyze writes.
+# outputs, which git ignores; analyze reads only the tracked tables, so it runs in CI,
+# and make report reads only what analyze writes.
 extract:
 	$(PYTHON) -m bodhi_lora analyze --all --extract
 

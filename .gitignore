@@ -17,9 +17,10 @@ checkpoints/
 optimizer*.pt
 
 # results/: one folder per cell (docs/ARCHITECTURE.md section 6). The rule depends on the
-# kind of file; the one exception is open decision O2 below. Tracked: manifests, cell records, id lists, scores,
-# adapter configs, trainer states, analysis and validation files. Ignored: traces and the
-# other JSONL, adapter weights and checkpoint state, raw eval and grade JSON, logs.
+# kind of file and is the same for every cell (open decision O2, settled on 2026-10-11).
+# Tracked: manifests, cell records, id lists, scores, response tables, adapter configs,
+# trainer states, analysis and validation files. Ignored: traces and the other JSONL,
+# adapter weights and checkpoint state, raw eval and grade JSON, logs.
 results/**/*.jsonl
 results/**/logs/
 results/**/eval/*.json
@@ -31,10 +32,6 @@ results/**/train/**
 !results/**/train/**/adapter_config.json
 !results/**/train/**/trainer_state.json
 !results/**/train/**/manifest.json
-# Open decision O2 (docs/ARCHITECTURE.md section 12): the 2026-05 cell's raw eval and
-# grade JSON stay tracked, as they were before the move, until one rule covers every cell.
-!results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_*/eval/*.json
-!results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_*/grade/*.json
 # The answer key unblinds the physician grading sheets, so it stays outside the repo
 # (docs/KNOWN_ISSUES.md). make_irr_excel.py writes it next to the sheets.
 results/**/validation/answer_key.xlsx

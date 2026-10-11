@@ -52,9 +52,8 @@ scripts and hooks.
 - Commit what `.gitignore` lets through: the manifests, cell records, eval id lists,
   adapter configs, trainer states, response tables
   (`results/<cell_id>/seed_<n>/table.csv`) and each cell's analysis and validation folders. Git ignores traces and other JSONL, raw eval and
-  grade JSON, adapter weights, checkpoint state and logs. The one exception is open
-  decision O2: the 2026-05 cell's raw eval and grade JSON stay tracked
-  (docs/ARCHITECTURE.md section 12).
+  grade JSON, adapter weights, checkpoint state and logs. The rule is the same for every
+  cell (open decision O2, docs/ARCHITECTURE.md section 12).
 - The runner writes a manifest into every stage folder (`bodhi_lora/manifest.py`).
 - Never put a rater's name in a tracked file, a file name or a commit message. Raters
   are AnonClinician1-4. The key from number to person stays with the study coordinator.

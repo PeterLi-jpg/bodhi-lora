@@ -595,18 +595,17 @@ shared path and its sha256. A cell that samples traces per seed writes them in t
 own folder. In an eval-only cell the traces, filter and train manifests point to the
 cell whose adapters it uses.
 
-**Tracked and ignored.** The rule depends on the kind of file, with one exception while O2
-stands (below). Tracked:
+**Tracked and ignored.** The rule depends on the kind of file and is the same for every
+cell (O2, below). Tracked:
 manifests, `cell.yaml`, ids, `scores.json`, `adapter_config.json`, `trainer_state.json`,
 `table.csv` and `table.meta.json`, the analysis and validation folders, `PROVENANCE.md`,
 `provenance.json`. Ignored: traces, filter JSONL, adapter weights, optimizer state, raw
-eval and grade JSON, logs. Today the submitted cell's raw eval JSON (80 MB) is tracked
-and the added cells' (370 MB) is not. Under one rule both are ignored and every cell has
-a tracked response table; history keeps the submitted files at the migration base commit
-(open decision O2). `make figures` reads those raw files today for `ushape_difficulty`,
-`axis_breakdown` and `score_distribution`; `epistemic_bar`, `epistemic_seeds` and
-`effect_size_forest` read the cell's `analysis/stats.json` (since 2026-10-11). So the
-default of O2 must first point the three raw-file figures at the response tables. The probe and bench outputs match no rule yet, so git tracks them (open
+eval and grade JSON, logs. Until 2026-10-11 the submitted cell's raw eval and grade JSON
+(80 MB) was tracked and the added cells' (370 MB) was not; history keeps the submitted
+files at 31e4fd8. `make figures` reads the response tables for `ushape_difficulty`,
+`axis_breakdown` and `score_distribution` (the same values as the raw files, which a test
+checks where they are present), and the cell's `analysis/stats.json` for
+`epistemic_bar`, `epistemic_seeds` and `effect_size_forest`. The probe and bench outputs match no rule yet, so git tracks them (open
 decision O8).
 
 **The response table.** `results/<cell_id>/seed_<n>/table.csv` has one row per
@@ -845,8 +844,8 @@ replaces it once it reproduces its values (10.3).
 
 | Old path | New path | Kind |
 |---|---|---|
-| `02ac9a3:results_modal/seed_7/base_no_wrapper.json` (each seed; and `base_bodhi`, `lora_no_wrapper`, `lora_bodhi`) | `results/<M>/<S>/eval/base.json` (and `base+bodhi`, `lora`, `lora+bodhi`) | moved; still tracked (O2) |
-| `02ac9a3:results_modal/seed_7/epistemic_scores.json` (each seed) | `results/<M>/<S>/grade/epistemic__llama-3.1-8b.json` | moved; still tracked (O2) |
+| `02ac9a3:results_modal/seed_7/base_no_wrapper.json` (each seed; and `base_bodhi`, `lora_no_wrapper`, `lora_bodhi`) | `results/<M>/<S>/eval/base.json` (and `base+bodhi`, `lora`, `lora+bodhi`) | moved; ignored since 2026-10-11 (O2) |
+| `02ac9a3:results_modal/seed_7/epistemic_scores.json` (each seed) | `results/<M>/<S>/grade/epistemic__llama-3.1-8b.json` | moved; ignored since 2026-10-11 (O2) |
 | `02ac9a3:results_modal/cross_seed_aggregate.json`, `.md` | `results/<M>/analysis/` | moved; superseded |
 | `02ac9a3:results_modal/irr/` (sheets, answer key, README) | `results/<M>/validation/` | moved |
 | `02ac9a3:results_modal/irr/kappa_results.json` | `results/<M>/validation/kappa_results.json` | moved |

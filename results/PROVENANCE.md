@@ -6,6 +6,8 @@ path, its new paths, its sha256 and size, whether git tracked it before and afte
 note. This file says the same in prose. An entry with an `edited` field moved byte for
 byte and was edited later, for the reason the field gives; the test
 (`tests/test_migration_provenance.py`) holds it to its bytes at the move commit, 408e42c.
+An entry with an `untracked` field was tracked after the move and is ignored now, for the
+reason the field gives.
 
 ## How the move was checked
 
@@ -106,5 +108,7 @@ host or were lost. Each recorded cell also has `cell.yaml`, a copy of its record
 The rule in `.gitignore` depends on the kind of file. Tracked: manifests, cell records,
 id lists, score copies, adapter configs, trainer states, analysis and validation files.
 Ignored: traces and the other JSONL, adapter weights and checkpoint state, raw eval and
-grade JSON, logs. One exception waits on the first author (open decision O2): the 2026-05
-cell's raw eval and grade JSON stay tracked, as they were before the move.
+grade JSON, logs. The rule is the same for every cell (open decision O2). Until
+2026-10-11 the 2026-05 cell's raw eval and grade JSON stayed tracked, as they were before
+the move; history keeps them at 31e4fd8, and their 25 entries in `provenance.json` say so in
+an `untracked` field.

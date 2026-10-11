@@ -21,8 +21,9 @@ kind is moved (byte-identical), archived (moved next to the repo), or merged (te
 joined into another file; its sha256 is of the old file). results/PROVENANCE.md says the
 same in prose. A stage folder of a recorded cell gets a manifest that lists its files.
 
-The 2026-05 cell's raw eval and grade JSON stay tracked, as they were, until the first
-author decides on one tracked/ignored rule for every cell (open decision O2).
+The 2026-05 cell's raw eval and grade JSON stayed tracked, as they were, until one
+tracked/ignored rule covered every cell on 2026-10-11 (open decision O2); their entries in
+results/provenance.json say so in an "untracked" field.
 """
 from __future__ import annotations
 

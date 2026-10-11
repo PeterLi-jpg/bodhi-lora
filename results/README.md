@@ -10,8 +10,9 @@ Status words used below:
 - **raw**: the numbers regenerate from the raw outputs. `make extract` turns each seed's
   raw eval and grade files into its tracked response table
   (`results/<cell_id>/seed_<n>/table.csv`), and `make analyze` computes every statistic
-  from the tables. The raw files of the 2026-05 cell are in git today (open decision O2);
-  those of the 2026-07 cells (about 370 MB) are gitignored and kept in the local copy.
+  from the tables. The raw files of every cell are gitignored and kept in the local copy
+  (open decision O2): about 80 MB for the 2026-05 cell, which history keeps at 31e4fd8,
+  and about 370 MB for the 2026-07 cells.
 - **posted**: the numbers exist only as posted rebuttal text, transcribed into
   `rebuttal/posted_values.json`. Since the sync of 2026-10-08 no cell is in this
   state; the file stays as the record of what was posted.

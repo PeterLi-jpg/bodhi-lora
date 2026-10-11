@@ -46,9 +46,9 @@ environments for real runs.
 | Table 1, every cell | `paper/generated/tab_cross_cell.tex` | `make numbers` | the same two kinds of file, and the groups of `configs/report.yaml` |
 | Appendix tables (B, E, G, H, J) | `paper/generated/tab_*.tex` | `make numbers` | the same |
 | Figure 1 | `paper/figures/pipeline.pdf` (tracked) | `make figures` | `paper/figures/pipeline_standalone.tex` |
-| Appendix figures (E, G, I) | `paper/figures/*.pdf` | `make figures` | the 2026-05 cell's `stats.json` and raw outputs |
+| Appendix figures (E, G, I) | `paper/figures/*.pdf` | `make figures` | the 2026-05 cell's `stats.json` and response tables |
 | Each cell's statistics | `results/<cell_id>/analysis/stats.json` | `make analyze` | the cell's response tables, `results/<cell_id>/seed_<n>/table.csv` |
-| The response tables | `results/<cell_id>/seed_<n>/table.csv` | `make extract` | the raw eval and grade files (gitignored, except the 2026-05 cell's) |
+| The response tables | `results/<cell_id>/seed_<n>/table.csv` | `make extract` | the raw eval and grade files (gitignored in every cell) |
 | Physician agreement (Appendix B) | `results/healthbench__medgemma-27b-text__bodhi__2026-05/validation/kappa_results.json` | `make kappa` | the returned rater file and the answer key, both kept outside the repo |
 
 [paper/NUMBERS.md](paper/NUMBERS.md) maps each number and claim of the paper to its
@@ -175,10 +175,9 @@ to its new one.
 - Git tracks, in every cell: the manifests, `cell.yaml`, the eval id lists, the adapter
   configs and trainer states, the response tables and the analysis and validation
   folders. Git ignores traces, raw eval and grade JSON, adapter weights and logs. The
-  rule depends on the kind of file, with one exception while open decision O2 stands
-  (docs/ARCHITECTURE.md section 12): the 2026-05 cell's raw eval and grade JSON (25 files,
-  about 80 MB) stay tracked, because `make figures` draws five of the paper's seven
-  figures from them.
+  rule depends on the kind of file and is the same for every cell (open decision O2,
+  docs/ARCHITECTURE.md section 12). The 2026-05 cell's raw eval and grade JSON (25 files,
+  about 80 MB) were tracked until 2026-10-11 and stay in history at commit 31e4fd8.
 - `results/healthbench__medgemma-27b-text__bodhi__2026-05/validation/`: the blank physician
   grading sheets and the instructions. The answer key and the returned sheets are not in
   the repo.

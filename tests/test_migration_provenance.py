@@ -95,10 +95,16 @@ def test_moved_files_keep_their_bytes(entries):
 
 
 def test_tracked_after_matches_git(entries):
+    """tracked_after is the state after the move. An entry whose file git stopped tracking
+    later says when and why in its "untracked" field (open decision O2)."""
     tracked = set(_git("ls-files").splitlines())
     for e in entries:
         if e["kind"] == "moved":
-            assert e["tracked_after"] == all(n in tracked for n in e["new"]), e["old"]
+            now = all(n in tracked for n in e["new"])
+            if "untracked" in e:
+                assert e["tracked_after"] and not any(n in tracked for n in e["new"]), e["old"]
+            else:
+                assert e["tracked_after"] == now, e["old"]
 
 
 def test_no_old_location_is_tracked_any_more():
