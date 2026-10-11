@@ -13,16 +13,22 @@ Grading-template.xlsx     master template, do not edit
 Grading-reviewer1.xlsx    → AnonClinician1
 Grading-reviewer2.xlsx    → AnonClinician2
 Grading-reviewer3.xlsx    → AnonClinician3
-answer_key.xlsx           DO NOT SEND. Maps grading_id → source/config/llm_score
-                          for downstream κ analysis.
 ```
+
+The answer key (`answer_key.xlsx`, sha256
+d2994f85d822b402c18535a2ccba2f08e818294d5a8e50fad1584b2e3034e0a4) maps grading_id →
+source/config/llm_score for the κ analysis. It unblinds the sheets, so it is no longer in
+the repo: git stopped tracking it on 2026-10-11, a copy stays outside
+the repo, and `.gitignore` covers it. Git history still holds it (it was tracked from
+2026-05-04), so anyone can unblind these three sheets; KNOWN_ISSUES.md says what that
+means for the two deferred raters.
 
 Returned `Grading-*.xlsx` files can carry rater names. Keep them outside the
 repo and pass their paths. The scripts read them in place and never copy them:
 
 ```
 python scripts/make_tiebreaker_excel.py --rater-files <r1.xlsx> <r2.xlsx> <r3.xlsx>   # → Grading-tiebreaker.xlsx
-make kappa RATER_FILES="<r1.xlsx> ..."     # → kappa_results.json
+make kappa RATER_FILES="<r1.xlsx> ..." ANSWER_KEY=<answer_key.xlsx>   # → kappa_results.json
 ```
 
 `kappa_results.json` names raters only as rater_A, rater_B, ... So far one rater
@@ -38,7 +44,7 @@ has returned grades, and `kappa_results.json` holds the result for that rater.
 - **10 filter rows** = 10 Qwen-graded BODHI training traces (validates the
   Stage-2 filter grader).
 - Reviewers blind to source AND configuration; both are recoverable only via
-  `answer_key.xlsx`.
+  the answer key.
 
 ## Reviewer instructions (inside each Excel)
 

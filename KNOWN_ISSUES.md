@@ -30,6 +30,18 @@ Issue numbers such as #5 are GitHub issues on `PeterLi-jpg/bohdi-lora`.
 
 ### Measurement and design
 
+- **The answer key of the physician sheets was public (C28, D20).** From 2026-05-04 to
+  2026-10-11 the repo tracked
+  `results/healthbench__medgemma-27b-text__bodhi__2026-05/validation/answer_key.xlsx`.
+  It maps each grading id of `Grading-reviewer1.xlsx` to `Grading-reviewer3.xlsx` to the
+  condition and seed that made the response and the LLM's score. Git no longer tracks it
+  (the validation README gives its sha256), but history keeps it, because there is no
+  purge (D18). The one rater who returned grades graded while the key was public. The
+  two deferred raters would grade the same sheets, and anyone who reads the repo can
+  unblind them. The
+  choice is the first author's: re-key the sheets before they go out (new shuffled
+  grading ids from `scripts/make_irr_excel.py`, with a new answer key kept outside the
+  repo), or send them as they are and say in the paper that the key was public.
 - **Physician validation is incomplete (D5).** The check grades HealthBench rubric
   criteria only, and agreement is below the pre-registered 0.6 target. No physician
   graded the seven behaviors, so every epistemic-behavior result is labeled LLM-graded.

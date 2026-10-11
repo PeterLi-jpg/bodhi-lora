@@ -31,8 +31,12 @@ Approach
 
 Output: <M>/validation/kappa_results.json (de-identified).
 
+The answer key (grading_id to source, condition and LLM score) unblinds the sheets, so it
+is kept outside the repo too; pass its path with --answer-key.
+
 Usage:
-    python3 scripts/compute_irr_kappa.py --rater-files /path/to/Grading-<rater>.xlsx [...]
+    python3 scripts/compute_irr_kappa.py --answer-key /path/to/answer_key.xlsx \
+        --rater-files /path/to/Grading-<rater>.xlsx [...]
 """
 from __future__ import annotations
 
@@ -255,7 +259,8 @@ def main() -> None:
     ap.add_argument("--rater-files", type=Path, nargs="+", required=True,
                     help="returned Grading-*.xlsx files, read in place; labelled rater_A, rater_B, ... in this order")
     ap.add_argument("--adjudicator", type=Path, default=None, help="filled tiebreaker xlsx, if any")
-    ap.add_argument("--answer-key", type=Path, default=IRR_DIR / "answer_key.xlsx")
+    ap.add_argument("--answer-key", type=Path, required=True,
+                    help="answer_key.xlsx written by make_irr_excel.py, kept outside the repo")
     ap.add_argument("--template", type=Path, default=IRR_DIR / "Grading-template.xlsx")
     ap.add_argument("--results-dir", type=Path, default=CELL)
     ap.add_argument("--filter-traces", type=Path, default=CELL / "seed_7" / "filter" / "train.jsonl")

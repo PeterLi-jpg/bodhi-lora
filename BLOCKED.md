@@ -186,22 +186,24 @@ git config --get core.hooksPath     # expect: hooks
 Deferred by you (D20). D5 stands: one of three raters, kappa 0.35, below the 0.6 target.
 When you resume:
 
-1. Check that the returned file is the one the kappa came from:
+1. Check that the returned file is the one the kappa came from. The answer key is no
+   longer in the repo (KNOWN_ISSUES.md); its copy is in `../_archive/validation/`:
 
    ```bash
-   make kappa RATER_FILES="<private dir>/<returned Grading file>.xlsx"
+   make kappa RATER_FILES="<private dir>/<returned Grading file>.xlsx" ANSWER_KEY=../_archive/validation/answer_key.xlsx
    git diff --exit-code results/healthbench__medgemma-27b-text__bodhi__2026-05/validation/kappa_results.json   # expect no diff (0.354, n=509)
    ```
 
-2. Send the two other raters their
-   `results/healthbench__medgemma-27b-text__bodhi__2026-05/validation/Grading-reviewer<K>.xlsx`.
-   Keep returned files outside the repo.
+2. Decide first whether to re-key the sheets: the answer key was public until 2026-10-11
+   and history keeps it (KNOWN_ISSUES.md). Then send the two other raters their
+   `results/healthbench__medgemma-27b-text__bodhi__2026-05/validation/Grading-reviewer<K>.xlsx`
+   (or the re-keyed sheets). Keep returned files outside the repo.
 3. When both are back:
 
    ```bash
    python3 scripts/make_tiebreaker_excel.py --rater-files <r1.xlsx> <r2.xlsx> <r3.xlsx>
    # send the tiebreaker sheet to the fourth physician, then
-   make kappa RATER_FILES="<r1.xlsx> <r2.xlsx> <r3.xlsx>"
+   make kappa RATER_FILES="<r1.xlsx> <r2.xlsx> <r3.xlsx>" ANSWER_KEY=<answer_key.xlsx>
    ```
 
 4. Decide whether to commit de-identified per-row grades (grading id to pass, fail or

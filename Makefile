@@ -13,7 +13,7 @@
 #                  record of how posted values were made, withdrawn; the paper reads none
 #   make cells     results/cross_cell/cell_recipe.json from the host logs: the record of the
 #                  2026-07 filter counts (needs the ignored host logs)
-#   make kappa     $(MAIN_CELL)/validation/kappa_results.json (needs RATER_FILES)
+#   make kappa     $(MAIN_CELL)/validation/kappa_results.json (needs RATER_FILES and ANSWER_KEY)
 #   make derived   the tracked score copies, from the large ignored files they copy
 
 PYTHON ?= python3
@@ -86,11 +86,13 @@ rebuttal: $(HB_HARD)
 cells:
 	$(PYTHON) rebuttal/analyses/cell_recipe.py
 
-# The returned rater files carry names, so they stay outside the repo; pass their
-# paths, e.g. make kappa RATER_FILES="/path/to/Grading-<rater>.xlsx".
+# The returned rater files carry names and the answer key unblinds the sheets, so both
+# stay outside the repo; pass their paths, e.g.
+# make kappa RATER_FILES="/path/to/Grading-<rater>.xlsx" ANSWER_KEY=/path/to/answer_key.xlsx
 kappa:
 	@test -n '$(RATER_FILES)' || { echo "set RATER_FILES to the returned Grading-*.xlsx path(s)"; exit 1; }
-	$(PYTHON) scripts/compute_irr_kappa.py --rater-files $(RATER_FILES) --filter-traces "$(FILTER_TRAIN)"
+	@test -n '$(ANSWER_KEY)' || { echo "set ANSWER_KEY to the answer_key.xlsx kept outside the repo"; exit 1; }
+	$(PYTHON) scripts/compute_irr_kappa.py --rater-files $(RATER_FILES) --answer-key "$(ANSWER_KEY)" --filter-traces "$(FILTER_TRAIN)"
 
 derived:
 	$(PYTHON) scripts/export_derived_inputs.py --filter-train "$(FILTER_TRAIN)"

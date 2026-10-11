@@ -35,6 +35,9 @@ results/**/train/**
 # grade JSON stay tracked, as they were before the move, until one rule covers every cell.
 !results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_*/eval/*.json
 !results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_*/grade/*.json
+# The answer key unblinds the physician grading sheets, so it stays outside the repo
+# (KNOWN_ISSUES.md). make_irr_excel.py writes it next to the sheets.
+results/**/validation/answer_key.xlsx
 
 paper/build/
 paper/figures/*.pdf

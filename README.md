@@ -159,8 +159,8 @@ location to its new one.
   folders. Git ignores traces, raw eval and grade JSON, adapter weights and logs. The
   rule depends on the kind of file, never on the cell.
 - `results/healthbench__medgemma-27b-text__bodhi__2026-05/validation/`: the blank physician
-  grading sheets, the instructions and the answer key. Returned sheets are not in the
-  repo.
+  grading sheets and the instructions. The answer key and the returned sheets are not in
+  the repo.
 - [RESULTS.md](RESULTS.md): what each result is, where it lives and its status.
 
 ## Data and leakage
