@@ -248,7 +248,7 @@ adapter with and without the protocol. Each seed draws 200 of the \statHBMedGemm
 We run the \bodhi{} protocol on MedGemma-27B over the \statHBMedGemmaMayFilterRaw{} HealthBench prompts that
 are not in \hbhard{}. Generation uses greedy decoding in vLLM \citep{kwon2023efficient} on TPU
 v6e. A preflight gate checks that no \hbhard{} prompt id enters training. In the one training split
-in the repository (seed 7, \statHBMedGemmaMayFilterTrainSplit{} traces), the overlap with \hbhard{} is
+whose prompt ids the repository holds (seed 7, \statHBMedGemmaMayFilterTrainSplit{} traces), the overlap with \hbhard{} is
 \statHBMedGemmaMayFilterTrainOverlap{} prompt ids. Each trace keeps the Pass~1 analysis
 (not used for training) and the Pass~2 response (the training target).
 
@@ -661,8 +661,10 @@ online (ChatDoctor) and no patient records. Before patient-facing use, the adapt
 harm review (Appendix~\ref{app:harm}), physician validation of the grades (Appendix~\ref{app:human})
 and a test of false red flags; an LLM-graded harm proxy already rose on ChatDoctor (\S\ref{sec:cells}).
 
-\paragraph{Code availability.} \codeurl{} holds the code, the outputs, and the added cells' adapter
-configurations and trainer states, without weights. The MedGemma-27B adapters were not retained.
+\paragraph{Code availability.} \codeurl{} holds the code, the per-response grade tables and
+statistics of every evaluated cell, and the added cells' adapter configurations and trainer states, without
+weights. A grade table gives a hash of each response, not its text. The MedGemma-27B adapters were
+not retained.
 
 \begin{ack}
 Funding: None declared.
@@ -1590,10 +1592,12 @@ This recipe & weights & 1 & protocol, rubric, grader & epistemic behaviors & our
 \label{app:examples}
 
 The examples come from the seed~42 and seed~99 evaluation outputs on \hbhard{}, with grades from
-the epistemic grading of the evaluator. Prompts and responses are verbatim. They are in
-\texttt{data/raw/healthbench/hard.jsonl} (by \texttt{prompt\_id}) and in the grade files of the
-MedGemma-27B cell,
-\texttt{results/healthbench\_\_medgemma-27b-text\_\_bodhi\_\_2026-05/seed\_<N>/grade/}.
+the epistemic grading of the evaluator. Prompts and responses are verbatim. The prompts are in
+\hbhard{} (by \texttt{prompt\_id}), which \texttt{python -m bodhi\_lora fetch healthbench} downloads.
+The responses come from the grade files of the MedGemma-27B cell, which the repository does not
+hold; the cell's per-response table of each seed,
+\texttt{results/healthbench\_\_medgemma-27b-text\_\_bodhi\_\_2026-05/seed\_<N>/table.csv}, gives
+the grades and a hash of each response.
 \texttt{[\ldots]} marks omitted text,
 and nothing is paraphrased. Examples A and B show the four conditions: Base, Base+\bodhi{}, LoRA
 and LoRA+\bodhi{}. Figure~\ref{fig:interference} shows one more prompt.
