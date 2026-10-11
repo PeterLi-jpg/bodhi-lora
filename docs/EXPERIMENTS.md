@@ -376,8 +376,15 @@ flag section moved to the start of pass 1 and an instruction that the reply stat
 flags first. Test: `lora+red-flags-first` minus `lora+bodhi` on red flag identification
 and leak share, on the adapters trained with BODHI; `base+red-flags-first` shows the
 effect of the order alone. Cells: E13. Optional: a cell that also teaches with it.
-GPU: yes, inside E13. Status: built (protocol `red-flags-first`), then to run. Its contrast
-with `lora+bodhi` is not one the analysis makes by rule yet (ARCHITECTURE.md section 7).
+GPU: yes, inside E13. Status: built (protocol `red-flags-first`, and the contrast
+`lora+red-flags-first - lora+bodhi` that the E13 records declare), then to run. Risk: the
+drop occurred only under the 2026-05 recipe (r 8, bf16 on TPU, a 4,096-token eval
+context). The E13 cells train QLoRA with r 16 on seven projections and evaluate at 8,192
+tokens, and the paper names recipe and context length as candidate reasons why the drop
+does not repeat. So the H6 precondition may find no drop to recover in any new cell, and
+C31 would stay untested. A pair of `lora+bodhi` and `lora+red-flags-first` at a 4,096-token
+eval context in R7 would test the context part; that is the first author's choice
+(BLOCKED.md item 1).
 
 **E18. Over-flagging set.** Answers C30, C18, FzpA-W3 (red-flag false positives).
 HealthBench physicians labelled cases emergent, conditionally emergent or not emergent

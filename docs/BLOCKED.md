@@ -43,7 +43,10 @@ Still yours:
    b23be49 as the default; D25 says how to undo it.
 5. O7: the MedGemma-27B rerun (R7) is the new QLoRA cell
    `healthbench__medgemma-27b-text__bodhi`, at the E13 settings, and the 2026-05 cell stays
-   the record.
+   the record. With it: the red-flag drop that C31 promised to recover occurred only at
+   r 8 and a 4,096-token eval context, and R7 runs at r 16 and 8,192, so it may find no
+   drop to recover. Should R7 add `lora+bodhi` and `lora+red-flags-first` at 4,096 tokens
+   (RUN_PLAN.md, "R7 and C31")? The record does not have them yet.
 6. O8: git tracks the probe's `probe.json` (counts, rates, Fisher test) and ignores its
    `samples.jsonl` (benchmark text and continuations). Applied in 4ae74c6 as the default;
    D25 says how to undo it.
