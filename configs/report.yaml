@@ -402,5 +402,7 @@ cell_detail_tables:
   per_table: 4
   blocks: [submitted, added-kept, set-aside]
   contrasts: [lora - base, 'lora+{protocol} - lora']
+  # Blanket disclaimers are a secondary row: an undesired behavior the evaluator flags,
+  # outside the Holm family, so its p is the unadjusted paired t.
   metrics: [active_inquiry, uncertainty_ack, context_seeking, red_flag, scope_bounding, hedging_quality,
-            specificity, rubric_score]
+            specificity, rubric_score, blanket_disclaimer]
