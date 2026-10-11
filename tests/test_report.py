@@ -14,7 +14,7 @@ from bodhi_lora.paths import CONFIGS_DIR, REPO_ROOT, project  # noqa: E402
 from bodhi_lora.registry import load_registry  # noqa: E402
 from bodhi_lora.report import Report, report, write  # noqa: E402
 from bodhi_lora.report.cross import cross_label  # noqa: E402
-from bodhi_lora.report.latex import fmt, fmt_pm, fmt_range, token  # noqa: E402
+from bodhi_lora.report.latex import fmt, fmt_ci, fmt_pm, fmt_range, token  # noqa: E402
 
 CROSS_TABLE = "tab_cross_cell_checks"
 GENERATED = REPO_ROOT / "paper" / "generated"
@@ -38,6 +38,15 @@ def test_range_prints_both_ends_of_an_asymmetric_interval():
         "\\shortstack[r]{\\ensuremath{+0.100}\\\\\\ensuremath{[-0.005,\\,+0.201]}}"
     assert fmt_range(0.1, None, 3) == "\\ensuremath{+0.100}"
     assert fmt_range(None, [0, 1], 3) == "--"
+
+
+def test_an_interval_end_near_zero_keeps_its_sign():
+    # -0.0003 at 3 decimals would print "-0.000" and hide that the interval crosses zero
+    assert fmt_ci([-0.0003, 0.037], 3) == "\\ensuremath{[-0.0003,\\,+0.037]}"
+    assert fmt_ci([0.00004, 0.5], 2) == "\\ensuremath{[+0.00004,\\,+0.50]}"
+    assert fmt_ci([0.0, 0.5], 2) == "\\ensuremath{[+0.00,\\,+0.50]}"
+    # past three extra decimals it stops; the value is zero for any table purpose
+    assert fmt_ci([-1e-9, 0.5], 2) == "\\ensuremath{[-0.00000,\\,+0.50]}"
 
 
 def test_cross_label_splits_benchmark_from_model():

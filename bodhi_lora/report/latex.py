@@ -1,7 +1,8 @@
 """LaTeX text for the report: number formats, macro tokens and booktabs tables.
 
 The formats are the ones the paper's numbers had since the submission: fixed decimals in
-\\ensuremath, "-0.0" printed as "0.0", p-values to two significant digits and in
+\\ensuremath, "-0.0" printed as "0.0" for a point value, an interval end that rounds to
+zero printed with the extra decimals that show its sign, p-values to two significant digits and in
 scientific form below 0.001.
 """
 from __future__ import annotations
@@ -40,11 +41,22 @@ def fmt_p(p) -> str:
     return "\\ensuremath{" + f"{p:.2g}" + "}"
 
 
+def _endpoint(v: float, dp: int, sign: bool) -> str:
+    """One end of an interval. An end that is not zero but rounds to zero would print
+    as "-0.000" or "+0.000" and hide which side of zero it lies on, which is the point
+    of the interval, so it gets up to three more decimals until a nonzero digit shows."""
+    for extra in range(4):
+        s = f"{v:+.{dp + extra}f}" if sign else f"{v:.{dp + extra}f}"
+        if float(s) != 0 or v == 0:
+            return s
+    return s
+
+
 def fmt_ci(ci, dp: int, sign: bool = True) -> str:
     if not ci or not (finite(ci[0]) and finite(ci[1])):
         return MISSING
-    a = f"{ci[0]:+.{dp}f}" if sign else f"{ci[0]:.{dp}f}"
-    b = f"{ci[1]:+.{dp}f}" if sign else f"{ci[1]:.{dp}f}"
+    a = _endpoint(ci[0], dp, sign)
+    b = _endpoint(ci[1], dp, sign)
     return "\\ensuremath{[" + a + ",\\," + b + "]}"
 
 
