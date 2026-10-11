@@ -146,6 +146,18 @@ counts:
   - {token: DimFell, group: outside-family, contrast: lora - base, direction: down, any: true,
      metrics: [uncertainty_ack, active_inquiry, context_seeking, red_flag, scope_bounding, hedging_quality,
                specificity]}
+  # In the added cells every seed evaluated the same prompts, so the seed-level t covers
+  # training randomness only; the prompt bootstrap covers prompt sampling (D7).
+  - {token: AskRoseBoot, group: outside-family, contrast: lora - base, metrics: [active_inquiry, context_seeking],
+     direction: up, test: bootstrap}
+  - {token: RedFlagRoseBoot, group: outside-family, contrast: lora - base, metrics: [red_flag], direction: up,
+     test: bootstrap}
+  - {token: ScopeRoseBoot, group: outside-family, contrast: lora - base, metrics: [scope_bounding], direction: up,
+     test: bootstrap}
+  - {token: AggregateFell, group: added-outside-family, contrast: lora - base, metrics: [rubric_score],
+     direction: down, test: p}
+  - {token: AggregateFellBoot, group: added-outside-family, contrast: lora - base, metrics: [rubric_score],
+     direction: down, test: bootstrap}
   # The red-flag drop of the 2026-05 cell under LoRA plus the protocol: a lenient test
   # (unadjusted p) for "the drop repeats", and the Holm test for a rise.
   - {token: RedFlagProtocolFell, group: added-outside-family, contrast: 'lora+{protocol} - lora',
@@ -297,6 +309,16 @@ cross_tables:
         value: contrasts.lora - base.metrics.rubric_score.diff
         ci: contrasts.lora - base.metrics.rubric_score.ci95
         star: contrasts.lora - base.metrics.rubric_score.p
+        decimals: 3
+        sign: true
+      # The same difference over pooled responses, with the interval of the prompt
+      # bootstrap: in the added cells every seed evaluated the same prompts, so the t
+      # interval to its left covers training randomness only.
+      - group: 'LoRA $-$ Base'
+        header: '\shortstack[r]{Aggregate,\\prompt bootstrap}'
+        value: contrasts.lora - base.metrics.rubric_score.pooled_diff
+        ci: contrasts.lora - base.metrics.rubric_score.diff_ci95
+        ci_style: interval
         decimals: 3
         sign: true
   # The filter and training record of each trained cell (Table F.2 of the paper).

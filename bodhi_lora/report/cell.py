@@ -31,9 +31,10 @@ DIMENSION_ROWS = (("uncertainty_ack", "context_seeking", "red_flag", "scope_boun
                    "specificity"),
                   ("questions", "active_inquiry", "red_flag_rate", "scope_bounded_rate", "specificity_rate",
                    "blanket_disclaimer", "appropriate_hedging"))
-# Asking helps only where facts are missing, so questions per response has no better
-# direction (audit CR-19); a blanket disclaimer is worse.
-DIRECTION = {"blanket_disclaimer": "$\\downarrow$", "questions": "$\\circ$"}
+# Asking helps only where facts are missing, so neither questions per response nor the
+# share of replies that ask has a better direction (audit CR-19); a blanket disclaimer is
+# worse.
+DIRECTION = {"blanket_disclaimer": "$\\downarrow$", "questions": "$\\circ$", "active_inquiry": "$\\circ$"}
 
 
 def _metrics(stats: dict) -> list[str]:

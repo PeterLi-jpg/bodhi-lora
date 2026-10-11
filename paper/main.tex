@@ -78,17 +78,19 @@ score on the HealthBench rubrics (\statHBMedGemmaMayRubricScoreLoRAvsBaseDiff, 9
 outside the evaluator's family and a prompt that does not tell the model to ask. In
 \statGroupOutsideFamilyAskRose{} of them, on \statGroupOutsideFamilyAskRoseModels{} base models and
 \statGroupOutsideFamilyAskRoseBenchmarks{} benchmarks, active inquiry and context-seeking both rise
-(Holm-adjusted $p < 0.05$). BioMistral-7B is a null result. In the \statGroupAddedOutsideFamilyRubricScoreLoRAvsBaseMeasured{}
-added cells among them, the aggregate score falls, by \statGroupAddedOutsideFamilyRubricScoreLoRAvsBaseAbsMin{} to
-\statGroupAddedOutsideFamilyRubricScoreLoRAvsBaseAbsMax{} (paired $t$ over seeds, largest $p = \statGroupAddedOutsideFamilyRubricScoreLoRAvsBasePMax$). The data do
+(Holm-adjusted $p < 0.05$). BioMistral-7B is a null result on the seven dimensions. In the
+\statGroupAddedOutsideFamilyRubricScoreLoRAvsBaseMeasured{} added cells among them, the aggregate score falls on each cell's fixed prompt
+set, by \statGroupAddedOutsideFamilyRubricScoreLoRAvsBaseAbsMin{} to \statGroupAddedOutsideFamilyRubricScoreLoRAvsBaseAbsMax{} (paired $t$ over seeds, largest
+$p = \statGroupAddedOutsideFamilyRubricScoreLoRAvsBasePMax$); with the prompts resampled, the drop is clear of zero in
+\statGroupAddedOutsideFamilyAggregateFellBoot{} of them. The data do
 not show that the adapter learned when to ask: in no \hbhard{} cell is it detectably more selective
 than the base model. We report the \statGroupFamilyWaiverCells{} Med42-8B cells, which share the
 evaluator's family, and the MedQA cell, whose prompt told the model to ask, but leave them out of
 the counts. The third is a diagnosis in the MedGemma-27B cell. Adding the CoT protocol to the
 adapter changes red-flag identification by \statHBMedGemmaMayRedFlagLoRABodhivsLoRADiff{} on the 0--2 scale (95\%
 CI \statHBMedGemmaMayRedFlagLoRABodhivsLoRACI; $p_{\text{Holm}} = \statHBMedGemmaMayRedFlagLoRABodhivsLoRAPHolm$). A post hoc
-analysis links this drop to the protocol's analysis format, which leaks into
-\statHBMedGemmaMayLeakBodhiAnalysisFormatLoRABodhi\% of the responses. The drop does not repeat in
+analysis links this change to the protocol's analysis format, which leaks into
+\statHBMedGemmaMayLeakBodhiAnalysisFormatLoRABodhi\% of the graded responses. The drop does not repeat in
 the added cells. All scores are LLM-graded. The one physician who returned grades agrees with the
 evaluator on the rubric criteria at $\kappa = \statHBMedGemmaMayKappaEvalLlamaAll$, below the target of 0.6 that we set in
 advance for the filter grader. No physician has checked the seven dimensions.
@@ -143,11 +145,12 @@ Our contributions:
     context-seeking (Holm-adjusted $p < 0.05$) in \statGroupOutsideFamilyAskRose{} of the
     \statGroupOutsideFamilyCells{} cells with a base model outside the evaluator's family and no prompt that
     cues asking, the MedGemma-27B cell included. The aggregate score falls in all
-    \statGroupAddedOutsideFamilyRubricScoreLoRAvsBaseMeasured{} added cells among them. We report this trade-off next to the gain.
-    \item A diagnosis of a failure mode in the MedGemma-27B cell: adding the CoT protocol to the
-    adapter lowers red-flag identification ($p_{\text{Holm}} = \statHBMedGemmaMayRedFlagLoRABodhivsLoRAPHolm$ on the
-    0--2 score). A post hoc analysis links the drop to the Pass~1 analysis format, which leaks into
-    the response. The drop does not repeat in the added cells (\S\ref{sec:interference}).
+    \statGroupAddedOutsideFamilyRubricScoreLoRAvsBaseMeasured{} added cells among them (in \statGroupAddedOutsideFamilyAggregateFellBoot{} with prompts resampled), a trade-off
+    we report next to the gain.
+    \item A post hoc observation in the MedGemma-27B cell: adding the CoT protocol to the adapter
+    lowers red-flag identification ($p = \statHBMedGemmaMayRedFlagLoRABodhivsLoRAP$, but $p_{\text{Holm}} =
+    \statHBMedGemmaMayRedFlagLoRABodhivsLoRAPHolm$), which we link to the leak of the Pass~1 format into the response.
+    It does not repeat in the added cells (\S\ref{sec:interference}); a planned run tests it.
 \end{enumerate}
 
 \noindent What we show is limited to one CoT protocol, one fine-tuning method and patient-facing
@@ -366,7 +369,9 @@ prompts), below the target (Appendix~\ref{app:human}). So every epistemic result
 \caption{Behavior gain and aggregate cost in every cell, with the same statistics for each cell.
 Base and LoRA: mean of the five seed means. LoRA $-$ Base: mean of the five per-seed differences,
 $\pm$ half of its 95\% $t$ interval (4 df). $^{*}$: $p < 0.05$, Holm-adjusted over the seven
-dimensions for the four dimensions, paired $t$ for the aggregate score. The first row is the
+dimensions for the four dimensions, paired $t$ for the aggregate score. Prompt bootstrap: 95\%
+interval of the pooled difference over resampled prompts (the $t$ interval covers training only
+where every seed has the same prompts). The first row is the
 MedGemma-27B cell; the added cells used another stack, recipe and evaluation settings
 (Appendix~\ref{app:generality}). Appendix~\ref{app:perseed} gives every dimension in every
 condition. $^{\dagger}$Base model in the evaluator's Llama-3 family, left out of every count across
@@ -394,10 +399,11 @@ active inquiry and context-seeking both rise under LoRA with $p_{\text{Holm}} < 
 cells cover \statGroupOutsideFamilyAskRoseModels{} base models (MedGemma-27B and Mistral-Small-24B) and
 \statGroupOutsideFamilyAskRoseBenchmarks{} benchmarks. Our claim of generality goes no further than these cells.
 Red-flag identification rises in \statGroupOutsideFamilyRedFlagRose{} of them and scope bounding in
-\statGroupOutsideFamilyScopeRose. BioMistral-7B is a null result. Of its seven dimensions,
+\statGroupOutsideFamilyScopeRose{} (\statGroupOutsideFamilyScopeRoseBoot{} with prompts resampled). BioMistral-7B is a null result. Of its seven dimensions,
 \statHBBioMistralJulDimsUpLoRAvsBase{} rise and \statHBBioMistralJulDimsDownLoRAvsBase{} fall with
 $p_{\text{Holm}} < 0.05$, and active inquiry goes from \statHBBioMistralJulActiveInquiryBase\% to
-\statHBBioMistralJulActiveInquiryLoRA\%. Its teacher was the weakest
+\statHBBioMistralJulActiveInquiryLoRA\%, but its blanket disclaimers rise
+(\statHBBioMistralJulBlanketDisclaimerPctBase\% to \statHBBioMistralJulBlanketDisclaimerPctLoRA\%, Fisher $p = \statHBBioMistralJulBlanketDisclaimerFisherPLoRA$). Its teacher was the weakest
 (\statHBBioMistralJulActiveInquiryBaseBodhi\%), and its filter kept the fewest traces
 (\statHBBioMistralJulFilterKeptPct\%). Our hypothesis is that the recipe needs a teacher whose
 traces the filter keeps at a usable rate. One null cannot separate this from model size,
@@ -414,12 +420,14 @@ adapter reaches or passes its teacher's active inquiry in \statGroupOutsideFamil
 \statGroupAddedOutsideFamilyRubricScoreLoRAvsBaseAbsMin{} to \statGroupAddedOutsideFamilyRubricScoreLoRAvsBaseAbsMax. The largest two-sided paired $p$ of these drops
 is \statGroupAddedOutsideFamilyRubricScoreLoRAvsBasePMax, and each stays significant after Holm correction over the
 \statGroupAddedKeptCells{} added cells that are not set aside (largest $p_{\text{Holm}} =
-\statGroupAddedKeptRubricScoreLoRAvsBasePHolmMax$), as our posted tests said. In the MedGemma-27B cell
+\statGroupAddedKeptRubricScoreLoRAvsBasePHolmMax$), as our posted tests said. These tests cover training, not
+prompt sampling: with prompts resampled, the drop is clear of zero in only
+\statGroupAddedOutsideFamilyAggregateFellBoot{} cells (Table~\ref{tab:cells}). In the MedGemma-27B cell
 we detect no change (\S\ref{sec:main}). In BioMistral-7B, the score fell without a rise in asking,
 so a rubric penalty on asking cannot be the whole cause. In no cell outside the evaluator's
 family do the adapter's responses that ask score detectably lower than those that answer
-(Table~\ref{tab:checks}). This comparison is self-selected and only suggestive. So in the added
-cells, the adapter buys more inquiry at a cost in aggregate score.
+(Table~\ref{tab:checks}). This comparison is self-selected and only suggestive. So on the prompts of
+the added cells, the adapter buys more inquiry at a cost in aggregate score.
 
 \paragraph{Cells we do not count.} The \statGroupFamilyWaiverCells{} Med42-8B cells ($\dagger$) show the
 same pattern, but Med42-8B is a Llama-3 model like the evaluator, which breaks the separation of
@@ -470,10 +478,10 @@ for a small drop. Over pooled responses, the rubric accuracy axis moves from
 \label{sec:interference}
 
 In the MedGemma-27B cell, adding the CoT protocol to the adapter raises active inquiry further, to
-\statHBMedGemmaMayActiveInquiryLoRABodhi\%. But it lowers red-flag identification from \statHBMedGemmaMayRedFlagLoRA{} to
+\statHBMedGemmaMayActiveInquiryLoRABodhi\%. Red-flag identification goes from \statHBMedGemmaMayRedFlagLoRA{} to
 \statHBMedGemmaMayRedFlagLoRABodhi{} (difference \statHBMedGemmaMayRedFlagLoRABodhivsLoRADiff, 95\% CI
-\statHBMedGemmaMayRedFlagLoRABodhivsLoRACI; $p = \statHBMedGemmaMayRedFlagLoRABodhivsLoRAP$, $p_{\text{Holm}} =
-\statHBMedGemmaMayRedFlagLoRABodhivsLoRAPHolm$). The red-flag rate changes by \statHBMedGemmaMayRedFlagRateLoRABodhivsLoRADiff{}
+\statHBMedGemmaMayRedFlagLoRABodhivsLoRACI; $p = \statHBMedGemmaMayRedFlagLoRABodhivsLoRAP$), not significant after Holm
+correction ($p_{\text{Holm}} = \statHBMedGemmaMayRedFlagLoRABodhivsLoRAPHolm$), so a post hoc observation. The red-flag rate changes by \statHBMedGemmaMayRedFlagRateLoRABodhivsLoRADiff{}
 percentage points (\statHBMedGemmaMayRedFlagRateLoRABodhivsLoRACI; $p = \statHBMedGemmaMayRedFlagRateLoRABodhivsLoRAP$, outside
 the Holm family). Against Base, we detect no difference for LoRA+\bodhi{} on the 0--2 score
 (\statHBMedGemmaMayRedFlagLoRABodhivsBaseDiff, \statHBMedGemmaMayRedFlagLoRABodhivsBaseCI), and it is lower on the rate
@@ -482,14 +490,16 @@ aggregate score of LoRA+\bodhi{} differs from LoRA by \statHBMedGemmaMayRubricSc
 (\statHBMedGemmaMayRubricScoreLoRABodhivsLoRACI).
 
 A post hoc analysis points to format leakage. A response leaks when it repeats at least two of
-the seven Pass~1 section headers, such as ``RED FLAGS:''. The protocol defines these headers, and
-the rule counts one only where a header starts: at the start of a line, after optional markdown, a
-bullet or a section number. So the same words inside a sentence do not count.
-\statHBMedGemmaMayLeakBodhiAnalysisFormatLoRABodhi\% of LoRA+\bodhi{} responses leak, against \statHBMedGemmaMayLeakBodhiAnalysisFormatBase\% to
+the seven Pass~1 section headers, such as ``RED FLAGS:'', each counted only at the start of a line.
+The protocol defines these headers, so the rule reads no other words.
+\statHBMedGemmaMayLeakBodhiAnalysisFormatLoRABodhi\% of the graded LoRA+\bodhi{} responses leak (\statHBMedGemmaMayLeakBodhiAnalysisFormatLoRABodhiNLeakedCompletions{} of
+all \statHBMedGemmaMayLeakBodhiAnalysisFormatLoRABodhiNCompletions{}, graded or not), against \statHBMedGemmaMayLeakBodhiAnalysisFormatBase\% to
 \statHBMedGemmaMayLeakBodhiAnalysisFormatBaseBodhi\% in the other conditions (Figure~\ref{fig:interference} shows one case).
 Leaked responses score \statHBMedGemmaMayLeakBodhiAnalysisFormatLoRABodhiRedFlagLeaked{} on red-flag identification ($n =
 \statHBMedGemmaMayLeakBodhiAnalysisFormatLoRABodhiN$). The others score \statHBMedGemmaMayLeakBodhiAnalysisFormatLoRABodhiRedFlagClean{} ($n =
-\statHBMedGemmaMayLeakBodhiAnalysisFormatLoRABodhiNClean$), and LoRA scores \statHBMedGemmaMayRedFlagLoRA{}. We withdraw our posted rule,
+\statHBMedGemmaMayLeakBodhiAnalysisFormatLoRABodhiNClean$), and LoRA scores \statHBMedGemmaMayRedFlagLoRA{}. Length alone
+does not explain this: clean responses score \statHBMedGemmaMayLeakBodhiAnalysisFormatLoRABodhiCleanRedFlagQOne{} to
+\statHBMedGemmaMayLeakBodhiAnalysisFormatLoRABodhiCleanRedFlagQFour{} from the shortest to the longest quarter. We withdraw our posted rule,
 which also counted two words that are not headers (Appendix~\ref{app:robustness}). We defined the
 split by a property of the format after we saw the results, so leakage may also follow prompt
 difficulty. We do not claim that the adapter and the protocol compete for capacity.
@@ -511,12 +521,11 @@ context length.
 \subsection{Post Hoc Checks in Every Cell}
 \label{sec:checks}
 
-Three questions about the gain need no new run: over-flagging, selective asking and cost.
-Table~\ref{tab:checks} gives each check for every cell. The checks are post hoc and descriptive, and
-their labels are HealthBench theme tags.
+Table~\ref{tab:checks} gives three post hoc, descriptive checks for every cell; their labels are
+HealthBench theme tags.
 
-\paragraph{Over-flagging.} The red-flag grade credits warning signs and does not penalize false
-ones. We have no labelled test of false flags (\S\ref{sec:future}). On the \hbhard{} prompts outside
+\paragraph{Over-flagging.} The red-flag grade does not penalize false flags, and we have no labelled
+test of them (\S\ref{sec:future}). On the \hbhard{} prompts outside
 HealthBench's emergency-referrals theme, LoRA raises the red-flag rate by
 \statHBMedGemmaMayRedFlagRateEmergencyThemeNegRateLoRAvsBaseDiff{} percentage points with
 MedGemma-27B (95\% CI \statHBMedGemmaMayRedFlagRateEmergencyThemeNegRateLoRAvsBaseCI) and by
@@ -540,8 +549,7 @@ cell do the data show that the adapter learned when to ask.
 conditions stored only their final response, so we cannot count their tokens. By the serving
 engine's count, LoRA responses have more output tokens than Base responses in every cell except
 ChatDoctor with Med42-8B (\statHBMedGemmaMayTokensEngineLoRA{} against
-\statHBMedGemmaMayTokensEngineBase{} with MedGemma-27B). We did not time training or inference
-(\S\ref{sec:limitations}).
+\statHBMedGemmaMayTokensEngineBase{} with MedGemma-27B).
 
 %======================================================================
 \section{Discussion}
@@ -559,16 +567,16 @@ unedited patient messages (\statCDMistralJulActiveInquiryBase\% to
 \statCDMistralJulActiveInquiryLoRA\%). MedQuAD is a reference set of short questions. There
 the rise is the smallest among the cells where active inquiry rises
 (\statMQMistralJulActiveInquiryBase\% to \statMQMistralJulActiveInquiryLoRA\%), and the
-cost is the largest. A deployment should measure both on its own prompts.
+cost is the largest. A deployment should run the recipe on its own base model and prompts, and
+measure both on held-out prompts.
 
 \paragraph{What these behaviors mean clinically.} \emph{Active inquiry} is history-taking: getting
 the facts that decide the answer before giving it. \emph{Red-flag identification} is recognizing
 presentations that need escalation, not reassurance. \emph{Scope bounding} is declining to advise
 past the available evidence, so that a confident answer does not replace an examination.
 \emph{Hedging quality} separates a qualification that carries information from a blanket disclaimer
-that carries none. To ``is it safe to just start antidepressants i feel really down lately'', Base
-lists what to tell a doctor but asks nothing. LoRA asks how long the user has felt down, about
-sleep, appetite and self-harm, and gives a crisis line (Appendix~\ref{app:examples}). Active inquiry
+that carries none. On one prompt about starting antidepressants, Base asks nothing, and LoRA asks
+about duration, sleep and self-harm and gives a crisis line (Appendix~\ref{app:examples}). Active inquiry
 and context-seeking help only where facts are missing and the user can give them. We do not show
 that the adapter asks only there. With MedGemma-27B it also asks more on prompts outside
 HealthBench's context-seeking theme (\statHBMedGemmaMayActiveInquiryNeedsInfoThemeNegRateBase\% to
@@ -610,8 +618,7 @@ that cost and also the option to turn the behavior off. The weight-level methods
 abstention \citep{lin2022teaching, zhang2024rtuning} need answers with known correctness, and STaR
 \citep{zelikman2022star} filters on correctness. We filter on rubric quality, so the target is
 behavior, not facts. AMIE \citep{tu2025amie} learns to ask from simulated dialogue; we tested one
-single-turn protocol. This comparison is an argument, not a measurement; a test against prompt
-baselines is the most important missing experiment (\S\ref{sec:future}).
+single-turn protocol. This comparison is an argument, not a measurement (\S\ref{sec:future}).
 
 \subsection{Limitations}
 \label{sec:limitations}
@@ -625,8 +632,7 @@ criteria (dangerous advice, failure to escalate), it is at chance ($\kappa = \st
 \statHBMedGemmaMayKappaEvalLlamaNegativeCI). The physicians are co-authors. The evaluator does not always follow its
 anchors, and its prompt names the \bodhi{} protocol and says that it trains active inquiry, which may
 favor responses in the protocol's style, although it is not told the condition.
-\emph{Selectivity.} We do not show that the adapter learned when to ask (\S\ref{sec:checks}), and we
-withdraw the claim of our posted replies that it asks selectively.
+\emph{Selectivity.} We withdraw our posted claim that the adapter asks selectively (\S\ref{sec:checks}).
 \emph{Cells.} The added cells used another training stack, recipe and evaluation settings, so a
 difference from the MedGemma-27B cell can come from the settings. The Mistral-Small-24B adapters
 were trained against a 4-bit base and evaluated on the bfloat16 base.
@@ -635,34 +641,32 @@ were trained against a 4-bit base and evaluated on the bfloat16 base.
 teacher traces, and decoding was greedy. We ran no ablation over $\tau$, rank or data size, and no
 arm without the filter, so we cannot attribute any effect to the filter. We did not time training
 or inference on dedicated hardware. The MedGemma-27B adapters were not retained, so no saved file
-can confirm their configuration. The checks of \S\ref{sec:checks} are post hoc and use theme tags,
-not the physicians' labels.
+can confirm their configuration.
 
 \subsection{Future Work}
 \label{sec:future}
 
-The code release has these experiments built and checked on the CPU, but not run. Most need GPU
-time, and \texttt{docs/ANALYSIS\_PLAN.md} fixes how each result will be read before it exists.
-(1) One set of settings for Mistral-Small-24B and MedGemma-27B on \hbhard{}. (2) Prompt baselines in
+These are built and checked on the CPU, not run; a dated analysis plan
+(\texttt{docs/ANALYSIS\_PLAN.md}), once adopted, fixes how each result is read. (1) One set of settings for Mistral-Small-24B and
+MedGemma-27B on \hbhard{}, with per-stage timing on an idle GPU. (2) Prompt baselines in
 the same cells: clarifying questions, verbalized confidence \citep{tian2023just} and abstention
 after MediQ \citep{li2024mediq}. (3) Selective asking on paired
 MediQ prompts with and without the missing facts. (4) Over-flagging on the prompts that HealthBench
 physicians labelled not emergent. (5) A one-pass protocol that asks first, and the \bodhi{} protocol
-with its red-flag section first. (6) A clinical judge from a third model family on every cell, which
-also checks the active-inquiry grade against hand labels. (7) Filter and teacher ablations, which
-test the BioMistral-7B hypothesis. (8) Clinician-posed prompts:
-the HealthBench prompts that physicians labelled as written by a health professional, and the NLM
-Clinical Questions Collection, open sets in place of MIMIC and eICU, which need credentialed access.
-(9) The contamination probe of Appendix~\ref{app:contamination}, with its outputs kept. The discrimination index with the physicians' labels needs no new run, only our adoption of the plan.
+with its red-flag section first. (6) A clinical judge from a third model family on every cell but
+the set-aside MedQA cell; its check of the active-inquiry grade against hand labels is specified,
+not built. (7) Filter and teacher ablations, which
+test the BioMistral-7B hypothesis. (8) Clinician-posed prompts from HealthBench and the NLM
+Clinical Questions Collection.
+(9) The contamination probe of Appendix~\ref{app:contamination}, with its outputs kept. The discrimination index with the physicians' labels needs only our adoption of the plan.
 
-\paragraph{Ethics and broader impact.} We use public benchmark data, including questions that
-patients posted online (ChatDoctor), and no patient records. The adapter is a research artifact,
-not a tool for unsupervised clinical use. Its main risk is hedging or asking that delays urgent
-care. The red-flag drop under LoRA+\bodhi{} motivates the clinician harm review of
-Appendix~\ref{app:harm}, not yet done.
+\paragraph{Ethics and broader impact.} We use public benchmark data, with patient questions posted
+online (ChatDoctor) and no patient records. Before patient-facing use, the adapter needs a clinician
+harm review (Appendix~\ref{app:harm}), physician validation of the grades (Appendix~\ref{app:human})
+and a test of false red flags.
 
-\paragraph{Code availability.} Code, evaluation outputs and analysis scripts: \codeurl{}. The
-MedGemma-27B adapters were not retained; the repository holds the adapter files of the added cells.
+\paragraph{Code availability.} Code, outputs, and the added cells' adapter configurations and
+trainer states (no weights): \codeurl{}.
 
 \begin{ack}
 Funding: None declared.
@@ -749,7 +753,8 @@ in four high-stakes categories (chest-pain triage, anaphylaxis, suicide risk, dr
 contraindications). Clinicians then judge whether a response delays care harmfully, compared with
 the base model. Until that review is done, we cannot rule out that the adapter hedges or asks where
 a direct answer is the right one. The drop in red-flag rate from LoRA (\statHBMedGemmaMayRedFlagRateLoRA\%) to
-LoRA+\bodhi{} (\statHBMedGemmaMayRedFlagRateLoRABodhi\%) is an early warning that motivates the review.
+LoRA+\bodhi{} (\statHBMedGemmaMayRedFlagRateLoRABodhi\%; a secondary measure, $p =
+\statHBMedGemmaMayRedFlagRateLoRABodhivsLoRAP$ before correction) is an early warning that motivates the review.
 
 \section{The Seven Dimensions: Anchors, Examples and Mapping}
 \label{app:dimensions}
@@ -789,13 +794,11 @@ Scope bounding & risk management & Humble & safe recommendations \\
 \end{table}
 
 The evaluator's prompt (\texttt{bodhi\_lora/grading/epistemic.py}) defines each dimension. We quote its
-anchors and give one example for each dimension. The prompt also names the protocol under test. It
+anchors and give one example for each dimension. The prompt names the protocol in two places: it
 says it judges ``the epistemic virtues that BODHI-style prompting aims to instill'', and its
-context-seeking definition adds ``BODHI v0.1.3 specifically trains active inquiry'' (we used
-version 0.1.4). The same prompt graded every condition, Base included, and the evaluator does not
-see which condition wrote a response. But an evaluator told what the method aims at may credit
-these behaviors more readily in every condition. We kept the prompt unchanged, so that the grades
-of all cells stay comparable.
+context-seeking definition says ``BODHI v0.1.3 specifically trains active inquiry'' (we used version
+0.1.4). An evaluator told what the method aims at may credit these behaviors more readily in every
+condition. We kept the prompt unchanged, so that the grades of all cells stay comparable.
 
 \begin{itemize}[leftmargin=*,itemsep=1pt]
     \item \emph{Uncertainty acknowledgment}. Anchor: ``states what is unknown or what missing info
@@ -887,8 +890,8 @@ their two passes can exceed the 4{,}096-token context, so \statHBMedGemmaMayComp
 \S\ref{sec:eval} describes the physician check). Each value is the mean of the five seed means,
 with the cross-seed SD as subscript. Top: dimensions graded 0--2. Bottom: rates (\%) and questions
 per response. $\uparrow$: higher is better; $\downarrow$: lower is better (blanket disclaimer
-only). Questions per response ($\circ$) has no better direction: asking helps only where facts are
-missing. Red-flag identification and rate measure sensitivity to warning signs that need
+only). Questions per response and active inquiry ($\circ$) have no better direction: asking helps
+only where facts are missing. Red-flag identification and rate measure sensitivity to warning signs that need
 escalation. The anchor credits only red flags relevant to the case, but we have no labelled test of
 over-flagging. The last row gives the responses with a parsed grade.}
 \label{tab:epistemic}
@@ -903,7 +906,7 @@ over-flagging. The last row gives the responses with a parsed grade.}
 grades and rates do not share an axis. \textbf{Panel A}: dimensions graded 0--2. \textbf{Panel
 B}: rates (\%). Bars are means of the five seed means, and error bars are the cross-seed SD.
 Active inquiry and context-seeking rise with the adapter. Adding the CoT protocol to the adapter
-(LoRA+\bodhi{}) lowers red-flag identification. On the 0--2 score we detect no difference from
+(LoRA+\bodhi{}) lowers red-flag identification before correction. On the 0--2 score we detect no difference from
 Base, and on the rate it ends below Base (\S\ref{sec:interference}).}
 \label{fig:epistemic_bar}
 \end{figure}

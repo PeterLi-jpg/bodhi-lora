@@ -114,14 +114,15 @@ class CrossColumn(_Record):
     `value` and `ci` are dotted paths into stats.json; {protocol} stands for the cell's
     protocol id. With ci_style "pm", `ci` names a t interval, printed as plus or minus its
     half width. A bootstrap interval need not be symmetric, so it takes ci_style "range",
-    which prints both ends. `star` names a p-value: the cell gets a star when it is below
+    which prints the value and both ends, or "interval", which prints only the two ends
+    (for a column next to the value it qualifies). `star` names a p-value: the cell gets a star when it is below
     alpha. format "int" prints a count with a thousands mark; "span" prints `value` and
     `upper` as whole numbers, "a" when they are equal and "a--b" when not."""
     group: str = ""
     header: str
     value: str
     ci: Optional[str] = None
-    ci_style: Literal["pm", "range"] = "pm"
+    ci_style: Literal["pm", "range", "interval"] = "pm"
     star: Optional[str] = None
     upper: Optional[str] = None
     format: Literal["num", "int", "span"] = "num"
@@ -160,14 +161,16 @@ class CellDetailTables(_Record):
 class Count(_Record):
     """The cells of a group where the listed metrics move in `direction` in a contrast,
     each with p below alpha: the seven dimensions under Holm within the contrast (test
-    holm), or under the paired t (test p); any: at least one metric, not all. The report
-    also counts the base models and benchmarks of those cells."""
+    holm), or under the paired t (test p). Test bootstrap: the 95% interval of the pooled
+    difference from the prompt-clustered bootstrap lies on that side of zero, which
+    covers prompt sampling where every seed evaluated the same prompts. any: at least one
+    metric, not all. The report also counts the base models and benchmarks of those cells."""
     token: MacroToken
     group: RegistryId
     contrast: str
     metrics: list[str] = Field(min_length=1)
     direction: Literal["up", "down"]
-    test: Literal["holm", "p"] = "holm"
+    test: Literal["holm", "p", "bootstrap"] = "holm"
     any: bool = False
 
 

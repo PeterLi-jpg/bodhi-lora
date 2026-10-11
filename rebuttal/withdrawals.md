@@ -283,8 +283,13 @@ non-leaked subset after the fact, by a format property, so leakage may correlate
 difficulty.
 
 **Changed 2026-10-10 (W25).** The leakage numbers above came from a rule with two free words.
-With the seven Pass 1 headers only, 53.2% of LoRA+CoT responses leak against 0.0% to 0.8%,
-and the red-flag scores are 1.32 (n = 494) and 1.73 (n = 434). The paper carries these.
+With the seven Pass 1 headers only, 53.2% of graded LoRA+CoT responses leak (519 of all 959,
+graded or not) against 0.0% to 0.8%, and the red-flag scores are 1.32 (n = 494) and 1.73
+(n = 434). The paper carries these. Among the non-leaked responses, red-flag identification
+rises across length quartiles, 1.45, 1.80, 1.82 and 1.84 (medians 1,529 to 5,477 characters,
+about 108 responses each), and section 4.3 says so; this answers whether long outputs dilute
+attention (LxMF). The check is post hoc, like the split. Prompts whose two passes overran the
+context got no response and are in neither group.
 
 ---
 
@@ -657,8 +662,9 @@ conditions; red-flag identification is 1.32 in the leaked subset (n = 494) and 1
 rest (n = 434), which is above LoRA alone (1.67). The diagnosis of W9 holds under this rule.
 
 **The paper must say.** The seven-header numbers, and that the posted nine-marker rule is
-withdrawn. Done in the abstract, section 4.3 and Appendix H of `paper/main.tex`. The length
-quartiles and medians were not printed in the paper and are withdrawn with the rule. Since
+withdrawn. Done in the abstract, section 4.3 and Appendix H of `paper/main.tex`. The posted
+length quartiles and medians are withdrawn with the rule; under the seven-header rule the
+quartiles rise from 1.45 to 1.84, and section 4.3 gives the two ends (W9). Since
 2026-10-10, section 4.3 and Table H.6 give leakage in every cell under the seven-header
 rule. Also since 2026-10-10, the rule counts a header only where a header starts (the start
 of a line, after optional markdown, a bullet or a section number), so a sentence such as

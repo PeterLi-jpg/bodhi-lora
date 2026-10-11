@@ -66,8 +66,12 @@ def cross_table(spec: CrossTable, all_stats: dict, members: dict, reg: Registry,
             return str(a) if a == b else f"{a}--{b}"
         if c.ci:
             ci = scaled(get(stats, with_protocol(c.ci, cell)), c.scale)
-            text = (fmt_range(v, ci, c.decimals, c.sign, stack=True) if c.ci_style == "range"
-                    else fmt_pm(v, ci, c.decimals, c.sign))
+            if c.ci_style == "interval":
+                text = fmt_ci(ci, c.decimals, c.sign) if v is not None else MISSING
+            elif c.ci_style == "range":
+                text = fmt_range(v, ci, c.decimals, c.sign, stack=True)
+            else:
+                text = fmt_pm(v, ci, c.decimals, c.sign)
         else:
             text = fmt(v, c.decimals, c.sign)
         if c.star:
@@ -218,14 +222,18 @@ def count_macros(rep, all_stats: dict, members: dict, reg: Registry, cfg: Report
 
             def moved(m: str) -> bool:
                 r = res.get(m) or {}
+                if spec.test == "bootstrap":
+                    lo, hi = r.get("diff_ci95") or (None, None)
+                    return finite(lo) and finite(hi) and (lo > 0 if sign > 0 else hi < 0)
                 p = r.get("p_holm_within_contrast") if (spec.test == "holm" and m in SEVEN) else r.get("p")
                 return finite(p) and p < cfg.alpha and finite(r.get("diff")) and sign * r["diff"] > 0
 
             if (any if spec.any else all)(moved(m) for m in spec.metrics):
                 hits.append(cell)
+        test = {"holm": f"Holm p < {cfg.alpha}", "p": f"paired t p < {cfg.alpha}",
+                "bootstrap": "prompt-bootstrap 95% interval off zero"}[spec.test]
         what = (f"cells of group {spec.group} where {'any' if spec.any else 'each'} of {spec.metrics} "
-                f"{'rose' if spec.direction == 'up' else 'fell'} in {spec.contrast}, "
-                f"{'Holm' if spec.test == 'holm' else 'paired t'} p < {cfg.alpha}")
+                f"{'rose' if spec.direction == 'up' else 'fell'} in {spec.contrast}, {test}")
         rep.add(G, fmt_int(len(hits)), what)
         rep.add(G + "Models", fmt_int(len({c.model for c in hits})), f"base models of those cells")
         rep.add(G + "Benchmarks", fmt_int(len({c.benchmark for c in hits})), f"benchmarks of those cells")
