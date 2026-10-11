@@ -7,7 +7,7 @@ repo after it. Run commands from the repo root.
 
 D-numbers refer to [DECISIONS.md](DECISIONS.md), C-numbers to
 [rebuttal/commitments.md](../rebuttal/commitments.md), audit IDs (PROV-1, EVAL-7) to
-`CONVENTIONS_AUDIT_2026-10-07.md` next to the repo. The last section maps the old item
+[AUDIT_IDS.md](AUDIT_IDS.md). The last section maps the old item
 numbers, which other files still cite, to the items below.
 
 Nothing here was pushed. On 2026-10-11 the first author adopted the analysis plan, deleted

@@ -1,7 +1,8 @@
 # Lab conventions for this repo
 
 Rules 1 to 10 were adopted on 2026-10-07. They come from section 4 of the audit of that
-date, which traced most of the review's complaints to missing conventions. Rules 11 to 14
+date, which traced most of the review's complaints to missing conventions; the audit IDs
+cited below are in [AUDIT_IDS.md](AUDIT_IDS.md). Rules 11 to 14
 were adopted on 2026-10-08 with the architecture (D22): they keep the code general, so
 that a new model, benchmark or protocol is a new record and not new code. Rule 15 was set
 by the first author on 2026-10-09 and applied on 2026-10-10. Each rule says

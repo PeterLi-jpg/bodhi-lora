@@ -1,8 +1,8 @@
 # Known issues
 
 Open problems first, then the fixed ones, then a short history. IDs such as PROV-1 refer
-to the audit of 2026-10-07; D-numbers refer to [DECISIONS.md](DECISIONS.md).
-Issue numbers such as #5 are GitHub issues on `PeterLi-jpg/bohdi-lora`.
+to the audit of 2026-10-07 ([AUDIT_IDS.md](AUDIT_IDS.md) says what each one found);
+D-numbers refer to [DECISIONS.md](DECISIONS.md). Issue numbers such as #5 are GitHub issues on `PeterLi-jpg/bohdi-lora`.
 
 ## Open
 
