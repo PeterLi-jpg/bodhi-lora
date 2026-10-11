@@ -940,8 +940,8 @@ the paper.
   cell's raw files are in the tree and the others' are not.
 - **O3. A versioned archive of all raw outputs** (about 450 MB with the submitted cell),
   so reviewers can check any table. Publishing it is a remote action.
-- **O4. The dated analysis plan** (BLOCKED.md item 1) before any new run, and before the
-  physician-label discrimination index is computed on existing outputs.
+- **O4. The dated analysis plan.** Closed on 2026-10-11: the first author adopted
+  ANALYSIS_PLAN.md as written (its section 12, adoption entry).
 - **O5. Margins for the deployment-risk criterion** (EXPERIMENTS.md E07). Without them
   the criterion reports intervals only.
 - **O6. GPU priorities.** EXPERIMENTS.md section 4 groups the runs in tiers, and

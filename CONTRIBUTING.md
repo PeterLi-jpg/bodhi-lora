@@ -1,7 +1,7 @@
 # Contributing
 
 How to set up a clone, what to run before a pull request, and how review copies are
-made. The lab rules behind these steps are in [docs/CONVENTIONS.md](../docs/CONVENTIONS.md).
+made. The lab rules behind these steps are in [docs/CONVENTIONS.md](docs/CONVENTIONS.md).
 
 ## Set up a clone
 
@@ -11,7 +11,7 @@ cd bohdi-lora
 git config core.hooksPath hooks
 ```
 
-Then follow [getting-started/installation.md](getting-started/installation.md).
+Then follow [docs/INSTALL.md](docs/INSTALL.md).
 
 The last line activates the two hooks in `hooks/`. Git does not run hooks from a
 tracked folder until you point `core.hooksPath` at it, so every clone needs it once.
@@ -47,9 +47,13 @@ whitespace, large-file and secret checks on each commit.
 
 ## Results and data
 
-- Commit result summaries and per-seed eval JSON. Do not commit raw generations,
-  adapter weights, optimizer states or tokenizers; `.gitignore` keeps them out.
-- Record each run with `bodhi_lora/manifest.py`.
+- Commit what `.gitignore` lets through: the manifests, cell records, eval id lists,
+  adapter configs, trainer states, response tables
+  (`results/<cell_id>/seed_<n>/table.csv`) and each cell's analysis and validation folders. Git ignores traces and other JSONL, raw eval and
+  grade JSON, adapter weights, checkpoint state and logs. The one exception is open
+  decision O2: the 2026-05 cell's raw eval and grade JSON stay tracked
+  (docs/ARCHITECTURE.md section 12).
+- The runner writes a manifest into every stage folder (`bodhi_lora/manifest.py`).
 - Never put a rater's name in a tracked file, a file name or a commit message. Raters
   are AnonClinician1-4. The key from number to person stays with the study coordinator.
 

@@ -25,7 +25,7 @@ PAPER_SEEDS = [7, 13, 42, 99, 101]
 # Rule 6: grader text names no protocol, so the measuring instrument is neutral to the
 # conditions it grades. The one exception is the evaluator template that graded every
 # recorded cell: it names BODHI, and it stays as it was so that the recorded grades keep
-# their meaning (bodhi_lora/grading/epistemic.py; KNOWN_ISSUES.md). It is pinned by its
+# their meaning (bodhi_lora/grading/epistemic.py; docs/KNOWN_ISSUES.md). It is pinned by its
 # sha256, so an edit to it, or any new grader text that names a protocol, fails here.
 FROZEN_GRADER_TEXT = {
     "aa6e2f507de69fd5cad113ebb1f94cd605f129e62f4b3ab727bc73c7e440d313":

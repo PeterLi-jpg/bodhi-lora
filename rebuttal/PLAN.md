@@ -50,7 +50,7 @@ wrong (`withdrawals.md` W21).
 - MedicationQA, MedDialog and MedMCQA.
 - MedGemma and BioMistral on MedQA or MedQuAD. MedGemma on MedQA and on MedQuAD, and
   Gemma-2-9B on HealthBench-Hard, stopped in trace generation. BioMistral on MedQA ran
-  only as a one-seed smoke test (`../RESULTS.md`).
+  only as a one-seed smoke test (`results/README.md`).
 - A second CoT protocol, or a BODHI ablation variant (C29). Code for an ask-first protocol
   now exists (`PROTOCOL=ask_first` in `launch/run_cell.sh`).
 - The clinical-judge re-grade (C26).

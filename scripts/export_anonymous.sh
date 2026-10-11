@@ -60,7 +60,7 @@ EXCLUDE=(
     scripts/maintenance
     scripts/export_anonymous.sh
     docs/DECISIONS.md
-    BLOCKED.md
+    docs/BLOCKED.md
     paper/submitted
     rebuttal/PLAN.md
     rebuttal/COVERAGE.md

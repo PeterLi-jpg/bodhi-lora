@@ -3,7 +3,7 @@
 How to rerun every cell in the paper, the config of each cell, how the two pipelines
 differ, and what lives outside the repo. To regenerate the paper's numbers from
 results that already exist, you need none of this: run `make numbers` (see
-[README.md](README.md)).
+[README.md](../README.md)).
 
 ## 1. The grid
 
@@ -24,7 +24,7 @@ outside the Llama and Qwen families.
 MedQA-USMLE was run and set aside: it is a single-best-answer exam with complete
 vignettes, so nothing is withheld and asking is not the target behavior. Its only run used
 the old prompt preamble that told the model to ask (removed in 035d85f), and seed 42's
-epistemic grading found none of its prompts. See [RESULTS.md](RESULTS.md).
+epistemic grading found none of its prompts. See [results/README.md](../results/README.md).
 
 Four runs on the GPU host did not finish and are not in the grid: MedGemma-27B on MedQA
 and on MedQuAD (folders with `eval_ids.json` only; trace generation failed on 2026-07-27

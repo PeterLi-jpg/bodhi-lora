@@ -20,7 +20,7 @@ d2994f85d822b402c18535a2ccba2f08e818294d5a8e50fad1584b2e3034e0a4) maps grading_i
 source/config/llm_score for the κ analysis. It unblinds the sheets, so it is no longer in
 the repo: git stopped tracking it on 2026-10-11, a copy stays outside
 the repo, and `.gitignore` covers it. Git history still holds it (it was tracked from
-2026-05-04), so anyone can unblind these three sheets; KNOWN_ISSUES.md says what that
+2026-05-04), so anyone can unblind these three sheets; docs/KNOWN_ISSUES.md says what that
 means for the two deferred raters.
 
 Returned `Grading-*.xlsx` files can carry rater names. Keep them outside the

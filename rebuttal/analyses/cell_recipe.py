@@ -210,7 +210,7 @@ def run(results_root: Path, out: Path) -> dict:
     runs = host_runs(results_root)
     if not runs:
         raise SystemExit(f"cell_recipe: no host logs under {_rel(results_root)}/*/logs/ "
-                         "(copies from the GPU host; see REPRODUCIBILITY.md section 7)")
+                         "(copies from the GPU host; see docs/REPRODUCIBILITY.md section 7)")
     folders = host_folders(results_root)
     # Log names are unique across cells: each host log went to the one cell it belongs to.
     texts = {p.name: _text(p) for d in runs.values() for p in sorted((d / "logs").glob("*.log"))}

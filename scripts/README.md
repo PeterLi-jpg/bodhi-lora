@@ -14,11 +14,11 @@ scripts here are the tools that are not pipeline steps. Each one has a caller:
 | `plot_epistemic_figures.py` | `build_paper_figures.py` | Figure E.1, from the 2026-05 cell's cross-seed summary |
 | `aggregate_cross_seed.py` | `make figures` | that cross-seed summary (`analysis/cross_seed_aggregate.json`) |
 | `compute_irr_kappa.py` | `make kappa` | physician agreement, from rater files and an answer key kept outside the repo |
-| `make_irr_excel.py`, `make_tiebreaker_excel.py` | by hand (BLOCKED.md item 6) | the physician grading sheets |
+| `make_irr_excel.py`, `make_tiebreaker_excel.py` | by hand (docs/BLOCKED.md item 6) | the physician grading sheets |
 | `export_derived_inputs.py` | `make derived` | the tracked score copies, from the large ignored files they copy |
 | `export_anonymous.sh` | by hand (convention 10) | the anonymous reviewer copy |
 | `migrate_results.py` | ran once, 2026-10-09 | the move into one results root; every migrated manifest names it (results/PROVENANCE.md) |
-| `maintenance/` | by hand (BLOCKED.md item 4) | branch pruning and the history purge; goes once the purge is done |
+| `maintenance/` | by hand (docs/BLOCKED.md item 4) | branch pruning and the history purge; goes once the purge is done |
 
 ## What went
 

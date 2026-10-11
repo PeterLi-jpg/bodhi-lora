@@ -526,7 +526,7 @@ retained. Done in Code availability (`paper/main.tex`, ab58ee5) and in the check
 - Posted `FzpA_2_followup.md:11`: "quadratic-weighted kappa against a three-physician consensus".
 
 **Correction.** The plan was written into the repository on 2026-04-29 (commit aa7eec4,
-`RESULTS.md` section 7.B), not registered with an outside registry. It specifies Cohen's kappa
+`aa7eec4:RESULTS.md` section 7.B), not registered with an outside registry. It specifies Cohen's kappa
 between the Qwen2.5-14B filter grader and the consensus of at least two physicians, with a target
 of 0.6.
 

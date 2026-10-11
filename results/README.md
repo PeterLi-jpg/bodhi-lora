@@ -2,7 +2,7 @@
 
 This file says what each result is, where its data lives, what makes it and what state
 it is in. It holds no effect sizes, p-values or scores. Those come from `make analyze`
-and, for the paper, `make numbers` (see [README.md](README.md)), so they cannot drift
+and, for the paper, `make numbers` (see [README.md](../README.md)), so they cannot drift
 from the data.
 
 Status words used below:
@@ -16,9 +16,9 @@ Status words used below:
   `rebuttal/posted_values.json`. Since the sync of 2026-10-08 no cell is in this
   state; the file stays as the record of what was posted.
 - **planned**: the cell or analysis is designed and its reading is fixed in
-  [docs/ANALYSIS_PLAN.md](docs/ANALYSIS_PLAN.md), but it has not run.
-  [docs/RUN_PLAN.md](docs/RUN_PLAN.md) gives its run.
-- **blocked**: an input is not in the repo. [KNOWN_ISSUES.md](KNOWN_ISSUES.md) says
+  [docs/ANALYSIS_PLAN.md](../docs/ANALYSIS_PLAN.md), but it has not run.
+  [docs/RUN_PLAN.md](../docs/RUN_PLAN.md) gives its run.
+- **blocked**: an input is not in the repo. [docs/KNOWN_ISSUES.md](../docs/KNOWN_ISSUES.md) says
   what unblocks it.
 
 ## Cells
@@ -64,10 +64,10 @@ All cells are in the main evaluation of the paper (D12), including these two:
 
 ## Planned cells
 
-[docs/EXPERIMENTS.md](docs/EXPERIMENTS.md) lists every planned cell and the reviewer
+[docs/EXPERIMENTS.md](../docs/EXPERIMENTS.md) lists every planned cell and the reviewer
 point it answers. All of them share one set of settings (EXPERIMENTS.md E13), so the
 same analysis applies to each. None has run (D21). The first ones in
-[docs/RUN_PLAN.md](docs/RUN_PLAN.md) are `healthbench__mistral-small-24b__bodhi` (a
+[docs/RUN_PLAN.md](../docs/RUN_PLAN.md) are `healthbench__mistral-small-24b__bodhi` (a
 widely used general base, with the prompt baselines and red flags first),
 `mediq-paired__mistral-small-24b__bodhi` (the calibration against mimicry probe on its
 adapters) and `healthbench__mistral-small-24b__bodhi__labelled` (the physician-labelled
@@ -107,7 +107,7 @@ python -c "import json,glob; print(len({r['prompt_id'] for f in glob.glob('resul
 | Red-flag drop with LoRA plus the BODHI prompt | `make analyze` (format leakage: two of the protocol's own Pass 1 headers) | raw | format leakage, a post hoc diagnosis (D11); the posted nine-marker rule is withdrawn (W25) |
 | Where the rubric-score drop comes from | `make analyze` (rubric axes and the askers gap) | raw | exploratory (ANALYSIS_PLAN.md section 4); the internal note is `rebuttal/responses/drafts/FINDINGS_quality_drop.md` |
 | Harm proxy (negative rubric criteria met) | `make analyze` (`neg_any`, `neg_points_lost`) | raw, every recorded cell with rubric grades (extracted 2026-10-09) | LLM-graded proxy, secondary (E06, ANALYSIS_PLAN.md section 10); not the physician harm review (C33) |
-| Red-flag rate by the emergency theme (stands in for the C30 check) | `make analyze` (the evaluator's red-flag rate on the `emergency-theme` groups) | raw on every HealthBench cell; post hoc; the paper cites it as a descriptive check (section 4.4, Table H.6), until the first author accepts or changes it (BLOCKED.md item 1) | descriptive, not an over-flagging rate: prompts of other themes can hold a red flag (ANALYSIS_PLAN.md section 12, 2026-10-10); the over-flagging test is H7 on the physician labels. The escalation keyword rule and the `red-flag-at-stake` label it used were removed |
+| Red-flag rate by the emergency theme (stands in for the C30 check) | `make analyze` (the evaluator's red-flag rate on the `emergency-theme` groups) | raw on every HealthBench cell; post hoc; the paper cites it as a descriptive check (section 4.4, Table H.6), until the first author accepts or changes it (docs/BLOCKED.md item 1) | descriptive, not an over-flagging rate: prompts of other themes can hold a red flag (ANALYSIS_PLAN.md section 12, 2026-10-10); the over-flagging test is H7 on the physician labels. The escalation keyword rule and the `red-flag-at-stake` label it used were removed |
 | Grader-free question rate (E03) | none since 2026-10-10 | withdrawn: the second-person keyword rule is gone (W23) | the cross-check is a judge classifier with a hand-label gate, planned (ANALYSIS_PLAN.md section 12, 2026-10-10; RUN_PLAN.md R17) |
 | Prior-work prompt baselines | `bodhi_lora/protocols/` | planned: all three built and stub-tested; RUN_PLAN.md R2 | compared only inside a cell that ran them (ANALYSIS_PLAN.md H4) |
 | Med42-8B re-grade outside the Llama and Qwen families | `bodhi_lora/pipeline/grade.py` | planned: built, needs a GPU; RUN_PLAN.md R1 | D6, ANALYSIS_PLAN.md H8 |

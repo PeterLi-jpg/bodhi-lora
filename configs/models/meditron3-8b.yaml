@@ -4,7 +4,7 @@ hf_id: OpenMeditron/Meditron3-8B
 revision: null
 unpinned_reason: >-
   Gated repo; the token in use had no access, so the revision could not be read
-  (BLOCKED.md item 3).
+  (docs/BLOCKED.md item 3).
 family: llama3
 domain: clinical
 params_b: 8

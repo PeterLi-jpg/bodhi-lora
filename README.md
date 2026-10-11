@@ -48,9 +48,9 @@ else. Renaming the remote repo is deferred (docs/DECISIONS.md, D15).
   cost ([docs/RUN_PLAN.md](docs/RUN_PLAN.md)) are written down. None has run: no GPU
   use until the first author says so (D21).
 
-The open problems are in [KNOWN_ISSUES.md](KNOWN_ISSUES.md). The decisions behind these
+The open problems are in [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md). The decisions behind these
 points are in [docs/DECISIONS.md](docs/DECISIONS.md). What still needs the first author
-is in [BLOCKED.md](BLOCKED.md).
+is in [docs/BLOCKED.md](docs/BLOCKED.md).
 
 ## Layout
 
@@ -87,7 +87,7 @@ its status and marks.
 
 Records of past runs are frozen. The runner refuses to run them again, except to add
 judge re-grades, so new outputs never mix with old ones; a new run of the same design is
-a new cell. [REPRODUCIBILITY.md](REPRODUCIBILITY.md) gives each cell's settings and how
+a new cell. [docs/REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md) gives each cell's settings and how
 the 2026-05 and 2026-07 settings differ.
 
 ## Reproduce the paper
@@ -137,7 +137,16 @@ python -m bodhi_lora run <cell_id> --gpus 0,1   # every stage, one seed per GPU
 python -m bodhi_lora analyze <cell_id>          # the cell's statistics, from its tables
 python -m bodhi_lora analyze <cell_id> --extract  # first the tables, from the raw outputs
 make smoke                                      # the smoke cell on the CPU, training included
+python -m bodhi_lora.pipeline.eval --cell <cell_id> --seed 42 --condition lora+bodhi   # one stage alone
 ```
+
+`make smoke` runs every stage of the smoke cell
+(`configs/cells/tiny-rubric__tiny-random-llama__bodhi.yaml`) on the CPU in about two
+minutes, with the stub engine in place of vLLM and a tiny public model trained for real.
+It needs no GPU and no token, and writes to `outputs/smoke/` (ignored by git). Every
+stage is also a module with the same command line, as in the last line above. A rerun
+skips every stage whose manifest says complete, and the traces and filter stages resume
+where they stopped.
 
 Setup, once per machine: `bash setup.sh` builds the training environment (`.venv`,
 `pip install -e '.[train,gpu,dev]'` from `pyproject.toml`) and the vLLM environment
@@ -163,7 +172,7 @@ location to its new one.
 - `results/healthbench__medgemma-27b-text__bodhi__2026-05/validation/`: the blank physician
   grading sheets and the instructions. The answer key and the returned sheets are not in
   the repo.
-- [RESULTS.md](RESULTS.md): what each result is, where it lives and its status.
+- [results/README.md](results/README.md): what each result is, where it lives and its status.
 
 ## Data and leakage
 
@@ -190,7 +199,7 @@ Before a pull request, run `make check` (doc paths, secrets scan, registry) and
 `make test`. A new model, benchmark, protocol or cell is a new record in `configs/`, not
 new code (docs/CONVENTIONS.md, rules 11 to 14). Reviewers get an anonymized copy made by
 `scripts/export_anonymous.sh`, never this repo. See
-[contributions/contributing.md](contributions/contributing.md) and
+[CONTRIBUTING.md](CONTRIBUTING.md) and
 [docs/CONVENTIONS.md](docs/CONVENTIONS.md).
 
 ## License

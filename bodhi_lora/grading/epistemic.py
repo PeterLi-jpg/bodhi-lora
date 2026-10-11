@@ -25,7 +25,7 @@ DIMENSION_GRADE_TOKENS = 768
 # Frozen: every recorded cell was graded with this text (02ac9a3:scripts/eval_epistemic.py,
 # written in 7df83b4), and tests/test_grading_epistemic.py pins its sha256. It names the
 # protocol under test twice ("BODHI-style prompting", "BODHI v0.1.3"), and it graded every
-# condition with those words, the base and the baselines too. KNOWN_ISSUES.md and the
+# condition with those words, the base and the baselines too. docs/KNOWN_ISSUES.md and the
 # paper's appendix on the dimensions say so. A protocol-neutral template would be a new
 # grader version, which the first author decides at the analysis plan's adoption
 # (docs/ANALYSIS_PLAN.md section 12); tests/test_no_hardcode.py fails on any other grader

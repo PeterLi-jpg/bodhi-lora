@@ -451,8 +451,8 @@ None of these decides a claim. Each is computed the same way for every cell.
 Entries are dated and never edited. Format: date, who, what changed, why, and whether any
 output of a covered cell existed at that time.
 
-The first author's adoption entry is still to come. Choices left to him before adoption
-(EXPERIMENTS.md section 6, ARCHITECTURE.md section 12):
+The first author adopted the plan on 2026-10-11 (the last entry below). The choices that
+were left to him before adoption (EXPERIMENTS.md section 6, ARCHITECTURE.md section 12):
 
 1. E14 as the primary test of H3 and E02 as the secondary (proposed here), or the reverse.
 2. Margins for E07 (open decision O5). With none, E07 reports intervals only.
@@ -693,3 +693,35 @@ The three trace-seed cells of E23 (`healthbench__mistral-small-24b__bodhi__trace
 varies the teacher traces, and the five training seeds of
 `healthbench__mistral-small-24b__bodhi` give the spread they are read against (section
 10, E23). They are the one exception. No output of any planned cell existed.
+
+**2026-10-11, the first author. Adoption.** On 2026-10-11 the first author wrote: "the
+analysis plan is good". He adopts the plan as written: sections 1 to 11 and every entry
+above. He changed nothing, so the plan's own proposals and the settings in the cell
+records stand. For the choices above, that means:
+
+1. E14 (the MediQ paired probe) is the primary test of H3, and E02 (the physician-label
+   discrimination index) is the secondary test, as section 5 proposes. RUN_PLAN.md needed
+   this fix before any GPU run.
+2. E07 has no margins (open decision O5), so it reports intervals only.
+4. The new cells use the settings of their records (E13): the `default` HealthBench split,
+   the context length of 8,192 and the base served as trained.
+5. The choices in the cell records stand: the judges, the cells with no judge, the probe
+   method and controls, the harm axes and the wording of the two new protocols.
+6. The judge classifier stands as the 2026-10-10 no-lexicon entry specifies it, with its
+   hand-label sample and its gate. It has not run.
+
+The 2026-10-10 entries stand, the paper-step entry too. This entry lifts the gate of the
+2026-10-09 entry: the paper may cite the post hoc values of section 4.4, Table H.6 and the
+abstract sentence on selective asking, each marked post hoc and descriptive.
+
+Two choices have no proposal in the plan, so the adoption does not settle them, and each
+waits for a later entry of the first author. Choice 3 (whether the new cells replace the
+2026-05 and 2026-07 cells in the main tables) waits until the first new cell is analyzed.
+Choice 7 (the evaluator template of the new cells) waits until the first new cell is
+graded: the code has only the frozen template, which names BODHI (KNOWN_ISSUES.md).
+
+No physician label was read before this entry. No output of any planned cell existed: no
+folder of a planned cell is under `results/`. The label analyses of H3, H7 and H11 may now
+run as sections 5, 7 and 9 say. To run E02 on the existing outputs, add
+`needs-info-physician` to the `active_inquiry` entry of `discrimination` in
+`configs/report.yaml`, then run `make analyze` and `make numbers`.

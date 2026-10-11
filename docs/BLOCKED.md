@@ -5,83 +5,49 @@ a login or a fact. Rewritten on 2026-10-08 after his facts of that day (DECISION
 to D22). Items are in priority order. Each one says what to do and what changes in the
 repo after it. Run commands from the repo root.
 
-D-numbers refer to [docs/DECISIONS.md](docs/DECISIONS.md), C-numbers to
-[rebuttal/commitments.md](rebuttal/commitments.md), audit IDs (PROV-1, EVAL-7) to
+D-numbers refer to [DECISIONS.md](DECISIONS.md), C-numbers to
+[rebuttal/commitments.md](../rebuttal/commitments.md), audit IDs (PROV-1, EVAL-7) to
 `CONVENTIONS_AUDIT_2026-10-07.md` next to the repo. The last section maps the old item
 numbers, which other files still cite, to the items below.
 
-Nothing here was pushed, and no remote state changed.
+Nothing here was pushed. On 2026-10-11 the first author adopted the analysis plan, deleted
+the remote scratch branches and set the hooks path; items 1, 4.2 and 5 say what is
+left of them.
 
-## 1. Adopt the analysis plan and the open design choices
+## 1. The analysis plan (adopted 2026-10-11) and the open design choices
 
-Why: convention 3 needs a dated plan before any new run, and before the physician-label
-analyses run on the existing outputs. The plans step drafted it; the choices in it are
-methodology, so they are yours.
+Done: on 2026-10-11 you wrote "the analysis plan is good". The adoption entry at the end
+of [ANALYSIS_PLAN.md](ANALYSIS_PLAN.md) section 12 records it: the plan as written, with
+E14 as the primary test of H3 and E02 as the secondary, no E07 margins, the choices in the
+cell records as they stand (the judges, the cells with no judge, the probe method, the
+harm axes, the protocol wording) and the 2026-10-10 entries. So the paper keeps the post
+hoc values of section 4.4, Table H.6 and the abstract sentence on selective asking.
+Check the entry; to change any of it, add a dated entry below it. RUN_PLAN.md may start
+once item 2 says so.
 
-Action:
+Still yours:
 
-1. Read [docs/ANALYSIS_PLAN.md](docs/ANALYSIS_PLAN.md). Adopt it as it is, or change it
-   with a dated entry in its section 12. Its section 12 lists seven open choices: E14 or
-   E02 as the primary test of calibration, the E07 margins (O5), whether the new cells
-   replace the old ones in the main tables, the settings of the new cells, the
-   choices in the cell records (step 4 below), the judge classifier of the
-   2026-10-10 entry (its judge, rubric text, hand-label sample and agreement gate), and
-   the evaluator template of the new cells (the frozen one names BODHI, the protocol
-   under test; KNOWN_ISSUES.md).
-2. Decide the open choices of [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) section 12
+1. Decide the open choices of [ARCHITECTURE.md](ARCHITECTURE.md) section 12
    that are still open: O1 (package name), O2 (raw outputs in git: the default stops
    tracking the 80 MB of the 2026-05 cell), O3 (a versioned archive of all raw outputs,
    about 450 MB; publishing it is a remote action), O7 (the MedGemma-27B rerun is a
    new QLoRA cell) and O8 (whether git tracks the probe and bench outputs; the probe
    output holds benchmark text). Decide O8 before the first probe or bench run.
-3. Read D17 to D22 in [docs/DECISIONS.md](docs/DECISIONS.md). To revise one, add a dated
+2. Read D17 to D22 in [DECISIONS.md](DECISIONS.md). To revise one, add a dated
    entry below it.
-4. Decide the choices the experiments step made in the cell records (2026-10-09). Each
-   is in the records now; change a record before its cell runs, because the runner
-   freezes it then.
-   - Judges (E10): `medgemma-27b-text` for every base outside Gemma, `phi-4` (general)
-     for the Gemma bases. The earlier candidates (Med42-8B, Meditron3-8B, Aloe-Beta-8B)
-     are in no record.
-   - No judge on the labelled, MediQ, filter-ablation, trace-seed and component-ablation
-     cells, to save cost.
-   - The labelled cells evaluate five conditions and the paired cells seven.
-     RUN_PLAN.md section 4 costs them as they stand, and also with three and two
-     conditions, which the primary tests need.
-   - The probe (E11) continues raw token ids with no chat template, unlike the chat-mode
-     probe of the paper's Appendix A; its control is HealthBench for the older
-     benchmarks and ChatDoctor for HealthBench, 100 to 200 prompts each.
-   - The judges' harm axes (extent and likelihood from Singhal et al. 2023, plus delayed
-     care) are an LLM proxy for C33, not physician review.
-   - `mediq-abstain` adapts MediQ's multiple-choice wording to open questions. It reads
-     the rating from the DECISION: field only, matched to a full label; MediQ's parser
-     also searches the free text, so "not very confident" scored as "very confident".
-     A rating that does not parse asks, as in MediQ, and the eval output counts it.
-     `red-flags-first` moves the red-flag section first and skips its pass-2 line on
-     TECHNICAL and HYBRID tasks.
+3. Two choices of the plan that it makes no proposal for: choice 3 (whether the new
+   cells replace the 2026-05 and 2026-07 cells in the main tables) before the first new
+   cell is analyzed, and choice 7 (keep the frozen evaluator template, which names BODHI,
+   or write a protocol-neutral one as a new grader version) before the first new cell is
+   graded.
 
-After: record the adoption as a dated entry in ANALYSIS_PLAN.md section 12 and commit it.
-The uniform analysis of the existing outputs already ran on 2026-10-09 (`make extract`,
-`make analyze`; tables and statistics committed): the descriptive and exploratory items
-of the plan's section 10, with no physician label read. For E02, add
+Next in the repo, not blocked on you: E02 on the existing outputs. Add
 `needs-info-physician` to the `active_inquiry` entry of `discrimination` in
-`configs/report.yaml`, then run `make analyze` and `make numbers`. Fix choice 1 (E14 or
-E02 as the primary test of H3) in the adoption entry; RUN_PLAN.md may not start without
-it. Also accept or change the 2026-10-10 entries of ANALYSIS_PLAN.md section 12. Only your
-entry lifts a gate that an entry sets for you (the 2026-10-10 entry on gates), so the
-paper's citations below are a draft until you decide. The no-lexicon entry removed
-the keyword rules, put the `emergency-theme` red-flag rates in place of the over-flagging
-check (KNOWN_ISSUES.md) and specified the judge classifier with its hand-label gate. The
-paper entry records that the paper now cites the post hoc checks of every cell (section
-4.4 and Table H.6 of `paper/main.tex`): format leakage, the red-flag rate outside the
-emergency theme (with the statement that it is not an over-flagging rate), the theme-tag
-asking index, the askers gap and the engine's token counts. The abstract also says that
-no cell shows selective asking. If you do not want these values in the paper, say so:
-they come out of section 4.4, Table H.6, that abstract sentence and CLAIMS.md row 26.
-Then RUN_PLAN.md may start.
+`configs/report.yaml`, then run `make analyze` and `make numbers`.
 
 ## 2. Go-ahead for GPU runs
 
-Why: no GPU job runs until you say so (D21). [docs/RUN_PLAN.md](docs/RUN_PLAN.md) lists
+Why: no GPU job runs until you say so (D21). [RUN_PLAN.md](RUN_PLAN.md) lists
 every run in order, with its command, cells, seeds, H100-hour estimate and the reviewer
 points it answers.
 
@@ -133,22 +99,13 @@ there is no privacy purge (D18).
    time. The CI step that downloads HealthBench, runs `make numbers` and diffs
    `paper/generated/` has never run off this machine. Check it with `gh pr checks` or the
    Actions tab.
-2. **Delete the scratch branches.** The remote has 44, under the two scratch prefixes
-   that `scripts/maintenance/prune_branches.sh` names (40 and 4), counted from the
-   remote-tracking refs of the last fetch. Fetch first, read the dry run, then apply:
-
-   ```bash
-   git fetch --prune origin
-   scripts/maintenance/prune_branches.sh            # dry run: read the list
-   scripts/maintenance/prune_branches.sh --apply    # asks before it deletes
-   ```
-
-   `--apply` also deletes the temp branches and the branches already merged into the
-   mainline. One temp branch, `origin/results-temp`, holds the 2026-04 pilot adapter
-   (seed 42, 838 traces), not a submitted adapter. Its weights have the same git blob as
-   the local copy in
-   `results/healthbench__medgemma-27b-text__bodhi__2026-04/seed_42/train/`, and its
-   `adapter_config.json` differs only in the order of the target modules.
+2. **Delete the scratch branches.** Done on 2026-10-11: the remote `claude/*` and
+   `worktree-agent*` branches are deleted. `scripts/maintenance/prune_branches.sh --apply`
+   also deletes the temp branches and the branches already merged into the mainline; this
+   checkout has not fetched since, so whether those went too is not confirmed here. One
+   temp branch, `origin/results-temp`, holds the 2026-04 pilot adapter (seed 42, 838
+   traces), not a submitted adapter. Its weights have the same git blob as the local copy
+   in `results/healthbench__medgemma-27b-text__bodhi__2026-04/seed_42/train/`.
 3. **Optional: remove the two AI-tool trailers** (`cf72766` and its twin `72a428b`),
    and nothing else (D18). Follow `scripts/maintenance/purge_history.md` with four
    changes: skip steps 2 and 3 (no name map); in step 4 write only the `co-authored-by`
@@ -158,27 +115,23 @@ there is no privacy purge (D18).
    changes, and commit links in the OpenReview replies stop working. Skipping this is a
    valid choice.
 4. **Optional: rename the repository** `bohdi-lora` to `bodhi-lora` (D15). Then update
-   the URLs in `README.md`, `KNOWN_ISSUES.md`, `contributions/contributing.md`,
-   `contributions/index.md`, `contributions/getting-started/installation.md` and
-   `scripts/maintenance/purge_history.md`, and run
+   the URLs in `README.md`, `docs/KNOWN_ISSUES.md`, `CONTRIBUTING.md`,
+   `docs/INSTALL.md`, `pyproject.toml` and `scripts/maintenance/purge_history.md`, and run
    `git remote set-url origin git@github.com:PeterLi-jpg/bodhi-lora.git`.
 5. **Local-only refs.** Check, then delete, `refs/codex/*`, `refs/original/*` and the tags
    `backup-before-email-rewrite*`. Run `git worktree prune` for the stale
    `/private/tmp/bohdi-main` entry. The merged branches `cleanup/lane-*` can go with
    `git branch -d`.
 
-## 5. Fix the hooks path in each clone
+## 5. The hooks path (done 2026-10-11 in this clone)
 
-Why: `core.hooksPath` in this clone points at a folder that no longer exists (the old
-location of the repository, before it moved under `Substrate Labs/`). So
-`hooks/commit-msg` and `hooks/pre-push` never run. Every commit message of the cleanup
-was checked with `sh hooks/commit-msg` by hand and passes. [G14]
-
-Action, in each clone:
+Done: `git config --get core.hooksPath` returns `hooks` in this clone, and on 2026-10-11 a
+test commit whose message named a coding assistant was rejected by `hooks/commit-msg`.
+Every commit of the cleanup before that date was checked with `sh hooks/commit-msg` by
+hand. In any other clone, run once:
 
 ```bash
 git config core.hooksPath hooks
-git config --get core.hooksPath     # expect: hooks
 ```
 
 ## 6. The two remaining physician raters (deferred)

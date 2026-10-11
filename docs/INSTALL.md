@@ -8,7 +8,7 @@ model and for the CPU-only tests. On Windows, use WSL2 with Ubuntu.
 ```bash
 git clone https://github.com/PeterLi-jpg/bohdi-lora.git
 cd bohdi-lora
-git config core.hooksPath hooks     # activates the repo hooks, see contributing.md
+git config core.hooksPath hooks     # activates the repo hooks, see CONTRIBUTING.md
 ```
 
 ## 2. Training env
@@ -31,7 +31,7 @@ HealthBench into `data/raw/`. On macOS, pip prints `Ignoring autoawq` and
 The runner (`python -m bodhi_lora run`) runs generation, grading and eval with
 `.venv-infer/bin/python`, a second env for vLLM 0.9.2, which needs an older transformers
 than training does. `requirements-infer.txt` pins it; the env behind the posted cells was
-not frozen (KNOWN_ISSUES). If your envs live elsewhere, change `python.train` and
+not frozen (KNOWN_ISSUES.md). If your envs live elsewhere, change `python.train` and
 `python.infer` in `configs/project.yaml`.
 
 ## 4. Hugging Face access

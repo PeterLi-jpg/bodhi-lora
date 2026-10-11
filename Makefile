@@ -86,7 +86,7 @@ rebuttal: $(HB_HARD)
 	$(PYTHON) rebuttal/analyses/second_person_questions.py
 
 # Reads the host logs of the added cells, copied from the GPU host and gitignored
-# (REPRODUCIBILITY.md section 7): tau, trace counts and the adapter recipe per cell
+# (docs/REPRODUCIBILITY.md section 7): tau, trace counts and the adapter recipe per cell
 # (PROV-3). The cells' filter manifests hold the counts it read; the analysis reads those.
 cells:
 	$(PYTHON) rebuttal/analyses/cell_recipe.py
