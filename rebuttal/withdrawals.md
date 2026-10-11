@@ -686,6 +686,14 @@ paper must decide on each one.
 - **"blanket disclaimers eliminated"** Submitted `main.tex:36`, live `paper/main.tex:78`,
   `:103`. This rests on 5 of 998 against 0 of 985 responses (Fisher p = 0.062, audit CLAIM-8).
 - **MedQuAD base hedging, 1.45 against 1.46.** Settled by the raw outputs; see W21.
+- **LoRA minus the wrapper on active inquiry, bootstrap CI [-0.069, +0.021].**
+  `FzpA_2_followup.md:17`. No script or output reproduces the posted interval. The uniform
+  analysis of the MedGemma-27B cell gives LoRA minus Base+BODHI -2.4 points, seed-level t(4)
+  interval [-5.7, +1.0], prompt-clustered bootstrap [-6.2, +1.5]
+  (`results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/stats.json`,
+  `contrasts`, `lora - base+bodhi`, `active_inquiry`). The conclusion is the same, no
+  difference detected, and the paper cites the uniform values (section 4.2, "The
+  MedGemma-27B Cell"); the posted interval stays only in `rebuttal/posted_values.json`.
 - **"in five of the six added cells at every individual seed"** `FzpA_2_followup.md:13`. Checked against
   the raw outputs on 2026-10-08 (`results/cross_cell/generated_values.json`, per_seed): LoRA
   active inquiry is above Base in all five seeds of five added cells, and in one of five seeds of

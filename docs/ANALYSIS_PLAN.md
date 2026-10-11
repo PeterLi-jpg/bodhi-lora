@@ -330,7 +330,8 @@ reported beside it.
   `base`. The rubric score and the harm proxy on the non-emergent prompts. Their rubrics
   grade part of the referral advice: 177 of their 1,238 physician-written criteria contain
   "emergenc", "urgent" or "911", 66 of them with negative points, on 46 of the 134
-  prompts.
+  prompts. [Withdrawn as a keyword count: section 12, the 2026-10-10 no-lexicon entry,
+  item 5. This marker is the only change to the sentence.]
 - **Decision.** Over-flagging found: the primary outcome rises with adjusted p below 0.05.
   Not detected: otherwise.
 - **What changes the paper.** If over-flagging is found, the paper says that the red-flag

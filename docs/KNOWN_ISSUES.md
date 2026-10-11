@@ -19,10 +19,6 @@ D-numbers refer to [DECISIONS.md](DECISIONS.md). Issue numbers such as #5 are Gi
   the values come from the code and could not be checked. A new experiment on
   MedGemma-27B needs a rerun, proposed as a new QLoRA cell, with the 2026-05 cell as the
   record (O7, which waits for the first author's yes; BLOCKED.md item 1).
-- **The paper still says a second copy of the adapters may exist.** The Code
-  availability paragraph and checklist items 4, 5, 11 and 13 say "we have not yet checked
-  a second copy", and two comments in `paper/main.tex` point at the Modal volume. Under
-  D19 they must say that the adapters are not retained.
 - **Returned physician grades are not in the repo (PROV-5, EVAL-5).** One of three
   raters returned. `scripts/compute_irr_kappa.py` read that file in place and wrote
   `results/healthbench__medgemma-27b-text__bodhi__2026-05/validation/kappa_results.json`, which names no rater. Nobody else can
@@ -182,6 +178,10 @@ D-numbers refer to [DECISIONS.md](DECISIONS.md). Issue numbers such as #5 are Gi
 
 ## Fixed
 
+- **The paper said a second copy of the adapters may exist (2026-10-09).** The Code
+  availability paragraph and checklist items 4, 5, 11 and 13 said "we have not yet checked
+  a second copy", and two comments in `paper/main.tex` pointed at the Modal volume. Since
+  ab58ee5 and faf8579 the paper says that the adapters were not retained (D19).
 - **The hooks were not active in this clone (2026-10-11).** `core.hooksPath` pointed
   at the repository's old location, so `hooks/commit-msg` and `hooks/pre-push` did not
   run, and commit messages were checked by hand. It now points at `hooks/`, and a commit

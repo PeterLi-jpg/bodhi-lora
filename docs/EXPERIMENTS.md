@@ -16,6 +16,7 @@ so (2026-10-08). The two remaining physician raters are deferred.
 | Word | Meaning |
 |---|---|
 | exists | The code and an output exist in the repo. Uniform analysis may still have to recompute it. |
+| built | The code exists and passes its CPU tests (stub or dry run); no output yet. |
 | to build | Code must be written. CPU only, unless the GPU column says yes. |
 | to run | The code exists or the build steps write it; the run needs a GPU or people. |
 | deferred | Waits on people, by the first author's decision. |
@@ -106,8 +107,9 @@ waiver).
 D13. Every statistic of ARCHITECTURE.md section 7 for every cell: seven dimensions and
 rates with seed-level paired t(4) intervals and Holm over the seven, pooled d with
 prompt-clustered bootstrap intervals, counts and parse failures for both graders, worst
-case, blanket disclaimers with Fisher, length, askers gap, rubric axes, dimension
-correlations, and one drawn example per score level per dimension (FzpA-Q2). The
+case, blanket disclaimers with Fisher, length, askers gap, rubric axes and dimension
+correlations. No code draws example replies: the response text is not in the tracked
+tables, and the paper's examples for each dimension (C22, Appendix D) answer FzpA-Q2. The
 spreads of base and adapted active inquiry are reported without any convergence claim
 (HomM-F2, W4). Status: built (`python -m bodhi_lora analyze`, ARCHITECTURE.md section
 7, which lists the parts not built yet). The 2026-05 cell has tracked tables and
@@ -180,8 +182,9 @@ R3 and R4.
 **E08. Cost from the outputs.** Answers FzpA-S, C25 (in part), LxMF-1. Calls,
 generated tokens and characters per response and condition, and completions lost to
 the context window. The 2026-05 files hold `response_token_count`; new runs add calls
-and tokens over all passes. GPU: no. Status: built, except stage times from the
-manifests. E20 adds measured time.
+and tokens over all passes. GPU: no. Status: built; stage times from the manifests
+since 2026-10-11 (`stage_times` in `stats.json`), which no recorded cell has, because its
+manifests were written after the run. E20 adds measured time.
 
 ### Inference only (GPU, no training)
 
@@ -225,29 +228,31 @@ tokenizer (no chat template), which differs from the chat-mode probe that Append
 describes. Seven recorded cells and the Mistral-7B-Instruct and Gemma-3-27B cells
 (E21, E24) carry `probe` blocks; the control is HealthBench for the older benchmarks and
 ChatDoctor for HealthBench. The MedQuAD cell has none: no question of its eval pool
-reaches the 40 tokens the probe needs (RUN_PLAN.md, R11).
+reaches the 40 tokens the probe needs (RUN_PLAN.md, R11). Since 2026-10-11 `analyze`
+copies each probe's rates and Fisher test into the cell's `stats.json` (`probe`), so a
+`families` entry of `configs/report.yaml` can run F7 over the probed cells.
 
 **E12. Prior-work baselines.** Answers MR-W6, HomM-W4, HomM-Q3, HomM-F5, C27, C14, and
 the open item the LxMF rebuttal named. Three inference-time baselines on the unchanged
 base, on each cell's eval prompts, graded like every other condition:
-- `base+clarify`: a clarifying-question instruction. Exists (`bodhi_lora/protocols/instruction.py`).
+- `base+clarify`: a clarifying-question instruction. Built (`bodhi_lora/protocols/instruction.py`).
 - `base+verbalized-confidence`: state confidence in words and as a number, and what
-  would change the answer (Lin et al., 2022; Tian et al., 2023). Exists.
-- `base+mediq-abstain`: a MediQ-style abstention step (Li et al., NeurIPS 2024). Exists
+  would change the answer (Lin et al., 2022; Tian et al., 2023). Built.
+- `base+mediq-abstain`: a MediQ-style abstention step (Li et al., NeurIPS 2024). Built
   (`bodhi_lora/protocols/abstain.py`; it adapts MediQ's multiple-choice wording to open
   questions, and reads the rating from the DECISION: field only). Pass 1
   rates on a five-level scale, with a short rationale, whether the information is enough
   to answer safely; if it is below the threshold, pass 2 asks the most important question,
   otherwise it answers. This is the paper's Scale plus rationale variant without
-  self-consistency, so it costs two calls like BODHI. To build.
+  self-consistency, so it costs two calls like BODHI.
 Contrasts: LoRA minus each baseline on the seven dimensions and the rubric score;
 each baseline minus Base on active inquiry; and the discrimination index (E02, E14)
 for each baseline, because a prompt can raise asking without targeting it. Cells: every
 new cell (E13, E16, E25); optional on the 2026-07 cells, which pair with their stored
 Base rows only if the grader repo and the serving settings match the cell record. GPU:
 yes, about 2 to 3 H100-hours per 24-27B cell for the two single-pass baselines
-([RUN_PLAN.md](RUN_PLAN.md) R2), more with the two-pass one. Status: all three exist (dry-run
-tested); all to run.
+([RUN_PLAN.md](RUN_PLAN.md) R2), more with the two-pass one. Status: built (dry-run tested),
+to run.
 
 **E14. MediQ paired probe: calibration against mimicry.** Answers MR-W4, LxMF-2 directly.
 MediQ (Li et al., NeurIPS 2024; repository licence CC BY 4.0) turns MedQA vignettes into
@@ -368,7 +373,7 @@ C29, C12. Ask-first (`bodhi_lora/protocols/ask_first.py`): one call, a three-que
 then a reply that asks first. Cell: `healthbench__mistral-small-24b__ask-first` with
 `base`, `base+ask-first`, `lora`, `lora+ask-first`, and `base+bodhi` to compare the two
 teachers on the same prompts; the E14 probe on its adapters. If budget allows, the same
-on MedGemma-27B. GPU: yes, about 10 to 13 H100-hours per cell. Status: exists (dry-run
+on MedGemma-27B. GPU: yes, about 10 to 13 H100-hours per cell. Status: built (dry-run
 tested), to run.
 
 **E17. Red flags first.** Answers LxMF-4, C31. The posted diagnosis says LoRA plus BODHI
@@ -460,7 +465,9 @@ wall-clock time, GPU model and tokens per stage. The `bench` stage times a fixed
 of 50 prompts per condition on an otherwise idle GPU, so shared-node queueing does not
 enter the figures. Report training time per seed, and time and tokens per response per
 condition. GPU: yes, inside E13 and E16. Status: built (manifest timers; the `bench` stage
-times the seeds in `bench.seeds` at the eval's token limits), then to run.
+times the seeds in `bench.seeds` at the eval's token limits; since 2026-10-11 `analyze`
+reads `bench.json` and the stage manifests into each cell's `stats.json`, `bench` and
+`stage_times`, tested on a stub run), then to run.
 
 **E21. BioMistral null: teacher or student?** Answers HomM-F1, withdrawals W5. One null
 cannot separate teacher strength from model size, instruction tuning or recipe.
@@ -505,7 +512,7 @@ holdout of 1,000 in place of the first rows in source order (REPRO-11). GPU: yes
 **E26. BODHI component ablations.** The submitted paper named them as beyond its budget.
 Protocols `bodhi-no-calibration`, `bodhi-no-questions`, `bodhi-no-abstention` as teachers
 (`bodhi_lora/protocols/bodhi_llm.py` builds them, with a prompt-drift check). GPU: yes, about 10
-H100-hours per protocol. Status: exists (code), to run. Optional; no reviewer asked.
+H100-hours per protocol. Status: built (dry-run tested), to run. Optional; no reviewer asked.
 
 ### People
 
@@ -566,7 +573,7 @@ changes already in `paper/main.tex`, with the commitment that records them.
 | FzpA-W3 | text and figures done (C5, C16, C17, C18, C20) |
 | FzpA-S | E08, E20 (C25) |
 | FzpA-Q1 | text done (C21); E01 dimension correlations; E27 deferred |
-| FzpA-Q2 | text done (C22, C23); E01 drawn examples per score level |
+| FzpA-Q2 | text done (C22, C23) |
 | FzpA-Q3 | E19, E15, E25; the 2026-07 ChatDoctor and MedQuAD cells exist |
 | FzpA-F1 | text done (C6, C7; withdrawals W2, W3); E19; E27 deferred |
 | FzpA-F2 | text done (C10, C20); E07, E06 |
@@ -588,16 +595,16 @@ changes already in `paper/main.tex`, with the commitment that records them.
 
 | Commitment | Status now | Answered by |
 |---|---|---|
-| C1 to C24 | done (text, figures and tables; see `rebuttal/commitments.md`) | E01 recomputes every number they cite from the response tables |
-| C25 cost per configuration | to-do | E08, E20 |
-| C26 clinical judge panel | to-do | E10 (E09 for the Med42-8B cells) |
-| C27 inference-time baseline | to-do | E12 |
-| C28 three-physician validation | to-do | E27, deferred |
-| C29 second CoT protocol | to-do | E16 |
-| C30 over-flagging set | to-do | E18 |
-| C31 red flags early | to-do | E17 |
-| C32 clinician-posed benchmark | to-do | E19 (open sets in place of MIMIC and eICU) |
-| C33 harm grading | to-do | E06 now (proxy), E28 deferred |
+| C1 to C24 | done or changed (text, figures and tables; `rebuttal/commitments.md` says which changed and why) | E01 recomputes every number they cite from the response tables |
+| C25 cost per configuration | built, awaiting GPU (R2) | E08, E20 |
+| C26 clinical judge panel | built, awaiting GPU (R1, R6; R2 and R5 for the new cells) | E10 (E09 for the Med42-8B cells), read by H8 |
+| C27 inference-time baseline | built, awaiting GPU (R2) | E12 |
+| C28 three-physician validation | deferred (D20) | E27 |
+| C29 second CoT protocol | built, awaiting GPU (R5) | E16 |
+| C30 over-flagging set | changed (HealthBench physician labels); built, awaiting GPU (R4) | E18 |
+| C31 red flags early | built, awaiting GPU (R2, R7); R7 may find no drop to recover (E17) | E17 |
+| C32 clinician-posed benchmark | changed (open sets in place of MIMIC and eICU); built, awaiting GPU (R4, R10) | E19 |
+| C33 harm grading | deferred (E28); the LLM-graded proxy is in the paper | E06 now (proxy), E28 deferred |
 
 Audit items that need a run: REPRO-8 (E23), EVAL-12 and NUM-7 (E11), REPRO-12 (E13
 serves the base as trained), REPRO-3 (E13), PROV-11 (E13 manifests), REPRO-11 (E25).
