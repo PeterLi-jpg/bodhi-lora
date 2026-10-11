@@ -5,7 +5,7 @@ On 2026-10-08 every result file moved into this one folder (docs/ARCHITECTURE.md
 path, its new paths, its sha256 and size, whether git tracked it before and after, and a
 note. This file says the same in prose. An entry with an `edited` field moved byte for
 byte and was edited later, for the reason the field gives; the test
-(`tests/test_migration_provenance.py`) holds it to its bytes at the move commit, 408e42c.
+(`tests/test_migration_provenance.py`) holds it to its bytes at the move commit, 5975c91.
 An entry with an `untracked` field was tracked after the move and is ignored now, for the
 reason the field gives.
 
@@ -25,17 +25,17 @@ it is. Each of its 338 files has the sha256 of a file that moved here.
 
 | Old location | New location | What it held |
 |---|---|---|
-| `02ac9a3:results_modal/` | `healthbench__medgemma-27b-text__bodhi__2026-05/` | the 2026-05 cell: eval and grade files per seed, physician grading sheets, a cross-seed summary |
-| `02ac9a3:results_rebuttal/` (tracked part) and its ignored local copy | the `*__2026-07/` cells | the 2026-07 cells: eval ids, eval and grade files, adapter configs and trainer states |
+| `df10aa8:results_modal/` | `healthbench__medgemma-27b-text__bodhi__2026-05/` | the 2026-05 cell: eval and grade files per seed, physician grading sheets, a cross-seed summary |
+| `df10aa8:results_rebuttal/` (tracked part) and its ignored local copy | the `*__2026-07/` cells | the 2026-07 cells: eval ids, eval and grade files, adapter configs and trainer states |
 | results/seed_42/ and results/_rescue/ (ignored, gone) | `healthbench__medgemma-27b-text__bodhi__2026-04/` | the 2026-04 pilot: eval files, teacher traces, its train/val split |
 | `checkpoints/seed_42/` (ignored) | the pilot's `seed_42/train/` | the pilot adapter and its epoch checkpoints |
-| `02ac9a3:rebuttal/results/` | the 2026-05 cell's `analysis/`, and `cross_cell/` | the analyses posted in the discussion |
-| `02ac9a3:data/rebuttal_cells/` | `cross_cell/generated_values.json`, `rebuttal/posted_values.json`, `rebuttal/README.md` | the added-cell values, computed and as posted |
-| `02ac9a3:data/derived/` | the 2026-05 cell's `seed_7/filter/`, the pilot's `analysis/` | two small score copies the paper reads |
-| `02ac9a3:data/irr_instructions/` | the 2026-05 cell's `validation/instructions/` | the rater instructions |
+| `df10aa8:rebuttal/results/` | the 2026-05 cell's `analysis/`, and `cross_cell/` | the analyses posted in the discussion |
+| `df10aa8:data/rebuttal_cells/` | `cross_cell/generated_values.json`, `rebuttal/posted_values.json`, `rebuttal/README.md` | the added-cell values, computed and as posted |
+| `df10aa8:data/derived/` | the 2026-05 cell's `seed_7/filter/`, the pilot's `analysis/` | two small score copies the paper reads |
+| `df10aa8:data/irr_instructions/` | the 2026-05 cell's `validation/instructions/` | the rater instructions |
 | data/sft_qwen_graded/ (ignored, gone) | the 2026-05 cell's `seed_7/filter/train.jsonl` | the seed-7 train split |
 | `logs/host/` (ignored) | each cell's `logs/` | the GPU host's stage logs |
-| `02ac9a3:data/raw/hard_200_sample_ids.json` | `shared/inputs/eval_ids.json` of the three 2026-07 HealthBench cells, the Gemma-2-9B run and the pilot | the fixed eval set they used, one copy each |
+| `df10aa8:data/raw/hard_200_sample_ids.json` | `shared/inputs/eval_ids.json` of the three 2026-07 HealthBench cells, the Gemma-2-9B run and the pilot | the fixed eval set they used, one copy each |
 
 Inside a cell, an eval file of condition `<w>_no_wrapper` is now `eval/<w>.json`, and one
 of `<w>_<protocol>` is `eval/<w>+<protocol>.json` (for example `base_bodhi.json` became
@@ -110,5 +110,5 @@ id lists, score copies, adapter configs, trainer states, analysis and validation
 Ignored: traces and the other JSONL, adapter weights and checkpoint state, raw eval and
 grade JSON, logs. The rule is the same for every cell (open decision O2). Until
 2026-10-11 the 2026-05 cell's raw eval and grade JSON stayed tracked, as they were before
-the move; history keeps them at 31e4fd8, and their 25 entries in `provenance.json` say so in
+the move; history keeps them at 843c90e, and their 25 entries in `provenance.json` say so in
 an `untracked` field.

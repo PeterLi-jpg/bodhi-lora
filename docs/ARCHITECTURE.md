@@ -4,7 +4,7 @@ Design of the resubmission code, written on 2026-10-08 and brought up to date wh
 build steps merged on 2026-10-09 and on 2026-10-10. Sections 3 to 7 and 9 describe code
 that is in the repo. Since 2026-10-10 every number that `paper/main.tex` prints comes
 from `python -m bodhi_lora report` (`make numbers`), which reads only the cells'
-`stats.json` and the cross-cell statistics; `503b975:scripts/paper_stats.py` is gone. Section 11
+`stats.json` and the cross-cell statistics; `b533908:scripts/paper_stats.py` is gone. Section 11
 records how the steps ran. [EXPERIMENTS.md](EXPERIMENTS.md) lists the runs and analyses this design
 must carry.
 
@@ -14,27 +14,27 @@ The code grew in two review phases, and each phase left its own launcher, its ow
 results folder and its own analysis. The result is not general:
 
 - **Two launch paths and six result locations.** The submitted MedGemma-27B cell ran
-  through `legacy/modal_eval.py` into `02ac9a3:results_modal/`. The cells added in the
-  discussion ran through `02ac9a3:rebuttal/launch/run_cell.sh` into `02ac9a3:results_rebuttal/`. A pilot
-  run sat in the ignored results/seed_42/, analysis outputs in `02ac9a3:rebuttal/results/`,
-  and copied scores in `02ac9a3:data/derived/` and `02ac9a3:data/rebuttal_cells/`.
+  through `legacy/modal_eval.py` into `df10aa8:results_modal/`. The cells added in the
+  discussion ran through `df10aa8:rebuttal/launch/run_cell.sh` into `df10aa8:results_rebuttal/`. A pilot
+  run sat in the ignored results/seed_42/, analysis outputs in `df10aa8:rebuttal/results/`,
+  and copied scores in `df10aa8:data/derived/` and `df10aa8:data/rebuttal_cells/`.
   Section 10 records the move into one results root.
-- **Analysis special-cases one cell.** `02ac9a3:scripts/paper_stats.py` computes the full
+- **Analysis special-cases one cell.** `df10aa8:scripts/paper_stats.py` computes the full
   statistics only for the submitted cell (`MAIN_CELL_ID`, a fixed `CONDITIONS` tuple).
-  The added cells get a subset through `503b975:rebuttal/analyses/cell_values.py` and
-  `503b975:rebuttal/analyses/quality_drop.py`. The discrimination, leakage and question-count
-  analyses read `02ac9a3:results_modal/` only.
-- **Conditions are code, not data.** `61dada9:scripts/aggregate_seeds.py` knows four BODHI
+  The added cells get a subset through `b533908:rebuttal/analyses/cell_values.py` and
+  `b533908:rebuttal/analyses/quality_drop.py`. The discrimination, leakage and question-count
+  analyses read `df10aa8:results_modal/` only.
+- **Conditions are code, not data.** `20f1ca1:scripts/aggregate_seeds.py` knows four BODHI
   condition names, so a cell run with `PROTOCOL=ask_first` cannot be aggregated.
 - **Names and paths are literals in code.** The cell table in
-  `02ac9a3:rebuttal/launch/run_grid.sh`, the benchmark case statement in
-  `02ac9a3:rebuttal/launch/_common.sh`, the model tokens in `02ac9a3:scripts/paper_stats.py`, the
-  dataset-keyed row builders in `02ac9a3:scripts/build_benchmark_jsonl.py`, and
+  `df10aa8:rebuttal/launch/run_grid.sh`, the benchmark case statement in
+  `df10aa8:rebuttal/launch/_common.sh`, the model tokens in `df10aa8:scripts/paper_stats.py`, the
+  dataset-keyed row builders in `df10aa8:scripts/build_benchmark_jsonl.py`, and
   `DATA_DIR = Path("data/raw")` in three scripts.
-- **Settings live in four places.** `configs/*.yaml`, `02ac9a3:rebuttal/configs/`, the
-  `PROFILE` blocks of `02ac9a3:rebuttal/launch/_common.sh`, and script flag defaults.
+- **Settings live in four places.** `configs/*.yaml`, `df10aa8:rebuttal/configs/`, the
+  `PROFILE` blocks of `df10aa8:rebuttal/launch/_common.sh`, and script flag defaults.
 - **A name collision.** The installed `bodhi-llm` package imports as `bodhi`
-  (`02ac9a3:scripts/_bodhi_ablation.py` does `from bodhi import BODHIConfig`). A repo-root
+  (`df10aa8:scripts/_bodhi_ablation.py` does `from bodhi import BODHIConfig`). A repo-root
   package named bodhi would hide it. The package is therefore `bodhi_lora/`, after
   the repository.
 
@@ -109,8 +109,8 @@ The grader-family rule (`family_problems()`, convention 5 in
 
 ### 3.2 Examples
 
-These show the shape. The foundation step copied the values from `02ac9a3:configs/families.yaml`,
-`02ac9a3:rebuttal/configs/`, `02ac9a3:rebuttal/launch/_common.sh` and `legacy/README.md`, and checks
+These show the shape. The foundation step copied the values from `df10aa8:configs/families.yaml`,
+`df10aa8:rebuttal/configs/`, `df10aa8:rebuttal/launch/_common.sh` and `legacy/README.md`, and checks
 each against its source. Together with the records they reference (the graders, the
 `bodhi` protocol), the examples pass `load_registry()` as written.
 
@@ -291,12 +291,12 @@ bodhi_lora/
   __main__.py      python -m bodhi_lora
   cli.py           subcommands list, fetch, run, analyze, report
   paths.py         results and data roots from configs/project.yaml; CellPaths
-  manifest.py      run manifests                       <- 02ac9a3:scripts/run_manifest.py
+  manifest.py      run manifests                       <- df10aa8:scripts/run_manifest.py
   registry/
     schema.py      records, validate_registry, load_registry
   engine/
-    vllm.py        vLLM OpenAI server as a subprocess  <- 02ac9a3:scripts/_vllm_engine.py
-    stub.py        the CPU stub engine for dry runs     <- 02ac9a3:scripts/_vllm_engine.py
+    vllm.py        vLLM OpenAI server as a subprocess  <- df10aa8:scripts/_vllm_engine.py
+    stub.py        the CPU stub engine for dry runs     <- df10aa8:scripts/_vllm_engine.py
   data/
     loaders.py     loader registry by file format: rubric_jsonl, hf_qa,
                    paired_context_jsonl, xml_records
@@ -307,31 +307,31 @@ bodhi_lora/
   protocols/
     base.py        Protocol interface and Output record
     bodhi_llm.py   BODHI via bodhi-llm, section ablations, red-flags-first order
-                                                        <- 02ac9a3:scripts/_bodhi_ablation.py
-    ask_first.py                                        <- 02ac9a3:scripts/baselines/ask_first.py
-    instruction.py prompt protocols                     <- 02ac9a3:scripts/baselines/prompts.py
+                                                        <- df10aa8:scripts/_bodhi_ablation.py
+    ask_first.py                                        <- df10aa8:scripts/baselines/ask_first.py
+    instruction.py prompt protocols                     <- df10aa8:scripts/baselines/prompts.py
     abstain.py     impl abstain: confidence check, then ask or answer (mediq-abstain)
   grading/
-    rubric.py      rubric grader prompt, parse, retries <- 02ac9a3:scripts/filter_traces.py
-    epistemic.py   seven-dimension grader               <- 02ac9a3:scripts/eval_epistemic.py
+    rubric.py      rubric grader prompt, parse, retries <- df10aa8:scripts/filter_traces.py
+    epistemic.py   seven-dimension grader               <- df10aa8:scripts/eval_epistemic.py
     harm.py        judge harm axes: extent, likelihood, delayed care (C33 proxy)
   pipeline/
     context.py     StageContext: what a stage reads, and the stage command line
     runner.py      stage order, seeds, GPU assignment, resume, manifests
-    probe.py       contamination probe                  <- 02ac9a3:scripts/contamination_probe.py
-    traces.py      teacher traces                       <- 02ac9a3:scripts/generate_traces.py
-    filter.py      grade, tau, train and val split      <- 02ac9a3:scripts/filter_traces.py
-    train.py       LoRA and QLoRA with PEFT and TRL      <- 02ac9a3:scripts/train_lora.py
+    probe.py       contamination probe                  <- df10aa8:scripts/contamination_probe.py
+    traces.py      teacher traces                       <- df10aa8:scripts/generate_traces.py
+    filter.py      grade, tau, train and val split      <- df10aa8:scripts/filter_traces.py
+    train.py       LoRA and QLoRA with PEFT and TRL      <- df10aa8:scripts/train_lora.py
     eval.py        responses and rubric grades per condition
-                                                        <- 02ac9a3:scripts/eval_healthbench.py
+                                                        <- df10aa8:scripts/eval_healthbench.py
     grade.py       evaluator dimensions and judges over stored responses
                                                         <- eval_epistemic.py, regrade_cross_family.py
-    bench.py       measured time and tokens per condition  <- 02ac9a3:scripts/latency_benchmark.py
+    bench.py       measured time and tokens per condition  <- df10aa8:scripts/latency_benchmark.py
   analysis/
     config.py      configs/report.yaml as typed records
     extract.py     raw stage outputs to the per-seed response table and prompts.csv
     stats.py       t interval, paired t, Holm, Fisher, clustered bootstrap, Cohen's d
-                                                        <- 02ac9a3:scripts/paper_stats.py
+                                                        <- df10aa8:scripts/paper_stats.py
     cell.py        every statistic of one cell, judge agreement included
     cross.py       cross-cell groups, Holm over cells, the posted-value check
   report/
@@ -350,7 +350,7 @@ reads its output, `results/<cell_id>/validation/kappa_results.json`, into the st
 
 The arrows name the existing file whose logic each module reuses. Each step moved the
 file with `git mv` and then edits it, so `git log --follow` keeps the history. The TPU
-docker modes of `02ac9a3:scripts/_vllm_engine.py` are not carried over; the TPU path stays in
+docker modes of `df10aa8:scripts/_vllm_engine.py` are not carried over; the TPU path stays in
 `legacy/` as the record of the 2026-05 cell.
 
 ### 4.1 Interfaces between modules
@@ -470,10 +470,10 @@ def write(rep: Report, out_dir: Path) -> list[str]   # numbers.tex, numbers.json
 ```
 
 Stage output formats stay compatible with the files that exist: `results/<cell_id>/seed_<n>/eval/<condition>.json`
-keeps the fields `02ac9a3:scripts/eval_healthbench.py` writes (`results[]` with `prompt_id`,
+keeps the fields `df10aa8:scripts/eval_healthbench.py` writes (`results[]` with `prompt_id`,
 `response`, `score`, `criteria_results`, `parse_failures`, `response_token_count`), and
 `results/<cell_id>/seed_<n>/grade/epistemic__<grader>.json` keeps the fields of
-`02ac9a3:scripts/eval_epistemic.py` (`configs[].examples[]`). New runs add `condition`, `protocol`, and per response
+`df10aa8:scripts/eval_epistemic.py` (`configs[].examples[]`). New runs add `condition`, `protocol`, and per response
 `calls`, `completion_tokens_total` and `finish_length`. Fields are added, never renamed,
 so one reader serves the migrated files and the new ones. Inside migrated files the old
 condition names (`base_no_wrapper`, `lora_bodhi`) map to the new ones by one rule:
@@ -604,7 +604,7 @@ manifests, `cell.yaml`, ids, `scores.json`, `adapter_config.json`, `trainer_stat
 `provenance.json`. Ignored: traces, filter JSONL, adapter weights, optimizer state, raw
 eval and grade JSON, logs. Until 2026-10-11 the submitted cell's raw eval and grade JSON
 (80 MB) was tracked and the added cells' (370 MB) was not; history keeps the submitted
-files at 31e4fd8. `make figures` reads the response tables for `ushape_difficulty`,
+files at 843c90e. `make figures` reads the response tables for `ushape_difficulty`,
 `axis_breakdown` and `score_distribution` (the same values as the raw files, which a test
 checks where they are present), and the cell's `analysis/stats.json` for
 `epistemic_bar`, `epistemic_seeds` and `effect_size_forest`. The probe writes its rates,
@@ -639,7 +639,7 @@ train records and the validation file, and no raw output. A value a legacy file 
 not have (for example `finish_length`) is empty, and the analysis reports it as not
 measured for that cell.
 
-**Manifests.** `bodhi_lora/manifest.py` keeps what `02ac9a3:scripts/run_manifest.py` records
+**Manifests.** `bodhi_lora/manifest.py` keeps what `df10aa8:scripts/run_manifest.py` records
 today (resolved config and sha256, git commit and dirty diff hash, package versions,
 model ids with family and revision, adapter and id-list hashes, stage counts, hashed
 host name) and adds wall-clock time, GPU model and count, and token totals per stage.
@@ -652,7 +652,7 @@ file can have several homes (the shared eval id list went to five cells). `moved
 are byte-identical, and `sha256` is the hash at both places; the note says when a moved
 file is an output that the analysis now supersedes (10.2). `archived` means the file went
 to the archive folder next to the repo. `merged` means its text joined another file
-(`02ac9a3:data/rebuttal_cells/README.md` into `rebuttal/README.md`). Values read out of a host log
+(`df10aa8:data/rebuttal_cells/README.md` into `rebuttal/README.md`). Values read out of a host log
 into a manifest leave the log `moved`; the manifest names its source. Config files that
 records replaced (10.2) have no entry: git history keeps them. `results/PROVENANCE.md`
 explains the mapping in prose and lists the host runs that left no folder.
@@ -737,7 +737,7 @@ conditions. The groups, the `counts`, `compares` and `ranges` of the config give
 numbers the paper states across cells. So a new cell needs its record, its `stats.json`,
 a line in `cross_cells` and a group that the tables print, not code (`tests/test_end_to_end.py` runs a
 stub cell through every step). Since 2026-10-10 `paper/main.tex` uses only these macros;
-`503b975:scripts/paper_stats.py`, which wrote the older ones, is removed
+`b533908:scripts/paper_stats.py`, which wrote the older ones, is removed
 (`tests/test_analysis_equivalence.py` keeps the check that the analysis reproduces it).
 
 **Pre-registration.** Convention 3 still holds. A statistic that has not been computed
@@ -776,13 +776,13 @@ contrasts of `report.contrasts` (H5, H6); and the seed-level contrasts of the le
 
 | Path | Keeps | Leaves |
 |---|---|---|
-| `rebuttal/` | The review record: `rebuttal/responses/posted/`, `rebuttal/responses/drafts/`, `rebuttal/withdrawals.md`, `rebuttal/commitments.md`, `rebuttal/posted_values.json` (moved from `02ac9a3:data/rebuttal_cells/`), `rebuttal/README.md`, `rebuttal/PLAN.md`, `rebuttal/COVERAGE.md` | `02ac9a3:rebuttal/launch/`, `02ac9a3:rebuttal/configs/` and `02ac9a3:rebuttal/results/` went (code into the package, settings into cell records, outputs superseded). `rebuttal/analyses/` stays as the record of how the posted values were made (`make rebuttal`, `make cells`); the package reads none of it. Its `peek_results.py` went on 2026-10-11: it read a layout no cell has. The unposted internal note on the aggregate drop moved to `rebuttal/responses/drafts/FINDINGS_quality_drop.md`, and the candidate references to `paper/prior_work_candidates.bib`. |
-| `legacy/` | The launcher, trainer, exporter, config and eval script of the 2026-05 cell, the old lock file, and `README.md`. `legacy/scripts/prefetch_gemma_safetensors.py` joined them: it is TPU-era tooling (blob 3d21545 at 8262d49), though the frozen launcher does not call it; the trainer downloads the weights itself. | Nothing else. The 2026-07 launcher is cited by commit (`61dada9:rebuttal/launch/run_cell.sh`), not copied. |
-| `scripts/` | Repository tools that are not pipeline steps: `check_doc_paths.py`, `check_no_secrets.sh`, `check_paper_macros.py`, `export_anonymous.sh`, `scripts/maintenance/` (until the trailer purge of BLOCKED.md item 4 is done), the physician sheet tools `make_irr_excel.py`, `make_tiebreaker_excel.py` and `compute_irr_kappa.py` (`make kappa`), `export_derived_inputs.py` (`make derived`), the one-off `migrate_results.py`, and the figure scripts `build_paper_figures.py`, `plot_postprocessing.py` and `plot_epistemic_figures.py` (`make figures`, for the first detail cell of `configs/report.yaml`). | Every pipeline and analysis script (section 10). On 2026-10-11 the scripts that no make target, command or live script called went: `aggregate_seeds.py` and `eval_ushape.py` (the 2026-07 launcher ran them; cited as `61dada9:scripts/aggregate_seeds.py`), `grader_correlation.py`, `plot_ushape.py`, `plot_training.py` and `rubric_diff.py`, and the shared-host tool `gpu_lease.sh` (`854761f:scripts/gpu_lease.sh`); later that day `aggregate_cross_seed.py` (`4b05c30:scripts/aggregate_cross_seed.py`), once the figures read `stats.json`. No shims: the Makefile and the CLI are the only entry points, and docs cite module paths. |
+| `rebuttal/` | The review record: `rebuttal/responses/posted/`, `rebuttal/responses/drafts/`, `rebuttal/withdrawals.md`, `rebuttal/commitments.md`, `rebuttal/posted_values.json` (moved from `df10aa8:data/rebuttal_cells/`), `rebuttal/README.md`, `rebuttal/PLAN.md`, `rebuttal/COVERAGE.md` | `df10aa8:rebuttal/launch/`, `df10aa8:rebuttal/configs/` and `df10aa8:rebuttal/results/` went (code into the package, settings into cell records, outputs superseded). `rebuttal/analyses/` stays as the record of how the posted values were made (`make rebuttal`, `make cells`); the package reads none of it. Its `peek_results.py` went on 2026-10-11: it read a layout no cell has. The unposted internal note on the aggregate drop moved to `rebuttal/responses/drafts/FINDINGS_quality_drop.md`, and the candidate references to `paper/prior_work_candidates.bib`. |
+| `legacy/` | The launcher, trainer, exporter, config and eval script of the 2026-05 cell, the old lock file, and `README.md`. `legacy/scripts/prefetch_gemma_safetensors.py` joined them: it is TPU-era tooling (blob 3d21545 at 8262d49), though the frozen launcher does not call it; the trainer downloads the weights itself. | Nothing else. The 2026-07 launcher is cited by commit (`20f1ca1:rebuttal/launch/run_cell.sh`), not copied. |
+| `scripts/` | Repository tools that are not pipeline steps: `check_doc_paths.py`, `check_no_secrets.sh`, `check_paper_macros.py`, `export_anonymous.sh`, `scripts/maintenance/` (until the trailer purge of BLOCKED.md item 4 is done), the physician sheet tools `make_irr_excel.py`, `make_tiebreaker_excel.py` and `compute_irr_kappa.py` (`make kappa`), `export_derived_inputs.py` (`make derived`), the one-off `migrate_results.py`, and the figure scripts `build_paper_figures.py`, `plot_postprocessing.py` and `plot_epistemic_figures.py` (`make figures`, for the first detail cell of `configs/report.yaml`). | Every pipeline and analysis script (section 10). On 2026-10-11 the scripts that no make target, command or live script called went: `aggregate_seeds.py` and `eval_ushape.py` (the 2026-07 launcher ran them; cited as `20f1ca1:scripts/aggregate_seeds.py`), `grader_correlation.py`, `plot_ushape.py`, `plot_training.py` and `rubric_diff.py`, and the shared-host tool `gpu_lease.sh` (`7e02348:scripts/gpu_lease.sh`); later that day `aggregate_cross_seed.py` (`92b2e76:scripts/aggregate_cross_seed.py`), once the figures read `stats.json`. No shims: the Makefile and the CLI are the only entry points, and docs cite module paths. |
 | `paper/` | The paper source and `paper/generated/`. | Nothing. |
 
-`02ac9a3:slurm/`, `02ac9a3:gpu/`, `02ac9a3:run_all.sh`, `02ac9a3:smoke.sh` and
-`02ac9a3:eval/` went on 2026-10-08: no reported number came from them, and `make smoke`
+`df10aa8:slurm/`, `df10aa8:gpu/`, `df10aa8:run_all.sh`, `df10aa8:smoke.sh` and
+`df10aa8:eval/` went on 2026-10-08: no reported number came from them, and `make smoke`
 replaces `smoke.sh`.
 
 ## 9. The no-hardcode check
@@ -822,30 +822,30 @@ with `git mv` and ignored files on disk, hashed every file before and after, and
 was deleted; a file with no new home went to the archive folder next to the repo
 (`../_archive/foundation_2026-10-08/`). `--manifests` then wrote each recorded cell's
 `cell.yaml` and a manifest per stage folder, with status `recorded` or `not_kept`.
-Old paths below are as of `02ac9a3` when git tracked them; the others were ignored.
+Old paths below are as of `df10aa8` when git tracked them; the others were ignored.
 
 ### 10.1 Cell ids for existing outputs
 
 | Old location | Cell id | Status |
 |---|---|---|
-| `02ac9a3:results_modal/` | `healthbench__medgemma-27b-text__bodhi__2026-05` | complete; train `external` (TPU recipe, `legacy/README.md` section 3); adapters not retained |
-| `02ac9a3:results_rebuttal/healthbench__mistralai_Mistral-Small-24B-Instruct-2501/` | `healthbench__mistral-small-24b__bodhi__2026-07` | complete |
-| `02ac9a3:results_rebuttal/healthbench__m42-health_Llama3-Med42-8B/` | `healthbench__med42-8b__bodhi__2026-07` | complete; family waiver (D6) |
-| `02ac9a3:results_rebuttal/healthbench__BioMistral_BioMistral-7B/` | `healthbench__biomistral-7b__bodhi__2026-07` | complete |
-| `02ac9a3:results_rebuttal/chatdoctor__mistralai_Mistral-Small-24B-Instruct-2501/` | `chatdoctor__mistral-small-24b__bodhi__2026-07` | complete |
-| `02ac9a3:results_rebuttal/chatdoctor__m42-health_Llama3-Med42-8B/` | `chatdoctor__med42-8b__bodhi__2026-07` | complete; family waiver (D6) |
-| `02ac9a3:results_rebuttal/medquad__mistralai_Mistral-Small-24B-Instruct-2501/` | `medquad__mistral-small-24b__bodhi__2026-07` | complete |
-| `02ac9a3:results_rebuttal/medqa__mistralai_Mistral-Small-24B-Instruct-2501/` | `medqa-open-preamble__mistral-small-24b__bodhi__2026-07` | complete; set aside (W12) |
-| `02ac9a3:results_rebuttal/medqa__BioMistral_BioMistral-7B/` | `medqa-open-preamble__biomistral-7b__bodhi__2026-07` | partial (seed 42) |
-| `02ac9a3:results_rebuttal/medqa__google_medgemma-27b-text-it/` | `medqa-open-preamble__medgemma-27b-text__bodhi__2026-07` | not run (eval ids only) |
-| `02ac9a3:results_rebuttal/medquad__google_medgemma-27b-text-it/` | `medquad__medgemma-27b-text__bodhi__2026-07` | not run (eval ids only) |
+| `df10aa8:results_modal/` | `healthbench__medgemma-27b-text__bodhi__2026-05` | complete; train `external` (TPU recipe, `legacy/README.md` section 3); adapters not retained |
+| `df10aa8:results_rebuttal/healthbench__mistralai_Mistral-Small-24B-Instruct-2501/` | `healthbench__mistral-small-24b__bodhi__2026-07` | complete |
+| `df10aa8:results_rebuttal/healthbench__m42-health_Llama3-Med42-8B/` | `healthbench__med42-8b__bodhi__2026-07` | complete; family waiver (D6) |
+| `df10aa8:results_rebuttal/healthbench__BioMistral_BioMistral-7B/` | `healthbench__biomistral-7b__bodhi__2026-07` | complete |
+| `df10aa8:results_rebuttal/chatdoctor__mistralai_Mistral-Small-24B-Instruct-2501/` | `chatdoctor__mistral-small-24b__bodhi__2026-07` | complete |
+| `df10aa8:results_rebuttal/chatdoctor__m42-health_Llama3-Med42-8B/` | `chatdoctor__med42-8b__bodhi__2026-07` | complete; family waiver (D6) |
+| `df10aa8:results_rebuttal/medquad__mistralai_Mistral-Small-24B-Instruct-2501/` | `medquad__mistral-small-24b__bodhi__2026-07` | complete |
+| `df10aa8:results_rebuttal/medqa__mistralai_Mistral-Small-24B-Instruct-2501/` | `medqa-open-preamble__mistral-small-24b__bodhi__2026-07` | complete; set aside (W12) |
+| `df10aa8:results_rebuttal/medqa__BioMistral_BioMistral-7B/` | `medqa-open-preamble__biomistral-7b__bodhi__2026-07` | partial (seed 42) |
+| `df10aa8:results_rebuttal/medqa__google_medgemma-27b-text-it/` | `medqa-open-preamble__medgemma-27b-text__bodhi__2026-07` | not run (eval ids only) |
+| `df10aa8:results_rebuttal/medquad__google_medgemma-27b-text-it/` | `medquad__medgemma-27b-text__bodhi__2026-07` | not run (eval ids only) |
 | no folder; host logs only | `healthbench__gemma-2-9b__bodhi__2026-07` | not run (stopped in trace generation) |
 | results/seed_42/ and results/_rescue/ (ignored) | `healthbench__medgemma-27b-text__bodhi__2026-04` | pilot: 2,999 traces, 838 train rows, seed 42, Qwen grader |
 
 The run month comes from `run_metadata.timestamp_utc` in each cell's eval files
 (2026-05-04 for the submitted cell; 2026-07-23 to 2026-07-28 for the added cells;
 2026-04-29 for the pilot). `medqa-open-preamble` is the MedQA benchmark record with the
-prompt template from before 035d85f; `medqa-open` is the template after it.
+prompt template from before 01b638e; `medqa-open` is the template after it.
 
 ### 10.2 Files
 
@@ -855,34 +855,34 @@ replaces it once it reproduces its values (10.3).
 
 | Old path | New path | Kind |
 |---|---|---|
-| `02ac9a3:results_modal/seed_7/base_no_wrapper.json` (each seed; and `base_bodhi`, `lora_no_wrapper`, `lora_bodhi`) | `results/<M>/<S>/eval/base.json` (and `base+bodhi`, `lora`, `lora+bodhi`) | moved; ignored since 2026-10-11 (O2) |
-| `02ac9a3:results_modal/seed_7/epistemic_scores.json` (each seed) | `results/<M>/<S>/grade/epistemic__llama-3.1-8b.json` | moved; ignored since 2026-10-11 (O2) |
-| `02ac9a3:results_modal/cross_seed_aggregate.json`, `.md` | `results/<M>/analysis/` | moved; superseded |
-| `02ac9a3:results_modal/irr/` (sheets, answer key, README) | `results/<M>/validation/` | moved |
-| `02ac9a3:results_modal/irr/kappa_results.json` | `results/<M>/validation/kappa_results.json` | moved |
-| `02ac9a3:data/irr_instructions/` | `results/<M>/validation/instructions/` | moved |
-| `02ac9a3:data/derived/seed_7_filter_scores.json` | `results/<M>/seed_7/filter/filter_scores.json` | moved |
+| `df10aa8:results_modal/seed_7/base_no_wrapper.json` (each seed; and `base_bodhi`, `lora_no_wrapper`, `lora_bodhi`) | `results/<M>/<S>/eval/base.json` (and `base+bodhi`, `lora`, `lora+bodhi`) | moved; ignored since 2026-10-11 (O2) |
+| `df10aa8:results_modal/seed_7/epistemic_scores.json` (each seed) | `results/<M>/<S>/grade/epistemic__llama-3.1-8b.json` | moved; ignored since 2026-10-11 (O2) |
+| `df10aa8:results_modal/cross_seed_aggregate.json`, `.md` | `results/<M>/analysis/` | moved; superseded |
+| `df10aa8:results_modal/irr/` (sheets, answer key, README) | `results/<M>/validation/` | moved |
+| `df10aa8:results_modal/irr/kappa_results.json` | `results/<M>/validation/kappa_results.json` | moved |
+| `df10aa8:data/irr_instructions/` | `results/<M>/validation/instructions/` | moved |
+| `df10aa8:data/derived/seed_7_filter_scores.json` | `results/<M>/seed_7/filter/filter_scores.json` | moved |
 | data/sft_qwen_graded/seed_7_train.jsonl (ignored) | `results/<M>/seed_7/filter/train.jsonl` | moved |
-| `02ac9a3:data/derived/seed_42_qwen_grader_scores.json` | `results/<pilot>/analysis/qwen_grader_scores.json` | moved |
+| `df10aa8:data/derived/seed_42_qwen_grader_scores.json` | `results/<pilot>/analysis/qwen_grader_scores.json` | moved |
 | results/seed_42/eval/*.json (ignored) | `results/<pilot>/seed_42/eval/` | moved |
 | results/_rescue/raw_traces.jsonl and results/_rescue/sft/ (ignored) | `results/<pilot>/shared/traces/traces.jsonl`, `results/<pilot>/seed_42/filter/` | moved |
 | checkpoints/seed_42/ (ignored) | `results/<pilot>/seed_42/train/` | moved |
 | results/seed_42/figures/ and three pilot analysis outputs (ignored) | archive | archived |
-| `02ac9a3:results_rebuttal/medqa__google_medgemma-27b-text-it/eval_ids.json` (each folder) | `results/<C>/shared/inputs/eval_ids.json` | moved |
-| `02ac9a3:data/raw/hard_200_sample_ids.json` | `results/<C>/shared/inputs/eval_ids.json` of the three 2026-07 HealthBench cells, the Gemma-2-9B run and the pilot | moved (one to five) |
-| `02ac9a3:results_rebuttal/healthbench__BioMistral_BioMistral-7B/seed_42/ckpt/best/` (each seed: `adapter_config.json`, `trainer_state.json`) | `results/<C>/<S>/train/` | moved |
-| `02ac9a3:results_rebuttal/healthbench__BioMistral_BioMistral-7B/seed_42/ckpt/` (the trainer state of each epoch checkpoint) | `results/<C>/<S>/train/checkpoint-<k>/trainer_state.json` | moved |
+| `df10aa8:results_rebuttal/medqa__google_medgemma-27b-text-it/eval_ids.json` (each folder) | `results/<C>/shared/inputs/eval_ids.json` | moved |
+| `df10aa8:data/raw/hard_200_sample_ids.json` | `results/<C>/shared/inputs/eval_ids.json` of the three 2026-07 HealthBench cells, the Gemma-2-9B run and the pilot | moved (one to five) |
+| `df10aa8:results_rebuttal/healthbench__BioMistral_BioMistral-7B/seed_42/ckpt/best/` (each seed: `adapter_config.json`, `trainer_state.json`) | `results/<C>/<S>/train/` | moved |
+| `df10aa8:results_rebuttal/healthbench__BioMistral_BioMistral-7B/seed_42/ckpt/` (the trainer state of each epoch checkpoint) | `results/<C>/<S>/train/checkpoint-<k>/trainer_state.json` | moved |
 | the host copy's seed_N/eval/ condition files and epistemic_scores.json (ignored) | `results/<C>/<S>/eval/<condition>.json`, `results/<C>/<S>/grade/epistemic__llama-3.1-8b-nous.json` | moved |
 | the host copy's multi_seed_summary.json (ignored, wrong seed glob) | archive | archived |
 | the host logs, logs/host/ (ignored) | `results/<C>/logs/`; tau and counts into `results/<C>/shared/filter/manifest.json`; four logs that span cells to the archive | moved and extracted |
-| `02ac9a3:rebuttal/results/mimicry_split.json`, `interference_mechanism.json`, `second_person_questions.json` | `results/<M>/analysis/withdrawn/` | moved; withdrawn (W23 to W25) |
-| `02ac9a3:rebuttal/results/quality_drop.json`, `cell_recipe.json` | `results/cross_cell/` | moved; superseded |
-| `02ac9a3:data/rebuttal_cells/generated_values.json` | `results/cross_cell/generated_values.json` | moved; superseded |
-| `02ac9a3:data/rebuttal_cells/posted_values.json` | `rebuttal/posted_values.json` | moved |
-| `02ac9a3:data/rebuttal_cells/README.md` | `rebuttal/README.md` | merged |
+| `df10aa8:rebuttal/results/mimicry_split.json`, `interference_mechanism.json`, `second_person_questions.json` | `results/<M>/analysis/withdrawn/` | moved; withdrawn (W23 to W25) |
+| `df10aa8:rebuttal/results/quality_drop.json`, `cell_recipe.json` | `results/cross_cell/` | moved; superseded |
+| `df10aa8:data/rebuttal_cells/generated_values.json` | `results/cross_cell/generated_values.json` | moved; superseded |
+| `df10aa8:data/rebuttal_cells/posted_values.json` | `rebuttal/posted_values.json` | moved |
+| `df10aa8:data/rebuttal_cells/README.md` | `rebuttal/README.md` | merged |
 | smoke outputs in checkpoints/, data/sft/ and eval/smoke/ (ignored) | archive | archived |
-| `02ac9a3:configs/families.yaml` | `configs/models/*.yaml` | replaced; git history keeps it (no provenance entry) |
-| the old configs/lora_*.yaml files, `02ac9a3:rebuttal/configs/` | `train` blocks of `configs/cells/*.yaml` | replaced; git history keeps them (no provenance entry) |
+| `df10aa8:configs/families.yaml` | `configs/models/*.yaml` | replaced; git history keeps it (no provenance entry) |
+| the old configs/lora_*.yaml files, `df10aa8:rebuttal/configs/` | `train` blocks of `configs/cells/*.yaml` | replaced; git history keeps them (no provenance entry) |
 
 The ignored copy in `../_remote_sync/results_rebuttal` stays where it is; each of its
 files has the sha256 of a file that moved (results/PROVENANCE.md).
@@ -902,7 +902,7 @@ its stored precision: the files marked superseded in 10.2 and the macros in
 raise.
 
 Done on 2026-10-10. `tests/test_analysis_equivalence.py` recomputes the 2026-05 cell from
-its tracked tables and matches the last statistics of `503b975:scripts/paper_stats.py`
+its tracked tables and matches the last statistics of `b533908:scripts/paper_stats.py`
 (frozen in `tests/fixtures/legacy/paper_stats_numbers.json`: conditions, contrasts, worst
 case, disclaimers, length quartiles, axes, themes, counts, the context-seeking anchor,
 shift correlations, reply size, tau calibration) and the cell's `mimicry_split.json` and
@@ -910,8 +910,8 @@ shift correlations, reply size, tau calibration) and the cell's `mimicry_split.j
 cross-cell files: the per-seed means of `generated_values.json`, the aggregate tests of
 `quality_drop.json`, and the filter counts and recipe of `cell_recipe.json`. Two old
 values differ by definition, and the test says why: the median of an even count, and a
-group count the old script took over the base condition only. Then `503b975:scripts/paper_stats.py`,
-`503b975:rebuttal/analyses/cell_values.py` and `503b975:rebuttal/analyses/quality_drop.py` were removed.
+group count the old script took over the base condition only. Then `b533908:scripts/paper_stats.py`,
+`b533908:rebuttal/analyses/cell_values.py` and `b533908:rebuttal/analyses/quality_drop.py` were removed.
 Their outputs stay as the record. Every number the paper printed stayed the same, except
 the second-grader check of Appendix H, which had compared two score formulas
 (KNOWN_ISSUES.md), and two score differences printed with one more decimal.
@@ -983,9 +983,9 @@ undone (D25). O3 is deferred, and O6 and O9 are open.
 - **O1. Package name.** Proposed: it stays `bodhi_lora`, because `bodhi` is taken by the
   `bodhi-llm` dependency (section 1). A rename goes only with the repository slug (D15).
   Nothing was changed.
-- **O2. Raw outputs in git.** Proposed and applied on 2026-10-11 (b23be49): one rule for
+- **O2. Raw outputs in git.** Proposed and applied on 2026-10-11 (d224bf8): one rule for
   every cell. The submitted cell's raw eval and grade JSON (about 80 MB) stopped being
-  tracked and stays in history at 31e4fd8; every cell has a tracked response table
+  tracked and stays in history at 843c90e; every cell has a tracked response table
   (section 6). The three figures that read the raw files read the tables instead, with
   byte-identical PDFs. The other option keeps those files tracked, which means one
   cell's raw files are in the tree and the others' are not.
@@ -1003,7 +1003,7 @@ undone (D25). O3 is deferred, and O6 and O9 are open.
   every new experiment on it needs a rerun. On one H100 that means QLoRA (4-bit), which
   is not the bf16 TPU recipe of the 2026-05 cell. The rerun is the new cell
   `healthbench__medgemma-27b-text__bodhi`, and the 2026-05 cell stays the record.
-- **O8. Probe and bench outputs in git.** Proposed and applied on 2026-10-11 (4ae74c6): git
+- **O8. Probe and bench outputs in git.** Proposed and applied on 2026-10-11 (d6a3177): git
   tracks `bench.json` (times and token counts) and the probe's `probe.json` (counts, rates
   and the Fisher test). The probed benchmark text and the continuations go to
   `samples.jsonl` next to it, which git ignores like every JSONL under `results/`; the

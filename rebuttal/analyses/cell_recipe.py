@@ -13,7 +13,7 @@ in two places in each cell folder <C> of the results root:
                                           launcher that made the posted cells cut again at
                                           the 22nd percentile when train.jsonl of a
                                           non-HealthBench cell held under 40% of the raw
-                                          traces (1262448:rebuttal/launch/run_cell.sh:160-200).
+                                          traces (579421f:rebuttal/launch/run_cell.sh:160-200).
                                           The launcher overwrites the filter log on each
                                           pass, so the log is the cell's last pass.
   <C>/seed_<N>/train/{adapter_config,trainer_state}.json
@@ -64,7 +64,7 @@ REFILTER = re.compile(r"re-filtering at")
 HEADER = re.compile(r"^=== cell: (\S+) x (\S+)", re.M)
 N_SEEDS = 5
 # The launcher re-filters a non-HealthBench cell when train.jsonl holds fewer than this
-# percent of the raw traces, in shell integer arithmetic (1262448:rebuttal/launch/run_cell.sh:162-164).
+# percent of the raw traces, in shell integer arithmetic (579421f:rebuttal/launch/run_cell.sh:162-164).
 REFILTER_RULE_PCT = 40
 
 
@@ -112,7 +112,7 @@ def refilter_rule_met(bench: str, f: dict | None) -> bool | None:
 
 
 def _tag(model: str) -> str:
-    # The launcher's TAG: tr '/:.' '___' (1262448:rebuttal/launch/run_cell.sh:39).
+    # The launcher's TAG: tr '/:.' '___' (579421f:rebuttal/launch/run_cell.sh:39).
     return model.translate(str.maketrans("/:.", "___"))
 
 

@@ -14,7 +14,7 @@ traces:
   serving: {max_model_len: 8192, max_num_seqs: 64, concurrency: 32, request_timeout_s: 180}
 eval:
   conditions: [base, base+bodhi, lora, lora+bodhi]
-  # 02ac9a3:data/raw/hard_200_sample_ids.json, one fixed set for every seed, now in the cell's
+  # df10aa8:data/raw/hard_200_sample_ids.json, one fixed set for every seed, now in the cell's
   # shared/inputs folder.
   ids: {policy: fixed_file, n: 200, file: eval_ids.json}
   base_precision: model

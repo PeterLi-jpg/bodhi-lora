@@ -46,8 +46,8 @@ rendered page, so it drops MathJax math and table layout.
   paragraph (C7) now cites the draft.
 - **FzpA_1, LxMF_1 and HomM_1.** Until 2026-10-11 these files held edits made after
   posting (one sentence of FzpA_1, two paragraphs of HomM_1, and plain-text math in place
-  of MathJax). The posted text is in git history: `4731560:rebuttal/responses/reviewer_FzpA.md`,
-  `006ee3c:rebuttal/responses/reviewer_LxMF.md` and `79e98f3:rebuttal/responses/reviewer_HomM.md`,
+  of MathJax). The posted text is in git history: `0e8e090:rebuttal/responses/reviewer_FzpA.md`,
+  `e1a4359:rebuttal/responses/reviewer_LxMF.md` and `a710cb4:rebuttal/responses/reviewer_HomM.md`,
   committed within minutes of each post. The files here are those versions with each
   paragraph on one line, so every line citation still points at the same paragraph.
   HomM_1 also drops one closing sentence that the thread does not have; the thread marks
@@ -124,7 +124,7 @@ Two files, with different jobs:
   cross-cell statistics check every posted value against it (`posted_check` in
   `../results/cross_cell/stats.json`). `../results/cross_cell/generated_values.json` is the
   record of the first check, made on 2026-10-08 by the removed
-  `503b975:rebuttal/analyses/cell_values.py`; it
+  `b533908:rebuttal/analyses/cell_values.py`; it
   lists each posted value that differs from the raw outputs (`mismatches`).
 - `posted_values.json` is the record of what was posted. It lists every number the authors
   posted on OpenReview about the rebuttal cells, plus the posted analyses of the submitted
@@ -210,12 +210,12 @@ each cell's `shared/inputs/eval_ids.json` and every `adapter_config.json` and
 responses (about 370 MB), so it is ignored by git and stays in the local copy and on the
 host. The host logs are in each cell's `logs/` folder (ignored).
 
-The 2026-07 launcher (`61dada9:rebuttal/launch/run_cell.sh`) named a cell folder
+The 2026-07 launcher (`20f1ca1:rebuttal/launch/run_cell.sh`) named a cell folder
 `<bench>__<tag>`, with `<tag>` the HF repo with `/`, `:` and `.` replaced by `_`. Its eval
 files `base_no_wrapper`, `base_bodhi`, `lora_no_wrapper` and `lora_bodhi` are now
 `eval/base.json`, `eval/base+bodhi.json`, `eval/lora.json` and `eval/lora+bodhi.json`; its
 `epistemic_scores.json` is `grade/epistemic__llama-3.1-8b-nous.json`. The host's
-`multi_seed_summary.json` copies were written before commit 55f6c7c, list their seeds as
+`multi_seed_summary.json` copies were written before commit 2c13550, list their seeds as
 `["eval"]` (a wrong glob) and hold one seed only; they went to the archive, and
 The analysis recomputes everything from the per-seed files. The teacher traces and
 filter outputs (the host's sft/ folders) stayed on the host.
@@ -227,7 +227,7 @@ failed on 2026-07-27: the vLLM server did not start), and
 `medqa-open-preamble__biomistral-7b__bodhi__2026-07` is a smoke run (one seed, 40 traces,
 3 kept, 3 optimizer steps, 10 eval prompts). Its train split held 2 of its 40 traces,
 which meets the launcher's re-filter condition, but it ran on 2026-07-23, before the
-launcher had that rule (912782d, 2026-07-27). A fourth run left no folder: Gemma-2-9B on
+launcher had that rule (872a93d, 2026-07-27). A fourth run left no folder: Gemma-2-9B on
 HealthBench-Hard was stopped in trace generation on 2026-07-27 while its vLLM server was
 starting; its logs are in `results/healthbench__gemma-2-9b__bodhi__2026-07/logs/`.
 `results/cross_cell/cell_recipe.json` records the status of all four (the last under
@@ -245,7 +245,7 @@ and `make analyze` computes every metric from them. The cross-cell step then put
 posted value next to the generated seed mean (`posted_check` in
 `results/cross_cell/stats.json`; the names map through `posted` in
 `configs/report.yaml`) and lists each posted value that differs at the posted decimals.
-Until 2026-10-10 `503b975:rebuttal/analyses/cell_values.py` did this into `generated_values.json`, which
+Until 2026-10-10 `b533908:rebuttal/analyses/cell_values.py` did this into `generated_values.json`, which
 stays as the record.
 
 - The metrics are per-seed means over scored responses (epistemic metrics) or over all

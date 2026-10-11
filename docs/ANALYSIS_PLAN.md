@@ -20,7 +20,7 @@ existed at that time. A result that a late change touches is reported as explora
 **State at registration.** No planned cell has run: no folder of a planned cell exists
 under `results/`. No file in the repo joins the HealthBench physician labels (section
 2.4) to a model output: `rebuttal/analyses/mimicry_split.py` labels prompts by rubric
-keywords and the theme tag, and `1effff4:scripts/paper_stats.py` only counts the speaker tag. So
+keywords and the theme tag, and `57771d5:scripts/paper_stats.py` only counts the speaker tag. So
 the label analyses of H3, H7 and H11 are unseen on every cell, the existing ones too.
 
 ## 1. Questions
@@ -87,7 +87,7 @@ result that would change the paper.
 - **Ask.** A response asks when the evaluator marks `active_inquiry` true.
 - **Ask without a grader.** A response asks when it holds a second-person question, by
   the four steps in the docstring of `rebuttal/analyses/second_person_questions.py` at
-  commit bf771eb. The analysis lane may move that code; the definition stays.
+  commit 23b1f86. The analysis lane may move that code; the definition stays.
 - **Harm proxy.** The share of responses that meet at least one rubric criterion with
   negative points, and the points lost to such criteria. It is LLM-graded and is not the
   physician harm review (E28).
@@ -841,12 +841,12 @@ each proposed default of the entry above, the first author answered "Accept all
 - Choice 7 (O10): the new cells keep the frozen evaluator template, which names BODHI, so
   their grades compare with the recorded ones.
 - O1: the package keeps the name `bodhi_lora`.
-- O2: one tracked rule for every cell (applied in b23be49).
+- O2: one tracked rule for every cell (applied in d224bf8).
 - O7: the MedGemma-27B rerun (R7) is the new QLoRA cell
   `healthbench__medgemma-27b-text__bodhi` at the E13 settings; the 2026-05 cell stays the
   record.
 - O8: git tracks the probe's `probe.json` and ignores its `samples.jsonl` (applied in
-  4ae74c6).
+  d6a3177).
 
 Still open after this answer: whether R7 adds `lora+bodhi` and `lora+red-flags-first` at a
 4,096-token eval context (RUN_PLAN.md, "R7 and C31"), the merged-weights condition of the

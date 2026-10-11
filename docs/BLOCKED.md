@@ -131,10 +131,10 @@ there is no privacy purge (D18).
    `origin/results-scaffold`: it is the only branch that holds aa7eec4, the commit that
    dates the physician-check plan to 2026-04-29 (`paper/NUMBERS.md`, withdrawals W19). The
    prune script lists it as unmerged and does not delete it.
-3. **Remove the two tool trailers** (`cf72766` and its twin `72a428b`), and nothing else
+3. **Remove the two tool trailers** (`def7eee` and its twin `9a0dbd6`), and nothing else
    (D18). On 2026-10-11 you asked for this purge. It is not done: it rewrites the history
-   of `main` and of this branch (`cf72766` is in 20 refs, local and remote, the stash
-   among them; `72a428b` is in `origin/results-scaffold`, after aa7eec4, which keeps its
+   of `main` and of this branch (`def7eee` is in 20 refs, local and remote, the stash
+   among them; `9a0dbd6` is in `origin/results-scaffold`, after aa7eec4, which keeps its
    id), and it needs a force-push, so it waits for your yes on each. The four other
    `Co-authored-by` lines in history name a human collaborator and stay. Follow
    `scripts/maintenance/purge_history.md` with five changes: skip steps 2 and 3 (no name
@@ -155,9 +155,9 @@ there is no privacy purge (D18).
    `scripts/maintenance/purge_history.md` step 9 lists. Run `git worktree prune` for the
    stale `/private/tmp/bohdi-main` entry. The merged branches `cleanup/lane-*` can go with
    `git branch -d`. One stash is left, `stash@{0}`, "interrupted integrator WIP 2026-10-09
-   (paper table fitting)", on 52e080d: it changes `paper/main.tex` (462 lines),
+   (paper table fitting)", on 176475f: it changes `paper/main.tex` (462 lines),
    `paper/generated/numbers.tex`, `paper/generated/numbers.json` and the removed
-   `503b975:scripts/paper_stats.py`. Its paper text is older than the current tables.
+   `b533908:scripts/paper_stats.py`. Its paper text is older than the current tables.
    Drop it (`git stash drop`) or recover what you need from it before the purge, which
    rewrites it too.
 

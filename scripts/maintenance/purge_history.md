@@ -11,8 +11,8 @@ decision 8; docs/DECISIONS.md D16). Ask the raters about consent first (EVAL-6).
 | Rater-named files `results_modal/irr/Grading-<name>.xlsx` | `origin/main` and older commits | 3 paths |
 | Rater, adjudicator and handle text inside files and xlsx sheets | IRR scripts, IRR JSON, docs, paper drafts | 39 blobs in 21 paths |
 | Rater names in commit messages | 6 commits | 6 |
-| Full author block (names, affiliations, correspondence email) | `paper/main.tex` from `fcdcd9e` until `aa0c505`, on `origin/rebuttal/generality-experiments` | 1 block |
-| `Co-Authored-By` trailers for an AI tool | `cf72766` and its twin `72a428b` | 2 commits |
+| Full author block (names, affiliations, correspondence email) | `paper/main.tex` from `f3f41c1` until `df79362`, on `origin/rebuttal/generality-experiments` | 1 block |
+| `Co-Authored-By` trailers for an AI tool | `def7eee` and its twin `9a0dbd6` | 2 commits |
 
 It does not remove:
 
@@ -159,7 +159,7 @@ word (`flash`). Read any hit before you decide it is a name.
 ## Step 7b. Rewrite the commit ids that tracked files cite
 
 filter-repo rewrites the ids in commit messages, not in files. On 2026-10-11 the tracked
-files cited 67 commits, 49 of them at or after `cf72766` or `72a428b`, and 78 of the 83
+files cited 67 commits, 49 of them at or after `def7eee` or `9a0dbd6`, and 78 of the 83
 distinct `<commit>:<path>` references point at those 49. `scripts/check_doc_paths.py` checks each of them with
 `git cat-file`, and `make check`, CI and `hooks/pre-commit` run it, so without this step
 every later commit fails the hook. The run manifests under `results/` also cite the

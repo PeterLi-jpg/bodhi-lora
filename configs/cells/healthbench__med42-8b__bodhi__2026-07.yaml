@@ -1,4 +1,4 @@
-# A cell added in the 2026-07 discussion. It ran 61dada9:rebuttal/launch/run_cell.sh;
+# A cell added in the 2026-07 discussion. It ran 20f1ca1:rebuttal/launch/run_cell.sh;
 # legacy/README.md section 7 lists how its settings differ from the 2026-05 cell.
 id: healthbench__med42-8b__bodhi__2026-07
 benchmark: healthbench
@@ -46,7 +46,7 @@ train:
   hardware: 1x H100 80GB
 eval:
   conditions: [base, base+bodhi, lora, lora+bodhi]
-  # 02ac9a3:data/raw/hard_200_sample_ids.json, one fixed set for every seed, now in the cell's
+  # df10aa8:data/raw/hard_200_sample_ids.json, one fixed set for every seed, now in the cell's
   # shared/inputs folder.
   ids: {policy: fixed_file, n: 200, file: eval_ids.json}
   base_precision: model

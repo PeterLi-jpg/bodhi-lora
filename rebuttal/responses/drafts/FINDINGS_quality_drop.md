@@ -94,7 +94,7 @@ Resolve before camera-ready.
 
 Section 1 (paired t over seeds, Holm over the six cells) is now
 `rebuttal/analyses/quality_drop.py`. It read the host copy, then in the layout
-`61dada9:rebuttal/launch/run_cell.sh` writes; since the move it reads the cell folders of
+`20f1ca1:rebuttal/launch/run_cell.sh` writes; since the move it reads the cell folders of
 `results/` and writes `results/cross_cell/quality_drop.json`.
 On 2026-10-08 it ran against the cells synced from the host, and its six t values match
 the table above. Its Holm family also holds the MedQA cell, so its adjusted p values differ

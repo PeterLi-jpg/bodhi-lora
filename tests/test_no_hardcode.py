@@ -29,7 +29,7 @@ PAPER_SEEDS = [7, 13, 42, 99, 101]
 # sha256, so an edit to it, or any new grader text that names a protocol, fails here.
 FROZEN_GRADER_TEXT = {
     "aa6e2f507de69fd5cad113ebb1f94cd605f129e62f4b3ab727bc73c7e440d313":
-        "the evaluator template of the recorded cells (02ac9a3:scripts/eval_epistemic.py)",
+        "the evaluator template of the recorded cells (df10aa8:scripts/eval_epistemic.py)",
 }
 
 

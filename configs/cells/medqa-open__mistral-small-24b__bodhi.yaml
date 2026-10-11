@@ -1,4 +1,4 @@
-# E15, MedQA without the preamble: the template of 035d85f, with no cue to ask, on a
+# E15, MedQA without the preamble: the template of 01b638e, with no cue to ask, on a
 # seeded pool and holdout. The rubric's reference criterion is the keyed-answer check, so
 # its share met is the accuracy measure. A task where little information is missing.
 # Run: python -m bodhi_lora run medqa-open__mistral-small-24b__bodhi --gpus 0,1,2,3,4

@@ -1,4 +1,4 @@
-# A one-seed smoke run of the 2026-07 launcher at 61dada9 (its host logs are in the cell's logs folder).
+# A one-seed smoke run of the 2026-07 launcher at 20f1ca1 (its host logs are in the cell's logs folder).
 id: medqa-open-preamble__biomistral-7b__bodhi__2026-07
 benchmark: medqa-open-preamble
 split: head-10

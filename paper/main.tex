@@ -973,7 +973,7 @@ Table~\ref{tab:hparams-cells} gives the configuration of the added cells.
 
 % Table~\ref{tab:hparams} reports the recipe that produced the evaluated MedGemma-27B adapters
 % (run prod-v39-tunix-27b-neurips, seed_<N>/checkpoints/best on GCS; main:modal_eval.py:54).
-% Evidence is cited at git main (e0cca7c). The training config there is the one from
+% Evidence is cited at git main (025d468). The training config there is the one from
 % b89f47b (2026-05-03 11:12), its last change; the trainer differs from b89f47b only by a
 % checkpoint-flush wait (8684816):
 %   training path   main:tpu/launch_5seeds_tunix.sh:525-529 (scripts/train_lora_tunix.py)
@@ -1486,7 +1486,7 @@ the last filter run of its cell. The training count in each log gives the number
 steps in the saved trainer files.
 % Per-cell tau, counts and the re-filter check: rebuttal/analyses/cell_recipe.py on the host
 % logs (audit PROV-3); refilter_rule_met and grad_accumulation_consistent in
-% rebuttal/results/cell_recipe.json. Rule as run: 1262448:rebuttal/launch/run_cell.sh:160-200
+% rebuttal/results/cell_recipe.json. Rule as run: 579421f:rebuttal/launch/run_cell.sh:160-200
 % (train.jsonl lines against raw trace lines, lines 162-164).
 
 \begin{table}[!ht]

@@ -21,7 +21,7 @@ loader_params:
   reference_max_chars: 400
   reference_newlines: keep
 id_prefix: medqa
-# The template before 035d85f. It told the model to ask, so base active inquiry reached
+# The template before 01b638e. It told the model to ask, so base active inquiry reached
 # 99% and the cell measured instruction-following (withdrawals W12). Kept to describe
 # the 2026-07 cells; new cells use medqa-open.
 prompt_template: "You are advising a clinician colleague. Answer the following clinical question. Ask for any information you would need before committing, and state your reasoning.\n\n{question}"

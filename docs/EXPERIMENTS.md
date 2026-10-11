@@ -154,7 +154,7 @@ REPLY: line, so the H5 cell gets the same leak columns.
 **E05. What the aggregate drop is made of.** Answers HomM-final (consistent aggregate
 drops), withdrawals W7 and W8. Per cell: LoRA minus Base on each HealthBench rubric axis,
 the askers gap, and the cross-cell Holm family of the aggregate drops. Exists in part
-(`503b975:rebuttal/analyses/quality_drop.py`, the askers gap in `503b975:rebuttal/analyses/cell_values.py`). GPU: no.
+(`b533908:rebuttal/analyses/quality_drop.py`, the askers gap in `b533908:rebuttal/analyses/cell_values.py`). GPU: no.
 Status: built (axes with Holm over the axes of a cell, askers gap, and Holm over the
 cells of each group). In the paper since 2026-10-11: Table H.2 and section 4.1.
 
@@ -363,7 +363,7 @@ report:
 
 **E15. MedQA without the preamble.** Answers W12, C24 (follow-through), FzpA-Q3 (the
 clinician framing), C1 (tasks with no missing information). The only MedQA run used a
-preamble that told the model to ask; 035d85f removed it. Cell:
+preamble that told the model to ask; 01b638e removed it. Cell:
 `medqa-open__mistral-small-24b__bodhi`, plus the rubric's keyed-answer check as an
 accuracy measure. GPU: yes, about 10 H100-hours. Status: to run (the `medqa-open`
 record exists).

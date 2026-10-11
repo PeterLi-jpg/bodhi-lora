@@ -23,8 +23,8 @@ scripts here are the tools that are not pipeline steps. Each one has a caller:
 
 Git history keeps every removed script.
 
-- 2026-10-08: the shell launchers that no reported number came from (`02ac9a3:gpu/`, `02ac9a3:slurm/`,
-  `02ac9a3:run_all.sh`, `02ac9a3:smoke.sh`, `run_multi_seed.sh`, `launch_gpu.sh`, `run_ablation_seeds.sh`,
+- 2026-10-08: the shell launchers that no reported number came from (`df10aa8:gpu/`, `df10aa8:slurm/`,
+  `df10aa8:run_all.sh`, `df10aa8:smoke.sh`, `run_multi_seed.sh`, `launch_gpu.sh`, `run_ablation_seeds.sh`,
   `regrade_empty_seeds.sh`) and the manual tools `analyze_traces.py`, `chat.py`,
   `compare_eval_runs.py`, `eval_high_stakes.py`, `preflight.py`,
   `prepare_clinician_grading.py` and `regrade_with_secondary.py`. `draw_pipeline_figure.py`
@@ -38,11 +38,11 @@ Git history keeps every removed script.
   from them. The evaluator's hedging-quality grade is the measure.
 - 2026-10-11: the scripts that no make target, command or live script called, with the
   tests that alone kept them alive. `aggregate_seeds.py` and `eval_ushape.py` summarized
-  seeds for the 2026-07 launcher (`61dada9:scripts/aggregate_seeds.py`); the uniform
+  seeds for the 2026-07 launcher (`20f1ca1:scripts/aggregate_seeds.py`); the uniform
   analysis replaces them. `grader_correlation.py`, `plot_ushape.py` (`plot_postprocessing.py`
   draws the difficulty figure itself), `plot_training.py` (no figure uses it),
   `rubric_diff.py` and the shared-host GPU lease tool `gpu_lease.sh` had no caller.
 - 2026-10-11, later: `aggregate_cross_seed.py` and its test. Figure E.1 now reads the
   detail cell's `stats.json`, the numbers the tables print, so no target needs the
-  cross-seed summary (`4b05c30:scripts/aggregate_cross_seed.py` is the last version; its
+  cross-seed summary (`92b2e76:scripts/aggregate_cross_seed.py` is the last version; its
   output `analysis/cross_seed_aggregate.*` stays as a moved record, results/PROVENANCE.md).

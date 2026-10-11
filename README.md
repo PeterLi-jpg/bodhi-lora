@@ -122,7 +122,7 @@ its status and marks.
 | Set | Cells | How it ran | Outputs |
 |---|---|---|---|
 | 2026-05 (submitted) | MedGemma-27B on HealthBench-Hard | tunix LoRA on 8x TPU v6e; eval on one A100 (Modal). Launchers in `legacy/`; the adapters are not retained (D19) | `results/healthbench__medgemma-27b-text__bodhi__2026-05/` |
-| 2026-07 (added in the discussion) | Mistral-Small-24B, Med42-8B†, BioMistral-7B on HealthBench-Hard; Mistral-Small-24B and Med42-8B† on ChatDoctor; Mistral-Small-24B on MedQuAD; Mistral-Small-24B on MedQA (set aside) | the 2026-07 launcher (`61dada9:rebuttal/launch/run_cell.sh`) on H100 | the `results/*__2026-07/` cells (raw eval JSON gitignored) |
+| 2026-07 (added in the discussion) | Mistral-Small-24B, Med42-8B†, BioMistral-7B on HealthBench-Hard; Mistral-Small-24B and Med42-8B† on ChatDoctor; Mistral-Small-24B on MedQuAD; Mistral-Small-24B on MedQA (set aside) | the 2026-07 launcher (`20f1ca1:rebuttal/launch/run_cell.sh`) on H100 | the `results/*__2026-07/` cells (raw eval JSON gitignored) |
 | Planned | the cells of docs/EXPERIMENTS.md | `python -m bodhi_lora run` | none yet; docs/RUN_PLAN.md orders them |
 
 Records of past runs are frozen. The runner refuses to run them again, except to add
@@ -177,7 +177,7 @@ to its new one.
   folders. Git ignores traces, raw eval and grade JSON, adapter weights and logs. The
   rule depends on the kind of file and is the same for every cell (open decision O2,
   docs/ARCHITECTURE.md section 12). The 2026-05 cell's raw eval and grade JSON (25 files,
-  about 80 MB) were tracked until 2026-10-11 and stay in history at commit 31e4fd8.
+  about 80 MB) were tracked until 2026-10-11 and stay in history at commit 843c90e.
 - `results/healthbench__medgemma-27b-text__bodhi__2026-05/validation/`: the blank physician
   grading sheets and the instructions. The answer key and the returned sheets are not in
   the repo.

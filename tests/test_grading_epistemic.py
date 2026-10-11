@@ -5,7 +5,7 @@ import json
 
 from bodhi_lora.grading import epistemic as ep
 
-# The evaluator template of every recorded cell, 02ac9a3:scripts/eval_epistemic.py.
+# The evaluator template of every recorded cell, df10aa8:scripts/eval_epistemic.py.
 FROZEN_TEMPLATE_SHA256 = "aa6e2f507de69fd5cad113ebb1f94cd605f129e62f4b3ab727bc73c7e440d313"
 
 

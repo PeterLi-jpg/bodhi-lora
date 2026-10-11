@@ -1,8 +1,8 @@
 """Benchmark loaders (bodhi_lora/data/loaders.py): config-driven rows, pins and caches.
 
 The question-answer fixtures were made by the dataset-specific builders that built the
-2026-07 cells' files (scripts/build_benchmark_jsonl.py at 02ac9a3, and its MedQA
-template before 035d85f). The config-driven loader must give the same rows, byte for
+2026-07 cells' files (scripts/build_benchmark_jsonl.py at df10aa8, and its MedQA
+template before 01b638e). The config-driven loader must give the same rows, byte for
 byte, so the eval ids of those cells still name the same prompts.
 """
 import json

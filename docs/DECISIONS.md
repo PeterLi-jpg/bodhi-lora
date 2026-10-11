@@ -103,10 +103,10 @@ Why: a history rewrite and remote branch deletion change public state, which is 
   still expands the acronym the other way in its docstrings and cites the PLOS Digital Health
   paper.
 - D12, after the sync (2026-10-08). The added cells' raw outputs were copied from the GPU
-  host (commit 60c1a54). Their numbers now come from `results/cross_cell/generated_values.json`,
+  host (commit 3b19a4c). Their numbers now come from `results/cross_cell/generated_values.json`,
   which `make cells` computes from those outputs, with a paired t(4) interval for every cell.
   The "transcribed from posted values; raw outputs pending sync" footnote is gone from the
-  paper (38b800e). `rebuttal/posted_values.json` stays as the record of what was
+  paper (72a9565). `rebuttal/posted_values.json` stays as the record of what was
   posted; one posted value differs from the raw outputs (`rebuttal/withdrawals.md` W21). The
   MedQA cell is in Table 3 with its aggregate score and interval. Its only run is the
   preamble run, so it stays set aside with that reason, and its seven dimensions stay out of
@@ -140,7 +140,7 @@ name into a tracked file: raters stay AnonClinician1 to 4 (convention 10).
 
 **D18** The repository stays public. There is no privacy purge of history. A purge is
 optional, and if it runs it removes only the AI-tool traces (the two trailers of
-`cf72766` and `72a428b`).
+`def7eee` and `9a0dbd6`).
 
 Changes: the steps to make the repository private and to purge rater names and the author
 block (old BLOCKED.md items 1 and 10.2) are dropped. D16 still holds: nothing remote
@@ -213,7 +213,7 @@ bench) stay open.
 
 Changes: D22 said that O1 to O8 stay the first author's; O1 to O5, O7 and O8 are now
 closed. O2 removed the 2026-05 exception from `.gitignore`: that cell's raw eval and grade
-JSON left the tree and stay in history at 31e4fd8, and the three figures that read them
+JSON left the tree and stay in history at 843c90e, and the three figures that read them
 read the response tables instead (the PDFs are byte-identical). O8 split the probe output
 into `probe.json` (tracked) and `samples.jsonl` (ignored).
 
@@ -235,8 +235,8 @@ MedGemma-27B rerun is a new QLoRA cell; O8, git tracks the probe's `probe.json` 
 ignores its `samples.jsonl`. O3 stays deferred, because publishing an archive is a remote
 action (D16). The O2 and O8 changes are in the tree as the proposed defaults, and each can
 be undone. For O2, put back the two `.gitignore` lines for the 2026-05 cell's
-`seed_*/eval/*.json` and `seed_*/grade/*.json` that b23be49 removed, and add the 25 files
-again (history keeps them at 31e4fd8, and the files are still in this checkout). For O8,
+`seed_*/eval/*.json` and `seed_*/grade/*.json` that d224bf8 removed, and add the 25 files
+again (history keeps them at 843c90e, and the files are still in this checkout). For O8,
 add a `.gitignore` exception for the probe's `samples.jsonl`. Neither change touched a
 number of the paper. The ANALYSIS_PLAN.md section 12 entry of the same date records the
 same correction.

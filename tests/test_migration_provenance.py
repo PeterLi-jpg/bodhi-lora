@@ -17,10 +17,10 @@ import pytest
 ROOT = Path(__file__).resolve().parent.parent
 PROVENANCE = ROOT / "results" / "provenance.json"
 # The last commit before the move. Its tree holds every old tracked path.
-MIGRATION_BASE = "4e3edce"
+MIGRATION_BASE = "e93726a"
 # The commit that made the move. A file edited after it says when and why in its entry's
 # "edited" field, and is held to its bytes at this commit instead of in the checkout.
-MOVE_COMMIT = "408e42c"
+MOVE_COMMIT = "5975c91"
 OLD_TRACKED_ROOTS = ("results_modal", "results_rebuttal", "rebuttal/results", "data/derived",
                      "data/rebuttal_cells", "data/irr_instructions", "data/raw/hard_200_sample_ids.json",
                      "data/sft")

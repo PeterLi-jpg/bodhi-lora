@@ -22,7 +22,7 @@ DIMENSION_GRADE_TOKENS = 768
 # object with score and auxiliary fields per dimension. Keep the schema
 # stable: downstream aggregation extracts fields by name.
 #
-# Frozen: every recorded cell was graded with this text (02ac9a3:scripts/eval_epistemic.py,
+# Frozen: every recorded cell was graded with this text (df10aa8:scripts/eval_epistemic.py,
 # written in 7df83b4), and tests/test_grading_epistemic.py pins its sha256. It names the
 # protocol under test twice ("BODHI-style prompting", "BODHI v0.1.3"), and it graded every
 # condition with those words, the base and the baselines too. docs/KNOWN_ISSUES.md and the

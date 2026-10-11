@@ -10,7 +10,7 @@
   "written_by": {
     "script": "scripts/migrate_results.py --manifests",
     "git": {
-      "sha": "4e3edce5962174602e3689dfc9bad7cc461ac636",
+      "sha": "e93726ab17db8561424e4b171f4d4c2b2d1c20dc",
       "dirty": true,
       "diff_sha256": "ba74f7540e2a5b2f67ca432c9647e843ba5fbd366b0018940b7804c89d68dcc3",
       "n_untracked": 0

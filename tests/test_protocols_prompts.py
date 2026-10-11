@@ -49,7 +49,7 @@ def test_unknown_placement_is_refused():
 
 
 # sha256 of the two baseline instructions as scripts/baselines/prompts.py held them at
-# 02ac9a3; the protocol records must keep the text byte for byte.
+# df10aa8; the protocol records must keep the text byte for byte.
 BASELINE_SHA256 = {
     "clarify": "3671672511dc433afaf9514fc743b9d11a706c5667a1d2dc61b191218b955ec5",
     "verbalized-confidence": "9ffa2664c1c913456244464812ea2dff14c31df0731389df0fc3f95f7f317f43",

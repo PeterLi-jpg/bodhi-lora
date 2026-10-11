@@ -1,5 +1,5 @@
 {
- "_note": "The sections of paper/generated/numbers.json that scripts/paper_stats.py wrote at 503b975, before the report moved into bodhi_lora/report/ (2026-10-10). tests/test_analysis_equivalence.py checks that the uniform analysis reproduces them.",
+ "_note": "The sections of paper/generated/numbers.json that scripts/paper_stats.py wrote at b533908, before the report moved into bodhi_lora/report/ (2026-10-10). tests/test_analysis_equivalence.py checks that the uniform analysis reproduces them.",
  "axis_scores": {
   "accuracy": {
    "base_bodhi": 0.124457,

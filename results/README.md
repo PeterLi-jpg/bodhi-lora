@@ -11,7 +11,7 @@ Status words used below:
   raw eval and grade files into its tracked response table
   (`results/<cell_id>/seed_<n>/table.csv`), and `make analyze` computes every statistic
   from the tables. The raw files of every cell are gitignored and kept in the local copy
-  (open decision O2): about 80 MB for the 2026-05 cell, which history keeps at 31e4fd8,
+  (open decision O2): about 80 MB for the 2026-05 cell, which history keeps at 843c90e,
   and about 370 MB for the 2026-07 cells.
 - **posted**: the numbers exist only as posted rebuttal text, transcribed into
   `rebuttal/posted_values.json`. Since the sync of 2026-10-08 no cell is in this
@@ -58,7 +58,7 @@ All cells are in the main evaluation of the paper (D12), including these two:
   of the cell used a preamble that told the model to ask for missing information, which
   cued the behavior under test. The preamble in `bodhi_lora/data/loaders.py` is
   now neutral. The synced MedQA outputs are that earlier run: they predate the fix
-  (035d85f), and Base asks in nearly every response. No run without the preamble exists.
+  (01b638e), and Base asks in nearly every response. No run without the preamble exists.
   Seed 42's epistemic grading found none of the MedQA prompts, so the seven dimensions
   have four seeds. The paper's Table 1 gives the cell's dimensions from those four seeds
   and its aggregate score from all five, set aside (withdrawals W12).

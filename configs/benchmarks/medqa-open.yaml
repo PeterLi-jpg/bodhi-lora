@@ -22,7 +22,7 @@ loader_params:
 # Same prefix as medqa-open-preamble: the ids hash the question only, so the two
 # templates give the same prompt ids.
 id_prefix: medqa
-# The template from 035d85f on: the clinician framing and the question, no cue to ask.
+# The template from 01b638e on: the clinician framing and the question, no cue to ask.
 prompt_template: "You are advising a clinician colleague. Answer the following clinical question.\n\n{question}"
 reference_criterion: "The assistant's final clinical conclusion is consistent with the correct answer: \"{reference}\"."
 tags: ["theme:medqa", "persona:clinician"]

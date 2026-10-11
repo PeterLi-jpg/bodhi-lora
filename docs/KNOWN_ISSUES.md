@@ -69,7 +69,7 @@ D-numbers refer to [DECISIONS.md](DECISIONS.md). Issue numbers such as #5 are Gi
   with (docs/RUN_PLAN.md R2, docs/ANALYSIS_PLAN.md H4).
 - **The MedQA cell has only the preamble run.** Its one run used the old prompt that told
   the model to ask (Base asks in nearly every response), so it measures instruction
-  following. The fixed prompt (035d85f) was never run. The paper reports the cell's
+  following. The fixed prompt (01b638e) was never run. The paper reports the cell's
   aggregate score, sets it aside and says why (withdrawals W12).
 - **MedQA seed 42 has no epistemic grades.** Its grading looked the prompts up in
   HealthBench-Hard only and skipped all 200 per condition
@@ -127,9 +127,9 @@ D-numbers refer to [DECISIONS.md](DECISIONS.md). Issue numbers such as #5 are Gi
   `requirements-infer.txt` gives the range and why; each eval JSON records only its
   transformers and bodhi-llm versions) and an overlap-check output (the gate came after
   these runs). The eval ids are synced: each non-HealthBench cell has its `eval_ids.json`,
-  and the HealthBench cells used `02ac9a3:data/raw/hard_200_sample_ids.json`. New runs record all
+  and the HealthBench cells used `df10aa8:data/raw/hard_200_sample_ids.json`. New runs record all
   of this in their manifests (`bodhi_lora/manifest.py`).
-- **The host's `multi_seed_summary.json` files are wrong.** They predate 55f6c7c and list
+- **The host's `multi_seed_summary.json` files are wrong.** They predate 2c13550 and list
   their seeds as `["eval"]`, so each holds one seed. They are gitignored and unused;
   `make cells` recomputes from the per-seed files.
 
@@ -193,14 +193,14 @@ D-numbers refer to [DECISIONS.md](DECISIONS.md). Issue numbers such as #5 are Gi
 - **The paper said a second copy of the adapters may exist (2026-10-09).** The Code
   availability paragraph and checklist items 4, 5, 11 and 13 said "we have not yet checked
   a second copy", and two comments in `paper/main.tex` pointed at the Modal volume. Since
-  ab58ee5 and faf8579 the paper says that the adapters were not retained (D19).
+  7ce22cc and 48814bf the paper says that the adapters were not retained (D19).
 - **The hooks were not active in this clone (2026-10-11).** `core.hooksPath` pointed
   at the repository's old location, so `hooks/commit-msg` and `hooks/pre-push` did not
   run, and commit messages were checked by hand. It now points at `hooks/`, and a commit
   message that names a coding assistant is rejected. `hooks/pre-commit` was added the
   same day (BLOCKED.md item 5).
 - **The report step named the cells it reported (2026-10-10).** Table 1, the per-cell
-  tables and most main-body numbers came from `503b975:scripts/paper_stats.py`, which knew four
+  tables and most main-body numbers came from `b533908:scripts/paper_stats.py`, which knew four
   condition names, the submitted cell and a token map of the posted cells, so a new cell
   reached only the appendix checks table. `python -m bodhi_lora report` (`make numbers`)
   now writes every macro and table from the cells' `stats.json`, and
@@ -236,7 +236,7 @@ D-numbers refer to [DECISIONS.md](DECISIONS.md). Issue numbers such as #5 are Gi
   and the per-cell macros in sections 4.3 and 4.4. Table 1 and the per-cell detail tables
   still come from `make cells`; `make numbers` stops if the two sources disagree on a
   per-seed mean.
-- **Added-cell raw outputs synced (PROV-1, PROV-2, PROV-3; 60c1a54, 5d5890e).** The
+- **Added-cell raw outputs synced (PROV-1, PROV-2, PROV-3; 3b19a4c, b20f3f9).** The
   outputs were copied read-only from the GPU host on 2026-10-08. `make cells` computes
   every added-cell value, the paired tests of the aggregate drop and the per-cell tau,
   trace counts and adapter recipe from them, and the paper takes every added-cell value
@@ -255,16 +255,16 @@ D-numbers refer to [DECISIONS.md](DECISIONS.md). Issue numbers such as #5 are Gi
   only; the Docker and TPU modes were removed on 2026-10-08.
 - **#3** The filter grader (Qwen2.5-14B) and the evaluator (Llama-3.1-8B) come from
   different families. Med42-8B breaks this rule for its own cells (see above).
-- **Dependency pins (REPRO-10, b2452bc).** `requirements-infer.txt` pins
+- **Dependency pins (REPRO-10, fc496d7).** `requirements-infer.txt` pins
   `vllm==0.9.2` and `torch==2.7.0` and bounds transformers below 4.54, and each model
-  record in `configs/models/` pins a Hugging Face revision (e6e1f2d; the records replaced
-  `02ac9a3:configs/families.yaml`). Every run manifest records the package versions it
+  record in `configs/models/` pins a Hugging Face revision (481f998; the records replaced
+  `df10aa8:configs/families.yaml`). Every run manifest records the package versions it
   ran with.
-- **Benchmark data pinning (REPRO-11, 92aed30).** Each benchmark record pins its source:
+- **Benchmark data pinning (REPRO-11, 28c5873).** Each benchmark record pins its source:
   a dataset commit, or a sha256 per downloaded file. `bodhi_lora/data/loaders.py` builds
   the rows from it, and `bodhi_lora/data/splits.py` draws the pool and the holdout with a
   seed. The head-of-file rule of the posted cells is the `head` split of their records.
-- **Leakage gate (EVAL-12, 838e0a9).** The runner runs `bodhi_lora/data/leakage.py` on
+- **Leakage gate (EVAL-12, 11cd835).** The runner runs `bodhi_lora/data/leakage.py` on
   the graded traces of every cell before training and writes its report,
   `leakage.json`, into the cell's shared inputs folder (`bodhi_lora/paths.py`).
 - **One record per cell.** `configs/cells/` lists every cell of the final grid, with the
@@ -279,6 +279,6 @@ The submitted MedGemma-27B cell trained on TPU. Stage 3 first used custom MaxTex
 code, which never ran end to end on a TPU. It was replaced by tunix and qwix, which
 produced the submitted adapters. The rebuttal moved to one GPU pipeline
 (`bodhi_lora/pipeline/train.py`) and deleted the TPU code from this branch. The TPU tree is
-still in history, for example `c4b8e6f:tpu/launch_5seeds_tunix.sh` (the tip of
+still in history, for example `8403e3b:tpu/launch_5seeds_tunix.sh` (the tip of
 `origin/main` on 2026-10-07). The launchers that produced the submitted cell are kept in
 `legacy/`. Issues that only concerned the MaxText or TPU path are closed as obsolete.

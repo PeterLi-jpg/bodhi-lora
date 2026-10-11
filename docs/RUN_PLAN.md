@@ -40,7 +40,7 @@ section 5.
 7. The first author chooses where it runs: the shared H100 host or a paid cloud. Not
    Modal (DECISIONS.md, 2026-10-08). On the shared host, claim the cards with the group's
    lease file first; the runner does not. The repo's copy of the lease tool went on
-   2026-10-11, and `854761f:scripts/gpu_lease.sh` has it.
+   2026-10-11, and `7e02348:scripts/gpu_lease.sh` has it.
 
 ## 2. How a cell runs
 

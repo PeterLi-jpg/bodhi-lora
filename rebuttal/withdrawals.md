@@ -16,10 +16,10 @@ correction that exists only in a reply does not count.
 ## Where the locations point
 
 - **Submitted:** `paper/submitted/neurips2026/main.tex`. This is the frozen source of record,
-  checked against the official PDF (commit 416113b on `cleanup/resubmission`). The earlier
+  checked against the official PDF (commit 05b774a on `cleanup/resubmission`). The earlier
   `paper/neurips_submission/main.tex` is a later working copy and is archived.
 - **Posted:** `rebuttal/responses/posted/<file>.md:<line>`.
-- **Live paper:** `paper/main.tex` at commit 61dada9. Later paper edits will move these lines.
+- **Live paper:** `paper/main.tex` at commit 20f1ca1. Later paper edits will move these lines.
 
 Each "must say" text is plain wording for the paper to adapt. Numbers in it come from
 the posted replies (see `rebuttal/posted_values.json`) or from files in this repo.
@@ -332,7 +332,7 @@ prompts repeat across seeds (audit CLAIM-10).
 **Correction posted.** None. Audit findings HYG-4, PROV-3, REPRO-3 and REPRO-12 contradict it.
 
 **The paper must say.** State what ran in each cell, not "unchanged":
-- The added cells used `61dada9:rebuttal/configs/`: r = 16, alpha = 32, effective batch 16 and
+- The added cells used `20f1ca1:rebuttal/configs/`: r = 16, alpha = 32, effective batch 16 and
   3 epochs. Mistral-Small-24B was trained with 4-bit QLoRA and served on a bf16 base.
 - The submitted MedGemma adapters very likely used r = 8 and alpha = 16 (tunix path). The GCS
   check in HYG-4 cannot run: the bucket returned 404 on 2026-10-08. The paper says the values come
@@ -342,9 +342,9 @@ prompts repeat across seeds (audit CLAIM-10).
   against a new draw per seed, grader weights from a mirror repo, and H100 against A100.
 - tau was 0.4 in every added cell, MedQuAD included. Each filter log prints `threshold=0.4`,
   and no host log has the 22nd-percentile re-filter line (`results/cross_cell/cell_recipe.json`,
-  commit 5d5890e; PROV-3). The earlier reading that MedQuAD used a percentile cut came from its
+  commit b20f3f9; PROV-3). The earlier reading that MedQuAD used a percentile cut came from its
   clearance, 78.4%, which a 22nd-percentile cut would also give. Done in Appendix J (Table J.1)
-  of `paper/main.tex`, commit 38b800e. The synced `adapter_config.json` files confirm r = 16,
+  of `paper/main.tex`, commit 72a9565. The synced `adapter_config.json` files confirm r = 16,
   alpha = 32, dropout 0.05 and seven target modules in all 35 adapters, and the trainer states
   confirm 3 epochs and an effective batch of 16 (Table F.2 now reads them).
 
@@ -366,13 +366,13 @@ main evaluation.
 
 **The paper must say.** One account. We ran MedQA-USMLE as open-ended questions. The first
 prompt set had a preamble that told the model to ask for missing information. Base active
-inquiry reached 99%, so that run measured instruction-following. Commit 035d85f removed the
+inquiry reached 99%, so that run measured instruction-following. Commit 01b638e removed the
 preamble. The cell in the main evaluation must name which run it reports. It must also say
 that MedQA is a single-best-answer exam task, scored against a keyed answer.
 
 **Checked against the raw outputs (2026-10-08).** The host holds one MedQA run, and it is the
 preamble run. Its traces were generated on 2026-07-27, and its eval files were written between
-2026-07-27 and 2026-07-28 01:23 (Pacific); 035d85f, on another machine, removed the preamble at
+2026-07-27 and 2026-07-28 01:23 (Pacific); 01b638e, on another machine, removed the preamble at
 01:04 that night. Base active inquiry is 99.0% to 100.0% in each of the four seeds with an
 epistemic grade (seed 42's grading found none of the MedQA prompts), as posted for the preamble
 run. Its aggregate score rises from 0.665 to 0.683
@@ -380,8 +380,8 @@ run. Its aggregate score rises from 0.665 to 0.683
 drafts (`rebuttal/README.md`, "Not in these files"). So the posted "aggregate score
 rises" (`HomM_2_followup_part1.md:11`) describes the preamble run, which measures instruction
 following. No run without the preamble exists. Done in section 4.2, the abstract, the Limitations
-and Appendix J of `paper/main.tex` (commit 38b800e), with every number from `make numbers`. Since
-ab58ee5 this is section 4.1, where the cell sits last in Table 1, set aside.
+and Appendix J of `paper/main.tex` (commit 72a9565), with every number from `make numbers`. Since
+7ce22cc this is section 4.1, where the cell sits last in Table 1, set aside.
 
 ---
 
@@ -515,8 +515,8 @@ added-cell adapters are a separate case: the sync of 2026-10-08 copied their con
 states, not their weights, which stay on the GPU host.
 
 **The paper must say.** No adapter is released, because the five MedGemma-27B adapters were not
-retained. Done in Code availability (`paper/main.tex`, ab58ee5) and in the checklist
-(`paper/checklist.tex`, faf8579).
+retained. Done in Code availability (`paper/main.tex`, 7ce22cc) and in the checklist
+(`paper/checklist.tex`, 48814bf).
 
 ---
 
@@ -550,7 +550,7 @@ other way, 1.71 to 1.33, and belonged next to them."
 **The paper must say.** Give specificity next to the other two: Base 1.71, teacher 1.47, LoRA 1.33,
 so the adapter lowers specificity on MedQuAD. Done in Appendix J of `paper/main.tex`, with every
 dimension of every cell in the generated tables of Appendix E (`paper/generated/tab_cell_detail_1.tex`
-and `tab_cell_detail_2.tex`; before ab58ee5, `tab_cell_dimensions.tex`).
+and `tab_cell_detail_2.tex`; before 7ce22cc, `tab_cell_dimensions.tex`).
 
 ---
 
@@ -562,7 +562,7 @@ Base hedging quality 1.46 ± 0.01. Two earlier posts (`LxMF_1_rebuttal.md:76`,
 
 **Correction posted.** None.
 
-**What the raw outputs give.** `503b975:rebuttal/analyses/cell_values.py`, then run by `make cells`, computes 1.4548
+**What the raw outputs give.** `b533908:rebuttal/analyses/cell_values.py`, then run by `make cells`, computes 1.4548
 from the per-seed eval files, which rounds to 1.45. It is the only posted value of the added cells
 that differs from the raw outputs at the posted precision
 (`results/cross_cell/generated_values.json`, `mismatches`). So 1.45 was right and Table 1's 1.46
@@ -588,7 +588,7 @@ counts the protocol's tokens, and no script or output gives 58%
 
 **The paper must say.** The engine's counts for Base and LoRA, that the two-pass conditions cannot
 be counted, and that the posted 58% is withdrawn. Done in section 4.2 and Appendix H of
-`paper/main.tex` (ab58ee5), with the posted value from `rebuttal/posted_values.json`. Since
+`paper/main.tex` (7ce22cc), with the posted value from `rebuttal/posted_values.json`. Since
 2026-10-10, section 4.4 and Table H.6 give the engine's counts for Base and LoRA in every
 cell.
 
@@ -705,14 +705,14 @@ paper must decide on each one.
 - **What the physician check covers.** `FzpA_1_rebuttal.md:40` reports kappa = 0.35 right after
   the dimension anchors, as if the physician check graded the seven dimensions. It grades
   HealthBench rubric criteria (`scripts/make_irr_excel.py`, `scripts/compute_irr_kappa.py`).
-  The paper now says that no physician graded the seven dimensions (a59cb82).
+  The paper now says that no physician graded the seven dimensions (547ccea).
 - **The antidepressant example.** `FzpA_2_followup.md:19` says the adapter asks about "current
   medications and conditions". The answer in `results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_99/eval/lora.json`
-  (prompt `2c915b71`) does not. The paper lists only the questions it asks (5c2e9b0).
+  (prompt `2c915b71`) does not. The paper lists only the questions it asks (01d0db5).
 - **The hedging scale.** `FzpA_2_followup.md:25` says the grader's scale is "0 for a bare
   referral". The grader prompt gives the two ends but ties no score to them, and the grader
-  scored most flagged blanket disclaimers 2 on hedging. The paper says so (a59cb82).
+  scored most flagged blanket disclaimers 2 on hedging. The paper says so (547ccea).
 - **Context-seeking needs a question for a 2.** The paper's earlier text, and the grader
   prompt, say a 2 needs a direct question. The grader gave 2 with no direct question to most
   Base answers it scored 2 (`\statContextSeekingTwoNoQuestionPctBase`). The paper reports
-  the rate (a59cb82).
+  the rate (547ccea).
