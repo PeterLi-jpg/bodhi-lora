@@ -156,9 +156,11 @@ def test_the_committed_paper_numbers_are_what_the_report_writes(setup, tmp_path)
 def test_every_macro_names_its_source_and_no_absolute_path(setup, tmp_path):
     reg, cfg, proj, rep = setup
     write(rep, tmp_path)
+    # A home folder in any output (the repo is public, and the files must be the same on
+    # every machine). The pattern is split so this file does not name one either.
+    home = re.compile(r"/(Users|home)" + r"/[A-Za-z]")
     for path in tmp_path.iterdir():
-        text = path.read_text()
-        assert "/Users/" not in text and "/home/" not in text, path.name
+        assert not home.search(path.read_text()), path.name
     for line in (tmp_path / "numbers.tex").read_text().splitlines():
         if line.startswith("\\newcommand"):
             assert re.search(r"\} % \S", line), line
