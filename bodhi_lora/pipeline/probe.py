@@ -24,8 +24,8 @@ control.
 
 Output, in shared/probe/: probe.json, the rates, counts and test, which git tracks; and
 samples.jsonl, one line per probed text with its prefix, its true continuation and the
-model's, which git ignores like every JSONL under results/, because it copies benchmark
-text (open decision O8). The stage only adds that folder, so it also runs on a recorded
+model's, which git ignores like every JSONL under the results root, because it copies
+benchmark text (open decision O8). The stage only adds that folder, so it also runs on a recorded
 cell.
 """
 from __future__ import annotations
