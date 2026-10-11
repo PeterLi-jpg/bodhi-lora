@@ -283,7 +283,7 @@ def report(idx, eval_pids, meta, labelname, out):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--cell-dir", default=str(CELL))
-    ap.add_argument("--out", default=str(CELL / "analysis" / "mimicry_split.json"))
+    ap.add_argument("--out", default=str(CELL / "analysis" / "withdrawn" / "mimicry_split.json"))
     # data/raw/*.jsonl is gitignored; pass the path when the file lives elsewhere.
     ap.add_argument("--healthbench", default=str(HARD))
     args = ap.parse_args()

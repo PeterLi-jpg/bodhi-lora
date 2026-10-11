@@ -418,7 +418,7 @@ cells, the evaluator is from the same family as the base model (audit EVAL-7).
 **Correction.** Not corrected in the discussion. The keyword rule behind 14 was never
 committed, and no script in the repo gives 14. The committed rule, `CLINICIAN_RE` in
 `rebuttal/analyses/mimicry_split.py`, finds 4 of the 667 evaluated prompts
-(`results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/mimicry_split.json`). HealthBench's own physician-agreed tag
+(`results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/withdrawn/mimicry_split.json`). HealthBench's own physician-agreed tag
 (`physician_agreed_category:health-professional`) marks 40 of the 1,000 Hard prompts as
 written by a health professional. Only 63 prompts, all in the communication theme, carry
 the tag, so 40 is a lower bound.
@@ -448,7 +448,7 @@ record. The tag count stays.
 **Correction.** Not corrected in the discussion. The posted numbers compare each condition's
 discrimination index with zero. The test of a change is LoRA minus Base: +8.4 points
 [-1.2, +17.9] with the rubric-based labeling and +10.0 [-0.5, +20.1] with the theme-only one
-(`results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/mimicry_split.json`). Both intervals include zero. The adapter also asks more
+(`results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/withdrawn/mimicry_split.json`). Both intervals include zero. The adapter also asks more
 on self-contained prompts (15.9% to 37.5%, and 17.0% to 43.2%).
 
 **The paper must say.** We do not show that the adapter learned when to ask, and template

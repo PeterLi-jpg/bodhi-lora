@@ -176,8 +176,8 @@ models only by short name.
 Checks run on the file: every number appears on at least one of its cited source lines;
 every count and range posted across cells recomputes from the cell values; the submitted
 cell matches its `analysis/cross_seed_aggregate.json` (8 values); the discrimination index
-and the leakage numbers match its `analysis/mimicry_split.json` and
-`analysis/interference_mechanism.json` (41 values, 0 mismatches); the Base and LoRA
+and the leakage numbers match its `analysis/withdrawn/mimicry_split.json` and
+`analysis/withdrawn/interference_mechanism.json` (41 values, 0 mismatches); the Base and LoRA
 aggregate means in the paper's cross-cell table match the 4-decimal table in
 `responses/drafts/FINDINGS_quality_drop.md`. These checks show that the transcription matches the
 posts and that the posts agree with each other. Only the raw outputs can show that the

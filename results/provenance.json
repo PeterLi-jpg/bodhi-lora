@@ -2922,7 +2922,7 @@
  {
   "old": "rebuttal/results/interference_mechanism.json",
   "new": [
-   "results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/interference_mechanism.json"
+   "results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/withdrawn/interference_mechanism.json"
   ],
   "kind": "moved",
   "note": "analysis output of the 2026-05 cell; make analyze supersedes it (ARCHITECTURE 10.3)",
@@ -2934,7 +2934,7 @@
  {
   "old": "rebuttal/results/mimicry_split.json",
   "new": [
-   "results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/mimicry_split.json"
+   "results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/withdrawn/mimicry_split.json"
   ],
   "kind": "moved",
   "note": "analysis output of the 2026-05 cell; make analyze supersedes it (ARCHITECTURE 10.3)",
@@ -2958,7 +2958,7 @@
  {
   "old": "rebuttal/results/second_person_questions.json",
   "new": [
-   "results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/second_person_questions.json"
+   "results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/withdrawn/second_person_questions.json"
   ],
   "kind": "moved",
   "note": "analysis output of the 2026-05 cell; make analyze supersedes it (ARCHITECTURE 10.3)",

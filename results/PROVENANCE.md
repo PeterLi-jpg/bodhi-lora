@@ -58,8 +58,9 @@ in `seed_<n>/train/checkpoint-<k>/`.
 ## What the analysis replaces
 
 These moved files are analysis outputs, kept byte for byte: `analysis/cross_seed_aggregate.*`,
-`analysis/mimicry_split.json`, `analysis/interference_mechanism.json` and
-`analysis/second_person_questions.json` of the 2026-05 cell, the pilot's
+`analysis/withdrawn/mimicry_split.json`, `analysis/withdrawn/interference_mechanism.json` and
+`analysis/withdrawn/second_person_questions.json` of the 2026-05 cell (in `withdrawn/` since
+2026-10-11, because no paper number may come from them), the pilot's
 `analysis/qwen_grader_scores.json`, the 2026-05 cell's `seed_7/filter/filter_scores.json`,
 and `cross_cell/{quality_drop,cell_recipe,generated_values}.json`. Since 2026-10-10 the
 paper's numbers come from `make analyze` and `make numbers` (`python -m bodhi_lora

@@ -9,8 +9,8 @@
 #   make extract   each analyzed cell's seed_*/table.csv from its raw outputs, then make analyze
 #   make analyze   results/<cell>/analysis/stats.json for every cell with tables, and the
 #                  cross-cell statistics once every cell they need has its stats
-#   make rebuttal  the submitted cell's analysis/*.json of the three discussion scripts: the
-#                  record of how posted values were made, withdrawn; the paper reads none
+#   make rebuttal  the submitted cell's analysis/withdrawn/*.json of the three discussion
+#                  scripts: the record of how posted values were made; the paper reads none
 #   make cells     results/cross_cell/cell_recipe.json from the host logs: the record of the
 #                  2026-07 filter counts (needs the ignored host logs)
 #   make kappa     $(MAIN_CELL)/validation/kappa_results.json (needs RATER_FILES and ANSWER_KEY)
@@ -77,7 +77,8 @@ analyze:
 
 # The three scripts are kept as the record of how the posted values were made. Each
 # decides meaning by keywords somewhere (docs/CONVENTIONS.md rule 15), so the paper reads
-# none of their outputs (rebuttal/withdrawals.md W23 to W25; tests/test_paper_inputs.py).
+# none of their outputs (rebuttal/withdrawals.md W23 to W25; tests/test_report.py). They
+# write into the cell's analysis/withdrawn/.
 rebuttal: $(HB_HARD)
 	@echo "make rebuttal remakes a record of withdrawn keyword measures (rebuttal/withdrawals.md W23 to W25); the paper reads none of these files."
 	$(PYTHON) rebuttal/analyses/mimicry_split.py --healthbench "$(HB_HARD)"

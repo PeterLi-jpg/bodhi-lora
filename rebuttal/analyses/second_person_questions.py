@@ -109,7 +109,7 @@ def summarize(flags, seeds=SEEDS):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--results-dir", default=str(CELL))
-    ap.add_argument("--out", default=str(CELL / "analysis" / "second_person_questions.json"))
+    ap.add_argument("--out", default=str(CELL / "analysis" / "withdrawn" / "second_person_questions.json"))
     args = ap.parse_args()
 
     res = summarize(load_flags(args.results_dir))

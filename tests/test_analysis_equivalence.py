@@ -119,7 +119,8 @@ def test_numbers_of_the_paper(stats):
 
 
 def _analysis(name):
-    return json.loads((REPO_ROOT / "results" / CELL / "analysis" / name).read_text())
+    """A withdrawn keyword-measure output of the cell, kept as a record (W23 to W25)."""
+    return json.loads((REPO_ROOT / "results" / CELL / "analysis" / "withdrawn" / name).read_text())
 
 
 def test_rebuttal_analyses_of_the_cell(stats):

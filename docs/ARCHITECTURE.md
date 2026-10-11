@@ -833,7 +833,7 @@ replaces it once it reproduces its values (10.3).
 | the host copy's seed_N/eval/ condition files and epistemic_scores.json (ignored) | `results/<C>/<S>/eval/<condition>.json`, `results/<C>/<S>/grade/epistemic__llama-3.1-8b-nous.json` | moved |
 | the host copy's multi_seed_summary.json (ignored, wrong seed glob) | archive | archived |
 | the host logs, logs/host/ (ignored) | `results/<C>/logs/`; tau and counts into `results/<C>/shared/filter/manifest.json`; four logs that span cells to the archive | moved and extracted |
-| `02ac9a3:rebuttal/results/mimicry_split.json`, `interference_mechanism.json`, `second_person_questions.json` | `results/<M>/analysis/` | moved; superseded |
+| `02ac9a3:rebuttal/results/mimicry_split.json`, `interference_mechanism.json`, `second_person_questions.json` | `results/<M>/analysis/withdrawn/` | moved; withdrawn (W23 to W25) |
 | `02ac9a3:rebuttal/results/quality_drop.json`, `cell_recipe.json` | `results/cross_cell/` | moved; superseded |
 | `02ac9a3:data/rebuttal_cells/generated_values.json` | `results/cross_cell/generated_values.json` | moved; superseded |
 | `02ac9a3:data/rebuttal_cells/posted_values.json` | `rebuttal/posted_values.json` | moved |

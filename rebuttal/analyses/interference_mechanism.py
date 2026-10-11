@@ -122,7 +122,7 @@ def mean(xs):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--cell-dir", default=str(CELL))
-    ap.add_argument("--out", default=str(CELL / "analysis" / "interference_mechanism.json"))
+    ap.add_argument("--out", default=str(CELL / "analysis" / "withdrawn" / "interference_mechanism.json"))
     args = ap.parse_args()
 
     data = {c: load(c, args.cell_dir) for c in CONFIG_ORDER}
