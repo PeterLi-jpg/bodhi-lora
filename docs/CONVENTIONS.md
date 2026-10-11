@@ -144,7 +144,8 @@ tracked files.
 - Why: anonymity by editing files in a public, author-named repo left names in history
   and in many files (HYG-1, EVAL-6, HYG-13).
 - Enforced by: `scripts/export_anonymous.sh` builds a squashed copy, redacts identities
-  and fails if any remain; pass rater and co-author names with `--deny-file`. Raters are
+  and this repository's commit ids (a hash search finds the public repo), and fails if
+  any remain; pass rater and co-author names with `--deny-file`. Raters are
   AnonClinician1-4 in every tracked file. `.gitignore` keeps `IRR-clinicians/`,
   `paper/AUTHORS.md` and `CONTRIBUTORS.md` out of git. Review step: before sharing a
   review link, run the export and keep its gate output.

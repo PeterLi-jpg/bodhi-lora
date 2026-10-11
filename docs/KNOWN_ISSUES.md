@@ -182,6 +182,14 @@ D-numbers refer to [DECISIONS.md](DECISIONS.md). Issue numbers such as #5 are Gi
 
 ## Fixed
 
+- **The anonymous export kept the commit ids (2026-10-11).** The exported docs, tests and
+  run manifests cited about 70 commits of this public repository, and GitHub finds a
+  public commit by its hash, so the reviewer copy pointed at the authors. The paper
+  already left hashes out for this reason (withdrawals W19). `scripts/export_anonymous.sh`
+  now replaces every commit id of the repository with `<commit>` in the copy's text files
+  (not in the response tables, whose 8-digit prompt ids could match by chance), and its
+  gate fails on any that remain. On 2026-10-11 it replaced them on 534 lines of 287 files,
+  and the gate passed.
 - **The paper said a second copy of the adapters may exist (2026-10-09).** The Code
   availability paragraph and checklist items 4, 5, 11 and 13 said "we have not yet checked
   a second copy", and two comments in `paper/main.tex` pointed at the Modal volume. Since
