@@ -50,8 +50,10 @@ def test_aggregate_handles_empty_and_populated():
     ]
     agg = cp.aggregate(samples, n_rows=9, n_tokenized=4)
     assert agg["n"] == 2 and agg["n_rows_tokenized"] == 4
-    assert agg["exact_match_rate"] == 0.5
+    assert agg["exact_match_rate"] == 0.5 and agg["n_exact_match"] == 1
     assert agg["mean_prefix_overlap_tokens"] == 7.0
+    # The summary is tracked in git, so it carries no per-item text (open decision O8).
+    assert "samples" not in agg
 
 
 def test_strip_template_removes_only_the_fixed_words_around_the_fields():

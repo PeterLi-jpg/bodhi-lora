@@ -5,7 +5,9 @@ stage with the stub engine, so every stage's code and every manifest is exercise
 """
 import json
 import re
+import subprocess
 from dataclasses import replace
+from pathlib import Path
 
 import pytest
 
@@ -71,6 +73,29 @@ def test_per_seed_filter_splits_differ_by_seed(smoke_run):
     a = (smoke_run / "seed_1" / "filter" / "val.jsonl").read_text()
     b = (smoke_run / "seed_2" / "filter" / "val.jsonl").read_text()
     assert a and b and a != b
+
+
+def test_probe_text_stays_out_of_git(reg, smoke_run):
+    """Open decision O8: probe.json holds the rates and the test, and git tracks it; the
+    probed text and the continuations go to samples.jsonl, which git ignores under
+    results/. The bench output (times and token counts) is tracked."""
+    cell = reg.cells[SMOKE]
+    folder = smoke_run / "shared" / "probe"
+    probe = json.loads((folder / "probe.json").read_text())
+    assert all("samples" not in probe[name] for name in ("benchmark", "control"))
+    lines = [json.loads(line) for line in (folder / probe["samples_file"]).read_text().splitlines()]
+    assert len(lines) == 2 * cell.probe.n_prompts
+    assert {"set", "leak_prefix", "ground_truth_continuation", "model_output"} <= set(lines[0])
+    for name in ("benchmark", "control"):
+        assert sum(x["exact_match"] for x in lines if x["set"] == name) == probe[name]["n_exact_match"]
+    outputs = _manifest(folder / "manifest.json")["outputs"]
+    assert sorted(Path(o["path"]).name for o in outputs) == ["probe.json", "samples.jsonl"]
+    # The same files under the results root: the text is ignored, the summaries are tracked.
+    root = Path(__file__).resolve().parent.parent
+    for rel, ignored in (("shared/probe/samples.jsonl", True), ("shared/probe/probe.json", False),
+                         ("shared/probe/manifest.json", False), ("seed_1/bench/bench.json", False)):
+        r = subprocess.run(["git", "check-ignore", "-q", "--no-index", f"results/{SMOKE}/{rel}"], cwd=root)
+        assert (r.returncode == 0) == ignored, rel
 
 
 def test_a_rerun_resumes_and_refuses_changed_inputs(reg, smoke_run, capsys):

@@ -167,7 +167,7 @@ Each stage writes into `results/<cell id>/` (docs/ARCHITECTURE.md section 6), wi
 | Stage | Module | Output |
 |---|---|---|
 | Prepare | `bodhi_lora/pipeline/runner.py` | `shared/inputs/`: pools, eval ids per seed, leakage report |
-| Probe | `bodhi_lora/pipeline/probe.py` | `shared/probe/`: one JSON file with the exact-match rates of the continuations on benchmark and control text, and the Fisher test |
+| Probe | `bodhi_lora/pipeline/probe.py` | `shared/probe/`: `probe.json` (tracked) with the exact-match counts and rates of the continuations on benchmark and control text, and the Fisher test; `samples.jsonl` (ignored) with each probed text and both continuations |
 | Traces | `bodhi_lora/pipeline/traces.py` | `results/<cell>/shared/traces/traces.jsonl`: prompt_id, messages, reply, protocol, calls, tokens |
 | Filter | `bodhi_lora/pipeline/filter.py` | `results/<cell>/shared/filter/graded.jsonl` (a `grade` per trace), `kept.jsonl`, and the train/val split (shared or per seed) |
 | Train | `bodhi_lora/pipeline/train.py` | `seed_<n>/train/`: adapter, `trainer_state.json`, `checkpoint-<k>/` |

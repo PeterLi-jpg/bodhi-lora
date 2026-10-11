@@ -22,8 +22,11 @@ Fisher exact test (scipy.stats.fisher_exact). A set with fewer long-enough rows 
 n_prompts stops the stage: the cell record then needs a smaller n_prompts or another
 control.
 
-Output: shared/probe/probe.json. The stage only adds that folder, so it also runs on a
-recorded cell.
+Output, in shared/probe/: probe.json, the rates, counts and test, which git tracks; and
+samples.jsonl, one line per probed text with its prefix, its true continuation and the
+model's, which git ignores like every JSONL under results/, because it copies benchmark
+text (open decision O8). The stage only adds that folder, so it also runs on a recorded
+cell.
 """
 from __future__ import annotations
 
@@ -129,15 +132,17 @@ def probe_one(pid, ids: list, engine, prefix_tokens: int, continuation_tokens: i
 
 
 def aggregate(samples: list, n_rows: int, n_tokenized: int) -> dict:
+    """The summary of one probed set. It holds no text, so git can track it."""
     n = len(samples)
+    hits = sum(s["exact_match"] for s in samples)
     return {
         "n": n,
         "n_rows_in_set": n_rows,
         # Rows read in the seeded order until n were long enough; the rest were too short.
         "n_rows_tokenized": n_tokenized,
-        "exact_match_rate": sum(s["exact_match"] for s in samples) / n if n else None,
+        "n_exact_match": hits,
+        "exact_match_rate": hits / n if n else None,
         "mean_prefix_overlap_tokens": float(np.mean([s["prefix_overlap_tokens"] for s in samples])) if n else None,
-        "samples": samples,
     }
 
 
@@ -165,14 +170,15 @@ def run(ctx: StageContext) -> dict:
     # The stub's tokenizer is its own; the reply repeats nothing, so stub rates are 0.
     engine = make_engine(ctx.model, serving=probe.serving, stub=ctx.stub, stub_reply="stub continuation",
                          log_path=ctx.log_path("vllm_probe.log"))
-    results = {}
+    results, samples = {}, {}
     with engine as eng:
         for name, items in sets.items():
             drawn, tokenized = draw_long_enough(items, eng, need, probe.n_prompts, probe.seed, name)
-            results[name] = aggregate(probe_set(drawn, eng, probe), len(items), tokenized)
+            samples[name] = probe_set(drawn, eng, probe)
+            results[name] = aggregate(samples[name], len(items), tokenized)
             print(f"  {name}: {results[name]['n']} probed, exact-match rate "
                   f"{results[name]['exact_match_rate']}", flush=True)
-    hits = {k: sum(s["exact_match"] for s in v["samples"]) for k, v in results.items()}
+    hits = {k: v["n_exact_match"] for k, v in results.items()}
     _, p_value = fisher_exact([[hits["benchmark"], probe.n_prompts - hits["benchmark"]],
                                [hits["control"], probe.n_prompts - hits["control"]]],
                               alternative="two-sided")
@@ -180,13 +186,21 @@ def run(ctx: StageContext) -> dict:
            "model_revision": ctx.model.revision, "method": "raw continuation of token ids, greedy",
            "benchmark": results["benchmark"], "control": results["control"],
            "fisher_p_value": float(p_value), "test_used": "fisher_exact",
-           "settings": probe.model_dump(), "interpretation": INTERPRETATION}
+           "settings": probe.model_dump(), "interpretation": INTERPRETATION,
+           "samples_file": "samples.jsonl"}
     path = out_dir / "probe.json"
     path.write_text(json.dumps(out, indent=2))
+    # The per-item text stays out of git (.gitignore ignores results/**/*.jsonl); the
+    # manifest records its sha256, so the tracked summary names the file it came from.
+    samples_path = out_dir / out["samples_file"]
+    with samples_path.open("w") as f:
+        for name in ("benchmark", "control"):
+            for s in samples[name]:
+                f.write(json.dumps({"set": name, **s}) + "\n")
     counts = {"benchmark_hits": hits["benchmark"], "control_hits": hits["control"],
               "n_per_set": probe.n_prompts, "fisher_p_value": float(p_value)}
     ctx.write_manifest(out_dir, "probe", timer=timer, models={"base": ctx.model},
-                       engines={"base": engine.settings()}, outputs=[path], counts=counts,
+                       engines={"base": engine.settings()}, outputs=[path, samples_path], counts=counts,
                        config={"probe": probe.model_dump(), "control": control_bench.id},
                        extra={"status": "complete"})
     print(f"probe: {hits['benchmark']}/{probe.n_prompts} benchmark, {hits['control']}/{probe.n_prompts} "

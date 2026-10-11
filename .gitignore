@@ -19,7 +19,8 @@ optimizer*.pt
 # results/: one folder per cell (docs/ARCHITECTURE.md section 6). The rule depends on the
 # kind of file and is the same for every cell (open decision O2, settled on 2026-10-11).
 # Tracked: manifests, cell records, id lists, scores, response tables, adapter configs,
-# trainer states, analysis and validation files. Ignored: traces and the other JSONL,
+# trainer states, the probe and bench summaries, analysis and validation files. Ignored:
+# traces and the other JSONL (the probe's per-item text among them, open decision O8),
 # adapter weights and checkpoint state, raw eval and grade JSON, logs.
 results/**/*.jsonl
 results/**/logs/

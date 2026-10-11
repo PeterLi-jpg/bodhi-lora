@@ -559,7 +559,8 @@ results/
       traces/               teacher traces when every seed shares them (ignored)
       filter/               manifest.json, scores.json (tracked); graded.jsonl, kept.jsonl,
                             and train.jsonl and val.jsonl under split_policy once (ignored)
-      probe/                contamination probe
+      probe/                contamination probe: probe.json, the rates and the test (tracked);
+                            samples.jsonl, the probed text and continuations (ignored)
     seed_<n>/
       traces/  manifest.json   (points to shared/traces, or holds the seed's traces)
       filter/  manifest.json   train.jsonl val.jsonl under split_policy per_seed (ignored)
@@ -605,8 +606,11 @@ eval and grade JSON, logs. Until 2026-10-11 the submitted cell's raw eval and gr
 files at 31e4fd8. `make figures` reads the response tables for `ushape_difficulty`,
 `axis_breakdown` and `score_distribution` (the same values as the raw files, which a test
 checks where they are present), and the cell's `analysis/stats.json` for
-`epistemic_bar`, `epistemic_seeds` and `effect_size_forest`. The probe and bench outputs match no rule yet, so git tracks them (open
-decision O8).
+`epistemic_bar`, `epistemic_seeds` and `effect_size_forest`. The probe writes its rates,
+counts and Fisher test to `probe.json` (tracked) and each probed text with its true and
+generated continuation to `samples.jsonl` (ignored, as every JSONL is), so benchmark text
+stays out of git; the bench output `bench.json` (times and token counts) is tracked
+(O8).
 
 **The response table.** `results/<cell_id>/seed_<n>/table.csv` has one row per
 (condition, prompt id). `analyze --extract` writes it from the raw files, with
