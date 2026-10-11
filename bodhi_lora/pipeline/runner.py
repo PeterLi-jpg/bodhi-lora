@@ -46,7 +46,8 @@ from typing import Optional, Sequence
 import yaml
 
 from bodhi_lora import manifest as mf
-from bodhi_lora.data import check_leakage, eval_ids, eval_population, load_rows, read_id_list, row_text, split_rows
+from bodhi_lora.data import (DataError, check_leakage, eval_ids, eval_population, load_rows, read_id_list, row_text,
+                             split_rows)
 from bodhi_lora.data.leakage import NGRAM, LeakageError, check_adapter_leakage
 from bodhi_lora.data.loaders import source_hashes
 from bodhi_lora.paths import CONFIGS_DIR, REPO_ROOT, CellPaths, Project
@@ -54,11 +55,15 @@ from bodhi_lora.pipeline import filter as filter_stage
 from bodhi_lora.pipeline.context import POOLS_FILE, StageContext, eval_ids_file
 from bodhi_lora.registry import RECORD_STATUSES, Registry, family_problems
 
-STAGES = ("probe", "traces", "filter", "train", "eval", "grade", "bench")
+STAGES = ("probe", "traces", "filter", "train", "eval", "grade", "classify", "bench")
+# What a run without --stages runs. The judge classifier runs only when --stages names it
+# (docs/RUN_PLAN.md R17): its rates count only after its hand-label gate, and the run
+# plan's costs leave it out.
+DEFAULT_STAGES = tuple(s for s in STAGES if s != "classify")
 MODES = ("gpu", "stub", "dry_run")
-# Stages that only add files to a recorded cell's folder: judge re-grades and the
-# contamination probe.
-ADDITIVE_STAGES = ("probe", "grade")
+# Stages that only add files to a recorded cell's folder: judge re-grades, the judge
+# classifier and the contamination probe.
+ADDITIVE_STAGES = ("probe", "grade", "classify")
 
 
 class RunError(RuntimeError):
@@ -229,6 +234,8 @@ def plan(ctx: StageContext, stages: Sequence[str], seeds: Sequence[int],
         if "grade" in stages:
             steps.append(Step("grade", s, done=p.stage(s, "grade") / "epistemic.manifest.json"))
             steps += [judge_step(ctx, s, j) for j in judges]
+        if "classify" in stages:
+            steps += [classify_step(ctx, s, j) for j in judges]
         if "bench" in stages and cell.bench and s in cell.bench.seeds:
             steps.append(Step("bench", s, done=p.stage(s, "bench") / "manifest.json"))
     return shared, per_seed
@@ -238,17 +245,29 @@ def probe_step(ctx: StageContext) -> Step:
     return Step("probe", done=ctx.paths.shared("probe") / "manifest.json")
 
 
-def fetch_benchmarks(ctx: StageContext, stages: Sequence[str]) -> None:
+def fetch_benchmarks(ctx: StageContext, stages: Sequence[str], fetch: bool = True) -> None:
     """Build every benchmark the stages read in the data root, here and not in a GPU stage:
-    the cell's own, and the probe's control set."""
-    load_rows(ctx.bench, ctx.project.data_root, fetch=True)
-    if "probe" in stages and ctx.cell.probe:
-        load_rows(ctx.reg.benchmarks[ctx.cell.probe.control], ctx.project.data_root, fetch=True)
+    the cell's own, and the probe's control set. With fetch False (a dry run), only check
+    that they are already local."""
+    benches = [ctx.bench] + ([ctx.reg.benchmarks[ctx.cell.probe.control]]
+                             if "probe" in stages and ctx.cell.probe else [])
+    for bench in benches:
+        try:
+            load_rows(bench, ctx.project.data_root, fetch=fetch)
+        except DataError as e:
+            if fetch:
+                raise
+            raise RunError(f"dry run: {e}. A dry run never downloads; after the fetch it checks the rest") from e
 
 
 def judge_step(ctx: StageContext, seed: int, judge: str) -> Step:
     return Step("grade", seed, ["--judge", judge],
                 done=ctx.paths.stage(seed, "grade") / f"judge__{judge}.manifest.json")
+
+
+def classify_step(ctx: StageContext, seed: int, judge: str) -> Step:
+    return Step("classify", seed, ["--judge", judge],
+                done=ctx.paths.stage(seed, "classify") / f"classify__{judge}.manifest.json")
 
 
 def gpu_of(seeds: Sequence[int], gpus: Sequence[int]) -> dict[int, int]:
@@ -375,7 +394,7 @@ def _pointer(ctx: StageContext, seed: int, stage: str, target: Path, note: str =
 
 # -- the run ------------------------------------------------------------------------------
 
-def run_cell(reg: Registry, proj: Project, cell_id: str, *, stages: Sequence[str] = STAGES,
+def run_cell(reg: Registry, proj: Project, cell_id: str, *, stages: Sequence[str] = DEFAULT_STAGES,
              seeds: Optional[Sequence[int]] = None, gpus: Sequence[int] = (), mode: str = "gpu",
              configs_dir: Path = CONFIGS_DIR, results_root: Optional[Path] = None,
              force: bool = False, judges: Optional[Sequence[str]] = None) -> Path:
@@ -454,10 +473,13 @@ def run_cell(reg: Registry, proj: Project, cell_id: str, *, stages: Sequence[str
                                   "stage_manifests": index})
 
     shared, per_seed = plan(ctx, stages, seeds, judges)
-    if mode == "dry_run":
+    # A dry run prints its GPU commands first, then checks the rest on the CPU without
+    # downloading anything: a benchmark that is not local stops it with the fetch command.
+    fetch = mode != "dry_run"
+    if not fetch:
         runner.print_plan(shared, per_seed)
-    prepare(ctx, fetch=True)
-    fetch_benchmarks(ctx, stages)
+    fetch_benchmarks(ctx, stages, fetch)
+    prepare(ctx, fetch=fetch)
     write_cell_manifest("started")
     try:
         if cell.adapters_from and "eval" in stages:
@@ -505,11 +527,12 @@ def _add_to_recorded(runner: Runner, stored: CellPaths, stages: Sequence[str], s
         link_stored_outputs(stored, ctx.paths, ctx.cell, seeds)
     shared = [probe_step(ctx)] if "probe" in stages and ctx.cell.probe else []
     steps = [judge_step(ctx, s, j) for s in seeds for j in judges] if "grade" in stages else []
+    steps += [classify_step(ctx, s, j) for s in seeds for j in judges] if "classify" in stages else []
     if runner.mode == "dry_run":
         runner.print_plan(shared, {s: [st for st in steps if st.seed == s] for s in seeds})
     # After the plan, as in run_cell: a dry run prints its GPU commands even when a
-    # benchmark cannot be fetched here (offline, or a file not pinned yet).
-    fetch_benchmarks(ctx, stages)
+    # benchmark is not local, and never downloads one.
+    fetch_benchmarks(ctx, stages, fetch=runner.mode != "dry_run")
     for step in shared + steps:
         runner.run_step(step, runner.gpus[0])
     return ctx.paths.root

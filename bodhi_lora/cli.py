@@ -14,16 +14,19 @@
         write under the scratch root (configs/project.yaml), never the results root.
         --judges runs only these judges of grading.judges in the grade stage; --judges none
         runs the evaluator only.
-    analyze (<cell> ... | --all) [--extract]
+    analyze (<cell> ... | --all) [--extract] [--results-root DIR]
         The uniform analysis (bodhi_lora/analysis/). --extract first writes each seed's
         response table from the raw stage outputs (local, ignored by git); without it,
         analyze reads only the tracked tables. Each cell gets analysis/stats.json; with
         --all, the cells configs/report.yaml analyzes, then the cross-cell statistics
         when every cell they need has its stats.json.
-    report [--out-dir DIR]
+    report [--out-dir DIR] [--results-root DIR]
         Every number the paper prints (bodhi_lora/report/): the macros, tables and record
         of paper/generated/, from each cell's analysis/stats.json and the cross-cell
         statistics. make numbers runs it.
+    --results-root on run, analyze and report reads and writes cells under DIR instead of
+    the results root of configs/project.yaml, e.g. the scratch root of a stub run
+    (outputs/stub), so a stub cell can be analyzed and reported without editing a config.
 
 Every command first loads and checks the whole registry, so a broken config fails here
 with every problem listed.
@@ -32,6 +35,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from dataclasses import replace
 from pathlib import Path
 
 from bodhi_lora.paths import CONFIGS_DIR, project
@@ -127,9 +131,9 @@ def cmd_fetch(args, reg: Registry) -> int:
 
 
 def cmd_run(args, reg: Registry) -> int:
-    from bodhi_lora.pipeline.runner import STAGES, RunError, run_cell
+    from bodhi_lora.pipeline.runner import DEFAULT_STAGES, RunError, run_cell
 
-    stages = tuple(args.stages.split(",")) if args.stages else STAGES
+    stages = tuple(args.stages.split(",")) if args.stages else DEFAULT_STAGES
     gpus = [int(g) for g in args.gpus.split(",")] if args.gpus else []
     # "none" runs the grade stage with the evaluator only.
     judges = [] if args.judges == "none" else args.judges.split(",") if args.judges else None
@@ -144,6 +148,14 @@ def cmd_run(args, reg: Registry) -> int:
     return 0
 
 
+def _project(args):
+    """The project roots, with the results root the command line names, if any."""
+    proj = project(args.configs)
+    if getattr(args, "results_root", None) is not None:
+        proj = replace(proj, results_root=Path(args.results_root).resolve())
+    return proj
+
+
 def cmd_analyze(args, reg: Registry) -> int:
     from bodhi_lora import analysis
     from bodhi_lora.analysis.extract import ExtractError
@@ -151,7 +163,7 @@ def cmd_analyze(args, reg: Registry) -> int:
     if bool(args.cells) == args.all:
         raise SystemExit("name the cells to analyze, or pass --all")
     cfg = analysis.report_config(args.configs)
-    proj = project(args.configs)
+    proj = _project(args)
     cells = analysis.analyzable(reg, cfg) if args.all else args.cells
     unknown = sorted(set(cells) - set(reg.cells))
     if unknown:
@@ -183,7 +195,7 @@ def cmd_analyze(args, reg: Registry) -> int:
 def cmd_report(args, reg: Registry) -> int:
     from bodhi_lora import analysis, report
 
-    proj = project(args.configs)
+    proj = _project(args)
     try:
         rep = report.report(reg, analysis.report_config(args.configs), proj)
     except FileNotFoundError as e:
@@ -212,7 +224,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("run", help="run a cell")
     p.add_argument("cell")
-    p.add_argument("--stages", default=None, help="comma list; default every stage")
+    p.add_argument("--stages", default=None,
+                   help="comma list; default every stage but classify, which runs only when named")
     p.add_argument("--seeds", type=int, nargs="+", default=None, help="default every seed of the cell")
     p.add_argument("--gpus", default=None, help="comma list of GPU indices, e.g. 0,1")
     p.add_argument("--judges", default=None,
@@ -229,11 +242,15 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--all", action="store_true", help="every cell configs/report.yaml analyzes")
     p.add_argument("--extract", action="store_true",
                    help="first write the response tables from the raw stage outputs")
+    p.add_argument("--results-root", type=Path, default=None,
+                   help="read and write cells here instead of the project's results root")
     p.set_defaults(func=cmd_analyze)
 
     p = sub.add_parser("report", help="the paper's macros and tables from the analysis (make numbers)")
     p.add_argument("--out-dir", type=Path, default=Path(__file__).resolve().parent.parent / "paper" / "generated",
                    help="where to write numbers.tex, numbers.json and the tables")
+    p.add_argument("--results-root", type=Path, default=None,
+                   help="read the cells' analysis here instead of the project's results root")
     p.set_defaults(func=cmd_report)
     return ap
 

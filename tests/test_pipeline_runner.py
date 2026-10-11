@@ -169,7 +169,7 @@ def test_a_recorded_cell_dry_run_prints_its_plan_before_it_fetches(tmp_path, cap
     judge re-grade and the probe must be printed before that stops the run."""
     from bodhi_lora.pipeline import runner
 
-    def offline(ctx, stages):
+    def offline(ctx, stages, fetch=True):
         raise ConnectionError("offline")
 
     monkeypatch.setattr(runner, "fetch_benchmarks", offline)
@@ -239,3 +239,20 @@ def test_recorded_and_external_cells_are_refused(reg, tmp_path):
         run_cell(reg, missing, SMOKE, mode="gpu", gpus=[0], results_root=tmp_path)
     with pytest.raises(RunError, match="not seeds"):
         run_cell(reg, proj, SMOKE, mode="stub", seeds=[99], results_root=tmp_path)
+
+
+def test_a_dry_run_never_downloads_and_names_the_fetch_command(tmp_path, capsys, monkeypatch):
+    """A dry run writes only scratch files: a benchmark that is not local stops it after
+    the plan, with the fetch command, and no download starts (G14 of the 2026-10-11 audit)."""
+    import urllib.request
+
+    def no_download(*args, **kwargs):
+        raise AssertionError("a dry run tried to download")
+
+    monkeypatch.setattr(urllib.request, "urlopen", no_download)
+    configs = fixture_configs(tmp_path)          # its data root is empty
+    cell = "healthbench__mistral-small-24b__bodhi"
+    with pytest.raises(RunError, match="python -m bodhi_lora fetch healthbench"):
+        run_cell(load_registry(configs), project(configs), cell, mode="dry_run", seeds=[42],
+                 configs_dir=configs)
+    assert "DRY-RUN [gpu" in capsys.readouterr().out

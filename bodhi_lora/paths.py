@@ -25,7 +25,7 @@ from bodhi_lora.registry.schema import ProjectConfig
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CONFIGS_DIR = REPO_ROOT / "configs"
 
-STAGES = ("probe", "traces", "filter", "train", "eval", "grade", "bench")
+STAGES = ("probe", "traces", "filter", "train", "eval", "grade", "classify", "bench")
 
 
 @dataclass(frozen=True)

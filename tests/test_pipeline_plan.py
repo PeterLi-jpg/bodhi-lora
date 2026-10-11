@@ -43,6 +43,7 @@ def test_every_planned_cell_prints_one_gpu_command_per_step(cell_id):
     assert count("train") == (len(cell.seeds) if trains else 0)
     assert count("eval") == len(cell.seeds) * len(cell.eval.conditions)
     assert count("grade") == len(cell.seeds) * (1 + len(cell.grading.judges))
+    assert count("classify") == len(cell.seeds) * len(cell.grading.judges)
     assert count("bench") == (len(cell.bench.seeds) if cell.bench else 0)
     assert count("probe") == (1 if cell.probe else 0)
     assert count("traces") == (1 if trains else 0)
@@ -52,8 +53,11 @@ def test_every_planned_cell_prints_one_gpu_command_per_step(cell_id):
 def test_recorded_cells_plan_only_additive_stages(cell_id):
     cell = REG.cells[cell_id]
     _, per_seed, _ = _printed_plan(cell_id, ADDITIVE_STAGES)
-    judge_steps = [s for steps in per_seed.values() for s in steps if "--judge" in s.extra]
-    assert len(judge_steps) == len(cell.seeds) * len(cell.grading.judges)
+    steps = [s for steps in per_seed.values() for s in steps]
+    assert {s.stage for s in steps} <= set(ADDITIVE_STAGES)
+    for stage in ("grade", "classify"):
+        judge_steps = [s for s in steps if s.stage == stage and "--judge" in s.extra]
+        assert len(judge_steps) == len(cell.seeds) * len(cell.grading.judges), stage
 
 
 @pytest.mark.parametrize("cell_id", PLANNED)
