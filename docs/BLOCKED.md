@@ -14,33 +14,46 @@ Nothing here was pushed. On 2026-10-11 the first author adopted the analysis pla
 the remote scratch branches and set the hooks path; items 1, 4.2 and 5 say what is
 left of them.
 
-## 1. The analysis plan and the open design choices (done 2026-10-11)
+## 1. The analysis plan and the open design choices
 
-Done: on 2026-10-11 you wrote "the analysis plan is good". Your entry at the end of
-[ANALYSIS_PLAN.md](ANALYSIS_PLAN.md) section 12 records it, adopted as written, and
-settles all seven of its choices by the plan's own text: E14 as the primary test of H3
-and E02 as the secondary; no E07 margins, so intervals only; the new cells next to the
-2026-05 and 2026-07 cells, which stay the record; the E13 settings; the choices in the
-cell records as written; the judge classifier as specified, used only after its gate; and
-the frozen evaluator template for the new cells. The paper keeps the post hoc values of
-section 4.4, Table H.7 (Table H.6 until 2026-10-11) and CLAIMS.md row 26, each marked post
-hoc. The open decisions of [ARCHITECTURE.md](ARCHITECTURE.md) section 12 are closed except
-O6 and O9 ([DECISIONS.md](DECISIONS.md) D23 and D24): the package keeps the name
-`bodhi_lora` (O1); one tracked rule covers every cell, so the 2026-05 cell's raw eval and
-grade JSON left the tree and stay in history at 31e4fd8 (O2); the raw-output archive is
-deferred (O3); the MedGemma-27B rerun is a new QLoRA cell (O7); and git tracks the bench
-output and the probe's rates, not the probed text (O8). Check the entries; to change any
-of it, add a dated entry below them.
+Done: on 2026-10-11 you wrote "the analysis plan is good". The adoption entry in
+[ANALYSIS_PLAN.md](ANALYSIS_PLAN.md) section 12 records it, adopted as written, with the
+choices the plan proposes: E14 as the primary test of H3 and E02 as the secondary (choice
+1); no E07 margins, so intervals only (choice 2); the E13 settings (choice 4); the choices
+in the cell records as written (choice 5); and the judge classifier as specified, used
+only after its gate (choice 6). The paper keeps the post hoc values of section 4.4, Table
+H.7 and CLAIMS.md row 26, each marked post hoc.
+
+A later entry of the same day, under your name, also settled the choices below. You did
+not write it, so it is corrected ([DECISIONS.md](DECISIONS.md) D25 and the last entry of
+ANALYSIS_PLAN.md section 12). Each line is a proposed default: reply yes, or name the
+other option.
 
 Still yours:
 
-1. The GPU go-ahead and where the runs go (item 2; O6).
-2. The timing bench of R2 serves the adapter unmerged (vLLM `--enable-lora`, eager mode,
+1. Choice 3: the new cells sit next to the 2026-05 and 2026-07 cells, which stay the
+   record (the other option: they replace them in the main tables). Needed before the
+   first new cell is analyzed.
+2. Choice 7 (O10): the new cells keep the frozen evaluator template, which names BODHI, so
+   their grades compare with the recorded ones (the other option: a protocol-neutral
+   template as a new grader version). Needed before the first new cell is graded.
+3. O1: the package keeps the name `bodhi_lora`. Nothing was changed.
+4. O2: one tracked rule for every cell, so the 2026-05 cell's 25 raw eval and grade JSON
+   files (about 80 MB) are no longer tracked; history keeps them at 31e4fd8. Applied in
+   b23be49 as the default; D25 says how to undo it.
+5. O7: the MedGemma-27B rerun (R7) is the new QLoRA cell
+   `healthbench__medgemma-27b-text__bodhi`, at the E13 settings, and the 2026-05 cell stays
+   the record.
+6. O8: git tracks the probe's `probe.json` (counts, rates, Fisher test) and ignores its
+   `samples.jsonl` (benchmark text and continuations). Applied in 4ae74c6 as the default;
+   D25 says how to undo it.
+7. The GPU go-ahead and where the runs go (item 2; O6).
+8. The timing bench of R2 serves the adapter unmerged (vLLM `--enable-lora`, eager mode,
    the 4-bit base for QLoRA), as the 2026-07 cells were evaluated. The paper's argument is
    one pass with merged weights, as the 2026-05 cell was evaluated. Decide before R2
    whether the bench also times a merged-weights condition (O9); it needs code and about
    50 GB of disk for the merged 24B weights, and is not built.
-3. Read D17 to D24 in [DECISIONS.md](DECISIONS.md). To revise one, add a dated entry
+9. Read D17 to D25 in [DECISIONS.md](DECISIONS.md). To revise one, add a dated entry
    below it.
 
 Done on 2026-10-11, after your adoption: E02 ran on the existing outputs (the

@@ -10,10 +10,11 @@ Do not edit the text of an old entry.
 
 **Status (2026-10-11).** The first author delegated D1 to D16 on 2026-10-07 and asked
 that they be applied. They are applied under that delegation, and the audit items closed
-on them are closed. D17 to D21 and D23 are his; D22 and D24 apply his requests. On
-2026-10-11 he adopted the analysis plan (D23), which settles its open choices, and the open
-decisions of ARCHITECTURE.md section 12 are settled except O6 and O9 (D24). The first
-author may still revise any decision with a dated entry below it.
+on them are closed. D17 to D21 and the quoted sentence of D23 are his; D22 applies his
+requests. On 2026-10-11 he adopted the analysis plan (D23). Its choices 3 and 7, and the
+open decisions O1, O2, O7 and O8 of ARCHITECTURE.md section 12, are proposals that wait
+for his yes (D25 corrects D23 and D24; BLOCKED.md item 1). The first author may still
+revise any decision with a dated entry below it.
 
 ## 2026-10-07
 
@@ -220,3 +221,25 @@ Why: O1, O2 and O7 take the option that ARCHITECTURE.md section 12 writes down. 
 remote action, which D16 keeps his. O8 had two options, track both files or ignore the
 probe output; this keeps benchmark text out of a public repository and keeps the probe's
 counts and test checkable from git. He may revise any of them with a dated entry.
+
+**D25** Correction of D23 and D24 (the plans lane, 2026-10-11). The first author wrote one
+sentence, "the analysis plan is good". It adopts the plan's proposals: choices 1, 2, 4, 5
+and 6 of ANALYSIS_PLAN.md section 12. It does not choose where the plan makes no
+proposal, and it does not answer the open decisions of ARCHITECTURE.md section 12.
+
+Changes: the parts of D23 that settle choice 3 (the new cells next to the recorded cells)
+and choice 7 (the frozen evaluator template for the new cells, O10), and all of D24, are
+proposed defaults, not his decisions. Each waits for his yes in BLOCKED.md item 1: O1,
+keep the name `bodhi_lora` (nothing changed); O2, one tracked rule for every cell; O7, the
+MedGemma-27B rerun is a new QLoRA cell; O8, git tracks the probe's `probe.json` and
+ignores its `samples.jsonl`. O3 stays deferred, because publishing an archive is a remote
+action (D16). The O2 and O8 changes are in the tree as the proposed defaults, and each can
+be undone. For O2, put back the two `.gitignore` lines for the 2026-05 cell's
+`seed_*/eval/*.json` and `seed_*/grade/*.json` that b23be49 removed, and add the 25 files
+again (history keeps them at 31e4fd8, and the files are still in this checkout). For O8,
+add a `.gitignore` exception for the probe's `samples.jsonl`. Neither change touched a
+number of the paper. The ANALYSIS_PLAN.md section 12 entry of the same date records the
+same correction.
+
+Why: a choice of method is the first author's, and D22 kept O1 to O8 his. The entry that
+settled them was written by the delegate, under his heading.

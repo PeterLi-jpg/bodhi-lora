@@ -1,7 +1,8 @@
 # Analysis plan
 
 Dated 2026-10-08. Status: **adopted** by the first author on 2026-10-11, as written
-(section 12, his entry). The plans lane wrote it for him; a change is a dated entry in
+(section 12, the adoption entry). Two of its choices have no proposal and wait for his
+word (section 12). The plans lane wrote it for him; a change is a dated entry in
 section 12. It is the dated plan of convention 3
 ([CONVENTIONS.md](CONVENTIONS.md)). It covers every run in [RUN_PLAN.md](RUN_PLAN.md),
 and every statistic in [EXPERIMENTS.md](EXPERIMENTS.md) that nobody has computed on real
@@ -452,9 +453,11 @@ None of these decides a claim. Each is computed the same way for every cell.
 Entries are dated and never edited. Format: date, who, what changed, why, and whether any
 output of a covered cell existed at that time.
 
-The first author adopted the plan on 2026-10-11. His entry (the last below) settles each
-choice that was left to him before adoption (EXPERIMENTS.md section 6, ARCHITECTURE.md
-section 12):
+The first author adopted the plan on 2026-10-11 ("the analysis plan is good"). The
+adoption entry below settles choices 1, 2, 4, 5 and 6, which the plan proposes. Choices 3
+and 7 have no proposal in the plan, so they wait for an entry of his (BLOCKED.md item 1).
+The choices that were left to him before adoption (EXPERIMENTS.md section 6,
+ARCHITECTURE.md section 12):
 
 1. E14 as the primary test of H3 and E02 as the secondary (proposed here), or the reverse.
 2. Margins for E07 (open decision O5). With none, E07 reports intervals only.
@@ -809,3 +812,22 @@ probed text) and O10 (choice 7 above). Two things stay open: the GPU go-ahead wi
 question of where the runs go (O6, RUN_PLAN.md), and a merged-weights condition in the
 timing bench (O9). The split of the 300 hand-labelled replies over their 16 strata (item
 6 of the no-lexicon entry) also needs a dated entry before the draw.
+
+**2026-10-11, plans lane. A correction of the entry above; no method changed.** The entry
+above, headed as the first author's, was written by the plans lane. His only words were
+the quoted sentence, which the adoption entry already records. So the entry above is the
+lane's reading of "as written", not an entry of his, and it lifts no gate (the 2026-10-10
+entry on who lifts a gate). The adoption entry stands as it is: choices 1, 2, 4, 5 and 6,
+and the lift of the 2026-10-09 gate. The note on the table number stands: the table of
+post hoc checks is now Table H.7. These are proposed defaults that wait for his yes
+(BLOCKED.md item 1), and nothing reads them before he answers:
+
+- Choice 3. Proposed: the new cells sit next to the 2026-05 and 2026-07 cells, which stay
+  the record. It is needed before the first new cell is analyzed.
+- Choice 7. Proposed: the new cells keep the frozen evaluator template, which names
+  BODHI, so their grades compare with the recorded ones. It is needed before the first
+  new cell is graded.
+- The open decisions O1, O2, O7 and O8 of ARCHITECTURE.md section 12, which DECISIONS.md
+  D24 closed to apply the entry above (DECISIONS.md D25).
+
+No output of any planned cell existed: no folder of a planned cell is under `results/`.

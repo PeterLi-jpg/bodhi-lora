@@ -596,8 +596,8 @@ serves the base as trained), REPRO-3 (E13), PROV-11 (E13 manifests), REPRO-11 (E
 ## 6. Decisions for the first author
 
 These are methodology choices, so they are his (they are also in ARCHITECTURE.md
-section 12). His adoption of the analysis plan on 2026-10-11 settles all but one
-(ANALYSIS_PLAN.md section 12, his entry; DECISIONS.md D23):
+section 12). His adoption of the analysis plan on 2026-10-11 settles the ones the plan
+proposes (ANALYSIS_PLAN.md section 12, the adoption entry; DECISIONS.md D23 and D25):
 
 - The analysis plan (P1), including whether E02 is a primary or a secondary test.
   Settled: adopted as written; E14 is primary for H3 and E02 secondary.
@@ -607,4 +607,7 @@ section 12). His adoption of the analysis plan on 2026-10-11 settles all but one
 - The margins of E07. Settled: none, so intervals only.
 - The tiers and order of the GPU work, and when it starts. Open (O6; RUN_PLAN.md).
 - Whether the new cells replace the 2026-05 and 2026-07 cells in the main tables, or
-  report next to them as the record. Settled: next to them, as the record.
+  report next to them as the record. Open: the plan proposes nothing; next to them is
+  the proposed default (choice 3, BLOCKED.md item 1).
+- The evaluator template of the new cells (choice 7, O10). Open: keeping the frozen
+  template is the proposed default (BLOCKED.md item 1).

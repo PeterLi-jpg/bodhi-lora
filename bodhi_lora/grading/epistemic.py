@@ -26,11 +26,11 @@ DIMENSION_GRADE_TOKENS = 768
 # written in 7df83b4), and tests/test_grading_epistemic.py pins its sha256. It names the
 # protocol under test twice ("BODHI-style prompting", "BODHI v0.1.3"), and it graded every
 # condition with those words, the base and the baselines too. docs/KNOWN_ISSUES.md and the
-# paper's appendix on the dimensions say so. The new cells keep it, so their grades
-# compare with the recorded ones: the first author's adoption of the analysis plan settled
-# that on 2026-10-11 (docs/ANALYSIS_PLAN.md section 12, choice 7). A protocol-neutral
-# template would be a new grader version; tests/test_no_hardcode.py fails on any other
-# grader text that names a protocol.
+# paper's appendix on the dimensions say so. Whether the new cells keep it (proposed, so
+# their grades compare with the recorded ones) or get a protocol-neutral template, which
+# would be a new grader version, is choice 7 of the analysis plan; it waits for the first
+# author (docs/ANALYSIS_PLAN.md section 12, docs/BLOCKED.md item 1).
+# tests/test_no_hardcode.py fails on any other grader text that names a protocol.
 EPISTEMIC_GRADER_TEMPLATE = """\
 You are an expert grader of epistemic virtues in clinical AI responses.
 

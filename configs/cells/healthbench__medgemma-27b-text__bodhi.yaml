@@ -2,8 +2,9 @@
 # red-flags-first conditions and the E20 bench. The settings are the proposed ones of E13
 # and are fixed in the dated analysis plan (P1) before any run.
 # The 2026-05 MedGemma-27B adapters are treated as not retained, so this cell retrains the
-# clinical base under the new settings (O7, settled on 2026-10-11): QLoRA on one H100, not
-# the bf16 TPU recipe of 2026-05, which stays the record.
+# clinical base under the new settings (open decision O7, proposed, waiting for the first
+# author's yes): QLoRA on one H100, not the bf16 TPU recipe of 2026-05, which stays the
+# record.
 # Run: python -m bodhi_lora run healthbench__medgemma-27b-text__bodhi --gpus 0,1,2,3,4
 id: healthbench__medgemma-27b-text__bodhi
 benchmark: healthbench

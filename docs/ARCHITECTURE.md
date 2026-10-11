@@ -968,42 +968,49 @@ the paper.
 
 ## 12. Open decisions for the first author
 
-On 2026-10-11 the first author adopted ANALYSIS_PLAN.md as written (DECISIONS.md D23), and
-the decisions below that the adoption did not settle itself were settled to apply it
-(D24). O6 and O9 are still his.
+On 2026-10-11 the first author adopted ANALYSIS_PLAN.md as written (DECISIONS.md D23).
+That closes O4 and O5. A later entry closed O1, O2, O7, O8 and O10 for him; DECISIONS.md
+D25 corrects it, so each of them is a proposed default that waits for his yes
+(BLOCKED.md item 1). O2 and O8 are applied in the tree as those defaults and can be
+undone (D25). O3 is deferred, and O6 and O9 are open.
 
-- **O1. Package name.** Closed on 2026-10-11: it stays `bodhi_lora`, because `bodhi` is
-  taken by the `bodhi-llm` dependency (section 1). A rename goes only with the repository
-  slug (D15).
-- **O2. Raw outputs in git.** Closed on 2026-10-11 with the default: one rule for every
-  cell. The submitted cell's raw eval and grade JSON (80 MB) stopped being tracked and
-  stays in history at 31e4fd8; every cell has a tracked response table (section 6). The
-  three figures that read the raw files read the tables instead, with byte-identical PDFs.
+- **O1. Package name.** Proposed: it stays `bodhi_lora`, because `bodhi` is taken by the
+  `bodhi-llm` dependency (section 1). A rename goes only with the repository slug (D15).
+  Nothing was changed.
+- **O2. Raw outputs in git.** Proposed and applied on 2026-10-11 (b23be49): one rule for
+  every cell. The submitted cell's raw eval and grade JSON (about 80 MB) stopped being
+  tracked and stays in history at 31e4fd8; every cell has a tracked response table
+  (section 6). The three figures that read the raw files read the tables instead, with
+  byte-identical PDFs. The other option keeps those files tracked, which means one
+  cell's raw files are in the tree and the others' are not.
 - **O3. A versioned archive of all raw outputs** (about 450 MB with the submitted cell),
   so reviewers can check any table. Deferred on 2026-10-11: publishing it is a remote
   action (D16).
 - **O4. The dated analysis plan.** Closed on 2026-10-11: the first author adopted
-  ANALYSIS_PLAN.md as written (its section 12, his entry).
+  ANALYSIS_PLAN.md as written (its section 12, the adoption entry).
 - **O5. Margins for the deployment-risk criterion** (EXPERIMENTS.md E07). Closed on
   2026-10-11: the adoption sets none, so the criterion reports intervals only (Table C.1
   of the paper).
 - **O6. GPU priorities.** Open. EXPERIMENTS.md section 4 groups the runs in tiers, and
   RUN_PLAN.md costs each one. No GPU runs until you say so, and where they run is yours.
-- **O7. The MedGemma-27B rerun.** Closed on 2026-10-11: its adapters are treated as not
-  retained, so every new experiment on it needs a rerun. On one H100 that means QLoRA
-  (4-bit), which is not the bf16 TPU recipe of the 2026-05 cell. The rerun is the new cell
+- **O7. The MedGemma-27B rerun.** Proposed: its adapters are treated as not retained, so
+  every new experiment on it needs a rerun. On one H100 that means QLoRA (4-bit), which
+  is not the bf16 TPU recipe of the 2026-05 cell. The rerun is the new cell
   `healthbench__medgemma-27b-text__bodhi`, and the 2026-05 cell stays the record.
-- **O8. Probe and bench outputs in git.** Closed on 2026-10-11: git tracks `bench.json`
-  (times and token counts) and the probe's `probe.json` (counts, rates and the Fisher
-  test). The probed benchmark text and the continuations go to `samples.jsonl` next to
-  it, which git ignores like every JSONL under `results/`; the probe manifest records
-  its sha256 (`tests/test_pipeline_runner.py` checks the split).
+- **O8. Probe and bench outputs in git.** Proposed and applied on 2026-10-11 (4ae74c6): git
+  tracks `bench.json` (times and token counts) and the probe's `probe.json` (counts, rates
+  and the Fisher test). The probed benchmark text and the continuations go to
+  `samples.jsonl` next to it, which git ignores like every JSONL under `results/`; the
+  probe manifest records its sha256 (`tests/test_pipeline_runner.py` checks the split).
+  The other option tracks the probed text too. Decide before the first probe run.
 - **O9. A merged-weights condition in the timing bench.** Open. The bench serves the
   adapter unmerged (vLLM `--enable-lora`, eager mode), as the 2026-07 cells were
   evaluated; the paper argues for one pass with merged weights, as the 2026-05 cell was
   evaluated. Decide before R2 whether the bench also times merged weights (code not
   built).
 - **O10. The evaluator template of the new cells** (ANALYSIS_PLAN.md section 12,
-  choice 7). Closed on 2026-10-11 by the adoption: the new cells keep the frozen template,
-  which names BODHI, so their grades compare with the recorded ones; KNOWN_ISSUES.md
-  discloses it.
+  choice 7). Proposed: the new cells keep the frozen template, which names BODHI, so
+  their grades compare with the recorded ones; KNOWN_ISSUES.md discloses it. The other
+  option is a protocol-neutral template as a new grader version, whose hash each grade
+  file then records; the code has only the frozen one. Decide before the first new cell
+  is graded.

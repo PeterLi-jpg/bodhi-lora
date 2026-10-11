@@ -157,7 +157,8 @@ Check on the first run of a new base model:
 The submitted cell ran on TPU quota, a GCS bucket and a Modal account. Its launchers in
 `legacy/` are kept to document what ran, not as a path to use: the project no longer
 uses Modal, and the adapters are not retained (D19). A new run on MedGemma-27B is a new
-QLoRA cell, and the 2026-05 cell stays the record (O7, settled on 2026-10-11).
+cell: proposed as a QLoRA cell, with the 2026-05 cell as the record (O7, which waits for
+the first author's yes).
 
 ## 6. What each stage writes
 
