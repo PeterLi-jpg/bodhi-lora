@@ -38,7 +38,7 @@ Outcome values:
 | ID | Source | Concern | Outcome | Answered in | Open |
 |---|---|---|---|---|---|
 | D1 | LxMF Q3, HomM Q4 | Why a Llama-3.1-8B judge and not a clinical model? | partial: the structural reason was given. The clinical-judge re-grade did not run. | `LxMF_1_rebuttal.md:32-36`, `HomM_1_rebuttal.md:35`, `HomM_3_followup_part2.md:22` | C13, C26 |
-| D2 | MW3, HomM W3 | Claims rest on automatic grading of subjective dimensions | partial: physician validation, 1 of 3 raters, kappa 0.35 against a 0.6 target | `HomM_1_rebuttal.md:37`, `FzpA_2_followup.md:11` | C28 |
+| D2 | MW3, HomM W3 | Claims rest on automatic grading of subjective dimensions | partial: physician validation, 1 of 3 raters, kappa 0.35 against a 0.6 target | `HomM_1_rebuttal.md:37`, `FzpA_2_followup.md:9` | C28 |
 
 ## E. Prior work (MW6, HomM W4/Q3)
 
@@ -56,8 +56,8 @@ Outcome values:
 | F3 | FzpA W3 | Table 2 red-flag arrow | promised: arrow on every row, caption note | `FzpA_1_rebuttal.md:22-28` | C17, C18 |
 | F4 | FzpA W3 | Vague "not statements" | promised | `FzpA_1_rebuttal.md:21` | C5 |
 | F5 | FzpA W3 | Clinical implications missing | promised | `FzpA_1_rebuttal.md:23` | C20 |
-| F6 | FzpA Q1 | Where the seven dimensions came from | answered, then corrected: informal author consensus, no formal method | `FzpA_1_rebuttal.md:30-36`, `FzpA_2_followup.md:11` | W3, C21 |
-| F7 | FzpA Q2 | How each dimension looks in text | promised: a verbatim example per dimension and the hedging anchor | `FzpA_1_rebuttal.md:40`, `FzpA_2_followup.md:25-29` | C22, C23 |
+| F6 | FzpA Q1 | Where the seven dimensions came from | answered, then corrected: informal author consensus, no formal method | `FzpA_1_rebuttal.md:30-36`, `FzpA_2_followup.md:9` | W3, C21 |
+| F7 | FzpA Q2 | How each dimension looks in text | promised: a verbatim example per dimension and the hedging anchor | `FzpA_1_rebuttal.md:40`, `FzpA_2_followup.md:23-27` | C22, C23 |
 | F8 | LxMF Q1 | Table 1 n of 200, 191 and 192 | answered: CoT conditions lose prompts. The posted pooled n range is wrong for the CoT conditions. | `LxMF_1_rebuttal.md:5-7` | W10, C19 |
 
 ## G. Cost (FzpA)

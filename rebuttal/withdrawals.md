@@ -73,8 +73,9 @@ same result.
 
 **Correction posted.**
 - `FzpA_2_followup.md:5`: "\"Clinical decision support\" was the wrong term. The label was
-  ours and named a setting the study never addressed".
-- `FzpA_2_followup.md:9`: "None of the seven presupposes a clinician reader".
+  ours and it named a setting the study never addressed".
+- The draft of that reply also said "None of the seven presupposes a clinician reader"
+  (`drafts/FzpA_2_followup_prepost.md:9`). That paragraph was not posted.
 - `HomM_4_consolidation.md:3`: "The scope is named as patient-facing clinical Q&A."
 
 **The paper must say.** The setting is patient-facing clinical Q&A. In HealthBench-Hard, 14 of
@@ -95,9 +96,9 @@ the person who asks.
   this paper, who work across several health systems".
 
 **Correction posted.**
-- `FzpA_2_followup.md:11`: "The selection method was informal author-group consensus, settled
-  in discussion including the three practising physicians among the authors, with no Delphi
-  round or content-validity index."
+- `FzpA_2_followup.md:9`: "The selection method was informal author-group consensus, settled
+  in discussion including the three practising physicians among the authors, without a Delphi
+  round or a content-validity index."
 - `FzpA_2_followup.md:7`: the grounding is the cited literature (Simpkin and Schwartzstein,
   2016; Jones et al., 2019).
 
@@ -240,8 +241,8 @@ and rejected. The internal analysis in `rebuttal/responses/drafts/FINDINGS_quali
 - `HomM_4_consolidation.md:3`: "the trade-off goes into the abstract alongside the gain, where
   the submitted version claimed quality was preserved."
 
-**Left over in a later post.** `FzpA_2_followup.md:15` (dated after the correction) still
-reports "no detected change in aggregate quality, d = 0.03, p = 0.57". It does not mention the
+**Left over in a later post.** `FzpA_2_followup.md:13` (dated after the correction) still
+reports "no detected change in aggregate quality at d = 0.03, p = 0.57". It does not mention the
 six drops. The sentence is true for the submitted cell only.
 
 **The paper must say.** In the submitted cell we detected no change in aggregate score (0.459
@@ -293,12 +294,12 @@ context got no response and are in neither group.
 
 ---
 
-## W10. "n around 985-998 per condition" (not corrected in the discussion)
+## W10. "n ≈ 985–998 per condition" (not corrected in the discussion)
 
 **Claim as made.**
 - Submitted `main.tex:212`: "$n\approx985$--$998$ per condition, pooled across 5 seeds".
-- Posted `LxMF_1_rebuttal.md:7`: "All comparisons use the available completions, n around
-  985–998 per condition pooled across 5 seeds."
+- Posted `LxMF_1_rebuttal.md:7`: "All comparisons use the available completions,
+  $n \approx 985$–$998$ per condition pooled across 5 seeds."
 - Live paper `paper/main.tex:221`, `:560`.
 
 **Correction posted.** None. Audit finding PROV-4 found the range wrong for both CoT
@@ -321,11 +322,11 @@ prompts repeat across seeds (audit CLAIM-10).
 - Submitted, hyperparameter table, `main.tex:328-335`: r = 16, alpha = 32, seven target
   modules, 3 epochs, effective batch 16, max sequence 4096.
 - Posted `HomM_1_rebuttal.md:9`: "We re-ran the pipeline unchanged, every hyperparameter fixed
-  (LoRA r = 16, alpha = 32, effective batch 16, 3 epochs, tau = 0.4, Qwen-14B filter,
+  (LoRA $r=16$, $\alpha=32$, effective batch 16, 3 epochs, $\tau=0.4$, Qwen-14B filter,
   Llama-3.1-8B evaluator)".
 - The same claim is posted at `FzpA_1_rebuttal.md:13` ("We re-ran the pipeline unchanged"),
   `FzpA_1_rebuttal.md:50` ("hyperparameters fixed"), `LxMF_1_rebuttal.md:58` and
-  `FzpA_2_followup.md:23` ("rank 16, alpha 32, three epochs").
+  `FzpA_2_followup.md:21` ("rank 16, alpha 32, three epochs").
 - Live paper `paper/main.tex:710-713`.
 
 **Correction posted.** None. Audit findings HYG-4, PROV-3, REPRO-3 and REPRO-12 contradict it.
@@ -490,7 +491,7 @@ Appendix D of `paper/main.tex` (`bodhiplos2026` in `paper/references.bib`).
 **Claim as made.**
 - Submitted `main.tex:218`, `:222`: "$p < 10^{-5}$" for scope bounding and red-flag
   identification, from tests that treat each response as independent.
-- Posted `FzpA_2_followup.md:15`: "all at p below 0.00001".
+- Posted `FzpA_2_followup.md:13`: "all at p below 0.00001".
 
 **Correction.** The seed is now the unit of inference (D7). At seed level the LoRA minus Base
 p-values of the four dimensions that rise are 5.1e-5 to 1.6e-3 before Holm correction, and
@@ -523,7 +524,7 @@ retained. Done in Code availability (`paper/main.tex`, ab58ee5) and in the check
 
 **Claim as made.**
 - Paper and abstract: "pre-registered".
-- Posted `FzpA_2_followup.md:11`: "quadratic-weighted kappa against a three-physician consensus".
+- Posted `FzpA_2_followup.md:9`: "quadratic-weighted kappa against a three-physician consensus".
 
 **Correction.** The plan was written into the repository on 2026-04-29 (commit aa7eec4,
 `aa7eec4:RESULTS.md` section 7.B), not registered with an outside registry. It specifies Cohen's kappa
@@ -573,10 +574,10 @@ was not.
 
 ---
 
-## W22. "About 58% fewer output tokens" (found in the outputs)
+## W22. "Roughly 58% fewer output tokens" (found in the outputs)
 
-**Claim as made.** Posted `FzpA_2_followup.md:19`: the adapter "needs one call where the protocol
-takes two, at about 58% fewer output tokens".
+**Claim as made.** Posted `FzpA_2_followup.md:17`: the adapter "needs one call where the protocol
+takes two, at roughly 58% fewer output tokens".
 
 **Correction posted.** None.
 
@@ -595,10 +596,10 @@ cell.
 
 ## W23. Second-person questions, 18.4% against 39.6% (withdrawn 2026-10-10, keyword measure)
 
-**Claim as made.** Posted `FzpA_2_followup.md:13`: "counting questions addressed to the reader
-in the second person, the base does so in 18.4% of responses and the adapter in 39.6%, a
-21-point gap where the grader puts it at 28". The reply as it stands in the OpenReview thread
-adds that 27% of the base's questions and 48% of the adapter's go to the reader.
+**Claim as made.** Posted `FzpA_2_followup.md:11`: "counting questions addressed to the reader
+in the second person, the base does so in 18.4% of responses and the adapter in 39.6%. The
+grader puts that gap at 28 points where the text count puts it at 21". The same paragraph
+adds that "27% of the base's go to the reader against 48% of the adapter's".
 
 **Why withdrawn.** The count is a keyword rule: a sentence that ends in "?" and contains "you"
 or "your". It counts quoted and rhetorical questions and misses indirect ones ("tell me how
@@ -685,22 +686,22 @@ paper must decide on each one.
 - **"blanket disclaimers eliminated"** Submitted `main.tex:36`, live `paper/main.tex:78`,
   `:103`. This rests on 5 of 998 against 0 of 985 responses (Fisher p = 0.062, audit CLAIM-8).
 - **MedQuAD base hedging, 1.45 against 1.46.** Settled by the raw outputs; see W21.
-- **"in five of the six added cells at every seed"** `FzpA_2_followup.md:15`. Checked against
+- **"in five of the six added cells at every individual seed"** `FzpA_2_followup.md:13`. Checked against
   the raw outputs on 2026-10-08 (`results/cross_cell/generated_values.json`, per_seed): LoRA
   active inquiry is above Base in all five seeds of five added cells, and in one of five seeds of
   BioMistral-7B. The claim holds as posted. It counts the two Med42-8B cells, which the paper
   leaves out of cross-model statements (D6).
-- **Second-person questions, 18.4% against 39.6%.** `FzpA_2_followup.md:13`. No script or
+- **Second-person questions, 18.4% against 39.6%.** `FzpA_2_followup.md:11`. No script or
   output exists. A simple regex gives 17.9% and 37.2% (audit PROV-7). Withdrawn on
   2026-10-10 as a keyword measure (W23).
 - **What the physician check covers.** `FzpA_1_rebuttal.md:40` reports kappa = 0.35 right after
   the dimension anchors, as if the physician check graded the seven dimensions. It grades
   HealthBench rubric criteria (`scripts/make_irr_excel.py`, `scripts/compute_irr_kappa.py`).
   The paper now says that no physician graded the seven dimensions (a59cb82).
-- **The antidepressant example.** `FzpA_2_followup.md:21` says the adapter asks about "current
+- **The antidepressant example.** `FzpA_2_followup.md:19` says the adapter asks about "current
   medications and conditions". The answer in `results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_99/eval/lora.json`
   (prompt `2c915b71`) does not. The paper lists only the questions it asks (5c2e9b0).
-- **The hedging scale.** `FzpA_2_followup.md:27` says the grader's scale is "0 for a bare
+- **The hedging scale.** `FzpA_2_followup.md:25` says the grader's scale is "0 for a bare
   referral". The grader prompt gives the two ends but ties no score to them, and the grader
   scored most flagged blanket disclaimers 2 on hedging. The paper says so (a59cb82).
 - **Context-seeking needs a question for a 2.** The paper's earlier text, and the grader

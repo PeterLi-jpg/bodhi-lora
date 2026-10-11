@@ -19,30 +19,47 @@ withdrew, and what we promised. The ledgers are the files that the resubmission 
 `responses/posted/` holds the final version of each reply that we posted on OpenReview, in
 the order the posting record gives:
 
-| File | Thread | Opens with | File date |
+| File | Thread | Opens with | Posted |
 |---|---|---|---|
 | `FzpA_1_rebuttal.md` | FzpA | "Thank you for this careful and constructive review" | 2026-07-28 |
 | `FzpA_2_followup.md` | FzpA | "The authors would like to thank you again for these questions" | 2026-08-03 |
-| `LxMF_1_rebuttal.md` | LxMF | "Thank you for this thorough review and for the specific suggestions" | 2026-07-29 |
-| `HomM_1_rebuttal.md` | HomM | "Thank you for this careful and generous review" | 2026-07-29 |
+| `LxMF_1_rebuttal.md` | LxMF | "Thank you for this thorough review and for the specific suggestions" | 2026-07-28 |
+| `HomM_1_rebuttal.md` | HomM | "Thank you for this careful and generous review" | 2026-07-28 |
 | `HomM_2_followup_part1.md` | HomM | "Thanks for coming back with specifics" | 2026-08-02 |
 | `HomM_3_followup_part2.md` | HomM | "Continued from the previous comment." | 2026-08-02 |
 | `HomM_4_consolidation.md` | HomM | "Thank you for the care you have given this throughout" | 2026-08-03 |
 
-How we know these are the posted versions, and where we are not sure:
+How we know these are the posted versions. On 2026-10-11 we compared each file with a
+copy of the full OpenReview thread of submission 32818 (all reviews, replies and the
+decision), word by word, leaving out tables, list markers and math. The copy is the
+rendered page, so it drops MathJax math and table layout.
 
-- **The HomM follow-up, parts 1 and 2.** A rendered copy (`HomM_response_final.docx`) says
-  "Two comments, posted in order", with comment 1 at 4,864 characters and comment 2 at
-  4,812. The two files have exactly those lengths, and every paragraph and table cell
-  matches the copy. The .docx is not in the repo. It is archived in `BODHI/_archive/rebuttal/`
-  on the first author's machine. Its text adds nothing to the two files.
-- **LxMF and HomM rebuttals.** Git history has an earlier version of each (before commit
-  0100b3c) that writes math as MathJax (`$\kappa = 0.35$`, `$n \approx 985$–$998$`). The
-  versions here are the later edit (2026-07-29), which writes the same math as plain text
-  ("kappa = 0.35", "LoRA minus Base"). Only the math notation differs. The numbers are the
-  same. We cannot tell from the repo which notation is on OpenReview.
-- **All seven.** Nobody has compared these files byte for byte with OpenReview. That check
-  needs an OpenReview login.
+- **HomM_2, HomM_3 and HomM_4.** Every word matches. A rendered copy of the HomM follow-up
+  (`HomM_response_final.docx`, archived in `BODHI/_archive/rebuttal/` on the first
+  author's machine) also gives the two comments' lengths, 4,864 and 4,812 characters,
+  which the two files have.
+- **FzpA_2.** Until 2026-10-11 this file held a draft: 13 of its 35 prose sentences were in
+  the thread, and its paragraph that "none of the seven presupposes a clinician reader"
+  was never posted. It is now `responses/drafts/FzpA_2_followup_prepost.md`. The file here
+  is the thread's text, with markdown added back only for its three bold headings. The
+  ledgers' line citations into it were renumbered, and the one claim from the unposted
+  paragraph (C7) now cites the draft.
+- **FzpA_1, LxMF_1 and HomM_1.** Until 2026-10-11 these files held edits made after
+  posting (one sentence of FzpA_1, two paragraphs of HomM_1, and plain-text math in place
+  of MathJax). The posted text is in git history: `4731560:rebuttal/responses/reviewer_FzpA.md`,
+  `006ee3c:rebuttal/responses/reviewer_LxMF.md` and `79e98f3:rebuttal/responses/reviewer_HomM.md`,
+  committed within minutes of each post. The files here are those versions with each
+  paragraph on one line, so every line citation still points at the same paragraph.
+  HomM_1 also drops one closing sentence that the thread does not have; the thread marks
+  all three posts as modified after they went up. Where the thread drops the math, these versions write it in
+  MathJax (`$\kappa = 0.35$`), so MathJax is what was posted.
+- **The meta-review replies.** `responses/drafts/meta_review_part1.md` and
+  `meta_review_part2.md` are not in the thread (1 of their 81 prose sentences), so they
+  were not posted. The thread has no author reply after 2026-08-03; the decision came on
+  2026-09-24.
+
+The raw OpenReview markdown of each reply would settle the remaining format questions
+(tables and math); exporting it needs the first author's login.
 
 ## Drafts
 
@@ -55,7 +72,8 @@ Drafts are kept as history. Do not cite them as the public record.
 | `reviewer_HomM_followup_5k.md` | Second draft of the same reply. Still over the limit. |
 | `reviewer_HomM_tables_companion.md` | Draft companion post with four-condition tables for five metrics. Not in the posted list. |
 | `meta_review_comment.md` | Draft reply to the AC meta-review, in one comment. Part 1 and part 2 replace it. |
-| `meta_review_part1.md`, `meta_review_part2.md` | Reply to the AC meta-review in two comments (file date 2026-08-04). Not in the posted list for this cleanup. They may have gone to the AC. See "Open" below. |
+| `meta_review_part1.md`, `meta_review_part2.md` | Reply to the AC meta-review in two comments (file date 2026-08-04). Not posted: the OpenReview thread does not have them (checked 2026-10-11). |
+| `FzpA_2_followup_prepost.md` | The draft of the FzpA follow-up that this folder held as posted until 2026-10-11. Its line 9 paragraph (every anchor addresses the person who asks) was not posted; C7 cites it. |
 | `meta_review_ARCHIVED.md` | Early plan to answer each meta-review weakness in its own box. Replaced by the per-reviewer replies. |
 | `SUBMIT.md` | Posting guide from 2026-07-28. This README replaces it. |
 
@@ -86,14 +104,10 @@ Some drafts hold numbers that we never posted. The last section below lists them
 - **Scripts for posted numbers.** Each posted analysis now has a script. Two results differ
   from the posts. The second-person count gives 17.9% against 36.7%, not the posted 18.4%
   against 39.6% (PROV-7). The odds ratios reproduce 1.16, 1.54 and 1.56, but their 95% CIs
-  overlap (PROV-10). The outputs are in `results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/`.
+  overlap (PROV-10). The outputs are in `results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/withdrawn/`.
 - **The MedQA cell.** Settled by the sync: the only run is the preamble run, so the cell
   measures instruction following and stays set aside. Table 1 of the paper reports it last,
   set aside (W12, C24 done).
-- **The meta-review reply.** Confirm on OpenReview whether `meta_review_part1.md` and
-  `meta_review_part2.md` were posted to the AC. If they were, move them to
-  `responses/posted/` as `AC_1_part1.md` and `AC_2_part2.md` with `git mv`, and add them to
-  the table above. Their withdrawals and promises repeat ones that are already in the ledgers.
 - **Promised experiments.** C25 to C33 need GPU time, people or data access.
   `commitments.md` says where each one stands (done, built and awaiting GPU, changed or
   deferred). docs/RUN_PLAN.md orders the runs, with their cost, and

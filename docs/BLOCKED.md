@@ -172,11 +172,11 @@ and C28.
   gave consent (D17); say in item 15 what they consented to, if the venue asks.
 - **LLM-usage statement.** `paper/checklist.tex` (LLM-usage item) says the authors used AI
   assistants for editing and drafting. That disclosure is your decision.
-- **Posted replies against OpenReview.** Compare the 7 files in `rebuttal/responses/posted/`
-  with the threads of submission 32818, including the math notation in the LxMF and HomM
-  rebuttals. Check whether `rebuttal/responses/drafts/meta_review_part1.md` and
-  `meta_review_part2.md` went to the AC; if they did, `git mv` them to
-  `rebuttal/responses/posted/` and add them to `rebuttal/README.md`.
+- **Posted replies against OpenReview.** Done on 2026-10-11 from the copy of the thread
+  you supplied: four of the seven files held text that was not posted, and now hold the
+  posted text; the meta-review replies were not posted (`rebuttal/README.md`, "Posted
+  replies"). Optional: export the raw markdown of each reply from OpenReview, which would
+  settle the table and math formatting that the rendered copy cannot show.
 - **Byte-exact submitted source.** In the Overleaf project, download the version from
   just before the NeurIPS deadline and diff it with `paper/submitted/neurips2026/main.tex`.
 - **Host environments of the 2026-07 cells (REPRO-10).** With a login to the host:

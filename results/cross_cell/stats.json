@@ -1589,13 +1589,15 @@
     "cell": "healthbench__medgemma-27b",
     "id": "second_person_questions",
     "sources": [
-     "rebuttal/responses/posted/FzpA_2_followup.md:13"
+     "rebuttal/responses/posted/FzpA_2_followup.md:11"
     ],
     "values": {
      "base_pct": 18.4,
+     "base_questions_to_reader_pct": 27,
      "gap_points": 21,
      "grader_gap_points": 28,
-     "lora_pct": 39.6
+     "lora_pct": 39.6,
+     "lora_questions_to_reader_pct": 48
     }
    },
    {
@@ -1689,7 +1691,7 @@
     "cell": null,
     "id": "active_inquiry_rise_vs_submitted",
     "sources": [
-     "rebuttal/responses/posted/FzpA_2_followup.md:15",
+     "rebuttal/responses/posted/FzpA_2_followup.md:13",
      "rebuttal/responses/posted/HomM_3_followup_part2.md:18"
     ],
     "values": {
@@ -1748,7 +1750,7 @@
     "id": "physician_kappa",
     "sources": [
      "rebuttal/responses/posted/FzpA_1_rebuttal.md:40",
-     "rebuttal/responses/posted/FzpA_2_followup.md:11",
+     "rebuttal/responses/posted/FzpA_2_followup.md:9",
      "rebuttal/responses/posted/LxMF_1_rebuttal.md:38",
      "rebuttal/responses/posted/HomM_1_rebuttal.md:37"
     ],
@@ -1780,13 +1782,15 @@
     "cell": "healthbench__medgemma-27b",
     "id": "submitted_cell_effects",
     "sources": [
-     "rebuttal/responses/posted/FzpA_2_followup.md:15"
+     "rebuttal/responses/posted/FzpA_2_followup.md:13"
     ],
     "values": {
      "aggregate_d": 0.03,
      "aggregate_p": 0.57,
      "d_active_inquiry": 0.63,
+     "d_context_seeking": 0.44,
      "d_red_flag": 0.2,
+     "d_scope_bounding": 0.22,
      "p_below": 1e-05
     }
    },
@@ -1817,7 +1821,7 @@
     "id": "cost",
     "sources": [
      "rebuttal/responses/posted/FzpA_1_rebuttal.md:64",
-     "rebuttal/responses/posted/FzpA_2_followup.md:19",
+     "rebuttal/responses/posted/FzpA_2_followup.md:17",
      "rebuttal/responses/posted/HomM_3_followup_part2.md:18"
     ],
     "values": {
@@ -1835,7 +1839,7 @@
     "cell": null,
     "id": "posted_recipe_settings",
     "sources": [
-     "rebuttal/responses/posted/FzpA_2_followup.md:23",
+     "rebuttal/responses/posted/FzpA_2_followup.md:21",
      "rebuttal/responses/posted/HomM_1_rebuttal.md:9"
     ],
     "values": {

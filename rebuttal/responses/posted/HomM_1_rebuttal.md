@@ -6,7 +6,7 @@ The constraint was compute access rather than a judgment about what mattered. Tr
 
 What was ours to fix is the mismatch between that evidence and the language around it. The contribution will be described as a recipe plus an evaluation decomposition for open-ended, information-seeking clinical Q&A, not as a validated general framework, and we will state what it does not cover.
 
-*Results on additional base models and evaluation sets.* You asked for one or two additional base models, or one additional clinical evaluation set. We re-ran the pipeline unchanged, every hyperparameter fixed (LoRA r = 16, alpha = 32, effective batch 16, 3 epochs, tau = 0.4, Qwen-14B filter, Llama-3.1-8B evaluator), on two further model families and two further benchmarks, 5 seeds per cell and ~200 prompts per seed per condition.
+*Results on additional base models and evaluation sets.* You asked for one or two additional base models, or one additional clinical evaluation set. We re-ran the pipeline unchanged, every hyperparameter fixed (LoRA $r=16$, $\alpha=32$, effective batch 16, 3 epochs, $\tau=0.4$, Qwen-14B filter, Llama-3.1-8B evaluator), on two further model families and two further benchmarks, 5 seeds per cell and ~200 prompts per seed per condition.
 
 **Table R1.** Transfer across model families and benchmarks. Every cell reads Base → LoRA. Mistral-Small-24B is general-purpose, Med42-8B is clinically tuned (Llama-3 family), BioMistral-7B is a scope condition. Row 1 repeats the submitted result for comparison.
 
@@ -34,7 +34,7 @@ We share this concern and have not resolved it.
 
 On the choice of graders the reason is structural. The evaluator must sit in a different family from the Qwen-14B filter, because that separation is what prevents filter-grader circularity: if one family both selects training traces and scores the result, the metric partly measures agreement with the selector. Meditron-3, Med42-v2 and the Aloe family are all Llama-derived, so promoting one to evaluator would put filter and grader in adjacent families and weaken that property. If accepted we will state this and add a clinical judge as an additional robustness panel alongside the primary grader rather than replacing it.
 
-On the strength of the evidence, the physician validation remains partial: one of three raters has returned grades, giving kappa = 0.35 against the Llama-3.1-8B grader, below our pre-registered target of 0.6. We report that as a limitation on the aggregate-quality claims and do not present LLM grading as settled clinical validation.
+On the strength of the evidence, the physician validation remains partial: one of three raters has returned grades, giving $\kappa = 0.35$ against the Llama-3.1-8B grader, below our pre-registered target of 0.6. We report that as a limitation on the aggregate-quality claims and do not present LLM grading as settled clinical validation.
 
 One piece of evidence does not depend on the grader's own scores, and it covers one of the three dimensions you named. Using labels the grader never sees, HealthBench's `context_seeking` theme tag and whether a prompt's rubric rewards asking, the adapter distinguishes information-withholding prompts from self-contained ones (+10.5pp, bootstrap CI excluding zero) while the base model does not (+2.1pp, CI including zero). Context-seeking is therefore supported by a signal external to the grader. Hedging quality and red-flag identification are not, and we do not claim otherwise; those two rest on the automatic grader until the physician panel is complete.
 
@@ -42,7 +42,7 @@ It is worth separating which claims this touches. Trace filtering and the aggreg
 
 **W4 and Q3. Comparison with prior work**
 
-This is a fair criticism and the one our additional runs do not address. One clarification, with the criticism accepted: Section 2 does position the method against STaR, Constitutional AI and chain-of-thought prompting, and states how our filter-then-finetune step differs from each. What is missing is an *empirical* comparison, and that gap is real.
+This is a fair criticism and the one our additional runs do not address. We would gently push back on one word, though. Section 2 does position the method against STaR, Constitutional AI and chain-of-thought prompting, and states how our filter-then-finetune step differs from each, so the comparison is not wholly absent. What is absent is an *empirical* one, which is a narrower gap than the sentence implies, and a real one we do not dispute.
 
 If accepted we will expand that into a Discussion subsection, "Comparison to Prior Calibration Approaches," covering uncertainty prompting (Lin et al., 2022; Tian et al., 2023), which calibrates at inference time whereas we internalize into weights; STaR (Zelikman et al., 2022), whose filter-then-finetune logic we apply to behavioral rather than factual demonstrations; and Constitutional AI (Bai et al., 2022), which uses self-critique where we use a CoT protocol as a behavioral teacher, with a table comparing inference cost, teacher requirement, behavioral versus factual focus, and generality.
 
@@ -54,8 +54,8 @@ We understand how the submitted version invited that reading: a single setting l
 
 The evidence also changed in kind, not only in quantity: a single positive instantiation cannot separate "the recipe works" from "this pairing happens to work," whereas several cells, a documented null with a diagnosis, and a mechanistic account of the interference can.
 
-For context on how much weight the added cells can carry: the rigour of what was already run was not the difficulty. The submitted version carries 5 independent seeds, bootstrap intervals, a contamination probe on the held-out set, specified hardware, and released code and adapters. What was narrow was the number of settings, and that is precisely the gap the new runs close.
+On the rating, which we raise only because the category is broad. Reject covers technical flaws, weak evaluation, inadequate reproducibility and incompletely addressed ethics. Your review identifies the second of these; on the others it records clarity 4, no ethical concerns, and no technical flaw, and the submitted version already carries 5 independent seeds, bootstrap intervals, a contamination probe, specified hardware and released code and adapters. If evaluation breadth is the operative concern, that is the ground we have been able to move.
 
 Three things remain outstanding, and if accepted we commit to all three: the empirical prior-work comparison, completion of the physician validation, and a second CoT protocol.
 
-We would be grateful if you would reconsider the rating in light of the added evidence, with those gaps visible. Thank you again for a review specific enough to act on. Please let us know if questions remain; we would gladly run further analyses while the discussion period is open.
+Thank you again for a review specific enough to act on. Please let us know if questions remain; we would gladly run further analyses while the discussion period is open.

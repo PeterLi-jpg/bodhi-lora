@@ -9,9 +9,10 @@ indirect ones. The posted 18.4% and 39.6% and this script's 17.9% and 36.7% are 
 cross-check by a judge from another family, with a semantic rubric and a hand-label
 gate, is planned (docs/ANALYSIS_PLAN.md section 12, 2026-10-10).
 
-A grader-free check on the active-inquiry shift. The posted replies
-(posted/FzpA_2_followup.md:13, drafts/meta_review_part1.md:27) say the base model asks a
-second-person question in 18.4% of responses and the adapter in 39.6%. No script or
+A grader-free check on the active-inquiry shift. The posted reply
+(posted/FzpA_2_followup.md:11) and an unposted draft (drafts/meta_review_part1.md:27) say
+the base model asks a second-person question in 18.4% of responses and the adapter in
+39.6%. No script or
 output behind those two numbers was saved (PROV-7). This is the scripted count.
 
 Definition, fixed before comparing with the posted values:
@@ -58,7 +59,7 @@ CONFIG_DISPLAY = {
 }
 # Transcribed from the posted replies, kept only for the comparison in the output.
 POSTED = {"base_no_wrapper": 0.184, "lora_no_wrapper": 0.396,
-          "source": "rebuttal/responses/posted/FzpA_2_followup.md:13; rebuttal/responses/drafts/meta_review_part1.md:27"}
+          "source": "rebuttal/responses/posted/FzpA_2_followup.md:11; rebuttal/responses/drafts/meta_review_part1.md:27"}
 
 MARKDOWN = re.compile(r"[*_`#>]+")
 SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+|\n+")

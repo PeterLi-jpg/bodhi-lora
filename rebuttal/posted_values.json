@@ -56,8 +56,8 @@
       "sources": [
         "rebuttal/responses/posted/FzpA_1_rebuttal.md:15",
         "rebuttal/responses/posted/FzpA_1_rebuttal.md:54",
-        "rebuttal/responses/posted/FzpA_2_followup.md:15",
-        "rebuttal/responses/posted/FzpA_2_followup.md:23",
+        "rebuttal/responses/posted/FzpA_2_followup.md:13",
+        "rebuttal/responses/posted/FzpA_2_followup.md:21",
         "rebuttal/responses/posted/LxMF_1_rebuttal.md:45",
         "rebuttal/responses/posted/LxMF_1_rebuttal.md:64",
         "rebuttal/responses/posted/HomM_1_rebuttal.md:15",
@@ -732,10 +732,12 @@
         "base_pct": 18.4,
         "lora_pct": 39.6,
         "gap_points": 21,
-        "grader_gap_points": 28
+        "grader_gap_points": 28,
+        "base_questions_to_reader_pct": 27,
+        "lora_questions_to_reader_pct": 48
       },
       "sources": [
-        "rebuttal/responses/posted/FzpA_2_followup.md:13"
+        "rebuttal/responses/posted/FzpA_2_followup.md:11"
       ]
     },
     {
@@ -835,7 +837,7 @@
         "added_cells_rising_every_seed": 5
       },
       "sources": [
-        "rebuttal/responses/posted/FzpA_2_followup.md:15",
+        "rebuttal/responses/posted/FzpA_2_followup.md:13",
         "rebuttal/responses/posted/HomM_3_followup_part2.md:18"
       ]
     },
@@ -894,7 +896,7 @@
       },
       "sources": [
         "rebuttal/responses/posted/FzpA_1_rebuttal.md:40",
-        "rebuttal/responses/posted/FzpA_2_followup.md:11",
+        "rebuttal/responses/posted/FzpA_2_followup.md:9",
         "rebuttal/responses/posted/LxMF_1_rebuttal.md:38",
         "rebuttal/responses/posted/HomM_1_rebuttal.md:37"
       ]
@@ -921,13 +923,15 @@
       "cell": "healthbench__medgemma-27b",
       "values": {
         "d_active_inquiry": 0.63,
+        "d_context_seeking": 0.44,
+        "d_scope_bounding": 0.22,
         "d_red_flag": 0.2,
         "p_below": 1e-05,
         "aggregate_d": 0.03,
         "aggregate_p": 0.57
       },
       "sources": [
-        "rebuttal/responses/posted/FzpA_2_followup.md:15"
+        "rebuttal/responses/posted/FzpA_2_followup.md:13"
       ]
     },
     {
@@ -967,7 +971,7 @@
       },
       "sources": [
         "rebuttal/responses/posted/FzpA_1_rebuttal.md:64",
-        "rebuttal/responses/posted/FzpA_2_followup.md:19",
+        "rebuttal/responses/posted/FzpA_2_followup.md:17",
         "rebuttal/responses/posted/HomM_3_followup_part2.md:18"
       ]
     },
@@ -986,7 +990,7 @@
         "n_seeds": 5
       },
       "sources": [
-        "rebuttal/responses/posted/FzpA_2_followup.md:23",
+        "rebuttal/responses/posted/FzpA_2_followup.md:21",
         "rebuttal/responses/posted/HomM_1_rebuttal.md:9"
       ]
     }
