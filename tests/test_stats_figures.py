@@ -80,3 +80,28 @@ def test_forest_plot_draws_the_clustered_bootstrap_cis(tmp_path, monkeypatch):
     assert tuple(rf) in drawn
     # Three comparisons x seven dimensions.
     assert len(drawn) == 21
+
+
+def test_score_figures_read_the_response_tables():
+    """The U-shape, axis and score figures read each seed's tracked table.csv, so they
+    build from a clean checkout (open decision O2). Where the ignored raw eval files are
+    present, the tables give the same score and axis scores for every response."""
+    import pytest
+    from collections import Counter
+    from bodhi_lora.registry import condition_from_legacy
+    from scripts import plot_postprocessing as pp
+    cell = ROOT / "results" / CELL
+    pooled = pp.load_health_results(cell)
+    assert [len(pooled[c]) > 0 for c in pp.CONFIG_ORDER] == [True] * 4
+    raw_files = {c: [cell / f"seed_{s}" / "eval" / f"{condition_from_legacy(c)}.json" for s in pp.SEEDS]
+                 for c in pp.CONFIG_ORDER}
+    if not all(p.is_file() for paths in raw_files.values() for p in paths):
+        pytest.skip("the ignored raw eval files are not in this checkout")
+
+    def key(r):
+        axes = {k: v for k, v in (r.get("tag_scores") or {}).items() if k.startswith("axis:")}
+        return r["prompt_id"], r["score"], tuple(sorted(axes.items()))
+
+    for c, paths in raw_files.items():
+        raw = [key(r) for p in paths for r in json.loads(p.read_text())["results"]]
+        assert Counter(raw) == Counter(key(r) for r in pooled[c]), c

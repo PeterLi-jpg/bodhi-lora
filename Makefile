@@ -34,8 +34,8 @@ report numbers:
 	$(PYTHON) -m bodhi_lora report
 
 # Figure E.1 and the per-seed figure read the cell's stats.json, as the tables do; the
-# difficulty, axis and score figures read its raw outputs (tracked for the 2026-05 cell
-# while open decision O2 stands, docs/ARCHITECTURE.md section 12).
+# difficulty, axis and score figures read its tracked response tables (seed_*/table.csv),
+# so the figures need nothing outside git but the HealthBench file.
 figures: $(HB_HARD)
 	$(PYTHON) scripts/build_paper_figures.py --hb-hard "$(HB_HARD)"
 

@@ -72,20 +72,38 @@ def load_healthbench_difficulty(hb_path):
 def load_health_results(data_dir, seeds=SEEDS, configs=None):
     """
     Load per-prompt HealthBench scores for all seeds and configs.
-    Returns dict: config -> list of {prompt_id, score, tag_scores, ...}
+    Returns dict: config -> list of {prompt_id, score, tag_scores}
+
+    They come from each seed's tracked response table (seed_<n>/table.csv, written by
+    make extract), not from the raw eval files: git ignores those for every cell
+    (open decision O2, docs/ARCHITECTURE.md section 12), so a clean checkout has only
+    the tables. rubric_score is the score the eval file stored, and axis_<name> its
+    tag_scores["axis:<name>"].
     """
+    from bodhi_lora.analysis.extract import read_table
+
     if configs is None:
         configs = CONFIG_ORDER
     pooled = {cfg: [] for cfg in configs}
     for seed in seeds:
+        # A missing seed would silently shrink the pooled figures, so it is an error.
+        path = Path(data_dir) / f"seed_{seed}" / "table.csv"
+        if not path.exists():
+            raise SystemExit(f"plot_postprocessing: missing {path}")
+        table = read_table(path)
+        axes = [c for c in table.columns if c.startswith("axis_")]
         for cfg in configs:
-            # A missing seed would silently shrink the pooled figures, so it is an error.
-            path = Path(data_dir) / f"seed_{seed}" / "eval" / f"{condition_from_legacy(cfg)}.json"
-            if not path.exists():
-                raise SystemExit(f"plot_postprocessing: missing {path}")
-            d = json.load(open(path))
-            for r in d["results"]:
-                pooled[cfg].append(r)
+            rows = table[table["condition"] == condition_from_legacy(cfg)]
+            if rows.empty:
+                raise SystemExit(f"plot_postprocessing: {path} has no {condition_from_legacy(cfg)} rows")
+            for r in rows.to_dict("records"):
+                pooled[cfg].append({
+                    "prompt_id": r["prompt_id"],
+                    "score": r["rubric_score"],
+                    # A blank cell is an axis the response's rubric did not grade.
+                    "tag_scores": {"axis:" + c.removeprefix("axis_"): r[c]
+                                   for c in axes if not np.isnan(r[c])},
+                })
     return pooled
 
 
