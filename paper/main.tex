@@ -691,12 +691,12 @@ Funding: None declared.
 We tested whether MedGemma-27B had memorized \hbhard{} prompts in pretraining. The probe
 (\texttt{bodhi\_lora/pipeline/probe.py}) gives the base model the first 15 tokens of an
 \hbhard{} prompt and asks for a 25-token continuation. It then measures the exact-completion rate
-and the mean prefix overlap in tokens. Of 200 sampled \hbhard{} prompts, 105 met the minimum
-length of 40 tokens. On those 105, the model produced no exact completion, and the mean prefix
-overlap was zero tokens. This shows no verbatim memorization where the probe is defined. A
-PubMedQA control gave no usable samples, because its questions are shorter than 40 tokens. We did
-not keep the probe's output file in the repository, so these counts cannot be derived again from
-it. A new run is future work (\S\ref{sec:future}).
+and the mean prefix overlap in tokens, on the sampled prompts that have at least 40 tokens. The
+run for the submitted version found no exact completion and no prefix overlap. We did not keep
+that run's output file, so no file in the repository supports its counts, and we do not rely on
+it: it is a check from an unretained run, not evidence of no memorization. A PubMedQA control gave
+no usable samples, because its questions are shorter than 40 tokens. A new run, with its output
+kept, is future work (\S\ref{sec:future}).
 
 \section{Physician Check: Amended Protocol}
 \label{app:human}

@@ -167,7 +167,7 @@ analysis reproduces both.
 
 | Claim | Where | Kind | What would settle it |
 |---|---|---|---|
-| Contamination probe: 200 sampled, 105 long enough, 0 exact matches, 0 overlap | Appendix A | unverified | Re-run `bodhi_lora/pipeline/probe.py` on the base model (GPU) and commit the output |
+| Contamination probe: no exact completion and no prefix overlap, from the submitted version's run, whose output was not kept. The counts (200 sampled, 105 long enough) left the paper on 2026-10-11, because no file supports them and the paper prints numbers only from macros | Appendix A | unverified | R11 reruns the probe and keeps `probe.json`; the analysis reads it into each cell's `stats.json` (`probe`) |
 | Filter kept 3,129 of 4,000 traces (tau table pool column) | Table tau-calibration | unverified (constant `FILTER_KEPT`) | The filter logs of the submitted run (PROV-11) |
 | Figure 1 labels: 4,000 prompts, 2,816 train in seed 7, r = 8, 250 to 300 steps, 200 of 1,000 prompts | Figure 1 | computed for the counts (`paper/figures/pipeline_standalone.tex` inputs `generated/numbers.tex`); design for r and steps | `make figures` rebuilds the PDF |
 | Every cell on every dimension in the four conditions (Tables E.1 and E.2), MedQuAD specificity 1.71, 1.47, 1.33 | Appendix E, `tab_cell_detail_2.tex`; Appendix J text | computed (CS; `\statMQMistralJul<Dim><Cond>`; withdrawals W20, W21) | Settled by the sync |
