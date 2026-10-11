@@ -159,8 +159,8 @@ word (`flash`). Read any hit before you decide it is a name.
 ## Step 7b. Rewrite the commit ids that tracked files cite
 
 filter-repo rewrites the ids in commit messages, not in files. On 2026-10-11 the tracked
-files cited 64 commits, 47 of them after `cf72766`, and 78 of the 83 `<commit>:<path>`
-references point at those 47. `scripts/check_doc_paths.py` checks each of them with
+files cited 67 commits, 49 of them at or after `cf72766` or `72a428b`, and 78 of the 83
+distinct `<commit>:<path>` references point at those 49. `scripts/check_doc_paths.py` checks each of them with
 `git cat-file`, and `make check`, CI and `hooks/pre-commit` run it, so without this step
 every later commit fails the hook. The run manifests under `results/` also cite the
 commit they ran at. `filter-repo/commit-map` in the rewritten repository maps old ids to
