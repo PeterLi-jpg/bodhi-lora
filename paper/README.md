@@ -44,9 +44,9 @@ it. Its README gives the provenance and the known differences.
 ## No other copies
 
 On 2026-10-07 we moved every other copy out of the repo, to
-`BODHI/_archive/paper_copies_2026-10-07/` on the first author's machine. These were
-`arxiv/`, `arxiv_upload/`, `overleaf/`, `preprint/`, `neurips_submission/`,
-`BODHI_overleaf.zip`, `main_cam.*`, `preview.*` (the old workshop draft) and old build
+`BODHI/_archive/paper_copies_2026-10-07/` on the first author's machine. These were the
+folders arxiv/, arxiv_upload/, overleaf/, preprint/ and neurips_submission/, the files
+BODHI_overleaf.zip, main_cam.* and preview.* (the old workshop draft), and old build
 outputs. Do not make a new copy of the paper in the repo. Make a venue or arXiv
 version from `main.tex` at build time, and mark the commit with a tag.
 

@@ -23,13 +23,13 @@ it is. Each of its 338 files has the sha256 of a file that moved here.
 |---|---|---|
 | `02ac9a3:results_modal/` | `healthbench__medgemma-27b-text__bodhi__2026-05/` | the 2026-05 cell: eval and grade files per seed, physician grading sheets, a cross-seed summary |
 | `02ac9a3:results_rebuttal/` (tracked part) and its ignored local copy | the `*__2026-07/` cells | the 2026-07 cells: eval ids, eval and grade files, adapter configs and trainer states |
-| `results/seed_42/`, `results/_rescue/` (ignored) | `healthbench__medgemma-27b-text__bodhi__2026-04/` | the 2026-04 pilot: eval files, teacher traces, its train/val split |
+| results/seed_42/ and results/_rescue/ (ignored, gone) | `healthbench__medgemma-27b-text__bodhi__2026-04/` | the 2026-04 pilot: eval files, teacher traces, its train/val split |
 | `checkpoints/seed_42/` (ignored) | the pilot's `seed_42/train/` | the pilot adapter and its epoch checkpoints |
 | `02ac9a3:rebuttal/results/` | the 2026-05 cell's `analysis/`, and `cross_cell/` | the analyses posted in the discussion |
 | `02ac9a3:data/rebuttal_cells/` | `cross_cell/generated_values.json`, `rebuttal/posted_values.json`, `rebuttal/README.md` | the added-cell values, computed and as posted |
 | `02ac9a3:data/derived/` | the 2026-05 cell's `seed_7/filter/`, the pilot's `analysis/` | two small score copies the paper reads |
 | `02ac9a3:data/irr_instructions/` | the 2026-05 cell's `validation/instructions/` | the rater instructions |
-| `data/sft_qwen_graded/` (ignored) | the 2026-05 cell's `seed_7/filter/train.jsonl` | the seed-7 train split |
+| data/sft_qwen_graded/ (ignored, gone) | the 2026-05 cell's `seed_7/filter/train.jsonl` | the seed-7 train split |
 | `logs/host/` (ignored) | each cell's `logs/` | the GPU host's stage logs |
 | `02ac9a3:data/raw/hard_200_sample_ids.json` | `shared/inputs/eval_ids.json` of the three 2026-07 HealthBench cells, the Gemma-2-9B run and the pilot | the fixed eval set they used, one copy each |
 
@@ -49,9 +49,9 @@ in `seed_<n>/train/checkpoint-<k>/`.
   files.
 - The pilot's figures and its three analysis outputs (`hedge_rate.json`, `rubric_diff.json`,
   `ushape.json`). No table uses them.
-- The adapters of smoke runs in `checkpoints/` (`best/`, `checkpoint-1/`, `qwen_test/`), a
+- The adapters of smoke runs in `checkpoints/` (best/, checkpoint-1/ and qwen_test/), a
   copy of the pilot's trainer state, and the outputs of the removed smoke script in
-  `data/sft/` and `eval/smoke/`.
+  data/sft/ and eval/smoke/.
 - Four host logs that belong to several cells or none: the grid driver, the two install
   logs and one re-grade driver log.
 
@@ -59,7 +59,7 @@ in `seed_<n>/train/checkpoint-<k>/`.
 
 These moved files are analysis outputs, kept byte for byte: `analysis/cross_seed_aggregate.*`,
 `analysis/withdrawn/mimicry_split.json`, `analysis/withdrawn/interference_mechanism.json` and
-`analysis/withdrawn/second_person_questions.json` of the 2026-05 cell (in `withdrawn/` since
+`analysis/withdrawn/second_person_questions.json` of the 2026-05 cell (in `analysis/withdrawn/` since
 2026-10-11, because no paper number may come from them), the pilot's
 `analysis/qwen_grader_scores.json`, the 2026-05 cell's `seed_7/filter/filter_scores.json`,
 and `cross_cell/{quality_drop,cell_recipe,generated_values}.json`. Since 2026-10-10 the

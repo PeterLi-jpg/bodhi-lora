@@ -5,15 +5,18 @@ Docs drifted when code paths were deleted (audit HYG-14): README and
 KNOWN_ISSUES pointed at TPU launchers that were gone. This check fails CI when
 a doc names a path that is not there.
 
-What it reads: README.md, CONTRIBUTING.md, results/README.md and docs/**/*.md. In each
-it takes inline code spans,
+What it reads: every tracked *.md except the folders in SKIP. In each it takes inline
+code spans,
 markdown link targets and the words inside fenced code blocks, and keeps the
 ones that look like repo paths: the first path part is a top-level entry of
 the repo (or a root file such as setup.sh). It also reads the source comments of
 paper/generated/*.tex, where each macro and table names the file it came from, so a
 reader who follows a number's source does not reach a path that is gone.
 
-A path passes when it is one of these:
+A path is read from the repo root first, then from the doc's own folder (a README in a
+subfolder names its neighbours that way), then from a cell folder (results/<cell>/ or
+results/<cell>/seed_<n>/), because docs name a cell's files as analysis/stats.json or
+eval/base.json. It passes when it is one of these:
   - tracked in git, or a directory that holds tracked files
   - ignored by .gitignore (outputs and local data, such as eval/ or data/raw/)
   - written as <commit>:<path> and present at that commit (for history notes)
@@ -26,6 +29,7 @@ Exit 1 if any path is missing.
 from __future__ import annotations
 
 import fnmatch
+import os
 import re
 import subprocess
 import sys
@@ -33,8 +37,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
-DOCS = ["README.md", "CONTRIBUTING.md", "results/README.md"]
-DOC_GLOBS = ["docs/**/*.md"]
+# Markdown that is not checked, and why.
+SKIP = (
+    "rebuttal/responses/",   # the replies as posted or drafted: verbatim records
+    "paper/submitted/",      # the frozen submission and its provenance note
+    "scripts/maintenance/",  # one-off history tools that name old paths on purpose; they go after the purge
+)
 
 # Paths the docs name that are not in the repo yet. Each entry is a promise, not
 # a file: the check warns when one exists, so the entry can be removed.
@@ -120,7 +128,7 @@ def exists(path: str) -> bool:
 def candidate(tok: str, doc_dir: Path, is_link: bool, in_fence: bool = False) -> str | None:
     tok = tok.strip().strip("'\"").rstrip(".,;:)")
     tok = tok.split("#", 1)[0]
-    tok = re.sub(r":\d+(-\d+)?$", "", tok)  # file:line references
+    tok = re.sub(r":(\d[\d,-]*|<[^>]+>)$", "", tok)  # file:line, file:1,4-7 and file:<line> references
     if not tok or "://" in tok or tok.startswith(("-", "$", "~", "/", "<", "@", "=")):
         return None
     if " " in tok or "=" in tok:
@@ -155,10 +163,20 @@ def candidate(tok: str, doc_dir: Path, is_link: bool, in_fence: bool = False) ->
 
 
 def doc_files() -> list[Path]:
-    files = [ROOT / d for d in DOCS if (ROOT / d).exists()]
-    for g in DOC_GLOBS:
-        files += sorted(ROOT.glob(g))
-    return files
+    return [ROOT / t for t in sorted(TRACKED) if t.endswith(".md") and not t.startswith(SKIP)
+            and (ROOT / t).exists()]
+
+
+def exists_from(doc_dir: Path, path: str) -> bool:
+    """The path read from the doc's own folder, then from a cell folder."""
+    if COMMIT_PATH.match(path):
+        return False
+    tail = "/" if path.endswith("/") else ""
+    if doc_dir != Path("."):
+        joined = os.path.normpath(str(doc_dir / path))
+        if not joined.startswith("..") and exists(joined + tail):
+            return True
+    return any(exists(prefix + path) for prefix in ("results/*/", "results/*/seed_*/"))
 
 
 def main() -> int:
@@ -183,7 +201,7 @@ def main() -> int:
                 if path is None:
                     continue
                 checked += 1
-                ok = exists(path)
+                ok = exists(path) or exists_from(rel.parent, path)
                 if verbose:
                     print(f"{'ok  ' if ok else 'MISS'} {rel}:{lineno}: {path}")
                 if not ok:

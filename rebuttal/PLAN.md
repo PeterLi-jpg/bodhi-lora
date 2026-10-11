@@ -52,10 +52,11 @@ wrong (`withdrawals.md` W21).
   Gemma-2-9B on HealthBench-Hard, stopped in trace generation. BioMistral on MedQA ran
   only as a one-seed smoke test (`results/README.md`).
 - A second CoT protocol, or a BODHI ablation variant (C29). Code for an ask-first protocol
-  now exists (`PROTOCOL=ask_first` in `launch/run_cell.sh`).
+  now exists (`configs/protocols/ask-first.yaml`).
 - The clinical-judge re-grade (C26).
-- The inference-time calibration baseline (C27), planned as `analyses/prior_work_baseline.py`.
-  The code now lives in `bodhi_lora/protocols/` and `launch/run_baselines.sh`.
+- The inference-time calibration baseline (C27). The prompt baselines are now protocol
+  records (`configs/protocols/clarify.yaml`, `verbalized-confidence.yaml`,
+  `mediq-abstain.yaml`), run by `python -m bodhi_lora run` (docs/RUN_PLAN.md R2).
 - The cost table from `bodhi_lora/pipeline/bench.py` (C25).
 
 ## Rules that still hold
@@ -64,6 +65,6 @@ wrong (`withdrawals.md` W21).
   avoid both families, or the asymmetric-grading argument breaks. The Med42-8B cells break
   this rule (Llama-3 base, Llama-3 evaluator). A re-grade of those cells needs a judge from
   neither family (audit EVAL-7). `bodhi_lora/pipeline/grade.py` does that re-grade. It has
-  not run. `launch/run_cell.sh` now refuses a same-family cell unless `--allow-same-family`
-  is passed.
+  not run. The registry now refuses a same-family cell unless its record gives
+  `grading.same_family_waiver` with a reason.
 - **Seeds.** 42, 7, 13, 99 and 101, the same as the paper.

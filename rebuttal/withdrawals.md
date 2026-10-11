@@ -75,7 +75,7 @@ same result.
 - `FzpA_2_followup.md:5`: "\"Clinical decision support\" was the wrong term. The label was
   ours and it named a setting the study never addressed".
 - The draft of that reply also said "None of the seven presupposes a clinician reader"
-  (`drafts/FzpA_2_followup_prepost.md:9`). That paragraph was not posted.
+  (`responses/drafts/FzpA_2_followup_prepost.md:9`). That paragraph was not posted.
 - `HomM_4_consolidation.md:3`: "The scope is named as patient-facing clinical Q&A."
 
 **The paper must say.** The setting is patient-facing clinical Q&A. In HealthBench-Hard, 14 of
@@ -332,7 +332,7 @@ prompts repeat across seeds (audit CLAIM-10).
 **Correction posted.** None. Audit findings HYG-4, PROV-3, REPRO-3 and REPRO-12 contradict it.
 
 **The paper must say.** State what ran in each cell, not "unchanged":
-- The added cells used `rebuttal/configs/*.yaml`: r = 16, alpha = 32, effective batch 16 and
+- The added cells used `61dada9:rebuttal/configs/`: r = 16, alpha = 32, effective batch 16 and
   3 epochs. Mistral-Small-24B was trained with 4-bit QLoRA and served on a bf16 base.
 - The submitted MedGemma adapters very likely used r = 8 and alpha = 16 (tunix path). The GCS
   check in HYG-4 cannot run: the bucket returned 404 on 2026-10-08. The paper says the values come
@@ -562,7 +562,7 @@ Base hedging quality 1.46 ± 0.01. Two earlier posts (`LxMF_1_rebuttal.md:76`,
 
 **Correction posted.** None.
 
-**What the raw outputs give.** `make cells` (`rebuttal/analyses/cell_values.py`) computes 1.4548
+**What the raw outputs give.** `503b975:rebuttal/analyses/cell_values.py`, then run by `make cells`, computes 1.4548
 from the per-seed eval files, which rounds to 1.45. It is the only posted value of the added cells
 that differs from the raw outputs at the posted precision
 (`results/cross_cell/generated_values.json`, `mismatches`). So 1.45 was right and Table 1's 1.46

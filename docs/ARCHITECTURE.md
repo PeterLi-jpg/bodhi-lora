@@ -593,10 +593,9 @@ a tracked response table; history keeps the submitted files at the migration bas
 `axis_breakdown` and `score_distribution` directly, and `epistemic_bar` and
 `epistemic_seeds` through the cell's
 `results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/cross_seed_aggregate.json`.
-So the default of O2 must
-first point the figure scripts at the response tables and `stats.json`. The probe and bench
-outputs match no rule yet, so git tracks them
-(open decision O8).
+So the default of O2 must first point the figure scripts at the response tables and
+`stats.json`. The probe and bench outputs match no rule yet, so git tracks them (open
+decision O8).
 
 **The response table.** `results/<cell_id>/seed_<n>/table.csv` has one row per
 (condition, prompt id). `analyze --extract` writes it from the raw files, with

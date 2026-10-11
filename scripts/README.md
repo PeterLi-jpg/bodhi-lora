@@ -24,8 +24,8 @@ scripts here are the tools that are not pipeline steps. Each one has a caller:
 
 Git history keeps every removed script.
 
-- 2026-10-08: the shell launchers that no reported number came from (`gpu/`, `slurm/`,
-  `run_all.sh`, `smoke.sh`, `run_multi_seed.sh`, `launch_gpu.sh`, `run_ablation_seeds.sh`,
+- 2026-10-08: the shell launchers that no reported number came from (`02ac9a3:gpu/`, `02ac9a3:slurm/`,
+  `02ac9a3:run_all.sh`, `02ac9a3:smoke.sh`, `run_multi_seed.sh`, `launch_gpu.sh`, `run_ablation_seeds.sh`,
   `regrade_empty_seeds.sh`) and the manual tools `analyze_traces.py`, `chat.py`,
   `compare_eval_runs.py`, `eval_high_stakes.py`, `preflight.py`,
   `prepare_clinician_grading.py` and `regrade_with_secondary.py`. `draw_pipeline_figure.py`

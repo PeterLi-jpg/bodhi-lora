@@ -33,7 +33,7 @@ Modal eval cloned main at that commit. `modal_eval.py` was committed later
 | `scripts/prefetch_gemma_safetensors.py` | 3d21545 | Pre-downloads the MedGemma weights into a TPU host's HF cache. The launcher does not call it; `train_lora_tunix.py` downloads the weights itself. Moved here from `scripts/` on 2026-10-09. |
 | `requirements.lock.txt` | (moved) | Formerly at the repo root. See section 6. |
 
-The launcher also needs `tpu/setup_tpu.sh` and the rest of main at 8262d49.
+The launcher also needs `8262d49:tpu/setup_tpu.sh` and the rest of main at 8262d49.
 They are not copied here; `git show 8262d49:<path>` prints any of them.
 
 ## 2. The submitted cell, stage by stage
@@ -59,7 +59,7 @@ on GCS can show which.
 
 The paper's hyperparameter table states r=16, alpha=32, all 7 projections,
 3 epochs, effective batch 16, sequence length 4096. That is the GPU recipe in
-`configs/lora_medgemma27b.yaml`, and the rebuttal configs copy it. The submitted
+`8262d49:configs/lora_medgemma27b.yaml`, and the rebuttal configs copy it. The submitted
 adapters came from the tunix path, with these values:
 
 | Setting | Value | Source |
@@ -92,7 +92,7 @@ Open points, all settled only by the files on GCS (see "Blocked" below):
   on out-of-memory; no committed file contains it.
 - Whether tunix counts `max_steps` in optimizer steps or in loader yields, and
   so whether the effective batch is 64 or 8, comes from the config comment.
-  google-tunix was not pinned (`tpu/setup_tpu.sh` at 8262d49), so the version
+  google-tunix was not pinned (`8262d49:tpu/setup_tpu.sh`), so the version
   that ran is unknown.
 - The audit's adapter-size check (60.47 MiB per seed with the tokenizer) agrees
   with r=8 on q/k/v and rules out r=16 on all 7 modules.
@@ -141,7 +141,7 @@ This file was at the repo root. It pins torch 2.11.0 and has no vllm, jax,
 tunix or bitsandbytes entry, so it is not a freeze of any environment that
 produced a reported number: the Modal eval image had torch below 2.9 and vllm,
 and the TPU trainer needed jax and tunix. Its header names
-`tpu/setup_tpu.sh` as a source of truth, so it belongs to the submission era.
+`8262d49:tpu/setup_tpu.sh` as a source of truth, so it belongs to the submission era.
 It moved here so that the root no longer holds a lock that contradicts the
 training pins (torch 2.7.0). The root now has `pyproject.toml` (training and
 analysis env) and `requirements-infer.txt` (vLLM env).
@@ -150,27 +150,28 @@ analysis env) and `requirements-infer.txt` (vLLM env).
 
 The six posted cells (HealthBench x {Mistral-Small-24B, Med42-8B, BioMistral-7B};
 ChatDoctor x {Mistral-Small-24B, Med42-8B}; MedQuAD x Mistral-Small-24B) and the
-set-aside MedQA cell ran `rebuttal/launch/run_cell.sh` at 61dada9. That script
-is now rewritten. `PROFILE=rebuttal-posted` (see `rebuttal/launch/_common.sh`)
-restores its settings, so these cells stay describable:
+set-aside MedQA cell ran `61dada9:rebuttal/launch/run_cell.sh`. That launcher is gone; the
+cells' settings are now their records (`configs/cells/*__2026-07.yaml`), and the table
+below gives where each posted setting came from:
 
 | Setting | Posted cells | Submitted cell | Source (posted) |
 |---|---|---|---|
-| LoRA recipe | r=16, alpha=32, 7 projections, 3 epochs, effective batch 16, seq 4096, cosine with 5% warmup | section 3 | `rebuttal/configs/*.yaml` |
-| Training precision | Mistral-24B: 4-bit NF4 QLoRA; Med42, BioMistral: bf16 | bf16 | `rebuttal/configs/lora_mistral_small_24b_qlora.yaml:16` |
-| Eval base precision | bf16 for every cell, so the Mistral-24B adapters were trained on a 4-bit base and evaluated on a bf16 base. `EVAL_BASE_QUANT=match` now evaluates on the matching 4-bit base. | bf16 | `61dada9:scripts/_vllm_engine.py:236`, `:314` |
+| LoRA recipe | r=16, alpha=32, 7 projections, 3 epochs, effective batch 16, seq 4096, cosine with 5% warmup | section 3 | `61dada9:rebuttal/configs/` |
+| Training precision | Mistral-24B: 4-bit NF4 QLoRA; Med42, BioMistral: bf16 | bf16 | `61dada9:rebuttal/configs/lora_mistral_small_24b_qlora.yaml:16` |
+| Eval base precision | bf16 for every cell, so the Mistral-24B adapters were trained on a 4-bit base and evaluated on a bf16 base. In the package, a cell record with `eval.base_precision: train` evaluates on the matching 4-bit base. | bf16 | `61dada9:scripts/_vllm_engine.py:236`, `:314` |
 | Context length / slots | 8192 / 64 | 4096 / 32 | `61dada9:scripts/_vllm_engine.py:154`, `:250` |
 | Client threads | 16 | 32 | `61dada9:scripts/eval_healthbench.py:380` |
 | Grader | NousResearch/Meta-Llama-3.1-8B-Instruct (a re-upload; byte identity with the meta-llama weights is not checked here) | meta-llama/Llama-3.1-8B-Instruct | `61dada9:rebuttal/launch/run_cell.sh:38` |
 | HealthBench eval prompts | one fixed set (`data/raw/hard_200_sample_ids.json`) for every seed; it shares 141 of 200 prompts with the submitted union | a separate 200 per seed | `61dada9:rebuttal/launch/run_cell.sh:97` |
 | Other benchmarks | pool = first 4900 usable rows in HF order; holdout = first 200 ids of that file | n/a | `61dada9:rebuttal/launch/run_cell.sh:113`, `:116-121` |
-| tau | 0.4 in every cell (`rebuttal/results/cell_recipe.json`). The rule re-filters a non-HealthBench cell at the 22nd-percentile tau when its train/raw is below 40%; no cell met it, and no log shows a second cut. MedQuAD kept 78.4% at 0.4, close to what a 22nd-percentile cut keeps, which caused an earlier misreading (`rebuttal/withdrawals.md` W11). | 0.4 | `61dada9:rebuttal/launch/run_cell.sh:159-201` |
+| tau | 0.4 in every cell (`results/cross_cell/cell_recipe.json`). The rule re-filters a non-HealthBench cell at the 22nd-percentile tau when its train/raw is below 40%; no cell met it, and no log shows a second cut. MedQuAD kept 78.4% at 0.4, close to what a 22nd-percentile cut keeps, which caused an earlier misreading (`rebuttal/withdrawals.md` W11). | 0.4 | `61dada9:rebuttal/launch/run_cell.sh:159-201` |
 | Train/val split | once per cell, seed 42 | once per seed | `61dada9:rebuttal/launch/run_cell.sh:146-157` |
 | Hardware | one H100 80GB per stage | v6e-8 TPU (train), A100-80GB (eval) | `rebuttal/PLAN.md` |
 | vLLM env | `.venv-infer`, versions not recorded | see section 4 | `61dada9:rebuttal/launch/run_cell.sh:18-22` |
 
-The Med42-8B base is in the evaluator's family (Llama-3). The launcher now
-refuses such a cell unless `--allow-same-family` is passed.
+The Med42-8B base is in the evaluator's family (Llama-3). The registry now
+refuses such a cell unless its record gives `grading.same_family_waiver` with a reason
+(the two Med42-8B records do).
 `bodhi_lora/pipeline/grade.py` re-grades a cell with a judge from a third
 family.
 

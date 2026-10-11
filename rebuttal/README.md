@@ -123,7 +123,8 @@ Two files, with different jobs:
   (`make analyze` from the cell's response tables, `make numbers` from those). The
   cross-cell statistics check every posted value against it (`posted_check` in
   `../results/cross_cell/stats.json`). `../results/cross_cell/generated_values.json` is the
-  record of the first check, made on 2026-10-08 by the removed `analyses/cell_values.py`; it
+  record of the first check, made on 2026-10-08 by the removed
+  `503b975:rebuttal/analyses/cell_values.py`; it
   lists each posted value that differs from the raw outputs (`mismatches`).
 - `posted_values.json` is the record of what was posted. It lists every number the authors
   posted on OpenReview about the rebuttal cells, plus the posted analyses of the submitted
@@ -217,7 +218,7 @@ files `base_no_wrapper`, `base_bodhi`, `lora_no_wrapper` and `lora_bodhi` are no
 `multi_seed_summary.json` copies were written before commit 55f6c7c, list their seeds as
 `["eval"]` (a wrong glob) and hold one seed only; they went to the archive, and
 The analysis recomputes everything from the per-seed files. The teacher traces and
-filter outputs (`sft/`) stayed on the host.
+filter outputs (the host's sft/ folders) stayed on the host.
 
 Three host folders are not cells of the paper:
 `medqa-open-preamble__medgemma-27b-text__bodhi__2026-07` and
@@ -244,7 +245,7 @@ and `make analyze` computes every metric from them. The cross-cell step then put
 posted value next to the generated seed mean (`posted_check` in
 `results/cross_cell/stats.json`; the names map through `posted` in
 `configs/report.yaml`) and lists each posted value that differs at the posted decimals.
-Until 2026-10-10 `analyses/cell_values.py` did this into `generated_values.json`, which
+Until 2026-10-10 `503b975:rebuttal/analyses/cell_values.py` did this into `generated_values.json`, which
 stays as the record.
 
 - The metrics are per-seed means over scored responses (epistemic metrics) or over all

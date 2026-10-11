@@ -106,8 +106,9 @@ that exists only on a remote machine.
   `results/`: manifests, cell records, id lists, adapter configs, trainer states, response
   tables, analysis and validation files are tracked; traces, raw eval and grade JSON,
   adapter weights and logs stay out (results/PROVENANCE.md).
-  `scripts/check_doc_paths.py` (`make check`) fails when a doc names a path that does not
-  exist. Review step: a reply or paper number cites a file that is in git.
+  `scripts/check_doc_paths.py` (`make check`, `hooks/pre-commit`) fails when a tracked
+  markdown file names a path that does not exist; only the verbatim replies, the frozen
+  submission and the history tools are skipped. Review step: a reply or paper number cites a file that is in git.
 
 ## 8. One canonical paper source
 
