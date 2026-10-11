@@ -243,3 +243,11 @@ same correction.
 
 Why: a choice of method is the first author's, and D22 kept O1 to O8 his. The entry that
 settled them was written by the delegate, under his heading.
+
+### D26. The proposed defaults accepted (2026-10-11)
+
+The first author answered "Accept all (Recommended)" to the proposed defaults that D25
+left open: choice 3 (new cells sit next to the recorded ones), choice 7 / O10 (keep the
+frozen evaluator template), O1 (`bodhi_lora`), O2 (one tracked rule), O7 (R7 is a new
+QLoRA cell) and O8 (track `probe.json`, ignore `samples.jsonl`). Recorded in
+ANALYSIS_PLAN.md section 12. Still open: the R7 4,096-token pair, O9 and the R17 strata.

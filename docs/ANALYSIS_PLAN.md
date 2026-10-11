@@ -832,3 +832,26 @@ post hoc checks is now Table H.7. These are proposed defaults that wait for his 
   D24 closed to apply the entry above (DECISIONS.md D25).
 
 No output of any planned cell existed: no folder of a planned cell is under `results/`.
+
+**2026-10-11, the first author. The proposed defaults.** Asked in chat to accept or review
+each proposed default of the entry above, the first author answered "Accept all
+(Recommended)". This entry records his answer and lifts the gates it names:
+
+- Choice 3: the new cells sit next to the 2026-05 and 2026-07 cells, which stay the record.
+- Choice 7 (O10): the new cells keep the frozen evaluator template, which names BODHI, so
+  their grades compare with the recorded ones.
+- O1: the package keeps the name `bodhi_lora`.
+- O2: one tracked rule for every cell (applied in b23be49).
+- O7: the MedGemma-27B rerun (R7) is the new QLoRA cell
+  `healthbench__medgemma-27b-text__bodhi` at the E13 settings; the 2026-05 cell stays the
+  record.
+- O8: git tracks the probe's `probe.json` and ignores its `samples.jsonl` (applied in
+  4ae74c6).
+
+Still open after this answer: whether R7 adds `lora+bodhi` and `lora+red-flags-first` at a
+4,096-token eval context (RUN_PLAN.md, "R7 and C31"), the merged-weights condition of the
+timing bench (O9), and the split of the 300 hand-labelled replies over their strata (R17).
+R2 started before O9 was decided, so its bench times the adapter unmerged, as recorded.
+
+No output of any planned cell existed when he answered: R1 (judge re-grade of the recorded
+Med42-8B cells) was running and R2 had not started.
