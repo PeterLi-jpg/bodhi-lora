@@ -135,10 +135,13 @@ def test_the_analysis_reads_the_probe_the_bench_and_the_stage_times(run):
     assert s["probe"]["benchmark"]["n"] == probe["benchmark"]["n"] > 0
     bench = json.loads((proj.cell(SMOKE).stage(1, "bench") / "bench.json").read_text())
     assert s["bench"]["seeds"] == [1]
+    # stats.json keeps 6 significant digits (round6), so compare to 1e-5 relative.
     for c in reg.cells[SMOKE].eval.conditions:
-        assert s["bench"]["conditions"][c]["1"]["median_s"] == pytest.approx(bench["conditions"][c]["median_s"])
+        assert s["bench"]["conditions"][c]["1"]["median_s"] == pytest.approx(
+            bench["conditions"][c]["median_s"], rel=1e-5)
     ratio = s["bench"]["contrasts"]["lora - base"]["1"]["median_s_ratio"]
-    assert ratio == pytest.approx(bench["conditions"]["lora"]["median_s"] / bench["conditions"]["base"]["median_s"])
+    assert ratio == pytest.approx(bench["conditions"]["lora"]["median_s"] / bench["conditions"]["base"]["median_s"],
+                                  rel=1e-5)
     times = s["stage_times"]
     assert {"traces", "filter", "probe"} <= set(times["shared"])
     assert set(times["per_seed"]["eval"]) == {"1", "2"} and times["per_seed"]["bench"]["1"]["seconds"] >= 0
