@@ -3,7 +3,9 @@
 On 2026-10-08 every result file moved into this one folder (docs/ARCHITECTURE.md section
 6), by `scripts/migrate_results.py`. `provenance.json` has one entry per old file: its old
 path, its new paths, its sha256 and size, whether git tracked it before and after, and a
-note. This file says the same in prose.
+note. This file says the same in prose. An entry with an `edited` field moved byte for
+byte and was edited later, for the reason the field gives; the test
+(`tests/test_migration_provenance.py`) holds it to its bytes at the move commit, 408e42c.
 
 ## How the move was checked
 
