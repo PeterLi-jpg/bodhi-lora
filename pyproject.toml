@@ -1,6 +1,8 @@
 # The training and analysis environment (.venv). Install it editable from the repo root:
-#   pip install -e '.[dev]'                 analysis, report, figures and tests (CPU)
-#   pip install -e '.[train,gpu,dev]'       also the training stack (setup.sh does this)
+#   pip install -e '.[dev]'                 analysis, report, figures and tests (CPU; the tests
+#                                           that need the training stack skip)
+#   pip install -e '.[train,gpu,dev]'       also the training stack and python -m bodhi_lora run
+#                                           (setup.sh does this)
 # Install it editable, never as a wheel: bodhi_lora/paths.py finds configs/ and results/
 # next to the package folder, so a copy in site-packages finds neither.
 #

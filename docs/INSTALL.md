@@ -4,8 +4,8 @@ There are three environments. Pick the one you need.
 
 | Environment | For | Install |
 |---|---|---|
-| analysis (`.venv`, CPU) | the tables, statistics, figures and tests: `make analyze`, `make numbers`, `make figures`, `make test` | `pip install -e '.[dev]'` |
-| training (`.venv`) | the above, plus LoRA training and the CPU smoke cell (`make smoke`) | `bash setup.sh`, which runs `pip install -e '.[train,gpu,dev]'` |
+| analysis (`.venv`, CPU) | the tables, statistics, figures and tests: `make analyze`, `make numbers`, `make figures`, `make test` (the tests that need the training stack skip) | `pip install -e '.[dev]'` |
+| training (`.venv`) | the above, plus LoRA training, the CPU smoke cell (`make smoke`) and every `python -m bodhi_lora run`, dry runs too | `bash setup.sh`, which runs `pip install -e '.[train,gpu,dev]'` |
 | inference (`.venv-infer`, Linux and CUDA) | the vLLM stages of a real run: traces, filter, eval, grade, probe, bench | `bash setup.sh` on Linux, from `requirements-infer.txt` |
 
 Python 3.10, 3.11 or 3.12; CI runs 3.11. Real runs need Linux with CUDA 12.1 or later.
@@ -35,7 +35,11 @@ make analyze numbers figures
 ```
 
 The pins are in `pyproject.toml`. This is enough to rebuild every table, macro and figure
-of the paper from the tracked results. `make paper` also needs `tectonic`.
+of the paper from the tracked results. `make paper` also needs `tectonic`. `make test`
+passes here, and skips the tests that need the training stack (torch, transformers or
+`bodhi-llm`); CI runs them with `'.[train,dev]'`. `python -m bodhi_lora run`, a dry run
+too, builds the protocols and so needs `bodhi-llm` from the train extra; here it stops and
+names that install.
 
 ## 3. Training environment
 

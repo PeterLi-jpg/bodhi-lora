@@ -107,3 +107,11 @@ def test_every_record_file_is_named_after_its_id():
         for path in sorted((CONFIGS_DIR / kind).glob("*.yaml")):
             assert yaml.safe_load(path.read_text(encoding="utf-8"))["id"] == path.stem
     assert not list(Path(CONFIGS_DIR).glob("*/*.yml")), "use the .yaml suffix"
+
+
+def test_run_names_the_install_it_needs_without_bodhi_llm(monkeypatch, capsys):
+    """On the CPU install (.[dev]) bodhi-llm is missing; run stops with the install to use
+    instead of a traceback from inside a stage (docs/INSTALL.md)."""
+    monkeypatch.setattr(cli, "_has_module", lambda name: name != "bodhi")
+    assert cli.main(["run", "tiny-rubric__tiny-random-llama__bodhi", "--dry-run"]) == 1
+    assert "pip install -e '.[train,dev]'" in capsys.readouterr().out

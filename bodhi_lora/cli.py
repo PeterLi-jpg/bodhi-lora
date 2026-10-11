@@ -34,6 +34,7 @@ with every problem listed.
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 from dataclasses import replace
 from pathlib import Path
@@ -130,7 +131,21 @@ def cmd_fetch(args, reg: Registry) -> int:
     return 0
 
 
+def _has_module(name: str) -> bool:
+    try:
+        return importlib.util.find_spec(name) is not None
+    except (ImportError, ValueError):
+        return False
+
+
 def cmd_run(args, reg: Registry) -> int:
+    # Every run, a dry run too, builds the protocols on the CPU stub, and BODHI comes from
+    # bodhi-llm, which only the train extra installs. The CPU analysis install (.[dev])
+    # lacks it, so say which install a run needs instead of failing inside a stage.
+    if not _has_module("bodhi"):
+        print("run needs bodhi-llm, which the train extra installs: pip install -e '.[train,dev]' "
+              "(docs/INSTALL.md)", flush=True)
+        return 1
     from bodhi_lora.pipeline.runner import DEFAULT_STAGES, RunError, run_cell
 
     stages = tuple(args.stages.split(",")) if args.stages else DEFAULT_STAGES

@@ -5,6 +5,9 @@ import hashlib
 import pytest
 
 pytest.importorskip("pydantic")
+# bodhi_lora.protocols imports the BODHI protocol, which needs bodhi-llm from the train
+# extra; the CPU install (.[dev]) skips these tests, as the other protocol tests do.
+pytest.importorskip("bodhi")
 
 from bodhi_lora.engine import StubEngine  # noqa: E402
 from bodhi_lora.paths import CONFIGS_DIR  # noqa: E402

@@ -139,7 +139,7 @@ line (`python -m bodhi_lora`, or `bodhi-lora` once installed) runs a cell:
 python -m bodhi_lora list cells                 # every cell, its status and marks
 python -m bodhi_lora list cells --settings      # what differs between the cells
 python -m bodhi_lora fetch healthbench          # download a benchmark, checked against its pins
-python -m bodhi_lora run <cell_id> --dry-run    # print the GPU commands, run the rest on the CPU stub
+python -m bodhi_lora run <cell_id> --dry-run    # print the GPU commands, run the rest on the CPU stub (training env)
 python -m bodhi_lora run <cell_id> --gpus 0,1   # every stage, one seed per GPU
 python -m bodhi_lora analyze <cell_id>          # the cell's statistics, from its tables
 python -m bodhi_lora analyze <cell_id> --extract  # first the tables, from the raw outputs
