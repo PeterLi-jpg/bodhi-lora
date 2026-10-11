@@ -109,6 +109,7 @@ REDACT = [
     # Branch-policy lines name the scratch-branch prefixes of the team's tools.
     (re.compile(r"a `claude/\*` or `worktree-agent\*` branch"), "a scratch branch"),
     (re.compile(r"`claude/\*` and `worktree-agent\*` pushes"), "scratch-branch pushes"),
+    (re.compile(r"the remote `claude/\*` and `worktree-agent\*` branches"), "the remote scratch branches"),
     (re.compile(r"github\.com([/:])(PeterLi-jpg|sebasmos)/", re.I), r"github.com\1anonymous/"),
     (re.compile(r"\b(PeterLi-jpg|sebasmos)\b", re.I), "anonymous"),
     (re.compile(r"\banqipeter[\w.+-]*@[\w.-]+", re.I), "anonymous@example.org"),
@@ -124,6 +125,8 @@ REDACT = [
     (re.compile(r"Substrate Labs", re.I), "ANONYMOUS-LAB"),
     # The slurm partition name gives away the cluster's institution.
     (re.compile(r"\bmit_normal_gpu\b"), "gpu"),
+    # The full name, where a ledger entry records who said what, before the short form.
+    (re.compile(r"\bAnqi Peter Li\b"), "anonymous"),
     (re.compile(r"\bPeter Li\b"), "Anonymous Authors"),
     # The repo slug misspells BODHI. The misspelling finds the public repo.
     (re.compile(r"bohdi", re.I), keep_case("bodhi")),
@@ -145,8 +148,8 @@ GATE = [
     # All-caps affiliations, case-sensitive. The deny-file skips all-caps hits as
     # acronyms, so these must be built in. "MIT" is also a license name; those
     # uses (MIT License, "MIT, see LICENSE", a "| MIT |" table cell, and the license
-    # field of a registry record, YAML or JSON) are allowed.
-    ("affiliation", re.compile(r"\bUNC\b|(?<!license: )(?<!\"license\": \")\bMIT\b"
+    # field of a registry record, YAML or JSON, or of pyproject.toml) are allowed.
+    ("affiliation", re.compile(r"\bUNC\b|(?<!license: )(?<!\"license\": \")(?<!license = \")\bMIT\b"
                                r"(?!\s*(?:[Ll]icen[cs]e|, see|\|))")),
     ("repo slug", re.compile(r"bohdi", re.I)),
     ("co-author repo", re.compile(r"humbleai", re.I)),
