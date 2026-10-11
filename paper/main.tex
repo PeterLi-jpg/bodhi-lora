@@ -509,10 +509,9 @@ does not explain this: clean responses score \statHBMedGemmaMayLeakBodhiAnalysis
 \statHBMedGemmaMayLeakBodhiAnalysisFormatLoRABodhiCleanRedFlagQFour{} from the shortest to the longest quarter. We withdraw our posted rule,
 which also counted two words that are not headers (Appendix~\ref{app:robustness}). We defined the
 split by a property of the format after we saw the results, so leakage may also follow prompt
-difficulty. We do not claim that the adapter and the protocol compete for capacity. Truncation is
-another possible cause. A prompt whose two passes overran the context window got no response, so it
-is in neither group and lowers no score. The outputs do not record why generation stopped, so we
-cannot rule out responses that the token limit cut short.
+difficulty. We do not claim that the adapter and the protocol compete for capacity. Truncation
+remains possible: prompts that overran the context are in neither group, but the outputs do not
+record why generation stopped.
 
 The drop does not repeat in the added cells. There, red-flag identification under LoRA+\bodhi{}
 is lower than under LoRA with $p < 0.05$ in \statGroupAddedOutsideFamilyRedFlagProtocolFell{} of the
@@ -645,19 +644,17 @@ The MedGemma-27B adapters were not retained, so no saved file can confirm their 
 \subsection{Future Work}
 \label{sec:future}
 
-None of these has run. Each has its command and cost in \texttt{docs/RUN\_PLAN.md} and code that
-passes its CPU tests, and the analysis plan that we adopted before any run fixes how it is read. Two
-analysis steps are not written yet: the contrasts between cells that item 7 needs, and the tool that
-draws the replies to label by hand for item 6. Items 3 and 8 still need their data files. (1) One set of settings for
+None of these has run. Each has its command and cost in \texttt{docs/RUN\_PLAN.md}, code that
+passes its CPU tests (not yet the contrasts between cells of item 7 and the hand-label draw of item
+6) and a reading fixed by the analysis plan we adopted before any run. Items 3 and 8 need data files. (1) One set of settings for
 Mistral-Small-24B and MedGemma-27B on \hbhard{}, with per-stage timing on an idle GPU. (2) Prompt
 baselines in the same cells: clarifying questions, verbalized confidence \citep{tian2023just} and
 abstention after MediQ \citep{li2024mediq}. (3) Selective asking on paired MediQ prompts with and
 without the missing facts. (4) Over-flagging on the prompts that HealthBench physicians labelled not
 emergent. (5) A one-pass protocol that asks first, and the \bodhi{} protocol with its red-flag section
-first. (6) A second judge from a third model family on every cell but the set-aside MedQA cell: a
-clinical model (MedGemma-27B) where the base is not a Gemma model, and a general model (Phi-4) on
-the MedGemma-27B cell. Also a judge check of the active-inquiry grade, which counts only after it
-agrees with hand labels that we have not yet made. (7) Filter and teacher ablations, which test the BioMistral-7B hypothesis.
+first. (6) A judge from a third model family on every cell but the set-aside MedQA cell (clinical
+MedGemma-27B; general Phi-4 on the MedGemma-27B cell), and a judge check of the active-inquiry
+grade, which counts only after it agrees with hand labels that we have not yet made. (7) Filter and teacher ablations, which test the BioMistral-7B hypothesis.
 (8) Clinician-posed prompts from HealthBench and the NLM Clinical Questions Collection. (9) The
 contamination probe of Appendix~\ref{app:contamination}, with its outputs kept.
 
@@ -666,10 +663,9 @@ online (ChatDoctor) and no patient records. Before patient-facing use, the adapt
 harm review (Appendix~\ref{app:harm}), physician validation of the grades (Appendix~\ref{app:human})
 and a test of false red flags; an LLM-graded harm proxy already rose on ChatDoctor (\S\ref{sec:cells}).
 
-\paragraph{Code availability.} \codeurl{} holds the code, the per-response grade tables and
-statistics of every evaluated cell, and the added cells' adapter configurations and trainer states, without
-weights. A grade table gives a hash of each response, not its text. The MedGemma-27B adapters were
-not retained.
+\paragraph{Code availability.} \codeurl{} holds the code, each evaluated cell's statistics and
+per-response grade tables (response hashes, not texts) and the added cells' adapter configurations,
+without weights. The MedGemma-27B adapters were not retained.
 
 \begin{ack}
 Funding: None declared.
