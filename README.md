@@ -24,6 +24,40 @@ bounding. Llama-3.1-8B-Instruct grades both.
 The repo slug `bohdi-lora` misspells the name. The project name is BODHI everywhere
 else. Renaming the remote repo is deferred (docs/DECISIONS.md, D15).
 
+## Rebuild the paper's numbers on a CPU
+
+No GPU and no token. The tracked results hold everything the paper reads, except the
+public HealthBench files, which `fetch` downloads and checks against their pins.
+
+```bash
+python3 -m venv .venv && . .venv/bin/activate && pip install -e '.[dev]'
+python -m bodhi_lora fetch healthbench
+make analyze numbers figures      # then git status: nothing changed
+```
+
+`make paper` also builds `paper/build/main.pdf` (it needs `tectonic`). Install the
+package editable (`pip install -e`): it finds `configs/` and `results/` next to its
+folder. [docs/INSTALL.md](docs/INSTALL.md) covers the training and inference
+environments for real runs.
+
+| In the paper | File | Made by | From |
+|---|---|---|---|
+| Every number in the text (`\stat...` macros) | `paper/generated/numbers.tex` | `make numbers` | each cell's `results/<cell_id>/analysis/stats.json` and `results/cross_cell/stats.json` |
+| Table 1, every cell | `paper/generated/tab_cross_cell.tex` | `make numbers` | the same two kinds of file, and the groups of `configs/report.yaml` |
+| Appendix tables (B, E, G, H, J) | `paper/generated/tab_*.tex` | `make numbers` | the same |
+| Figure 1 | `paper/figures/pipeline.pdf` (tracked) | `make figures` | `paper/figures/pipeline_standalone.tex` |
+| Appendix figures (E, G, I) | `paper/figures/*.pdf` | `make figures` | the 2026-05 cell's `stats.json` and raw outputs |
+| Each cell's statistics | `results/<cell_id>/analysis/stats.json` | `make analyze` | the cell's response tables, `results/<cell_id>/seed_<n>/table.csv` |
+| The response tables | `results/<cell_id>/seed_<n>/table.csv` | `make extract` | the raw eval and grade files (gitignored, except the 2026-05 cell's) |
+| Physician agreement (Appendix B) | `results/healthbench__medgemma-27b-text__bodhi__2026-05/validation/kappa_results.json` | `make kappa` | the returned rater file and the answer key, both kept outside the repo |
+
+[paper/NUMBERS.md](paper/NUMBERS.md) maps each number and claim of the paper to its
+macro, the function that writes it and its input. Every number comes from code, none is
+typed by hand (docs/CONVENTIONS.md, rule 2), and the same analysis runs on every cell
+(rule 14). `make analyze` writes each `stats.json` again byte for byte
+(`tests/test_analysis_committed.py`), and CI rebuilds `paper/generated/` from a clean
+checkout and fails on any difference.
+
 ## Read this first
 
 - **The epistemic-behavior scores are LLM-graded.** The physician check grades the
@@ -43,34 +77,40 @@ else. Renaming the remote repo is deferred (docs/DECISIONS.md, D15).
   used in any cross-model statement (D6).
 - **Calibration is not measured.** The word appears only as motivation (D3).
 - **New runs wait.** The planned experiments ([docs/EXPERIMENTS.md](docs/EXPERIMENTS.md)),
-  the dated analysis plan that fixes how they are read
-  ([docs/ANALYSIS_PLAN.md](docs/ANALYSIS_PLAN.md)) and the ordered GPU runs with their
+  the analysis plan that fixes how they are read, adopted on 2026-10-11
+  ([docs/ANALYSIS_PLAN.md](docs/ANALYSIS_PLAN.md)), and the ordered GPU runs with their
   cost ([docs/RUN_PLAN.md](docs/RUN_PLAN.md)) are written down. None has run: no GPU
   use until the first author says so (D21).
 
-The open problems are in [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md). The decisions behind these
-points are in [docs/DECISIONS.md](docs/DECISIONS.md). What still needs the first author
-is in [docs/BLOCKED.md](docs/BLOCKED.md).
+The open problems are in [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md). The decisions
+behind these points are in [docs/DECISIONS.md](docs/DECISIONS.md). What still needs the
+first author is in [docs/BLOCKED.md](docs/BLOCKED.md).
 
 ## Layout
 
 ```
-bodhi_lora/         the package: registry, engine, data, protocols, grading, pipeline, analysis, report
-configs/            the registry: one YAML record per model, benchmark, protocol and cell
-data/raw/           benchmark files, downloaded or built here (gitignored)
-docs/               architecture, experiments, analysis plan, run plan, conventions, decisions, claims
-hooks/              pre-commit, commit-msg and pre-push hooks (activate once, see below)
-legacy/             frozen launchers of the 2026-05 MedGemma-27B cell (TPU training, Modal eval)
-paper/              the paper source (paper/main.tex), paper/generated/ and the frozen submission
-rebuttal/           the review record: posted replies, withdrawals, commitments, posted values
-results/            one folder per cell, and cross_cell/ (results/PROVENANCE.md)
-scripts/            repository tools: doc and secrets checks, anonymous export, physician sheets
-tests/              pytest suite, no GPU needed
+bodhi_lora/          the package: registry, engine, data, protocols, grading, pipeline, analysis, report
+configs/             the registry: one YAML record per model, benchmark, protocol and cell
+data/raw/            benchmark files, downloaded or built here (gitignored)
+docs/                install, architecture, experiments, analysis and run plans, conventions,
+                     decisions, claims, known issues, what is blocked, reproducibility, audit IDs
+hooks/               pre-commit, commit-msg and pre-push hooks (activate once, see below)
+legacy/              record: the frozen launchers of the 2026-05 MedGemma-27B cell (TPU training, Modal eval)
+paper/               the paper source (paper/main.tex), paper/generated/, and the frozen submission (record)
+rebuttal/            record: the posted replies, withdrawals, commitments and posted values
+results/             one folder per cell, and cross_cell/; results/README.md says what each holds
+scripts/             repository tools: doc and secrets checks, figure scripts, physician sheets, export
+tests/               pytest suite, no GPU needed
+.github/workflows/   CI (checks, paper numbers and figures, tests) and shellcheck
+pyproject.toml       the package and its pins (analysis, train, gpu and dev extras)
+requirements-infer.txt   the separate vLLM environment (vLLM 0.9.2 cannot share an env with training)
+Makefile, setup.sh   the make targets below, and the one-time setup of a GPU machine
 ```
 
-[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) explains the design: the terms (cell,
-protocol, condition, evaluator, judge), the records, the package, the results root and
-the uniform analysis.
+`legacy/`, `rebuttal/` and `paper/submitted/` are records: they keep what ran or was
+posted, and nothing in the package reads them. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+explains the design: the terms (cell, protocol, condition, evaluator, judge), the
+records, the package, the results root and the uniform analysis.
 
 ## Cells
 
@@ -87,46 +127,13 @@ its status and marks.
 
 Records of past runs are frozen. The runner refuses to run them again, except to add
 judge re-grades, so new outputs never mix with old ones; a new run of the same design is
-a new cell. [docs/REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md) gives each cell's settings and how
-the 2026-05 and 2026-07 settings differ.
-
-## Reproduce the paper
-
-Every number in the paper comes from code, and none is typed by hand
-(docs/CONVENTIONS.md, rule 2). The same analysis code runs on every cell
-(docs/CONVENTIONS.md, rule 14; docs/ARCHITECTURE.md section 7).
-
-```bash
-python -m bodhi_lora fetch healthbench   # the public HealthBench files, checked against their pins
-make test        # pytest suite
-make numbers     # paper/generated/: numbers.tex, numbers.json, tables
-make figures     # paper/figures/
-make paper       # make numbers and make figures, the macro check, then the LaTeX build
-make analyze     # every statistic of every cell that has tracked response tables
-make extract     # the response tables from the raw outputs (needs the gitignored files), then the statistics
-```
-
-| Output | Made from | Notes |
-|---|---|---|
-| `results/<cell_id>/seed_<n>/table.csv` | the raw eval and grade files of the seed (`make extract`) | one row per condition and prompt; the analysis reads nothing else |
-| `results/<cell_id>/analysis/stats.json` | the cell's response tables (`make analyze`) | the seed is the unit: paired t over seeds, Holm over the seven behaviors within each contrast; prompt-level d is descriptive (D7) |
-| `results/cross_cell/stats.json` | every cell's statistics | the cross-cell families of `configs/report.yaml` |
-| `paper/generated/` | `make numbers` (`python -m bodhi_lora report`, from the two files above) | `scripts/check_paper_macros.py` checks that the paper uses only defined macros |
-| `results/healthbench__medgemma-27b-text__bodhi__2026-05/validation/kappa_results.json` | `make kappa` on the returned rater file, kept outside the repo | per-row grades are not committed (KNOWN_ISSUES) |
-
-Every recorded cell with outputs has tracked tables and a `stats.json`: the eight cells
-of `configs/report.yaml`, the 2026-04 pilot and the partial BioMistral-7B MedQA cell.
-`make analyze` writes each `stats.json` again byte for byte
-(`tests/test_analysis_committed.py`) and reproduces the 2026-05 cell's values
-(`tests/test_analysis_equivalence.py`). `make numbers` turns them into every macro and
-table the paper prints (`paper/generated/README.md`); `configs/report.yaml` names the
-tables, groups and counts, so a new cell needs a record and its `stats.json`, not code.
-`make figures` draws the figures from the raw outputs of the 2026-05 cell.
+a new cell. [docs/REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md) gives each cell's settings
+and how the 2026-05 and 2026-07 settings differ.
 
 ## Run the pipeline
 
 Every setting is a record in `configs/` (docs/ARCHITECTURE.md section 3). The command
-line runs a cell:
+line (`python -m bodhi_lora`, or `bodhi-lora` once installed) runs a cell:
 
 ```bash
 python -m bodhi_lora list cells                 # every cell, its status and marks
@@ -148,11 +155,10 @@ stage is also a module with the same command line, as in the last line above. A 
 skips every stage whose manifest says complete, and the traces and filter stages resume
 where they stopped.
 
-Setup, once per machine: `bash setup.sh` builds the training environment (`.venv`,
-`pip install -e '.[train,gpu,dev]'` from `pyproject.toml`) and the vLLM environment
-(`.venv-infer`, `requirements-infer.txt`), and `export HF_TOKEN=...` gives access to the
-gated models (MedGemma, Llama-3.1, Gemma). Install editable: the package finds
-`configs/` and `results/` next to its folder.
+Setup, once per GPU machine: `bash setup.sh` builds the training environment (`.venv`,
+`pip install -e '.[train,gpu,dev]'`) and the vLLM environment (`.venv-infer`,
+`requirements-infer.txt`), and `export HF_TOKEN=...` gives access to the gated models
+(MedGemma, Llama-3.1, Gemma).
 
 A run writes `results/<cell_id>/`, with a manifest in every stage folder
 (`bodhi_lora/manifest.py`): resolved settings, git commit and dirty flag, library
@@ -162,8 +168,9 @@ first author's go-ahead (D21); [docs/RUN_PLAN.md](docs/RUN_PLAN.md) lists them.
 ## Where results live
 
 Every result is in `results/`, one folder per cell, named by its cell id, with one folder
-per seed and one per stage. [results/PROVENANCE.md](results/PROVENANCE.md) maps each old
-location to its new one.
+per seed and one per stage. [results/README.md](results/README.md) says what each result
+is and its status; [results/PROVENANCE.md](results/PROVENANCE.md) maps each old location
+to its new one.
 
 - Git tracks, in every cell: the manifests, `cell.yaml`, the eval id lists, the adapter
   configs and trainer states, the response tables and the analysis and validation
@@ -175,7 +182,8 @@ location to its new one.
 - `results/healthbench__medgemma-27b-text__bodhi__2026-05/validation/`: the blank physician
   grading sheets and the instructions. The answer key and the returned sheets are not in
   the repo.
-- [results/README.md](results/README.md): what each result is, where it lives and its status.
+- The 2026-05 cell's `analysis/withdrawn/` holds the outputs of three keyword measures
+  posted in the discussion and withdrawn since; the paper reads none of them.
 
 ## Data and leakage
 
@@ -201,9 +209,8 @@ git config core.hooksPath hooks
 Before a pull request, run `make check` (doc paths, secrets scan, registry) and
 `make test`. A new model, benchmark, protocol or cell is a new record in `configs/`, not
 new code (docs/CONVENTIONS.md, rules 11 to 14). Reviewers get an anonymized copy made by
-`scripts/export_anonymous.sh`, never this repo. See
-[CONTRIBUTING.md](CONTRIBUTING.md) and
-[docs/CONVENTIONS.md](docs/CONVENTIONS.md).
+`scripts/export_anonymous.sh`, never this repo. See [CONTRIBUTING.md](CONTRIBUTING.md)
+and [docs/CONVENTIONS.md](docs/CONVENTIONS.md).
 
 ## License
 
