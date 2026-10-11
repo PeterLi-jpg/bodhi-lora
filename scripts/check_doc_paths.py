@@ -11,7 +11,9 @@ markdown link targets and the words inside fenced code blocks, and keeps the
 ones that look like repo paths: the first path part is a top-level entry of
 the repo (or a root file such as setup.sh). It also reads the source comments of
 paper/generated/*.tex, where each macro and table names the file it came from, so a
-reader who follows a number's source does not reach a path that is gone.
+reader who follows a number's source does not reach a path that is gone, and the
+\\texttt{...} spans of the paper and its checklist (PAPER), where the paper points a
+reader at a file.
 
 A path is read from the repo root first, then from the doc's own folder (a README in a
 subfolder names its neighbours that way), then from a cell folder (results/<cell>/ or
@@ -43,6 +45,11 @@ SKIP = (
     "paper/submitted/",      # the frozen submission and its provenance note
     "scripts/maintenance/",  # one-off history tools that name old paths on purpose; they go after the purge
 )
+
+# LaTeX sources whose \texttt{} spans name repo paths. TeX comments are skipped: they
+# name old paths of the submitted run on purpose (main:modal_eval.py:54).
+PAPER = ("paper/main.tex", "paper/checklist.tex")
+TEXTT = re.compile(r"\\texttt\{([^{}]*)\}")
 
 # Paths the docs name that are not in the repo yet. Each entry is a promise, not
 # a file: the check warns when one exists, so the entry can be removed.
@@ -223,6 +230,19 @@ def main() -> int:
                     checked += 1
                 if not seen[path]:
                     missing.append(f"{rel}:{lineno}: {path}")
+    for rel in PAPER:
+        tex = ROOT / rel
+        if not tex.is_file():
+            continue
+        for lineno, line in enumerate(tex.read_text(encoding="utf-8").splitlines(), 1):
+            line = re.sub(r"(?<!\\)%.*", "", line)
+            for raw in TEXTT.findall(line):
+                path = candidate(raw.replace("\\_", "_"), Path(rel).parent, False)
+                if path is None:
+                    continue
+                checked += 1
+                if not exists(path):
+                    missing.append(f"{rel}:{lineno}: {path}")
     stale = [k for k in PENDING if (k.rstrip("/") in TRACKED or k in TRACKED_DIRS)]
     for k in stale:
         print(f"note: PENDING entry now exists, remove it from the list: {k}")
@@ -231,7 +251,7 @@ def main() -> int:
         for m in missing:
             print("  " + m)
         return 1
-    print(f"check_doc_paths: OK, {checked} paths in {len(doc_files())} docs")
+    print(f"check_doc_paths: OK, {checked} paths in {len(doc_files())} docs and the paper")
     return 0
 
 
