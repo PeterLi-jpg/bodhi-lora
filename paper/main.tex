@@ -643,16 +643,18 @@ The MedGemma-27B adapters were not retained, so no saved file can confirm their 
 \label{sec:future}
 
 None of these has run. Each has its command and cost in \texttt{docs/RUN\_PLAN.md} and code that
-passes its CPU tests, and the analysis plan that we adopted before any run fixes how it is read. Items
-3 and 8 still need their data files. (1) One set of settings for
+passes its CPU tests, and the analysis plan that we adopted before any run fixes how it is read. Two
+analysis steps are not written yet: the contrasts between cells that item 7 needs, and the tool that
+draws the replies to label by hand for item 6. Items 3 and 8 still need their data files. (1) One set of settings for
 Mistral-Small-24B and MedGemma-27B on \hbhard{}, with per-stage timing on an idle GPU. (2) Prompt
 baselines in the same cells: clarifying questions, verbalized confidence \citep{tian2023just} and
 abstention after MediQ \citep{li2024mediq}. (3) Selective asking on paired MediQ prompts with and
 without the missing facts. (4) Over-flagging on the prompts that HealthBench physicians labelled not
 emergent. (5) A one-pass protocol that asks first, and the \bodhi{} protocol with its red-flag section
-first. (6) A clinical judge from a third model family on every cell but the set-aside MedQA cell, and a
-judge check of the active-inquiry grade, which counts only after it agrees with hand labels that we
-have not yet made. (7) Filter and teacher ablations, which test the BioMistral-7B hypothesis.
+first. (6) A second judge from a third model family on every cell but the set-aside MedQA cell: a
+clinical model (MedGemma-27B) where the base is not a Gemma model, and a general model (Phi-4) on
+the MedGemma-27B cell. Also a judge check of the active-inquiry grade, which counts only after it
+agrees with hand labels that we have not yet made. (7) Filter and teacher ablations, which test the BioMistral-7B hypothesis.
 (8) Clinician-posed prompts from HealthBench and the NLM Clinical Questions Collection. (9) The
 contamination probe of Appendix~\ref{app:contamination}, with its outputs kept.
 

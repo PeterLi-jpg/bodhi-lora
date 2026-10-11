@@ -203,14 +203,16 @@ fail R3), and MedGemma-27B (Gemma, clinical). Per judge: per-criterion kappa aga
 evaluator, weighted kappa on the 0 to 2 dimensions, Pearson r of the rubric score, and
 every contrast recomputed. It does not replace the evaluator. Cells: every existing cell
 and every new one. GPU: yes, about 1 to 5 H100-hours per judge and cell. Status: built
-(judge lists in the grade stage, judges run with `--stages grade` on recorded cells),
-then to run. The records name one clinical judge per cell, a choice the experiments step
-made and the first author may change (BLOCKED.md item 1): `medgemma-27b-text` for every
-base outside the Gemma family, and `phi-4` (general) for the Gemma bases, because no
+(judge lists in the grade stage, judges run with `--stages grade` on recorded cells; the
+H8 analysis, `judges` in each `stats.json`, since 2026-10-11), then to run. The records
+name one judge per cell, which the adoption kept with the cell records (plan choice 5):
+`medgemma-27b-text` for every base outside the Gemma family, and `phi-4` (general) for
+the Gemma bases, so the MedGemma-27B cells get a general judge, not a clinical one, because no
 clinical model outside Gemma, Llama and Qwen fits (Meditron3-Phi4-14B is a base model by
 its card, and gpt-oss needs vLLM 0.10.1 or later). No record uses Med42-8B, Meditron3-8B
 or Aloe-Beta-8B as a judge: the Meditron3-8B record is stale (BLOCKED.md item 3), and
-Aloe-Beta-8B has no record.
+Aloe-Beta-8B has no record. The set-aside MedQA record lists `medgemma-27b-text`, but R6
+leaves that cell out, as section 5.3 of the paper does.
 
 **E11. Contamination probe for every base model and benchmark.** Answers EVAL-12,
 NUM-7. Does the base complete benchmark prompts verbatim more often than a control text?
