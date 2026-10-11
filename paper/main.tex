@@ -509,7 +509,10 @@ does not explain this: clean responses score \statHBMedGemmaMayLeakBodhiAnalysis
 \statHBMedGemmaMayLeakBodhiAnalysisFormatLoRABodhiCleanRedFlagQFour{} from the shortest to the longest quarter. We withdraw our posted rule,
 which also counted two words that are not headers (Appendix~\ref{app:robustness}). We defined the
 split by a property of the format after we saw the results, so leakage may also follow prompt
-difficulty. We do not claim that the adapter and the protocol compete for capacity.
+difficulty. We do not claim that the adapter and the protocol compete for capacity. Truncation is
+another possible cause. A prompt whose two passes overran the context window got no response, so it
+is in neither group and lowers no score. The outputs do not record why generation stopped, so we
+cannot rule out responses that the token limit cut short.
 
 The drop does not repeat in the added cells. There, red-flag identification under LoRA+\bodhi{}
 is lower than under LoRA with $p < 0.05$ in \statGroupAddedOutsideFamilyRedFlagProtocolFell{} of the

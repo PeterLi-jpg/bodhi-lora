@@ -35,7 +35,7 @@ is in `docs/RUN_PLAN.md`, and the paper names it as not run (section 5.3).
 
 | ID | Source | Concern | Outcome | Answered in | Open | Resubmission |
 |---|---|---|---|---|---|---|
-| C1 | LxMF W4 | "Competition" is speculative; it could be truncation or attention dilution | done: format leakage, 54.6% under LoRA+CoT; the mechanism claim was restated | `LxMF_1_rebuttal.md:40-50` | W9, C31 | done: section 4.3, leak rule now the seven headers only (W25); red flags first built, awaiting GPU (R2, R7) |
+| C1 | LxMF W4 | "Competition" is speculative; it could be truncation or attention dilution | done: format leakage, 54.6% under LoRA+CoT; the mechanism claim was restated | `LxMF_1_rebuttal.md:40-50` | W9, C31 | done: section 4.3, leak rule now the seven headers only (W25), and truncation named as a cause it cannot rule out, because the outputs did not record the finish reason (the new runs record it, E13); red flags first built, awaiting GPU (R2, R7) |
 
 ## D. Grading (MW3, LxMF Q3, HomM W3/Q4)
 
