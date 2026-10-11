@@ -359,10 +359,10 @@ def prompt_table(reg: Registry, cell: CellConfig, paths: CellPaths, project: Pro
     come from the criteria stored with the eval outputs.
 
     Only the labels that the report config lists get a column. The analysis plan keeps
-    the other labels (the physician labels among them) unseen until its adoption, and a
-    tracked column next to the outcome tables would make the join one merge away
-    (docs/ANALYSIS_PLAN.md section 12, 2026-10-10). The record keeps every label's
-    population counts, which say nothing about any output.
+    every other label (the physician labels among them) unseen until the analysis that
+    reads it may run, and a tracked column next to the outcome tables would make the join
+    one merge away (docs/ANALYSIS_PLAN.md section 12, 2026-10-10). The record keeps every
+    label's population counts, which say nothing about any output.
     """
     from bodhi_lora.data import DataError, SplitError, eval_ids, eval_population, read_id_list, \
         load_rows, split_rows

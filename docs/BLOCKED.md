@@ -14,38 +14,34 @@ Nothing here was pushed. On 2026-10-11 the first author adopted the analysis pla
 the remote scratch branches and set the hooks path; items 1, 4.2 and 5 say what is
 left of them.
 
-## 1. The analysis plan (adopted 2026-10-11) and the open design choices
+## 1. The analysis plan and the open design choices (done 2026-10-11)
 
-Done: on 2026-10-11 you wrote "the analysis plan is good". The adoption entry at the end
-of [ANALYSIS_PLAN.md](ANALYSIS_PLAN.md) section 12 records it: the plan as written, with
-E14 as the primary test of H3 and E02 as the secondary, no E07 margins, the choices in the
-cell records as they stand (the judges, the cells with no judge, the probe method, the
-harm axes, the protocol wording) and the 2026-10-10 entries. So the paper keeps the post
-hoc values of section 4.4, Table H.7 (Table H.6 until 2026-10-11) and the abstract sentence on selective asking.
-Check the entry; to change any of it, add a dated entry below it. RUN_PLAN.md may start
-once item 2 says so.
+Done: on 2026-10-11 you wrote "the analysis plan is good". Your entry at the end of
+[ANALYSIS_PLAN.md](ANALYSIS_PLAN.md) section 12 records it, adopted as written, and
+settles all seven of its choices by the plan's own text: E14 as the primary test of H3
+and E02 as the secondary; no E07 margins, so intervals only; the new cells next to the
+2026-05 and 2026-07 cells, which stay the record; the E13 settings; the choices in the
+cell records as written; the judge classifier as specified, used only after its gate; and
+the frozen evaluator template for the new cells. The paper keeps the post hoc values of
+section 4.4, Table H.7 (Table H.6 until 2026-10-11) and CLAIMS.md row 26, each marked post
+hoc. The open decisions of [ARCHITECTURE.md](ARCHITECTURE.md) section 12 are closed except
+O6 and O9 ([DECISIONS.md](DECISIONS.md) D23 and D24): the package keeps the name
+`bodhi_lora` (O1); one tracked rule covers every cell, so the 2026-05 cell's raw eval and
+grade JSON left the tree and stay in history at 31e4fd8 (O2); the raw-output archive is
+deferred (O3); the MedGemma-27B rerun is a new QLoRA cell (O7); and git tracks the bench
+output and the probe's rates, not the probed text (O8). Check the entries; to change any
+of it, add a dated entry below them.
 
 Still yours:
 
-1. Decide the open choices of [ARCHITECTURE.md](ARCHITECTURE.md) section 12
-   that are still open: O1 (package name), O2 (raw outputs in git: the default stops
-   tracking the 80 MB of the 2026-05 cell), O3 (a versioned archive of all raw outputs,
-   about 450 MB; publishing it is a remote action), O7 (the MedGemma-27B rerun is a
-   new QLoRA cell) and O8 (whether git tracks the probe and bench outputs; the probe
-   output holds benchmark text). Decide O8 before the first probe or bench run.
-2. Read D17 to D22 in [DECISIONS.md](DECISIONS.md). To revise one, add a dated
-   entry below it.
-3. Two choices of the plan that it makes no proposal for: choice 3 (whether the new
-   cells replace the 2026-05 and 2026-07 cells in the main tables) before the first new
-   cell is analyzed, and choice 7 (keep the frozen evaluator template, which names BODHI,
-   or write a protocol-neutral one as a new grader version) before the first new cell is
-   graded. The code has only the frozen template; a second one is a small change
-   (a template version key in the cell record's grading block), made only if you choose it.
-4. The timing bench of R2 serves the adapter unmerged (vLLM `--enable-lora`, eager mode,
+1. The GPU go-ahead and where the runs go (item 2; O6).
+2. The timing bench of R2 serves the adapter unmerged (vLLM `--enable-lora`, eager mode,
    the 4-bit base for QLoRA), as the 2026-07 cells were evaluated. The paper's argument is
    one pass with merged weights, as the 2026-05 cell was evaluated. Decide before R2
-   whether the bench also times a merged-weights condition; it needs code and about
+   whether the bench also times a merged-weights condition (O9); it needs code and about
    50 GB of disk for the merged 24B weights, and is not built.
+3. Read D17 to D24 in [DECISIONS.md](DECISIONS.md). To revise one, add a dated entry
+   below it.
 
 Done on 2026-10-11, after your adoption: E02 ran on the existing outputs (the
 `needs-info-physician` label in `configs/report.yaml`, `make extract`, `make analyze`,

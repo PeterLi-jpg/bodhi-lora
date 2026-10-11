@@ -17,7 +17,8 @@ D-numbers refer to [DECISIONS.md](DECISIONS.md). Issue numbers such as #5 are Gi
   says r=8, alpha=16. The GCS bucket that held the five submitted adapters returned 404
   on 2026-10-08, and the adapters are treated as not retained (D19), so the paper says
   the values come from the code and could not be checked. A new experiment on
-  MedGemma-27B needs a rerun, which is a new cell (open decision O7).
+  MedGemma-27B needs a rerun, which is a new QLoRA cell; the 2026-05 cell stays the
+  record (O7, settled on 2026-10-11).
 - **The paper still says a second copy of the adapters may exist.** The Code
   availability paragraph and checklist items 4, 5, 11 and 13 say "we have not yet checked
   a second copy", and two comments in `paper/main.tex` point at the Modal volume. Under
@@ -56,10 +57,10 @@ D-numbers refer to [DECISIONS.md](DECISIONS.md). Issue numbers such as #5 are Gi
   The repo pins `bodhi-llm` 0.1.4, so the version is also stale. The same words graded
   every condition, the base and the baselines too, but a grader told what the method
   aims at may credit its behaviors more readily. The recorded cells keep the template so
-  their grades stay comparable; the paper's appendix on the dimensions says so. Whether
-  new cells use a protocol-neutral template (a new grader version, with its own hash in
-  each grade file) is the first author's choice 7 of the analysis plan, which its adoption on
-  2026-10-11 left open (BLOCKED.md item 1).
+  their grades stay comparable; the paper's appendix on the dimensions says so. The new
+  cells keep it too, so their grades compare with the recorded ones: the first author's
+  adoption of the analysis plan on 2026-10-11 settled its choice 7 that way
+  (docs/ANALYSIS_PLAN.md section 12).
   `tests/test_no_hardcode.py` fails on any other grader text that names a protocol.
 - **Med42-8B shares the evaluator's family (EVAL-7, D6).** The cells are marked † and
   kept out of cross-model statements. The judge re-grade is built

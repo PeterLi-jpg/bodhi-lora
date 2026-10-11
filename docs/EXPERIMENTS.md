@@ -596,13 +596,15 @@ serves the base as trained), REPRO-3 (E13), PROV-11 (E13 manifests), REPRO-11 (E
 ## 6. Decisions for the first author
 
 These are methodology choices, so they are his (they are also in ARCHITECTURE.md
-section 12):
+section 12). His adoption of the analysis plan on 2026-10-11 settles all but one
+(ANALYSIS_PLAN.md section 12, his entry; DECISIONS.md D23):
 
 - The analysis plan (P1), including whether E02 is a primary or a secondary test.
+  Settled: adopted as written; E14 is primary for H3 and E02 secondary.
 - The E13 settings, most of all the HealthBench split (679 fewer training prompts) and
   the context length of 8,192 (it should cut the CoT attrition, but it differs from the
-  2026-05 cell).
-- The margins of E07.
-- The tiers and order of the GPU work, and when it starts.
+  2026-05 cell). Settled: as E13 proposes.
+- The margins of E07. Settled: none, so intervals only.
+- The tiers and order of the GPU work, and when it starts. Open (O6; RUN_PLAN.md).
 - Whether the new cells replace the 2026-05 and 2026-07 cells in the main tables, or
-  report next to them as the record.
+  report next to them as the record. Settled: next to them, as the record.

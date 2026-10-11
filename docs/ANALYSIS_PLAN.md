@@ -1,7 +1,8 @@
 # Analysis plan
 
-Dated 2026-10-08. Status: **proposed**. The plans lane wrote it for the first author, who
-adopts it or changes it (section 12). It is the dated plan of convention 3
+Dated 2026-10-08. Status: **adopted** by the first author on 2026-10-11, as written
+(section 12, his entry). The plans lane wrote it for him; a change is a dated entry in
+section 12. It is the dated plan of convention 3
 ([CONVENTIONS.md](CONVENTIONS.md)). It covers every run in [RUN_PLAN.md](RUN_PLAN.md),
 and every statistic in [EXPERIMENTS.md](EXPERIMENTS.md) that nobody has computed on real
 outputs yet.
@@ -451,8 +452,9 @@ None of these decides a claim. Each is computed the same way for every cell.
 Entries are dated and never edited. Format: date, who, what changed, why, and whether any
 output of a covered cell existed at that time.
 
-The first author adopted the plan on 2026-10-11 (the last entry below). The choices that
-were left to him before adoption (EXPERIMENTS.md section 6, ARCHITECTURE.md section 12):
+The first author adopted the plan on 2026-10-11. His entry (the last below) settles each
+choice that was left to him before adoption (EXPERIMENTS.md section 6, ARCHITECTURE.md
+section 12):
 
 1. E14 as the primary test of H3 and E02 as the secondary (proposed here), or the reverse.
 2. Margins for E07 (open decision O5). With none, E07 reports intervals only.
@@ -763,3 +765,47 @@ existed: no folder of a planned cell is under `results/`.
    cell share 43 prompts in seed 42; their Base replies are the same in 6 and their LoRA
    replies in none, so that comparison is not a second grader on the same replies. The
    paper says so (Appendix H); R6 is the second grader on the same replies.
+
+**2026-10-11, first author (Anqi Peter Li), in chat: "the analysis plan is good". Adopted
+as written.** He wrote only the quoted sentence. This entry records what "as written"
+means for each choice of the list above, by the plan's own text; he may change any of
+them with a later dated entry. The adoption entry above records the same sentence but
+leaves choices 3 and 7 open; this entry settles all seven. No new output existed: no
+folder of a planned cell is under `results/`. The outputs of the existing cells existed,
+and E02 had run on them (the entry above).
+
+1. E14 (the MediQ paired probe) is the primary test of H3, and E02 (the physician-label
+   discrimination index) is the secondary test, as section 5 proposes.
+2. E07 has no margins (open decision O5), so it reports intervals only (section 10).
+3. The new cells sit next to the 2026-05 and 2026-07 cells, which stay the record. No new
+   cell replaces a recorded cell in the main tables. This is the option that sections 3,
+   4 and 9.1 already assume: they read the new cells against the recorded ones.
+4. The new cells use the settings that EXPERIMENTS.md E13 proposes: the `default`
+   HealthBench split, the context length of 8,192 and the base served as trained.
+5. The choices in the cell records stand as written: the judges, the cells with no judge,
+   the probe method and controls, the harm axes and the wording of the two new protocols.
+6. The judge classifier stands as the 2026-10-10 no-lexicon entry (item 6) specifies it:
+   the judge, the rubric text, the hand-label sample and the agreement gate. No judge
+   rate is used before the judge passes the gate.
+7. The new cells keep the frozen evaluator template, so their grades compare with the
+   recorded grades. The template names BODHI; KNOWN_ISSUES.md and the paper's appendix on
+   the dimensions say so, as they do now. This is the first option of choice 7, with the
+   reason the list gives, and the only template in the code; no protocol-neutral grader
+   version is written.
+
+The post hoc values that the paper cites stay in the paper, each marked post hoc and
+descriptive where it appears: section 4.4 and its table of post hoc checks (Table H.7,
+which the 2026-10-10 entries call Table H.6), and CLAIMS.md row 26. The abstract sentence on
+selective asking stays; it rests on E02, the planned secondary test, and on the post hoc
+theme index beside it. This entry is his, so it lifts the gate of the 2026-10-09 entry
+(the 2026-10-10 entry on who lifts a gate).
+
+The open decisions of ARCHITECTURE.md section 12 that the list above refers to are
+settled as that section and DECISIONS.md D24 record: O1 (the package keeps the name
+`bodhi_lora`), O2 (one tracked rule for every cell), O3 (deferred: publishing an archive is
+a remote action), O7 (the MedGemma-27B rerun is a new QLoRA cell, and the 2026-05 cell
+stays the record), O8 (git tracks the bench output and the probe's summary, not the
+probed text) and O10 (choice 7 above). Two things stay open: the GPU go-ahead with the
+question of where the runs go (O6, RUN_PLAN.md), and a merged-weights condition in the
+timing bench (O9). The split of the 300 hand-labelled replies over their 16 strata (item
+6 of the no-lexicon entry) also needs a dated entry before the draw.

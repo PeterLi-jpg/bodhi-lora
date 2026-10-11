@@ -93,4 +93,5 @@ data access.
   (`HomM_3_followup_part2.md:32`). The repo now tracks the per-seed values
   (`results/cross_cell/generated_values.json`), adapter configs and trainer states. The per-seed
   eval JSON with full responses (about 370 MB) is copied from the host but gitignored, so sharing
-  it needs a versioned archive first (open decision O3).
+  it needs a versioned archive first (open decision O3, deferred on 2026-10-11 because
+  publishing it is a remote action).

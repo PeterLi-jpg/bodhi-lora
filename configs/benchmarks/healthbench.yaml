@@ -61,7 +61,8 @@ labels:
   #     category of the example (on all 586 Hard rows that have either, the cluster
   #     names the same category as the physician_agreed_category tag), so a cluster rule
   #     is a physician label under another name, and the analysis plan keeps those
-  #     unseen until its adoption (docs/ANALYSIS_PLAN.md section 2.4);
+  #     unseen until the analysis that reads them may run (docs/ANALYSIS_PLAN.md
+  #     sections 2.4 and 12);
   #   - axis:<name> and level:<name> say how a criterion is graded, not what the prompt
   #     lacks or risks (704 of the 1,000 Hard prompts have a positive context_awareness
   #     criterion).

@@ -8,10 +8,12 @@ finding named in brackets.
 To change a decision, add a new dated entry below it that says what changed and why.
 Do not edit the text of an old entry.
 
-**Status (2026-10-08).** The first author delegated D1 to D16 on 2026-10-07 and asked
+**Status (2026-10-11).** The first author delegated D1 to D16 on 2026-10-07 and asked
 that they be applied. They are applied under that delegation, and the audit items closed
-on them are closed. The first author may still revise any decision with a dated entry
-below it.
+on them are closed. D17 to D21 and D23 are his; D22 and D24 apply his requests. On
+2026-10-11 he adopted the analysis plan (D23), which settles its open choices, and the open
+decisions of ARCHITECTURE.md section 12 are settled except O6 and O9 (D24). The first
+author may still revise any decision with a dated entry below it.
 
 ## 2026-10-07
 
@@ -186,3 +188,35 @@ Why: the code had two launch paths, six result locations, analysis that special-
 one cell, condition names in code and settings in four places (ARCHITECTURE.md section
 1). Each review phase added its own copy, which is how the evaluation became hard to
 check. [HYG-5, REPRO-3, REPRO-6, REPRO-7]
+
+## 2026-10-11
+
+**D23** "the analysis plan is good" (the first author, in chat, 2026-10-11).
+
+Changes: docs/ANALYSIS_PLAN.md is adopted as written. Its section 12 records his entry
+and what it settles for each open choice: E14 primary and E02 secondary for H3; no E07
+margins, so intervals only (O5); the new cells sit next to the 2026-05 and 2026-07 cells,
+which stay the record; the E13 settings; the choices in the cell records as written; the
+judge classifier as specified, used only after its gate; and the frozen evaluator template
+for the new cells (O10). The post hoc values that the paper cites stay in the paper, marked
+post hoc. The GPU go-ahead stays open (D21).
+
+**D24** The open decisions of ARCHITECTURE.md section 12, settled on 2026-10-11 to apply
+D23: O1, keep the package name `bodhi_lora`; O2, the default, one tracked rule for every
+cell, with a tracked response table in each; O3, a versioned archive of all raw outputs
+is deferred, because publishing it is a remote action; O7, the MedGemma-27B rerun is a new
+QLoRA cell and the 2026-05 cell stays the record; O8, git tracks the bench output and the
+probe's rates and test, and ignores the probed benchmark text and the continuations. O6
+(GPU priorities and where the runs go) and O9 (a merged-weights condition in the timing
+bench) stay open.
+
+Changes: D22 said that O1 to O8 stay the first author's; O1 to O5, O7 and O8 are now
+closed. O2 removed the 2026-05 exception from `.gitignore`: that cell's raw eval and grade
+JSON left the tree and stay in history at 31e4fd8, and the three figures that read them
+read the response tables instead (the PDFs are byte-identical). O8 split the probe output
+into `probe.json` (tracked) and `samples.jsonl` (ignored).
+
+Why: O1, O2 and O7 take the option that ARCHITECTURE.md section 12 writes down. O3 needs a
+remote action, which D16 keeps his. O8 had two options, track both files or ignore the
+probe output; this keeps benchmark text out of a public repository and keeps the probe's
+counts and test checkable from git. He may revise any of them with a dated entry.

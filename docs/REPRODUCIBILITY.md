@@ -82,8 +82,8 @@ The MedGemma cell has no such mismatch.
 ## 3. Settings that differ between the cell sets
 
 `python -m bodhi_lora list cells --settings` prints every setting that differs between
-the cell records. The planned column is the proposal of EXPERIMENTS.md E13; the first
-author fixes it when he adopts docs/ANALYSIS_PLAN.md.
+the cell records. The planned column is the proposal of EXPERIMENTS.md E13, which the
+first author's adoption of docs/ANALYSIS_PLAN.md on 2026-10-11 fixed (its choice 4).
 
 | Setting | Submitted cell (2026-05) | Added cells (2026-07) | Planned cells |
 |---|---|---|---|
@@ -157,7 +157,7 @@ Check on the first run of a new base model:
 The submitted cell ran on TPU quota, a GCS bucket and a Modal account. Its launchers in
 `legacy/` are kept to document what ran, not as a path to use: the project no longer
 uses Modal, and the adapters are not retained (D19). A new run on MedGemma-27B is a new
-cell (open decision O7).
+QLoRA cell, and the 2026-05 cell stays the record (O7, settled on 2026-10-11).
 
 ## 6. What each stage writes
 
