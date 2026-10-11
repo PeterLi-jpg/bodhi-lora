@@ -20,7 +20,9 @@ Response table columns (docs/ARCHITECTURE.md section 6):
     response   chars; tokens (the model's own tokenizer on the reply, when its
                tokenizer.json is in the local Hugging Face cache); tokens_engine (the count
                the serving engine stored, single-call conditions only); calls, tokens_total,
-               finish_length (stored by the package's eval stage; empty in older files)
+               finish_length (stored by the package's eval stage; empty in older files);
+               response_sha256 (first 16 hex digits of the reply's sha256, so two runs'
+               replies compare without the text in a tracked file)
     rubric     rubric_score (normalized; recomputed from the verdicts when the file stored
                another score, see STORED_SCORE), rubric_score_worst (failed negative
                criteria counted as met),
@@ -66,6 +68,9 @@ SEVEN = ("uncertainty_ack", "active_inquiry", "context_seeking", "red_flag", "sc
 
 KEY = ["cell", "seed", "condition", "prompt_id", "pair_id"]
 RESPONSE = ["chars", "tokens", "tokens_engine", "calls", "tokens_total", "finish_length"]
+# The first 16 hex digits of the reply's sha256: whether two runs made the same reply,
+# without the reply text in a tracked file (the cross-cell grader comparison reads it).
+RESPONSE_ID = "response_sha256"
 RUBRIC = ["rubric_score", "rubric_score_worst", "rubric_items", "rubric_parse_failures",
           "neg_items_met", "neg_points_lost"]
 
@@ -291,6 +296,7 @@ def seed_table(reg: Registry, cell: CellConfig, paths: CellPaths, seed: int, cfg
             neg_met = [c for c in criteria if c["points"] < 0 and c["criteria_met"]]
             row = {"cell": cell.id, "seed": seed, "condition": condition, "prompt_id": r["prompt_id"],
                    "pair_id": r.get("pair_id"), "chars": float(len(r["response"])),
+                   RESPONSE_ID: hashlib.sha256(r["response"].encode("utf-8")).hexdigest()[:16],
                    "tokens": float(tokens[i]) if tokens is not None else float("nan"),
                    "tokens_engine": float(r["response_token_count"]) if r.get("response_token_count") else float("nan"),
                    "calls": _num(r.get("calls")),
@@ -331,7 +337,7 @@ def seed_table(reg: Registry, cell: CellConfig, paths: CellPaths, seed: int, cfg
             df[col] = np.nan
     axes = sorted(c for c in df.columns if c.startswith("axis_"))
     judge_cols = sorted(c for c in df.columns if c.startswith("j_"))
-    columns = KEY + RESPONSE + RUBRIC + axes + ["epi_status", *EPISTEMIC] + list(leaks) + judge_cols
+    columns = KEY + RESPONSE + [RESPONSE_ID] + RUBRIC + axes + ["epi_status", *EPISTEMIC] + list(leaks) + judge_cols
     order = {c: i for i, c in enumerate(cell.eval.conditions)}
     df = df[columns].sort_values(["condition", "prompt_id"], key=lambda s: s.map(order) if s.name == "condition" else s)
     return df.reset_index(drop=True), meta
@@ -443,7 +449,7 @@ def read_table(path: Path) -> pd.DataFrame:
     # round_trip: the default float parser can be off in the last bit, and the
     # equivalence checks compare at full precision.
     return pd.read_csv(path, float_precision="round_trip", keep_default_na=True,
-                       dtype={"prompt_id": str, "pair_id": str, "theme": str})
+                       dtype={"prompt_id": str, "pair_id": str, "theme": str, RESPONSE_ID: str})
 
 
 def extract(reg: Registry, cell_id: str, project: Project, cfg: ReportConfig) -> dict:

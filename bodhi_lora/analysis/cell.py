@@ -216,6 +216,11 @@ def contrasts_section(d: CellData, metrics: list[Metric], pairs, boot: st.Cluste
         family = [res[key]["metrics"][k].get("p", float("nan")) for k in SEVEN]
         for k, ph in zip(SEVEN, st.holm(family)):
             res[key]["metrics"][k]["p_holm_within_contrast"] = _f(ph)
+        # The rubric axes are one family of their own (ANALYSIS_PLAN.md section 4, E05):
+        # Holm over the axes the cell's rubric has, within the contrast.
+        axes = [m.key for m in metrics if m.key.startswith("axis_")]
+        for k, ph in zip(axes, st.holm([res[key]["metrics"][k].get("p", float("nan")) for k in axes])):
+            res[key]["metrics"][k]["p_holm_axes"] = _f(ph)
     every = [(k2, k) for k2 in res for k in SEVEN]
     for (k2, k), ph in zip(every, st.holm([res[k2]["metrics"][k].get("p", float("nan")) for k2, k in every])):
         res[k2]["metrics"][k]["p_holm_all_contrasts"] = _f(ph)
@@ -493,8 +498,12 @@ def discrimination_section(d: CellData, reg: Registry, cfg: ReportConfig, metric
         res[resp] = {}
         for lab in spec.labels:
             col = f"label_{lab}"
-            if lab not in bench.labels or col not in d.prompts:
+            if lab not in bench.labels:
                 res[resp][lab] = {"not_measured": f"benchmark {bench.id} has no label {lab}"}
+                continue
+            if col not in d.prompts:
+                res[resp][lab] = {"not_measured": f"prompts.csv has no column {col}; run analyze --extract "
+                                                  "where the cell's raw outputs are"}
                 continue
             value = dict(zip(d.prompts["prompt_id"], d.prompts[col]))
             frame = base.assign(g=base["prompt_id"].map(value))
@@ -804,7 +813,14 @@ def analyze_tables(reg: Registry, cell: CellConfig, table: pd.DataFrame, prompts
     metrics = metrics_of(table, cfg)
     pairs = contrasts_of(cell, reg)
     boot = st.ClusterBootstrap(table["prompt_id"].unique().tolist(), cfg.bootstrap.resamples, cfg.bootstrap.seed)
-    filt, train_ids = filter_section(cell, paths, d.seeds)
+    # An eval-only cell (adapters_from) trained nothing itself: its adapters, and the
+    # filter record they were trained on, are in the source cell's folders.
+    trained = reg.cells[cell.adapters_from] if cell.adapters_from else cell
+    tpaths = CellPaths(paths.root.parent / trained.id) if cell.adapters_from else paths
+    filt, train_ids = filter_section(trained, tpaths, d.seeds)
+    recipe = recipe_section(trained, tpaths, filt)
+    if cell.adapters_from:
+        filt["from_cell"] = recipe["from_cell"] = trained.id
     out = {
         "cell": cell.id, "status": cell.report.status, "seeds": d.seeds, "conditions_order": d.conditions,
         "evaluator": cell.grading.evaluator,
@@ -830,7 +846,7 @@ def analyze_tables(reg: Registry, cell: CellConfig, table: pd.DataFrame, prompts
         "paired_probe": paired_probe_section(d, reg, cfg, metrics, pairs),
         "askers_gap": askers_gap_section(d, boot),
         "filter": filt,
-        "recipe": recipe_section(cell, paths, filt),
+        "recipe": recipe,
         "judges": judges_section(d, pairs),
     }
     kappa = _read_json(paths.validation() / "kappa_results.json")

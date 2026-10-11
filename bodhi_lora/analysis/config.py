@@ -57,7 +57,15 @@ class Group(_Record):
         return self
 
 
+def check_condition(name: str) -> None:
+    """parse_condition for a config string, where {protocol} stands for each cell's own
+    protocol id."""
+    parse_condition(name.replace("{protocol}", "protocol"))
+
+
 class GroupContrast(_Record):
+    """A contrast counted over a group's cells; {protocol} stands for each cell's own
+    protocol id, so "lora - base+{protocol}" is every cell's adapter against its teacher."""
     contrast: str
     metrics: list[str]
 
@@ -71,9 +79,22 @@ class GroupContrast(_Record):
         a, b = self.conditions
         if not a or not b:
             raise ValueError(f"contrast {self.contrast!r}: write it as '<condition> - <condition>'")
-        parse_condition(a)
-        parse_condition(b)
+        check_condition(a)
+        check_condition(b)
         return self
+
+
+class Family(_Record):
+    """A correction family across cells (docs/ANALYSIS_PLAN.md section 2.7): Holm over
+    the cells of `group` of the p-value at `p`, a dotted path into each cell's stats.json
+    ({protocol} stands for the cell's protocol id). `diff` is the path of the difference
+    that p tests; the report counts the cells where it moves each way with adjusted p
+    below alpha. A table column reads a cell's adjusted p at
+    cross.families.<token>.p_holm."""
+    token: MacroToken
+    group: RegistryId
+    p: str
+    diff: str
 
 
 class GraderComparison(_Record):
@@ -142,18 +163,31 @@ class CrossTable(_Record):
     rows each in cross_cells order; without blocks, the cells that are not set aside and
     then those that are. `label_columns` splits each cell's label at its last comma into
     that many columns (two: benchmark and base model); without it, one Cell column.
-    With skip_missing, a cell without a value in the first column has no row."""
+    With skip_missing, a cell without a value in the first column has no row.
+
+    Blocks name groups, and a group may list its cells, so a cell added to cross_cells
+    can fall outside every block. The report then stops, unless `leave_out` names the
+    cell: a table leaves a cell out only on purpose."""
     columns: list[CrossColumn] = Field(min_length=1)
     label_columns: list[str] = Field(default_factory=list, max_length=2)
     blocks: list[RegistryId] = Field(default_factory=list)
+    leave_out: list[CellId] = Field(default_factory=list)
     skip_missing: bool = False
 
 
 class CellDetailTables(_Record):
     """Every cell's metrics in each condition and a few contrasts, `per_table` cells to a
-    table (tab_cell_detail_<n>). {protocol} stands for the cell's protocol id."""
+    table (tab_cell_detail_<n>). {protocol} stands for the cell's protocol id.
+
+    `conditions` are roles, not names: base+{protocol} is each cell's own teacher
+    condition, so cells on different protocols share a column. When every cell of a table
+    has one protocol, the headers name it; otherwise they say "P" and each cell's block
+    row names its protocol. `leave_out` works as in CrossTable."""
     per_table: int = Field(gt=0)
     blocks: list[RegistryId] = Field(default_factory=list)
+    leave_out: list[CellId] = Field(default_factory=list)
+    conditions: list[str] = Field(default_factory=lambda: ["base", "base+{protocol}", "lora", "lora+{protocol}"],
+                                  min_length=1)
     contrasts: list[str] = Field(min_length=1)
     metrics: list[str] = Field(min_length=1)
 
@@ -225,6 +259,7 @@ class ReportConfig(_Record):
     grader_comparisons: list[GraderComparison] = Field(default_factory=list)
     posted: Optional[Posted] = None
     display: Display = Field(default_factory=Display)
+    families: list[Family] = Field(default_factory=list)
     cross_tables: dict[str, CrossTable] = Field(default_factory=dict)
     cell_detail_tables: Optional[CellDetailTables] = None
 
@@ -234,15 +269,21 @@ class ReportConfig(_Record):
         responses = [d.response for d in self.discrimination]
         if len(set(responses)) != len(responses):
             raise ValueError("a discrimination response repeats; list all its labels in one entry")
-        tokens = [g.token for g in self.groups.values()] + [g.token for g in self.grader_comparisons]
+        tokens = ([g.token for g in self.groups.values()] + [g.token for g in self.grader_comparisons]
+                  + [f.token for f in self.families])
         if len(set(tokens)) != len(tokens):
-            raise ValueError("group and comparison tokens repeat")
+            raise ValueError("group, comparison and family tokens repeat")
+        left_out = [c for t in self.cross_tables.values() for c in t.leave_out]
+        left_out += self.cell_detail_tables.leave_out if self.cell_detail_tables else []
+        unknown_cells = sorted(set(left_out) - set(self.cross_cells))
+        if unknown_cells:
+            raise ValueError(f"leave_out names cells that are not in cross_cells: {unknown_cells}")
         for gid, g in self.groups.items():
             # A listed cell outside cross_cells would drop out of its group without a word.
             outside = sorted(set(g.cells) - set(self.cross_cells))
             if outside:
                 raise ValueError(f"group {gid} lists cells that are not in cross_cells: {outside}")
-        named = [x.group for x in (*self.counts, *self.compares, *self.ranges)]
+        named = [x.group for x in (*self.counts, *self.compares, *self.ranges, *self.families)]
         named += [b for t in self.cross_tables.values() for b in t.blocks]
         named += self.cell_detail_tables.blocks if self.cell_detail_tables else []
         unknown = sorted(set(named) - set(self.groups))

@@ -18,7 +18,7 @@ import numpy as np
 from bodhi_lora.analysis import stats as st
 from bodhi_lora.analysis.cell import _f, round6
 from bodhi_lora.analysis.config import Group, ReportConfig
-from bodhi_lora.analysis.extract import read_table
+from bodhi_lora.analysis.extract import RESPONSE_ID, read_table
 from bodhi_lora.paths import Project
 from bodhi_lora.registry import CellConfig, Registry
 
@@ -51,11 +51,26 @@ def _metric(stats: dict, contrast: str, metric: str) -> dict:
     return stats["contrasts"].get(contrast, {}).get("metrics", {}).get(metric, {})
 
 
-def group_summary(ids: list[str], all_stats: dict, cfg: ReportConfig) -> dict:
+def own_protocol(text: str, cell: CellConfig) -> str:
+    """A config string with {protocol} standing for the cell's protocol id."""
+    return text.replace("{protocol}", cell.protocol)
+
+
+def _path(obj, path: str):
+    """A dotted path into stats.json; None where any key is missing."""
+    for key in path.split("."):
+        if not isinstance(obj, dict) or key not in obj:
+            return None
+        obj = obj[key]
+    return obj
+
+
+def group_summary(ids: list[str], all_stats: dict, cfg: ReportConfig, reg: Registry) -> dict:
     res = {"cells": ids, "n_cells": len(ids), "contrasts": {}, "recipe": {}, "askers_gap": {}}
     for gc in cfg.group_contrasts:
         for m in gc.metrics:
-            rows = [(cid, _metric(all_stats[cid], gc.contrast, m)) for cid in ids]
+            # Each cell's own protocol: a cell on another protocol is measured, not skipped.
+            rows = [(cid, _metric(all_stats[cid], own_protocol(gc.contrast, reg.cells[cid]), m)) for cid in ids]
             tested = [(cid, r) for cid, r in rows if r.get("diff") is not None]
             diffs = [r["diff"] for _, r in tested]
             ps = [r.get("p") if r.get("p") is not None else float("nan") for _, r in tested]
@@ -92,6 +107,24 @@ def group_summary(ids: list[str], all_stats: dict, cfg: ReportConfig) -> dict:
     return res
 
 
+def family_summary(ids: list[str], all_stats: dict, fam, reg: Registry, alpha: float) -> dict:
+    """Holm over a group's cells of one p-value per cell (a correction family of
+    docs/ANALYSIS_PLAN.md section 2.7). A cell without the value is listed, not tested."""
+    rows = []
+    for cid in ids:
+        cell = reg.cells[cid]
+        p = _path(all_stats[cid], own_protocol(fam.p, cell))
+        diff = _path(all_stats[cid], own_protocol(fam.diff, cell))
+        rows.append((cid, p, diff))
+    tested = [(cid, p, d) for cid, p, d in rows if p is not None and d is not None and np.isfinite(p)]
+    holm = st.holm([p for _, p, _ in tested])
+    cells = {cid: {"p": _f(p), "diff": _f(d), "p_holm": _f(h)} for (cid, p, d), h in zip(tested, holm)}
+    return {"group": fam.group, "p": fam.p, "diff": fam.diff, "cells": cells,
+            "not_measured": [cid for cid, p, d in rows if cid not in cells],
+            "n_up": sum(r["p_holm"] < alpha and r["diff"] > 0 for r in cells.values()),
+            "n_down": sum(r["p_holm"] < alpha and r["diff"] < 0 for r in cells.values())}
+
+
 def grader_comparison(project: Project, reg: Registry, cells: list[str], seed: int) -> dict:
     """Rubric scores of two cells on the prompts both drew in one seed.
 
@@ -116,6 +149,12 @@ def grader_comparison(project: Project, reg: Registry, cells: list[str], seed: i
         res["conditions"][c] = {"n_shared": len(shared),
                                 "pearson_r": _f(st.pearson_r(sa[shared], sb[shared])),
                                 "mean_first": _f(sa.mean()), "mean_second": _f(sb.mean())}
+        # How many shared prompts got the same reply in both runs: where the replies
+        # differ, r mixes the graders with the replies (audit G5, 2026-10-11).
+        if RESPONSE_ID in a and RESPONSE_ID in b:
+            ra = a[a["condition"] == c].set_index("prompt_id")[RESPONSE_ID]
+            rb = b[b["condition"] == c].set_index("prompt_id")[RESPONSE_ID]
+            res["conditions"][c]["n_same_reply"] = int(sum(ra[p] == rb[p] for p in shared))
         xs += sa[shared].tolist()
         ys += sb[shared].tolist()
     res["pooled"] = {"pearson_r": _f(st.pearson_r(xs, ys)), "spearman_rho": _f(st.spearman_rho(xs, ys))}
@@ -178,7 +217,10 @@ def analyze_cross(reg: Registry, project: Project, cfg: ReportConfig) -> dict:
            "groups": {}, "grader_comparisons": {}}
     for gid, g in cfg.groups.items():
         ids = members(g, cells, reg)
-        out["groups"][gid] = {"token": g.token, "description": g.description, **group_summary(ids, all_stats, cfg)}
+        out["groups"][gid] = {"token": g.token, "description": g.description,
+                              **group_summary(ids, all_stats, cfg, reg)}
+    out["families"] = {f.token: family_summary(out["groups"][f.group]["cells"], all_stats, f, reg, cfg.alpha)
+                       for f in cfg.families}
     for gc in cfg.grader_comparisons:
         out["grader_comparisons"][gc.token] = {"description": gc.description,
                                                **grader_comparison(project, reg, gc.cells, gc.seed)}
