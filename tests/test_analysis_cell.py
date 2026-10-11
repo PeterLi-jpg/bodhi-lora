@@ -239,3 +239,72 @@ def test_the_paired_probe_gives_delta_and_the_difference_in_differences(reg, tmp
     assert "conditions" in out["discrimination"]["active_inquiry"]["incomplete"]
     smoke = run(reg, synthetic_table(reg.cells[SMOKE]), tmp_path)
     assert smoke["paired_probe"] == {}
+
+
+def test_kappa_matches_sklearn():
+    """stats.kappa is written out for the bootstrap; it must give sklearn's number, with
+    weights too (the bootstrap passes resample counts as weights)."""
+    sklearn_metrics = pytest.importorskip("sklearn.metrics")
+    from bodhi_lora.analysis import stats as st
+
+    rng = np.random.default_rng(1)
+    for k, weights in ((3, "quadratic"), (2, None)):
+        a, b = rng.integers(0, k, 200), rng.integers(0, k, 200)
+        b[:120] = a[:120]
+        w = rng.integers(0, 4, 200).astype(float)
+        conf = np.zeros((k, k))
+        np.add.at(conf, (a, b), w)
+        expected = sklearn_metrics.cohen_kappa_score(a, b, labels=list(range(k)), weights=weights, sample_weight=w)
+        assert st.kappa(conf, quadratic=weights == "quadratic") == pytest.approx(expected, rel=1e-9)
+
+
+def test_judges_recompute_the_contrasts_and_decide_against_the_evaluator(reg, tmp_path):
+    """H8 (docs/ANALYSIS_PLAN.md section 8): each contrast on the seven dimensions again
+    from a judge's grades, Holm within the contrast, and confirmed, not confirmed or
+    reversed against the evaluator; kappa (quadratic on the 0 to 2 grades) with intervals."""
+    base_cell = reg.cells[SMOKE]
+    cell = base_cell.model_copy(update={"grading": base_cell.grading.model_copy(
+        update={"judges": ["same", "flipped", "absent"]})})
+    seeds = (1, 2, 3, 4, 5)
+    table = synthetic_table(cell, seeds=seeds)
+    # lora asks on 3 or 4 of the 6 prompts by seed, base on 1: a rise with seed spread.
+    pi = table["prompt_id"].str[1:].astype(int)
+    table.loc[table["condition"] == "base", "active_inquiry"] = (pi == 0).astype(float)
+    lora = table["condition"] == "lora"
+    table.loc[lora, "active_inquiry"] = (pi < 3 + table["seed"] % 2)[lora].astype(float)
+    for jid in ("same", "flipped"):
+        j = f"j_{jid}__"
+        table[f"{j}rubric_score"] = table["rubric_score"]
+        for k in EPISTEMIC:
+            table[f"{j}{k}"] = table[k]
+        table[f"{j}crit_11"], table[f"{j}crit_10"], table[f"{j}crit_01"], table[f"{j}crit_00"] = 1.0, 0.0, 0.0, 1.0
+    table["j_flipped__active_inquiry"] = 1.0 - table["active_inquiry"]
+    meta = [{"n_examples": {c: len(PROMPTS) for c in cell.eval.conditions}} for _ in seeds]
+    paths = replace(project(CONFIGS_DIR), results_root=tmp_path).cell(SMOKE)
+    out = analyze_tables(reg, cell, table, synthetic_prompts(), meta, paths, report_config())
+    judges, ev = out["judges"], out["contrasts"]
+    assert judges["absent"] == {"not_measured": "no judge file in the cell's grade folders"}
+
+    same = judges["same"]
+    assert same["criterion_kappa"] == pytest.approx(1.0) and same["criterion_kappa_ci95"] == pytest.approx([1.0, 1.0])
+    for k in SEVEN:
+        kap = same["dimension_kappa"][k]
+        assert kap["kappa"] == pytest.approx(1.0) and kap["n_off_scale"] == 0
+        assert kap["weights"] == ("none" if k == "active_inquiry" else "quadratic")
+    for key, res in same["contrasts"].items():
+        for k in SEVEN:
+            r, e = res["metrics"][k], ev[key]["metrics"][k]
+            if "not_measured" in r:
+                continue
+            assert r["diff"] == pytest.approx(e["diff"])
+            p = e["p_holm_within_contrast"]
+            assert r["decision"] == ("confirmed" if p is not None and p < 0.05 and e["diff"] != 0 else "not confirmed")
+        assert "decision" not in res["metrics"]["rubric_score"]
+        assert res["metrics"]["rubric_score"]["diff"] == pytest.approx(ev[key]["metrics"]["rubric_score"]["diff"])
+
+    ai = ev["lora - base"]["metrics"]["active_inquiry"]
+    assert ai["diff"] > 0 and ai["p_holm_within_contrast"] < 0.05
+    assert same["contrasts"]["lora - base"]["metrics"]["active_inquiry"]["decision"] == "confirmed"
+    flipped = judges["flipped"]
+    assert flipped["contrasts"]["lora - base"]["metrics"]["active_inquiry"]["decision"] == "reversed"
+    assert flipped["dimension_kappa"]["active_inquiry"]["kappa"] < 0

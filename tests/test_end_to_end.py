@@ -17,6 +17,7 @@ pytest.importorskip("pandas")
 
 from bodhi_lora import analysis  # noqa: E402
 from bodhi_lora.analysis.config import load_report_config  # noqa: E402
+from bodhi_lora.analysis.extract import SEVEN  # noqa: E402
 from bodhi_lora.paths import project  # noqa: E402
 from bodhi_lora.pipeline.runner import run_cell  # noqa: E402
 from bodhi_lora.registry import load_registry  # noqa: E402
@@ -122,6 +123,19 @@ def test_the_analysis_makes_every_statistic_the_records_ask_for(run):
     assert set(paired["conditions"]) == set(reg.cells[PAIRED].eval.conditions)
     assert sum(paired["conditions"]["base"]["n_pairs"].values()) > 0
     assert "did" in paired["contrasts"]["lora - base"]
+
+
+def test_the_judge_analysis_runs_on_a_stub_judge(run):
+    """H8 on the paired cell's stub judge: agreement and every contrast under the judge."""
+    reg, proj, cfg, rep, out = run
+    judge = reg.cells[PAIRED].grading.judges[0]
+    j = _stats(proj, PAIRED)["judges"][judge]
+    assert j["n_regraded"] > 0 and set(j["dimension_kappa"]) == set(SEVEN)
+    assert set(j["contrasts"]) == set(_stats(proj, PAIRED)["contrasts_order"])
+    for res in j["contrasts"].values():
+        for k in SEVEN:
+            assert res["metrics"][k].get("decision", "not measured") in (
+                "confirmed", "not confirmed", "reversed", "not measured")
 
 
 def test_a_new_cell_reaches_table_one_its_macros_and_the_counts(run):

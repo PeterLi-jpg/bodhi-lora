@@ -778,8 +778,47 @@ def recipe_section(cell: CellConfig, paths: CellPaths, filt: dict) -> dict:
     return res
 
 
-def judges_section(d: CellData, pairs) -> dict:
-    """Agreement of each judge with the evaluator, and the contrasts recomputed with it."""
+def _judge_decision(evaluator: dict, judge: dict, alpha: float) -> str:
+    """One contrast under a judge against the same contrast under the evaluator
+    (docs/ANALYSIS_PLAN.md section 8): confirmed when the judge's Holm-adjusted p is below
+    alpha with the evaluator's sign, reversed when it is below alpha with the other sign,
+    and not confirmed otherwise."""
+    p, dj, de = judge.get("p_holm_within_contrast"), judge.get("diff"), evaluator.get("diff")
+    if p is None or dj is None or de is None or not (np.isfinite(p) and np.isfinite(dj) and np.isfinite(de)):
+        return "not confirmed"
+    if p >= alpha or dj == 0 or de == 0:
+        return "not confirmed"
+    return "confirmed" if np.sign(dj) == np.sign(de) else "reversed"
+
+
+def _agreement(boot: st.ClusterBootstrap, prompt_ids, a: np.ndarray, b: np.ndarray, k: int,
+               quadratic: bool) -> dict:
+    """Cohen's kappa of two raters on categories 0..k-1, with a prompt-clustered bootstrap
+    interval. A value off the scale leaves its row out, and the output counts it."""
+    a, b = np.asarray(a, dtype=float), np.asarray(b, dtype=float)
+    on = np.isin(a, np.arange(k)) & np.isin(b, np.arange(k))
+    cell_of = (a[on] * k + b[on]).astype(int)
+    onehot = np.zeros((len(cell_of), k * k))
+    onehot[np.arange(len(cell_of)), cell_of] = 1.0
+    point = st.kappa(onehot.sum(axis=0).reshape(k, k), quadratic)
+    boots = st.kappa(boot.totals(np.asarray(prompt_ids)[on], onehot).reshape(-1, k, k), quadratic)
+    return {"kappa": _f(point), "kappa_ci95": [_f(x) for x in st.percentile_ci(boots)],
+            "weights": "quadratic" if quadratic else "none", "n": int(on.sum()), "n_off_scale": int((~on).sum())}
+
+
+def judges_section(d: CellData, pairs, boot: st.ClusterBootstrap, evaluator: dict, alpha: float) -> dict:
+    """Each judge against the evaluator, and the contrasts recomputed with it (H8,
+    docs/ANALYSIS_PLAN.md section 8).
+
+    Agreement (descriptive): Cohen's kappa per rubric criterion, kappa with quadratic
+    weights on each 0 to 2 dimension, Cohen's kappa on active inquiry, Pearson r of the
+    rubric score, each with a prompt-clustered bootstrap interval. Contrasts: every
+    contrast of the cell on the rubric score and the seven dimensions, from the judge's
+    grades alone, with Holm over the seven within each contrast (F1). Each dimension gets
+    the plan's decision against the evaluator's result in `evaluator` (the contrasts
+    section). The rubric score's correction runs across cells (F2), so it gets no decision
+    here. No correction runs across judges.
+    """
     t = d.table
     res = {}
     for jid in d.cell.grading.judges:
@@ -790,18 +829,48 @@ def judges_section(d: CellData, pairs) -> dict:
         both = t[t[f"{j}rubric_score"].notna()]
         out = {"n_regraded": int(len(both)),
                "rubric_score_pearson_r": _f(st.pearson_r(both["rubric_score"], both[f"{j}rubric_score"]))}
-        n = {k: both[f"{j}crit_{k}"].sum() for k in ("11", "10", "01", "00")}
-        tot = sum(n.values())
-        if tot:
-            po = (n["11"] + n["00"]) / tot
-            pe = ((n["11"] + n["10"]) * (n["11"] + n["01"]) + (n["00"] + n["01"]) * (n["00"] + n["10"])) / tot ** 2
-            out["criterion_kappa"] = _f((po - pe) / (1 - pe)) if pe < 1 else None
-            out["criterion_n"] = int(tot)
-        sc = both[(both["epi_status"] == "scored") & both[f"{j}active_inquiry"].notna()]
+        if len(both) > 1:
+            x, y = both["rubric_score"].to_numpy(dtype=float), both[f"{j}rubric_score"].to_numpy(dtype=float)
+            n, sx, sy, sxx, syy, sxy = boot.totals(both["prompt_id"], np.stack(
+                [np.ones_like(x), x, y, x * x, y * y, x * y], axis=1)).T
+            with np.errstate(invalid="ignore", divide="ignore"):
+                r = (n * sxy - sx * sy) / np.sqrt((n * sxx - sx * sx) * (n * syy - sy * sy))
+            out["rubric_score_pearson_r_ci95"] = [_f(v) for v in st.percentile_ci(r)]
+        crit = [f"{j}crit_{k}" for k in ("11", "10", "01", "00")]
+        counts = both[crit].fillna(0.0).to_numpy(dtype=float)
+        if counts.sum():
+            # Rows: the evaluator's verdict (met, not met); columns: the judge's.
+            out["criterion_kappa"] = _f(st.kappa(counts.sum(axis=0).reshape(2, 2)))
+            out["criterion_kappa_ci95"] = [_f(v) for v in st.percentile_ci(
+                st.kappa(boot.totals(both["prompt_id"], counts).reshape(-1, 2, 2)))]
+            out["criterion_n"] = int(counts.sum())
+        sc = t[(t["epi_status"] == "scored") & t[f"{j}active_inquiry"].notna()]
         out["dimension_agreement"] = {k: _f(np.mean(sc[k] == sc[f"{j}{k}"])) if len(sc) else None for k in SEVEN}
-        frame = both[["seed", "condition", "prompt_id", f"{j}rubric_score"]].rename(columns={f"{j}rubric_score": "v"})
-        sm = d.seed_means(frame)
-        out["contrasts_rubric_score"] = {contrast_key(a, b): paired(sm, a, b, d.seeds) for a, b in pairs}
+        out["dimension_kappa"] = {}
+        for k in SEVEN:
+            graded = sc[sc[k].notna() & sc[f"{j}{k}"].notna()]
+            # Active inquiry is yes or no; the other six are 0 to 2 grades.
+            binary = EPISTEMIC_KIND.get(k) == "rate"
+            out["dimension_kappa"][k] = (_agreement(boot, graded["prompt_id"], graded[k], graded[f"{j}{k}"],
+                                                    2 if binary else 3, quadratic=not binary)
+                                         if len(graded) else {"not_measured": "no reply graded by both"})
+        contrasts = {}
+        rubric = d.seed_means(both[["seed", "condition", "prompt_id", f"{j}rubric_score"]]
+                              .rename(columns={f"{j}rubric_score": "v"}))
+        for a, b in pairs:
+            key = contrast_key(a, b)
+            ms = {}
+            for k in SEVEN:
+                rows = t[t[f"{j}{k}"].notna()]
+                ms[k] = paired(d.seed_means(rows[["seed", "condition", "prompt_id", f"{j}{k}"]]
+                                            .rename(columns={f"{j}{k}": "v"})), a, b, d.seeds)
+            for k, ph in zip(SEVEN, st.holm([ms[k].get("p", float("nan")) for k in SEVEN])):
+                ms[k]["p_holm_within_contrast"] = _f(ph)
+                if "not_measured" not in ms[k]:
+                    ms[k]["decision"] = _judge_decision(evaluator[key]["metrics"][k], ms[k], alpha)
+            ms["rubric_score"] = paired(rubric, a, b, d.seeds)
+            contrasts[key] = {"a": a, "b": b, "metrics": ms}
+        out["contrasts"] = contrasts
         res[jid] = out
     return res
 
@@ -821,6 +890,7 @@ def analyze_tables(reg: Registry, cell: CellConfig, table: pd.DataFrame, prompts
     recipe = recipe_section(trained, tpaths, filt)
     if cell.adapters_from:
         filt["from_cell"] = recipe["from_cell"] = trained.id
+    contrasts = contrasts_section(d, metrics, pairs, boot)
     out = {
         "cell": cell.id, "status": cell.report.status, "seeds": d.seeds, "conditions_order": d.conditions,
         "evaluator": cell.grading.evaluator,
@@ -830,7 +900,7 @@ def analyze_tables(reg: Registry, cell: CellConfig, table: pd.DataFrame, prompts
                       "cluster": "prompt_id", "interval": "percentile"},
         "metrics": {m.key: {"kind": m.kind, "source": m.source, "secondary": m.secondary} for m in metrics},
         "conditions": conditions_section(d, metrics),
-        "contrasts": contrasts_section(d, metrics, pairs, boot),
+        "contrasts": contrasts,
         "counts": counts_section(d, meta),
         "worst_case": worst_case_section(d, metrics, pairs),
         "blanket_disclaimers": disclaimers_section(d),
@@ -847,7 +917,7 @@ def analyze_tables(reg: Registry, cell: CellConfig, table: pd.DataFrame, prompts
         "askers_gap": askers_gap_section(d, boot),
         "filter": filt,
         "recipe": recipe,
-        "judges": judges_section(d, pairs),
+        "judges": judges_section(d, pairs, boot, contrasts, cfg.alpha),
     }
     kappa = _read_json(paths.validation() / "kappa_results.json")
     out["validation"] = kappa if kappa is not None else {"not_measured": "no physician agreement file"}

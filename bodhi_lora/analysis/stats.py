@@ -10,7 +10,9 @@ Their intervals come from one bootstrap that resamples prompt ids, because a pro
 sit in several seeds' draws and responses to one prompt are not independent.
 
 Library calls: scipy.stats (t.ppf, ttest_rel, fisher_exact, pearsonr) and
-statsmodels.stats.multitest.multipletests(method="holm").
+statsmodels.stats.multitest.multipletests(method="holm"). Cohen's kappa is written out
+(kappa below), because the bootstrap scores thousands of tables at once; a test checks it
+against sklearn.metrics.cohen_kappa_score.
 """
 from __future__ import annotations
 
@@ -81,6 +83,29 @@ def holm(pvals) -> list[float]:
     if ok.any():
         out[ok] = multipletests(p[ok], method="holm")[1]
     return out.tolist()
+
+
+def kappa(conf, quadratic: bool = False) -> np.ndarray:
+    """Cohen's kappa of K x K tables of counts (the last two axes; rows are the first
+    rater), so one call scores a whole stack of bootstrap tables.
+
+    quadratic=True weights a disagreement by the squared distance between the categories
+    0..K-1, for an ordinal scale such as a 0 to 2 grade. The result is that of
+    sklearn.metrics.cohen_kappa_score(y1, y2, labels=range(K), weights=None or
+    "quadratic", sample_weight=w), which tests/test_analysis_cell.py checks. NaN where the
+    two raters' marginals leave no expected disagreement.
+    """
+    conf = np.asarray(conf, dtype=float)
+    k = conf.shape[-1]
+    i = np.arange(k)
+    w = ((i[:, None] - i[None, :]) ** 2).astype(float) if quadratic else (i[:, None] != i[None, :]).astype(float)
+    n = conf.sum(axis=(-2, -1))
+    expected = conf.sum(axis=-1)[..., :, None] * conf.sum(axis=-2)[..., None, :]
+    with np.errstate(invalid="ignore", divide="ignore"):
+        expected = expected / n[..., None, None]
+        observed_d = (w * conf).sum(axis=(-2, -1))
+        expected_d = (w * expected).sum(axis=(-2, -1))
+        return np.where(expected_d > 0, 1.0 - observed_d / expected_d, np.nan)
 
 
 def fisher_p(k1: int, n1: int, k2: int, n2: int) -> float:
@@ -169,6 +194,15 @@ class ClusterBootstrap:
         # last bits between machines.
         out = np.einsum("bp,pk->bk", self.weights, np.stack([cnt, s, q], axis=1))
         return out[:, 0], out[:, 1], out[:, 2]
+
+    def totals(self, prompt_ids, values) -> np.ndarray:
+        """Per resample: the sum over rows of each column of values (rows x k), each row
+        counted as often as the resample draws its prompt."""
+        idx = pd.Series(list(prompt_ids)).map(self.index).to_numpy()
+        values = np.asarray(values, dtype=float)
+        per_prompt = np.zeros((len(self.prompt_ids), values.shape[1]))
+        np.add.at(per_prompt, idx, values)
+        return np.einsum("bp,pk->bk", self.weights, per_prompt)
 
     def means(self, frame: pd.DataFrame) -> np.ndarray:
         """Per resample: the pooled mean of column v."""

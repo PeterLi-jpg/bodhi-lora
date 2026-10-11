@@ -702,7 +702,7 @@ get their own Holm correction.
 | Harm proxy: share of responses that meet at least one negative rubric criterion, and points lost to them | rubric | C33 (proxy only) |
 | Judge question rate: share of responses that ask the person for information, by a judge with a semantic rubric, once it passes its hand-label gate (ANALYSIS_PLAN.md section 12, 2026-10-10). The `classify` stage and the gate are built (2026-10-11); the analysis does not read the classify files until the gate passes. The second-person keyword rule it replaces was removed | judge | PROV-7; withdrawals W23 |
 | Teacher: `base+<protocol>` behaviour and filter clearance, tau, kept and raw counts; for an eval-only cell (`adapters_from`), the filter and recipe of the source cell, which `from_cell` names | eval, filter manifest | HomM follow-up Table 2 |
-| Judges: per-criterion kappa against the evaluator, weighted kappa for the 0 to 2 dimensions, Pearson r of the rubric score, and the contrasts recomputed with each judge | judge files | D6, C26 |
+| Judges (H8): per-criterion Cohen's kappa against the evaluator, quadratic-weighted kappa on the 0 to 2 dimensions, Cohen's kappa on active inquiry and Pearson r of the rubric score, each with a prompt-clustered bootstrap interval; every contrast recomputed from each judge's grades, Holm over the seven within it, and each dimension's decision against the evaluator (confirmed, not confirmed, reversed) | judge files | D6, C26 |
 | Dimension correlations | evaluator | FzpA Q1 |
 
 **Cross-cell.** One row per cell for each contrast and statistic, the cross-cell Holm
@@ -757,10 +757,14 @@ partial BioMistral-7B MedQA cell), and `results/cross_cell/stats.json` exists. T
 are the descriptive and exploratory items of ANALYSIS_PLAN.md section 10 (E01 to E05,
 E08). Since the plan's adoption on 2026-10-11, E02 with `needs-info-physician` has run
 (ANALYSIS_PLAN.md section 12, the entry after the adoption), and E07 is a table of
-intervals (Table C.1 of the paper). Not built yet, each needed by the analysis plan before its cells exist: the
-weighted kappa and dimension contrasts under a judge (H8), the judges' harm grades
-(C33), the probe and bench outputs (E11, E20), stage times from the manifests (E08),
-and contrasts between cells (H9, H10, E24). Built on 2026-10-10 and tested on synthetic
+intervals (Table C.1 of the paper). Built on 2026-10-11 and tested on synthetic tables
+and a stub run only (`tests/test_analysis_cell.py`, `tests/test_end_to_end.py`): the
+judge analysis of H8 (weighted kappa with intervals, the contrasts under each judge and
+their decisions). No recorded cell has a judge file yet, so its section says "not
+measured". Not built yet, each needed by the analysis plan before its cells exist: the
+judges' harm grades (C33), the probe and bench outputs (E11, E20), stage times from the
+manifests (E08), the contrasts between cells (H9, H10, E24) and the tool that draws the
+300 replies for the judge classifier's hand labels (R17). Built on 2026-10-10 and tested on synthetic
 tables only: the paired probe of H3 (`paired_probe` in `stats.json`: Delta per condition
 and seed, the difference in differences per contrast, the exact McNemar tables), from the
 `pair_id` column of the response table and a label whose rule pairs rows; the declared
