@@ -790,9 +790,29 @@ def family_problems(cell: CellConfig, reg: Registry) -> list[str]:
     return out
 
 
+# Each protocol implementation key and the kind of its class (bodhi_lora/protocols,
+# IMPLS). Kept here, next to the schema, so that `list` checks records without importing
+# the protocol packages (bodhi-llm is a training dependency); protocols/__init__.py
+# fails at import if the two disagree.
+PROTOCOL_IMPLS = {"bodhi_llm": "wrapper", "ask_first": "wrapper", "instruction": "prompt", "abstain": "wrapper"}
+
+
 def validate_registry(reg: Registry) -> None:
-    """Check references between records and the family rule; raise RegistryError."""
+    """Check references between records, each record against the code that reads it
+    (loader and protocol keys, loader settings), and the family rule; raise RegistryError."""
+    # Imported here: the loaders import this module.
+    from bodhi_lora.data.loaders import record_problems
+
     problems: list[str] = []
+    for bid, bench in sorted(reg.benchmarks.items()):
+        problems += [f"benchmarks/{bid}: {p}" for p in record_problems(bench)]
+    for pid, proto in sorted(reg.protocols.items()):
+        if proto.impl not in PROTOCOL_IMPLS:
+            problems.append(f"protocols/{pid}: impl {proto.impl!r} does not exist; implementations are "
+                            f"{sorted(PROTOCOL_IMPLS)}")
+        elif proto.kind != PROTOCOL_IMPLS[proto.impl]:
+            problems.append(f"protocols/{pid}: kind {proto.kind}, but impl {proto.impl} is a "
+                            f"{PROTOCOL_IMPLS[proto.impl]}")
     for cid, cell in sorted(reg.cells.items()):
         def bad(msg: str) -> None:
             problems.append(f"cells/{cid}: {msg}")

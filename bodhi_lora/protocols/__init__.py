@@ -18,9 +18,13 @@ from bodhi_lora.protocols.ask_first import AskFirst
 from bodhi_lora.protocols.base import CallLog, Decoding, Identity, Output, Protocol
 from bodhi_lora.protocols.bodhi_llm import BodhiLLM
 from bodhi_lora.protocols.instruction import Instruction
-from bodhi_lora.registry.schema import ModelConfig, ProtocolConfig
+from bodhi_lora.registry.schema import PROTOCOL_IMPLS, ModelConfig, ProtocolConfig
 
 IMPLS = {"bodhi_llm": BodhiLLM, "ask_first": AskFirst, "instruction": Instruction, "abstain": Abstain}
+# The registry checks records against its copy of these keys and kinds, without importing
+# this package; a new implementation goes in both.
+if {k: c.kind for k, c in IMPLS.items()} != PROTOCOL_IMPLS:
+    raise ImportError("bodhi_lora/protocols IMPLS and registry/schema.py PROTOCOL_IMPLS disagree")
 
 __all__ = ["CallLog", "Decoding", "IMPLS", "Identity", "Output", "Protocol", "build", "decoding_for"]
 

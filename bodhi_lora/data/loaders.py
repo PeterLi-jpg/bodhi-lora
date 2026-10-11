@@ -184,6 +184,10 @@ class HfQaParams(BaseModel):
     # Single-best-answer sources that store the answer as an index into choice columns.
     choice_fields: list[str] = Field(default_factory=list)
     choice_index_field: Optional[str] = None
+    # Source column -> tag name: each row gets the tag "<name>:<value>" from that
+    # structured column, so a label rule can read it (e.g. MedQuAD's question_type).
+    # Like xml_records tag_paths; the column's value is copied, never parsed for meaning.
+    tag_fields: dict[str, str] = Field(default_factory=dict)
 
 
 def _first(ex: dict, keys: list[str], default: Any = "") -> Any:
@@ -240,11 +244,13 @@ def build_hf_qa_rows(bench: BenchmarkConfig, source_rows) -> tuple[list[dict], d
         if p.reference_newlines == "space":
             ref = ref.replace("\n", " ")
         ref = ref[:p.reference_max_chars]
+        tags = list(bench.tags) + [f"{name}:{str(ex[col]).strip()}" for col, name in p.tag_fields.items()
+                                   if ex.get(col) not in (None, "") and str(ex[col]).strip()]
         rows.append({
             "prompt_id": pid,
             "prompt": [{"role": "user", "content": bench.prompt_template.format(question=text)}],
             "rubrics": synthesized_rubric(bench.reference_criterion.format(reference=ref)),
-            "example_tags": list(bench.tags),
+            "example_tags": tags,
         })
     counts["n_written"] = len(rows)
     return rows, counts
@@ -451,11 +457,89 @@ LOADERS: dict[str, Callable[..., list[Row]]] = {
 }
 
 
+@dataclass(frozen=True)
+class LoaderNeeds:
+    """What a loader reads from its benchmark record, so a record that lacks it fails
+    when the registry loads, not at fetch or run with a bare KeyError."""
+    sources: tuple[str, ...]                 # source kinds it reads
+    params: Optional[type] = None            # the loader_params model; None takes none
+    fields: tuple[str, ...] = ()             # keys of `fields` it reads
+    template: tuple[str, ...] = ()           # fields that prompt_template must hold
+    id_prefix: bool = False
+    rubrics: tuple[str, ...] = ("native", "synthesized", "none")
+
+
+NEEDS = {
+    "rubric_jsonl": LoaderNeeds(sources=("url", "local"), rubrics=("native",)),
+    "hf_qa": LoaderNeeds(sources=("hf",), params=HfQaParams, fields=("question",), template=("question",),
+                         id_prefix=True, rubrics=("synthesized",)),
+    "paired_context_jsonl": LoaderNeeds(sources=("url", "local"), params=PairedContextParams,
+                                        fields=("question", "answer", "context"),
+                                        template=("context", "question"), id_prefix=True, rubrics=("synthesized",)),
+    "xml_records": LoaderNeeds(sources=("url", "local"), params=XmlParams, fields=("question",),
+                               template=("question",), rubrics=("none",)),
+}
+
+
+def record_problems(bench: BenchmarkConfig) -> list[str]:
+    """What is wrong with a benchmark record for its loader; empty when nothing is.
+    validate_registry calls it for every record (make check)."""
+    if bench.loader not in LOADERS:
+        return [f"loader {bench.loader!r} does not exist; loaders are {sorted(LOADERS)}"]
+    need, out = NEEDS[bench.loader], []
+    if bench.source.kind not in need.sources:
+        out.append(f"loader {bench.loader} reads source kind {' or '.join(need.sources)}, not {bench.source.kind}")
+    if need.params is None and bench.loader_params:
+        out.append(f"loader {bench.loader} takes no loader_params")
+    elif need.params is not None:
+        try:
+            p = need.params.model_validate(bench.loader_params)
+        except ValueError as e:
+            out.append(f"loader_params: {' '.join(str(e).split())}")
+            p = None
+        if bench.loader == "hf_qa" and p is not None and not p.choice_fields and "answer" not in bench.fields:
+            out.append("loader hf_qa needs fields.answer, or loader_params.choice_fields")
+    missing = [f for f in need.fields if not bench.fields.get(f)]
+    if missing:
+        out.append(f"loader {bench.loader} needs fields {missing}")
+    if need.template:
+        if not bench.prompt_template:
+            out.append(f"loader {bench.loader} needs prompt_template")
+        else:
+            import string
+            used = {f for _, f, _, _ in string.Formatter().parse(bench.prompt_template) if f}
+            if not set(need.template) <= used or not used <= set(need.template):
+                out.append(f"prompt_template must use exactly {{{', '.join(need.template)}}}, not {sorted(used)}")
+    if need.id_prefix and not bench.id_prefix:
+        out.append(f"loader {bench.loader} needs id_prefix (its prompt ids hash the question)")
+    if bench.rubric not in need.rubrics:
+        out.append(f"loader {bench.loader} makes rubric {' or '.join(need.rubrics)}, not {bench.rubric}")
+    return out
+
+
+def broken_labels(bench: BenchmarkConfig, rows: list[Row]) -> list[str]:
+    """Labels whose rule gives no positive or no negative row in the whole benchmark. Such
+    a rule (a misspelled tag, a field the loader never sets) would leave every row in one
+    group or unlabelled, and every analysis of the label would quietly have nothing."""
+    out = []
+    for name in bench.labels:
+        values = [r.labels.get(name) for r in rows]
+        pos, neg = sum(v is True for v in values), sum(v is False for v in values)
+        if not pos or not neg:
+            out.append(f"{name} ({pos} positive, {neg} negative of {len(rows)} rows)")
+    return out
+
+
 def load_rows(bench: BenchmarkConfig, data_root: Path, fetch: bool = True) -> list[Row]:
     """Every row of a benchmark, by its record's loader. fetch=False never downloads."""
     if bench.loader not in LOADERS:
         raise DataError(f"{bench.id}: no loader {bench.loader!r}; loaders are {sorted(LOADERS)}")
-    return LOADERS[bench.loader](bench, Path(data_root), fetch=fetch)
+    rows = LOADERS[bench.loader](bench, Path(data_root), fetch=fetch)
+    broken = broken_labels(bench, rows)
+    if broken:
+        raise DataError(f"{bench.id}: these labels have an empty group, so their rule reads nothing the "
+                        f"loader sets: {'; '.join(broken)}. Check the label's tags or field against the rows.")
+    return rows
 
 
 def row_text(row: Row) -> str:

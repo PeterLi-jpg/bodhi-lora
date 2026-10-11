@@ -123,3 +123,42 @@ def test_healthbench_rows_and_physician_labels(reg):
     assert count("emergent-physician", True, rows) == 139 + 180
     assert (count("clinician-user", True, rows), count("clinician-user", True, hard)) == (322, 40)
     assert by_id[hard[0].prompt_id].messages[-1]["role"] == "user"
+
+
+def test_an_hf_qa_record_can_tag_rows_from_a_structured_column(reg):
+    """GEN-4 of the 2026-10-11 audit: a label can read a dataset column (MedQuAD's
+    question_type) through tag_fields, with no code; the column's value is copied, not
+    parsed for meaning."""
+    from bodhi_lora.data.loaders import _with_labels, broken_labels
+    from bodhi_lora.registry.schema import LabelRule
+
+    base = reg.benchmarks["medquad"]
+    rule = LabelRule(description="t", source="dataset field", timing="post_hoc",
+                     positive_tags=["question_type:when to contact a medical professional"])
+    bench = base.model_copy(update={
+        "loader_params": {**base.loader_params, "tag_fields": {"question_type": "question_type"}},
+        "labels": {"contact-professional": rule}})
+    fields = {k: v[0] for k, v in base.fields.items()}
+    source = [{fields["question"]: "When should I call a doctor?", fields["answer"]: "If a fever lasts.",
+               "question_type": "when to contact a medical professional"},
+              {fields["question"]: "What is asthma?", fields["answer"]: "A lung disease.",
+               "question_type": "information"}]
+    rows, _ = build_hf_qa_rows(bench, source)
+    assert "question_type:information" in rows[1]["example_tags"]
+    assert hf_qa_build_key(bench) != hf_qa_build_key(base)
+    labelled = [_with_labels(bench, r, {}) for r in rows]
+    assert [r.labels["contact-professional"] for r in labelled] == [True, False]
+    assert broken_labels(bench, labelled) == []
+
+
+def test_a_label_rule_that_reads_nothing_stops_the_load(reg, tmp_path):
+    """A field rule on a loader that never sets the field marks every row unlabelled;
+    loading must stop instead of every analysis of the label quietly having nothing."""
+    from bodhi_lora.registry.schema import LabelRule
+
+    bench = reg.benchmarks["tiny-rubric"]
+    broken = bench.model_copy(update={"labels": {"type": LabelRule(
+        description="t", source="t", timing="post_hoc", field="question_type",
+        positive_values=["a"], negative_values=["b"])}})
+    with pytest.raises(DataError, match="type .0 positive, 0 negative"):
+        load_rows(broken, tmp_path)

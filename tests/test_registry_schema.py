@@ -4,6 +4,7 @@ The records below follow the examples in docs/ARCHITECTURE.md. They are built in
 memory so the test does not depend on the configs/ files the build steps write.
 """
 import copy
+import re
 
 import pytest
 import yaml
@@ -279,3 +280,59 @@ def test_pair_draws_do_not_take_a_fixed_file():
     bad["eval"]["ids"] = {"policy": "fixed_file", "n": 200, "file": "eval_ids.json", "unit": "pair"}
     with pytest.raises(pydantic.ValidationError, match="unit pair"):
         CellConfig.model_validate(bad)
+
+
+def _registry_with(benchmark=None, protocol=None):
+    bench = BenchmarkConfig.model_validate(benchmark or BENCHMARK)
+    protos = [ProtocolConfig.model_validate(protocol or p) for p in PROTOCOLS]
+    cell = CellConfig.model_validate(copy.deepcopy(CELL))
+    return Registry(models={m["id"]: ModelConfig.model_validate(m) for m in MODELS},
+                    benchmarks={bench.id: bench}, protocols={p.id: p for p in protos},
+                    cells={cell.id: cell})
+
+
+@pytest.mark.parametrize("change,expected", [
+    ({"loader": "rubric_jsonll"}, "loader 'rubric_jsonll' does not exist"),
+    ({"loader": "hf_qa"}, "reads source kind hf"),
+    ({"loader_params": {"x": 1}}, "takes no loader_params"),
+    ({"rubric": "synthesized", "reference_criterion": "Agrees with {reference}."}, "makes rubric native"),
+])
+def test_a_benchmark_record_the_loader_cannot_read_fails_at_load(change, expected):
+    """GEN-5 of the 2026-10-11 audit: a misspelled or incomplete record fails make check,
+    not later with a bare KeyError at fetch or run."""
+    with pytest.raises(RegistryError, match=re.escape(expected)):
+        validate_registry(_registry_with(benchmark={**copy.deepcopy(BENCHMARK), **change}))
+
+
+def test_an_hf_qa_record_needs_its_fields_template_and_prefix():
+    from bodhi_lora.data.loaders import record_problems
+
+    bench = BenchmarkConfig.model_validate({
+        "id": "qa", "title": "QA", "loader": "hf_qa", "license": "MIT", "audience": "patient",
+        "task": "open_ended", "rubric": "synthesized", "reference_criterion": "Agrees with {reference}.",
+        "source": {"kind": "hf", "dataset": "org/qa", "revision": SHA},
+        "loader_params": {"id_text": "raw", "reference_max_chars": 100, "reference_newlines": "keep"},
+        "prompt_template": "{query}",
+        "splits": {"default": {"method": "holdout", "pool": {"select": "all"},
+                               "holdout": {"select": "head", "size": 2}}}})
+    problems = " | ".join(record_problems(bench))
+    for part in ("needs fields ['question']", "fields.answer", "prompt_template must use exactly {question}",
+                 "needs id_prefix"):
+        assert part in problems, part
+
+
+@pytest.mark.parametrize("change,expected", [
+    ({"impl": "bodhi_lm"}, "impl 'bodhi_lm' does not exist"),
+    ({"kind": "prompt", "instructions": "x", "passes": 1}, "kind prompt, but impl bodhi_llm is a wrapper"),
+])
+def test_a_protocol_record_without_its_implementation_fails_at_load(change, expected):
+    with pytest.raises(RegistryError, match=re.escape(expected)):
+        validate_registry(_registry_with(protocol={**copy.deepcopy(PROTOCOLS[0]), **change}))
+
+
+def test_the_registry_knows_every_implementation_and_its_kind():
+    pytest.importorskip("bodhi")
+    from bodhi_lora.protocols import IMPLS
+    from bodhi_lora.registry.schema import PROTOCOL_IMPLS
+
+    assert {k: c.kind for k, c in IMPLS.items()} == PROTOCOL_IMPLS
