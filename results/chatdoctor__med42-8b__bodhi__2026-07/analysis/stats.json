@@ -2041,6 +2041,7 @@
      "diff": 0.03375,
      "n_seeds": 5,
      "p": 0.00369126,
+     "p_holm_axes": 0.0110738,
      "per_seed_diff": [
       0.0325,
       0.021875,
@@ -2064,6 +2065,7 @@
      "diff": 0.153,
      "n_seeds": 5,
      "p": 6.27055e-05,
+     "p_holm_axes": 0.000250822,
      "per_seed_diff": [
       0.15,
       0.185,
@@ -2087,6 +2089,7 @@
      "diff": 0.0236667,
      "n_seeds": 5,
      "p": 0.135083,
+     "p_holm_axes": 0.19149,
      "per_seed_diff": [
       -0.00611111,
       0.0233333,
@@ -2110,6 +2113,7 @@
      "diff": -0.035,
      "n_seeds": 5,
      "p": 0.095745,
+     "p_holm_axes": 0.19149,
      "per_seed_diff": [
       -0.045,
       -0.02,
@@ -2133,6 +2137,7 @@
      "diff": -0.175,
      "n_seeds": 5,
      "p": 6.70964e-06,
+     "p_holm_axes": 3.35482e-05,
      "per_seed_diff": [
       -0.19,
       -0.185,
@@ -2743,6 +2748,7 @@
      "diff": 0.042,
      "n_seeds": 5,
      "p": 0.0062972,
+     "p_holm_axes": 0.00871993,
      "per_seed_diff": [
       0.0325,
       0.0175,
@@ -2766,6 +2772,7 @@
      "diff": 0.103,
      "n_seeds": 5,
      "p": 0.00435997,
+     "p_holm_axes": 0.00871993,
      "per_seed_diff": [
       0.05,
       0.14,
@@ -2789,6 +2796,7 @@
      "diff": -0.0777778,
      "n_seeds": 5,
      "p": 0.000357588,
+     "p_holm_axes": 0.00143035,
      "per_seed_diff": [
       -0.0855556,
       -0.0727778,
@@ -2812,6 +2820,7 @@
      "diff": -0.158,
      "n_seeds": 5,
      "p": 0.00212828,
+     "p_holm_axes": 0.00638485,
      "per_seed_diff": [
       -0.185,
       -0.205,
@@ -2835,6 +2844,7 @@
      "diff": -0.207,
      "n_seeds": 5,
      "p": 2.998e-05,
+     "p_holm_axes": 0.0001499,
      "per_seed_diff": [
       -0.215,
       -0.225,
@@ -3445,6 +3455,7 @@
      "diff": 0.00825,
      "n_seeds": 5,
      "p": 0.315643,
+     "p_holm_axes": 0.315643,
      "per_seed_diff": [
       0.0,
       -0.004375,
@@ -3468,6 +3479,7 @@
      "diff": -0.05,
      "n_seeds": 5,
      "p": 0.0255592,
+     "p_holm_axes": 0.0511183,
      "per_seed_diff": [
       -0.1,
       -0.045,
@@ -3491,6 +3503,7 @@
      "diff": -0.101444,
      "n_seeds": 5,
      "p": 0.00104175,
+     "p_holm_axes": 0.00520875,
      "per_seed_diff": [
       -0.0794444,
       -0.0961111,
@@ -3514,6 +3527,7 @@
      "diff": -0.123,
      "n_seeds": 5,
      "p": 0.00858731,
+     "p_holm_axes": 0.0343492,
      "per_seed_diff": [
       -0.14,
       -0.185,
@@ -3537,6 +3551,7 @@
      "diff": -0.032,
      "n_seeds": 5,
      "p": 0.0130826,
+     "p_holm_axes": 0.0392477,
      "per_seed_diff": [
       -0.025,
       -0.04,
@@ -4147,6 +4162,7 @@
      "diff": 0.056125,
      "n_seeds": 5,
      "p": 0.00243652,
+     "p_holm_axes": 0.00730957,
      "per_seed_diff": [
       0.06125,
       0.05375,
@@ -4170,6 +4186,7 @@
      "diff": -0.008,
      "n_seeds": 5,
      "p": 0.720509,
+     "p_holm_axes": 0.720509,
      "per_seed_diff": [
       0.045,
       0.035,
@@ -4193,6 +4210,7 @@
      "diff": -0.0827778,
      "n_seeds": 5,
      "p": 2.01793e-06,
+     "p_holm_axes": 1.00896e-05,
      "per_seed_diff": [
       -0.0772222,
       -0.0822222,
@@ -4216,6 +4234,7 @@
      "diff": -0.053,
      "n_seeds": 5,
      "p": 0.0319311,
+     "p_holm_axes": 0.0638622,
      "per_seed_diff": [
       -0.085,
       -0.09,
@@ -4239,6 +4258,7 @@
      "diff": -0.209,
      "n_seeds": 5,
      "p": 8.92762e-06,
+     "p_holm_axes": 3.57105e-05,
      "per_seed_diff": [
       -0.205,
       -0.23,
@@ -4849,6 +4869,7 @@
      "diff": 0.014125,
      "n_seeds": 5,
      "p": 0.293848,
+     "p_holm_axes": 0.881545,
      "per_seed_diff": [
       0.02875,
       0.03625,
@@ -4872,6 +4893,7 @@
      "diff": -0.111,
      "n_seeds": 5,
      "p": 0.0185658,
+     "p_holm_axes": 0.0742631,
      "per_seed_diff": [
       -0.005,
       -0.105,
@@ -4895,6 +4917,7 @@
      "diff": -0.005,
      "n_seeds": 5,
      "p": 0.575333,
+     "p_holm_axes": 1.0,
      "per_seed_diff": [
       0.00833333,
       -0.00944444,
@@ -4918,6 +4941,7 @@
      "diff": 0.105,
      "n_seeds": 5,
      "p": 0.00445014,
+     "p_holm_axes": 0.0222507,
      "per_seed_diff": [
       0.1,
       0.115,
@@ -4941,6 +4965,7 @@
      "diff": -0.002,
      "n_seeds": 5,
      "p": 0.717428,
+     "p_holm_axes": 1.0,
      "per_seed_diff": [
       0.01,
       -0.005,
@@ -5705,6 +5730,9 @@
    "incomplete": {
     "not_measured": "benchmark chatdoctor has no label incomplete"
    },
+   "needs-info-physician": {
+    "not_measured": "benchmark chatdoctor has no label needs-info-physician"
+   },
    "needs-info-theme": {
     "not_measured": "benchmark chatdoctor has no label needs-info-theme"
    }
@@ -6352,7 +6380,7 @@
  "prompts": {
   "labels": {},
   "n_evaluated": 200,
-  "n_population": null,
+  "n_population": 200,
   "population_labels": {},
   "rubric_points_pos_max": 29.0,
   "rubric_points_pos_min": 29.0
@@ -6453,7 +6481,28 @@
  },
  "status": "complete",
  "themes": {
-  "not_measured": "no theme tags: the benchmark rows were not read at extract"
+  "chatdoctor": {
+   "conditions": {
+    "base": {
+     "n": 1000,
+     "rate": 0.029
+    },
+    "base+bodhi": {
+     "n": 1000,
+     "rate": 0.834
+    },
+    "lora": {
+     "n": 1000,
+     "rate": 0.864
+    },
+    "lora+bodhi": {
+     "n": 1000,
+     "rate": 0.776
+    }
+   },
+   "n_evaluated": 200,
+   "n_population": 200
+  }
  },
  "validation": {
   "not_measured": "no physician agreement file"

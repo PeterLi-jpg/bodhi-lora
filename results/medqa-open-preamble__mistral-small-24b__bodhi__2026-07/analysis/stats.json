@@ -2119,6 +2119,7 @@
      "diff": 0.050875,
      "n_seeds": 5,
      "p": 0.053009,
+     "p_holm_axes": 0.212036,
      "per_seed_diff": [
       -0.019375,
       0.055,
@@ -2142,6 +2143,7 @@
      "diff": -0.019,
      "n_seeds": 5,
      "p": 0.0269653,
+     "p_holm_axes": 0.134827,
      "per_seed_diff": [
       0.0,
       -0.03,
@@ -2165,6 +2167,7 @@
      "diff": 0.00366667,
      "n_seeds": 5,
      "p": 0.71996,
+     "p_holm_axes": 0.71996,
      "per_seed_diff": [
       -0.0238889,
       -0.00166667,
@@ -2188,6 +2191,7 @@
      "diff": 0.014,
      "n_seeds": 5,
      "p": 0.20564,
+     "p_holm_axes": 0.41128,
      "per_seed_diff": [
       -0.005,
       0.025,
@@ -2211,6 +2215,7 @@
      "diff": -0.016,
      "n_seeds": 5,
      "p": 0.11508,
+     "p_holm_axes": 0.345239,
      "per_seed_diff": [
       -0.03,
       -0.025,
@@ -2846,6 +2851,7 @@
      "diff": 0.048875,
      "n_seeds": 5,
      "p": 0.093503,
+     "p_holm_axes": 0.280509,
      "per_seed_diff": [
       -0.0025,
       0.0575,
@@ -2869,6 +2875,7 @@
      "diff": -0.007,
      "n_seeds": 5,
      "p": 0.245492,
+     "p_holm_axes": 0.490984,
      "per_seed_diff": [
       0.01,
       -0.02,
@@ -2892,6 +2899,7 @@
      "diff": 0.00177778,
      "n_seeds": 5,
      "p": 0.445673,
+     "p_holm_axes": 0.490984,
      "per_seed_diff": [
       -0.00333333,
       0.00777778,
@@ -2915,6 +2923,7 @@
      "diff": 0.034,
      "n_seeds": 5,
      "p": 0.00363955,
+     "p_holm_axes": 0.0181978,
      "per_seed_diff": [
       0.03,
       0.045,
@@ -2938,6 +2947,7 @@
      "diff": 0.049,
      "n_seeds": 5,
      "p": 0.0274422,
+     "p_holm_axes": 0.109769,
      "per_seed_diff": [
       0.0,
       0.045,
@@ -3573,6 +3583,7 @@
      "diff": -0.002,
      "n_seeds": 5,
      "p": 0.9087,
+     "p_holm_axes": 1.0,
      "per_seed_diff": [
       0.016875,
       0.0025,
@@ -3596,6 +3607,7 @@
      "diff": 0.012,
      "n_seeds": 5,
      "p": 0.0240435,
+     "p_holm_axes": 0.0961741,
      "per_seed_diff": [
       0.01,
       0.01,
@@ -3619,6 +3631,7 @@
      "diff": -0.00188889,
      "n_seeds": 5,
      "p": 0.837907,
+     "p_holm_axes": 1.0,
      "per_seed_diff": [
       0.0205556,
       0.00944444,
@@ -3642,6 +3655,7 @@
      "diff": 0.02,
      "n_seeds": 5,
      "p": 0.0440338,
+     "p_holm_axes": 0.132101,
      "per_seed_diff": [
       0.035,
       0.02,
@@ -3665,6 +3679,7 @@
      "diff": 0.065,
      "n_seeds": 5,
      "p": 0.00587769,
+     "p_holm_axes": 0.0293885,
      "per_seed_diff": [
       0.03,
       0.07,
@@ -4300,6 +4315,7 @@
      "diff": 0.047,
      "n_seeds": 5,
      "p": 0.0773675,
+     "p_holm_axes": 0.232102,
      "per_seed_diff": [
       -0.02625,
       0.05125,
@@ -4323,6 +4339,7 @@
      "diff": -0.069,
      "n_seeds": 5,
      "p": 0.000704058,
+     "p_holm_axes": 0.00352029,
      "per_seed_diff": [
       -0.07,
       -0.09,
@@ -4346,6 +4363,7 @@
      "diff": 0.0375556,
      "n_seeds": 5,
      "p": 0.0450267,
+     "p_holm_axes": 0.180107,
      "per_seed_diff": [
       0.03,
       -0.00444444,
@@ -4369,6 +4387,7 @@
      "diff": 0.024,
      "n_seeds": 5,
      "p": 0.111029,
+     "p_holm_axes": 0.232102,
      "per_seed_diff": [
       0.01,
       -0.005,
@@ -4392,6 +4411,7 @@
      "diff": 0.075,
      "n_seeds": 5,
      "p": 0.105288,
+     "p_holm_axes": 0.232102,
      "per_seed_diff": [
       0.09,
       0.015,
@@ -5027,6 +5047,7 @@
      "diff": -0.001875,
      "n_seeds": 5,
      "p": 0.940702,
+     "p_holm_axes": 1.0,
      "per_seed_diff": [
       -0.02375,
       -0.00625,
@@ -5050,6 +5071,7 @@
      "diff": -0.062,
      "n_seeds": 5,
      "p": 0.00072955,
+     "p_holm_axes": 0.00364775,
      "per_seed_diff": [
       -0.08,
       -0.07,
@@ -5073,6 +5095,7 @@
      "diff": 0.0357778,
      "n_seeds": 5,
      "p": 0.0657697,
+     "p_holm_axes": 0.263079,
      "per_seed_diff": [
       0.0333333,
       -0.0122222,
@@ -5096,6 +5119,7 @@
      "diff": -0.01,
      "n_seeds": 5,
      "p": 0.52576,
+     "p_holm_axes": 1.0,
      "per_seed_diff": [
       -0.02,
       -0.05,
@@ -5119,6 +5143,7 @@
      "diff": 0.026,
      "n_seeds": 5,
      "p": 0.511273,
+     "p_holm_axes": 1.0,
      "per_seed_diff": [
       0.09,
       -0.03,
@@ -5905,6 +5930,9 @@
   "active_inquiry": {
    "incomplete": {
     "not_measured": "benchmark medqa-open-preamble has no label incomplete"
+   },
+   "needs-info-physician": {
+    "not_measured": "benchmark medqa-open-preamble has no label needs-info-physician"
    },
    "needs-info-theme": {
     "not_measured": "benchmark medqa-open-preamble has no label needs-info-theme"

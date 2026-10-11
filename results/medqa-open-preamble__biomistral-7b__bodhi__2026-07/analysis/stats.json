@@ -1541,6 +1541,7 @@
      "n_seeds": 1,
      "not_measured_test": "one seed: no interval and no test",
      "p": null,
+     "p_holm_axes": null,
      "per_seed_diff": [
       0.26
      ],
@@ -1561,6 +1562,7 @@
      "n_seeds": 1,
      "not_measured_test": "one seed: no interval and no test",
      "p": null,
+     "p_holm_axes": null,
      "per_seed_diff": [
       -0.3
      ],
@@ -1801,6 +1803,7 @@
      "n_seeds": 1,
      "not_measured_test": "one seed: no interval and no test",
      "p": null,
+     "p_holm_axes": null,
      "per_seed_diff": [
       0.36
      ],
@@ -1821,6 +1824,7 @@
      "n_seeds": 1,
      "not_measured_test": "one seed: no interval and no test",
      "p": null,
+     "p_holm_axes": null,
      "per_seed_diff": [
       -0.3
      ],
@@ -2061,6 +2065,7 @@
      "n_seeds": 1,
      "not_measured_test": "one seed: no interval and no test",
      "p": null,
+     "p_holm_axes": null,
      "per_seed_diff": [
       0.1
      ],
@@ -2081,6 +2086,7 @@
      "n_seeds": 1,
      "not_measured_test": "one seed: no interval and no test",
      "p": null,
+     "p_holm_axes": null,
      "per_seed_diff": [
       0.0
      ],
@@ -2321,6 +2327,7 @@
      "n_seeds": 1,
      "not_measured_test": "one seed: no interval and no test",
      "p": null,
+     "p_holm_axes": null,
      "per_seed_diff": [
       0.18
      ],
@@ -2341,6 +2348,7 @@
      "n_seeds": 1,
      "not_measured_test": "one seed: no interval and no test",
      "p": null,
+     "p_holm_axes": null,
      "per_seed_diff": [
       -0.3
      ],
@@ -2581,6 +2589,7 @@
      "n_seeds": 1,
      "not_measured_test": "one seed: no interval and no test",
      "p": null,
+     "p_holm_axes": null,
      "per_seed_diff": [
       -0.18
      ],
@@ -2601,6 +2610,7 @@
      "n_seeds": 1,
      "not_measured_test": "one seed: no interval and no test",
      "p": null,
+     "p_holm_axes": null,
      "per_seed_diff": [
       0.0
      ],
@@ -3021,6 +3031,9 @@
   "active_inquiry": {
    "incomplete": {
     "not_measured": "benchmark medqa-open-preamble has no label incomplete"
+   },
+   "needs-info-physician": {
+    "not_measured": "benchmark medqa-open-preamble has no label needs-info-physician"
    },
    "needs-info-theme": {
     "not_measured": "benchmark medqa-open-preamble has no label needs-info-theme"

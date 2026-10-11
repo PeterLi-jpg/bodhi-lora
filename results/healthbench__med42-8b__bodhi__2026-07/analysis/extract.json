@@ -68,7 +68,7 @@
       },
       "needs-info-physician": {
         "definition_sha256": "c06012df6b3bd85432e100ae23d9e5c12c08897bda51216dcbcba12524bc1167",
-        "in_prompts_table": false,
+        "in_prompts_table": true,
         "population": {
           "negative": 113,
           "positive": 204,

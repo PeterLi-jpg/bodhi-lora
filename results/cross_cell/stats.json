@@ -9,6 +9,33 @@
   "medquad__mistral-small-24b__bodhi__2026-07",
   "medqa-open-preamble__mistral-small-24b__bodhi__2026-07"
  ],
+ "families": {
+  "PhysicianIndex": {
+   "cells": {
+    "healthbench__biomistral-7b__bodhi__2026-07": {
+     "diff": -0.138902,
+     "p": 9.82715e-05,
+     "p_holm": 0.000294815
+    },
+    "healthbench__medgemma-27b-text__bodhi__2026-05": {
+     "diff": 0.0338665,
+     "p": 0.661076,
+     "p_holm": 0.661076
+    },
+    "healthbench__mistral-small-24b__bodhi__2026-07": {
+     "diff": -0.0423341,
+     "p": 0.23177,
+     "p_holm": 0.46354
+    }
+   },
+   "diff": "discrimination.active_inquiry.needs-info-physician.contrasts.lora - base.seed_test.diff",
+   "group": "e02-existing",
+   "n_down": 1,
+   "n_up": 0,
+   "not_measured": [],
+   "p": "discrimination.active_inquiry.needs-info-physician.contrasts.lora - base.seed_test.p"
+  }
+ },
  "grader_comparisons": {
   "PilotGrader": {
    "cells": [
@@ -19,6 +46,7 @@
     "base": {
      "mean_first": 0.460087,
      "mean_second": 0.47235,
+     "n_same_reply": 6,
      "n_shared": 43,
      "pearson_r": 0.707734
     },
@@ -27,6 +55,7 @@
      "mean_second": 0.46009,
      "minus_base_first": -0.0221151,
      "minus_base_second": -0.0122592,
+     "n_same_reply": 0,
      "n_shared": 43,
      "pearson_r": 0.668393
     },
@@ -35,6 +64,7 @@
      "mean_second": 0.468113,
      "minus_base_first": -0.00598144,
      "minus_base_second": -0.00423678,
+     "n_same_reply": 0,
      "n_shared": 43,
      "pearson_r": 0.718886
     }
@@ -86,7 +116,7 @@
     "medqa-open-preamble__mistral-small-24b__bodhi__2026-07"
    ],
    "contrasts": {
-    "base+bodhi - base": {
+    "base+{protocol} - base": {
      "rubric_score": {
       "abs_max": 0.129714,
       "abs_min": 0.0017381,
@@ -156,7 +186,7 @@
       "p_max": 0.0283218
      }
     },
-    "lora - base+bodhi": {
+    "lora - base+{protocol}": {
      "active_inquiry": {
       "abs_max": 0.0461106,
       "abs_min": 0.00740578,
@@ -236,7 +266,7 @@
     "healthbench__biomistral-7b__bodhi__2026-07"
    ],
    "contrasts": {
-    "base+bodhi - base": {
+    "base+{protocol} - base": {
      "rubric_score": {
       "abs_max": 0.0153143,
       "abs_min": 0.0153143,
@@ -288,7 +318,7 @@
       "p_max": 0.0160429
      }
     },
-    "lora - base+bodhi": {
+    "lora - base+{protocol}": {
      "active_inquiry": {
       "abs_max": 0.044,
       "abs_min": 0.044,
@@ -369,7 +399,7 @@
     "medquad__mistral-small-24b__bodhi__2026-07"
    ],
    "contrasts": {
-    "base+bodhi - base": {
+    "base+{protocol} - base": {
      "rubric_score": {
       "abs_max": 0.129714,
       "abs_min": 0.0017381,
@@ -436,7 +466,7 @@
       "p_max": 0.0160429
      }
     },
-    "lora - base+bodhi": {
+    "lora - base+{protocol}": {
      "active_inquiry": {
       "abs_max": 0.0461106,
       "abs_min": 0.0240151,
@@ -516,7 +546,7 @@
     "chatdoctor__med42-8b__bodhi__2026-07"
    ],
    "contrasts": {
-    "base+bodhi - base": {
+    "base+{protocol} - base": {
      "rubric_score": {
       "abs_max": 0.0139223,
       "abs_min": 0.0017381,
@@ -571,7 +601,7 @@
       "p_max": 0.00344452
      }
     },
-    "lora - base+bodhi": {
+    "lora - base+{protocol}": {
      "active_inquiry": {
       "abs_max": 0.0461106,
       "abs_min": 0.03,
@@ -651,7 +681,7 @@
     "medqa-open-preamble__mistral-small-24b__bodhi__2026-07"
    ],
    "contrasts": {
-    "base+bodhi - base": {
+    "base+{protocol} - base": {
      "rubric_score": {
       "abs_max": 0.129714,
       "abs_min": 0.00680952,
@@ -712,7 +742,7 @@
       "p_max": 0.0283218
      }
     },
-    "lora - base+bodhi": {
+    "lora - base+{protocol}": {
      "active_inquiry": {
       "abs_max": 0.0411709,
       "abs_min": 0.00740578,
@@ -794,7 +824,7 @@
     "medquad__mistral-small-24b__bodhi__2026-07"
    ],
    "contrasts": {
-    "base+bodhi - base": {
+    "base+{protocol} - base": {
      "rubric_score": {
       "abs_max": 0.129714,
       "abs_min": 0.00680952,
@@ -855,7 +885,7 @@
       "p_max": 0.0160429
      }
     },
-    "lora - base+bodhi": {
+    "lora - base+{protocol}": {
      "active_inquiry": {
       "abs_max": 0.044,
       "abs_min": 0.0240151,
@@ -905,6 +935,142 @@
    },
    "token": "AddedOutsideFamily"
   },
+  "e02-existing": {
+   "askers_gap": {
+    "base": {
+     "n_measured": 3,
+     "n_negative": 3,
+     "n_positive": 0
+    },
+    "base+bodhi": {
+     "n_measured": 3,
+     "n_negative": 0,
+     "n_positive": 3
+    },
+    "lora": {
+     "n_measured": 3,
+     "n_negative": 1,
+     "n_positive": 2
+    },
+    "lora+bodhi": {
+     "n_measured": 3,
+     "n_negative": 0,
+     "n_positive": 3
+    }
+   },
+   "cells": [
+    "healthbench__medgemma-27b-text__bodhi__2026-05",
+    "healthbench__mistral-small-24b__bodhi__2026-07",
+    "healthbench__biomistral-7b__bodhi__2026-07"
+   ],
+   "contrasts": {
+    "base+{protocol} - base": {
+     "rubric_score": {
+      "abs_max": 0.0153143,
+      "abs_min": 0.00381439,
+      "max": 0.00381439,
+      "min": -0.0153143,
+      "n_measured": 3,
+      "n_negative": 2,
+      "n_positive": 1,
+      "n_zero": 0,
+      "not_measured": [],
+      "p_holm": {
+       "healthbench__biomistral-7b__bodhi__2026-07": 0.000211929,
+       "healthbench__medgemma-27b-text__bodhi__2026-05": 0.656519,
+       "healthbench__mistral-small-24b__bodhi__2026-07": 0.0140861
+      },
+      "p_holm_max": 0.656519,
+      "p_max": 0.656519
+     }
+    },
+    "lora - base": {
+     "active_inquiry": {
+      "abs_max": 0.309628,
+      "abs_min": 0.016,
+      "max": 0.309628,
+      "min": -0.016,
+      "n_measured": 3,
+      "n_negative": 1,
+      "n_positive": 2,
+      "n_zero": 0,
+      "not_measured": [],
+      "p_holm": {
+       "healthbench__biomistral-7b__bodhi__2026-07": 0.159553,
+       "healthbench__medgemma-27b-text__bodhi__2026-05": 0.000333087,
+       "healthbench__mistral-small-24b__bodhi__2026-07": 0.000333087
+      },
+      "p_holm_max": 0.159553,
+      "p_max": 0.159553
+     },
+     "rubric_score": {
+      "abs_max": 0.0152028,
+      "abs_min": 0.00424676,
+      "max": 0.00424676,
+      "min": -0.0152028,
+      "n_measured": 3,
+      "n_negative": 2,
+      "n_positive": 1,
+      "n_zero": 0,
+      "not_measured": [],
+      "p_holm": {
+       "healthbench__biomistral-7b__bodhi__2026-07": 0.0320858,
+       "healthbench__medgemma-27b-text__bodhi__2026-05": 0.483146,
+       "healthbench__mistral-small-24b__bodhi__2026-07": 0.0163466
+      },
+      "p_holm_max": 0.483146,
+      "p_max": 0.483146
+     }
+    },
+    "lora - base+{protocol}": {
+     "active_inquiry": {
+      "abs_max": 0.044,
+      "abs_min": 0.0237225,
+      "max": 0.0240151,
+      "min": -0.044,
+      "n_measured": 3,
+      "n_negative": 2,
+      "n_positive": 1,
+      "n_zero": 0,
+      "not_measured": [],
+      "p_holm": {
+       "healthbench__biomistral-7b__bodhi__2026-07": 0.045099,
+       "healthbench__medgemma-27b-text__bodhi__2026-05": 0.241588,
+       "healthbench__mistral-small-24b__bodhi__2026-07": 0.295471
+      },
+      "p_holm_max": 0.295471,
+      "p_max": 0.295471
+     }
+    }
+   },
+   "description": "the existing HealthBench cells outside the evaluator's family (family F6 of E02)",
+   "n_cells": 3,
+   "recipe": {
+    "adapters": 10,
+    "best_epoch_max": 2.0,
+    "best_epoch_min": 1.0,
+    "effective_batch_consistent": [
+     16
+    ],
+    "grad_accumulation_consistent": null,
+    "lora_alpha": 32,
+    "lora_dropout": 0.05,
+    "num_train_epochs": 3,
+    "r": 16,
+    "target_modules": [
+     "down_proj",
+     "gate_proj",
+     "k_proj",
+     "o_proj",
+     "q_proj",
+     "up_proj",
+     "v_proj"
+    ],
+    "tau": 0.4,
+    "train_batch_size": null
+   },
+   "token": "PhysicianIndexExisting"
+  },
   "family-waiver": {
    "askers_gap": {
     "base": {
@@ -933,7 +1099,7 @@
     "chatdoctor__med42-8b__bodhi__2026-07"
    ],
    "contrasts": {
-    "base+bodhi - base": {
+    "base+{protocol} - base": {
      "rubric_score": {
       "abs_max": 0.0139223,
       "abs_min": 0.0017381,
@@ -988,7 +1154,7 @@
       "p_max": 0.00344452
      }
     },
-    "lora - base+bodhi": {
+    "lora - base+{protocol}": {
      "active_inquiry": {
       "abs_max": 0.0461106,
       "abs_min": 0.03,
@@ -1069,7 +1235,7 @@
     "medquad__mistral-small-24b__bodhi__2026-07"
    ],
    "contrasts": {
-    "base+bodhi - base": {
+    "base+{protocol} - base": {
      "rubric_score": {
       "abs_max": 0.129714,
       "abs_min": 0.00381439,
@@ -1133,7 +1299,7 @@
       "p_max": 0.483146
      }
     },
-    "lora - base+bodhi": {
+    "lora - base+{protocol}": {
      "active_inquiry": {
       "abs_max": 0.044,
       "abs_min": 0.0237225,
@@ -1211,7 +1377,7 @@
     "medqa-open-preamble__mistral-small-24b__bodhi__2026-07"
    ],
    "contrasts": {
-    "base+bodhi - base": {
+    "base+{protocol} - base": {
      "rubric_score": {
       "abs_max": 0.00854762,
       "abs_min": 0.00854762,
@@ -1263,7 +1429,7 @@
       "p_max": 0.0283218
      }
     },
-    "lora - base+bodhi": {
+    "lora - base+{protocol}": {
      "active_inquiry": {
       "abs_max": 0.00740578,
       "abs_min": 0.00740578,
@@ -1339,7 +1505,7 @@
     "healthbench__medgemma-27b-text__bodhi__2026-05"
    ],
    "contrasts": {
-    "base+bodhi - base": {
+    "base+{protocol} - base": {
      "rubric_score": {
       "abs_max": 0.00381439,
       "abs_min": 0.00381439,
@@ -1391,7 +1557,7 @@
       "p_max": 0.483146
      }
     },
-    "lora - base+bodhi": {
+    "lora - base+{protocol}": {
      "active_inquiry": {
       "abs_max": 0.0237225,
       "abs_min": 0.0237225,

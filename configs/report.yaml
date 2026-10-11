@@ -31,23 +31,27 @@ alpha: 0.05
 # The discrimination index: P(response | label positive) - P(response | label negative),
 # for each listed label whose groups both occur among a cell's evaluated prompts, with the
 # rate in each group. Only labels listed here are computed. The physician labels of the
-# benchmark records are left out on purpose: the analysis plan keeps them unseen on every
-# cell until its adoption (docs/ANALYSIS_PLAN.md, state at registration; convention 3).
-# The two HealthBench labels read the theme tag only (configs/benchmarks/healthbench.yaml
-# says why no other structured field can stand in), and both are post hoc (decision D9).
+# benchmark records stayed out until the first author adopted the analysis plan on
+# 2026-10-11 (docs/ANALYSIS_PLAN.md section 12; convention 3). That adoption let
+# `needs-info-physician` in: it is E02, the secondary test of H3 (ANALYSIS_PLAN.md section
+# 5.2), read with the F6 family below. The other physician labels wait for the runs whose
+# analyses read them (H7 and H11 on the labelled cells).
+# The two theme labels read the theme tag only (configs/benchmarks/healthbench.yaml says
+# why no other structured field can stand in), and both are post hoc (decision D9).
 # `incomplete` is the label of the MediQ paired probe (configs/benchmarks/mediq-paired.yaml):
 # it comes from how each pair was built, and its rule pairs the rows, so a cell on that
 # benchmark also gets the paired statistics of ANALYSIS_PLAN.md section 5.1 (H3). No cell
 # with that benchmark has run.
-#   active_inquiry: does the reply ask more on prompts of the context_seeking theme, or on
-#     the incomplete row of a pair than on the complete one.
+#   active_inquiry: does the reply ask more on prompts that HealthBench physicians labelled
+#     as lacking context, on prompts of the context_seeking theme, or on the incomplete row
+#     of a pair than on the complete one.
 #   red_flag_rate: the evaluator's red-flag rate (share of replies with red-flag score 2)
 #     on prompts of the emergency_referrals theme and on the others. The rate on the
 #     others counts warranted flags too, so it is not an over-flagging rate; the test of
 #     over-flagging is H7 on the physician labels (ANALYSIS_PLAN.md section 7.2).
 discrimination:
   - response: active_inquiry
-    labels: [needs-info-theme, incomplete]
+    labels: [needs-info-physician, needs-info-theme, incomplete]
   - response: red_flag_rate
     labels: [emergency-theme]
 
@@ -126,13 +130,24 @@ groups:
     token: AddedBioMistral
     description: the added BioMistral-7B cells
     cells: [healthbench__biomistral-7b__bodhi__2026-07]
+  # Family F6 of docs/ANALYSIS_PLAN.md section 2.7 (E02, the secondary test of H3): the
+  # existing HealthBench cells outside the waiver. The two Med42-8B cells are reported
+  # and marked, outside the family (section 5.2). New HealthBench cells form their own
+  # family when they run.
+  e02-existing:
+    token: PhysicianIndexExisting
+    description: the existing HealthBench cells outside the evaluator's family (family F6 of E02)
+    cells: [healthbench__medgemma-27b-text__bodhi__2026-05, healthbench__mistral-small-24b__bodhi__2026-07,
+            healthbench__biomistral-7b__bodhi__2026-07]
 
 # For each group: per contrast and metric, how many cells move each way, the range of
 # the differences, and Holm over the group's cells of the seed-level p-values.
+# {protocol} stands for each cell's own protocol id, so a cell on another protocol is
+# measured against its own teacher. Its macros say Protocol (e.g. BaseProtocolvsBase).
 group_contrasts:
   - {contrast: lora - base, metrics: [active_inquiry, rubric_score]}
-  - {contrast: lora - base+bodhi, metrics: [active_inquiry]}
-  - {contrast: base+bodhi - base, metrics: [rubric_score]}
+  - {contrast: 'lora - base+{protocol}', metrics: [active_inquiry]}
+  - {contrast: 'base+{protocol} - base', metrics: [rubric_score]}
 
 # Counts the paper states over a group: the cells where the listed metrics move in the
 # given direction in a contrast with p below alpha (test holm: the seven dimensions under
@@ -158,6 +173,9 @@ counts:
      direction: down, test: p}
   - {token: AggregateFellBoot, group: added-outside-family, contrast: lora - base, metrics: [rubric_score],
      direction: down, test: bootstrap}
+  # What the drop is made of (E05, exploratory): the accuracy axis of the rubric.
+  - {token: AccuracyFell, group: added-outside-family, contrast: lora - base, metrics: [axis_accuracy],
+     direction: down, test: p}
   # The red-flag drop of the 2026-05 cell under LoRA plus the protocol: a lenient test
   # (unadjusted p) for "the drop repeats", and the Holm test for a rise.
   - {token: RedFlagProtocolFell, group: added-outside-family, contrast: 'lora+{protocol} - lora',
@@ -177,6 +195,19 @@ ranges:
   # spread across seeds is the run-to-run spread of the evaluation.
   - {token: BaseActiveInquirySD, group: added, value: conditions.active_inquiry.base.seed_sd, scale: 100,
      decimals: 1}
+
+# Correction families across cells (docs/ANALYSIS_PLAN.md section 2.7): Holm over a
+# group's cells of one p-value of each cell. The report counts the cells that move each
+# way with adjusted p below alpha; a table column reads a cell's adjusted p at
+# cross.families.<token>.p_holm.
+families:
+  # E02 (H3 secondary): LoRA - Base on the physician-label discrimination index, the
+  # seed-level paired t (ANALYSIS_PLAN.md section 5.2). "Consistent with calibration" needs
+  # a positive difference with adjusted p below 0.05.
+  - token: PhysicianIndex
+    group: e02-existing
+    p: 'discrimination.active_inquiry.needs-info-physician.contrasts.lora - base.seed_test.p'
+    diff: 'discrimination.active_inquiry.needs-info-physician.contrasts.lora - base.seed_test.diff'
 
 # Two cells that graded the same base model on the same benchmark with different
 # evaluators: rubric scores on the prompts both drew in `seed`.
@@ -247,6 +278,7 @@ display:
     chars: 'Reply length (characters)'
     tokens: 'Reply tokens (tokenizer)'
   labels:
+    needs-info-physician: 'physicians: context missing'
     needs-info-theme: 'context-seeking theme'
     emergency-theme: 'emergency-referral theme'
   benchmarks:
@@ -256,7 +288,9 @@ display:
 
 # Tables with one row per cell of cross_cells, every cell with the same columns, "--"
 # where a cell has no such value. Paths are into each cell's stats.json; {protocol}
-# stands for the cell's protocol id. A t interval prints as plus or minus its half width;
+# stands for the cell's protocol id, and {leak_rule} for that protocol's one leak rule.
+# A table with blocks must place every cell of cross_cells in a block, or name it in
+# leave_out: the report stops otherwise, so a new cell cannot drop out unseen. A t interval prints as plus or minus its half width;
 # a bootstrap interval (ci_style: range) prints both ends, because it need not be
 # symmetric. star: a p-value; the cell gets a star when it is below alpha.
 cross_tables:
@@ -325,6 +359,8 @@ cross_tables:
   tab_cell_filter:
     label_columns: [Benchmark, Base model]
     blocks: [added-kept, set-aside]
+    # Its filter and recipe are in Table F.1 of the paper (trained outside the package).
+    leave_out: [healthbench__medgemma-27b-text__bodhi__2026-05]
     skip_missing: true
     columns:
       - {header: '$\tau$', value: filter.recorded.tau, decimals: 1}
@@ -366,20 +402,20 @@ cross_tables:
         sign: true
       - group: 'Format leak, LoRA+P'
         header: '\shortstack[r]{Share\\(\%)}'
-        value: leakage.leak_{protocol}__analysis-format.conditions.lora+{protocol}.leaked_share
+        value: leakage.leak_{protocol}__{leak_rule}.conditions.lora+{protocol}.leaked_share
         scale: 100
         decimals: 1
       - group: 'Format leak, LoRA+P'
         header: '$n$'
-        value: leakage.leak_{protocol}__analysis-format.conditions.lora+{protocol}.n_leaked
+        value: leakage.leak_{protocol}__{leak_rule}.conditions.lora+{protocol}.n_leaked
         decimals: 0
       - group: 'Format leak, LoRA+P'
         header: '\shortstack[r]{Red flag\\leaked}'
-        value: leakage.leak_{protocol}__analysis-format.conditions.lora+{protocol}.dimensions_leaked.red_flag
+        value: leakage.leak_{protocol}__{leak_rule}.conditions.lora+{protocol}.dimensions_leaked.red_flag
         decimals: 2
       - group: 'Format leak, LoRA+P'
         header: '\shortstack[r]{Red flag\\clean}'
-        value: leakage.leak_{protocol}__analysis-format.conditions.lora+{protocol}.dimensions_clean.red_flag
+        value: leakage.leak_{protocol}__{leak_rule}.conditions.lora+{protocol}.dimensions_clean.red_flag
         decimals: 2
       - header: '\shortstack[r]{Askers gap\\LoRA}'
         value: askers_gap.lora.gap
@@ -396,8 +432,102 @@ cross_tables:
         value: cost.conditions.lora.tokens_engine_mean
         decimals: 0
 
+  # What the aggregate drop is made of (E05; ANALYSIS_PLAN.md section 4, secondary): LoRA -
+  # Base on each HealthBench rubric axis, the seed-level paired t, with a star where its
+  # Holm-adjusted p over the five axes of the cell is below alpha. On ChatDoctor and MedQuAD
+  # the rubric is synthesized (bodhi_lora/data/rubric.py): accuracy is the reference-answer
+  # criterion and the two negative criteria. Exploratory: it describes, it decides nothing.
+  tab_cross_cell_axes:
+    label_columns: [Benchmark, Base model]
+    blocks: [submitted, added-kept, set-aside]
+    columns:
+      - group: 'LoRA $-$ Base, rubric axis'
+        header: Accuracy
+        value: contrasts.lora - base.metrics.axis_accuracy.diff
+        ci: contrasts.lora - base.metrics.axis_accuracy.ci95
+        star: contrasts.lora - base.metrics.axis_accuracy.p_holm_axes
+        decimals: 3
+        sign: true
+      - group: 'LoRA $-$ Base, rubric axis'
+        header: Completeness
+        value: contrasts.lora - base.metrics.axis_completeness.diff
+        ci: contrasts.lora - base.metrics.axis_completeness.ci95
+        star: contrasts.lora - base.metrics.axis_completeness.p_holm_axes
+        decimals: 3
+        sign: true
+      - group: 'LoRA $-$ Base, rubric axis'
+        header: '\shortstack[r]{Communication\\quality}'
+        value: contrasts.lora - base.metrics.axis_communication_quality.diff
+        ci: contrasts.lora - base.metrics.axis_communication_quality.ci95
+        star: contrasts.lora - base.metrics.axis_communication_quality.p_holm_axes
+        decimals: 3
+        sign: true
+      - group: 'LoRA $-$ Base, rubric axis'
+        header: '\shortstack[r]{Context\\awareness}'
+        value: contrasts.lora - base.metrics.axis_context_awareness.diff
+        ci: contrasts.lora - base.metrics.axis_context_awareness.ci95
+        star: contrasts.lora - base.metrics.axis_context_awareness.p_holm_axes
+        decimals: 3
+        sign: true
+      - group: 'LoRA $-$ Base, rubric axis'
+        header: '\shortstack[r]{Instruction\\following}'
+        value: contrasts.lora - base.metrics.axis_instruction_following.diff
+        ci: contrasts.lora - base.metrics.axis_instruction_following.ci95
+        star: contrasts.lora - base.metrics.axis_instruction_following.p_holm_axes
+        decimals: 3
+        sign: true
+  # The parts of the deployment-risk criterion (E07; ANALYSIS_PLAN.md section 12, the
+  # 2026-10-11 adoption: no margins, so intervals only), each LoRA - Base with its seed-level
+  # t interval:
+  #   Harm proxy (E06): the share of replies that meet at least one negative rubric
+  #     criterion, and the points lost to such criteria. LLM-graded, not the physician harm
+  #     review (E28). The synthesized rubrics have two negative criteria.
+  #   Red-flag identification (0-2), the seven-dimension grade.
+  #   Physician-label asking index (E02, H3 secondary): HealthBench cells only; star where
+  #     its Holm-adjusted p over family F6 is below alpha.
+  # The fourth part, over-flagging on the physician labels (H7), needs the labelled cells
+  # (docs/RUN_PLAN.md R4) and has no column until they run.
+  tab_cross_cell_risk:
+    label_columns: [Benchmark, Base model]
+    blocks: [submitted, added-kept, set-aside]
+    columns:
+      - group: 'Harm proxy (E06)'
+        header: '\shortstack[r]{Base\\(\%)}'
+        value: conditions.neg_any.base.seed_mean
+        scale: 100
+        decimals: 1
+      - group: 'Harm proxy (E06)'
+        header: '\shortstack[r]{LoRA $-$ Base\\(pp)}'
+        value: contrasts.lora - base.metrics.neg_any.diff
+        ci: contrasts.lora - base.metrics.neg_any.ci95
+        star: contrasts.lora - base.metrics.neg_any.p
+        scale: 100
+        decimals: 1
+        sign: true
+      - group: 'Harm proxy (E06)'
+        header: '\shortstack[r]{Points lost\\LoRA $-$ Base}'
+        value: contrasts.lora - base.metrics.neg_points_lost.diff
+        ci: contrasts.lora - base.metrics.neg_points_lost.ci95
+        star: contrasts.lora - base.metrics.neg_points_lost.p
+        decimals: 2
+        sign: true
+      - header: '\shortstack[r]{Red-flag\\identification}'
+        value: contrasts.lora - base.metrics.red_flag.diff
+        ci: contrasts.lora - base.metrics.red_flag.ci95
+        star: contrasts.lora - base.metrics.red_flag.p_holm_within_contrast
+        decimals: 2
+        sign: true
+      - header: '\shortstack[r]{Physician-label\\asking index (pp)}'
+        value: 'discrimination.active_inquiry.needs-info-physician.contrasts.lora - base.seed_test.diff'
+        ci: 'discrimination.active_inquiry.needs-info-physician.contrasts.lora - base.seed_test.ci95'
+        star: cross.families.PhysicianIndex.p_holm
+        scale: 100
+        decimals: 1
+        sign: true
+
 # Every cell's metrics in the four conditions and two contrasts, a few cells to a table
-# (tab_cell_detail_<n>; Appendix I of the paper).
+# (tab_cell_detail_<n>; Appendix I of the paper). The conditions are roles: base+{protocol}
+# is each cell's own teacher condition (bodhi_lora/analysis/config.py, CellDetailTables).
 cell_detail_tables:
   per_table: 4
   blocks: [submitted, added-kept, set-aside]

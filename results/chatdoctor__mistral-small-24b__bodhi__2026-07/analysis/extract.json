@@ -5,7 +5,36 @@
   },
   "prompts": {
     "benchmark": "chatdoctor",
-    "rows": "not available: data/raw/chatdoctor/rows.jsonl is missing or stale; run python -m bodhi_lora fetch chatdoctor",
+    "draw_check": {
+      "101": {
+        "drawn": 200,
+        "evaluated": 200,
+        "evaluated_not_drawn": 0
+      },
+      "13": {
+        "drawn": 200,
+        "evaluated": 200,
+        "evaluated_not_drawn": 0
+      },
+      "42": {
+        "drawn": 200,
+        "evaluated": 200,
+        "evaluated_not_drawn": 0
+      },
+      "7": {
+        "drawn": 200,
+        "evaluated": 200,
+        "evaluated_not_drawn": 0
+      },
+      "99": {
+        "drawn": 200,
+        "evaluated": 200,
+        "evaluated_not_drawn": 0
+      }
+    },
+    "labels": {},
+    "n_population": 200,
+    "rows": "loaded",
     "split": "head"
   },
   "seeds": [
