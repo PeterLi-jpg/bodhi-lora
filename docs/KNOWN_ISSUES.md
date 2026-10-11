@@ -164,14 +164,13 @@ D-numbers refer to [DECISIONS.md](DECISIONS.md). Issue numbers such as #5 are Gi
 - **Two tool trailers remain in public history (HYG-12).** The repository stays public,
   and the raters gave consent, so there is no privacy purge of history (D17, D18). A purge
   of the two trailers only is optional (BLOCKED.md item 4). The current tree is clean.
-- **The hooks are not active in this clone (G14).** `core.hooksPath` points at the
-  repository's old location, so `hooks/commit-msg` and `hooks/pre-push` do not run.
-  Commit messages were checked by hand. The fix is one command (BLOCKED.md item 5).
-- **Scratch and temp branches remain on the remote (HYG-12, HYG-15, HYG-11).** This
-  includes `results-temp`, which holds the adapter of the 2026-04 MedGemma pilot (seed
-  42, 838 traces), not a submitted adapter; its weights match the local copy in the pilot
-  cell's train folder. `scripts/maintenance/prune_branches.sh` lists them; `--apply`
-  deletes them after the first author's yes (D16, BLOCKED.md item 4).
+- **Temp branches may remain on the remote (HYG-15, HYG-11).** The first author deleted
+  the remote `claude/*` and `worktree-agent*` branches on 2026-10-11 (HYG-12). Whether the
+  temp branches and the branches merged into the mainline went too is not confirmed from
+  this checkout. One of them, `results-temp`, holds the adapter of the 2026-04 MedGemma
+  pilot (seed 42, 838 traces), not a submitted adapter; its weights match the local copy
+  in the pilot cell's train folder. `scripts/maintenance/prune_branches.sh` lists them;
+  `--apply` deletes them after the first author's yes (D16, BLOCKED.md item 4).
 - **The remote slug misspells the name (`bohdi-lora`, D15).** Renaming is a remote
   action and is deferred.
 - **`make smoke` stops after the smoke record changes.** The runner freezes a cell's
@@ -180,6 +179,11 @@ D-numbers refer to [DECISIONS.md](DECISIONS.md). Issue numbers such as #5 are Gi
 
 ## Fixed
 
+- **The hooks were not active in this clone (2026-10-11).** `core.hooksPath` pointed
+  at the repository's old location, so `hooks/commit-msg` and `hooks/pre-push` did not
+  run, and commit messages were checked by hand. It now points at `hooks/`, and a commit
+  message that names a coding assistant is rejected. `hooks/pre-commit` was added the
+  same day (BLOCKED.md item 5).
 - **The report step named the cells it reported (2026-10-10).** Table 1, the per-cell
   tables and most main-body numbers came from `503b975:scripts/paper_stats.py`, which knew four
   condition names, the submitted cell and a token map of the posted cells, so a new cell
