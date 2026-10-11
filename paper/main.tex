@@ -380,7 +380,10 @@ cells. $^{\ddagger}$Set aside, because its prompt told the model to ask; its dim
 \label{tab:cells}
 \scriptsize
 \setlength{\tabcolsep}{1.5pt}
-\input{generated/tab_cross_cell}
+% Ten columns do not fit the text width even at scriptsize: tighten the math spacing
+% around the plus-minus signs and interval commas, then scale the rest to fit (about 90%).
+\medmuskip=0.5mu\thinmuskip=0.5mu
+\resizebox{\linewidth}{!}{\input{generated/tab_cross_cell}}
 \end{table}
 
 The MedGemma-27B cell on \hbhard{} is the cell of the submitted version. After the submission we
@@ -859,7 +862,7 @@ scale. All dimension values are LLM-graded. $^{\dagger}$Base model in the evalua
 $^{\ddagger}$Set aside (\S\ref{sec:cells}).}
 \label{tab:cell-detail-1}
 \scriptsize
-\setlength{\tabcolsep}{3pt}
+\setlength{\tabcolsep}{2.9pt}
 \input{generated/tab_cell_detail_1}
 \end{table}
 
@@ -870,7 +873,7 @@ Table~\ref{tab:cell-detail-1}. $^{\dagger}$Base model in the evaluator's family.
 (\S\ref{sec:cells}).}
 \label{tab:cell-detail-2}
 \scriptsize
-\setlength{\tabcolsep}{3pt}
+\setlength{\tabcolsep}{2.9pt}
 \input{generated/tab_cell_detail_2}
 \end{table}
 
