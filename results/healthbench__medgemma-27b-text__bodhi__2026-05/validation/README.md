@@ -2,7 +2,7 @@
 
 Format mirrors the processed clinician_1 template
 (`clinician_1-processed.xlsx`, kept outside the repo). Each Excel has
-three sheets — Grading, Instructions - Primary, Instructions - Tiebreaker —
+three sheets (Grading, Instructions - Primary, Instructions - Tiebreaker),
 with the full grading instructions and a worked example baked into the file
 itself.
 
@@ -45,18 +45,18 @@ has returned grades, and `kappa_results.json` holds the result for that rater.
 - `physician_grade` ∈ {pass, fail, unsure}. Excel data validation enforces.
 - `physician_confidence` ∈ {1, 2, 3}. Excel data validation enforces.
 - Orange `is_avoid_item=YES` rows: criteria the AI should NOT exhibit. Read
-  carefully — `pass` means the AI correctly avoided the harmful behavior.
+  carefully: `pass` means the AI correctly avoided the harmful behavior.
 
 ## Stats reported by compute_irr_kappa.py
 
-- **Inter-physician κ** (3 pairwise, averaged) — upper bound.
-- **LLM grader vs physician consensus κ** — issue #73's headline number.
+- **Inter-physician κ** (3 pairwise, averaged): upper bound.
+- **LLM grader vs physician consensus κ**: issue #73's headline number.
   Reported separately for `eval_llama` (Llama-3.1-8B) and `filter_qwen`
   (Qwen-14B) sources.
 - **Per-config κ breakdown** for the 4 Stage-4 conditions.
 
 ## Data sources
 
-- `../seed_<N>/eval/<condition>.json` — 5-seed Modal eval (Llama-graded)
-- `../seed_7/filter/train.jsonl` — Qwen-filtered BODHI traces
-- `data/raw/healthbench/hard.jsonl`, `data/raw/healthbench/full.jsonl` — rubrics
+- `../seed_<N>/eval/<condition>.json`: 5-seed Modal eval (Llama-graded)
+- `../seed_7/filter/train.jsonl`: Qwen-filtered BODHI traces
+- `data/raw/healthbench/hard.jsonl`, `data/raw/healthbench/full.jsonl`: rubrics

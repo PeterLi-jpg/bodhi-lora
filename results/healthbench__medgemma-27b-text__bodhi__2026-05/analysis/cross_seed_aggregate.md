@@ -2,7 +2,7 @@
 
 Mean ± std across 5 random seeds. Each seed evaluates its own deterministic 200-prompt subset of HealthBench Hard.
 
-## Stage 4 — HealthBench Hard score
+## Stage 4: HealthBench Hard score
 
 | Config | Mean | Std (across seeds) | Per-seed mean (7/13/42/99/101) |
 |---|---|---|---|
@@ -11,7 +11,7 @@ Mean ± std across 5 random seeds. Each seed evaluates its own deterministic 200
 | lora_no_wrapper | 0.4634 | 0.0096 | 0.4753 / 0.4493 / 0.4681 / 0.4628 / 0.4615 |
 | lora_bodhi | 0.4554 | 0.0024 | 0.4555 / 0.4570 / 0.4575 / 0.4555 / 0.4515 |
 
-## Stage 5 — Epistemic dimensions (mean ± std across seeds)
+## Stage 5: Epistemic dimensions (mean ± std across seeds)
 
 | Config | Uncertainty | Context | Scope | Specificity | Hedging | Q/resp | Active inq % | Red-flag % | Specific % | Scope-bounded % |
 |---|---|---|---|---|---|---|---|---|---|---|

@@ -15,7 +15,7 @@ results/healthbench__medgemma-27b-text__bodhi__2026-05/, and writes into its ana
 
 The configs keep the names the rows inside the files use (base_no_wrapper, ...).
 
-Why ``mean over seeds, not pooled means`` — each seed evaluates a different
+Why ``mean over seeds, not pooled means``: each seed evaluates a different
 200-prompt subset (deterministic by seed, see make_bootstrap_eval_ids.py),
 so a pooled-prompt mean would mix subsets and hide between-seed variance.
 We average per-seed means and report the across-seed std as the uncertainty
@@ -141,13 +141,13 @@ def load_per_seed_stage5(seed: int) -> dict[str, dict]:
 
 
 def render_md(stage4_agg: dict, stage5_agg: dict) -> str:
-    """Markdown report — paper-ready table for both stages."""
+    """Markdown report: paper-ready table for both stages."""
     lines = []
     lines.append("# Cross-seed aggregate (5 seeds: 7, 13, 42, 99, 101)\n")
     lines.append("Mean ± std across 5 random seeds. Each seed evaluates its own deterministic 200-prompt subset of HealthBench Hard.\n")
 
     # Stage 4 table.
-    lines.append("## Stage 4 — HealthBench Hard score\n")
+    lines.append("## Stage 4: HealthBench Hard score\n")
     lines.append("| Config | Mean | Std (across seeds) | Per-seed mean (7/13/42/99/101) |")
     lines.append("|---|---|---|---|")
     for cfg in STAGE4_CONFIGS:
@@ -157,8 +157,8 @@ def render_md(stage4_agg: dict, stage5_agg: dict) -> str:
         lines.append(f"| {cfg} | {a['score_mean_across_seeds']:.4f} | {a['score_std_across_seeds']:.4f} | {per_str} |")
     lines.append("")
 
-    # Stage 5 epistemic — main rows.
-    lines.append("## Stage 5 — Epistemic dimensions (mean ± std across seeds)\n")
+    # Stage 5 epistemic: main rows.
+    lines.append("## Stage 5: Epistemic dimensions (mean ± std across seeds)\n")
     head_dims = (
         ("uncertainty_acknowledgment_mean", "Uncertainty"),
         ("context_seeking_mean",            "Context"),
