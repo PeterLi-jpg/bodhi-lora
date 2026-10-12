@@ -10,7 +10,7 @@ import pytest
 pytest.importorskip("torch")
 pytest.importorskip("bodhi")
 
-from bodhi_lora.engine import StubEngine  # noqa: E402
+from bodhi_lora.engine import StubEngine, VLLMEngine  # noqa: E402
 from bodhi_lora.paths import CONFIGS_DIR, project  # noqa: E402
 from bodhi_lora.pipeline import eval as eval_stage  # noqa: E402
 from bodhi_lora.pipeline.context import StageContext  # noqa: E402
@@ -19,6 +19,7 @@ from bodhi_lora.registry import load_registry, parse_condition  # noqa: E402
 from bodhi_lora.registry.schema import EvalIds  # noqa: E402
 
 SMOKE = "tiny-rubric__tiny-random-llama__bodhi"
+VLLM_FIELDS = VLLMEngine("m", max_model_len=1, max_num_seqs=1, request_timeout=1).settings()
 
 
 @pytest.fixture(scope="module")
@@ -237,6 +238,10 @@ def test_the_shared_server_writes_the_files_of_the_per_condition_path(reg, tmp_p
             assert set(ma) - {"time"} == set(mb) - {"shared_server"}
             assert (ma["config"], ma["counts"], ma["status"]) == (mb["config"], mb["counts"], mb["status"])
             assert set(ma["engines"]) == set(mb["engines"]) == {"policy", "grader"}
+            # The stub's engine fields are those a vLLM server writes on the GPU.
+            for m in (ma, mb):
+                for engine in m["engines"].values():
+                    assert set(engine) == set(VLLM_FIELDS) | {"stub"}, sorted(engine)
 
 
 def _manifest(ctx, seed, condition):

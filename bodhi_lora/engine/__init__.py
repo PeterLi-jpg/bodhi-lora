@@ -40,6 +40,9 @@ def make_engine(model: ModelConfig, *, serving: Serving, adapter: Optional[Path]
                     lora_path=str(adapter) if adapter else None,
                     lora_modules={name: str(path) for name, path in (adapters or {}).items()},
                     lora_rank=lora_rank, enforce_eager=enforce_eager, env=dict(model.serving_env))
+    engine = VLLMEngine(model.hf_id, log_path=str(log_path) if log_path else None, **settings)
     if stub:
-        return StubEngine(model.hf_id, reply=stub_reply, **settings)
-    return VLLMEngine(model.hf_id, log_path=str(log_path) if log_path else None, **settings)
+        # The stub reports the settings this server would have (nothing starts), so the
+        # manifests of a stub run carry the fields of a GPU run's.
+        return StubEngine(model.hf_id, reply=stub_reply, served=engine.settings(), **settings)
+    return engine

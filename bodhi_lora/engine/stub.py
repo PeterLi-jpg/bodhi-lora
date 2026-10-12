@@ -28,10 +28,12 @@ def _words(messages: list) -> int:
 
 
 class StubEngine:
-    def __init__(self, model: str, reply: Reply = "STUB RESPONSE", **settings):
+    def __init__(self, model: str, reply: Reply = "STUB RESPONSE", served: Optional[dict] = None, **settings):
+        """served: the settings a vLLM server would report (make_engine passes them), which
+        settings() returns; without it, settings() returns the constructor's settings."""
         self.model = model
         self._reply = reply
-        self._settings = {"model": model, "stub": True, **settings}
+        self._settings = {**(served or {"model": model, **settings}), "stub": True}
         lora_path = settings.get("lora_path")
         self.lora_modules = {ADAPTER_NAME: lora_path} if lora_path else dict(settings.get("lora_modules") or {})
         self._default = ADAPTER_NAME if lora_path else model

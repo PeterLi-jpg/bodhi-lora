@@ -427,3 +427,15 @@ def test_the_start_refuses_a_port_another_server_answers_on(monkeypatch):
         assert launched == []
     # Once the other server is gone, the port is free and the check passes at once.
     eng._wait_port_free(timeout_s=0)
+
+
+def test_a_stub_reports_the_settings_of_the_server_it_stands_in_for(tmp_path):
+    """Stub manifests then carry the engine fields a GPU run writes (request_timeout_s,
+    tensor_parallel_size, max_loras, max_lora_rank), so the CPU tests see them."""
+    adapters = {"adapter-s7": tmp_path / "s7", "adapter-s42": tmp_path / "s42"}
+    kwargs = dict(serving=SERVING, adapters=adapters, lora_rank=16, quantize=True)
+    real = make_engine(MODEL, **kwargs).settings()
+    stub = make_engine(MODEL, stub=True, **kwargs).settings()
+    assert stub == {**real, "stub": True}
+    assert (stub["request_timeout_s"], stub["max_loras"], stub["max_lora_rank"]) == (900, 2, 16)
+    assert stub["tensor_parallel_size"] == 1
