@@ -44,6 +44,7 @@ from pathlib import Path
 from typing import Optional, Sequence
 
 import yaml
+from pydantic import ValidationError
 
 from bodhi_lora import manifest as mf
 from bodhi_lora.data import (DataError, check_leakage, eval_ids, eval_population, load_rows, read_id_list, row_text,
@@ -53,7 +54,7 @@ from bodhi_lora.data.loaders import source_hashes
 from bodhi_lora.paths import CONFIGS_DIR, REPO_ROOT, CellPaths, Project
 from bodhi_lora.pipeline import filter as filter_stage
 from bodhi_lora.pipeline.context import POOLS_FILE, StageContext, eval_ids_file
-from bodhi_lora.registry import RECORD_STATUSES, Registry, family_problems
+from bodhi_lora.registry import RECORD_STATUSES, CellConfig, Registry, family_problems
 
 STAGES = ("probe", "traces", "filter", "train", "eval", "grade", "classify", "bench")
 # What a run without --stages runs. The judge classifier runs only when --stages names it
@@ -107,17 +108,32 @@ def _write_once(path: Path, data, what: str) -> None:
     path.write_text(text)
 
 
+def same_record(cell_yaml: Path, cell: CellConfig) -> bool:
+    """Whether the frozen cell.yaml holds the same record as the registry, value by value.
+
+    It is read with the current schema, so a key the schema gained after the first run
+    takes its default in both, and a resume does not stop on it (the R2 folders were
+    frozen before serving.enforce_eager existed). The file keeps
+    the form of the first run.
+    """
+    try:
+        return CellConfig.model_validate(yaml.safe_load(cell_yaml.read_text())) == cell
+    except (ValidationError, yaml.YAMLError):
+        return False
+
+
 def prepare(ctx: StageContext, fetch: bool = True) -> dict:
     """Write the cell record, the pools and every seed's eval ids into the cell's folder."""
     cell, bench = ctx.cell, ctx.bench
     inputs = ctx.paths.inputs()
-    record = yaml.safe_dump(cell.model_dump(mode="json"), sort_keys=False)
     cell_yaml = ctx.paths.root / "cell.yaml"
-    if cell_yaml.is_file() and cell_yaml.read_text() != record:
-        raise RunError(f"{cell_yaml} differs from configs/cells/{cell.id}.yaml: the record changed "
-                       "since the cell first ran; a changed design is a new cell.")
-    ctx.paths.root.mkdir(parents=True, exist_ok=True)
-    cell_yaml.write_text(record)
+    if cell_yaml.is_file():
+        if not same_record(cell_yaml, cell):
+            raise RunError(f"{cell_yaml} differs from configs/cells/{cell.id}.yaml: the record changed "
+                           "since the cell first ran; a changed design is a new cell.")
+    else:
+        ctx.paths.root.mkdir(parents=True, exist_ok=True)
+        cell_yaml.write_text(yaml.safe_dump(cell.model_dump(mode="json"), sort_keys=False))
     rows = load_rows(bench, ctx.project.data_root, fetch=fetch)
     by_id = {r.prompt_id: r for r in rows}
     rule = bench.splits[cell.split]

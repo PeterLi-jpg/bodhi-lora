@@ -10,6 +10,7 @@ from dataclasses import replace
 from pathlib import Path
 
 import pytest
+import yaml
 
 pytest.importorskip("torch")
 pytest.importorskip("trl")
@@ -109,6 +110,27 @@ def test_a_rerun_resumes_and_refuses_changed_inputs(reg, smoke_run, capsys):
     pools.write_text(json.dumps(data, indent=2) + "\n")
     with pytest.raises(RunError, match="differs"):
         run_cell(reg, project(CONFIGS_DIR), SMOKE, mode="stub", results_root=root)
+
+
+def test_the_frozen_record_is_compared_value_by_value(reg, tmp_path):
+    """A key the schema gained after a cell first ran takes its default on both sides, so
+    a resume does not stop on it; a changed value, or a key the schema refuses, still does."""
+    from bodhi_lora.pipeline.runner import same_record
+
+    cell = reg.cells[SMOKE]
+    path = tmp_path / "cell.yaml"
+
+    def frozen(change):
+        data = cell.model_dump(mode="json")
+        change(data)
+        path.write_text(yaml.safe_dump(data, sort_keys=False))
+        return same_record(path, cell)
+
+    assert frozen(lambda d: None)
+    assert frozen(lambda d: d["eval"]["serving"].pop("enforce_eager"))
+    assert not frozen(lambda d: d["eval"].update(max_new_tokens=32))
+    assert not frozen(lambda d: d["eval"]["serving"].update(enforce_eager=True))
+    assert not frozen(lambda d: d.update(unknown_key=1))
 
 
 def test_dry_run_prints_gpu_commands_and_does_not_train(reg, tmp_path, capsys):
