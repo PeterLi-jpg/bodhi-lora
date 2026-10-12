@@ -276,6 +276,112 @@ grade step. The labelled cells evaluate 17 condition and seed pairs instead of 2
 `base` and `base+bodhi` run once. R3 and the paired cells of R5 and R7 print their GPU
 commands and stop at the MediQ fetch: the pinned MediQ file is on the GPU host, not here.
 
+### 4.3 Readiness of R3 to R7 on GPU 3 (2026-10-12)
+
+A check that reads and dry-runs only, at commit c91d791, for the queue that runs R3 to R7
+on GPU 3 after R2. Every dry run ran again into a new scratch root, with every seed and
+`--gpus 3`: R2 first, then each cell with the judges its record lists. That is R3, R4,
+both cells of R5, all seven cells of R6 (`--stages grade`, with `medgemma-27b-text` on
+the six 2026-07 cells and `phi-4` on the 2026-05 cell) and the three cells of R7. All
+pass except the three paired cells, which stop at the MediQ file, as above. So on this
+machine the real MediQ file has not gone through this code: not the pair draw, not the
+label check of `load_rows`, and not the adapter leakage gate of a paired cell. Every run
+also needs the new code on the host (item 2 below).
+
+| Run | GPU commands | Models | Not on the host yet | Needs from an earlier run | Data files | New disk (estimate) | What stops it now |
+|---|---|---|---|---|---|---|---|
+| R3 | 6: one eval step for the five seeds, then one grade step per seed | Mistral-Small-24B (4-bit, five adapters on one server); Llama-3.1-8B (grader) | none | R2: the five adapters (`seed_<n>/train/`) and `shared/filter/kept.jsonl` | `data/raw/mediq-paired/dev.jsonl` | under 1 GB | R2 is not done |
+| R4 | 6, as R3 | as R3 | none | as R3 | the two HealthBench files | under 1 GB | as R3 |
+| R5 | training cell 19: traces, filter, train per seed, one eval step, grade and judge per seed, bench at seed 42. Paired cell 6 | Mistral-Small-24B (bf16 teacher, 4-bit training and eval); Qwen2.5-14B (filter); Llama-3.1-8B; MedGemma-27B-text (judge, bf16) | MedGemma-27B-text | the paired cell: the five adapters and kept traces of the training cell | HealthBench; MediQ | about 14 GB (each seed keeps its adapter and two checkpoints) | the MedGemma download, for its judge steps |
+| R6 | 35: one judge step per seed and cell | MedGemma-27B-text on six cells; Phi-4 on the 2026-05 cell | both | the stored eval files of the seven recorded cells | HealthBench; ChatDoctor; MedQuAD | under 1 GB | both downloads; the eval files of five cells (item 4 below) |
+| R7 | training cell 19, as R5; labelled cell 6; paired cell 6 | MedGemma-27B-text (bf16 teacher, 4-bit training and eval); Qwen2.5-14B; Llama-3.1-8B; Phi-4 (judge) | both | the labelled and paired cells: the training cell's adapters and kept traces | HealthBench; MediQ | about 17 GB | the first author's answer on the 4,096-token pair (BLOCKED.md item 1, point 1); both downloads |
+
+Every model loads at the revision of its record. Two are not in the host's cache:
+
+| Repo | Revision | Size | Gated | Licence | Needed by |
+|---|---|---|---|---|---|
+| `google/medgemma-27b-text-it` | `5b667cf2ddcf064085bc90952edb35a0edbfb79c` | 54.06 GB, 11 safetensors files | yes: accept the terms on Hugging Face with the account of the host's `HF_TOKEN` | Health AI Developer Foundations terms | R5 (judge), R6, R7 (base) |
+| `microsoft/phi-4` | `2db69c1c3e91a05d2c64a3185acfbaf36f744e25` | 29.33 GB, 6 safetensors files | no | MIT | R6 (2026-05 cell), R7 (judge) |
+
+The sizes are from the Hugging Face API on 2026-10-12. Each download needs the go-ahead,
+for example `huggingface-cli download <repo> --revision <revision>` into the cache that
+`vllm serve` and the training stage read. Without it, the first server of each model
+downloads it during the run.
+
+Serving checks against vLLM 0.10.2 (the source at tag v0.10.2):
+
+- Context. Every server holds 8,192 tokens and every model allows more:
+  Mistral-Small-24B 32,768, Qwen2.5-14B 32,768, Llama-3.1-8B 131,072, MedGemma-27B-text
+  131,072, Phi-4 16,384 (`max_position_embeddings`; MedGemma's from the ungated copy
+  `unsloth/medgemma-27b-text-it`, because the Google repo is gated).
+- FlashAttention 2. Not needed. MedGemma's config has no softcapping, and vLLM's Gemma 3
+  code passes no attention softcap (vllm/model_executor/models/gemma3.py). Phi-4 has
+  none. Only the Gemma 2 records set `VLLM_FLASH_ATTN_VERSION`, and no cell of R3 to R7
+  uses them.
+- 4-bit base with adapters. The bitsandbytes loader needs `packed_modules_mapping` in the
+  model class (vllm/model_executor/model_loader/bitsandbytes_loader.py).
+  `MistralForCausalLM` and `Gemma3ForCausalLM` have it, and the host env has
+  bitsandbytes 0.47.0, above the 0.46.1 that vLLM asks for. vLLM refuses LoRA when the
+  output layer has more than 257,024 tokens (vllm/lora/layers/logits_processor.py),
+  but it wraps the output layer only for a module named `lm_head` (vllm/lora/models.py).
+  Gemma 3 ties its output layer to the embeddings and has no `lm_head`, so MedGemma's
+  262,144 tokens pass. Mistral has 131,072.
+- Chat templates. MedGemma's template at the pinned revision (git blob 1117055, the same
+  bytes as in the ungated copy) puts a first system message at the top of the first user
+  turn, and stops on turns that do not alternate. All 5,000 HealthBench conversations
+  start with a user turn and alternate. Every protocol and grader sends user turns, with
+  at most one system message first. Phi-4's template takes a system message. So no record
+  of R3 to R7 needs `system_role: false`.
+- Memory. Every server takes vLLM's default share of 0.9 of the card
+  (`gpu_memory_utilization` in vllm/config/cache.py): about 73,400 of the 81,559 MiB that
+  nvidia-smi shows for an H100, inside the 70 to 75 GB target. MedGemma in bf16 (the R7 teacher, the judge of R5 and R6) leaves
+  about 17 to 19 GiB for the KV cache after 50.3 GiB of weights. Gemma 3 keeps only 1,024
+  tokens on its sliding-window layers (the hybrid KV cache manager is on by default,
+  vllm/config/scheduler.py), but 32 trace requests of up to 2,048 new tokens may still
+  not fit at once. A trace request waits 180 seconds. One that times out leaves the stage
+  incomplete, and a rerun retries only the missing prompts.
+
+Before the queue starts:
+
+1. R2 is complete: each seed folder has `train/adapter_config.json` and its weights, and
+   `shared/filter/kept.jsonl` exists.
+2. The new code is on the host. The commits after 3abe647 are not pushed, and the host
+   checkout is at 854761f, the old id of 7e02348. R1 and R2 write files of the kinds that
+   git tracks (manifests, `cell.yaml`, id lists, adapter configs, trainer states), and no
+   commit holds them yet, so `git status` on the host lists them as untracked. A checkout
+   switch that requires a clean tree stops on them.
+3. The host's `HF_TOKEN` can read `google/medgemma-27b-text-it` at the revision above.
+4. The stored eval files (`seed_<n>/eval/<condition>.json`) of five recorded cells are at
+   the same paths on the host: the three Mistral-Small-24B cells of 2026-07 and the
+   BioMistral-7B cell (about 150 MB from this machine), and the 2026-05 cell (53 MB). Git
+   ignores them, so a checkout does not bring them. The two Med42-8B cells went there for
+   R1. The 2026-05 files are on the host now, because commit 854761f tracks them, but the
+   switch to the new code deletes them: the new commits no longer track the 20 eval files
+   and 5 grade files of that cell (decision O2). Copy them back after the switch, or R6's
+   last cell stops on its first missing file.
+5. `data/raw/medquad/rows.jsonl` is on the host for R6's MedQuAD cell. If it is not, the
+   GPU run builds it from `lavita/MedQuAD` at its pinned revision, which is a download.
+   The ChatDoctor rows are there since R1.
+6. On the host, a CPU dry run of each paired cell, into a scratch root, after the dry run
+   of its source cell there (R2 at seed 42, the training cell of R5, the training cell of
+   R7). It checks the MediQ path that this machine cannot.
+7. Disk: about 84 GB for the two models and about 31 to 37 GB of new outputs for R3 to
+   R7, most of it adapters and checkpoints.
+
+Open choices of the first author. Only the first one blocks a run:
+
+- R7 and the 4,096-token pair (BLOCKED.md item 1, point 1). R7 does not start before it.
+- The batch. The records allow 32 sequences per eval server and 2 training rows per step
+  (R2 trains in about 33 GB). A 4-bit 24B or 27B base leaves room for many more
+  sequences. More slots (`eval.serving.max_num_seqs` and `concurrency`), or a larger
+  `train.per_device_batch` with a smaller `grad_accum` at the same effective batch, is a
+  record change. It must come before each cell's first run, because the runner freezes
+  the record then. The grader and the judges use `eval.serving` too.
+
+What only a GPU run shows is in [KNOWN_ISSUES.md](KNOWN_ISSUES.md), the entry on the
+serving changes of 2026-10-12. For R7 add: no MedGemma server or MedGemma training has
+run on the host, in bf16 or in 4-bit.
+
 ## 5. Minimal first batch
 
 If compute is tight, run these first: about **32 to 43 H100-hours** with the records as
