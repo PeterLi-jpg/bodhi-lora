@@ -45,6 +45,7 @@ LoRA Adapters"). route(name) returns a client whose requests carry that name:
 import http.client
 import json
 import os
+import socket
 import subprocess
 import sys
 import threading
@@ -57,6 +58,9 @@ from typing import List, Optional, Tuple
 # A server with one adapter (lora_path) serves it under this name, and requests go to it.
 ADAPTER_NAME = "adapter"
 QUANTIZATIONS = (None, "bitsandbytes")
+# How long start() waits for its port to be free: the server of the stage's previous
+# engine on this port may still be shutting down (stop() waits 15 s, then kills).
+PORT_FREE_WAIT_S = 60
 # The values vLLM 0.10.2 accepts for --max-lora-rank (possible_max_ranks in
 # vllm/config/lora.py at tag v0.10.2); the server refuses any other.
 LORA_RANKS = (8, 16, 32, 64, 128, 256, 320, 512)
@@ -270,6 +274,7 @@ class VLLMEngine:
     def start(self) -> "VLLMEngine":
         print(f"Starting vllm serve: {self.model} (TP={self.tensor_parallel}, port={self.port}"
               f"{', adapters ' + ', '.join(self.lora_modules) if self.lora_modules else ''})", flush=True)
+        self._wait_port_free()
         # vLLM is chatty; its log goes to a file, and _wait_ready reports progress.
         log_fh = open(self.log_path, "w")
         self._serving, self._failed_in_row, self._down = False, 0, None
@@ -295,6 +300,30 @@ class VLLMEngine:
                 pass
         self._proc = None
         print("  vllm serve stopped", flush=True)
+
+    def _port_answers(self) -> bool:
+        try:
+            with socket.create_connection(("localhost", self.port), timeout=2):
+                return True
+        except OSError:
+            return False
+
+    def _wait_port_free(self, timeout_s: Optional[int] = None) -> None:
+        """Refuse to start while something answers on the port.
+
+        vllm serve binds its port before it loads the model, and exits when the port is
+        taken (setup_server in vllm/entrypoints/openai/api_server.py at tag v0.10.2). Until
+        it exits, _wait_ready would take a server left on the port (one that outlived the
+        stage that started it) for this one, and the stage would send its requests to
+        other weights or settings than its manifest records.
+        """
+        deadline = time.time() + (PORT_FREE_WAIT_S if timeout_s is None else timeout_s)
+        while self._port_answers():
+            if time.time() >= deadline:
+                raise RuntimeError(f"port {self.port} is in use: a server there answers, perhaps a vllm "
+                                   f"serve that outlived its stage (see nvidia-smi). Stop it, then run "
+                                   f"the stage again.")
+            time.sleep(2)
 
     def _wait_ready(self, timeout_s: int = 2700) -> None:
         # /health answers 200 as soon as the HTTP server is up, before the chat route

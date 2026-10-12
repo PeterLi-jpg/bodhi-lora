@@ -102,6 +102,7 @@ def test_a_model_records_serving_env_reaches_its_server_only(monkeypatch, tmp_pa
 
     monkeypatch.setattr(ve.subprocess, "Popen", FakePopen)
     monkeypatch.setattr(judge, "_wait_ready", lambda: None)
+    monkeypatch.setattr(judge, "_wait_port_free", lambda: None)
     judge.start()
     judge._proc = None
     assert started["env"]["VLLM_FLASH_ATTN_VERSION"] == "2" and started["args"] == judge.serve_args()
@@ -404,3 +405,25 @@ def test_failures_while_the_server_starts_are_not_counted(monkeypatch):
         with pytest.raises(ConnectionRefusedError):
             eng.complete([{"role": "user", "content": "hi"}], max_new_tokens=1)
     assert eng._down is None
+
+
+def test_the_start_refuses_a_port_another_server_answers_on(monkeypatch):
+    """A server left on the port would pass the readiness checks before this server
+    fails to bind it; the start stops before anything is launched."""
+    import socket
+
+    with socket.socket() as other:
+        other.bind(("127.0.0.1", 0))
+        other.listen()
+        eng = ve.VLLMEngine("org/m", max_model_len=1, max_num_seqs=1, request_timeout=1,
+                            port=other.getsockname()[1])
+        monkeypatch.setattr(ve, "PORT_FREE_WAIT_S", 0)
+        launched = []
+        monkeypatch.setattr(ve.subprocess, "Popen", lambda *a, **k: launched.append(a))
+        with pytest.raises(RuntimeError, match="is in use"):
+            eng._wait_port_free(timeout_s=0)
+        with pytest.raises(RuntimeError, match="is in use"):
+            eng.start()
+        assert launched == []
+    # Once the other server is gone, the port is free and the check passes at once.
+    eng._wait_port_free(timeout_s=0)
