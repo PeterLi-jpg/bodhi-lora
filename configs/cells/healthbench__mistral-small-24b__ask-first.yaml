@@ -47,7 +47,9 @@ eval:
   base_precision: train
   max_new_tokens: 1024
   max_new_tokens_per_pass: 2048
-  serving: {max_model_len: 8192, max_num_seqs: 32, concurrency: 32, request_timeout_s: 900}
+  # 64 in flight: 32 left a 4-bit 24B model on one H100 far from compute-bound
+  # (KV cache at 0.9 memory holds about 300k tokens; replies run 2k to 3k). D27.
+  serving: {max_model_len: 8192, max_num_seqs: 64, concurrency: 64, request_timeout_s: 900}
 # E20: time and tokens per reply of every condition, one reply at a time, on seed 42.
 bench:
   n_prompts: 50

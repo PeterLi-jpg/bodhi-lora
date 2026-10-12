@@ -430,7 +430,7 @@ eval:
   base_precision: train
   max_new_tokens: 1024
   max_new_tokens_per_pass: 2048
-  serving: {max_model_len: 8192, max_num_seqs: 32, concurrency: 32, request_timeout_s: 900}
+  serving: {max_model_len: 8192, max_num_seqs: 64, concurrency: 64, request_timeout_s: 900}
 report:
   label: HealthBench labelled probes, Mistral-Small-24B
   token: HBMistralLabelled

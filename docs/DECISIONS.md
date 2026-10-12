@@ -251,3 +251,16 @@ left open: choice 3 (new cells sit next to the recorded ones), choice 7 / O10 (k
 frozen evaluator template), O1 (`bodhi_lora`), O2 (one tracked rule), O7 (R7 is a new
 QLoRA cell) and O8 (track `probe.json`, ignore `samples.jsonl`). Recorded in
 ANALYSIS_PLAN.md section 12. Still open: the R7 4,096-token pair, O9 and the R17 strata.
+
+### D27. Serving for Tier A: graders eager, policy servers at 64 (2026-10-12)
+
+Under the first author's delegation ("just fix everything and make everything optimal").
+Every server that grades (the evaluator in the grade and eval stages, the judges, the
+classifier and the filter) stays in eager mode unless a record says otherwise
+(`bodhi_lora.engine.grader_eager`), because the recorded cells were graded eager and CUDA
+graphs can move a greedy grade; new grades then compare with recorded ones. Servers that
+generate replies (teacher, policy, probe, bench) use CUDA graphs when no adapter is loaded.
+The four new Mistral-Small-24B cells of R3 to R5 serve 64 requests at once instead of 32,
+so the 4-bit 24B model keeps the H100 busy; vLLM's batch occupancy already varies within
+every run, so this adds no new kind of variation. R2 keeps its recorded settings. R7 waits
+for the first author's answer on the 4,096-token pair (BLOCKED.md item 1.1).
