@@ -15,11 +15,16 @@ In this order:
    exists. When the session is gone, it reads the session's exit marker. It goes on
    only if the first line of the marker is `0`. If the marker is missing or says
    anything else, it stops and claims nothing.
-2. **Claim.** It runs `<lease tool> claim <gpu> <owner> <purpose>` with `CLAIM_PID`
-   set to its own PID. That shell lives as long as the queue, so the lease stays live
-   between commands. The lease tool takes its own lock and refuses a card that another
-   live job holds. If the tool refuses, or the lease file does not then show the card
-   with this owner and PID, the queue stops and runs nothing.
+2. **Claim.** First the card must use less than 2,000 MiB, after up to 60 seconds of
+   waiting for the job before it to let go. The lease tool's `claim` gives out a card
+   whose row is free whatever the card holds, and a vLLM server that outlived a killed
+   job holds its card with no lease, because the engine starts the server in a session
+   of its own. If the card is in use, the queue logs the `nvidia-smi` table, stops and
+   claims nothing. Then it runs `<lease tool> claim <gpu> <owner> <purpose>` with
+   `CLAIM_PID` set to its own PID. That shell lives as long as the queue, so the lease
+   stays live between commands. The lease tool takes its own lock and refuses a card
+   that another live job holds. If the tool refuses, or the lease file does not then
+   show the card with this owner and PID, the queue stops and runs nothing.
 3. **Switch the checkout** (with `--bundle` and `--commit`). It stops if `git status`
    shows a change to a tracked file, or an untracked file outside the `--allow-untracked`
    paths; ignored files are allowed. It makes this check at the start too, before the
@@ -185,7 +190,8 @@ complete and skip them.
 
 `tests/test_gpu_queue.py` runs the script with bash on the CPU: a fake lease tool, tmux
 and `nvidia-smi` on PATH, and short shell commands as the queue. It covers the order and
-the GPU pin, the stop at a failure, a refused claim, the wait and the marker check, a
+the GPU pin, the stop at a failure, a refused claim, a card in use at the claim, the
+wait and the marker check, a
 line for another card, the env file, the three signals, a card that stays in use, the
 lease tool of 7e02348, and the checkout switch: a dropped file, a changed file, a folder
 with files the commit no longer tracks, untracked files inside and outside

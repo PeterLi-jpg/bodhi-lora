@@ -11,7 +11,8 @@
 #   a. With --after: wait until that tmux session has exited, then read its exit marker.
 #      Stop unless the marker's first line is 0.
 #   b. Claim the GPU with the node's lease tool, with this shell's PID as the lease PID.
-#      Stop if the tool refuses: it never gives out a card that another job holds.
+#      Stop if the card holds memory, or if the tool refuses: it never gives out a card
+#      that another job holds a lease on.
 #   c. With --bundle and --commit: fetch the bundle into the checkout and switch it to
 #      the commit. Stop if the checkout has changes, or untracked files outside the
 #      --allow-untracked paths (the run outputs under results/, for example). This
@@ -31,7 +32,7 @@
 # Settings for the tests (the defaults suit the node):
 #   GPU_QUEUE_POLL_S        seconds between checks of the --after session (60)
 #   GPU_QUEUE_STOP_GRACE_S  seconds a step gets to stop after SIGINT (120)
-#   GPU_QUEUE_MEM_WAIT_S    seconds to wait for the card to empty before release (60)
+#   GPU_QUEUE_MEM_WAIT_S    seconds to wait for the card to empty before claim and release (60)
 #
 # Everything runs inside functions and the last line calls main, so bash has read the
 # whole file before it runs any of it. A checkout switch that rewrites this file
@@ -204,8 +205,12 @@ lease_is_mine() {
         END { exit !(own && pid) }' "$LEASE_FILE"
 }
 
-# b. Claim the GPU.
+# b. Claim the GPU. The lease tool gives out a card whose row is free whatever the card
+# holds (only its find checks memory), and a vLLM server that outlived a killed job holds
+# a card with no lease. So the card must be empty first, after up to MEM_WAIT_S for the
+# job before this queue to let go of it.
 claim_gpu() {
+    card_empty || die 4 "GPU $GPU is in use, whatever its lease row says (see the nvidia-smi table above); nothing ran"
     log "claiming GPU $GPU for $OWNER, pid $$: $PURPOSE"
     CLAIM_TRIED=1
     # The lease records CLAIM_PID. This shell lives as long as the queue, so the lease
@@ -491,7 +496,7 @@ card_used_mib() {
     echo "${mib:-99999}"
 }
 
-# Wait up to MEM_WAIT_S for the card to empty. A step killed hard can leave its vLLM
+# Wait up to MEM_WAIT_S for the card to empty. A job killed hard can leave its vLLM
 # server alive, because the engine starts the server in a session of its own.
 card_empty() {
     local waited=0 mib

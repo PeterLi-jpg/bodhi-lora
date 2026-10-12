@@ -53,10 +53,11 @@ FAKE_TMUX = r"""#!/usr/bin/env bash
 [ -e "$FAKE_TMUX_DIR/${3#=}" ]
 """
 
-# The memory query prints $FAKE_GPU_MIB; any other call prints a line for the log.
+# The memory query prints the number in $FAKE_GPU_MIB_FILE, so a step can change it, or
+# else $FAKE_GPU_MIB; any other call prints a line for the log.
 FAKE_NVIDIA_SMI = r"""#!/usr/bin/env bash
 case "$*" in
-    *--query-gpu=memory.used*) echo "${FAKE_GPU_MIB:-0}" ;;
+    *--query-gpu=memory.used*) cat "$FAKE_GPU_MIB_FILE" 2>/dev/null || echo "${FAKE_GPU_MIB:-0}" ;;
     *) echo "fake nvidia-smi $*" ;;
 esac
 """
@@ -214,6 +215,19 @@ def test_refuses_a_gpu_that_another_job_holds(node):
     assert node.marker()[0] == "4"
 
 
+def test_does_not_claim_a_card_that_holds_memory(node):
+    """A vLLM server that outlived a killed job holds the card with no lease. The lease
+    tool would give the free row out; the queue checks the card first."""
+    out = node.tmp / "out.txt"
+    proc = node.run([f"echo ran >> {out}"], env={"FAKE_GPU_MIB": "41000"})
+    assert proc.returncode == 4
+    assert not out.exists()
+    assert node.lease_calls() == []
+    assert _row(node.lease_file)[1] == "free"
+    assert "is in use" in node.marker()[1]
+    assert "fake nvidia-smi -i 3" in node.queue_log()
+
+
 def test_waits_for_the_session_before_it_then_starts(node):
     (node.sessions / "prev").touch()
     node.logs.mkdir()
@@ -298,7 +312,9 @@ def test_a_signal_stops_the_step_with_sigint_and_releases_the_gpu(node, sig, cod
 
 
 def test_keeps_the_lease_while_the_card_still_holds_memory(node):
-    proc = node.run(["true"], env={"FAKE_GPU_MIB": "41000"})
+    """A step that leaves a server on the card (empty at the claim)."""
+    mib = node.tmp / "mib"
+    proc = node.run([f"echo 41000 > {mib}"], env={"FAKE_GPU_MIB_FILE": str(mib)})
     assert proc.returncode == 0
     row = _row(node.lease_file)
     assert row[1] == "busy" and row[2] == "tester"
