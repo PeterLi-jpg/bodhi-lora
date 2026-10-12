@@ -318,8 +318,8 @@ def generate(jobs: list, work: list, engine_for: Callable, workers: int, desc: s
 def replies_file(job: Job) -> Path:
     """The replies of a shared run's job, one JSON line each as it comes, so a crash loses
     only the replies in flight and a rerun makes only the missing ones. Removed once the
-    job's result file is written with no failed reply. Git ignores it
-    (results/**/*.jsonl)."""
+    job's result file is written with no failed reply. Git ignores it, as it ignores
+    every JSONL file under the results root."""
     return job.out_path.with_name(f"{job.condition}.replies.jsonl")
 
 
