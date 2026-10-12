@@ -65,7 +65,11 @@ records list `gemma-2-27b` (R1) and `medgemma-27b-text` (R6), and the set-aside 
 record lists `medgemma-27b-text`, which no run below costs; `--judges` picks one.
 
 The runner runs seeds in parallel, one per GPU, so with five GPUs a cell takes about its
-shared stages plus one seed in wall-clock time. An eval-only cell (`adapters_from`) needs
+shared stages plus one seed in wall-clock time. On one GPU (R3 to R7 run on GPU 3,
+`--gpus 3`) it trains every seed first, then one eval step serves every condition of
+every seed from one vLLM server that holds each seed's adapter, then the grade and bench
+steps run (since 2026-10-12, [ARCHITECTURE.md](ARCHITECTURE.md) section 4.2).
+`--no-shared-server` gives the path of R1 and R2: one server per condition and seed. An eval-only cell (`adapters_from`) needs
 the adapters of its source cell on the same machine.
 
 The `bench` stage runs only for the seeds in the record's `bench.seeds` (seed 42 in
@@ -224,9 +228,12 @@ runs, because the runner freezes it then. Each change below is the first author'
 - Judges need no change to a record: run with `--judges none`, and add them later with
   `--stages grade`. The judges are about 78 of the H100-hours of all tiers.
 
-The runner also evaluates `base` again for every seed, although with fixed eval ids and
-greedy decoding its output is the same for each seed. A runner option to evaluate such a
-condition once would save nearly half of the time of a labelled cell with three conditions.
+With fixed eval ids and greedy decoding a base condition gives the same output for each
+seed. Since 2026-10-12 a shared eval runs each base condition of such a cell once and
+writes every seed's file from it (ARCHITECTURE.md section 4.2), which saves nearly half
+of the time of a labelled cell with three conditions. The figures in this section still
+count the base conditions once per seed, and they count one vLLM start per condition,
+which the shared eval also no longer makes.
 
 ### 4.1 Dry runs on 2026-10-11
 
@@ -258,6 +265,16 @@ prints every GPU command, then runs the CPU steps with the stub engine and does 
 Until 2026-10-11 a dry run downloaded a missing benchmark, so the MedQA dry run passed by
 downloading it; now a dry run never downloads. After the fetches, rerun the five dry runs
 that stop.
+
+On 2026-10-12, after the serving changes (ARCHITECTURE.md section 4.2), the dry runs of
+R3 to R7 ran again with every seed and `--gpus 3`, after R2's dry run at seed 42 in the
+same scratch root (the eval-only cells read R2's kept traces). R4, the training cell of
+R5, R6 (the Mistral-Small-24B HealthBench cell of 2026-07 with `medgemma-27b-text`, the
+2026-05 cell with `phi-4`) and the training and labelled cells of R7 pass. Each prints
+one eval step for all five seeds, after the last training step and before the first
+grade step. The labelled cells evaluate 17 condition and seed pairs instead of 25, since
+`base` and `base+bodhi` run once. R3 and the paired cells of R5 and R7 print their GPU
+commands and stop at the MediQ fetch: the pinned MediQ file is on the GPU host, not here.
 
 ## 5. Minimal first batch
 

@@ -140,9 +140,32 @@ D-numbers refer to [DECISIONS.md](DECISIONS.md). Issue numbers such as #5 are Gi
   of serving a 4-bit base in vLLM, of a 14B or 27B judge, and of the judges' harm call is
   not measured; the plan gives a range or states the assumption. The first run's
   manifests and its `bench` stage replace the estimates (E20, C25).
-- **The runner evaluates seed-invariant conditions for every seed.** With fixed eval ids
-  and greedy decoding, `base` and `base+bodhi` give the same outputs for each seed, but
-  the runner runs them five times. In the labelled cells that is nearly half of the time.
+- **Seed-invariant conditions run once only within one shared eval.** Since 2026-10-12 a
+  shared eval (docs/ARCHITECTURE.md section 4.2) runs each base condition of a fixed-id
+  cell once and writes every seed's file from it. A run on several GPUs gives each seed
+  its own eval step, and the `--no-shared-server` path evaluates each condition alone, so
+  both still run them for every seed. The grade stage still grades each seed's copy of
+  the same replies.
+- **The serving changes of 2026-10-12 have run on the CPU stub only.** CUDA graphs on
+  servers with no adapter, several adapters on one server (`--max-loras`), routing by
+  model name, the 4-bit base under several adapters, and FlashAttention 2 for Gemma 2
+  through the model record are tested on the stub engine and on the command lines they
+  build, not on a GPU. R1 and R2 ran without them (commit 7e02348). What only a GPU run
+  shows: whether graph capture works and how long it takes for each model (and with
+  FlashAttention 2 for Gemma 2, and with the 4-bit base); whether the replies and grades
+  of a server with graphs differ from those of an eager one (batch order already makes
+  greedy replies differ slightly from run to run); whether base requests on a server
+  with LoRA enabled give the replies of a base-only server; memory and speed with five
+  adapters and the 4-bit base; and whether the first request to each adapter answers
+  (the engine sends one at start, so a broken adapter stops the stage early).
+- **A crash in a shared eval writes no partial result file.** One server makes the
+  replies of every condition of a run, so a crash before the grading ends writes no
+  result file. Each reply is on disk as it comes (`<condition>.replies.jsonl`), and a
+  rerun makes only the missing ones. A server that dies during generation still makes
+  every reply in flight and every later one fail: those conditions are written with
+  their failures counted (`n_failed_inference` in the manifest), as one condition was on
+  the per-condition path. Their replies files stay, so deleting such a result file and
+  rerunning makes only the failed replies again.
 - **The eval stage prints scores to its log.** The no-interim-look rule
   (docs/ANALYSIS_PLAN.md section 2.5) therefore depends on the operator reading
   manifests, not logs.
@@ -250,9 +273,16 @@ D-numbers refer to [DECISIONS.md](DECISIONS.md). Issue numbers such as #5 are Gi
   silently. The epistemic grader still drops them from its means (EVAL-9, above).
 - **#6, #7** The traces stage refuses to resume a trace file made with another model, protocol or ablation.
 - **#23** Training checkpoints on step intervals and resumes from the latest one.
-- **#65** `bodhi_lora/engine/vllm.py` sets `--enforce-eager` by default, because
-  CUDA-graph capture with LoRA hangs in vLLM 0.9. The engine runs vLLM as a subprocess
-  only; the Docker and TPU modes were removed on 2026-10-08.
+- **#65** `bodhi_lora/engine/vllm.py` sets `--enforce-eager` on every server with an
+  adapter, because CUDA-graph capture with LoRA hangs in vLLM 0.9. Since 2026-10-12 a
+  server with no adapter captures CUDA graphs, and `serving.enforce_eager` in a record
+  overrides either way (docs/ARCHITECTURE.md section 4.2). The engine runs vLLM as a
+  subprocess only; the Docker and TPU modes were removed on 2026-10-08.
+- **Gemma 2 crashed on its first request on an H100 (R1, 2026-10-11).** vLLM 0.10.2
+  picks FlashAttention 3 there, which has no tanh softcapping. The run used a launcher
+  prefix. Since 2026-10-12 the Gemma 2 model records carry
+  `serving_env: {VLLM_FLASH_ATTN_VERSION: "2"}`, which the engine sets for their servers
+  only.
 - **#3** The filter grader (Qwen2.5-14B) and the evaluator (Llama-3.1-8B) come from
   different families. Med42-8B breaks this rule for its own cells (see above).
 - **Dependency pins (REPRO-10, fc496d7).** `requirements-infer.txt` pins

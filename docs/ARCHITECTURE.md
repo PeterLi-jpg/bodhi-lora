@@ -280,6 +280,22 @@ Fields the experiments step added (each is checked by the schema):
 - `probe` on a recorded cell: the contamination probe adds files only, so the runner
   allows it there, like a judge re-grade.
 
+Fields the packing step added on 2026-10-12 (section 4.2):
+
+- `serving_env` on a model: vLLM environment variables that the model's server needs,
+  set in that server's process only. Keys start with `VLLM_`. The Gemma 2 records set
+  `VLLM_FLASH_ATTN_VERSION: "2"`.
+- `enforce_eager` in a serving block: null (the default) runs CUDA graphs on a server
+  with no adapter and eager mode on a server with one; true or false sets it for every
+  server of the block. The bench keeps its own `bench.enforce_eager` and refuses this key.
+- `eval.shared_server` (default true): the eval serves the base and every seed's
+  adapter from one vLLM server. False, or `run --no-shared-server`, evaluates each
+  condition of each seed on its own server, the path of the runs up to R2.
+
+A key the schema gains takes its default when the runner compares a frozen `cell.yaml`
+with the record (`same_record()` in `bodhi_lora/pipeline/runner.py`), so a cell frozen
+before the key existed still resumes; a changed value still stops it.
+
 ## 4. Package
 
 One importable package at the repository root, run as `python -m bodhi_lora`. No
@@ -439,10 +455,15 @@ class Engine:                      # context manager; the stub has the same surf
     def detokenize(self, ids: list[int]) -> str
     def continue_ids(self, prompt_ids: list[int], max_new_tokens: int,
                      temperature: float = 0.0) -> Completion
+    # A server with named adapters: a client whose requests go to one of them, or to the
+    # base for None (the request's "model" field; section 4.2).
+    def route(self, name: str | None) -> Route   # Route has complete() and chat()
 class ContextLengthError(ValueError)   # the server refused a request longer than its context;
                                    # traces, filter and grade list such items and skip them
 def make_engine(model: ModelConfig, *, serving: Serving, adapter: Path | None = None,
-                quantize: bool = False, stub: bool = False, ...) -> Engine
+                adapters: dict[str, Path] | None = None,   # name -> adapter, next to the base
+                lora_rank: int | None = None, quantize: bool = False, stub: bool = False,
+                enforce_eager: bool | None = None, ...) -> Engine
 
 # bodhi_lora.pipeline
 STAGES = ("probe", "traces", "filter", "train", "eval", "grade", "bench")
@@ -450,7 +471,8 @@ def run_cell(reg: Registry, proj: Project, cell_id: str, *, stages: Sequence[str
              seeds: Sequence[int] | None = None, gpus: Sequence[int] = (),
              mode: str = "gpu",              # "gpu", "stub" or "dry_run"
              results_root: Path | None = None, force: bool = False,
-             judges: Sequence[str] | None = None) -> Path    # None: every judge of the cell
+             judges: Sequence[str] | None = None,           # None: every judge of the cell
+             shared_eval: bool = True) -> Path              # False: one server per condition
 # A stub or dry run writes under <scratch_root>/<mode>/, never under the results root, and
 # refuses a results_root inside it. A recorded cell takes only the additive stages
 # (probe, judge re-grades).
@@ -468,6 +490,49 @@ def analyze_cross(reg, report_cfg=None, proj=None) -> dict    # every cell's sta
 def report(reg, cfg, proj) -> Report   # every stats.json -> macros, tables, record for paper/generated/
 def write(rep: Report, out_dir: Path) -> list[str]   # numbers.tex, numbers.json, tab_*.tex
 ```
+
+### 4.2 Serving on one GPU
+
+Added on 2026-10-12 for R3 to R7, which run on one H100. Each serving flag below was
+checked against the vLLM 0.10.2 docs that the code comments name; the GPU host runs
+vLLM 0.10.2.
+
+- **CUDA graphs without an adapter.** A server with no adapter (traces, filter, the
+  graders and judges, the probe, an eval of base conditions only) captures CUDA graphs.
+  A server with an adapter stays in eager mode, because graph capture with LoRA took
+  about 2 hours in vLLM 0.9. The bench stays eager (`bench.enforce_eager`), so its
+  conditions compare like for like. `serving.enforce_eager` overrides the rule per block.
+- **One eval server per run.** The eval stage (`run_shared` in
+  `bodhi_lora/pipeline/eval.py`) starts one server with the base in the cell's base
+  precision and each seed's adapter as a named LoRA module (`adapter-s<seed>`), with
+  `--max-loras` set to the number of adapters and `--max-lora-rank` to the train block's
+  rank. Every condition of every seed goes through it, each request routed by its model
+  name, from one pool of client threads; then one grader server grades every reply.
+  The files and their fields per seed and condition are those of the per-condition path
+  (`tests/test_pipeline_shared_eval.py` compares them). Each condition's manifest records
+  the shared server's settings and the route its requests took, and holds no time: the
+  run's time is in one manifest under `shared/eval/`, which `stage_times` counts once.
+  On one GPU the runner trains every seed first and then runs one eval step for all
+  seeds; on several GPUs each seed's eval step serves that seed's conditions.
+- **Base once.** In a cell whose seeds share their eval ids (`fixed_pool`,
+  `fixed_file`), each base condition runs once in a shared eval and every seed's file is
+  written from it. Each such manifest has `base_evaluated_once` with the seed it ran
+  with. The analysis plan already treats these conditions as seed-invariant
+  ([ANALYSIS_PLAN.md](ANALYSIS_PLAN.md) section 2.1). A `per_seed_draw` cell is not
+  affected, and neither is a parallel run on several GPUs, where each seed has its own
+  server.
+- **Requests in flight.** The shared eval keeps max(`concurrency`, `max_num_seqs`)
+  requests in flight, so every scheduler slot of the record holds a request, and sends
+  the two-call wrapper conditions first, so the last minutes hold short replies. The
+  record's limits are unchanged. vLLM keeps its default `--gpu-memory-utilization` of
+  0.9, about 72 GB of an 80 GB card, for weights, KV cache and adapter slots.
+- **Crash safety.** One server now makes the replies of many conditions, so each reply
+  goes to `seed_<n>/eval/<condition>.replies.jsonl` as it comes. A rerun after a crash
+  makes only the missing replies; with all of them on disk it starts no policy server.
+  The file goes once the condition's result file is written with no failed reply.
+- **Model-specific environment.** The engine sets a model record's `serving_env` in
+  that model's server process only (Gemma 2: FlashAttention 2, since the FlashAttention
+  3 build has no tanh softcapping). No launcher prefix is needed.
 
 Stage output formats stay compatible with the files that exist: `results/<cell_id>/seed_<n>/eval/<condition>.json`
 keeps the fields `df10aa8:scripts/eval_healthbench.py` writes (`results[]` with `prompt_id`,
@@ -488,6 +553,7 @@ python -m bodhi_lora fetch <benchmark> ...
 python -m bodhi_lora run <cell_id> [--stages probe,traces,filter,train,eval,grade,classify,bench]
                                    [--seeds 42 7] [--gpus 0,1] [--judges a,b | --judges none]
                                    [--stub-engine | --dry-run] [--results-root DIR] [--force]
+                                   [--no-shared-server]
 python -m bodhi_lora analyze (<cell_id> ... | --all) [--extract] [--results-root DIR]
 python -m bodhi_lora report [--out-dir DIR] [--results-root DIR]   # paper/generated/ (make numbers)
 ```
@@ -509,6 +575,10 @@ python -m bodhi_lora report [--out-dir DIR] [--results-root DIR]   # paper/gener
   judge files, `--stages classify` adds the judge classifier's answers and `--stages
   probe` adds the contamination probe; nothing else runs. The `classify` stage runs only
   when `--stages` names it (docs/RUN_PLAN.md R17).
+- `run --no-shared-server` evaluates each condition of each seed on its own vLLM server
+  (one step per condition, `python -m bodhi_lora.pipeline.eval --seed N --condition C`),
+  whatever `eval.shared_server` says. Without it a cell evaluates through one shared
+  server per run (`--seeds 42,7,...`, section 4.2).
 - `analyze` and `report` take `--results-root`, so a stub or smoke run under the scratch
   root can be analyzed and reported without editing `configs/project.yaml`.
 - `analyze --extract` reads the raw stage outputs (local, ignored by git) and writes the
@@ -562,11 +632,14 @@ results/
                             and train.jsonl and val.jsonl under split_policy once (ignored)
       probe/                contamination probe: probe.json, the rates and the test (tracked);
                             samples.jsonl, the probed text and continuations (ignored)
+      eval/                 eval_s<seeds>_<time>.manifest.json: one per shared eval run, with
+                            its time, servers and files (tracked)
     seed_<n>/
       traces/  manifest.json   (points to shared/traces, or holds the seed's traces)
       filter/  manifest.json   train.jsonl val.jsonl under split_policy per_seed (ignored)
       train/   manifest.json   adapter_config.json trainer_state.json   weights (ignored)
-      eval/    manifest.json   <condition>.json (ignored)
+      eval/    manifest.json   <condition>.json (ignored); <condition>.replies.jsonl while
+                               a shared eval is unfinished (ignored)
       grade/   manifest.json   epistemic__<grader>.json judge__<judge>.json (ignored)
       table.csv                the per-response table (tracked)
       table.meta.json          its record (tracked)

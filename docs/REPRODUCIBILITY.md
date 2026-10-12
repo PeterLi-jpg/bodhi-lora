@@ -120,7 +120,9 @@ Every cell is a record in `configs/cells/`, and `python -m bodhi_lora run` runs 
 ids, then runs the stages in order: the contamination probe, traces, filter (grading),
 the leakage gate, and per seed the filter split, training, the eval of each condition,
 the grading (the evaluator, then each judge) and, on the seeds in `bench.seeds`, the
-timing bench. A stage whose manifest says complete is skipped, so a run resumes where it
+timing bench. Since 2026-10-12 the eval serves every condition of the seeds that share a
+GPU through one vLLM server that holds each seed's adapter (`--no-shared-server` gives
+one server per condition; [ARCHITECTURE.md](ARCHITECTURE.md) section 4.2). A stage whose manifest says complete is skipped, so a run resumes where it
 stopped. A request too long for a server's context is listed in the stage's manifest
 and skipped, since a rerun would fail the same way.
 
