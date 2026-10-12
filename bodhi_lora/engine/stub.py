@@ -8,11 +8,17 @@ grade. Every call is kept in `calls`.
 Its tokenizer splits on spaces, one id per distinct word, so the probe's token
 arithmetic runs without downloading a tokenizer. A raw continuation is `reply` called
 with the prompt text as one user message.
+
+It serves names as the server would: the base, "adapter" for one adapter (lora_path),
+or each named LoRA module. route(name) checks the name, and `routes` keeps the served
+name of each call, in the order of `calls`, so a test can see which weights a request
+asked for.
 """
 
+import threading
 from typing import Callable, List, Optional, Tuple, Union
 
-from bodhi_lora.engine.vllm import Completion
+from bodhi_lora.engine.vllm import ADAPTER_NAME, Completion, Route, check_route
 
 Reply = Union[str, Callable[[list], str]]
 
@@ -26,7 +32,13 @@ class StubEngine:
         self.model = model
         self._reply = reply
         self._settings = {"model": model, "stub": True, **settings}
+        lora_path = settings.get("lora_path")
+        self.lora_modules = {ADAPTER_NAME: lora_path} if lora_path else dict(settings.get("lora_modules") or {})
+        self._default = ADAPTER_NAME if lora_path else model
         self.calls: List[list] = []
+        self.routes: List[str] = []
+        # Protocols call from many threads; calls and routes stay in step.
+        self._lock = threading.Lock()
         self._vocab: dict = {}
         self._words: List[str] = []
 
@@ -39,10 +51,21 @@ class StubEngine:
     def __exit__(self, *_) -> None:
         pass
 
+    def route(self, name: Optional[str]) -> Route:
+        return Route(self, check_route(self.model, self.lora_modules, name))
+
+    def _record(self, messages: list, model: Optional[str] = None) -> None:
+        name = model or self._default
+        if name != self.model and name not in self.lora_modules:
+            raise ValueError(f"The model `{name}` does not exist.")
+        with self._lock:
+            self.calls.append(messages)
+            self.routes.append(name)
+
     def complete(self, messages: list, max_new_tokens: int, temperature: float = 0.0,
                  top_p: float = 1.0, seed: Optional[int] = None,
-                 logprobs: bool = False) -> Completion:
-        self.calls.append(messages)
+                 logprobs: bool = False, model: Optional[str] = None) -> Completion:
+        self._record(messages, model)
         text = self._reply(messages) if callable(self._reply) else self._reply
         # Words stand in for tokens; the stub's counts only have to be plausible.
         n = len(text.split())
@@ -74,7 +97,7 @@ class StubEngine:
     def continue_ids(self, prompt_ids: List[int], max_new_tokens: int,
                      temperature: float = 0.0) -> Completion:
         messages = [{"role": "user", "content": self.detokenize(prompt_ids)}]
-        self.calls.append(messages)
+        self._record(messages)
         text = self._reply(messages) if callable(self._reply) else self._reply
         n = len(text.split())
         return Completion(text=text, prompt_tokens=len(prompt_ids), completion_tokens=n,

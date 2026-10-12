@@ -64,8 +64,8 @@ def run(ctx: StageContext, seed: int) -> dict:
         decoding = decoding_for(proto, max_new_tokens=ev.max_new_tokens,
                                 max_new_tokens_per_pass=ev.max_new_tokens_per_pass)
         adapter = ctx.adapter_dir(seed) if weights == "lora" else None
-        engine = make_engine(ctx.model, serving=b.serving, adapter=adapter, quantize=ctx.quantized_base(),
-                             stub=ctx.stub, enforce_eager=b.enforce_eager,
+        engine = make_engine(ctx.model, serving=b.serving, adapter=adapter, lora_rank=ctx.lora_rank(),
+                             quantize=ctx.quantized_base(), stub=ctx.stub, enforce_eager=b.enforce_eager,
                              log_path=ctx.log_path(f"vllm_bench_s{seed}.log"))
         seconds, tokens, prompt_tokens, calls = [], [], [], []
         t_start = time.perf_counter()

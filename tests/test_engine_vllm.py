@@ -113,6 +113,95 @@ def test_serving_env_takes_only_vllm_variables():
         MODEL.model_validate({**MODEL.model_dump(), "serving_env": {"CUDA_VISIBLE_DEVICES": "0"}})
 
 
+def test_one_server_serves_the_base_and_named_adapters(tmp_path):
+    """The shared eval server: every seed's adapter as a named LoRA module, as many LoRA
+    slots as adapters, and the rank the adapters need (vLLM 0.10.2 flags)."""
+    a7, a42 = (tmp_path / "s7").resolve(), (tmp_path / "s42").resolve()
+    eng = make_engine(MODEL, serving=SERVING, adapters={"adapter-s7": a7, "adapter-s42": a42},
+                      lora_rank=16, quantize=True)
+    cmd = eng.serve_args()
+    i = cmd.index("--lora-modules")
+    assert cmd[i + 1:i + 3] == [f"adapter-s7={a7}", f"adapter-s42={a42}"]
+    assert cmd[i + 3].startswith("--")
+    assert "--enable-lora" in cmd and "--enforce-eager" in cmd
+    assert _flag(cmd, "--max-loras") == "2" and _flag(cmd, "--max-lora-rank") == "16"
+    assert _flag(cmd, "--quantization") == "bitsandbytes"
+    assert "--max-cpu-loras" not in cmd
+    s = eng.settings()
+    assert s["lora_modules"] == {"adapter-s7": str(a7), "adapter-s42": str(a42)}
+    assert s["max_loras"] == 2 and s["max_lora_rank"] == 16 and s["lora_path"] is None
+    # One adapter needs no --max-loras (the default is 1); a rank vLLM does not list is
+    # rounded up to one it does.
+    one = make_engine(MODEL, serving=SERVING, adapter=a7, lora_rank=4).serve_args()
+    assert "--max-loras" not in one and _flag(one, "--max-lora-rank") == "8"
+    assert "--max-lora-rank" not in make_engine(MODEL, serving=SERVING, lora_rank=16).serve_args()
+    with pytest.raises(ValueError, match="above"):
+        make_engine(MODEL, serving=SERVING, adapter=a7, lora_rank=1024)
+    with pytest.raises(ValueError, match="not both"):
+        ve.VLLMEngine("m", max_model_len=1, max_num_seqs=1, request_timeout=1, lora_path=str(a7),
+                      lora_modules={"x": str(a42)})
+    with pytest.raises(ValueError, match="base model's name"):
+        make_engine(MODEL, serving=SERVING, adapters={MODEL.hf_id: a7})
+
+
+def test_a_route_sends_its_model_name_and_unknown_names_are_refused(monkeypatch, tmp_path):
+    eng = make_engine(MODEL, serving=SERVING, adapters={"adapter-s7": tmp_path / "s7"})
+    sent = []
+
+    def fake_post(payload, timeout=None):
+        sent.append(payload["model"])
+        return {"choices": [{"message": {"content": "ok"}, "finish_reason": "stop"}],
+                "usage": {"prompt_tokens": 1, "completion_tokens": 1}}
+
+    monkeypatch.setattr(eng, "_post", fake_post)
+    msgs = [{"role": "user", "content": "hi"}]
+    assert eng.route(None).chat(msgs, max_new_tokens=4) == "ok"
+    eng.route("adapter-s7").complete(msgs, max_new_tokens=4, seed=1, logprobs=True)
+    eng.complete(msgs, max_new_tokens=4)
+    assert sent == ["org/base-24b", "adapter-s7", "org/base-24b"]
+    with pytest.raises(ValueError, match="no adapter"):
+        eng.route("adapter-s99")
+    # With one adapter (the per-condition path) requests still go to it by default.
+    single = make_engine(MODEL, serving=SERVING, adapter=tmp_path / "s7")
+    monkeypatch.setattr(single, "_post", fake_post)
+    single.complete(msgs, max_new_tokens=4)
+    assert sent[-1] == ve.ADAPTER_NAME
+
+
+def test_the_stub_serves_the_same_names_and_records_each_calls_route(tmp_path):
+    eng = make_engine(MODEL, serving=SERVING, stub=True, adapters={"adapter-s7": tmp_path / "s7"})
+    msgs = [{"role": "user", "content": "hi"}]
+    eng.route("adapter-s7").chat(msgs, max_new_tokens=4)
+    eng.route(None).complete(msgs, max_new_tokens=4)
+    assert eng.routes == ["adapter-s7", "org/base-24b"] and len(eng.calls) == 2
+    with pytest.raises(ValueError):
+        eng.route("adapter-s42")
+    with pytest.raises(ValueError, match="does not exist"):
+        eng.complete(msgs, max_new_tokens=4, model="adapter-s42")
+    single = make_engine(MODEL, serving=SERVING, stub=True, adapter=tmp_path / "s7")
+    single.chat(msgs, max_new_tokens=4)
+    assert single.routes == [ve.ADAPTER_NAME]
+
+
+def test_an_adapter_that_does_not_answer_stops_the_start(monkeypatch, tmp_path):
+    """After the base answers, each named adapter gets a one-token request, so a broken
+    adapter fails at start and not hours into the eval."""
+    eng = make_engine(MODEL, serving=SERVING, adapters={"adapter-s7": tmp_path / "s7",
+                                                        "adapter-s42": tmp_path / "s42"})
+    asked = []
+
+    def fake_post(payload, timeout=None):
+        asked.append(payload["model"])
+        if payload["model"] == "adapter-s42":
+            raise RuntimeError("HTTP 404")
+        return {}
+
+    monkeypatch.setattr(eng, "_post", fake_post)
+    with pytest.raises(ve.AdapterError, match="adapter-s42"):
+        eng._check_adapters()
+    assert asked == ["adapter-s7", "adapter-s42"]
+
+
 def test_unknown_quantization_is_refused():
     with pytest.raises(ValueError):
         ve.VLLMEngine("m", max_model_len=1, max_num_seqs=1, request_timeout=1, quantization="awq")

@@ -232,8 +232,8 @@ def run(ctx: StageContext, seed: int, condition: str) -> dict:
           f"{', 4-bit base' if quantize else ''}{' [stub]' if ctx.stub else ''}", flush=True)
 
     # Pass 1: replies.
-    policy = make_engine(ctx.model, serving=ev.serving, adapter=adapter, quantize=quantize,
-                         stub=ctx.stub, stub_reply=STUB_POLICY_REPLY,
+    policy = make_engine(ctx.model, serving=ev.serving, adapter=adapter, lora_rank=ctx.lora_rank(),
+                         quantize=quantize, stub=ctx.stub, stub_reply=STUB_POLICY_REPLY,
                          log_path=ctx.log_path(f"vllm_eval_s{seed}.log"))
     generations, failed_inference = [], []
     with policy as eng:

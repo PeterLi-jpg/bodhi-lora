@@ -65,6 +65,12 @@ class StageContext:
     def train_block(self) -> Optional[Train]:
         return self.train_cell().train
 
+    def lora_rank(self) -> Optional[int]:
+        """The rank of the adapters this cell serves (its train block's r), so the vLLM
+        server is sized for them; None for a cell with no train block."""
+        train = self.train_block()
+        return train.r if train is not None else None
+
     def quantized_base(self) -> bool:
         """Serve the base in 4-bit: the cell serves it as trained, and training was 4-bit."""
         train = self.train_block()
