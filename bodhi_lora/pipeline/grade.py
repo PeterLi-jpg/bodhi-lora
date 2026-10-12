@@ -35,7 +35,7 @@ import numpy as np
 from tqdm import tqdm
 
 from bodhi_lora import manifest as mf
-from bodhi_lora.engine import ContextLengthError, make_engine
+from bodhi_lora.engine import ContextLengthError, grader_eager, make_engine
 from bodhi_lora.grading.epistemic import (STUB_EPISTEMIC_REPLY, TEMPLATE_SHA256, aggregate, flatten_grade,
                                           grade_dimensions, messages_to_text)
 from bodhi_lora.grading.harm import HARM_PROMPT_MARKER, STUB_HARM_REPLY, aggregate_harm, grade_harm
@@ -105,7 +105,7 @@ def grade_dimensions_of(ctx: StageContext, seed: int, files: dict) -> tuple:
     evaluator = ctx.reg.models[ctx.cell.grading.evaluator]
     rows = ctx.rows_by_id()
     serving = ctx.cell.eval.serving
-    engine = make_engine(evaluator, serving=serving, stub=ctx.stub, stub_reply=STUB_EPISTEMIC_REPLY,
+    engine = make_engine(evaluator, serving=serving, enforce_eager=grader_eager(serving), stub=ctx.stub, stub_reply=STUB_EPISTEMIC_REPLY,
                          log_path=ctx.log_path(f"vllm_grade_s{seed}.log"))
     out = {"grader_model": evaluator.hf_id, "grader_id": evaluator.id, "seed": seed,
            "run_metadata": {"git_sha": mf.git_state().get("sha"), "grader_revision": evaluator.revision,
@@ -150,7 +150,7 @@ def judge_of(ctx: StageContext, seed: int, files: dict, judge_id: str) -> tuple:
     judge = ctx.reg.models[judge_id]
     rows = ctx.rows_by_id()
     serving = ctx.cell.grading.judge_serving or ctx.cell.eval.serving
-    engine = make_engine(judge, serving=serving, stub=ctx.stub, stub_reply=_stub_reply,
+    engine = make_engine(judge, serving=serving, enforce_eager=grader_eager(serving), stub=ctx.stub, stub_reply=_stub_reply,
                          log_path=ctx.log_path(f"vllm_judge_{judge_id}_s{seed}.log"))
     configs = []
     with engine as eng:

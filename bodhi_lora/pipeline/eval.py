@@ -61,7 +61,7 @@ from tqdm import tqdm
 from transformers import set_seed
 
 from bodhi_lora import manifest as mf
-from bodhi_lora.engine import ContextLengthError, make_engine
+from bodhi_lora.engine import ContextLengthError, grader_eager, make_engine
 from bodhi_lora.grading.rubric import Grader, grade_rubric
 from bodhi_lora.pipeline.context import StageContext, context_from_args, eval_ids_file, stage_parser
 from bodhi_lora.protocols import Decoding, Output, Protocol, build, decoding_for
@@ -530,7 +530,7 @@ def run(ctx: StageContext, seed: int, condition: str) -> dict:
         time.sleep(ev.serving.drain_s)
 
     evaluator = ctx.reg.models[ctx.cell.grading.evaluator]
-    grader_engine = make_engine(evaluator, serving=ev.serving, stub=ctx.stub,
+    grader_engine = make_engine(evaluator, serving=ev.serving, enforce_eager=grader_eager(ev.serving), stub=ctx.stub,
                                 stub_reply=STUB_GRADER_REPLY,
                                 log_path=ctx.log_path(f"vllm_eval_grader_s{seed}.log"))
     with grader_engine as geng:
@@ -642,7 +642,7 @@ def run_shared(ctx: StageContext, seeds: list) -> dict:
         time.sleep(ev.serving.drain_s)
 
     evaluator = ctx.reg.models[ctx.cell.grading.evaluator]
-    grader_engine = make_engine(evaluator, serving=ev.serving, stub=ctx.stub,
+    grader_engine = make_engine(evaluator, serving=ev.serving, enforce_eager=grader_eager(ev.serving), stub=ctx.stub,
                                 stub_reply=STUB_GRADER_REPLY,
                                 log_path=ctx.log_path(f"vllm_eval_grader_s{label}.log"))
     with grader_engine as geng:

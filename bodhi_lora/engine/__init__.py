@@ -12,8 +12,18 @@ from bodhi_lora.registry.schema import ModelConfig, Serving
 
 Engine = Union[VLLMEngine, StubEngine]
 
-__all__ = ["Completion", "ContextLengthError", "Engine", "Route", "StubEngine", "VLLMEngine", "make_engine",
+__all__ = ["Completion", "ContextLengthError", "Engine", "Route", "StubEngine", "VLLMEngine", "grader_eager", "make_engine",
            "placement_from_env"]
+
+
+def grader_eager(serving: Serving) -> bool:
+    """Eager mode for a server that grades (evaluator, judge, classifier, filter).
+
+    The recorded cells were graded with every server in eager mode. CUDA graphs can move a
+    greedy grade by a token, so graders stay eager unless a record says otherwise, and
+    grades of new cells compare with the recorded ones (DECISIONS.md D27). Servers that
+    generate replies may use graphs."""
+    return True if serving.enforce_eager is None else serving.enforce_eager
 
 
 def make_engine(model: ModelConfig, *, serving: Serving, adapter: Optional[Path] = None,

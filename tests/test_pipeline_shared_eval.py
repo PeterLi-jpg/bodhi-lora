@@ -74,7 +74,8 @@ def test_each_request_reaches_the_adapter_of_its_seed_or_the_base(reg, tmp_path,
     eval_stage.run_shared(ctx, [1, 2])
     policy, grader = engines
     assert set(policy.lora_modules) == {"adapter-s1", "adapter-s2"}
-    assert policy.settings()["enforce_eager"] is True and grader.settings()["enforce_eager"] is False
+    # The policy server holds adapters, so it is eager; graders stay eager too (D27).
+    assert policy.settings()["enforce_eager"] is True and grader.settings()["enforce_eager"] is True
     assert set(grader.routes) == {grader.model}
     expected_calls = {}
     for seed in cell.seeds:

@@ -40,7 +40,7 @@ from pathlib import Path
 from tqdm import tqdm
 
 from bodhi_lora import manifest as mf
-from bodhi_lora.engine import ContextLengthError, make_engine
+from bodhi_lora.engine import ContextLengthError, grader_eager, make_engine
 from bodhi_lora.grading.rubric import Grader, grade_rubric
 from bodhi_lora.pipeline.context import StageContext, context_from_args, stage_parser
 
@@ -166,7 +166,7 @@ def grade(ctx: StageContext) -> dict:
     print(f"filter: {len(traces)} traces, {len(in_pool)} in the train pool, "
           f"{len(graded)} already graded, {len(todo)} to grade", flush=True)
     grader_model = ctx.reg.models[ctx.cell.grading.filter]
-    engine = make_engine(grader_model, serving=flt.serving, stub=ctx.stub,
+    engine = make_engine(grader_model, serving=flt.serving, enforce_eager=grader_eager(flt.serving), stub=ctx.stub,
                          stub_reply=STUB_GRADE_REPLY, log_path=ctx.log_path("vllm_filter.log"))
     failed, too_long = [], []
     if todo:

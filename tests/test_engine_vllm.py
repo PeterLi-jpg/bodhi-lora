@@ -1,11 +1,12 @@
 """The vLLM engine's serve command and client, and the stub engine. Nothing is started."""
 import json
+from pathlib import Path
 
 import pytest
 
 pytest.importorskip("pydantic")
 
-from bodhi_lora.engine import StubEngine, make_engine, placement_from_env  # noqa: E402
+from bodhi_lora.engine import StubEngine, grader_eager, make_engine, placement_from_env  # noqa: E402
 from bodhi_lora.engine import vllm as ve  # noqa: E402
 from bodhi_lora.registry.schema import ModelConfig, Serving  # noqa: E402
 
@@ -439,3 +440,21 @@ def test_a_stub_reports_the_settings_of_the_server_it_stands_in_for(tmp_path):
     assert stub == {**real, "stub": True}
     assert (stub["request_timeout_s"], stub["max_loras"], stub["max_lora_rank"]) == (900, 2, 16)
     assert stub["tensor_parallel_size"] == 1
+
+
+def test_graders_stay_eager_unless_the_record_says_otherwise():
+    # The recorded cells were graded eager; new grades must compare with them (D27).
+    base = dict(max_model_len=8192, max_num_seqs=64, concurrency=32, request_timeout_s=180)
+    assert grader_eager(Serving(**base)) is True
+    assert grader_eager(Serving(**base, enforce_eager=False)) is False
+    assert grader_eager(Serving(**base, enforce_eager=True)) is True
+
+
+def test_every_grading_stage_builds_its_engine_with_grader_eager():
+    root = Path(__file__).resolve().parents[1] / "bodhi_lora" / "pipeline"
+    for name, needle in [("grade.py", "make_engine(evaluator"), ("grade.py", "make_engine(judge"),
+                         ("classify.py", "make_engine(judge"), ("filter.py", "make_engine(grader_model"),
+                         ("eval.py", "grader_engine = make_engine(evaluator")]:
+        text = (root / name).read_text()
+        calls = [line for line in text.splitlines() if needle in line]
+        assert calls and all("enforce_eager=grader_eager(" in line for line in calls), (name, needle)

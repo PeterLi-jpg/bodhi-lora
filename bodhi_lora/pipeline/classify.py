@@ -22,7 +22,7 @@ import json
 import sys
 
 from bodhi_lora import manifest as mf
-from bodhi_lora.engine import make_engine
+from bodhi_lora.engine import grader_eager, make_engine
 from bodhi_lora.grading.classify import STUB_CLASSIFY_REPLY, TEMPLATE_SHA256, aggregate, classify
 from bodhi_lora.grading.epistemic import messages_to_text
 from bodhi_lora.grading.rubric import Grader
@@ -37,7 +37,7 @@ def classify_of(ctx: StageContext, seed: int, files: dict, judge_id: str) -> tup
     judge = ctx.reg.models[judge_id]
     rows = ctx.rows_by_id()
     serving = ctx.cell.grading.judge_serving or ctx.cell.eval.serving
-    engine = make_engine(judge, serving=serving, stub=ctx.stub, stub_reply=STUB_CLASSIFY_REPLY,
+    engine = make_engine(judge, serving=serving, enforce_eager=grader_eager(serving), stub=ctx.stub, stub_reply=STUB_CLASSIFY_REPLY,
                          log_path=ctx.log_path(f"vllm_classify_{judge_id}_s{seed}.log"))
     configs = []
     with engine as eng:
