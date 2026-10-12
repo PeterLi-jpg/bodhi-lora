@@ -398,7 +398,7 @@ class Repos:
     a queue file: one drops the tool, stops tracking a stored eval file (as the new code
     does with the 2026-05 cell's) and changes a manifest; the other changes the tool."""
 
-    def __init__(self, node: Node):
+    def __init__(self, node: Node, sparse: bool = False):
         up = node.tmp / "upstream"
         up.mkdir()
         _git(up, "init", "-q")
@@ -438,9 +438,17 @@ class Repos:
         self.bundle = node.tmp / "work.bundle"
         _git(up, "bundle", "create", "-q", str(self.bundle), f"{self.c1}..main", f"{self.c1}..keeps")
         _git(self.node, "checkout", "-q", "--detach", self.c1)
-        (self.node / "scripts" / "gpu_lease.sh").write_text("node copy\n")
-        _git(self.node, "update-index", "--skip-worktree", "scripts/gpu_lease.sh")
-        assert _git(self.node, "status", "--porcelain") == ""
+        if sparse:
+            # As the host was set up: the tool is kept out by a sparse-checkout pattern,
+            # and the host's own copy sits where the pattern leaves no file. Git 2.37 and
+            # later then show it as a changed tracked file.
+            _git(self.node, "sparse-checkout", "set", "--no-cone", "/*", "!/scripts/gpu_lease.sh")
+            (self.node / "scripts").mkdir(exist_ok=True)
+            (self.node / "scripts" / "gpu_lease.sh").write_text("node copy\n")
+        else:
+            (self.node / "scripts" / "gpu_lease.sh").write_text("node copy\n")
+            _git(self.node, "update-index", "--skip-worktree", "scripts/gpu_lease.sh")
+            assert _git(self.node, "status", "--porcelain") == ""
         self.refs = _git(self.node, "for-each-ref")
 
     def head(self) -> str:
@@ -472,6 +480,26 @@ def test_switch_keeps_the_node_copy_when_the_commit_drops_the_file(node, repos):
     assert "/scripts/gpu_lease.sh" in (repos.node / ".git" / "info" / "exclude").read_text().splitlines()
     # The fetch touched no branch or remote ref.
     assert _git(repos.node, "for-each-ref") == repos.refs
+
+
+def test_switch_keeps_a_sparse_checkout_copy_of_the_tool(node):
+    """The host keeps the shared tool out of its checkout with a sparse-checkout pattern
+    (and lists it in .git/info/exclude). Whether git shows the host's copy as clean or as
+    a changed file, --keep-local brings it through the switch unchanged."""
+    repos = Repos(node, sparse=True)
+    with open(repos.node / ".git" / "info" / "exclude", "a") as fh:
+        fh.write("/scripts/gpu_lease.sh\n")
+    proc = _switch(node, repos, repos.drops, "--keep-local", "scripts/gpu_lease.sh")
+    assert proc.returncode == 0, node.queue_log()
+    assert repos.head() == repos.drops and repos.tool() == "node copy\n"
+    assert repos.status() == ""
+
+
+def test_switch_still_refuses_other_changed_files(node, repos):
+    (repos.node / "a.txt").write_text("changed\n")
+    proc = _switch(node, repos, repos.drops, "--keep-local", "scripts/gpu_lease.sh")
+    assert proc.returncode == 5 and " M a.txt" in node.queue_log()
+    assert repos.head() == repos.c1
 
 
 def test_switch_brings_back_committed_files_that_the_commit_drops(node, repos):

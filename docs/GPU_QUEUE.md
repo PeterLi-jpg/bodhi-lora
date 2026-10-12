@@ -29,16 +29,18 @@ In this order:
    that another live job holds. If the tool refuses, or the lease file does not then
    show the card with this owner and PID, the queue stops and runs nothing.
 3. **Switch the checkout** (with `--bundle` and `--commit`). It stops if `git status`
-   shows a change to a tracked file, or an untracked file outside the `--allow-untracked`
-   paths; ignored files are allowed. It makes this check at the start too, before the
+   shows a change to a tracked file other than a `--keep-local` file, or an untracked
+   file outside the `--allow-untracked` paths; ignored files are allowed. It makes this check at the start too, before the
    wait, so a checkout that cannot switch fails at once. It fetches the bundle's refs
    into `FETCH_HEAD` only, so no branch changes, and checks out the commit as a detached
    HEAD. After the switch the checkout must pass the same check, so every manifest
    records a clean commit. A `--keep-local` path (relative to the checkout, or absolute
    inside it) is a file or a folder, which means every file git tracks under it. Its
    files come through the switch by two rules:
-   - The host's own copy (a file marked skip-worktree, or one git does not track) comes
-     back whatever the commit holds. If the commit tracks the file, it gets
+   - The host's own copy (a file marked skip-worktree, one git does not track, or a
+     tracked file the host changed) comes back whatever the commit holds. Git 2.37 and
+     later show a file that a sparse-checkout pattern leaves out, but that is present,
+     as a changed tracked file, so it counts as the host's copy too. If the commit tracks the file, it gets
      skip-worktree again; if not, it goes into the checkout's `.git/info/exclude`, unless
      an ignore rule covers it already.
    - A committed copy (tracked, with no local change) comes back only if the commit no
@@ -196,7 +198,8 @@ and `nvidia-smi` on PATH, and short shell commands as the queue. It covers the o
 the GPU pin, the stop at a failure, a refused claim, a card in use at the claim, the
 wait with the marker check and with `--after-check`, a
 line for another card, the env file, the three signals, a card that stays in use, the
-lease tool of 7e02348, and the checkout switch: a dropped file, a changed file, a folder
+lease tool of 7e02348, and the checkout switch: a dropped file, a changed file, a file kept out by a
+sparse-checkout pattern, a changed file that is not kept, a folder
 with files the commit no longer tracks, untracked files inside and outside
 `--allow-untracked`, no `--keep-local`, and a commit the bundle lacks. `make test` runs
 it.

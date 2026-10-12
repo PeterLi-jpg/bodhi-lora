@@ -167,13 +167,6 @@ validate() {
         [ "$AFTER" != "$NAME" ] || die 2 "--after names this queue itself ($NAME)"
         [ -n "$AFTER_MARKER" ] || [ -n "$AFTER_CHECK" ] || AFTER_MARKER="$LOG_DIR/$AFTER.exit"
     fi
-    if [ -n "$BUNDLE" ] || [ -n "$COMMIT" ]; then
-        [ -n "$BUNDLE" ] && [ -n "$COMMIT" ] || die 2 "--bundle and --commit go together"
-        [ -f "$BUNDLE" ] || die 2 "bundle $BUNDLE not found"
-        git -C "$REPO" rev-parse --is-inside-work-tree >/dev/null 2>&1 || die 2 "$REPO is not a git checkout"
-        check_clean "at the start"
-        logged git -C "$REPO" bundle verify "$BUNDLE" || die 5 "git bundle verify failed for $BUNDLE"
-    fi
     [ "${#KEEP[@]}${#ALLOW[@]}" = 00 ] || [ -n "$COMMIT" ] ||
         die 2 "--keep-local and --allow-untracked apply only to a checkout switch (--commit)"
     # A --keep-local path is relative to the checkout, or absolute inside it.
@@ -184,6 +177,13 @@ validate() {
             /*) die 2 "--keep-local ${KEEP[$i]} is not inside the checkout $REPO" ;;
         esac
     done
+    if [ -n "$BUNDLE" ] || [ -n "$COMMIT" ]; then
+        [ -n "$BUNDLE" ] && [ -n "$COMMIT" ] || die 2 "--bundle and --commit go together"
+        [ -f "$BUNDLE" ] || die 2 "bundle $BUNDLE not found"
+        git -C "$REPO" rev-parse --is-inside-work-tree >/dev/null 2>&1 || die 2 "$REPO is not a git checkout"
+        check_clean "at the start"
+        logged git -C "$REPO" bundle verify "$BUNDLE" || die 5 "git bundle verify failed for $BUNDLE"
+    fi
     [ -z "$ENV_FILE" ] || [ -f "$ENV_FILE" ] || die 2 "env file $ENV_FILE not found"
 }
 
@@ -253,14 +253,16 @@ keep_files() {
 }
 
 # Copy the --keep-local files out of the checkout before the switch. Two kinds:
-#   - the host's own copy: a file marked skip-worktree, or one git does not track. It
-#     comes back after the switch whatever the commit holds. A skip-worktree file is put
-#     back to its committed version first, because git refuses to switch while such a
-#     file differs from the index.
+#   - the host's own copy: a file marked skip-worktree, one git does not track, or a
+#     tracked file the host changed. It comes back after the switch whatever the commit
+#     holds. A skip-worktree or changed file is put back to its committed version first,
+#     because git refuses to switch while such a file differs from the index. A changed
+#     file is how git 2.37 and later show a sparse-checkout file that is present: they
+#     clear its skip-worktree bit when they read the index.
 #   - a committed copy: a tracked file with no local change. It comes back only if the
 #     commit no longer tracks it, which means the switch deleted it.
 keep_save() {
-    local bk=$1 arg f flag n
+    local bk=$1 arg f flag changed n
     SAVED=() OWN=()
     for arg in ${KEEP[@]+"${KEEP[@]}"}; do
         n=0
@@ -271,10 +273,16 @@ keep_save() {
             # Check the copy before anything overwrites the original.
             cmp -s "$REPO/$f" "$bk/$f" || return 1
             flag="$(git -C "$REPO" ls-files -v -- "$f" | cut -c1)"
+            changed=0
+            if [ -n "$flag" ] && [ "$flag" != S ] && ! git -C "$REPO" diff --quiet -- "$f"; then
+                changed=1
+            fi
             SAVED+=("$f")
-            if [ "$flag" = S ] || [ -z "$flag" ]; then OWN+=(1); else OWN+=(0); fi
+            if [ "$flag" = S ] || [ -z "$flag" ] || [ "$changed" = 1 ]; then OWN+=(1); else OWN+=(0); fi
             if [ "$flag" = S ]; then
                 git -C "$REPO" update-index --no-skip-worktree -- "$f" || return 1
+            fi
+            if [ "$flag" = S ] || [ "$changed" = 1 ]; then
                 git -C "$REPO" checkout -q -- "$f" || return 1
             fi
             n=$((n + 1))
@@ -320,12 +328,13 @@ keep_restore() {
     [ "${#SAVED[@]}" -eq 0 ] || log "keep-local: $back of ${#SAVED[@]} saved files copied back"
 }
 
-# The lines of git status that block a switch: any change to a tracked file, and any
+# The lines of git status that block a switch: any change to a tracked file other than
+# a --keep-local file (which comes through the switch as the host's copy), and any
 # untracked file outside the --allow-untracked paths. Ignored files never show, and a
 # skip-worktree file does not either. A failed git status prints its error, which also
 # blocks.
 checkout_dirt() {
-    local status line prefix allowed
+    local status line prefix kept allowed
     if ! status="$(git -C "$REPO" status --porcelain 2>&1)"; then
         printf 'git status failed: %s\n' "$status"
         return
@@ -336,6 +345,10 @@ checkout_dirt() {
         if [ "${line:0:3}" = "?? " ]; then
             for prefix in ${ALLOW[@]+"${ALLOW[@]}"}; do
                 case ${line:3} in "$prefix"*) allowed=1 ;; esac
+            done
+        elif [ "${line:0:3}" = " M " ]; then
+            for kept in ${KEEP[@]+"${KEEP[@]}"}; do
+                [ "${line:3}" = "$kept" ] && allowed=1
             done
         fi
         [ "$allowed" = 1 ] || printf '%s\n' "$line"
