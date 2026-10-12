@@ -3,13 +3,15 @@
 #
 #   gpu_queue.sh --gpu 3 --owner bohdi --purpose "BODHI R3-R7" \
 #       --queue configs/queues/tier_a.txt --log-dir /data/PROJECTS/bohdi-queue \
-#       [--name tier_a] [--repo DIR] [--after SESSION [--after-marker FILE]] \
+#       [--name tier_a] [--repo DIR] [--after SESSION [--after-marker FILE | --after-check CMD]] \
 #       [--bundle FILE --commit SHA [--keep-local PATH]... [--allow-untracked PATH]...] \
 #       [--env FILE] [--lease-tool PATH] [--lease-file PATH]
 #
 # The steps, in order:
 #   a. With --after: wait until that tmux session has exited, then read its exit marker.
-#      Stop unless the marker's first line is 0.
+#      Stop unless the marker's first line is 0. With --after-check instead, run that
+#      command in the checkout and stop unless it exits 0: for a job that this script did
+#      not start, which leaves no marker.
 #   b. Claim the GPU with the node's lease tool, with this shell's PID as the lease PID.
 #      Stop if the card holds memory, or if the tool refuses: it never gives out a card
 #      that another job holds a lease on.
@@ -47,7 +49,7 @@ MEM_WAIT_S="${GPU_QUEUE_MEM_WAIT_S:-60}"
 EMPTY_MIB=2000
 
 GPU="" OWNER="" PURPOSE="" QUEUE="" NAME="" LOG_DIR="" REPO="$PWD"
-AFTER="" AFTER_MARKER="" BUNDLE="" COMMIT="" ENV_FILE=""
+AFTER="" AFTER_MARKER="" AFTER_CHECK="" BUNDLE="" COMMIT="" ENV_FILE=""
 # The node's lease tool and the file it keeps the leases in (its own default).
 LEASE_TOOL=/data/PROJECTS/bohdi/gpu_lease.sh
 LEASE_FILE="${GPU_LEASE_FILE:-/home/nvidia/GPUS.txt}"
@@ -126,6 +128,7 @@ parse_args() {
             --repo) REPO=$(abspath "$2") ;;
             --after) AFTER=$2 ;;
             --after-marker) AFTER_MARKER=$(abspath "$2") ;;
+            --after-check) AFTER_CHECK=$2 ;;
             --bundle) BUNDLE=$(abspath "$2") ;;
             --commit) COMMIT=$2 ;;
             --keep-local) KEEP+=("$2") ;;
@@ -155,10 +158,14 @@ validate() {
     [ -n "$PURPOSE" ] || die 2 "--purpose is required"
     [ -x "$LEASE_TOOL" ] || die 2 "lease tool $LEASE_TOOL is not an executable file"
     [ -d "$REPO" ] || die 2 "--repo $REPO is not a directory"
+    if [ -n "$AFTER_CHECK" ]; then
+        [ -n "$AFTER" ] || die 2 "--after-check goes with --after"
+        [ -z "$AFTER_MARKER" ] || die 2 "give --after-marker or --after-check, not both"
+    fi
     if [ -n "$AFTER" ]; then
         command -v tmux >/dev/null 2>&1 || die 2 "--after needs tmux, and tmux is not on PATH"
         [ "$AFTER" != "$NAME" ] || die 2 "--after names this queue itself ($NAME)"
-        [ -n "$AFTER_MARKER" ] || AFTER_MARKER="$LOG_DIR/$AFTER.exit"
+        [ -n "$AFTER_MARKER" ] || [ -n "$AFTER_CHECK" ] || AFTER_MARKER="$LOG_DIR/$AFTER.exit"
     fi
     if [ -n "$BUNDLE" ] || [ -n "$COMMIT" ]; then
         [ -n "$BUNDLE" ] && [ -n "$COMMIT" ] || die 2 "--bundle and --commit go together"
@@ -180,7 +187,7 @@ validate() {
     [ -z "$ENV_FILE" ] || [ -f "$ENV_FILE" ] || die 2 "env file $ENV_FILE not found"
 }
 
-# a. Wait for the session before this queue, then read its marker.
+# a. Wait for the session before this queue, then read its marker or run the check.
 wait_for_session() {
     log "waiting for tmux session $AFTER to exit (a check every ${POLL_S}s)"
     # '=' asks tmux for this exact session name, not a prefix match.
@@ -188,6 +195,14 @@ wait_for_session() {
         sleep "$POLL_S"
     done
     log "tmux session $AFTER is gone"
+    if [ -n "$AFTER_CHECK" ]; then
+        # In the checkout, before the claim and the switch: it reads what that job left.
+        log "checking how $AFTER ended: $AFTER_CHECK"
+        (cd "$REPO" && logged bash -o pipefail -c "$AFTER_CHECK") ||
+            die 3 "$AFTER did not finish: the --after-check command failed; not starting"
+        log "$AFTER finished (the --after-check command passed)"
+        return 0
+    fi
     [ -f "$AFTER_MARKER" ] || die 3 "$AFTER left no exit marker at $AFTER_MARKER; not starting"
     local status
     status="$(head -n 1 "$AFTER_MARKER")"

@@ -14,7 +14,10 @@ In this order:
 1. **Wait** (with `--after`). It checks every minute whether that tmux session still
    exists. When the session is gone, it reads the session's exit marker. It goes on
    only if the first line of the marker is `0`. If the marker is missing or says
-   anything else, it stops and claims nothing.
+   anything else, it stops and claims nothing. A session that this script did not start
+   leaves no marker; for it, `--after-check <command>` replaces the marker: the queue
+   runs the command in the checkout, before the claim and the switch, and goes on only
+   if it exits 0.
 2. **Claim.** First the card must use less than 2,000 MiB, after up to 60 seconds of
    waiting for the job before it to let go. The lease tool's `claim` gives out a card
    whose row is free whatever the card holds, and a vLLM server that outlived a killed
@@ -191,7 +194,7 @@ complete and skip them.
 `tests/test_gpu_queue.py` runs the script with bash on the CPU: a fake lease tool, tmux
 and `nvidia-smi` on PATH, and short shell commands as the queue. It covers the order and
 the GPU pin, the stop at a failure, a refused claim, a card in use at the claim, the
-wait and the marker check, a
+wait with the marker check and with `--after-check`, a
 line for another card, the env file, the three signals, a card that stays in use, the
 lease tool of 7e02348, and the checkout switch: a dropped file, a changed file, a folder
 with files the commit no longer tracks, untracked files inside and outside

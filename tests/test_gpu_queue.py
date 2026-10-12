@@ -260,6 +260,35 @@ def test_does_not_start_when_the_queue_before_it_did_not_finish(node, marker):
     assert node.marker()[0] == "3"
 
 
+@pytest.mark.parametrize("finished", [True, False])
+def test_after_check_decides_for_a_session_that_leaves_no_marker(node, finished):
+    """R2 runs in a tmux session this script did not start; its cell manifest, read from
+    the checkout once the session is gone, tells whether it finished."""
+    (node.sessions / "r2").touch()
+    (node.repo / "status.txt").write_text("finished\n" if finished else "failed\n")
+    out = node.tmp / "out.txt"
+    proc = node.start([f"echo ran >> {out}"], "--after", "r2", "--after-check", "grep -qx finished status.txt")
+    try:
+        time.sleep(1.5)
+        assert proc.poll() is None and node.lease_calls() == []
+        (node.sessions / "r2").unlink()
+        rc = proc.wait(timeout=30)
+    finally:
+        proc.kill()
+    if finished:
+        assert rc == 0 and out.read_text() == "ran\n"
+    else:
+        assert rc == 3 and not out.exists() and node.lease_calls() == []
+        assert node.marker()[0] == "3"
+
+
+@pytest.mark.parametrize("extra", [["--after-check", "true"],
+                                   ["--after", "r2", "--after-check", "true", "--after-marker", "m"]])
+def test_after_check_needs_after_and_excludes_a_marker(node, extra):
+    proc = node.run(["true"], *extra)
+    assert proc.returncode == 2 and node.lease_calls() == []
+
+
 @pytest.mark.parametrize("line", ["true --gpus 0", "true --gpus=3,4", "true --gpus 3 --gpus 2", "true --gpus"])
 def test_refuses_a_line_for_another_gpu_before_any_line_runs(node, line):
     out = node.tmp / "out.txt"
