@@ -112,46 +112,63 @@ git rev-parse cleanup/resubmission      # the commit for --commit
 
 Copy the bundle and `scripts/gpu_queue.sh` to a folder outside the checkout on the host,
 for example `/data/PROJECTS/bohdi-queue/`. The host's checkout at 854761f has no copy of
-the script, and a copy inside it would show as an untracked file. Then start the queue
-in its own tmux session on the host, while R2 still runs:
+the script, and a copy inside it would show as an untracked file. On the host, write the
+env file there, then start the queue in its own tmux session while R2 still runs:
 
 ```bash
 cd /data/PROJECTS/bohdi-queue
-tmux new-session -d -s tier_a "bash gpu_queue.sh --gpu 3 --owner bohdi \
-    --purpose 'BODHI R3-R7' --queue configs/queues/tier_a.txt --name tier_a \
+printf '%s\n' '. /data/PROJECTS/bohdi/.env.run' '. /data/PROJECTS/bohdi/.venv/bin/activate' > tier_a.env
+tmux new-session -d -s tier_a "bash gpu_queue.sh --gpu 3 --owner PeterLi \
+    --purpose 'BODHI R3-R6' --queue configs/queues/tier_a.txt --name tier_a \
     --log-dir /data/PROJECTS/bohdi-queue --repo /data/PROJECTS/bohdi \
-    --after <R2 session> --after-marker <R2 marker> \
+    --after bohdi-gpu3 \
+    --after-check \"/data/PROJECTS/bohdi/.venv/bin/python -c 'import json, sys; m = json.load(open(sys.argv[1])); sys.exit(m[sys.argv[2]] != sys.argv[3])' /data/PROJECTS/bohdi/results/healthbench__mistral-small-24b__bodhi/manifest.json status finished\" \
     --bundle bohdi-tier-a.bundle --commit <commit> --allow-untracked results/ \
     --keep-local /data/PROJECTS/bohdi/scripts/gpu_lease.sh \
-    --keep-local /data/PROJECTS/bohdi/results/healthbench__medgemma-27b-text__bodhi__2026-05 \
-    --env <run env file> --lease-tool /data/PROJECTS/bohdi/gpu_lease.sh"
+    --keep-local results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_42 \
+    --keep-local results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_7 \
+    --keep-local results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_13 \
+    --keep-local results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_99 \
+    --keep-local results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_101 \
+    --env /data/PROJECTS/bohdi-queue/tier_a.env --lease-tool /data/PROJECTS/bohdi/gpu_lease.sh"
 ```
 
-- `<R2 session>` is the tmux session that runs R2. R2 was not started with this script,
-  so `--after-marker` must name a file that R2's session writes when R2 ends, with R2's
-  exit status on its first line. If R2's session writes no such file, the queue cannot
-  tell how R2 ended, and it stops. Then start the queue without `--after` once R2's
-  manifests show it complete.
-- The env file must put the Python of `.venv` first on PATH (for example
-  `. .venv/bin/activate`) and export `HF_TOKEN`. The stages take their interpreters from
-  `configs/project.yaml`. Gemma 2's FlashAttention setting comes from its model record,
-  not from the env file.
+- `bohdi-gpu3` is the tmux session that runs R1 and R2. This script did not start it, so
+  it leaves no exit marker that the queue can read, and `--after-check` decides instead:
+  once the session is gone, the queue goes on only if R2's cell manifest says
+  `finished`. The runner writes that file when a run starts (`started`) and ends
+  (`finished` or `failed`). Otherwise the queue stops with exit 3 and claims nothing.
+- The env file reads the host's `.env.run` (the Hugging Face token and the caches on
+  `/data`) and puts the Python of `.venv` first on PATH, for the `python` of the queue
+  lines. The stages take their own interpreters from `configs/project.yaml`. Gemma 2's
+  FlashAttention setting comes from its model record, not from the env file.
 - `--allow-untracked results/` lets the switch pass the outputs of R1 and R2. Git does
   not ignore their manifests, `cell.yaml` files and tables, and no commit holds them yet.
   Any other untracked file stops the queue at the start: move it, or add it to
   `.git/info/exclude` on the host.
-- The first `--keep-local` keeps the host's copy of the old lease tool in `scripts/`,
-  which the host marks skip-worktree. The commit to run does not track the file, so the
-  queue lists it in `.git/info/exclude`.
-- The second keeps the 20 eval files and 5 grade files of the 2026-05 cell, which 854761f
-  tracks and the new commits do not. The switch would delete them, and R6's last line
-  reads them (RUN_PLAN.md section 4.3, item 4). It also keeps the four other files of
-  that cell that the switch would delete and the host has now: three old analysis files
-  and the answer key.
+- The host has two copies of the group's lease tool, and other projects call both. The
+  in-place deploy of 2026-10-11 kept both out of git: `.git/info/exclude` lists them,
+  and a sparse-checkout pattern keeps `854761f:scripts/gpu_lease.sh` out of the
+  checkout. `/data/PROJECTS/bohdi/gpu_lease.sh` is the node's tool, the one that
+  claims and releases here (`--lease-tool`, also the default). `--keep-local
+  /data/PROJECTS/bohdi/scripts/gpu_lease.sh` brings the other copy through the switch unchanged: the commit
+  to run does not track it, and the exclude rule keeps it out of `git status`.
+- The five seed folders of the 2026-05 cell hold its 20 eval files and 5 grade files,
+  which 854761f tracks and the new commits do not. The switch would delete them, and
+  R6's last line reads them (RUN_PLAN.md section 4.3, item 4). The new `.gitignore`
+  covers them, so they need no exclude rule. Only those folders are kept: the cell's
+  three old analysis files, which the new commits move to `analysis/withdrawn/`, and its
+  answer key, which they no longer track, stay as the commit has them.
 - RUN_PLAN.md section 4.3 lists the other checks before the queue starts: R2 complete,
   the eval files of the other recorded cells, the model downloads and the disk.
-- `--lease-tool` is `/data/PROJECTS/bohdi/gpu_lease.sh` by default, and `--lease-file`
-  is `GPU_LEASE_FILE` or `/home/nvidia/GPUS.txt`, as in the lease tool.
+- `--lease-file` is `GPU_LEASE_FILE` or `/home/nvidia/GPUS.txt`, as in the lease tool.
+  The queue claims GPU 3 only when the card uses less than 2,000 MiB, so a vLLM server
+  that outlived R2 stops it with exit 4 and the `nvidia-smi` table in its log.
+
+Check on the host before the start, since each of these stops the queue at once:
+`git -C /data/PROJECTS/bohdi status --porcelain` lists only files under `results/`, and
+at most the host's copy of the tool in `scripts/` as changed; `git -C /data/PROJECTS/bohdi check-ignore -q
+gpu_lease.sh` succeeds; and `/data/PROJECTS/bohdi/gpu_lease.sh status` shows the table.
 
 To check on it:
 

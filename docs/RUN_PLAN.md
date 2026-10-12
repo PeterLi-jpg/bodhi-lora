@@ -283,8 +283,9 @@ commands and stop at the MediQ fetch: the pinned MediQ file is on the GPU host, 
 
 R1 is done and R2 runs on GPU 3 of the shared host. R3 to R7 follow on the same card, one
 command after another, from `configs/queues/tier_a.txt`. `scripts/gpu_queue.sh` runs it
-([GPU_QUEUE.md](GPU_QUEUE.md)): it waits for R2's tmux session to end, claims GPU 3 in
-the group's lease file, switches the host checkout to the commit of the queue, runs the
+([GPU_QUEUE.md](GPU_QUEUE.md)): it waits for R2's tmux session to end and for R2's cell
+manifest to say `finished`, claims GPU 3 in the group's lease file once the card is
+empty, switches the host checkout to the commit of the queue, runs the
 lines in order, stops at the first that fails, and releases the card at the end. Each
 line runs every stage of its record for every seed, and the runner skips a stage whose
 manifest is complete, so a second start goes on where the first stopped.
@@ -316,8 +317,9 @@ R7 waits for the first author's answer on the 4,096-token pair (BLOCKED.md item 
 1); R3 to R6 do not. If the answer comes before R6 ends, R7 can follow with no gap
 (GPU_QUEUE.md section 6). Two flags of the queue meet the host checks of section 4.3:
 `--allow-untracked results/` lets the switch pass the untracked outputs of R1 and R2
-(item 2), and `--keep-local results/healthbench__medgemma-27b-text__bodhi__2026-05`
-keeps the stored files of that cell, which the switch would delete, for R6 (item 4).
+(item 2), and a `--keep-local` for each seed folder of
+`results/healthbench__medgemma-27b-text__bodhi__2026-05` keeps the stored eval and grade
+files of that cell, which the switch would delete, for R6 (item 4).
 
 **Schedule.** On one card the runs follow each other, so the H100-hours of section 4 are
 also hours on the clock. The serving of 2026-10-12 (ARCHITECTURE.md section 4.2) removes
@@ -421,7 +423,10 @@ Serving checks against vLLM 0.10.2 (the source at tag v0.10.2):
 Before the queue starts:
 
 1. R2 is complete: each seed folder has `train/adapter_config.json` and its weights, and
-   `shared/filter/kept.jsonl` exists.
+   `shared/filter/kept.jsonl` exists. R3 and R4 need only these. R2's own eval manifests
+   need a look too: the code R2 runs writes a condition with failed replies or grades as
+   complete, with the failures counted (`n_failed_inference`, `n_failed_grading`), and
+   such a condition needs its eval run again before R2 is read (KNOWN_ISSUES.md).
 2. The new code is on the host. The commits after 3abe647 are not pushed, and the host
    checkout is at 854761f, the old id of 7e02348. R1 and R2 write files of the kinds that
    git tracks (manifests, `cell.yaml`, id lists, adapter configs, trainer states), and no
@@ -436,8 +441,8 @@ Before the queue starts:
    R1. The 2026-05 files are on the host now, because commit 854761f tracks them, but the
    switch to the new code deletes them: the new commits no longer track the 20 eval files
    and 5 grade files of that cell (decision O2). The queue keeps them across the switch
-   with `--keep-local results/healthbench__medgemma-27b-text__bodhi__2026-05` (section
-   4.2). Without it, R6's last cell stops on its first missing file.
+   with a `--keep-local` for each of the five seed folders of that cell (GPU_QUEUE.md
+   section 4). Without them, R6's last cell stops on its first missing file.
 5. `data/raw/medquad/rows.jsonl` is on the host for R6's MedQuAD cell. If it is not, the
    GPU run builds it from `lavita/MedQuAD` at its pinned revision, which is a download.
    The ChatDoctor rows are there since R1.
