@@ -1,6 +1,7 @@
 """The eval stage's shared server (bodhi_lora/pipeline/eval.py, run_shared) on the stub
-engine: every request reaches the weights of its condition and seed, and the files are
-those of the one-server-per-condition path."""
+engine: every request reaches the weights of its condition and seed, the files are those
+of the one-server-per-condition path, a crash keeps the replies made so far, and with
+fixed eval ids each base condition runs once for every seed."""
 import json
 from dataclasses import replace
 
@@ -15,6 +16,7 @@ from bodhi_lora.pipeline import eval as eval_stage  # noqa: E402
 from bodhi_lora.pipeline.context import StageContext  # noqa: E402
 from bodhi_lora.pipeline.runner import prepare  # noqa: E402
 from bodhi_lora.registry import load_registry, parse_condition  # noqa: E402
+from bodhi_lora.registry.schema import EvalIds  # noqa: E402
 
 SMOKE = "tiny-rubric__tiny-random-llama__bodhi"
 
@@ -151,6 +153,54 @@ def test_a_crash_after_the_replies_keeps_them_and_the_rerun_makes_none_again(reg
     for c in cell.eval.conditions:
         assert (_normalized(ctx.paths.eval_file(1, c), tmp_path / "crashed")
                 == _normalized(clean.paths.eval_file(1, c), tmp_path / "clean")), c
+
+
+def _fixed_ids_cell(reg):
+    """The smoke cell with every seed on the whole eval pool, as the labelled cells are."""
+    cell = reg.cells[SMOKE]
+    ids = EvalIds(policy="fixed_pool", n=6)
+    return cell.model_copy(update={"eval": cell.eval.model_copy(update={"ids": ids})})
+
+
+def test_with_fixed_ids_a_base_condition_is_evaluated_once_for_every_seed(reg, tmp_path, engines):
+    ctx = _ctx(reg, tmp_path, _fixed_ids_cell(reg))
+    cell = ctx.cell
+    assert ctx.eval_ids(1) == ctx.eval_ids(2)
+    eval_stage.run_shared(ctx, [1, 2])
+    policy, _ = engines
+    base = [c for c in cell.eval.conditions if parse_condition(c)[0] == "base"]
+    lora = [c for c in cell.eval.conditions if parse_condition(c)[0] == "lora"]
+    # The base server got the calls of seed 1's base files only; each adapter its own.
+    base_calls = sum(r["calls"] for c in base for r in _results(ctx, 1, c)["results"])
+    assert policy.routes.count(policy.model) == base_calls
+    for seed in cell.seeds:
+        assert policy.routes.count(f"adapter-s{seed}") == sum(
+            r["calls"] for c in lora for r in _results(ctx, seed, c)["results"])
+    for c in base:
+        one, two = _results(ctx, 1, c), _results(ctx, 2, c)
+        assert one["results"] == two["results"]
+        assert (one["run_metadata"]["seed"], two["run_metadata"]["seed"]) == (1, 2)
+        for seed in cell.seeds:
+            m = json.loads((ctx.paths.stage(seed, "eval") / f"{c}.manifest.json").read_text())
+            assert m["base_evaluated_once"] == {"evaluated_with_seed": 1, "written_for_seeds": [1, 2]}
+            assert m["eval_ids"]["n"] == 6
+    for c in lora:
+        m = json.loads((ctx.paths.stage(2, "eval") / f"{c}.manifest.json").read_text())
+        assert "base_evaluated_once" not in m
+    run = json.loads(next(ctx.paths.shared("eval").glob("*.manifest.json")).read_text())
+    assert {x["condition"] for x in run["base_evaluated_once"]} == set(base)
+    assert run["counts"]["n_files"] == 2 * len(cell.eval.conditions)
+    assert run["counts"]["n_conditions_run"] == len(base) + 2 * len(lora)
+
+
+def test_a_per_seed_draw_cell_evaluates_base_for_every_seed(reg, tmp_path, engines):
+    ctx = _ctx(reg, tmp_path)
+    eval_stage.run_shared(ctx, [1, 2])
+    policy, _ = engines
+    base = [c for c in ctx.cell.eval.conditions if parse_condition(c)[0] == "base"]
+    assert policy.routes.count(policy.model) == sum(
+        r["calls"] for s in (1, 2) for c in base for r in _results(ctx, s, c)["results"])
+    assert not eval_stage.seed_invariant_ids(ctx, [1, 2])
 
 
 def _normalized(path, root):

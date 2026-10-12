@@ -25,6 +25,11 @@ Two paths write the same files (run_shared and run):
             one server for that condition, then one grader server: the path of the runs
             up to R2, kept as the fallback (run --no-shared-server, or
             eval.shared_server: false).
+With fixed eval ids (eval.ids.policy fixed_pool or fixed_file) every seed answers the
+same prompts, and a base condition gives the same replies for every seed under greedy
+decoding (docs/ANALYSIS_PLAN.md section 2.1). The shared path then evaluates each base
+condition once and writes every seed's file from it; the manifests say so. A
+per_seed_draw cell is not affected.
 A row with no rubric (a benchmark with rubric: none) gets no rubric grade: its score is
 null and its criteria list is empty, so the dimensions and the text counts still apply.
 
@@ -500,6 +505,15 @@ def run(ctx: StageContext, seed: int, condition: str) -> dict:
                          timer, {"status": "complete", "condition": condition})
 
 
+def seed_invariant_ids(ctx: StageContext, seeds: list) -> bool:
+    """Every one of these seeds evaluates the same id list: a fixed_pool or fixed_file
+    cell. A per_seed_draw cell never counts, even if two draws happened to agree."""
+    if ctx.cell.eval.ids.policy == "per_seed_draw" or len(seeds) < 2:
+        return False
+    first = ctx.eval_ids(seeds[0])
+    return all(ctx.eval_ids(s) == first for s in seeds[1:])
+
+
 def run_shared(ctx: StageContext, seeds: list) -> dict:
     """Every unfinished condition of these seeds through one shared server, then one
     grader server; the files and manifests per seed and condition as run() writes them."""
@@ -523,26 +537,40 @@ def run_shared(ctx: StageContext, seeds: list) -> dict:
     np.random.seed(seeds[0])
     set_seed(seeds[0])
 
-    check_adapters(ctx, jobs)
-    adapters = {adapter_name(j.seed): j.adapter for j in jobs if j.adapter is not None}
+    # Base once: with the same ids for every seed, the first pending seed of each base
+    # condition is evaluated, and the other seeds' files are written from it.
+    copied_from = {}
+    if seed_invariant_ids(ctx, sorted({j.seed for j in jobs})):
+        first = {}
+        for j in jobs:
+            if j.weights != "base":
+                continue
+            if j.condition in first:
+                copied_from[j.key] = first[j.condition].key
+            else:
+                first[j.condition] = j
+    to_run = [j for j in jobs if j.key not in copied_from]
+    check_adapters(ctx, to_run)
+    adapters = {adapter_name(j.seed): j.adapter for j in to_run if j.adapter is not None}
     quantize = ctx.quantized_base()
     # Enough requests in flight to fill every scheduler slot (max_num_seqs) the record
     # gives the server, or the record's client threads when that is more.
     workers = max(ev.serving.concurrency, ev.serving.max_num_seqs)
     label = "-".join(str(s) for s in seeds)
-    print(f"eval: {len(jobs)} conditions of seeds {label} through one server ({len(adapters)} adapters, "
+    print(f"eval: {len(to_run)} conditions of seeds {label} through one server ({len(adapters)} adapters, "
           f"{workers} client threads){', 4-bit base' if quantize else ''}"
-          f"{' [stub]' if ctx.stub else ''}", flush=True)
+          f"{' [stub]' if ctx.stub else ''}; {len(copied_from)} base files written from another seed",
+          flush=True)
 
     policy = make_engine(ctx.model, serving=ev.serving, adapters=adapters, lora_rank=ctx.lora_rank(),
                          quantize=quantize, stub=ctx.stub, stub_reply=STUB_POLICY_REPLY,
                          log_path=ctx.log_path(f"vllm_eval_s{label}.log"))
-    routes = {j.key: adapter_name(j.seed) if j.adapter is not None else None for j in jobs}
-    saved = {j.key: saved_replies(j) for j in jobs}
-    have = {j.key: {g["row"].prompt_id for g in saved[j.key]} for j in jobs}
+    routes = {j.key: adapter_name(j.seed) if j.adapter is not None else None for j in to_run}
+    saved = {j.key: saved_replies(j) for j in to_run}
+    have = {j.key: {g["row"].prompt_id for g in saved[j.key]} for j in to_run}
     # Wrapper conditions make two calls per reply and take longest; sent first, they leave
     # the short one-call replies for the end, so the batch stays full until the last one.
-    order = sorted(jobs, key=lambda j: j.proto.kind != "wrapper")
+    order = sorted(to_run, key=lambda j: j.proto.kind != "wrapper")
     work = [(j, row) for j in order for row in j.examples if row.prompt_id not in have[j.key]]
     for j in jobs:
         j.out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -552,14 +580,14 @@ def run_shared(ctx: StageContext, seeds: list) -> dict:
         with open(replies_file(job), "a") as fh:
             fh.write(json.dumps({"prompt_id": g["row"].prompt_id, "out": asdict(g["out"])}) + "\n")
 
-    replies, failed_inference = {j.key: [] for j in jobs}, {j.key: [] for j in jobs}
+    replies, failed_inference = {j.key: [] for j in to_run}, {j.key: [] for j in to_run}
     if work:
         print(f"eval: {len(work)} replies to make, {sum(map(len, saved.values()))} kept from an earlier run",
               flush=True)
         with policy as eng:
-            replies, failed_inference = generate(jobs, work, lambda j: eng.route(routes[j.key]), workers,
+            replies, failed_inference = generate(to_run, work, lambda j: eng.route(routes[j.key]), workers,
                                                  "replies", on_reply=keep)
-    for j in jobs:
+    for j in to_run:
         replies[j.key] = saved[j.key] + replies[j.key]
         _print_failures(f"s{j.seed} {j.condition} reply", failed_inference[j.key])
     if ev.serving.drain_s and not ctx.stub:
@@ -571,34 +599,46 @@ def run_shared(ctx: StageContext, seeds: list) -> dict:
                                 log_path=ctx.log_path(f"vllm_eval_grader_s{label}.log"))
     with grader_engine as geng:
         results, failed_grading = grade_replies(order, replies, geng, workers, "grades")
-    for j in jobs:
+    for j in to_run:
         _print_failures(f"s{j.seed} {j.condition} grade", failed_grading[j.key])
 
     engines = {"policy": policy.settings(), "grader": grader_engine.settings()}
     stamp = timer.start.strftime("%Y%m%dT%H%M%SZ")
     run_manifest = ctx.paths.shared("eval") / f"eval_s{label}_{stamp}.manifest.json"
     shared = {"run_manifest": ctx.project.rel(run_manifest), "seeds": list(seeds),
-              "conditions_run": [list(j.key) for j in jobs], "client_threads": workers,
+              "conditions_run": [list(j.key) for j in to_run], "client_threads": workers,
               "replies_kept_from_an_earlier_run": sum(map(len, saved.values()))}
+    once = {}
+    for key, src in copied_from.items():
+        once.setdefault(src, [src[0]]).append(key[0])
     counts, outputs = {}, []
     for j in jobs:
+        src = copied_from.get(j.key, j.key)
         extra = {"status": "complete", "condition": j.condition,
-                 "shared_server": {**shared, "route": routes[j.key] or ctx.model.hf_id}}
+                 "shared_server": {**shared, "route": routes[src] or ctx.model.hf_id}}
+        if src in once:
+            # The replies and grades in this file were made once, with the seed named
+            # here, and every seed listed has the same rows (docs/ANALYSIS_PLAN.md 2.1).
+            extra["base_evaluated_once"] = {"evaluated_with_seed": src[0], "written_for_seeds": once[src]}
         # No time here: the run's time is in the run manifest, once for all its files.
-        counts[j.key] = write_outputs(ctx, j, results[j.key], len(replies[j.key]), failed_inference[j.key],
-                                      failed_grading[j.key], engines, None, extra)
-        # Kept while replies failed: delete the result file and rerun, and only those
-        # replies are made again.
+        counts[j.key] = write_outputs(ctx, j, results[src], len(replies[src]), failed_inference[src],
+                                      failed_grading[src], engines, None, extra)
+        outputs.append(j.out_path)
+    # Kept while replies failed: delete the result file and rerun, and only those replies
+    # are made again.
+    for j in to_run:
         if not failed_inference[j.key]:
             replies_file(j).unlink(missing_ok=True)
-        outputs.append(j.out_path)
-    totals = {k: sum(c[k] for c in counts.values()) for k in ("n_examples", "n_generated", "n_graded", "calls",
-                                                                "completion_tokens_total")}
+    # What the servers did: the conditions that ran, not the files written from them.
+    totals = {k: sum(counts[j.key][k] for j in to_run)
+              for k in ("n_examples", "n_generated", "n_graded", "calls", "completion_tokens_total")}
     ctx.write_manifest(run_manifest.parent, "eval", name=run_manifest.name, timer=timer,
                        models={"policy": ctx.model, "grader": evaluator},
                        config={"seeds": list(seeds), "eval": ev.model_dump()}, engines=engines,
-                       outputs=outputs, counts={**totals, "n_files": len(jobs)},
-                       extra={"status": "complete", "shared_server": shared})
+                       outputs=outputs, counts={**totals, "n_files": len(jobs), "n_conditions_run": len(to_run)},
+                       extra={"status": "complete", "shared_server": shared,
+                              "base_evaluated_once": [{"condition": src[1], "evaluated_with_seed": src[0],
+                                                       "written_for_seeds": s} for src, s in once.items()]})
     return {f"s{s}/{c}": v for (s, c), v in counts.items()}
 
 
