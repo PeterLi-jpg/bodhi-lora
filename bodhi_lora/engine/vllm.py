@@ -96,7 +96,7 @@ class VLLMEngine:
         dtype: str = "bfloat16",
         quantization: Optional[str] = None,
         lora_path: Optional[str] = None,
-        enforce_eager: bool = True,
+        enforce_eager: Optional[bool] = None,
         port: Optional[int] = None,
         tensor_parallel: Optional[int] = None,
         log_path: Optional[str] = None,
@@ -118,10 +118,14 @@ class VLLMEngine:
         # compress_statistics=True and quant_type="nf4"), the base QLoRA training used.
         self.quantization = quantization
         self.lora_path = os.path.realpath(lora_path) if lora_path else None
-        # Skip CUDA-graph capture. With --enable-lora vLLM 0.9 captures about 67 graph
-        # shapes at about 2 minutes each before the first request; eager mode is a
-        # little slower per token and much faster for a 200-prompt eval.
-        self.enforce_eager = enforce_eager
+        # None: eager mode only when an adapter is loaded. With --enable-lora vLLM 0.9
+        # captured about 67 graph shapes at about 2 minutes each before the first
+        # request; eager mode is a little slower per token and much faster for a
+        # 200-prompt eval. With no adapter the server captures CUDA graphs: --enforce-eager
+        # is off by default in vLLM 0.10.2, and graphs are captured for batch sizes up to
+        # min(2 * max_num_seqs, 512) (docs.vllm.ai/en/v0.10.2/cli/serve.html,
+        # --enforce-eager and --cuda-graph-sizes).
+        self.enforce_eager = bool(self.lora_path) if enforce_eager is None else enforce_eager
         self.port = port if port is not None else env_port
         self.tensor_parallel = tensor_parallel if tensor_parallel is not None else env_tp
         self.log_path = log_path or os.path.expanduser(f"~/vllm_serve_{self.port}.log")

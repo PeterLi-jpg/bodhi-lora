@@ -18,12 +18,18 @@ __all__ = ["Completion", "ContextLengthError", "Engine", "StubEngine", "VLLMEngi
 
 def make_engine(model: ModelConfig, *, serving: Serving, adapter: Optional[Path] = None,
                 quantize: bool = False, stub: bool = False, stub_reply: Reply = "STUB RESPONSE",
-                enforce_eager: bool = True, log_path: Optional[Path] = None) -> Engine:
+                enforce_eager: Optional[bool] = None, log_path: Optional[Path] = None) -> Engine:
     """An engine for one model record.
 
     quantize serves the base in 4-bit NF4, the precision a QLoRA adapter was trained on.
+    Eager mode (no CUDA graphs): enforce_eager when given (the bench's own setting), else
+    serving.enforce_eager when the record sets it, else only when an adapter is loaded.
     stub returns a StubEngine with the same settings, for CPU runs.
     """
+    if enforce_eager is None:
+        enforce_eager = serving.enforce_eager
+    if enforce_eager is None:
+        enforce_eager = adapter is not None
     settings = dict(revision=model.revision, max_model_len=serving.max_model_len,
                     max_num_seqs=serving.max_num_seqs, request_timeout=serving.request_timeout_s,
                     dtype=model.dtype, quantization="bitsandbytes" if quantize else None,

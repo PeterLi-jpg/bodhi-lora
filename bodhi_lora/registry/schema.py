@@ -440,6 +440,10 @@ class Serving(_Record):
     request_timeout_s: PosInt
     # Pause between two engines. Only the old TPU runtime needed one.
     drain_s: Annotated[float, Field(ge=0)] = 0.0
+    # null: eager mode (no CUDA graphs) only when the server loads a LoRA adapter, where
+    # graph capture took about 2 hours in vLLM 0.9 (bodhi_lora/engine/vllm.py). true or
+    # false sets it for every server of this block.
+    enforce_eager: Optional[bool] = None
 
 
 Grading.model_rebuild()
@@ -623,6 +627,13 @@ class Bench(_Record):
     # Skip CUDA-graph capture, as the eval does, so the conditions compare like for like.
     enforce_eager: bool = True
     serving: Serving
+
+    @model_validator(mode="after")
+    def _one_eager_setting(self) -> "Bench":
+        if self.serving.enforce_eager is not None:
+            raise ValueError("the bench sets eager mode with bench.enforce_eager; leave "
+                             "bench.serving.enforce_eager out")
+        return self
 
 
 # Statuses of a cell that records a past run. `run` refuses them: a new run of the same

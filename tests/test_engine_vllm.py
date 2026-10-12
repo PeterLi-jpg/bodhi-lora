@@ -49,6 +49,26 @@ def test_unpinned_full_precision_base_has_no_revision_or_quantization_flags():
         assert flag not in cmd
 
 
+def test_cuda_graphs_run_unless_an_adapter_is_loaded_or_a_record_says_otherwise(tmp_path):
+    """Eager mode only with LoRA (graph capture with LoRA took about 2 hours in vLLM 0.9);
+    the record's serving.enforce_eager overrides that, and the bench's own setting wins."""
+    adapter = tmp_path / "adapter"
+    assert "--enforce-eager" not in make_engine(MODEL, serving=SERVING).serve_args()
+    assert "--enforce-eager" in make_engine(MODEL, serving=SERVING, adapter=adapter).serve_args()
+    eager = SERVING.model_copy(update={"enforce_eager": True})
+    graphs = SERVING.model_copy(update={"enforce_eager": False})
+    assert "--enforce-eager" in make_engine(MODEL, serving=eager).serve_args()
+    assert "--enforce-eager" not in make_engine(MODEL, serving=graphs, adapter=adapter).serve_args()
+    assert "--enforce-eager" in make_engine(MODEL, serving=graphs, enforce_eager=True).serve_args()
+    # The stub records the same resolved setting for the manifest.
+    assert make_engine(MODEL, serving=SERVING, stub=True).settings()["enforce_eager"] is False
+    assert make_engine(MODEL, serving=SERVING, adapter=adapter, stub=True).settings()["enforce_eager"] is True
+    # Built directly, the engine follows the same rule.
+    assert ve.VLLMEngine("m", max_model_len=1, max_num_seqs=1, request_timeout=1).enforce_eager is False
+    assert ve.VLLMEngine("m", max_model_len=1, max_num_seqs=1, request_timeout=1,
+                         lora_path=str(adapter)).enforce_eager is True
+
+
 def test_unknown_quantization_is_refused():
     with pytest.raises(ValueError):
         ve.VLLMEngine("m", max_model_len=1, max_num_seqs=1, request_timeout=1, quantization="awq")

@@ -127,6 +127,7 @@ def test_parse_condition():
     ({"eval.ids": {"policy": "fixed_file", "n": 200}}, "needs file"),
     ({"train.eval_every": "steps"}, "needs eval_steps"),
     ({"filter.serving": None}, "filter.serving"),
+    ({"bench": {"seeds": [42], "serving": {**SERVING, "enforce_eager": False}}}, "bench.enforce_eager"),
 ])
 def test_cell_record_refuses(changes, message):
     with pytest.raises(pydantic.ValidationError, match=message):
