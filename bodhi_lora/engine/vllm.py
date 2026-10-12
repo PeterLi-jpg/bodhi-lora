@@ -11,6 +11,11 @@ the whole process group on exit, also after an exception. Every serving setting 
 constructor argument, so a run never patches this file, and settings() returns them for
 the run manifest. bodhi_lora.engine.make_engine() builds an engine from a model record.
 
+A server that stops answering (its process exited, or every request it held failed)
+gets no more requests: each later one fails at once with ServerDown (_failed). The
+stage then ends with those items failed and its manifest incomplete, and a rerun starts
+a new server.
+
 Where a stage runs is the runner's choice: it sets CUDA_VISIBLE_DEVICES and
 BODHI_VLLM_PORT for each stage (placement_from_env), so stages on different GPUs never
 share a port.
@@ -37,10 +42,12 @@ LoRA Adapters"). route(name) returns a client whose requests carry that name:
         lora_reply = engine.route("adapter-s7").chat(messages, max_new_tokens=1024)
 """
 
+import http.client
 import json
 import os
 import subprocess
 import sys
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -76,6 +83,16 @@ class ContextLengthError(ValueError):
 
 class AdapterError(RuntimeError):
     """A named adapter of a running server does not answer."""
+
+
+class ServerDown(RuntimeError):
+    """The server stopped answering, so the engine sends it no more requests.
+
+    vLLM 0.10.2 answers HTTP 500 once its engine has died and then shuts the HTTP server
+    down (terminate_if_errored in vllm/entrypoints/launcher.py at tag v0.10.2), so the
+    requests after it fail with a refused connection. A hung engine answers nothing, and
+    each request waits out its timeout.
+    """
 
 
 @dataclass(frozen=True)
@@ -172,6 +189,12 @@ class VLLMEngine:
         # serving_env), set in the server process only, never in this one.
         self.env = dict(env or {})
         self._proc: Optional[subprocess.Popen] = None
+        # Failed requests in a row, and why the engine stopped sending (see _failed).
+        # Counted only once the server is up, so the start's own polling never counts.
+        self._lock = threading.Lock()
+        self._serving = False
+        self._failed_in_row = 0
+        self._down: Optional[str] = None
 
     # -- the server ---------------------------------------------------------------
 
@@ -249,14 +272,17 @@ class VLLMEngine:
               f"{', adapters ' + ', '.join(self.lora_modules) if self.lora_modules else ''})", flush=True)
         # vLLM is chatty; its log goes to a file, and _wait_ready reports progress.
         log_fh = open(self.log_path, "w")
+        self._serving, self._failed_in_row, self._down = False, 0, None
         # A new process group, so stop() also ends the engine's worker processes.
         self._proc = subprocess.Popen(self.serve_args(), stdout=log_fh, stderr=subprocess.STDOUT,
                                       env=self.server_env(), preexec_fn=os.setsid)
         print(f"  pid={self._proc.pid}, log={self.log_path}", flush=True)
         self._wait_ready()
+        self._serving = True
         return self
 
     def stop(self) -> None:
+        self._serving = False
         if self._proc is None:
             return
         try:
@@ -336,17 +362,52 @@ class VLLMEngine:
 
     def _post(self, payload: dict, timeout: Optional[int] = None,
               route: str = "/v1/chat/completions") -> dict:
+        if self._down is not None:
+            raise ServerDown(self._down)
         req = urllib.request.Request(
             f"http://localhost:{self.port}{route}",
             data=json.dumps(payload).encode(), headers={"Content-Type": "application/json"})
         try:
             with urllib.request.urlopen(req, timeout=timeout or self.request_timeout) as r:
-                return json.loads(r.read())
+                out = json.loads(r.read())
         except urllib.error.HTTPError as e:
             body = e.read().decode("utf-8", errors="replace")
             if e.code == 400 and "maximum context length" in body:
                 raise ContextLengthError(body) from e
+            # A 4xx answer is about this request; a 5xx is about the server.
+            if e.code >= 500:
+                self._failed(e)
             raise
+        except (OSError, http.client.HTTPException) as e:
+            # No answer: the connection was refused, reset or timed out.
+            self._failed(e)
+            raise
+        with self._lock:
+            self._failed_in_row = 0
+        return out
+
+    def _failed(self, err: Exception) -> None:
+        """Count a request the server did not answer, once the server is up.
+
+        The engine stops sending when the server process has exited, or when max_num_seqs
+        requests in a row failed: as many as the server runs at once, so each request it
+        held failed and none came back. Every later request then fails at once with
+        ServerDown, and the stage ends with those items failed, instead of waiting out a
+        timeout for each one (900 s per eval request: days for a hung eval server).
+        """
+        if not self._serving:
+            return
+        with self._lock:
+            self._failed_in_row += 1
+            if self._down is not None:
+                return
+            exited = self._proc is not None and self._proc.poll() is not None
+            if not exited and self._failed_in_row < self.max_num_seqs:
+                return
+            why = (f"vllm serve exited with code {self._proc.returncode}" if exited
+                   else f"{self._failed_in_row} requests in a row failed")
+            self._down = f"{why}, the last with {err!r}; see {self.log_path}"
+        print(f"  vllm serve stopped answering: {self._down}. No more requests go to it.", flush=True)
 
     def tokenize(self, text: str) -> List[int]:
         """Token ids of raw text with the served tokenizer, without special tokens."""

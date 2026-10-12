@@ -306,3 +306,101 @@ def test_a_context_length_refusal_is_its_own_error(monkeypatch):
     with pytest.raises(ve.urllib.error.HTTPError) as err:
         eng.complete([{"role": "user", "content": "hi"}], max_new_tokens=8)
     assert not isinstance(err.value, ve.ContextLengthError)
+
+
+class _Proc:
+    """A stand-in for the server process: returncode None while it runs."""
+
+    def __init__(self, returncode=None):
+        self.returncode = returncode
+
+    def poll(self):
+        return self.returncode
+
+
+def _serving_engine(monkeypatch, answer, max_num_seqs=4):
+    """An engine whose server is up (as after start), with urlopen replaced by answer."""
+    eng = ve.VLLMEngine("org/m", max_model_len=4096, max_num_seqs=max_num_seqs, request_timeout=1)
+    eng._proc, eng._serving = _Proc(), True
+    monkeypatch.setattr(ve.urllib.request, "urlopen", answer)
+    return eng
+
+
+def _ok_body():
+    import io
+    return io.BytesIO(json.dumps({"choices": [{"message": {"content": "ok"}, "finish_reason": "stop"}],
+                                  "usage": {"prompt_tokens": 1, "completion_tokens": 1}}).encode())
+
+
+def test_a_hung_server_gets_no_more_requests_after_every_slot_failed(monkeypatch):
+    """A timed-out request is counted; once max_num_seqs fail in a row with no answer in
+    between, every later request fails at once and none is sent."""
+    sent = []
+
+    def hung(req, timeout=None):
+        sent.append(req.full_url)
+        raise TimeoutError("timed out")
+
+    eng = _serving_engine(monkeypatch, hung)
+    msgs = [{"role": "user", "content": "hi"}]
+    for _ in range(4):
+        with pytest.raises(TimeoutError):
+            eng.complete(msgs, max_new_tokens=4)
+    with pytest.raises(ve.ServerDown, match="4 requests in a row failed"):
+        eng.route(None).complete(msgs, max_new_tokens=4)
+    with pytest.raises(ve.ServerDown):
+        eng.tokenize("a b")
+    assert len(sent) == 4
+
+
+def test_an_answer_resets_the_count_and_a_bad_request_does_not_count(monkeypatch):
+    import io
+    import urllib.error
+
+    replies = iter(["timeout", "timeout", "timeout", "ok", "timeout", "timeout", "timeout", "400", "ok"])
+
+    def mixed(req, timeout=None):
+        what = next(replies)
+        if what == "timeout":
+            raise TimeoutError("timed out")
+        if what == "400":
+            raise urllib.error.HTTPError(req.full_url, 400, "Bad Request", {}, io.BytesIO(b'{"message": "x"}'))
+        return _ok_body()
+
+    eng = _serving_engine(monkeypatch, mixed)
+    msgs = [{"role": "user", "content": "hi"}]
+    results = []
+    for _ in range(9):
+        try:
+            results.append(eng.chat(msgs, max_new_tokens=4))
+        except Exception as e:
+            results.append(type(e).__name__)
+    assert results[3] == "ok" and results[-1] == "ok" and "ServerDown" not in results
+
+
+def test_a_server_that_exited_gets_no_more_requests(monkeypatch):
+    import urllib.error
+
+    def refused(req, timeout=None):
+        raise urllib.error.URLError(ConnectionRefusedError(111, "Connection refused"))
+
+    eng = _serving_engine(monkeypatch, refused, max_num_seqs=64)
+    eng._proc = _Proc(returncode=-9)
+    msgs = [{"role": "user", "content": "hi"}]
+    with pytest.raises(urllib.error.URLError):
+        eng.complete(msgs, max_new_tokens=4)
+    with pytest.raises(ve.ServerDown, match="exited with code -9"):
+        eng.complete(msgs, max_new_tokens=4)
+
+
+def test_failures_while_the_server_starts_are_not_counted(monkeypatch):
+    """The start polls until the chat route answers; those failures are expected."""
+    def refused(req, timeout=None):
+        raise ConnectionRefusedError(111, "Connection refused")
+
+    eng = _serving_engine(monkeypatch, refused, max_num_seqs=1)
+    eng._serving = False
+    for _ in range(3):
+        with pytest.raises(ConnectionRefusedError):
+            eng.complete([{"role": "user", "content": "hi"}], max_new_tokens=1)
+    assert eng._down is None
