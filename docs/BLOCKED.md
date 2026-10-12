@@ -32,10 +32,16 @@ Still yours:
 1. R7 and C31: the red-flag drop that C31 promised to recover occurred only at r 8 and a
    4,096-token eval context, and R7 runs at r 16 and 8,192, so it may find no drop to
    recover. Should R7 add `lora+bodhi` and `lora+red-flags-first` at 4,096 tokens
-   (RUN_PLAN.md, "R7 and C31")? Needed before R7 starts.
+   (RUN_PLAN.md, "R7 and C31")? Needed before R7 starts, and it blocks R7 only. The
+   queue of R3 to R7 on GPU 3 (`configs/queues/tier_a.txt`, RUN_PLAN.md section 4.2)
+   runs R3 to R6 and keeps R7's three lines behind `#`. R3 to R6 take about 2.8 to 4.1
+   days after R2 ends (an estimate). An answer before then lets R7 follow with no gap
+   ([GPU_QUEUE.md](GPU_QUEUE.md) section 6).
 2. Done 2026-10-11: the GPU go-ahead (O6). The runs go on the shared host
    mit-critical-data-1, GPU 3 only, reserved in /home/nvidia/GPUS.txt, at most 3 GPUs.
-   R1 started that day, R2 follows it, and Tier A (R3 to R7) is queued behind R2.
+   R1 is done and R2 runs. R3 to R7 follow R2 on GPU 3 through `scripts/gpu_queue.sh`,
+   which claims the card in that file for the whole queue and releases it at the end
+   (RUN_PLAN.md section 4.2).
 3. The timing bench of R2 serves the adapter unmerged (vLLM `--enable-lora`, eager mode,
    the 4-bit base for QLoRA), as the 2026-07 cells were evaluated. The paper's argument is
    one pass with merged weights, as the 2026-05 cell was evaluated. R2 started before
