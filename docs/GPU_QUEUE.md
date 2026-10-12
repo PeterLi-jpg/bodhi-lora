@@ -106,9 +106,14 @@ R2 runs on GPU 3 from commit 854761f (the old id of 7e02348) in `/data/PROJECTS/
 On this machine, make a bundle of the commit to run, with the host's commit as its base:
 
 ```bash
-git bundle create ../bohdi-tier-a.bundle cleanup/resubmission ^854761f
+git bundle create ../bohdi-tier-a.bundle cleanup/resubmission
 git rev-parse cleanup/resubmission      # the commit for --commit
 ```
+
+The bundle holds the whole history. The history rewrite of 2026-10-11 (the AI-trailer
+purge, scripts/maintenance/purge_history.md) gave 854761f the id 7e02348, so a bundle
+with `^854761f` as its base no longer applies: the host's checkout has the old id and
+this machine has the new one.
 
 Copy the bundle and `scripts/gpu_queue.sh` to a folder outside the checkout on the host,
 for example `/data/PROJECTS/bohdi-queue/`. The host's checkout at 854761f has no copy of
