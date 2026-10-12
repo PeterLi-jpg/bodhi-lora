@@ -529,7 +529,10 @@ vLLM 0.10.2.
 - **Crash safety.** One server now makes the replies of many conditions, so each reply
   goes to `seed_<n>/eval/<condition>.replies.jsonl` as it comes. A rerun after a crash
   makes only the missing replies; with all of them on disk it starts no policy server.
-  The file goes once the condition's result file is written with no failed reply.
+  A condition with a failed reply or grade gets no result file and an `incomplete`
+  manifest, and the stage exits with an error. The replies file goes once the
+  condition's result file is written. The engine sends no more requests to a server
+  that stopped answering (`ServerDown`), so a dead or hung server ends the stage soon.
 - **Model-specific environment.** The engine sets a model record's `serving_env` in
   that model's server process only (Gemma 2: FlashAttention 2, since the FlashAttention
   3 build has no tanh softcapping). No launcher prefix is needed.

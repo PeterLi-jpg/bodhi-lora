@@ -235,3 +235,111 @@ def test_the_shared_server_writes_the_files_of_the_per_condition_path(reg, tmp_p
             assert set(ma) - {"time"} == set(mb) - {"shared_server"}
             assert (ma["config"], ma["counts"], ma["status"]) == (mb["config"], mb["counts"], mb["status"])
             assert set(ma["engines"]) == set(mb["engines"]) == {"policy", "grader"}
+
+
+def _manifest(ctx, seed, condition):
+    return json.loads((ctx.paths.stage(seed, "eval") / f"{condition}.manifest.json").read_text())
+
+
+def _policy_dies_after(monkeypatch, n):
+    """The stub policy server answers n requests, then refuses every connection, as a
+    vLLM server does once its engine died; the grader stub keeps answering."""
+    import urllib.error
+
+    plain, made = StubEngine.complete, [0]
+
+    def complete(self, *args, **kwargs):
+        if self.lora_modules:
+            made[0] += 1
+            if made[0] > n:
+                raise urllib.error.URLError(ConnectionRefusedError(111, "Connection refused"))
+        return plain(self, *args, **kwargs)
+
+    monkeypatch.setattr(StubEngine, "complete", complete)
+
+
+def test_failed_replies_leave_their_conditions_incomplete_and_stop_the_stage(reg, tmp_path, monkeypatch):
+    """A server that dies mid-run must not make its conditions look finished: they get no
+    result file and an incomplete manifest, the runner does not count them complete, and
+    the stage exits with an error, so a queue stops instead of grading on."""
+    from bodhi_lora.pipeline.runner import eval_step, is_complete
+
+    ctx = _ctx(reg, tmp_path)
+    cell = ctx.cell
+    _policy_dies_after(monkeypatch, 3)
+    with pytest.raises(SystemExit, match="incomplete"):
+        eval_stage.run_shared(ctx, list(cell.seeds))
+    pairs = [(s, c) for s in cell.seeds for c in cell.eval.conditions]
+    broken = [(s, c) for s, c in pairs if _manifest(ctx, s, c)["counts"]["n_failed_inference"]]
+    assert broken
+    for s, c in pairs:
+        m = _manifest(ctx, s, c)
+        if (s, c) in broken:
+            assert m["status"] == "incomplete" and "outputs" not in m
+            assert not ctx.paths.eval_file(s, c).exists()
+        else:
+            assert m["status"] == "complete" and ctx.paths.eval_file(s, c).is_file()
+    assert not is_complete(eval_step(ctx, list(cell.seeds)).done)
+    run = json.loads(next(ctx.paths.shared("eval").glob("*.manifest.json")).read_text())
+    assert run["status"] == "incomplete" and run["counts"]["n_incomplete"] == len(broken)
+    kept = sum(len(eval_stage.saved_replies(eval_stage.make_job(ctx, s, c))) for s, c in broken)
+
+    # A rerun with a working server makes only the replies that are missing.
+    monkeypatch.undo()
+    eval_stage.run_shared(ctx, list(cell.seeds))
+    assert all(_manifest(ctx, s, c)["status"] == "complete" for s, c in pairs)
+    assert all(ctx.paths.eval_file(s, c).is_file() for s, c in pairs)
+    assert is_complete(eval_step(ctx, list(cell.seeds)).done)
+    rerun = max(ctx.paths.shared("eval").glob("*.manifest.json"), key=lambda p: p.stat().st_mtime)
+    assert json.loads(rerun.read_text())["shared_server"]["replies_kept_from_an_earlier_run"] == kept
+    assert not any(eval_stage.replies_file(eval_stage.make_job(ctx, s, c)).exists() for s, c in pairs)
+
+
+def test_failed_grades_keep_the_replies_and_the_condition_incomplete(reg, tmp_path, monkeypatch):
+    ctx = _ctx(reg, tmp_path)
+    plain = StubEngine.complete
+
+    def grader_refuses(self, *args, **kwargs):
+        if not self.lora_modules:
+            raise TimeoutError("timed out")
+        return plain(self, *args, **kwargs)
+
+    # The policy stub of this cell holds adapters, so it answers; the grader holds none.
+    monkeypatch.setattr(StubEngine, "complete", grader_refuses)
+    with pytest.raises(SystemExit, match="incomplete"):
+        eval_stage.run_shared(ctx, [1])
+    for c in ctx.cell.eval.conditions:
+        m = _manifest(ctx, 1, c)
+        assert m["status"] == "incomplete" and m["counts"]["n_failed_grading"] > 0
+        assert m["counts"]["n_failed_inference"] == 0
+        job = eval_stage.make_job(ctx, 1, c)
+        assert not job.out_path.exists() and len(eval_stage.saved_replies(job)) == ctx.cell.eval.ids.n
+
+
+def test_a_reply_too_long_for_the_context_is_listed_and_the_condition_completes(reg, tmp_path, monkeypatch):
+    from bodhi_lora.engine import ContextLengthError
+
+    ctx = _ctx(reg, tmp_path)
+    long_id = ctx.eval_ids(1)[0]
+    long_text = ctx.rows_by_id()[long_id].messages[-1]["content"]
+    plain = StubEngine.complete
+
+    def complete(self, messages, *args, **kwargs):
+        if self.lora_modules and messages[-1]["content"] == long_text:
+            raise ContextLengthError("This model's maximum context length is 4096 tokens.")
+        return plain(self, messages, *args, **kwargs)
+
+    monkeypatch.setattr(StubEngine, "complete", complete)
+    eval_stage.run_shared(ctx, [1])
+    m = _manifest(ctx, 1, "base")
+    assert m["status"] == "complete" and m["too_long_ids"] == [long_id] and m["counts"]["n_too_long"] == 1
+    assert long_id not in {r["prompt_id"] for r in _results(ctx, 1, "base")["results"]}
+
+
+def test_the_per_condition_path_stops_on_a_failed_reply_too(reg, tmp_path, monkeypatch):
+    ctx = _ctx(reg, tmp_path)
+    _policy_dies_after(monkeypatch, 1)
+    with pytest.raises(SystemExit, match="incomplete"):
+        eval_stage.run(ctx, 1, "lora")
+    assert _manifest(ctx, 1, "lora")["status"] == "incomplete"
+    assert not ctx.paths.eval_file(1, "lora").exists()

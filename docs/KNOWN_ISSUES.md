@@ -161,11 +161,16 @@ D-numbers refer to [DECISIONS.md](DECISIONS.md). Issue numbers such as #5 are Gi
 - **A crash in a shared eval writes no partial result file.** One server makes the
   replies of every condition of a run, so a crash before the grading ends writes no
   result file. Each reply is on disk as it comes (`<condition>.replies.jsonl`), and a
-  rerun makes only the missing ones. A server that dies during generation still makes
-  every reply in flight and every later one fail: those conditions are written with
-  their failures counted (`n_failed_inference` in the manifest), as one condition was on
-  the per-condition path. Their replies files stay, so deleting such a result file and
-  rerunning makes only the failed replies again.
+  rerun makes only the missing ones. Since 2026-10-12 a condition with a failed reply or
+  a failed grade gets no result file either, on both eval paths: its manifest says
+  `incomplete` with the failures counted, the stage exits with an error, so the runner
+  and a queue stop there, and a rerun makes only the missing replies. Up to then such a
+  condition was written as complete with its failures counted (`n_failed_inference`),
+  and the R1 and R2 eval manifests were written that way. A server that stops answering
+  gets no more requests once each request it held has failed (`ServerDown` in
+  `bodhi_lora/engine/vllm.py`), in every stage, so a hung eval server costs about two
+  request timeouts, not one timeout per request. A request too long for a server's
+  context is listed (`too_long_ids`) and skipped, as in the other stages.
 - **The eval stage prints scores to its log.** The no-interim-look rule
   (docs/ANALYSIS_PLAN.md section 2.5) therefore depends on the operator reading
   manifests, not logs.

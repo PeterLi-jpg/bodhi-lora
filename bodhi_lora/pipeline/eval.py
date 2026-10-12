@@ -34,7 +34,12 @@ A row with no rubric (a benchmark with rubric: none) gets no rubric grade: its s
 null and its criteria list is empty, so the dimensions and the text counts still apply.
 
 A non-empty output is never rewritten (a rerun after a crash skips finished conditions);
-an empty file counts as a crashed write and is replaced.
+an empty file counts as a crashed write and is replaced. A condition with a failed reply
+or a failed grade gets no output: its manifest says incomplete, with the failures
+counted, the stage exits with an error, and a rerun makes the condition again (on the
+shared path, only its missing replies). A request too long for a server's context fails
+the same way on every rerun, so it is listed in the manifest (too_long_ids) and skipped,
+as in the other stages.
 """
 from __future__ import annotations
 
@@ -56,7 +61,7 @@ from tqdm import tqdm
 from transformers import set_seed
 
 from bodhi_lora import manifest as mf
-from bodhi_lora.engine import make_engine
+from bodhi_lora.engine import ContextLengthError, make_engine
 from bodhi_lora.grading.rubric import Grader, grade_rubric
 from bodhi_lora.pipeline.context import StageContext, context_from_args, eval_ids_file, stage_parser
 from bodhi_lora.protocols import Decoding, Output, Protocol, build, decoding_for
@@ -286,19 +291,23 @@ def _traceback() -> str:
 
 
 def generate(jobs: list, work: list, engine_for: Callable, workers: int, desc: str,
-             on_reply: Optional[Callable] = None) -> tuple[dict, dict]:
+             on_reply: Optional[Callable] = None) -> tuple[dict, dict, dict]:
     """Pass 1: the replies to the (job, row) pairs of work, from one pool of client threads.
 
     engine_for(job) is what the job's protocol calls: the engine, or a route of a shared
     server to the job's weights. on_reply(job, reply) runs for each reply as it comes.
-    Returns the replies and the failures, by job key.
+    Returns the replies, the failures and the prompt ids too long for the context window,
+    by job key.
     """
     replies = {j.key: [] for j in jobs}
     failures = {j.key: [] for j in jobs}
+    too_long = {j.key: [] for j in jobs}
 
     def one(job, engine, row):
         try:
             return job, {"row": row, "out": job.proto.respond(engine, row.messages, job.decoding)}, None
+        except ContextLengthError:
+            return job, None, (row.prompt_id, None)
         except Exception:
             return job, None, (row.prompt_id, _traceback())
 
@@ -307,12 +316,12 @@ def generate(jobs: list, work: list, engine_for: Callable, workers: int, desc: s
         for fut in tqdm(as_completed(futures), total=len(futures), desc=desc):
             job, g, err = fut.result()
             if g is None:
-                failures[job.key].append(err)
+                (too_long[job.key].append(err[0]) if err[1] is None else failures[job.key].append(err))
                 continue
             replies[job.key].append(g)
             if on_reply is not None:
                 on_reply(job, g)
-    return replies, failures
+    return replies, failures, too_long
 
 
 def replies_file(job: Job) -> Path:
@@ -340,12 +349,14 @@ def saved_replies(job: Job) -> list:
     return list(kept.values())
 
 
-def grade_replies(jobs: list, replies: dict, engine, workers: int, desc: str) -> tuple[dict, dict]:
+def grade_replies(jobs: list, replies: dict, engine, workers: int, desc: str) -> tuple[dict, dict, dict]:
     """Pass 2: the evaluator's rubric grade of every reply, from one pool of client threads.
-    Returns the result rows (sorted by prompt id) and the failures, by job key."""
+    Returns the result rows (sorted by prompt id), the failures and the prompt ids too long
+    for the grader's context window, by job key."""
     grader = Grader(engine)
     results = {j.key: [] for j in jobs}
     failures = {j.key: [] for j in jobs}
+    too_long = {j.key: [] for j in jobs}
 
     def one(job, g):
         row, out = g["row"], g["out"]
@@ -372,6 +383,8 @@ def grade_replies(jobs: list, replies: dict, engine, workers: int, desc: str) ->
                 # format_parsed false marks a reply whose internal format did not parse.
                 "protocol_metadata": out.metadata,
             }, None
+        except ContextLengthError:
+            return job, None, (row.prompt_id, None)
         except Exception:
             return job, None, (row.prompt_id, _traceback())
 
@@ -379,10 +392,13 @@ def grade_replies(jobs: list, replies: dict, engine, workers: int, desc: str) ->
         futures = [pool.submit(one, j, g) for j in jobs for g in replies[j.key]]
         for fut in tqdm(as_completed(futures), total=len(futures), desc=desc):
             job, r, err = fut.result()
-            (results[job.key].append(r) if r else failures[job.key].append(err))
+            if r:
+                results[job.key].append(r)
+            else:
+                (too_long[job.key].append(err[0]) if err[1] is None else failures[job.key].append(err))
     for rows in results.values():
         rows.sort(key=lambda r: r["prompt_id"])
-    return results, failures
+    return results, failures, too_long
 
 
 def _print_failures(what: str, failures: list) -> None:
@@ -391,8 +407,16 @@ def _print_failures(what: str, failures: list) -> None:
 
 
 def write_outputs(ctx: StageContext, job: Job, results: list, n_generated: int, failed_inference: list,
-                  failed_grading: list, engines: dict, timer: Optional[mf.Timer], extra: dict) -> dict:
-    """The job's result file, in the form of the earlier result files, and its manifest."""
+                  failed_grading: list, too_long: list, engines: dict, timer: Optional[mf.Timer],
+                  extra: dict) -> dict:
+    """The job's result file, in the form of the earlier result files, and its manifest.
+
+    With a failed reply or grade the job is incomplete: no result file, so that nothing
+    reads a condition with rows missing as finished and a rerun makes it again, and a
+    manifest with status incomplete and the failures counted. Rows too long for a
+    server's context are listed and left out; they do not make the job incomplete.
+    """
+    complete = not failed_inference and not failed_grading
     ev = ctx.cell.eval
     proto_rec, adapter = job.proto_rec, job.adapter
     evaluator = ctx.reg.models[ctx.cell.grading.evaluator]
@@ -438,12 +462,14 @@ def write_outputs(ctx: StageContext, job: Job, results: list, n_generated: int, 
     }
     out_path = job.out_path
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = out_path.with_suffix(".part")
-    tmp.write_text(json.dumps(summary, indent=2))
-    tmp.replace(out_path)
+    if complete:
+        tmp = out_path.with_suffix(".part")
+        tmp.write_text(json.dumps(summary, indent=2))
+        tmp.replace(out_path)
     counts = {"n_examples": len(job.examples), "n_generated": n_generated,
               "n_failed_inference": len(failed_inference), "n_graded": len(results),
-              "n_failed_grading": len(failed_grading), "grader_parse_failures_total": parse_failures,
+              "n_failed_grading": len(failed_grading), "n_too_long": len(too_long),
+              "grader_parse_failures_total": parse_failures,
               "grader_rubric_items_total": items,
               "calls": sum(r["calls"] for r in results),
               "completion_tokens_total": sum(r["completion_tokens_total"] for r in results),
@@ -453,11 +479,22 @@ def write_outputs(ctx: StageContext, job: Job, results: list, n_generated: int, 
                        timer=timer, models={"policy": ctx.model, "grader": evaluator},
                        config={"condition": job.condition, "eval": ev.model_dump()},
                        engines=engines, adapter_dir=adapter, eval_ids=ids_file,
-                       outputs=[out_path], counts=counts, extra=extra)
+                       outputs=[out_path] if complete else [], counts=counts,
+                       extra={"status": "complete" if complete else "incomplete", **extra,
+                              "too_long_ids": sorted(too_long)})
+    if not complete:
+        print(f"eval: s{job.seed} {job.condition} incomplete: {len(failed_inference)} replies and "
+              f"{len(failed_grading)} grades failed; no result file", flush=True)
+        return counts
     mean = summary["mean"]
     print(f"eval: s{job.seed} {job.condition} score {mean if mean is None else round(mean, 4)} -> {out_path}",
           flush=True)
     return counts
+
+
+def incomplete(counts: dict) -> bool:
+    """A job that write_outputs left without a result file."""
+    return bool(counts["n_failed_inference"] or counts["n_failed_grading"])
 
 
 def run(ctx: StageContext, seed: int, condition: str) -> dict:
@@ -485,8 +522,9 @@ def run(ctx: StageContext, seed: int, condition: str) -> dict:
                          quantize=quantize, stub=ctx.stub, stub_reply=STUB_POLICY_REPLY,
                          log_path=ctx.log_path(f"vllm_eval_s{seed}.log"))
     with policy as eng:
-        replies, failed_inference = generate([job], [(job, row) for row in job.examples], lambda j: eng,
-                                             ev.serving.concurrency, f"{condition} [replies]")
+        replies, failed_inference, long_replies = generate([job], [(job, row) for row in job.examples],
+                                                           lambda j: eng, ev.serving.concurrency,
+                                                           f"{condition} [replies]")
     _print_failures("reply", failed_inference[job.key])
     # Some engines need a pause before the next one starts on the same accelerator.
     if ev.serving.drain_s and not ctx.stub:
@@ -497,12 +535,17 @@ def run(ctx: StageContext, seed: int, condition: str) -> dict:
                                 stub_reply=STUB_GRADER_REPLY,
                                 log_path=ctx.log_path(f"vllm_eval_grader_s{seed}.log"))
     with grader_engine as geng:
-        results, failed_grading = grade_replies([job], replies, geng, ev.serving.concurrency,
-                                                f"{condition} [grades]")
+        results, failed_grading, long_grades = grade_replies([job], replies, geng, ev.serving.concurrency,
+                                                             f"{condition} [grades]")
     _print_failures("grade", failed_grading[job.key])
-    return write_outputs(ctx, job, results[job.key], len(replies[job.key]), failed_inference[job.key],
-                         failed_grading[job.key], {"policy": policy.settings(), "grader": grader_engine.settings()},
-                         timer, {"status": "complete", "condition": condition})
+    counts = write_outputs(ctx, job, results[job.key], len(replies[job.key]), failed_inference[job.key],
+                           failed_grading[job.key], long_replies[job.key] + long_grades[job.key],
+                           {"policy": policy.settings(), "grader": grader_engine.settings()},
+                           timer, {"condition": condition})
+    if incomplete(counts):
+        raise SystemExit(f"eval s{seed} {condition} is incomplete ({counts['n_failed_inference']} replies, "
+                         f"{counts['n_failed_grading']} grades failed); run the stage again")
+    return counts
 
 
 def seed_invariant_ids(ctx: StageContext, seeds: list) -> bool:
@@ -581,12 +624,13 @@ def run_shared(ctx: StageContext, seeds: list) -> dict:
             fh.write(json.dumps({"prompt_id": g["row"].prompt_id, "out": asdict(g["out"])}) + "\n")
 
     replies, failed_inference = {j.key: [] for j in to_run}, {j.key: [] for j in to_run}
+    long_replies = {j.key: [] for j in to_run}
     if work:
         print(f"eval: {len(work)} replies to make, {sum(map(len, saved.values()))} kept from an earlier run",
               flush=True)
         with policy as eng:
-            replies, failed_inference = generate(to_run, work, lambda j: eng.route(routes[j.key]), workers,
-                                                 "replies", on_reply=keep)
+            replies, failed_inference, long_replies = generate(to_run, work, lambda j: eng.route(routes[j.key]),
+                                                               workers, "replies", on_reply=keep)
     for j in to_run:
         replies[j.key] = saved[j.key] + replies[j.key]
         _print_failures(f"s{j.seed} {j.condition} reply", failed_inference[j.key])
@@ -598,7 +642,7 @@ def run_shared(ctx: StageContext, seeds: list) -> dict:
                                 stub_reply=STUB_GRADER_REPLY,
                                 log_path=ctx.log_path(f"vllm_eval_grader_s{label}.log"))
     with grader_engine as geng:
-        results, failed_grading = grade_replies(order, replies, geng, workers, "grades")
+        results, failed_grading, long_grades = grade_replies(order, replies, geng, workers, "grades")
     for j in to_run:
         _print_failures(f"s{j.seed} {j.condition} grade", failed_grading[j.key])
 
@@ -614,31 +658,37 @@ def run_shared(ctx: StageContext, seeds: list) -> dict:
     counts, outputs = {}, []
     for j in jobs:
         src = copied_from.get(j.key, j.key)
-        extra = {"status": "complete", "condition": j.condition,
-                 "shared_server": {**shared, "route": routes[src] or ctx.model.hf_id}}
+        extra = {"condition": j.condition, "shared_server": {**shared, "route": routes[src] or ctx.model.hf_id}}
         if src in once:
             # The replies and grades in this file were made once, with the seed named
             # here, and every seed listed has the same rows (docs/ANALYSIS_PLAN.md 2.1).
             extra["base_evaluated_once"] = {"evaluated_with_seed": src[0], "written_for_seeds": once[src]}
         # No time here: the run's time is in the run manifest, once for all its files.
         counts[j.key] = write_outputs(ctx, j, results[src], len(replies[src]), failed_inference[src],
-                                      failed_grading[src], engines, None, extra)
-        outputs.append(j.out_path)
-    # Kept while replies failed: delete the result file and rerun, and only those replies
-    # are made again.
+                                      failed_grading[src], long_replies[src] + long_grades[src], engines, None,
+                                      extra)
+        if not incomplete(counts[j.key]):
+            outputs.append(j.out_path)
+    # Kept while the job is incomplete, so a rerun makes only the replies that are missing.
     for j in to_run:
-        if not failed_inference[j.key]:
+        if not incomplete(counts[j.key]):
             replies_file(j).unlink(missing_ok=True)
+    unfinished = [f"s{s} {c}" for (s, c) in counts if incomplete(counts[(s, c)])]
     # What the servers did: the conditions that ran, not the files written from them.
     totals = {k: sum(counts[j.key][k] for j in to_run)
               for k in ("n_examples", "n_generated", "n_graded", "calls", "completion_tokens_total")}
     ctx.write_manifest(run_manifest.parent, "eval", name=run_manifest.name, timer=timer,
                        models={"policy": ctx.model, "grader": evaluator},
                        config={"seeds": list(seeds), "eval": ev.model_dump()}, engines=engines,
-                       outputs=outputs, counts={**totals, "n_files": len(jobs), "n_conditions_run": len(to_run)},
-                       extra={"status": "complete", "shared_server": shared,
+                       outputs=outputs, counts={**totals, "n_files": len(outputs), "n_conditions_run": len(to_run),
+                                                "n_incomplete": len(unfinished)},
+                       extra={"status": "incomplete" if unfinished else "complete", "shared_server": shared,
+                              "incomplete": unfinished,
                               "base_evaluated_once": [{"condition": src[1], "evaluated_with_seed": src[0],
                                                        "written_for_seeds": s} for src, s in once.items()]})
+    if unfinished:
+        raise SystemExit(f"eval: {len(unfinished)} of {len(jobs)} conditions are incomplete ({', '.join(unfinished)}): "
+                         f"replies or grades failed. Run the stage again; it makes only the missing replies.")
     return {f"s{s}/{c}": v for (s, c), v in counts.items()}
 
 
