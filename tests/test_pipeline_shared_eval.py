@@ -114,7 +114,9 @@ def test_a_rerun_skips_finished_files_and_serves_only_what_is_left(reg, tmp_path
     eval_stage.run_shared(ctx, [1, 2])
     assert ctx.paths.eval_file(1, "lora").read_text() == first
     policy = engines[0]
-    assert set(policy.lora_modules) == {"adapter-s2"}
+    # Seed 1 has nothing left, but the server of seeds 1 and 2 holds both adapters.
+    assert set(policy.lora_modules) == {"adapter-s1", "adapter-s2"}
+    assert {r for r in policy.routes if r != policy.model} == {"adapter-s2"}
     engines.clear()
     assert eval_stage.run_shared(ctx, [1, 2]) == {} and engines == []
     with pytest.raises(SystemExit, match="not seeds"):
@@ -343,3 +345,24 @@ def test_the_per_condition_path_stops_on_a_failed_reply_too(reg, tmp_path, monke
         eval_stage.run(ctx, 1, "lora")
     assert _manifest(ctx, 1, "lora")["status"] == "incomplete"
     assert not ctx.paths.eval_file(1, "lora").exists()
+
+
+def test_a_rerun_of_base_files_only_uses_the_server_of_the_first_run(reg, tmp_path, engines):
+    """With only base conditions left (a base file deleted, or a crash while the files
+    were written), the server still holds every adapter of the run and stays eager, so a
+    4-bit base never runs with CUDA graphs here and every base file of the cell comes
+    from one serving setup."""
+    ctx = _ctx(reg, tmp_path)
+    eval_stage.run_shared(ctx, [1, 2])
+    first = engines[0].settings()
+    base = [c for c in ctx.cell.eval.conditions if parse_condition(c)[0] == "base"]
+    for c in base:
+        ctx.paths.eval_file(2, c).unlink()
+    engines.clear()
+    eval_stage.run_shared(ctx, [1, 2])
+    policy = engines[0]
+    assert policy.settings() == first
+    assert policy.settings()["enforce_eager"] is True and set(policy.lora_modules) == {"adapter-s1", "adapter-s2"}
+    assert set(policy.routes) == {policy.model}
+    for c in base:
+        assert _manifest(ctx, 2, c)["engines"]["policy"] == first

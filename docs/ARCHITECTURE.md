@@ -498,7 +498,8 @@ checked against the vLLM 0.10.2 docs that the code comments name; the GPU host r
 vLLM 0.10.2.
 
 - **CUDA graphs without an adapter.** A server with no adapter (traces, filter, the
-  graders and judges, the probe, an eval of base conditions only) captures CUDA graphs.
+  graders and judges, the probe, the eval of a cell with no `lora` condition, and a base
+  condition on the per-condition path) captures CUDA graphs.
   A server with an adapter stays in eager mode, because graph capture with LoRA took
   about 2 hours in vLLM 0.9. The bench stays eager (`bench.enforce_eager`), so its
   conditions compare like for like. `serving.enforce_eager` overrides the rule per block.
@@ -506,7 +507,9 @@ vLLM 0.10.2.
   `bodhi_lora/pipeline/eval.py`) starts one server with the base in the cell's base
   precision and each seed's adapter as a named LoRA module (`adapter-s<seed>`), with
   `--max-loras` set to the number of adapters and `--max-lora-rank` to the train block's
-  rank. Every condition of every seed goes through it, each request routed by its model
+  rank. It holds every seed's adapter whenever the cell has a `lora` condition, also on
+  a rerun with only base files left, so the serving of a cell's files does not depend
+  on what a crash left. Every condition of every seed goes through it, each request routed by its model
   name, from one pool of client threads; then one grader server grades every reply.
   The files and their fields per seed and condition are those of the per-condition path
   (`tests/test_pipeline_shared_eval.py` compares them). Each condition's manifest records

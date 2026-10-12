@@ -278,10 +278,9 @@ def finished(path: Path) -> bool:
     return path.is_file() and path.stat().st_size > 0
 
 
-def check_adapters(ctx: StageContext, jobs: list) -> None:
-    """Stop before any server starts when an adapter that a job needs is missing."""
-    missing = sorted({str(j.adapter) for j in jobs
-                      if j.adapter is not None and not (j.adapter / "adapter_config.json").is_file()})
+def check_adapters(ctx: StageContext, adapters) -> None:
+    """Stop before any server starts when an adapter folder it will load is missing."""
+    missing = sorted({str(a) for a in adapters if a is not None and not (a / "adapter_config.json").is_file()})
     if missing and not ctx.stub:
         raise SystemExit(f"no adapter in {', '.join(missing)}; run the train stage first")
 
@@ -513,7 +512,7 @@ def run(ctx: StageContext, seed: int, condition: str) -> dict:
     set_seed(seed)
 
     job = make_job(ctx, seed, condition)
-    check_adapters(ctx, [job])
+    check_adapters(ctx, [job.adapter])
     quantize = ctx.quantized_base()
     print(f"eval: {condition} on {len(job.examples)} prompts"
           f"{', 4-bit base' if quantize else ''}{' [stub]' if ctx.stub else ''}", flush=True)
@@ -593,8 +592,13 @@ def run_shared(ctx: StageContext, seeds: list) -> dict:
             else:
                 first[j.condition] = j
     to_run = [j for j in jobs if j.key not in copied_from]
-    check_adapters(ctx, to_run)
-    adapters = {adapter_name(j.seed): j.adapter for j in to_run if j.adapter is not None}
+    # The server holds the adapter of every seed of the run when the cell has a lora
+    # condition, whatever is left to run. Its settings (eager mode, --max-loras) then do
+    # not depend on which files a crash or a deletion left missing, so the base files of a
+    # rerun come from the same serving as the first run's.
+    has_lora = any(ctx.condition_protocol(c)[0] == "lora" for c in ev.conditions)
+    adapters = {adapter_name(s): ctx.adapter_dir(s) for s in seeds} if has_lora else {}
+    check_adapters(ctx, adapters.values())
     quantize = ctx.quantized_base()
     # Enough requests in flight to fill every scheduler slot (max_num_seqs) the record
     # gives the server, or the record's client threads when that is more.
