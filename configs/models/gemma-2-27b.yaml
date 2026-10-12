@@ -8,5 +8,10 @@ domain: general
 params_b: 27
 chat_template:
   system_role: false
+# Gemma 2 caps its attention logits with tanh (attn_logit_softcapping 50 in its config).
+# On an H100 vLLM 0.10.2 picks FlashAttention 3, which has no softcapping, and the first
+# request fails; version 2 has it. Set for this model's server only (2026-10-11, R1).
+serving_env:
+  VLLM_FLASH_ATTN_VERSION: "2"
 gated: true
 license: gemma

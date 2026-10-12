@@ -33,7 +33,8 @@ def make_engine(model: ModelConfig, *, serving: Serving, adapter: Optional[Path]
     settings = dict(revision=model.revision, max_model_len=serving.max_model_len,
                     max_num_seqs=serving.max_num_seqs, request_timeout=serving.request_timeout_s,
                     dtype=model.dtype, quantization="bitsandbytes" if quantize else None,
-                    lora_path=str(adapter) if adapter else None, enforce_eager=enforce_eager)
+                    lora_path=str(adapter) if adapter else None, enforce_eager=enforce_eager,
+                    env=dict(model.serving_env))
     if stub:
         return StubEngine(model.hf_id, reply=stub_reply, **settings)
     return VLLMEngine(model.hf_id, log_path=str(log_path) if log_path else None, **settings)

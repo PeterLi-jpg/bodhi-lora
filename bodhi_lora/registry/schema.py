@@ -125,6 +125,12 @@ class ModelConfig(_Record):
     # QLoRA training is a cell setting (train.quantization), not this field.
     quantization: Optional[Literal["4bit", "8bit"]] = None
     chat_template: ChatTemplate = Field(default_factory=ChatTemplate)
+    # vLLM environment variables that this model's server needs, set for its server only
+    # (bodhi_lora/engine/vllm.py, VLLMEngine.server_env). Example: Gemma 2 needs
+    # VLLM_FLASH_ATTN_VERSION "2" on an H100, because the FlashAttention 3 build that
+    # vLLM 0.10.2 picks there has no tanh softcapping.
+    serving_env: dict[Annotated[str, StringConstraints(pattern=r"^VLLM_[A-Z0-9_]+$")], str] = Field(
+        default_factory=dict)
     gated: bool = False
     license: str
     notes: str = ""

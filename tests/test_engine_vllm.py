@@ -69,6 +69,50 @@ def test_cuda_graphs_run_unless_an_adapter_is_loaded_or_a_record_says_otherwise(
                          lora_path=str(adapter)).enforce_eager is True
 
 
+def test_a_model_records_serving_env_reaches_its_server_only(monkeypatch, tmp_path):
+    """Gemma 2 needs FlashAttention 2 on an H100 (run notes 2026-10-11, R1). The record's
+    serving_env goes into that server's process and its manifest settings, not into this
+    process and not into another model's server."""
+    from bodhi_lora.paths import CONFIGS_DIR
+    from bodhi_lora.registry import load_registry
+
+    monkeypatch.delenv("VLLM_FLASH_ATTN_VERSION", raising=False)
+    reg = load_registry(CONFIGS_DIR)
+    for gemma2 in ("gemma-2-27b", "gemma-2-9b"):
+        assert reg.models[gemma2].serving_env == {"VLLM_FLASH_ATTN_VERSION": "2"}
+    judge = make_engine(reg.models["gemma-2-27b"], serving=SERVING, log_path=tmp_path / "judge.log")
+    assert judge.server_env()["VLLM_FLASH_ATTN_VERSION"] == "2"
+    assert judge.settings()["env"] == {"VLLM_FLASH_ATTN_VERSION": "2"}
+    assert make_engine(reg.models["gemma-2-27b"], serving=SERVING, stub=True).settings()["env"] == {
+        "VLLM_FLASH_ATTN_VERSION": "2"}
+    assert "VLLM_FLASH_ATTN_VERSION" not in make_engine(MODEL, serving=SERVING).server_env()
+    assert "VLLM_FLASH_ATTN_VERSION" not in make_engine(reg.models["medgemma-27b-text"], serving=SERVING).server_env()
+    # The record wins over a launcher that set another value for every server.
+    monkeypatch.setenv("VLLM_FLASH_ATTN_VERSION", "3")
+    assert judge.server_env()["VLLM_FLASH_ATTN_VERSION"] == "2"
+    monkeypatch.delenv("VLLM_FLASH_ATTN_VERSION")
+
+    started = {}
+
+    class FakePopen:
+        pid = 12345
+
+        def __init__(self, args, env=None, **kwargs):
+            started.update(args=args, env=env)
+
+    monkeypatch.setattr(ve.subprocess, "Popen", FakePopen)
+    monkeypatch.setattr(judge, "_wait_ready", lambda: None)
+    judge.start()
+    judge._proc = None
+    assert started["env"]["VLLM_FLASH_ATTN_VERSION"] == "2" and started["args"] == judge.serve_args()
+    assert "VLLM_FLASH_ATTN_VERSION" not in ve.os.environ
+
+
+def test_serving_env_takes_only_vllm_variables():
+    with pytest.raises(ValueError):
+        MODEL.model_validate({**MODEL.model_dump(), "serving_env": {"CUDA_VISIBLE_DEVICES": "0"}})
+
+
 def test_unknown_quantization_is_refused():
     with pytest.raises(ValueError):
         ve.VLLMEngine("m", max_model_len=1, max_num_seqs=1, request_timeout=1, quantization="awq")

@@ -11,5 +11,11 @@ params_b: 9
 chat_template:
   # The Gemma 2 template raises on a system message, as gemma-2-27b's does.
   system_role: false
+# Gemma 2 caps its attention logits with tanh (attn_logit_softcapping 50 in its config).
+# On an H100 vLLM 0.10.2 picks FlashAttention 3, which has no softcapping, and the first
+# request fails; version 2 has it (found on gemma-2-27b in R1, 2026-10-11). Set for
+# this model's server only.
+serving_env:
+  VLLM_FLASH_ATTN_VERSION: "2"
 gated: true
 license: gemma

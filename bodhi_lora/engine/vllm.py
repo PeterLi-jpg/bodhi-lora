@@ -100,6 +100,7 @@ class VLLMEngine:
         port: Optional[int] = None,
         tensor_parallel: Optional[int] = None,
         log_path: Optional[str] = None,
+        env: Optional[dict] = None,
     ):
         if quantization not in QUANTIZATIONS:
             raise ValueError(f"quantization={quantization!r}: use None or 'bitsandbytes'")
@@ -129,6 +130,9 @@ class VLLMEngine:
         self.port = port if port is not None else env_port
         self.tensor_parallel = tensor_parallel if tensor_parallel is not None else env_tp
         self.log_path = log_path or os.path.expanduser(f"~/vllm_serve_{self.port}.log")
+        # Environment variables this model's server needs (the model record's
+        # serving_env), set in the server process only, never in this one.
+        self.env = dict(env or {})
         self._proc: Optional[subprocess.Popen] = None
 
     # -- the server ---------------------------------------------------------------
@@ -169,17 +173,27 @@ class VLLMEngine:
             "enforce_eager": self.enforce_eager,
             "request_timeout_s": self.request_timeout,
             "lora_path": self.lora_path,
+            "env": self.env,
         }
+
+    def server_env(self) -> dict:
+        """The environment of the server process: this process's, a quieter vLLM log, and
+        last the model record's serving_env, so the record wins for this server only.
+
+        Example: VLLM_FLASH_ATTN_VERSION=2 for Gemma 2. On an H100 vLLM 0.10.2 picks
+        FlashAttention 3, which has no tanh softcapping; the variable forces version 2
+        (get_flash_attn_version in vllm/attention/utils/fa_utils.py at tag v0.10.2).
+        """
+        return {**os.environ, "VLLM_LOGGING_LEVEL": "WARNING", **self.env}
 
     def start(self) -> "VLLMEngine":
         print(f"Starting vllm serve: {self.model} (TP={self.tensor_parallel}, port={self.port}"
               f"{', adapter' if self.lora_path else ''})", flush=True)
         # vLLM is chatty; its log goes to a file, and _wait_ready reports progress.
         log_fh = open(self.log_path, "w")
-        env = {**os.environ, "VLLM_LOGGING_LEVEL": "WARNING"}
         # A new process group, so stop() also ends the engine's worker processes.
         self._proc = subprocess.Popen(self.serve_args(), stdout=log_fh, stderr=subprocess.STDOUT,
-                                      env=env, preexec_fn=os.setsid)
+                                      env=self.server_env(), preexec_fn=os.setsid)
         print(f"  pid={self._proc.pid}, log={self.log_path}", flush=True)
         self._wait_ready()
         return self
