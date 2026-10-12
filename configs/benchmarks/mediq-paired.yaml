@@ -16,12 +16,7 @@ source:
   files:
     dev:
       url: "https://raw.githubusercontent.com/stellalisy/mediQ/63acb4ccbbc082a3a7895b79d27f51204f6f9aa7/data/all_dev_good.jsonl"
-      sha256: null
-      unpinned_reason: >-
-        Not downloaded when the record was written, because no download ran without the first
-        author's go-ahead. The URL names commit 63acb4c, the last commit to touch the file; there
-        the GitHub API gives git blob 77b50e4b685ae5738b0facadad8b73deb26751ec and 2,585,822
-        bytes. Pin the sha256 that python -m bodhi_lora fetch mediq-paired prints.
+      sha256: 3bfc7090d060dd8d11e4237344ed78846707faab433a84d078191627ad3c9526
 license: CC BY 4.0 (the MediQ repository); the vignettes come from MedQA (Jin et al., 2021)
 audience: clinician
 task: single_best_answer

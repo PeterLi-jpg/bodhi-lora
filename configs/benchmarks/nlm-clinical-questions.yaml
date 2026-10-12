@@ -16,20 +16,16 @@ source:
   files:
     ia:
       url: "https://data.lhncbc.nlm.nih.gov/public/Clinical-Questions/Collection-IA-1095-Questions.xml"
-      sha256: null
-      unpinned_reason: &unread Not downloaded when the record was written, because no download ran without the first author's go-ahead. Pin the sha256 that python -m bodhi_lora fetch nlm-clinical-questions prints.
+      sha256: 0245f98996e14defbf7a56e1a80d5b6ce9a1e6bd2a8cf6cc4cae8a3ee9ef0fb0
     ib:
       url: "https://data.lhncbc.nlm.nih.gov/public/Clinical-Questions/Collection-IB-1892-Questions.xml"
-      sha256: null
-      unpinned_reason: *unread
+      sha256: b4da5498aef345f19594a197e6451c6d43fa64c948a7d82fb4152bfcc38892d1
     ic:
       url: "https://data.lhncbc.nlm.nih.gov/public/Clinical-Questions/Collection-IC-1062-Questions.xml"
-      sha256: null
-      unpinned_reason: *unread
+      sha256: df8e2a6d46a7b736939792c4590107fc06a5a0c4a82490b68d4d73f0b394629b
     id:
       url: "https://data.lhncbc.nlm.nih.gov/public/Clinical-Questions/Collection-ID-605-Questions.xml"
-      sha256: null
-      unpinned_reason: *unread
+      sha256: 58ab04fb32277570828c3200cbbcda1a6df3549c3208624c006cfb38794ed526
 license: Open Database License per catalog.data.gov; check the NLM terms page
 audience: clinician
 task: open_ended
