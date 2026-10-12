@@ -1,13 +1,14 @@
 # Run plan
 
-**Needs the first author's go-ahead.** No GPU job runs until he says so (DECISIONS.md,
-2026-10-08). Nothing in this file has run. Dated 2026-10-08. On 2026-10-09 sections 3
+**The first author gave the GPU go-ahead on 2026-10-11** (BLOCKED.md item 1). Before
+that no GPU job ran (DECISIONS.md, 2026-10-08). Dated 2026-10-08. On 2026-10-09 sections 3
 to 6 were updated to cost the cell records as they stand. On 2026-10-10 R17 was added,
 the judge classifier that replaces the withdrawn keyword rules, R11 lost the MedQuAD
 probe, which cannot run, and the MedQuAD split of R15 began to leave out repeated
 questions, so that its dry run passes the leakage gate. On 2026-10-11 the first author
 adopted the analysis plan, R17 got its stage (`classify`), dry runs stopped downloading
-anything, and section 4.1 records the dry run of every run.
+anything, and section 4.1 records the dry run of every run. On 2026-10-12 R1 was done,
+R2 ran, and section 4.2 put R3 to R7 in one queue behind it on GPU 3.
 
 This is the ordered list of GPU work from [EXPERIMENTS.md](EXPERIMENTS.md), with the
 command, the cells, the seeds, an H100-hour estimate and its basis for each run, and the
@@ -40,7 +41,9 @@ section 5.
 7. The first author chooses where it runs: the shared H100 host or a paid cloud. Not
    Modal (DECISIONS.md, 2026-10-08). On the shared host, claim the cards with the group's
    lease file first; the runner does not. The repo's copy of the lease tool went on
-   2026-10-11, and `7e02348:scripts/gpu_lease.sh` has it.
+   2026-10-11, and `7e02348:scripts/gpu_lease.sh` has it. `scripts/gpu_queue.sh` claims
+   a card with the host's lease tool for a whole queue of commands and releases it at
+   the end ([GPU_QUEUE.md](GPU_QUEUE.md)).
 
 ## 2. How a cell runs
 
@@ -276,6 +279,80 @@ grade step. The labelled cells evaluate 17 condition and seed pairs instead of 2
 `base` and `base+bodhi` run once. R3 and the paired cells of R5 and R7 print their GPU
 commands and stop at the MediQ fetch: the pinned MediQ file is on the GPU host, not here.
 
+### 4.2 R3 to R7 on GPU 3: the queue (2026-10-12)
+
+R1 is done and R2 runs on GPU 3 of the shared host. R3 to R7 follow on the same card, one
+command after another, from `configs/queues/tier_a.txt`. `scripts/gpu_queue.sh` runs it
+([GPU_QUEUE.md](GPU_QUEUE.md)): it waits for R2's tmux session to end, claims GPU 3 in
+the group's lease file, switches the host checkout to the commit of the queue, runs the
+lines in order, stops at the first that fails, and releases the card at the end. Each
+line runs every stage of its record for every seed, and the runner skips a stage whose
+manifest is complete, so a second start goes on where the first stopped.
+
+```bash
+# configs/queues/tier_a.txt
+# R3
+python -m bodhi_lora run mediq-paired__mistral-small-24b__bodhi --gpus 3
+# R4
+python -m bodhi_lora run healthbench__mistral-small-24b__bodhi__labelled --gpus 3
+# R5, with its judge medgemma-27b-text and its bench
+python -m bodhi_lora run healthbench__mistral-small-24b__ask-first --gpus 3
+python -m bodhi_lora run mediq-paired__mistral-small-24b__ask-first --gpus 3
+# R6: --judges picks the judge of this plan (the Med42-8B records list two)
+python -m bodhi_lora run healthbench__mistral-small-24b__bodhi__2026-07 --stages grade --judges medgemma-27b-text --gpus 3
+python -m bodhi_lora run chatdoctor__mistral-small-24b__bodhi__2026-07 --stages grade --judges medgemma-27b-text --gpus 3
+python -m bodhi_lora run medquad__mistral-small-24b__bodhi__2026-07 --stages grade --judges medgemma-27b-text --gpus 3
+python -m bodhi_lora run healthbench__biomistral-7b__bodhi__2026-07 --stages grade --judges medgemma-27b-text --gpus 3
+python -m bodhi_lora run healthbench__med42-8b__bodhi__2026-07 --stages grade --judges medgemma-27b-text --gpus 3
+python -m bodhi_lora run chatdoctor__med42-8b__bodhi__2026-07 --stages grade --judges medgemma-27b-text --gpus 3
+python -m bodhi_lora run healthbench__medgemma-27b-text__bodhi__2026-05 --stages grade --judges phi-4 --gpus 3
+# R7, with its judge phi-4 and its bench: off (#) until BLOCKED.md item 1, point 1
+# python -m bodhi_lora run healthbench__medgemma-27b-text__bodhi --gpus 3
+# python -m bodhi_lora run healthbench__medgemma-27b-text__bodhi__labelled --gpus 3
+# python -m bodhi_lora run mediq-paired__medgemma-27b-text__bodhi --gpus 3
+```
+
+R7 waits for the first author's answer on the 4,096-token pair (BLOCKED.md item 1, point
+1); R3 to R6 do not. If the answer comes before R6 ends, R7 can follow with no gap
+(GPU_QUEUE.md section 6). Two flags of the queue meet the host checks of section 4.3:
+`--allow-untracked results/` lets the switch pass the untracked outputs of R1 and R2
+(item 2), and `--keep-local results/healthbench__medgemma-27b-text__bodhi__2026-05`
+keeps the stored files of that cell, which the switch would delete, for R6 (item 4).
+
+**Schedule.** On one card the runs follow each other, so the H100-hours of section 4 are
+also hours on the clock. The serving of 2026-10-12 (ARCHITECTURE.md section 4.2) removes
+two costs that section 4 counts, and the last column takes them off. Both columns are
+estimates. The manifests of R3 replace them.
+
+| Order | Run | Lines | Section 4, H100-hours | Estimate with the serving of 2026-10-12 |
+|---|---|---|---|---|
+| 1 | R3 | 1 | 9.9 to 16.3 | 8.8 to 15.2 |
+| 2 | R4 | 1 | 21.0 to 36.3 | 17.5 to 31.1 |
+| 3 | R5: both cells, the judge and the bench | 2 | 19.7 to 30.7 | 18.3 to 29.3 |
+| 4 | R6 | 7 | 22.4 | 22.4 |
+| | R3 to R6 | 11 | 73.0 to 105.7 (3.0 to 4.4 days) | 67.0 to 98.1 (2.8 to 4.1 days) |
+| 5 | R7: three cells, the judge and the bench | 3 | 54.9 to 107.7 | 48.7 to 98.5 |
+| | R3 to R7 | 14 | 127.9 to 213.4 (5.3 to 8.9 days) | 115.8 to 196.6 (4.8 to 8.2 days) |
+
+The two costs, by the measured times of section 3.1:
+
+- **vLLM starts.** Section 4 counts about 1.9 minutes of starts for each condition of
+  each seed. The shared eval starts one policy server and one grader server for all
+  seeds of a cell. That saves (conditions x 5 - 1) x 1.9 minutes per cell: 1.1 hours in
+  R3, 1.4 in R5 and 3.2 in R7.
+- **Base once.** The seeds of a labelled cell share their prompts, so `base` and
+  `base+bodhi` make their replies and rubric grades once, not five times. That saves
+  four fifths of their inference and rubric time at 775 prompts per seed: 2.8 to 4.4
+  hours in R4 with its vLLM starts on top, and 2.9 to 6.0 in the labelled cell of R7 (the
+  high figures double the inference, as A3 does; R7 also scales it by A5). The other
+  cells draw their prompts per seed, so their base conditions still run for each seed.
+
+Not in the estimate, because nothing measured them: CUDA graphs on the servers without an
+adapter (traces, filter, graders, and the judges, which are all of R6), the tail of the
+batch, which now comes once per eval step and not once per condition and seed, and the
+speed of one server with five adapters against one with one adapter. The batch sizes are
+those of the records; section 4.3 lists a change to them as the first author's choice.
+
 ### 4.3 Readiness of R3 to R7 on GPU 3 (2026-10-12)
 
 A check that reads and dry-runs only, at commit c91d791, for the queue that runs R3 to R7
@@ -349,7 +426,8 @@ Before the queue starts:
    checkout is at 854761f, the old id of 7e02348. R1 and R2 write files of the kinds that
    git tracks (manifests, `cell.yaml`, id lists, adapter configs, trainer states), and no
    commit holds them yet, so `git status` on the host lists them as untracked. A checkout
-   switch that requires a clean tree stops on them.
+   switch that requires a clean tree stops on them; the queue passes them with
+   `--allow-untracked results/` (section 4.2).
 3. The host's `HF_TOKEN` can read `google/medgemma-27b-text-it` at the revision above.
 4. The stored eval files (`seed_<n>/eval/<condition>.json`) of five recorded cells are at
    the same paths on the host: the three Mistral-Small-24B cells of 2026-07 and the
@@ -357,8 +435,9 @@ Before the queue starts:
    ignores them, so a checkout does not bring them. The two Med42-8B cells went there for
    R1. The 2026-05 files are on the host now, because commit 854761f tracks them, but the
    switch to the new code deletes them: the new commits no longer track the 20 eval files
-   and 5 grade files of that cell (decision O2). Copy them back after the switch, or R6's
-   last cell stops on its first missing file.
+   and 5 grade files of that cell (decision O2). The queue keeps them across the switch
+   with `--keep-local results/healthbench__medgemma-27b-text__bodhi__2026-05` (section
+   4.2). Without it, R6's last cell stops on its first missing file.
 5. `data/raw/medquad/rows.jsonl` is on the host for R6's MedQuAD cell. If it is not, the
    GPU run builds it from `lavita/MedQuAD` at its pinned revision, which is a download.
    The ChatDoctor rows are there since R1.

@@ -1,0 +1,36 @@
+# Tier A after R2: R3 to R7 on GPU 3 of the shared host, in the order of
+# docs/RUN_PLAN.md section 4.2, which lists the same lines. scripts/gpu_queue.sh runs
+# them one after another and stops at the first that fails (docs/GPU_QUEUE.md).
+# A line without --stages runs every stage of its record for every seed. The runner
+# skips a stage whose manifest is complete, so a rerun goes on where the last run
+# stopped.
+
+# R3: the MediQ paired probe on the R2 adapters. Eval only, no judge.
+python -m bodhi_lora run mediq-paired__mistral-small-24b__bodhi --gpus 3
+
+# R4: the labelled HealthBench prompts on the R2 adapters. Eval only, no judge.
+python -m bodhi_lora run healthbench__mistral-small-24b__bodhi__labelled --gpus 3
+
+# R5: the ask-first protocol (train, eval, its judge medgemma-27b-text, the bench),
+# then its MediQ paired cell on those adapters.
+python -m bodhi_lora run healthbench__mistral-small-24b__ask-first --gpus 3
+python -m bodhi_lora run mediq-paired__mistral-small-24b__ask-first --gpus 3
+
+# R6: the judge medgemma-27b-text on six cells of 2026-07, and phi-4 on the 2026-05
+# cell. The Med42-8B records also list gemma-2-27b (R1), so --judges picks the judge.
+python -m bodhi_lora run healthbench__mistral-small-24b__bodhi__2026-07 --stages grade --judges medgemma-27b-text --gpus 3
+python -m bodhi_lora run chatdoctor__mistral-small-24b__bodhi__2026-07 --stages grade --judges medgemma-27b-text --gpus 3
+python -m bodhi_lora run medquad__mistral-small-24b__bodhi__2026-07 --stages grade --judges medgemma-27b-text --gpus 3
+python -m bodhi_lora run healthbench__biomistral-7b__bodhi__2026-07 --stages grade --judges medgemma-27b-text --gpus 3
+python -m bodhi_lora run healthbench__med42-8b__bodhi__2026-07 --stages grade --judges medgemma-27b-text --gpus 3
+python -m bodhi_lora run chatdoctor__med42-8b__bodhi__2026-07 --stages grade --judges medgemma-27b-text --gpus 3
+python -m bodhi_lora run healthbench__medgemma-27b-text__bodhi__2026-05 --stages grade --judges phi-4 --gpus 3
+
+# R7: MedGemma-27B with QLoRA (train, eval, its judge phi-4, the bench), then its
+# labelled and MediQ paired cells on those adapters. R7 waits for the first author's
+# answer on the 4,096-token pair (docs/BLOCKED.md item 1), so its lines start with #
+# and the queue skips them. After the answer, remove the # from the three lines,
+# commit, and run the queue again at that commit (docs/GPU_QUEUE.md, section 6).
+# python -m bodhi_lora run healthbench__medgemma-27b-text__bodhi --gpus 3
+# python -m bodhi_lora run healthbench__medgemma-27b-text__bodhi__labelled --gpus 3
+# python -m bodhi_lora run mediq-paired__medgemma-27b-text__bodhi --gpus 3

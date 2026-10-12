@@ -3,19 +3,24 @@
 Each test runs the script with bash, with a fake lease tool, a fake tmux and a fake
 nvidia-smi first on PATH, and small shell commands as the queue. One test runs the
 node's lease tool itself, from the commit that last had it, to check the lease file
-format the script reads.
+format the script reads. The last tests check that configs/queues/tier_a.txt holds
+the commands of docs/RUN_PLAN.md section 4.2 and that each names a real record.
 """
 import os
 import re
+import shlex
 import signal
 import subprocess
 import time
 from pathlib import Path
 
 import pytest
+import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
 QUEUE_SH = ROOT / "scripts" / "gpu_queue.sh"
+TIER_A = ROOT / "configs" / "queues" / "tier_a.txt"
+RUN_PLAN = ROOT / "docs" / "RUN_PLAN.md"
 # The last commit with the node's lease tool in the repo (docs/RUN_PLAN.md section 1).
 LEASE_TOOL_AT = "7e02348:scripts/gpu_lease.sh"
 GPU = "3"
@@ -490,3 +495,38 @@ def test_switch_stops_on_a_commit_the_bundle_does_not_have(node, repos):
     assert proc.returncode == 5
     assert repos.head() == repos.c1 and repos.tool() == "node copy\n"
 
+
+# -- the tier A queue ------------------------------------------------------------------
+
+def _run_lines(text: str) -> list:
+    """(enabled, command) for each line that runs the pipeline; a line after # is off."""
+    found = []
+    for line in text.splitlines():
+        if "python -m bodhi_lora run" in line:
+            stripped = line.strip()
+            found.append((not stripped.startswith("#"), stripped.lstrip("# ").strip()))
+    return found
+
+
+def _plan_block() -> str:
+    """The fenced block of RUN_PLAN.md whose first line names the queue file."""
+    blocks = re.findall(r"```bash\n(.*?)```", RUN_PLAN.read_text(), flags=re.S)
+    named = [b for b in blocks if b.splitlines()[0].strip() == "# configs/queues/tier_a.txt"]
+    assert len(named) == 1, "RUN_PLAN.md needs one block that starts with # configs/queues/tier_a.txt"
+    return named[0]
+
+
+def test_tier_a_queue_holds_the_commands_of_the_run_plan():
+    assert _run_lines(TIER_A.read_text()) == _run_lines(_plan_block())
+
+
+def test_tier_a_commands_name_real_records_and_run_on_gpu_3():
+    for _, command in _run_lines(TIER_A.read_text()):
+        argv = shlex.split(command)
+        assert argv[:4] == ["python", "-m", "bodhi_lora", "run"]
+        record = ROOT / "configs" / "cells" / f"{argv[4]}.yaml"
+        assert record.is_file(), command
+        assert argv[argv.index("--gpus") + 1] == GPU, command
+        if "--judges" in argv:
+            listed = yaml.safe_load(record.read_text())["grading"]["judges"]
+            assert set(argv[argv.index("--judges") + 1].split(",")) <= set(listed), command
