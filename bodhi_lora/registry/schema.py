@@ -598,6 +598,11 @@ class Eval(_Record):
     max_new_tokens: PosInt
     max_new_tokens_per_pass: PosInt
     serving: Serving
+    # true: one vLLM server serves the base and every seed's adapter as a named LoRA
+    # module, and every condition of the run goes through it (bodhi_lora/pipeline/eval.py,
+    # run_shared). false: one server per condition and seed, the path of the runs up to
+    # R2. `run --no-shared-server` also takes the second path.
+    shared_server: bool = True
 
     @model_validator(mode="after")
     def _conditions(self) -> "Eval":

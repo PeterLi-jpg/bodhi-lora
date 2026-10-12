@@ -144,8 +144,10 @@ def test_the_analysis_reads_the_probe_the_bench_and_the_stage_times(run):
                                   rel=1e-5)
     times = s["stage_times"]
     assert {"traces", "filter", "probe"} <= set(times["shared"])
-    assert set(times["per_seed"]["eval"]) == {"1", "2"} and times["per_seed"]["bench"]["1"]["seconds"] >= 0
-    assert times["per_seed"]["eval"]["1"]["n_manifests"] == len(reg.cells[SMOKE].eval.conditions)
+    assert times["per_seed"]["bench"]["1"]["seconds"] >= 0
+    # One shared eval server for both seeds: its time is counted once, as a shared stage,
+    # and the condition manifests carry none.
+    assert times["shared"]["eval"]["n_manifests"] == 1 and "eval" not in times["per_seed"]
 
 
 def test_the_judge_analysis_runs_on_a_stub_judge(run):

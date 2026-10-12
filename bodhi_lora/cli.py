@@ -7,13 +7,14 @@
         Download or build a benchmark's rows into the data root, checked against the
         record's pins.
     run <cell> [--stages traces,filter,...] [--seeds 42 7] [--gpus 0,1] [--judges a,b]
-               [--stub-engine | --dry-run] [--results-root DIR] [--force]
+               [--stub-engine | --dry-run] [--results-root DIR] [--force] [--no-shared-server]
         Run a cell (bodhi_lora/pipeline/runner.py). --stub-engine runs every stage on the
         CPU with the stub engine and trains for real; --dry-run first prints the GPU
         command of every step, then runs like --stub-engine without training. Both
         write under the scratch root (configs/project.yaml), never the results root.
         --judges runs only these judges of grading.judges in the grade stage; --judges none
-        runs the evaluator only.
+        runs the evaluator only. --no-shared-server evaluates each condition of each seed
+        on its own vLLM server instead of all of them through one (eval.shared_server).
     analyze (<cell> ... | --all) [--extract] [--results-root DIR]
         The uniform analysis (bodhi_lora/analysis/). --extract first writes each seed's
         response table from the raw stage outputs (local, ignored by git); without it,
@@ -156,7 +157,7 @@ def cmd_run(args, reg: Registry) -> int:
     try:
         run_cell(reg, project(args.configs), args.cell, stages=stages, seeds=args.seeds, gpus=gpus,
                  mode=mode, configs_dir=args.configs, results_root=args.results_root, force=args.force,
-                 judges=judges)
+                 judges=judges, shared_eval=not args.no_shared_server)
     except RunError as e:
         print(f"run refused or failed: {e}", flush=True)
         return 1
@@ -250,6 +251,8 @@ def build_parser() -> argparse.ArgumentParser:
     mode.add_argument("--dry-run", action="store_true")
     p.add_argument("--results-root", type=Path, default=None)
     p.add_argument("--force", action="store_true", help="rerun stages whose manifest says complete")
+    p.add_argument("--no-shared-server", action="store_true",
+                   help="one vLLM server per eval condition and seed (the fallback of eval.shared_server)")
     p.set_defaults(func=cmd_run)
 
     p = sub.add_parser("analyze", help="the uniform analysis of cells")

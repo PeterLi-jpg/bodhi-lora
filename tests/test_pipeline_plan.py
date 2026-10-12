@@ -20,13 +20,13 @@ PLANNED = sorted(cid for cid, c in REG.cells.items() if c.report.status == "plan
 RECORDED = sorted(cid for cid, c in REG.cells.items() if c.report.status in RECORD_STATUSES)
 
 
-def _printed_plan(cell_id, stages):
+def _printed_plan(cell_id, stages, gpus=(0, 1, 2, 3, 4), shared_eval=True):
     cell = REG.cells[cell_id]
     ctx = StageContext(reg=REG, project=PROJ, cell=cell, paths=PROJ.cell(cell_id))
-    shared, per_seed = plan(ctx, stages, cell.seeds, cell.grading.judges)
+    shared, per_seed = plan(ctx, stages, cell.seeds, cell.grading.judges, shared_eval)
     buf = io.StringIO()
     with redirect_stdout(buf):
-        Runner(ctx, "dry_run", [0, 1, 2, 3, 4]).print_plan(shared, per_seed)
+        Runner(ctx, "dry_run", list(gpus)).print_plan(shared, per_seed)
     return shared, per_seed, buf.getvalue()
 
 
@@ -41,12 +41,33 @@ def test_every_planned_cell_prints_one_gpu_command_per_step(cell_id):
     count = lambda stage: sum(f"bodhi_lora.pipeline.{stage} " in line for line in gpu_lines)  # noqa: E731
     trains = cell.adapters_from is None and cell.train is not None
     assert count("train") == (len(cell.seeds) if trains else 0)
-    assert count("eval") == len(cell.seeds) * len(cell.eval.conditions)
+    # One shared eval server per seed, each on its own GPU (eval.shared_server).
+    assert count("eval") == len(cell.seeds) * (1 if cell.eval.shared_server else len(cell.eval.conditions))
     assert count("grade") == len(cell.seeds) * (1 + len(cell.grading.judges))
     assert count("classify") == len(cell.seeds) * len(cell.grading.judges)
     assert count("bench") == (len(cell.bench.seeds) if cell.bench else 0)
     assert count("probe") == (1 if cell.probe else 0)
     assert count("traces") == (1 if trains else 0)
+
+
+@pytest.mark.parametrize("cell_id", PLANNED)
+def test_on_one_gpu_one_eval_step_serves_every_seed_after_every_training(cell_id):
+    """R3 to R7 run on one GPU: the eval of all seeds is one server holding every seed's
+    adapter, after the last training and before the first grade."""
+    cell = REG.cells[cell_id]
+    _, _, out = _printed_plan(cell_id, STAGES, gpus=(3,))
+    lines = [line for line in out.splitlines() if line.startswith("DRY-RUN [gpu 3]")]
+    evals = [i for i, line in enumerate(lines) if "bodhi_lora.pipeline.eval " in line]
+    assert len(evals) == 1
+    assert lines[evals[0]].endswith("--seeds " + ",".join(str(s) for s in cell.seeds))
+    trains = [i for i, line in enumerate(lines) if "bodhi_lora.pipeline.train " in line]
+    grades = [i for i, line in enumerate(lines) if "bodhi_lora.pipeline.grade " in line]
+    assert all(i < evals[0] for i in trains) and all(i > evals[0] for i in grades)
+    # The fallback: one step per condition and seed.
+    _, _, out = _printed_plan(cell_id, STAGES, gpus=(3,), shared_eval=False)
+    per_condition = [line for line in out.splitlines() if "bodhi_lora.pipeline.eval " in line]
+    assert len(per_condition) == len(cell.seeds) * len(cell.eval.conditions)
+    assert all("--condition" in line for line in per_condition)
 
 
 @pytest.mark.parametrize("cell_id", RECORDED)

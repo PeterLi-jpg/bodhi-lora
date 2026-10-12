@@ -103,7 +103,9 @@ def test_a_rerun_resumes_and_refuses_changed_inputs(reg, smoke_run, capsys):
     root = smoke_run.parent
     run_cell(reg, project(CONFIGS_DIR), SMOKE, mode="stub", results_root=root)
     out = capsys.readouterr().out
-    assert out.count("complete, skipping") >= 12
+    # Every step skips: probe, traces and filter; filter split, train and grade per seed;
+    # the one eval step of both seeds; the bench of seed 1.
+    assert out.count("complete, skipping") == 11
     pools = smoke_run / "shared" / "inputs" / "pools.json"
     data = json.loads(pools.read_text())
     data["eval"] = data["eval"][1:]
@@ -128,6 +130,8 @@ def test_the_frozen_record_is_compared_value_by_value(reg, tmp_path):
 
     assert frozen(lambda d: None)
     assert frozen(lambda d: d["eval"]["serving"].pop("enforce_eager"))
+    assert frozen(lambda d: d["eval"].pop("shared_server"))
+    assert not frozen(lambda d: d["eval"].update(shared_server=False))
     assert not frozen(lambda d: d["eval"].update(max_new_tokens=32))
     assert not frozen(lambda d: d["eval"]["serving"].update(enforce_eager=True))
     assert not frozen(lambda d: d.update(unknown_key=1))

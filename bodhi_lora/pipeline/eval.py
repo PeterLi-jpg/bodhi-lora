@@ -1,5 +1,6 @@
-"""Stage eval: one condition's replies to the seed's eval prompts, graded on the rubric.
+"""Stage eval: the replies of each condition to a seed's eval prompts, graded on the rubric.
 
+    python -m bodhi_lora.pipeline.eval --cell <cell id> --seeds 42,7 [--stub-engine]
     python -m bodhi_lora.pipeline.eval --cell <cell id> --seed N --condition <condition>
                                        [--stub-engine]
 
@@ -11,6 +12,19 @@ rubric. The output, seed_<n>/eval/<condition>.json, keeps the fields of the earl
 result files and adds, per reply, the condition, the protocol, the calls, the tokens
 over all calls and whether a call hit its token limit.
 
+Two paths write the same files (run_shared and run):
+  --seeds   one vLLM server serves the base and each seed's adapter as a named LoRA
+            module; every condition of every seed goes through it, each request routed
+            by its model name, from one pool of client threads. Then one grader server
+            grades every reply. Each condition's manifest records the shared server, and
+            the run's time is in one manifest in shared/eval/. Each reply goes to
+            <condition>.replies.jsonl as it comes, so a crash loses only the replies in
+            flight and a rerun makes only the missing ones. The runner's default
+            (eval.shared_server).
+  --seed N --condition C
+            one server for that condition, then one grader server: the path of the runs
+            up to R2, kept as the fallback (run --no-shared-server, or
+            eval.shared_server: false).
 A row with no rubric (a benchmark with rubric: none) gets no rubric grade: its score is
 null and its criteria list is empty, so the dimensions and the text counts still apply.
 
@@ -26,8 +40,11 @@ import sys
 import time
 import traceback
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from importlib import metadata
+from pathlib import Path
+from typing import Callable, Optional
 
 import numpy as np
 from tqdm import tqdm
@@ -36,8 +53,10 @@ from transformers import set_seed
 from bodhi_lora import manifest as mf
 from bodhi_lora.engine import make_engine
 from bodhi_lora.grading.rubric import Grader, grade_rubric
-from bodhi_lora.pipeline.context import StageContext, context_from_args, stage_parser
-from bodhi_lora.protocols import build, decoding_for
+from bodhi_lora.pipeline.context import StageContext, context_from_args, eval_ids_file, stage_parser
+from bodhi_lora.protocols import Decoding, Output, Protocol, build, decoding_for
+from bodhi_lora.registry.schema import ProtocolConfig
+
 
 # Stub replies. The policy reply carries the ask-first markers so that parser runs; the
 # grader reply is a valid rubric verdict.
@@ -203,119 +222,193 @@ def collect_run_metadata(seed, grader_model, **settings):
     }
 
 
-def run(ctx: StageContext, seed: int, condition: str) -> dict:
+
+
+def adapter_name(seed: int) -> str:
+    """The served name of a seed's adapter on the shared server."""
+    return f"adapter-s{seed}"
+
+
+@dataclass
+class Job:
+    """One condition of one seed: its protocol, its weights, its prompts and its file."""
+
+    seed: int
+    condition: str
+    weights: str
+    proto_rec: Optional[ProtocolConfig]
+    proto: Protocol
+    decoding: Decoding
+    adapter: Optional[Path]
+    examples: list
+    out_path: Path
+
+    @property
+    def key(self) -> tuple:
+        return (self.seed, self.condition)
+
+
+def make_job(ctx: StageContext, seed: int, condition: str) -> Job:
     ev = ctx.cell.eval
     if condition not in ev.conditions:
         raise SystemExit(f"{condition!r} is not a condition of {ctx.cell.id}: {ev.conditions}")
-    out_path = ctx.paths.eval_file(seed, condition)
-    if out_path.is_file() and out_path.stat().st_size > 0:
-        print(f"eval: {out_path} exists, skipping", file=sys.stderr)
-        return {}
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    timer = mf.Timer()
-    random.seed(seed)
-    np.random.seed(seed)
-    set_seed(seed)
-
     weights, proto_rec = ctx.condition_protocol(condition)
     proto = build(proto_rec, ctx.model)
     decoding = decoding_for(proto, max_new_tokens=ev.max_new_tokens,
                             max_new_tokens_per_pass=ev.max_new_tokens_per_pass)
-    adapter = ctx.adapter_dir(seed) if weights == "lora" else None
-    if adapter is not None and not (adapter / "adapter_config.json").is_file() and not ctx.stub:
-        raise SystemExit(f"{adapter} holds no adapter; run the train stage first")
     rows = ctx.rows_by_id()
-    ids = ctx.eval_ids(seed)
-    examples = [rows[pid] for pid in ids]
-    quantize = ctx.quantized_base()
-    print(f"eval: {condition} on {len(examples)} prompts"
-          f"{', 4-bit base' if quantize else ''}{' [stub]' if ctx.stub else ''}", flush=True)
+    return Job(seed=seed, condition=condition, weights=weights, proto_rec=proto_rec, proto=proto,
+               decoding=decoding, adapter=ctx.adapter_dir(seed) if weights == "lora" else None,
+               examples=[rows[pid] for pid in ctx.eval_ids(seed)],
+               out_path=ctx.paths.eval_file(seed, condition))
 
-    # Pass 1: replies.
-    policy = make_engine(ctx.model, serving=ev.serving, adapter=adapter, lora_rank=ctx.lora_rank(),
-                         quantize=quantize, stub=ctx.stub, stub_reply=STUB_POLICY_REPLY,
-                         log_path=ctx.log_path(f"vllm_eval_s{seed}.log"))
-    generations, failed_inference = [], []
-    with policy as eng:
-        def gen(row):
-            try:
-                return {"row": row, "out": proto.respond(eng, row.messages, decoding)}, None
-            except Exception:
-                return None, (row.prompt_id, "\n".join(traceback.format_exc().strip().splitlines()[-30:]))
 
-        with ThreadPoolExecutor(max_workers=ev.serving.concurrency) as pool:
-            futures = [pool.submit(gen, r) for r in examples]
-            for fut in tqdm(as_completed(futures), total=len(futures), desc=f"{condition} [replies]"):
-                g, err = fut.result()
-                (generations.append(g) if g else failed_inference.append(err))
-    for pid, tb in failed_inference[:5]:
-        print(f"  reply failed {pid}:\n{tb}", file=sys.stderr)
-    # Some engines need a pause before the next one starts on the same accelerator.
-    if ev.serving.drain_s and not ctx.stub:
-        time.sleep(ev.serving.drain_s)
+def finished(path: Path) -> bool:
+    """A non-empty output is kept; an empty file is a crashed write."""
+    return path.is_file() and path.stat().st_size > 0
 
-    # Pass 2: rubric grades.
+
+def check_adapters(ctx: StageContext, jobs: list) -> None:
+    """Stop before any server starts when an adapter that a job needs is missing."""
+    missing = sorted({str(j.adapter) for j in jobs
+                      if j.adapter is not None and not (j.adapter / "adapter_config.json").is_file()})
+    if missing and not ctx.stub:
+        raise SystemExit(f"no adapter in {', '.join(missing)}; run the train stage first")
+
+
+def _traceback() -> str:
+    return "\n".join(traceback.format_exc().strip().splitlines()[-30:])
+
+
+def generate(jobs: list, work: list, engine_for: Callable, workers: int, desc: str,
+             on_reply: Optional[Callable] = None) -> tuple[dict, dict]:
+    """Pass 1: the replies to the (job, row) pairs of work, from one pool of client threads.
+
+    engine_for(job) is what the job's protocol calls: the engine, or a route of a shared
+    server to the job's weights. on_reply(job, reply) runs for each reply as it comes.
+    Returns the replies and the failures, by job key.
+    """
+    replies = {j.key: [] for j in jobs}
+    failures = {j.key: [] for j in jobs}
+
+    def one(job, engine, row):
+        try:
+            return job, {"row": row, "out": job.proto.respond(engine, row.messages, job.decoding)}, None
+        except Exception:
+            return job, None, (row.prompt_id, _traceback())
+
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        futures = [pool.submit(one, job, engine_for(job), row) for job, row in work]
+        for fut in tqdm(as_completed(futures), total=len(futures), desc=desc):
+            job, g, err = fut.result()
+            if g is None:
+                failures[job.key].append(err)
+                continue
+            replies[job.key].append(g)
+            if on_reply is not None:
+                on_reply(job, g)
+    return replies, failures
+
+
+def replies_file(job: Job) -> Path:
+    """The replies of a shared run's job, one JSON line each as it comes, so a crash loses
+    only the replies in flight and a rerun makes only the missing ones. Removed once the
+    job's result file is written with no failed reply. Git ignores it
+    (results/**/*.jsonl)."""
+    return job.out_path.with_name(f"{job.condition}.replies.jsonl")
+
+
+def saved_replies(job: Job) -> list:
+    """The replies an earlier, crashed shared run kept for this job, for its rows."""
+    path = replies_file(job)
+    if not path.is_file():
+        return []
+    rows = {r.prompt_id: r for r in job.examples}
+    kept = {}
+    for line in path.read_text().splitlines():
+        try:
+            rec = json.loads(line)
+        except json.JSONDecodeError:
+            continue    # a line cut by the crash
+        if rec.get("prompt_id") in rows:
+            kept[rec["prompt_id"]] = {"row": rows[rec["prompt_id"]], "out": Output(**rec["out"])}
+    return list(kept.values())
+
+
+def grade_replies(jobs: list, replies: dict, engine, workers: int, desc: str) -> tuple[dict, dict]:
+    """Pass 2: the evaluator's rubric grade of every reply, from one pool of client threads.
+    Returns the result rows (sorted by prompt id) and the failures, by job key."""
+    grader = Grader(engine)
+    results = {j.key: [] for j in jobs}
+    failures = {j.key: [] for j in jobs}
+
+    def one(job, g):
+        row, out = g["row"], g["out"]
+        try:
+            confidence = score_response_confidence(out.token_logprobs)
+            if row.rubrics:
+                grade_ = grade_rubric(grader, row.messages, out.response, row.rubrics)
+            else:
+                grade_ = {"overall_score": None, "tag_scores": {}, "criteria_results": [],
+                          "parse_failures": 0}
+            return job, {
+                "prompt_id": row.prompt_id, "pair_id": row.pair_id, "response": out.response,
+                "score": grade_["overall_score"], "tag_scores": grade_["tag_scores"],
+                "criteria_results": grade_["criteria_results"],
+                "parse_failures": grade_["parse_failures"],
+                "model_fluency_geomean_prob": confidence["geomean_token_prob"],
+                "model_confidence_mean_token_logprob": confidence["mean_token_logprob"],
+                "response_token_count": confidence["response_token_count"],
+                "condition": job.condition, "protocol": job.proto_rec.id if job.proto_rec else None,
+                "calls": out.calls, "prompt_tokens_total": out.prompt_tokens,
+                "completion_tokens_total": out.completion_tokens,
+                "finish_length": out.finish_length,
+                # What the protocol recorded about this reply, e.g. an abstain decision;
+                # format_parsed false marks a reply whose internal format did not parse.
+                "protocol_metadata": out.metadata,
+            }, None
+        except Exception:
+            return job, None, (row.prompt_id, _traceback())
+
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        futures = [pool.submit(one, j, g) for j in jobs for g in replies[j.key]]
+        for fut in tqdm(as_completed(futures), total=len(futures), desc=desc):
+            job, r, err = fut.result()
+            (results[job.key].append(r) if r else failures[job.key].append(err))
+    for rows in results.values():
+        rows.sort(key=lambda r: r["prompt_id"])
+    return results, failures
+
+
+def _print_failures(what: str, failures: list) -> None:
+    for pid, tb in failures[:5]:
+        print(f"  {what} failed {pid}:\n{tb}", file=sys.stderr)
+
+
+def write_outputs(ctx: StageContext, job: Job, results: list, n_generated: int, failed_inference: list,
+                  failed_grading: list, engines: dict, timer: Optional[mf.Timer], extra: dict) -> dict:
+    """The job's result file, in the form of the earlier result files, and its manifest."""
+    ev = ctx.cell.eval
+    proto_rec, adapter = job.proto_rec, job.adapter
     evaluator = ctx.reg.models[ctx.cell.grading.evaluator]
-    grader_engine = make_engine(evaluator, serving=ev.serving, stub=ctx.stub,
-                                stub_reply=STUB_GRADER_REPLY,
-                                log_path=ctx.log_path(f"vllm_eval_grader_s{seed}.log"))
-    results, failed_grading = [], []
-    with grader_engine as geng:
-        grader = Grader(geng)
-
-        def grade(g):
-            row, out = g["row"], g["out"]
-            try:
-                confidence = score_response_confidence(out.token_logprobs)
-                if row.rubrics:
-                    grade_ = grade_rubric(grader, row.messages, out.response, row.rubrics)
-                else:
-                    grade_ = {"overall_score": None, "tag_scores": {}, "criteria_results": [],
-                              "parse_failures": 0}
-                return {
-                    "prompt_id": row.prompt_id, "pair_id": row.pair_id, "response": out.response,
-                    "score": grade_["overall_score"], "tag_scores": grade_["tag_scores"],
-                    "criteria_results": grade_["criteria_results"],
-                    "parse_failures": grade_["parse_failures"],
-                    "model_fluency_geomean_prob": confidence["geomean_token_prob"],
-                    "model_confidence_mean_token_logprob": confidence["mean_token_logprob"],
-                    "response_token_count": confidence["response_token_count"],
-                    "condition": condition, "protocol": proto_rec.id if proto_rec else None,
-                    "calls": out.calls, "prompt_tokens_total": out.prompt_tokens,
-                    "completion_tokens_total": out.completion_tokens,
-                    "finish_length": out.finish_length,
-                    # What the protocol recorded about this reply, e.g. an abstain decision;
-                    # format_parsed false marks a reply whose internal format did not parse.
-                    "protocol_metadata": out.metadata,
-                }, None
-            except Exception:
-                return None, (row.prompt_id, "\n".join(traceback.format_exc().strip().splitlines()[-30:]))
-
-        with ThreadPoolExecutor(max_workers=ev.serving.concurrency) as pool:
-            futures = [pool.submit(grade, g) for g in generations]
-            for fut in tqdm(as_completed(futures), total=len(futures), desc=f"{condition} [grades]"):
-                r, err = fut.result()
-                (results.append(r) if r else failed_grading.append(err))
-    for pid, tb in failed_grading[:5]:
-        print(f"  grade failed {pid}:\n{tb}", file=sys.stderr)
-    results.sort(key=lambda r: r["prompt_id"])
-
+    quantize = ctx.quantized_base()
     scores = [r["score"] for r in results]
     fluency = [r["model_fluency_geomean_prob"] for r in results if r["model_fluency_geomean_prob"] is not None]
     parse_failures = sum(r["parse_failures"] for r in results)
     items = sum(len(r["criteria_results"]) for r in results)
-    ids_digest = mf.id_list_digest(ctx.paths.inputs() / f"eval_ids_seed_{seed}.json")
+    ids_file = ctx.paths.inputs() / eval_ids_file(job.seed)
+    ids_digest = mf.id_list_digest(ids_file)
     summary = {
-        "config": condition, "condition": condition, "model": ctx.model.hf_id,
+        "config": job.condition, "condition": job.condition, "model": ctx.model.hf_id,
         "lora_path": str(adapter) if adapter else None,
         "use_bodhi": bool(proto_rec and proto_rec.impl == "bodhi_llm"),
         "wrapper": proto_rec.id if proto_rec and proto_rec.kind == "wrapper" else "none",
         "baseline": proto_rec.id if proto_rec and proto_rec.kind == "prompt" else None,
-        "instruction_placement": getattr(proto, "placement", None),
+        "instruction_placement": getattr(job.proto, "placement", None),
         "protocol": proto_rec.id if proto_rec else None,
-        "n_examples": len(examples),
+        "n_examples": len(job.examples),
         "run_metadata": collect_run_metadata(
-            seed, evaluator.hf_id, model_revision=ctx.model.revision,
+            job.seed, evaluator.hf_id, model_revision=ctx.model.revision,
             grader_revision=evaluator.revision, max_model_len=ev.serving.max_model_len,
             max_num_seqs=ev.serving.max_num_seqs, concurrency=ev.serving.concurrency,
             request_timeout_s=ev.serving.request_timeout_s,
@@ -338,10 +431,12 @@ def run(ctx: StageContext, seed: int, condition: str) -> dict:
         "grader_rubric_items_total": items,
         "results": results,
     }
+    out_path = job.out_path
+    out_path.parent.mkdir(parents=True, exist_ok=True)
     tmp = out_path.with_suffix(".part")
     tmp.write_text(json.dumps(summary, indent=2))
     tmp.replace(out_path)
-    counts = {"n_examples": len(examples), "n_generated": len(generations),
+    counts = {"n_examples": len(job.examples), "n_generated": n_generated,
               "n_failed_inference": len(failed_inference), "n_graded": len(results),
               "n_failed_grading": len(failed_grading), "grader_parse_failures_total": parse_failures,
               "grader_rubric_items_total": items,
@@ -349,21 +444,178 @@ def run(ctx: StageContext, seed: int, condition: str) -> dict:
               "completion_tokens_total": sum(r["completion_tokens_total"] for r in results),
               "n_finish_length": sum(r["finish_length"] for r in results),
               "n_format_unparsed": sum(r["protocol_metadata"].get("format_parsed") is False for r in results)}
-    ctx.write_manifest(out_path.parent, "eval", seed=seed, name=f"{condition}.manifest.json",
+    ctx.write_manifest(out_path.parent, "eval", seed=job.seed, name=f"{job.condition}.manifest.json",
                        timer=timer, models={"policy": ctx.model, "grader": evaluator},
-                       config={"condition": condition, "eval": ev.model_dump()},
-                       engines={"policy": policy.settings(), "grader": grader_engine.settings()},
-                       adapter_dir=adapter, eval_ids=ctx.paths.inputs() / f"eval_ids_seed_{seed}.json",
-                       outputs=[out_path], counts=counts,
-                       extra={"status": "complete", "condition": condition})
+                       config={"condition": job.condition, "eval": ev.model_dump()},
+                       engines=engines, adapter_dir=adapter, eval_ids=ids_file,
+                       outputs=[out_path], counts=counts, extra=extra)
     mean = summary["mean"]
-    print(f"eval: {condition} score {mean if mean is None else round(mean, 4)} -> {out_path}", flush=True)
+    print(f"eval: s{job.seed} {job.condition} score {mean if mean is None else round(mean, 4)} -> {out_path}",
+          flush=True)
     return counts
 
 
+def run(ctx: StageContext, seed: int, condition: str) -> dict:
+    """One condition of one seed on its own server, then its own grader server."""
+    ev = ctx.cell.eval
+    if condition not in ev.conditions:
+        raise SystemExit(f"{condition!r} is not a condition of {ctx.cell.id}: {ev.conditions}")
+    out_path = ctx.paths.eval_file(seed, condition)
+    if finished(out_path):
+        print(f"eval: {out_path} exists, skipping", file=sys.stderr)
+        return {}
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    timer = mf.Timer()
+    random.seed(seed)
+    np.random.seed(seed)
+    set_seed(seed)
+
+    job = make_job(ctx, seed, condition)
+    check_adapters(ctx, [job])
+    quantize = ctx.quantized_base()
+    print(f"eval: {condition} on {len(job.examples)} prompts"
+          f"{', 4-bit base' if quantize else ''}{' [stub]' if ctx.stub else ''}", flush=True)
+
+    policy = make_engine(ctx.model, serving=ev.serving, adapter=job.adapter, lora_rank=ctx.lora_rank(),
+                         quantize=quantize, stub=ctx.stub, stub_reply=STUB_POLICY_REPLY,
+                         log_path=ctx.log_path(f"vllm_eval_s{seed}.log"))
+    with policy as eng:
+        replies, failed_inference = generate([job], [(job, row) for row in job.examples], lambda j: eng,
+                                             ev.serving.concurrency, f"{condition} [replies]")
+    _print_failures("reply", failed_inference[job.key])
+    # Some engines need a pause before the next one starts on the same accelerator.
+    if ev.serving.drain_s and not ctx.stub:
+        time.sleep(ev.serving.drain_s)
+
+    evaluator = ctx.reg.models[ctx.cell.grading.evaluator]
+    grader_engine = make_engine(evaluator, serving=ev.serving, stub=ctx.stub,
+                                stub_reply=STUB_GRADER_REPLY,
+                                log_path=ctx.log_path(f"vllm_eval_grader_s{seed}.log"))
+    with grader_engine as geng:
+        results, failed_grading = grade_replies([job], replies, geng, ev.serving.concurrency,
+                                                f"{condition} [grades]")
+    _print_failures("grade", failed_grading[job.key])
+    return write_outputs(ctx, job, results[job.key], len(replies[job.key]), failed_inference[job.key],
+                         failed_grading[job.key], {"policy": policy.settings(), "grader": grader_engine.settings()},
+                         timer, {"status": "complete", "condition": condition})
+
+
+def run_shared(ctx: StageContext, seeds: list) -> dict:
+    """Every unfinished condition of these seeds through one shared server, then one
+    grader server; the files and manifests per seed and condition as run() writes them."""
+    ev = ctx.cell.eval
+    unknown = sorted(set(seeds) - set(ctx.cell.seeds))
+    if unknown:
+        raise SystemExit(f"seeds {unknown} are not seeds of {ctx.cell.id}: {ctx.cell.seeds}")
+    jobs = []
+    for s in seeds:
+        for c in ev.conditions:
+            if finished(ctx.paths.eval_file(s, c)):
+                print(f"eval: {ctx.paths.eval_file(s, c)} exists, skipping", file=sys.stderr)
+            else:
+                jobs.append(make_job(ctx, s, c))
+    if not jobs:
+        return {}
+    timer = mf.Timer()
+    # Nothing in the eval draws random numbers (greedy decoding, no request seed); the
+    # seeds are set as run() sets them, to the first seed of the run.
+    random.seed(seeds[0])
+    np.random.seed(seeds[0])
+    set_seed(seeds[0])
+
+    check_adapters(ctx, jobs)
+    adapters = {adapter_name(j.seed): j.adapter for j in jobs if j.adapter is not None}
+    quantize = ctx.quantized_base()
+    # Enough requests in flight to fill every scheduler slot (max_num_seqs) the record
+    # gives the server, or the record's client threads when that is more.
+    workers = max(ev.serving.concurrency, ev.serving.max_num_seqs)
+    label = "-".join(str(s) for s in seeds)
+    print(f"eval: {len(jobs)} conditions of seeds {label} through one server ({len(adapters)} adapters, "
+          f"{workers} client threads){', 4-bit base' if quantize else ''}"
+          f"{' [stub]' if ctx.stub else ''}", flush=True)
+
+    policy = make_engine(ctx.model, serving=ev.serving, adapters=adapters, lora_rank=ctx.lora_rank(),
+                         quantize=quantize, stub=ctx.stub, stub_reply=STUB_POLICY_REPLY,
+                         log_path=ctx.log_path(f"vllm_eval_s{label}.log"))
+    routes = {j.key: adapter_name(j.seed) if j.adapter is not None else None for j in jobs}
+    saved = {j.key: saved_replies(j) for j in jobs}
+    have = {j.key: {g["row"].prompt_id for g in saved[j.key]} for j in jobs}
+    # Wrapper conditions make two calls per reply and take longest; sent first, they leave
+    # the short one-call replies for the end, so the batch stays full until the last one.
+    order = sorted(jobs, key=lambda j: j.proto.kind != "wrapper")
+    work = [(j, row) for j in order for row in j.examples if row.prompt_id not in have[j.key]]
+    for j in jobs:
+        j.out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    def keep(job, g):
+        # generate() calls this in its result loop, one reply at a time.
+        with open(replies_file(job), "a") as fh:
+            fh.write(json.dumps({"prompt_id": g["row"].prompt_id, "out": asdict(g["out"])}) + "\n")
+
+    replies, failed_inference = {j.key: [] for j in jobs}, {j.key: [] for j in jobs}
+    if work:
+        print(f"eval: {len(work)} replies to make, {sum(map(len, saved.values()))} kept from an earlier run",
+              flush=True)
+        with policy as eng:
+            replies, failed_inference = generate(jobs, work, lambda j: eng.route(routes[j.key]), workers,
+                                                 "replies", on_reply=keep)
+    for j in jobs:
+        replies[j.key] = saved[j.key] + replies[j.key]
+        _print_failures(f"s{j.seed} {j.condition} reply", failed_inference[j.key])
+    if ev.serving.drain_s and not ctx.stub:
+        time.sleep(ev.serving.drain_s)
+
+    evaluator = ctx.reg.models[ctx.cell.grading.evaluator]
+    grader_engine = make_engine(evaluator, serving=ev.serving, stub=ctx.stub,
+                                stub_reply=STUB_GRADER_REPLY,
+                                log_path=ctx.log_path(f"vllm_eval_grader_s{label}.log"))
+    with grader_engine as geng:
+        results, failed_grading = grade_replies(order, replies, geng, workers, "grades")
+    for j in jobs:
+        _print_failures(f"s{j.seed} {j.condition} grade", failed_grading[j.key])
+
+    engines = {"policy": policy.settings(), "grader": grader_engine.settings()}
+    stamp = timer.start.strftime("%Y%m%dT%H%M%SZ")
+    run_manifest = ctx.paths.shared("eval") / f"eval_s{label}_{stamp}.manifest.json"
+    shared = {"run_manifest": ctx.project.rel(run_manifest), "seeds": list(seeds),
+              "conditions_run": [list(j.key) for j in jobs], "client_threads": workers,
+              "replies_kept_from_an_earlier_run": sum(map(len, saved.values()))}
+    counts, outputs = {}, []
+    for j in jobs:
+        extra = {"status": "complete", "condition": j.condition,
+                 "shared_server": {**shared, "route": routes[j.key] or ctx.model.hf_id}}
+        # No time here: the run's time is in the run manifest, once for all its files.
+        counts[j.key] = write_outputs(ctx, j, results[j.key], len(replies[j.key]), failed_inference[j.key],
+                                      failed_grading[j.key], engines, None, extra)
+        # Kept while replies failed: delete the result file and rerun, and only those
+        # replies are made again.
+        if not failed_inference[j.key]:
+            replies_file(j).unlink(missing_ok=True)
+        outputs.append(j.out_path)
+    totals = {k: sum(c[k] for c in counts.values()) for k in ("n_examples", "n_generated", "n_graded", "calls",
+                                                                "completion_tokens_total")}
+    ctx.write_manifest(run_manifest.parent, "eval", name=run_manifest.name, timer=timer,
+                       models={"policy": ctx.model, "grader": evaluator},
+                       config={"seeds": list(seeds), "eval": ev.model_dump()}, engines=engines,
+                       outputs=outputs, counts={**totals, "n_files": len(jobs)},
+                       extra={"status": "complete", "shared_server": shared})
+    return {f"s{s}/{c}": v for (s, c), v in counts.items()}
+
+
 def main(argv=None) -> int:
-    args = stage_parser(__doc__.splitlines()[0], seed="required", condition=True).parse_args(argv)
-    run(context_from_args(args), args.seed, args.condition)
+    ap = stage_parser(__doc__.splitlines()[0], seed="optional")
+    ap.add_argument("--condition", default=None, help="with --seed: one condition on its own server")
+    ap.add_argument("--seeds", default=None,
+                    help="comma-separated seeds: every condition of each through one shared server")
+    args = ap.parse_args(argv)
+    if args.seeds is not None:
+        if args.seed is not None or args.condition is not None:
+            ap.error("give --seeds, or --seed with --condition, not both")
+        run_shared(context_from_args(args), [int(s) for s in args.seeds.split(",") if s.strip()])
+    elif args.seed is not None and args.condition is not None:
+        run(context_from_args(args), args.seed, args.condition)
+    else:
+        ap.error("give --seeds, or --seed with --condition")
     return 0
 
 

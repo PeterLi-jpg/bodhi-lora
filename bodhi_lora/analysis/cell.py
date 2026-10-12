@@ -830,8 +830,11 @@ def bench_section(d: CellData, paths: CellPaths, pairs) -> dict:
 def stage_times_section(cell: CellConfig, paths: CellPaths) -> dict:
     """Wall-clock seconds and the GPUs of each stage, from the stage manifests (E08, C25):
     the shared stages once per cell, the others per seed (a folder with several manifests,
-    such as eval with one per condition, sums them). The manifests of the recorded cells
-    were written after their runs and hold no times, so for them this says so."""
+    such as eval with one per condition, sums them). An eval through one shared server
+    (pipeline/eval.py, run_shared) serves several seeds at once, so its time is in one
+    manifest in shared/eval and counts there, once; its condition manifests hold none. The
+    manifests of the recorded cells were written after their runs and hold no times, so
+    for them this says so."""
     def read(folder: Path) -> Optional[dict]:
         ms = [m for f in sorted(folder.glob("*manifest.json")) if "time" in (m := json.loads(f.read_text()))]
         if not ms:

@@ -23,6 +23,15 @@ a run resumes where it stopped; prepare refuses inputs that differ from an earli
 `judges` limits the judge steps to some of grading.judges, so one judge panel can run
 on its own.
 
+Eval with a shared server (eval.shared_server, the default; shared_eval=False or
+`run --no-shared-server` turns it off): one eval step serves every condition of a group
+of seeds through one vLLM server that holds each seed's adapter. The group is the seeds
+that run one after another on one GPU. On one GPU (and in a stub or dry run) that is
+every seed: first each seed's filter split and training, then one eval step for all
+seeds, then each seed's grade and bench steps. With several GPUs each seed runs on its
+own GPU, and its eval step serves that seed's conditions. Without a shared server each
+condition of each seed is its own step and server, as before.
+
 A cell whose report.status records a past run (complete, partial, not_run, pilot) keeps
 its outputs: only the stages in ADDITIVE_STAGES run on it, and they only add files (a
 judge re-grade, the contamination probe). The evaluator's grades of such a cell are
@@ -41,7 +50,7 @@ import sys
 import threading
 from dataclasses import dataclass, field, replace
 from pathlib import Path
-from typing import Optional, Sequence
+from typing import Optional, Sequence, Union
 
 import yaml
 from pydantic import ValidationError
@@ -77,16 +86,21 @@ class Step:
     seed: Optional[int] = None
     extra: list = field(default_factory=list)   # e.g. ["--condition", "lora+bodhi"]
     env: str = "infer"                          # infer, train or cpu
-    done: Optional[Path] = None                 # the manifest that marks it complete
+    # The manifest that marks it complete, or the list of manifests that all must.
+    done: Optional[Union[Path, list]] = None
+    # The seeds of an eval step that serves several (eval_step); empty for other steps.
+    group: tuple = ()
 
     @property
     def label(self) -> str:
         parts = [self.stage] + ([f"s{self.seed}"] if self.seed is not None else [])
         parts += [x for x in self.extra if not x.startswith("--")]
-        return "_".join(parts).replace("+", "-")
+        return "_".join(parts).replace("+", "-").replace(",", "-")
 
 
-def is_complete(manifest_path: Optional[Path]) -> bool:
+def is_complete(manifest_path: Optional[Union[Path, list]]) -> bool:
+    if isinstance(manifest_path, list):
+        return bool(manifest_path) and all(is_complete(m) for m in manifest_path)
     if manifest_path is None or not manifest_path.is_file():
         return False
     try:
@@ -113,7 +127,7 @@ def same_record(cell_yaml: Path, cell: CellConfig) -> bool:
 
     It is read with the current schema, so a key the schema gained after the first run
     takes its default in both, and a resume does not stop on it (the R2 folders were
-    frozen before serving.enforce_eager existed). The file keeps
+    frozen before serving.enforce_eager and eval.shared_server existed). The file keeps
     the form of the first run.
     """
     try:
@@ -226,8 +240,11 @@ def adapter_leakage_gate(ctx: StageContext) -> dict:
 # -- the plan -------------------------------------------------------------------------
 
 def plan(ctx: StageContext, stages: Sequence[str], seeds: Sequence[int],
-         judges: Sequence[str]) -> tuple[list, dict]:
-    """The shared steps, and the steps of each seed, in run order."""
+         judges: Sequence[str], shared_eval: bool = True) -> tuple[list, dict]:
+    """The shared steps, and the steps of each seed, in run order. With a shared eval
+    server each seed has one eval step for all its conditions; one_gpu_order merges them
+    into one step for a run on one GPU."""
+    shared_eval = shared_eval and ctx.cell.eval.shared_server
     cell, p = ctx.cell, ctx.paths
     shared, per_seed = [], {s: [] for s in seeds}
     trains_here = cell.adapters_from is None and cell.train is not None
@@ -243,7 +260,9 @@ def plan(ctx: StageContext, stages: Sequence[str], seeds: Sequence[int],
             steps.append(Step("filter", s, env="cpu", done=p.stage(s, "filter") / "manifest.json"))
         if "train" in stages and trains_here:
             steps.append(Step("train", s, env="train", done=p.stage(s, "train") / "manifest.json"))
-        if "eval" in stages:
+        if "eval" in stages and shared_eval:
+            steps.append(eval_step(ctx, [s]))
+        elif "eval" in stages:
             for c in cell.eval.conditions:
                 steps.append(Step("eval", s, ["--condition", c],
                                   done=p.stage(s, "eval") / f"{c}.manifest.json"))
@@ -255,6 +274,33 @@ def plan(ctx: StageContext, stages: Sequence[str], seeds: Sequence[int],
         if "bench" in stages and cell.bench and s in cell.bench.seeds:
             steps.append(Step("bench", s, done=p.stage(s, "bench") / "manifest.json"))
     return shared, per_seed
+
+
+def eval_step(ctx: StageContext, seeds: Sequence[int]) -> Step:
+    """Every condition of these seeds through one shared vLLM server (pipeline/eval.py,
+    run_shared); complete when every condition of every seed is."""
+    return Step("eval", extra=["--seeds", ",".join(str(s) for s in seeds)], group=tuple(seeds),
+                done=[ctx.paths.stage(s, "eval") / f"{c}.manifest.json"
+                      for s in seeds for c in ctx.cell.eval.conditions])
+
+
+def one_gpu_order(ctx: StageContext, per_seed: dict) -> list:
+    """The per-seed steps of a run on one GPU, in run order.
+
+    With shared eval steps: every seed's steps before its eval (filter split, train),
+    then one eval step for all seeds, so one server holds every adapter, then every
+    seed's steps after it (grade, judges, classify, bench). Otherwise seed after seed.
+    """
+    seeds = list(per_seed)
+    if not any(step.group for steps in per_seed.values() for step in steps):
+        return [step for s in seeds for step in per_seed[s]]
+    before, after = [], []
+    for s in seeds:
+        steps = per_seed[s]
+        i = next(i for i, step in enumerate(steps) if step.group)
+        before += steps[:i]
+        after += steps[i + 1:]
+    return before + [eval_step(ctx, seeds)] + after
 
 
 def probe_step(ctx: StageContext) -> Step:
@@ -331,10 +377,13 @@ class Runner:
         return {"CUDA_VISIBLE_DEVICES": str(gpu), "BODHI_VLLM_PORT": str(self.ctx.project.vllm_port_base + gpu)}
 
     def print_plan(self, shared: list, per_seed: dict) -> None:
-        """Every step's GPU command, on the GPU a GPU run would give it."""
+        """Every step's GPU command, on the GPU a GPU run would give it, in its order."""
         placed = [(step, self.gpus[0]) for step in shared]
-        on = gpu_of(list(per_seed), self.gpus)
-        placed += [(step, on[s]) for s, steps in per_seed.items() for step in steps]
+        if len(self.gpus) > 1:
+            on = gpu_of(list(per_seed), self.gpus)
+            placed += [(step, on[s]) for s, steps in per_seed.items() for step in steps]
+        else:
+            placed += [(step, self.gpus[0]) for step in one_gpu_order(self.ctx, per_seed)]
         for step, gpu in placed:
             if step.env == "cpu":
                 self.say(f"DRY-RUN [cpu]: {step.label} (runs in the runner)")
@@ -344,7 +393,9 @@ class Runner:
 
     def run_step(self, step: Step, gpu: int) -> None:
         if not self.force and is_complete(step.done):
-            self.say(f"[{step.label}] complete, skipping ({self.ctx.project.rel(step.done)})")
+            where = (self.ctx.project.rel(step.done) if isinstance(step.done, Path)
+                     else f"{len(step.done)} condition manifests")
+            self.say(f"[{step.label}] complete, skipping ({where})")
             return
         if step.env == "cpu":
             self.say(f"[{step.label}] cpu")
@@ -413,8 +464,10 @@ def _pointer(ctx: StageContext, seed: int, stage: str, target: Path, note: str =
 def run_cell(reg: Registry, proj: Project, cell_id: str, *, stages: Sequence[str] = DEFAULT_STAGES,
              seeds: Optional[Sequence[int]] = None, gpus: Sequence[int] = (), mode: str = "gpu",
              configs_dir: Path = CONFIGS_DIR, results_root: Optional[Path] = None,
-             force: bool = False, judges: Optional[Sequence[str]] = None) -> Path:
-    """Run the stages of one cell; return the cell's results folder."""
+             force: bool = False, judges: Optional[Sequence[str]] = None,
+             shared_eval: bool = True) -> Path:
+    """Run the stages of one cell; return the cell's results folder. shared_eval False
+    evaluates each condition of each seed on its own server, whatever the record says."""
     if mode not in MODES:
         raise RunError(f"mode {mode!r}: use one of {MODES}")
     unknown = set(stages) - set(STAGES)
@@ -488,7 +541,7 @@ def run_cell(reg: Registry, proj: Project, cell_id: str, *, stages: Sequence[str
                                              "waiver": cell.grading.same_family_waiver},
                                   "stage_manifests": index})
 
-    shared, per_seed = plan(ctx, stages, seeds, judges)
+    shared, per_seed = plan(ctx, stages, seeds, judges, shared_eval)
     # A dry run prints its GPU commands first, then checks the rest on the CPU without
     # downloading anything: a benchmark that is not local stops it with the fetch command.
     fetch = mode != "dry_run"
@@ -507,9 +560,9 @@ def run_cell(reg: Registry, proj: Project, cell_id: str, *, stages: Sequence[str
         if mode == "gpu" and len(gpus) > 1:
             _run_seeds_parallel(runner, per_seed, stages, gpus)
         else:
+            for step in one_gpu_order(ctx, per_seed):
+                runner.run_step(step, gpus[0])
             for s in seeds:
-                for step in per_seed[s]:
-                    runner.run_step(step, gpus[0])
                 runner.write_seed_pointers(s, stages)
     except Exception:
         write_cell_manifest("failed")
