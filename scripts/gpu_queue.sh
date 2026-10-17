@@ -162,7 +162,8 @@ validate() {
         '' | *[!0-9]*) die 2 "--gpu must be a GPU index or any, got '$GPU'" ;;
     esac
     case $OWNER in
-        '' | *[[:space:]]*) die 2 "--owner must be one word, got '$OWNER'" ;;
+        # tmux rewrites '.' and ':' in a session name, so a holder could not be found again.
+        '' | *[[:space:].:]*) die 2 "--owner must be one word with no '.' or ':', got '$OWNER'" ;;
     esac
     [ -n "$PURPOSE" ] || die 2 "--purpose is required"
     [ -x "$LEASE_TOOL" ] || die 2 "lease tool $LEASE_TOOL is not an executable file"
@@ -238,7 +239,33 @@ hold_name() { printf '%s-hold-gpu%s\n' "$OWNER" "$1"; }
 
 # The PID of a holder session's process, or nothing.
 hold_pid() {
-    tmux display-message -p -t "=$1" '#{pane_pid}' 2>/dev/null
+    # A pane target: '=NAME:' is the session of exactly that name and its active pane.
+    # '=NAME' alone is read as a pane name and matches nothing.
+    tmux display-message -p -t "=$1:" '#{pane_pid}' 2>/dev/null
+}
+
+# One queue of this owner on card $1 at a time: a held card is free to use only when no
+# live queue has its lock. The lock is node-local, as the cards are.
+use_lock() { printf '%s/%s-gpu%s.inuse\n' "${GPU_QUEUE_LOCK_DIR:-/tmp}" "$OWNER" "$1"; }
+
+take_card() {
+    local d
+    d="$(use_lock "$1")"
+    if mkdir "$d" 2>/dev/null; then
+        echo $$ >"$d/pid"
+        return 0
+    fi
+    # A lock whose queue is gone is stale.
+    kill -0 "$(cat "$d/pid" 2>/dev/null)" 2>/dev/null && return 1
+    rm -rf "$d"
+    mkdir "$d" 2>/dev/null && echo $$ >"$d/pid"
+}
+
+drop_card() {
+    local d
+    [ -n "$GPU" ] && [ "$GPU" != any ] || return 0
+    d="$(use_lock "$GPU")"
+    [ "$(cat "$d/pid" 2>/dev/null)" = $$ ] && rm -rf "$d"
 }
 
 # True when GPU $1 is one this owner already holds: its row is busy with this owner,
@@ -247,7 +274,7 @@ held_by_me() {
     local pid
     [ "$(row_field "$1" 2)" = busy ] && [ "$(row_field "$1" 3)" = "$OWNER" ] || return 1
     pid="$(hold_pid "$(hold_name "$1")")"
-    [ -n "$pid" ] && [ "$(row_field "$1" 4)" = "$pid" ]
+    [ -n "$pid" ] && [ "$(row_field "$1" 4)" = "$pid" ] && take_card "$1"
 }
 
 # With --keep-lease, the lease names a holder, so it stays live after this shell exits:
@@ -255,9 +282,14 @@ held_by_me() {
 make_holder() {
     [ "$KEEP_LEASE" = 1 ] || return 0
     HOLD="$(hold_name "$1")"
-    tmux has-session -t "=$HOLD" 2>/dev/null && die 4 "holder session $HOLD exists, but GPU $1's row does not name it; not claiming"
-    tmux new-session -d -s "$HOLD" "sleep infinity" || die 4 "could not start the holder session $HOLD"
+    if tmux has-session -t "=$HOLD" 2>/dev/null; then
+        # Not ours to kill: it may be a queue of this owner in the middle of a claim.
+        log "holder session $HOLD exists, but GPU $1's row does not name it; not claiming GPU $1"
+        HOLD=""
+        return 1
+    fi
     HOLD_MADE=1
+    tmux new-session -d -s "$HOLD" "sleep infinity" || { HOLD_MADE=0; die 4 "could not start the holder session $HOLD"; }
     LEASE_PID="$(hold_pid "$HOLD")"
     [ -n "$LEASE_PID" ] || die 4 "the holder session $HOLD has no PID"
 }
@@ -270,15 +302,28 @@ drop_holder() {
 # Claim GPU $GPU, whose row says free and whose card is empty. Returns 1 when the lease
 # tool does not give it (another job claimed it first).
 claim_row() {
-    make_holder "$GPU"
+    local nosmi rc
+    make_holder "$GPU" || return 1
     log "claiming GPU $GPU for $OWNER, lease pid $LEASE_PID: $PURPOSE"
     CLAIM_TRIED=1
-    if ! logged env CLAIM_PID="$LEASE_PID" "$LEASE_TOOL" claim "$GPU" "$OWNER" "$PURPOSE"; then
+    # The free check above runs outside the tool's lock, so another user can claim the row
+    # in between, and the tool would give us a busy row it counts stale (PID gone, card
+    # empty), which a job that is still starting looks like. The tool reads a failed
+    # nvidia-smi as a full card, and it asks nvidia-smi only about a busy row, so with a
+    # failing nvidia-smi first on PATH its claim refuses every busy row, under its lock.
+    if ! { nosmi="$(mktemp -d)" && printf '#!/bin/sh\nexit 1\n' >"$nosmi/nvidia-smi" && chmod +x "$nosmi/nvidia-smi"; }; then
+        die 4 "could not make the nvidia-smi stand-in for the claim"
+    fi
+    logged env PATH="$nosmi:$PATH" CLAIM_PID="$LEASE_PID" "$LEASE_TOOL" claim "$GPU" "$OWNER" "$PURPOSE"
+    rc=$?
+    rm -rf "$nosmi"
+    if [ "$rc" != 0 ]; then
         CLAIM_TRIED=0
         drop_holder
         return 1
     fi
     lease_is_mine || die 4 "the lease tool reported a claim, but $LEASE_FILE does not show GPU $GPU for $OWNER, pid $LEASE_PID"
+    take_card "$GPU" || die 4 "another queue of $OWNER has GPU $GPU's lock ($(use_lock "$GPU"))"
     log "claimed GPU $GPU"
 }
 
@@ -310,7 +355,7 @@ claim_gpu() {
     fi
     [ "$(row_field "$GPU" 2)" = free ] ||
         die 4 "GPU $GPU's lease row says $(row_field "$GPU" 2), owner $(row_field "$GPU" 3); a busy row is never taken; nothing ran"
-    claim_row || die 4 "the lease tool did not give GPU $GPU (another job holds it, or the tool failed); nothing ran"
+    claim_row || die 4 "GPU $GPU was not claimed (another job holds it, a holder session of ours is left on it, or the tool failed); nothing ran"
 }
 
 # --gpu any: a card this owner holds, else the first row that says free on an empty card.
@@ -649,6 +694,12 @@ card_empty() {
 # and the card is empty, and until then nobody is given a card that is in use.
 release_gpu() {
     [ "$CLAIM_TRIED" = 1 ] || { drop_holder; return 0; }
+    if [ "$KEEP_LEASE" = 1 ] && [ -n "$HOLD" ] && ! lease_is_mine; then
+        # A claim cut short by a signal, or one the tool refused or did not write.
+        log "the lease of GPU $GPU does not name this queue; not keeping it"
+        drop_holder
+        return 0
+    fi
     if [ "$KEEP_LEASE" = 1 ] && [ -n "$HOLD" ]; then
         log "GPU $GPU kept for $OWNER (--keep-lease): holder session $HOLD, pid $LEASE_PID. To give it back: $LEASE_TOOL release $GPU; tmux kill-session -t $HOLD"
         REASON="$REASON; GPU $GPU kept (holder $HOLD)"
@@ -661,6 +712,9 @@ release_gpu() {
     if ! card_empty; then
         log "GPU $GPU lease kept: the card is not empty (see the nvidia-smi table above)"
         REASON="$REASON; lease of GPU $GPU kept, the card was not empty"
+        # An adopted card's holder goes too: its live PID would keep the row busy after the
+        # card empties. With it gone, the lease tool frees the row then.
+        [ -z "$HOLD" ] || tmux kill-session -t "=$HOLD" 2>/dev/null
         return 0
     fi
     logged "$LEASE_TOOL" release "$GPU"
@@ -679,6 +733,7 @@ on_exit() {
     trap '' INT TERM HUP
     [ -n "$REASON" ] || REASON="exit $rc"
     release_gpu
+    drop_card
     printf '%s\n%s\n%s\n' "$rc" "$REASON" "$(ts)" >"$MARKER"
     log "queue $NAME: exit $rc ($REASON); marker $MARKER"
 }

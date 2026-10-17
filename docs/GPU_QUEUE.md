@@ -26,8 +26,11 @@ In this order:
    claims nothing. The row must say `free`: the queue never claims a busy row, even one
    the lease tool would count stale (its PID gone, the card empty), because a launcher's
    PID often exits while its job is still starting (the note at the top of the node's
-   lease file). A row of this owner held by its holder session (section 9) is used again
-   with no claim. Then it runs `<lease tool> claim <gpu> <owner> <purpose>` with
+   lease file). The queue checks the row outside the tool's lock, so for the claim itself
+   it puts a failing `nvidia-smi` first on PATH: the tool reads that as a full card and,
+   under its lock, refuses every busy row, one claimed a moment ago included. A row of
+   this owner held by its holder session (section 9) is used again with no claim, unless
+   another queue of the owner runs on it (a lock `/tmp/<owner>-gpu<N>.inuse` per card). Then it runs `<lease tool> claim <gpu> <owner> <purpose>` with
    `CLAIM_PID` set to its own PID, or to the holder's with `--keep-lease`. That process
    lives as long as the queue, so the lease stays live between commands. The lease tool
    takes its own lock and refuses a card that another live job holds. If the tool
@@ -227,7 +230,14 @@ Since 2026-10-17 it also covers `--gpu any` (it waits while every row is busy, t
 busy row, skips a free row on a card in use, and puts the card in `{gpu}`),
 `--keep-lease` (the row stays busy under a live holder), a later queue that uses the
 held card with no claim, a run without `--keep-lease` that gives a held card back, and a
-failed claim that leaves no holder.
+failed claim that leaves no holder. A review of that change on 2026-10-17 found seven
+faults, each now with a test: the holder's PID lookup used a pane target tmux does not
+match (so `--keep-lease` never worked; the fake tmux now reads targets as tmux does);
+a row claimed by someone else between the free check and the claim was taken (checked
+with the node's tool); two queues of the owner could share a held card; a signal during
+the claim could leave a holder; a leftover holder stopped `--gpu any` instead of skipping
+its card; a held card left in use kept its holder; and an owner with `.` or `:`, which
+tmux rewrites in session names.
 
 `tests/test_gpu_queue.py` runs the script with bash on the CPU: a fake lease tool, tmux
 and `nvidia-smi` on PATH, and short shell commands as the queue. It covers the order and

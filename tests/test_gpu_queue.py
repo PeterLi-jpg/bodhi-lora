@@ -57,7 +57,9 @@ case $1 in
     new-session) [ ! -e "$FAKE_TMUX_DIR/$4" ] || exit 1
                  sleep 1000 </dev/null >/dev/null 2>&1 &
                  echo $! >"$FAKE_TMUX_DIR/$4" ;;
-    display-message) [ -s "$FAKE_TMUX_DIR/${4#=}" ] && cat "$FAKE_TMUX_DIR/${4#=}" ;;
+    # A pane target, as real tmux reads it: only '=NAME:' names the session NAME.
+    display-message) t=${4#=}; case $t in *:) t=${t%:} ;; *) exit 0 ;; esac
+                     [ -s "$FAKE_TMUX_DIR/$t" ] && cat "$FAKE_TMUX_DIR/$t" ;;
     kill-session) f="$FAKE_TMUX_DIR/${3#=}"; [ -e "$f" ] || exit 1
                   [ -s "$f" ] && kill "$(cat "$f")" 2>/dev/null; rm -f "$f" ;;
     *) exit 2 ;;
@@ -135,7 +137,9 @@ class Node:
             "GPU_QUEUE_POLL_S": "1",
             "GPU_QUEUE_STOP_GRACE_S": "10",
             "GPU_QUEUE_MEM_WAIT_S": "0",
+            "GPU_QUEUE_LOCK_DIR": str(tmp / "locks"),
         }
+        (tmp / "locks").mkdir()
         # A GPU job of the test machine must not leak into the queue's environment.
         for key in ("CUDA_VISIBLE_DEVICES", "CUDA_DEVICE_ORDER", "GPU_LEASE_FILE"):
             self.env.pop(key, None)
@@ -314,6 +318,91 @@ def test_a_failed_claim_leaves_no_holder(node):
     proc = node.run(["true"], "--keep-lease")
     assert proc.returncode == 4
     assert list(node.sessions.iterdir()) == []
+
+
+def test_a_leftover_holder_skips_its_card_and_any_takes_another(node):
+    assert node.run(["true"], "--keep-lease").returncode == 0
+    subprocess.run([str(node.lease_tool), "release", GPU], env=node.env, check=True, capture_output=True)
+    _all_busy(node.lease_file, except_gpus=(GPU, "4"))     # 3 is the first free row
+    out = node.tmp / "out.txt"
+    proc = node.run([f"echo {{gpu}} >> {out}"], "--gpu", "any", "--keep-lease")
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert out.read_text() == "4\n"                       # 3 skipped, 4 claimed
+    assert "tester-hold-gpu3 exists" in node.queue_log()
+    assert (node.sessions / "tester-hold-gpu3").exists()   # not ours to kill
+
+
+def test_a_held_card_in_use_by_another_queue_of_the_owner_is_not_shared(node):
+    assert node.run(["true"], "--keep-lease").returncode == 0
+    _all_busy(node.lease_file, except_gpus=(GPU,))
+    gate = node.tmp / "gate"
+    first = node.start([f"while [ ! -e {gate} ]; do sleep 0.1; done"], "--gpu", "any", "--keep-lease")
+    try:
+        lock = node.tmp / "locks" / "tester-gpu3.inuse"
+        _wait_for(lock)
+        out = node.tmp / "out.txt"
+        # Its own queue file: node.queue_file would rewrite the one the first still has to read.
+        q2 = node.tmp / "q2.txt"
+        q2.write_text(f"echo {{gpu}} >> {out}\n")
+        second = subprocess.Popen(node.args(q2, "--gpu", "any", "--keep-lease", "--name", "q2"),
+                                  env=node.env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        time.sleep(2.5)
+        assert second.poll() is None and not out.exists()     # waits while the first runs
+        gate.touch()
+        assert first.wait(timeout=30) == 0
+        assert second.wait(timeout=30) == 0, second.stdout.read()
+        assert out.read_text() == "3\n"
+    finally:
+        for p in (first,):
+            if p.poll() is None:
+                p.kill()
+
+
+def test_a_held_card_left_in_use_by_a_run_without_keep_lease_loses_its_holder(node):
+    assert node.run(["true"], "--keep-lease").returncode == 0
+    mib = node.tmp / "mib"
+    proc = node.run([f"echo 41000 > {mib}"], env={"FAKE_GPU_MIB_FILE": str(mib)})
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert _row(node.lease_file)[1] == "busy"               # the card is in use: no release
+    assert not (node.sessions / "tester-hold-gpu3").exists()  # so the tool frees it once empty
+
+
+def test_an_owner_that_tmux_would_rename_is_refused(node):
+    args = node.args(node.queue_file(["true"]))
+    args[args.index("--owner") + 1] = "a.b"
+    proc = subprocess.run(args, env=node.env, capture_output=True, text=True, timeout=60)
+    assert proc.returncode == 2 and "no '.' or ':'" in proc.stdout + proc.stderr
+
+
+def test_a_row_claimed_after_the_free_check_is_not_taken(node, tmp_path):
+    """The race of the free check outside the tool's lock: alice claims card 3 between
+    the queue's check and its claim, and her launcher's PID is already gone with the card
+    still empty, so the node's tool would count her row stale. The queue's claim refuses it."""
+    try:
+        text = subprocess.run(["git", "-C", str(ROOT), "show", LEASE_TOOL_AT], capture_output=True,
+                              text=True, check=True).stdout
+    except subprocess.CalledProcessError:
+        pytest.skip(f"{LEASE_TOOL_AT} is not in this clone's history")
+    tool = _write_exec(tmp_path / "real_gpu_lease.sh", text)
+    if subprocess.run(["bash", "-c", "command -v flock"], env=node.env, capture_output=True).returncode:
+        _write_exec(node.bin / "flock", "#!/usr/bin/env bash\nexit 0\n")
+    lease_file = tmp_path / "real_GPUS.txt"
+    lease_file.write_text(_lease_table())
+    # alice's row appears after the queue's free check, just before its claim (mktemp runs
+    # in between), with her launcher's PID 99999 already gone and the card still empty.
+    real_mktemp = subprocess.run(["bash", "-c", "command -v mktemp"], capture_output=True, text=True).stdout.strip()
+    _write_exec(node.bin / "mktemp", f"""#!/usr/bin/env bash
+awk '$1 == "3" {{ printf "%-4s %-6s %-10s %-9s %-20s %s\\n", 3, "busy", "alice", 99999, "2026-10-17T00:00:00Z", "her job"; next }} {{ print }}' \
+    {lease_file} > {lease_file}.t && mv {lease_file}.t {lease_file}
+exec {real_mktemp} "$@"
+""")
+    args = node.args(node.queue_file(["true"]))
+    args[args.index("--lease-tool") + 1] = str(tool)
+    args[args.index("--lease-file") + 1] = str(lease_file)
+    proc = subprocess.run(args, env={**node.env, "GPU_LEASE_FILE": str(lease_file)},
+                          capture_output=True, text=True, timeout=60)
+    assert proc.returncode == 4, proc.stdout + proc.stderr
+    assert _row(lease_file)[1:4] == ["busy", "alice", "99999"]
 
 
 def test_does_not_claim_a_card_that_holds_memory(node):
