@@ -1,0 +1,140 @@
+# The reruns after the EOS fix on NRP (DECISIONS.md D28, BLOCKED.md item 2.1, docs/NRP.md).
+# scripts/task_pool.py runs these tasks with one worker per A100-80GB pod: a worker takes
+# the ready task whose chain of later tasks has the most hours, so the cards stay busy.
+# hours: A100-80GB estimates, twice the H100 stage times of the manifests of R2 to R5
+# (RUN_PLAN.md section 4.4); they only order the tasks. Each pod has one card, index 0.
+# The runner skips every stage whose manifest is complete, so a task run again goes on
+# where it stopped. The finish task of a cell runs every stage once more; all are
+# complete, so it only writes the cell manifest with the index of every stage.
+tasks:
+  # R2: the five seeds train apart, so up to three train at once.
+  - id: r2-train-s42
+    hours: 1.7
+    run: python -m bodhi_lora run healthbench__mistral-small-24b__bodhi --stages train --seeds 42 --gpus 0
+  - id: r2-train-s7
+    hours: 1.7
+    run: python -m bodhi_lora run healthbench__mistral-small-24b__bodhi --stages train --seeds 7 --gpus 0
+  - id: r2-train-s13
+    hours: 1.7
+    run: python -m bodhi_lora run healthbench__mistral-small-24b__bodhi --stages train --seeds 13 --gpus 0
+  - id: r2-train-s99
+    hours: 1.7
+    run: python -m bodhi_lora run healthbench__mistral-small-24b__bodhi --stages train --seeds 99 --gpus 0
+  - id: r2-train-s101
+    hours: 1.7
+    run: python -m bodhi_lora run healthbench__mistral-small-24b__bodhi --stages train --seeds 101 --gpus 0
+  # One shared server makes the replies of all nine conditions for all seeds (the base too).
+  - id: r2-eval
+    hours: 6.0
+    after: [r2-train-s42, r2-train-s7, r2-train-s13, r2-train-s99, r2-train-s101]
+    run: python -m bodhi_lora run healthbench__mistral-small-24b__bodhi --stages eval --judges none --gpus 0
+  - id: r2-grade
+    hours: 0.8
+    after: [r2-eval]
+    run: python -m bodhi_lora run healthbench__mistral-small-24b__bodhi --stages grade --judges none --gpus 0
+  # The MedGemma-27B judge, one task per seed (it never ran on R2).
+  - id: r2-judge-s42
+    hours: 3.6
+    after: [r2-grade]
+    run: python -m bodhi_lora run healthbench__mistral-small-24b__bodhi --stages grade --judges medgemma-27b-text --seeds 42 --gpus 0
+  - id: r2-judge-s7
+    hours: 3.6
+    after: [r2-grade]
+    run: python -m bodhi_lora run healthbench__mistral-small-24b__bodhi --stages grade --judges medgemma-27b-text --seeds 7 --gpus 0
+  - id: r2-judge-s13
+    hours: 3.6
+    after: [r2-grade]
+    run: python -m bodhi_lora run healthbench__mistral-small-24b__bodhi --stages grade --judges medgemma-27b-text --seeds 13 --gpus 0
+  - id: r2-judge-s99
+    hours: 3.6
+    after: [r2-grade]
+    run: python -m bodhi_lora run healthbench__mistral-small-24b__bodhi --stages grade --judges medgemma-27b-text --seeds 99 --gpus 0
+  - id: r2-judge-s101
+    hours: 3.6
+    after: [r2-grade]
+    run: python -m bodhi_lora run healthbench__mistral-small-24b__bodhi --stages grade --judges medgemma-27b-text --seeds 101 --gpus 0
+  - id: r2-bench
+    hours: 7.6
+    after: [r2-train-s42]
+    run: python -m bodhi_lora run healthbench__mistral-small-24b__bodhi --stages bench --seeds 42 --gpus 0
+  - id: r2-finish
+    hours: 0.1
+    after: [r2-judge-s42, r2-judge-s7, r2-judge-s13, r2-judge-s99, r2-judge-s101, r2-bench]
+    run: python -m bodhi_lora run healthbench__mistral-small-24b__bodhi --gpus 0
+  # R3 and R4 read the new R2 adapters.
+  - id: r3
+    hours: 9.0
+    after: [r2-train-s42, r2-train-s7, r2-train-s13, r2-train-s99, r2-train-s101]
+    run: python -m bodhi_lora run mediq-paired__mistral-small-24b__bodhi --stages eval,grade --judges none --gpus 0
+  - id: r3-finish
+    hours: 0.1
+    after: [r3]
+    run: python -m bodhi_lora run mediq-paired__mistral-small-24b__bodhi --gpus 0
+  - id: r4
+    hours: 14.0
+    after: [r2-train-s42, r2-train-s7, r2-train-s13, r2-train-s99, r2-train-s101]
+    run: python -m bodhi_lora run healthbench__mistral-small-24b__bodhi__labelled --stages eval,grade --judges none --gpus 0
+  - id: r4-finish
+    hours: 0.1
+    after: [r4]
+    run: python -m bodhi_lora run healthbench__mistral-small-24b__bodhi__labelled --gpus 0
+  # R5: the ask-first adapters, then their MediQ cell.
+  - id: r5-train-s42
+    hours: 0.8
+    run: python -m bodhi_lora run healthbench__mistral-small-24b__ask-first --stages train --seeds 42 --gpus 0
+  - id: r5-train-s7
+    hours: 0.8
+    run: python -m bodhi_lora run healthbench__mistral-small-24b__ask-first --stages train --seeds 7 --gpus 0
+  - id: r5-train-s13
+    hours: 0.8
+    run: python -m bodhi_lora run healthbench__mistral-small-24b__ask-first --stages train --seeds 13 --gpus 0
+  - id: r5-train-s99
+    hours: 0.8
+    run: python -m bodhi_lora run healthbench__mistral-small-24b__ask-first --stages train --seeds 99 --gpus 0
+  - id: r5-train-s101
+    hours: 0.8
+    run: python -m bodhi_lora run healthbench__mistral-small-24b__ask-first --stages train --seeds 101 --gpus 0
+  - id: r5-eval
+    hours: 3.0
+    after: [r5-train-s42, r5-train-s7, r5-train-s13, r5-train-s99, r5-train-s101]
+    run: python -m bodhi_lora run healthbench__mistral-small-24b__ask-first --stages eval --judges none --gpus 0
+  - id: r5-grade
+    hours: 0.4
+    after: [r5-eval]
+    run: python -m bodhi_lora run healthbench__mistral-small-24b__ask-first --stages grade --judges none --gpus 0
+  - id: r5-judge-s42
+    hours: 2.0
+    after: [r5-grade]
+    run: python -m bodhi_lora run healthbench__mistral-small-24b__ask-first --stages grade --judges medgemma-27b-text --seeds 42 --gpus 0
+  - id: r5-judge-s7
+    hours: 2.0
+    after: [r5-grade]
+    run: python -m bodhi_lora run healthbench__mistral-small-24b__ask-first --stages grade --judges medgemma-27b-text --seeds 7 --gpus 0
+  - id: r5-judge-s13
+    hours: 2.0
+    after: [r5-grade]
+    run: python -m bodhi_lora run healthbench__mistral-small-24b__ask-first --stages grade --judges medgemma-27b-text --seeds 13 --gpus 0
+  - id: r5-judge-s99
+    hours: 2.0
+    after: [r5-grade]
+    run: python -m bodhi_lora run healthbench__mistral-small-24b__ask-first --stages grade --judges medgemma-27b-text --seeds 99 --gpus 0
+  - id: r5-judge-s101
+    hours: 2.0
+    after: [r5-grade]
+    run: python -m bodhi_lora run healthbench__mistral-small-24b__ask-first --stages grade --judges medgemma-27b-text --seeds 101 --gpus 0
+  - id: r5-bench
+    hours: 4.6
+    after: [r5-train-s42]
+    run: python -m bodhi_lora run healthbench__mistral-small-24b__ask-first --stages bench --seeds 42 --gpus 0
+  - id: r5-finish
+    hours: 0.1
+    after: [r5-judge-s42, r5-judge-s7, r5-judge-s13, r5-judge-s99, r5-judge-s101, r5-bench]
+    run: python -m bodhi_lora run healthbench__mistral-small-24b__ask-first --gpus 0
+  - id: r5m
+    hours: 6.0
+    after: [r5-train-s42, r5-train-s7, r5-train-s13, r5-train-s99, r5-train-s101]
+    run: python -m bodhi_lora run mediq-paired__mistral-small-24b__ask-first --stages eval,grade --judges none --gpus 0
+  - id: r5m-finish
+    hours: 0.1
+    after: [r5m]
+    run: python -m bodhi_lora run mediq-paired__mistral-small-24b__ask-first --gpus 0

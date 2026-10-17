@@ -281,10 +281,14 @@ def build_manifest(stage, *, cell: Optional[str] = None, seed: Optional[int] = N
 
 
 def write_manifest(path, manifest) -> Path:
-    """Write atomically, so a crash never leaves half a manifest."""
+    """Write atomically, so a crash never leaves half a manifest.
+
+    The temporary name carries the host and the PID: runner processes in different pods
+    can write the same cell manifest at once (docs/NRP.md), and a shared name would let
+    one process rename the other's half-written file."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(path.name + ".tmp")
+    tmp = path.with_name(f"{path.name}.{socket.gethostname()}.{os.getpid()}.tmp")
     with open(tmp, "w") as f:
         json.dump(manifest, f, indent=2, default=str)
         f.write("\n")
