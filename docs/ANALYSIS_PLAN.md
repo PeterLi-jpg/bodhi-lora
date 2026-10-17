@@ -855,3 +855,23 @@ R2 started before O9 was decided, so its bench times the adapter unmerged, as re
 
 No output of any planned cell existed when he answered: R1 (judge re-grade of the recorded
 Med42-8B cells) was running and R2 had not started.
+
+**2026-10-17, the EOS defect. A fix to training, made after the outputs of R2 to R5
+existed; no score of them was read.** The training code took the EOS that ends each reply
+out of the loss for every Mistral and Llama tokenizer (KNOWN_ISSUES.md, Training;
+DECISIONS.md D28). Outputs of covered cells existed: R2, R3, R4 and R5 had run, and every
+seed was graded. No rubric score, epistemic score, mean or contrast of R2 to R5 was read:
+the checks that found the fault read reply text, finish flags, token counts and
+parse-failure counts only. What this changes:
+
+- The adapter conditions of R2 to R5 (`lora` and `lora+<protocol>`) as they ran are not
+  used for any claim. Every contrast of sections 3 to 9 that has an adapter condition on
+  these cells waits for adapters trained with the fix.
+- The base conditions of these cells stand: they do not depend on training.
+- Training is otherwise unchanged: the same rows, recipe and seeds. The only change is
+  that the end-of-turn token is now in the loss.
+- The 2026-07 cells stay the record as posted. Their adapters had the same fault, and
+  the paper says so where it describes their training.
+
+Which runs train again waits for the first author (BLOCKED.md item 2.1).
+

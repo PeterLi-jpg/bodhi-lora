@@ -479,6 +479,31 @@ What only a GPU run shows is in [KNOWN_ISSUES.md](KNOWN_ISSUES.md), the entry on
 serving changes of 2026-10-12. For R7 add: no MedGemma server or MedGemma training has
 run on the host, in bf16 or in 4-bit.
 
+### 4.4 Reruns after the EOS fix (2026-10-17)
+
+The adapters of R2 and R5 never trained on the end of a reply (KNOWN_ISSUES.md, Training;
+DECISIONS.md D28), so their adapter conditions run again once the first author says go
+(BLOCKED.md item 2.1). Traces, filter and the base conditions are kept. The hours below
+come from the stage manifests of R2 to R5:
+
+- **R2 again.** Training 4.2 (R2). Eval of `lora`, `lora+bodhi` and `lora+red-flags-first`
+  on one shared server, 1.5 to 2.5 (R5's shared eval of five conditions took 2.0, with
+  looping replies). The evaluator regrades all nine conditions, 0.4, because one grade
+  file holds them all. The MedGemma-27B judge on nine conditions, about 9 (5.1 for R5's
+  five); it never ran on R2. The bench of seed 42, 3.8 (R2). About 19 to 20.
+- **R3 again.** The three adapter conditions of seven, 1.8 (3/7 of R3's 4.1) up to 4.1 if
+  the shared step runs whole; the evaluator, 0.4. About 2 to 5.
+- **R4 again.** The three adapter conditions at 775 prompts and five seeds, most of R4's 6.5
+  because its base ran once; the evaluator, 0.6. About 6 to 7.
+- **R5 again, HealthBench.** Training 1.9; eval of `lora` and `lora+ask-first` 0.8 to 2.0;
+  the evaluator 0.2; the judge 2.0 to 5.1 (all five conditions sit in one judge file); the
+  bench 2.3. About 7 to 12.
+- **R5 again, MediQ paired.** The two adapter conditions of four, 1.5 to 3.0; the evaluator
+  0.3. About 2 to 3.
+
+Order: R2 and R5 first (on two cards at once if there are two), then R3, R4 and the MediQ
+ask-first cell, which read their adapters.
+
 ## 5. Minimal first batch
 
 If compute is tight, run these first: about **32 to 43 H100-hours** with the records as

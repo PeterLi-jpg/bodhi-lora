@@ -30,6 +30,7 @@ def test_recipe_comes_from_the_cell_and_the_model_record(tmp_path):
     assert cfg["model"]["quantization"] == "4bit"
     assert cfg["model"]["response_template"] == "[/INST]"
     assert cfg["model"]["tokenizer_kwargs"] == {"fix_mistral_regex": True}
+    assert cfg["model"]["pad_token"] == "<pad>"
     assert cfg["lora"]["r"] == 16 and len(cfg["lora"]["target_modules"]) == 7
     assert train_stage.effective_batch(cfg["training"], world_size=1) == 16
 
@@ -111,4 +112,59 @@ def test_format_example_batched_examples(monkeypatch):
         "user:second | assistant:two",
     ]
 
+
+def _tiny_tokenizer():
+    """The smoke model's tokenizer from the local cache (the smoke run downloads it)."""
+    from transformers import AutoTokenizer
+    reg = load_registry(CONFIGS_DIR)
+    m = reg.models["tiny-random-llama"]
+    try:
+        return AutoTokenizer.from_pretrained(m.hf_id, revision=m.revision, local_files_only=True)
+    except OSError:
+        pytest.skip("the tiny-random-llama tokenizer is not in the local cache")
+
+
+def _collated_rows(tok):
+    from trl import DataCollatorForCompletionOnlyLM
+    tok.padding_side = "right"
+    texts = [tok.apply_chat_template([{"role": "user", "content": q}, {"role": "assistant", "content": a}],
+                                     tokenize=False)
+             for q, a in (("hi", "Hello there."), ("Is it bad?", "Tell me more about the pain."))]
+    enc = [tok(t, add_special_tokens=False) for t in texts]
+    dataset = [{"input_ids": e["input_ids"], "attention_mask": e["attention_mask"]} for e in enc]
+    return dataset, DataCollatorForCompletionOnlyLM(response_template="[/INST]", tokenizer=tok)
+
+
+def test_pad_equal_to_eos_takes_the_end_of_the_reply_out_of_the_loss():
+    """The bug of every Mistral and Llama adapter before 2026-10-17: with pad = EOS the
+    collator masks the EOS that ends the reply. The check stops such a run before a step."""
+    from bodhi_lora.pipeline import train as train_stage
+    tok = _tiny_tokenizer()
+    tok.pad_token = tok.eos_token
+    dataset, collator = _collated_rows(tok)
+    labels = collator(dataset)["labels"][0][:len(dataset[0]["input_ids"])].tolist()
+    eos_at = dataset[0]["input_ids"].index(tok.eos_token_id)
+    assert labels[eos_at] == -100
+    with pytest.raises(SystemExit, match="out of the loss"):
+        train_stage.check_replies_in_loss(dataset, collator, tok)
+
+
+def test_with_a_pad_token_that_is_not_eos_the_whole_reply_is_trained():
+    from bodhi_lora.pipeline import train as train_stage
+    tok = _tiny_tokenizer()
+    train_stage.set_pad_token(tok, "<unk>")
+    dataset, collator = _collated_rows(tok)
+    assert train_stage.check_replies_in_loss(dataset, collator, tok) == 2
+    labels = collator(dataset)["labels"][0][:len(dataset[0]["input_ids"])].tolist()
+    assert labels[dataset[0]["input_ids"].index(tok.eos_token_id)] == tok.eos_token_id
+
+
+def test_set_pad_token_refuses_eos_and_unknown_tokens():
+    from bodhi_lora.pipeline import train as train_stage
+    tok = _tiny_tokenizer()
+    tok.pad_token = tok.eos_token
+    with pytest.raises(SystemExit, match="pads with its EOS"):
+        train_stage.set_pad_token(tok, None)
+    with pytest.raises(SystemExit, match="not in the vocabulary"):
+        train_stage.set_pad_token(tok, "<no-such-token>")
 

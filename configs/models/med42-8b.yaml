@@ -6,4 +6,8 @@ last_modified: "2024-08-20"
 family: llama3
 domain: clinical
 params_b: 8
+chat_template:
+  # The tokenizer pads with its EOS (<|eot_id|>, id 128009). <|reserved_special_token_2|>
+  # (id 128004) is the reserved token that Llama 3.1 later named <|finetune_right_pad_id|>.
+  pad_token: "<|reserved_special_token_2|>"
 license: llama3

@@ -68,6 +68,10 @@ def test_stub_run_writes_every_stage_and_manifest(reg, smoke_run):
             assert r["condition"] == condition and r["calls"] >= 1 and "finish_length" in r
         grades = json.loads((sd / "grade" / "epistemic__llama-3.1-8b.json").read_text())
         assert [c["name"] for c in grades["configs"]] == cell.eval.conditions
+    # The real training path ran the reply-loss check (train.py check_replies_in_loss).
+    train_logs = sorted((smoke_run / "logs").glob("train*.log"))
+    assert len(train_logs) == len(cell.seeds)
+    assert all("Reply tokens in the loss: checked on" in f.read_text() for f in train_logs)
 
 
 def test_runner_manifests_record_the_stage_env(smoke_run):

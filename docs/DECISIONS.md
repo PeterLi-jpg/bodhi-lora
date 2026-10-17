@@ -264,3 +264,22 @@ The four new Mistral-Small-24B cells of R3 to R5 serve 64 requests at once inste
 so the 4-bit 24B model keeps the H100 busy; vLLM's batch occupancy already varies within
 every run, so this adds no new kind of variation. R2 keeps its recorded settings. R7 waits
 for the first author's answer on the 4,096-token pair (BLOCKED.md item 1.1).
+
+### D28. EOS in the training loss; the EOS-masked adapter outputs set aside (2026-10-17)
+
+Under the first author's delegation ("just fix everything and make everything optimal").
+Training padded with EOS when a tokenizer had no pad token, and the collator took every
+pad-id token out of the loss, so no Mistral or Llama adapter trained on the end of a reply
+(KNOWN_ISSUES.md, Training). The fix pads with a token each model record names and checks
+on the real collated rows, before any step, that the whole reply is in the loss.
+
+R5's adapter conditions failed as runs: most of their replies are repetition loops that
+stop at the token limit. That was decided from reply health alone (loops, finish flags,
+token counts), before any score of R5 was read (ANALYSIS_PLAN.md section 2.5). The R2
+adapters have the same fault with a smaller effect, and R3 and R4 evaluate them. No claim
+uses the adapter conditions of R2 to R5 as they stand; their outputs stay on the GPU host
+as a record of the fault. The base conditions do not depend on training and stand. Which
+runs are trained and evaluated again, and on how many GPUs, is the first author's
+go-ahead (BLOCKED.md item 2.1). The 2026-07 cells stay the record as posted (choice 3),
+and the paper says how they were trained.
+

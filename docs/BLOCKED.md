@@ -102,6 +102,40 @@ Action: say which runs may start, where, and when.
 After: each finished cell lands in `results/<cell_id>/`. RUN_PLAN.md section 7 says how to
 copy it back, analyze it and commit it.
 
+### 2.1 The reruns after the EOS fix (2026-10-17)
+
+Why: the adapters of R2 and R5 never trained on the end of a reply (KNOWN_ISSUES.md,
+Training; DECISIONS.md D28). R5's adapters loop in most replies; R2's mostly stop. No claim
+uses their adapter conditions until they are trained again. The code fix needs no GPU and
+is in. R3 to R6 finished on 2026-10-15 and GPU 3 was released; the lease file says which
+cards are free now.
+
+Action: say which runs may start and on how many GPUs (at most three, D21).
+
+| Run | What runs again | H100-hours |
+|---|---|---|
+| R2 again | train the five seeds; eval the three adapter conditions; the evaluator on all nine conditions; the MedGemma-27B judge, which never ran on R2; the bench of seed 42 | 19 to 20 |
+| R3 again | eval the three adapter conditions on the new R2 adapters; the evaluator | 2 to 5 |
+| R4 again | eval the three adapter conditions at 775 prompts; the evaluator | 6 to 7 |
+| R5 again, HealthBench | train the five seeds; eval the two adapter conditions; the evaluator; the judge; the bench | 7 to 12 |
+| R5 again, MediQ paired | eval the two adapter conditions on the new R5 adapters; the evaluator | 2 to 3 |
+| All | | 36 to 47 |
+
+The hours come from the measured stage times of R2 to R5 (RUN_PLAN.md section 4.4). R3 and
+R4 need R2's new adapters, and the MediQ cell needs R5's. On one card the set takes about
+two days; on three, with R2 and R5 at once, about one.
+
+How: before each rerun, the outputs that depend on the adapters (each seed's `train`,
+`grade` and `bench` folders, the adapter-condition eval files and the cell manifest) move to
+`/data/PROJECTS/bohdi/results_archive/eos-masked-2026-10/<cell>/` on the host. The runner
+then trains and evaluates them again and skips what is complete (traces, filter, base
+conditions). Nothing is deleted.
+
+The 2026-07 cells stay the record as posted (choice 3); their adapters had the same
+fault, and the paper says so. Training them again is about 45 H100-hours by their
+2026-07 times, plus about 15 for the MedGemma-27B judge on the new replies. Say if you
+want that too.
+
 ## 3. Hugging Face facts
 
 Why: two model facts need a token with access to gated repositories. Neither blocks a

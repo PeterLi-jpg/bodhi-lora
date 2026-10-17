@@ -6,6 +6,37 @@ D-numbers refer to [DECISIONS.md](DECISIONS.md). Issue numbers such as #5 are Gi
 
 ## Open
 
+### Training
+
+- **The adapters never trained on the end of a reply (found 2026-10-17).** When a
+  tokenizer had no pad token, the training code padded with EOS
+  (`bodhi_lora/pipeline/train.py` before 2026-10-17, and
+  `579421f:scripts/train_lora.py:169-170` for the 2026-07 cells). The completion-only
+  collator of TRL 0.11.4 builds its labels with transformers'
+  `DataCollatorForLanguageModeling`, which gives every token with the pad id the label
+  -100. So the EOS that ends each reply was out of the loss. On real training rows of R2
+  and R5 with the Mistral-Small-24B tokenizer, the final `</s>` of every row had the
+  label -100. Affected: every adapter on Mistral-Small-24B, BioMistral-7B or Med42-8B,
+  that is, all 2026-07 adapters (their saved tokenizer configs say pad = EOS) and the
+  2026-10 adapters of R2 and R5. R3 and R4 evaluate the R2 adapters. Not affected: the
+  2026-05 MedGemma-27B cell, whose converter copied every reply token into the labels
+  (`5bd9265:scripts/convert_traces_to_maxtext.py:217-219`), and every Gemma, MedGemma,
+  Qwen or Phi-4 tokenizer, which has its own pad token. What it did to the replies, by
+  the content checks (a loop is a reply over 400 characters whose zlib ratio is below
+  0.15; no score was read):
+  - R5, HealthBench: `lora` 585 loops and 713 replies at the token limit of 1,000;
+    `lora+ask-first` 829 and 831. `base` 1 and 9.
+  - R5, MediQ paired: `lora` 1,607 loops and 1,880 at the limit of 2,000;
+    `lora+ask-first` 1,785 and 1,789. `base` 0 and 0.
+  - R2 adapters (R4, 3,875 replies each): `lora+bodhi` 70 loops and 229 at the limit,
+    `lora+red-flags-first` 26 and 160, `lora` 2 and 83; `base` 0 and 45.
+  - 2026-07 cells (their files do not flag the limit): BioMistral-7B `lora_bodhi` loops
+    in 514 of 1,000 replies and `lora_no_wrapper` in 268, against 32 and 37 for the base;
+    in the other cells at most 35 adapter replies of 1,000 loop.
+  The code is fixed (see Fixed). Open: the reruns of R2 to R5 (BLOCKED.md item 2.1;
+  DECISIONS.md D28) and what the paper does with the 2026-07 cells beyond saying it
+  (Appendix "What differs from the MedGemma-27B cell").
+
 ### Blocked on data outside the repo
 
 - **The added cells' full responses are not versioned (PROV-1).** The per-seed eval JSON
@@ -212,6 +243,19 @@ D-numbers refer to [DECISIONS.md](DECISIONS.md). Issue numbers such as #5 are Gi
 
 ## Fixed
 
+- **EOS out of the training loss (2026-10-17).** `set_pad_token` in
+  `bodhi_lora/pipeline/train.py` pads with the model record's `chat_template.pad_token`
+  and stops a run that would pad with EOS. The four records whose tokenizers have no
+  separate pad token name one: `<pad>` (id 11) for Mistral-Small-24B, `<unk>` (id 0) for
+  BioMistral-7B and Mistral-7B-Instruct (both fall back to bytes, so `<unk>` never
+  occurs), and `<|reserved_special_token_2|>` (id 128004) for Med42-8B. Before any step,
+  `check_replies_in_loss` runs the real collator on the first 16 tokenized training rows
+  and stops when a reply token, the end-of-turn token included, is out of the loss. The
+  smoke run passes through it (tests/test_pipeline_runner.py). Checked on 2026-10-17 on
+  the GPU host with the real tokenizers of the six models that cells train and 16 R2 and
+  R5 training rows: every reply token in the loss, and no row holds the pad id. The
+  Mistral-7B-Instruct record also gained `response_template: "[/INST]"`, without which its
+  template has no assistant header to find and training would have stopped.
 - **The anonymous export kept the commit ids (2026-10-11).** The exported docs, tests and
   run manifests cited about 70 commits of this public repository, and GitHub finds a
   public commit by its hash, so the reviewer copy pointed at the authors. The paper

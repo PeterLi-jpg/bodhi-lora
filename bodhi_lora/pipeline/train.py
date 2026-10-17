@@ -10,7 +10,10 @@ intermediate checkpoints in seed_<n>/train/checkpoint-<k>/; a rerun resumes from
 newest checkpoint.
 
 The loss covers the reply only (completion-only masking): the response template marks
-where the reply starts, from the model record or detected from the chat template.
+where the reply starts, from the model record or detected from the chat template. The
+loss must also cover the token that ends the reply, or the adapter never learns to stop:
+the pad token may not be EOS (set_pad_token), and check_replies_in_loss runs the real
+collator on the first training rows before any step.
 
 API used: TRL 0.11.4 (SFTConfig, SFTTrainer with formatting_func and peft_config,
 DataCollatorForCompletionOnlyLM), per the TRL v0.11.4 SFT Trainer docs
@@ -109,6 +112,56 @@ def find_response_template(tokenizer):
         f"model record.\nwithout_gen = {without_gen!r}\nwith_gen = {with_gen!r}")
 
 
+def set_pad_token(tokenizer, pad_token):
+    """Pad with the model record's pad token, and never with EOS.
+
+    DataCollatorForCompletionOnlyLM (TRL 0.11.4) builds its labels with transformers'
+    DataCollatorForLanguageModeling, which sets the label of every token equal to
+    pad_token_id to -100 (transformers/data/data_collator.py at v4.57.6). With pad = EOS
+    that takes the EOS that ends each reply out of the loss, and the adapter never learns
+    to stop. Until 2026-10-17 this code set pad = EOS when the tokenizer had no pad token,
+    and every Mistral and Llama adapter was trained that way (KNOWN_ISSUES.md).
+    """
+    if pad_token is not None:
+        pad_id = tokenizer.convert_tokens_to_ids(pad_token)
+        if pad_id is None or (pad_id == tokenizer.unk_token_id and pad_token != tokenizer.unk_token):
+            raise SystemExit(f"the model record's pad token {pad_token!r} is not in the vocabulary")
+        tokenizer.pad_token = pad_token
+    if tokenizer.pad_token is None:
+        raise SystemExit("the tokenizer has no pad token: name one in the model record "
+                         "(chat_template.pad_token), a token the data never holds and not EOS")
+    if tokenizer.pad_token_id == tokenizer.eos_token_id:
+        raise SystemExit(f"the tokenizer pads with its EOS {tokenizer.eos_token!r}, which takes the "
+                         "end of each reply out of the loss: name another pad token in the model "
+                         "record (chat_template.pad_token)")
+
+
+def check_replies_in_loss(dataset, collator, tokenizer, n=16):
+    """Stop before training when a reply token is out of the loss.
+
+    The collator masks the prompt up to the last response template and every token with
+    the pad id. On the first n tokenized training rows, run through the real collator,
+    every label from the first trained token to the end of the row must equal its input
+    id, the end-of-turn token included. Returns the number of rows checked.
+    """
+    rows = [{"input_ids": dataset[i]["input_ids"], "attention_mask": dataset[i]["attention_mask"]}
+            for i in range(min(n, len(dataset)))]
+    batch = collator(rows)
+    for i, row in enumerate(rows):
+        ids = list(row["input_ids"])
+        labels = batch["labels"][i][:len(ids)].tolist()
+        trained = [p for p, label in enumerate(labels) if label != -100]
+        if not trained:
+            raise SystemExit(f"training row {i}: no reply token is in the loss, so the response "
+                             "template was not found (chat_template.response_template)")
+        dropped = [p for p in range(trained[0], len(ids)) if labels[p] != ids[p]]
+        if dropped:
+            raise SystemExit(f"training row {i}: {len(dropped)} reply tokens are out of the loss, the "
+                             f"first {tokenizer.decode([ids[dropped[0]]])!r}; the pad token "
+                             f"{tokenizer.pad_token!r} must be one the replies never use")
+    return len(rows)
+
+
 def latest_checkpoint(output_dir):
     checkpoints = []
     for path in Path(output_dir).glob("checkpoint-*"):
@@ -151,7 +204,8 @@ def recipe(ctx: StageContext) -> dict:
         "model": {"id": m.id, "hf_id": m.hf_id, "revision": m.revision, "dtype": m.dtype,
                   "quantization": t.quantization,
                   "tokenizer_kwargs": m.chat_template.tokenizer_kwargs,
-                  "response_template": m.chat_template.response_template},
+                  "response_template": m.chat_template.response_template,
+                  "pad_token": m.chat_template.pad_token},
         "lora": {"method": t.method, "r": t.r, "alpha": t.alpha, "dropout": t.dropout,
                  "target_modules": t.target_modules},
         "training": {"epochs": t.epochs, "max_steps": t.max_steps,
@@ -195,8 +249,7 @@ def run(ctx: StageContext, seed: int) -> dict:
 
     _tokenizer = AutoTokenizer.from_pretrained(model_cfg["hf_id"], revision=model_cfg["revision"],
                                                **model_cfg["tokenizer_kwargs"])
-    if _tokenizer.pad_token is None:
-        _tokenizer.pad_token = _tokenizer.eos_token
+    set_pad_token(_tokenizer, model_cfg["pad_token"])
     # Half-precision SFT overflows with left padding.
     _tokenizer.padding_side = "right"
     # The chat template already emits BOS; a second one would be a sequence the model
@@ -273,6 +326,9 @@ def run(ctx: StageContext, seed: int) -> dict:
     trainer = SFTTrainer(model=model, args=args, peft_config=lora_config, train_dataset=ds_train,
                          eval_dataset=ds_val if has_val else None, tokenizer=_tokenizer,
                          data_collator=collator, formatting_func=format_example)
+    n_checked = check_replies_in_loss(trainer.train_dataset, collator, _tokenizer)
+    print(f"Reply tokens in the loss: checked on {n_checked} training rows "
+          f"(pad {_tokenizer.pad_token!r}, EOS {_tokenizer.eos_token!r})", flush=True)
     resume = latest_checkpoint(out_dir)
     if resume:
         print(f"Resuming from checkpoint: {resume}", flush=True)

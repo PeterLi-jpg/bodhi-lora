@@ -11,4 +11,7 @@ chat_template:
   # The model card asks for it; without it the tekken tokenizer warns of, and
   # applies, incorrect tokenization.
   tokenizer_kwargs: {fix_mistral_regex: true}
+  # The tokenizer has no pad token (pad_token null, EOS </s> id 2). <pad> (id 11) is a
+  # special token of the tekken vocabulary that no text encodes to.
+  pad_token: "<pad>"
 license: apache-2.0

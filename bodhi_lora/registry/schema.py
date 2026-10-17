@@ -104,6 +104,11 @@ class ChatTemplate(_Record):
     response_template: Optional[str] = None
     # Extra tokenizer arguments the model card asks for.
     tokenizer_kwargs: dict[str, Any] = Field(default_factory=dict)
+    # The token that pads training batches, when the tokenizer has none or pads with EOS.
+    # The training collator takes every token with the pad id out of the loss, so with
+    # pad = EOS the EOS that ends each reply goes too, and the adapter never learns to stop
+    # (KNOWN_ISSUES.md, "EOS out of the loss"). It must be a token the data never holds.
+    pad_token: Optional[str] = None
 
 
 class ModelConfig(_Record):

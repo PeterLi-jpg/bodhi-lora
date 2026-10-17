@@ -6,4 +6,10 @@ last_modified: "2025-12-03"
 family: mistral
 domain: general
 params_b: 7
+chat_template:
+  # The [INST] ... [/INST] template has no assistant header to detect.
+  response_template: "[/INST]"
+  # The tokenizer has no pad token (EOS </s> id 2); <unk> (id 0) never occurs, because
+  # the tokenizer falls back to bytes.
+  pad_token: "<unk>"
 license: apache-2.0

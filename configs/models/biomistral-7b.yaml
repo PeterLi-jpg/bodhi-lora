@@ -11,4 +11,7 @@ chat_template:
   # The template raises on a system message.
   system_role: false
   response_template: "[/INST]"
+  # The tokenizer has no pad token (EOS </s> id 2) and no pad-type token in its 32,000
+  # pieces; <unk> (id 0) never occurs, because the tokenizer falls back to bytes.
+  pad_token: "<unk>"
 license: apache-2.0
