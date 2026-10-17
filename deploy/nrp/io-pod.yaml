@@ -1,0 +1,21 @@
+# A small CPU pod to copy files onto and off the volume with kubectl cp (docs/NRP.md).
+# Delete it when the copy is done; it exits by itself after six hours.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: bodhi-lora-io
+  labels: {app: bodhi-lora}
+spec:
+  restartPolicy: Never
+  containers:
+    - name: io
+      image: vllm/vllm-openai:v0.10.2
+      command: [sleep, "21600"]
+      resources:
+        requests: {cpu: "1", memory: 2Gi}
+        limits: {cpu: 1200m, memory: 2400Mi}
+      volumeMounts:
+        - {name: data, mountPath: /data}
+  volumes:
+    - name: data
+      persistentVolumeClaim: {claimName: bodhi-lora-rerun}

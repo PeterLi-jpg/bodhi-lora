@@ -501,9 +501,12 @@ come from the stage manifests of R2 to R5:
 - **R5 again, MediQ paired.** The two adapter conditions of four, 1.5 to 3.0; the evaluator
   0.3. About 2 to 3.
 
-Order: R2 first, then R3 and R4, which read its adapters, then R5 and its MediQ cell. One
-card runs them one after another from `configs/queues/eos_rerun.txt`, which waits for a
-free card and keeps it at the end (GPU_QUEUE.md section 9):
+They run on NRP (DECISIONS.md D29, docs/NRP.md), on up to three A100-80GB cards, from the
+task list `configs/queues/eos_rerun_nrp.yaml`, with the base conditions made again there
+too; the hours above are H100 hours, about twice that on an A100 (about 92 A100-hours,
+about 31 hours on three cards). On the shared host the same cells would run one after
+another from `configs/queues/eos_rerun.txt`, which waits for a free card and keeps it at
+the end (GPU_QUEUE.md section 9):
 
 ```bash
 # configs/queues/eos_rerun.txt

@@ -884,3 +884,10 @@ condition, and the new base grades are compared with the archived ones as a chec
 evaluator's determinism. The 2026-07 cells are not trained again. He asked that no GPU be
 claimed yet. No score of R2 to R5 had been read.
 
+**2026-10-17, the first author. Where the reruns run.** He chose NRP's A100-80GB cards, at
+most three at once, and to make the base replies again there too: every condition of
+R2, R3, R4 and both R5 cells runs on one GPU type (DECISIONS.md D29). This replaces "the
+base conditions of these cells stand" in the EOS entry above: their replies from the
+shared host's H100 are kept as a record, and no contrast uses them. The envs are the same
+packages as on the host. No score of R2 to R5 had been read.
+

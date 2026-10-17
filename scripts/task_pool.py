@@ -26,9 +26,15 @@ On SIGTERM or SIGINT (the pod is stopped) the running task's process group gets 
 so a stage stops its vLLM server; its claim stays and goes stale, and another worker runs
 the task again. The pipeline runner skips every stage whose manifest is complete.
 
-Exit codes: 0 every task done; 1 a task failed MAX_ATTEMPTS times (the others that could
-run are done); 2 bad arguments or task file; 75 the card still holds memory before a
-task (the pod should be replaced); 128+N a signal.
+When no task is left that this worker could run, it writes summary.json (done, failed,
+blocked) and exits 0, failed tasks or not: a pod that failed would only be replaced by
+one that finds the same. The summary and the worker logs say what failed. --has-work
+exits 0 if a new worker would find a task to run and 3 if not, so a pod can check
+before it downloads its models.
+
+Exit codes: 0 no task left for this worker (summary.json says whether all are done);
+2 bad arguments or task file; 3 (--has-work) nothing for a new worker; 75 the card still
+holds memory before a task (the pod should be replaced); 128+N a signal.
 """
 from __future__ import annotations
 
@@ -245,6 +251,20 @@ class Pool:
         shutil.rmtree(self.claim_dir(tid), ignore_errors=True)
         return rc
 
+    def has_work(self) -> bool:
+        """Whether a worker that starts now would find a task: one is ready, or more are
+        left than the running workers will take."""
+        ready, pending, running, _ = self.plan()
+        return bool(ready) or len(pending) > len(running)
+
+    def write_summary(self, done: set, stuck: set) -> None:
+        failed = self.failed()
+        out = {"time": utc(), "tasks": len(self.tasks), "done": sorted(done),
+               "failed": sorted(failed), "blocked": sorted(stuck - failed)}
+        tmp = self.state / f"summary.json.{self.worker}.tmp"
+        tmp.write_text(json.dumps(out, indent=1) + "\n")
+        os.replace(tmp, self.state / "summary.json")
+
     def stop(self, signum, _frame) -> None:
         self.stopping = True
         self.log(f"got signal {signum}")
@@ -279,10 +299,11 @@ class Pool:
                 self.run(taken)
                 continue
             if not pending and not running:
-                done = len(self.done())
-                self.log(f"finished: {done} of {len(self.tasks)} tasks done"
-                         + (f"; failed or blocked: {sorted(stuck)}" if stuck else ""))
-                return 1 if stuck else 0
+                done = self.done()
+                self.write_summary(done, stuck)
+                self.log(f"finished: {len(done)} of {len(self.tasks)} tasks done"
+                         + (f"; FAILED or blocked: {sorted(stuck)}" if stuck else ""))
+                return 0
             # Nothing ready: the tasks left wait on running ones. When the other workers'
             # tasks are as many as the tasks left, those workers take them, and this card
             # is better given back than held empty.
@@ -351,6 +372,7 @@ def main(argv=None) -> int:
     ap.add_argument("--repo", required=True, type=Path)
     ap.add_argument("--worker", default=os.environ.get("POD_NAME") or socket.gethostname())
     ap.add_argument("--list", action="store_true", help="print the tasks in the order of their rank and exit")
+    ap.add_argument("--has-work", action="store_true", help="exit 0 if a new worker would find a task, else 3")
     args = ap.parse_args(argv)
     dag = args.dag if args.dag.is_absolute() else args.repo / args.dag
     pool = Pool(dag, args.state, args.repo, args.worker)
@@ -359,6 +381,8 @@ def main(argv=None) -> int:
             print(f"{pool.rank[t['id']]:6.1f} h  {t['id']:28s} after {','.join(t['after']) or '-'}: "
                   f"{shlex.join(shlex.split(t['run']))}")
         return 0
+    if args.has_work:
+        return 0 if pool.has_work() else 3
     signal.signal(signal.SIGTERM, pool.stop)
     signal.signal(signal.SIGINT, pool.stop)
     return pool.loop()

@@ -105,13 +105,17 @@ def test_a_failed_task_runs_again_then_blocks_what_comes_after_it(pool):
         {"id": "free", "run": pool.step("free")},
     ])
     proc = pool.run(dag)
-    assert proc.returncode == 1, proc.stdout
+    # exit 0, so the cluster does not replace the pod with one that finds the same
+    assert proc.returncode == 0, proc.stdout
     done = {p.stem for p in (pool.state / "done").glob("*.json")}
     assert done == {"flaky", "free"}
+    summary = json.loads((pool.state / "summary.json").read_text())
+    assert summary["failed"] == ["bad"] and summary["blocked"] == ["after_bad"]
+    assert pool.run(dag, worker="w2").returncode == 0               # a later pod stops at once
     assert [n for k, n, _ in pool.events() if k == "start"].count("bad") == 2   # MAX_ATTEMPTS
     assert "after_bad" not in [n for _, n, _ in pool.events()]
     assert json.loads((pool.state / "failed" / "bad.json").read_text())["exit"] == 4
-    assert "blocked" in proc.stdout
+    assert "FAILED or blocked" in proc.stdout
 
 
 def test_a_stale_claim_is_taken_again(pool):
@@ -180,6 +184,21 @@ def test_a_card_that_holds_memory_stops_the_worker_before_the_task(pool, tmp_pat
     assert proc.returncode == 75
     assert not pool.trace.exists()
     assert not (pool.state / "claims" / "a").exists()          # the task is free for another pod
+
+
+def test_has_work_tells_a_new_pod_whether_to_start(pool):
+    dag = pool.dag([{"id": "a", "run": pool.step("a")}, {"id": "b", "after": ["a"], "run": pool.step("b")}])
+    has = [sys.executable, str(POOL), "--dag", str(dag), "--state", str(pool.state), "--repo", str(pool.repo),
+           "--has-work"]
+    assert subprocess.run(has, env=pool.env).returncode == 0          # a is ready
+    claim = pool.state / "claims" / "a"
+    claim.mkdir(parents=True)
+    (claim / "heartbeat").touch()
+    assert subprocess.run(has, env=pool.env).returncode == 3          # b waits on a, whose worker takes it
+    import shutil
+    shutil.rmtree(claim)
+    assert pool.run(dag).returncode == 0
+    assert subprocess.run(has, env=pool.env).returncode == 3          # all done
 
 
 @pytest.mark.parametrize("tasks, message", [

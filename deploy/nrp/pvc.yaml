@@ -1,0 +1,14 @@
+# The shared volume of the NRP reruns (docs/NRP.md): the checkout, both envs, the
+# results and the task pool's state. CephFS, so the three worker pods mount it at once.
+# Models are not on it: each worker pod downloads them to its own disk.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: bodhi-lora-rerun
+  labels: {app: bodhi-lora}
+spec:
+  storageClassName: rook-cephfs
+  accessModes: [ReadWriteMany]
+  resources:
+    requests:
+      storage: 200Gi

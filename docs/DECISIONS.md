@@ -283,3 +283,16 @@ runs are trained and evaluated again, and on how many GPUs, is the first author'
 go-ahead (BLOCKED.md item 2.1). The 2026-07 cells stay the record as posted (choice 3),
 and the paper says how they were trained.
 
+### D29. The reruns on NRP A100s, every condition again (2026-10-17)
+
+The first author's choices of 2026-10-17. The shared host had no free card, so the reruns
+of D28 run on NRP (docs/NRP.md): "A100-80GB, up to 3", in the namespace's quota of five,
+because the MedGemma-27B judge needs an 80 GB card and the 48 GB cards would take three
+to five times longer. "Regenerate base on NRP": every condition of each rerun cell, the
+base conditions too, runs again on one GPU type, so no contrast mixes replies from an
+H100 and an A100 (greedy decoding can differ by a token across GPU types). The base
+replies of the shared host stay on the host as a record and a check of that difference.
+The envs are the host's, package for package (the lock files of D28's day). A task pool
+on the shared volume keeps the three cards busy (scripts/task_pool.py), because Argo is not
+open to the namespace.
+

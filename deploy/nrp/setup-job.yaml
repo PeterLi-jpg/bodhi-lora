@@ -1,0 +1,78 @@
+# One CPU job before the workers (docs/NRP.md): check out the commit from the bundle,
+# unpack the inputs copied from the shared host, build both envs from their lock files,
+# check the Hugging Face token can read the three models, and dry-run every cell.
+# Set COMMIT below to the commit of the bundle.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: bodhi-lora-setup
+  labels: {app: bodhi-lora}
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 604800
+  template:
+    metadata:
+      labels: {app: bodhi-lora}
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: setup
+          image: vllm/vllm-openai:v0.10.2
+          env:
+            - {name: COMMIT, value: "SET-ME"}
+            - {name: PIP_CACHE_DIR, value: /data/pip-cache}
+            - {name: PYTHONUNBUFFERED, value: "1"}
+            - name: HF_TOKEN
+              valueFrom: {secretKeyRef: {name: nfootprint-hf, key: token}}
+          command: [/bin/bash, -lc]
+          args:
+            - |
+              set -euo pipefail
+              exec > >(tee -a /data/setup.log) 2>&1
+              echo "=== setup $(date -u +%FT%TZ) on ${HOSTNAME}"
+              python3 -c 'import sys; assert sys.version_info[:2] == (3, 12), sys.version'
+              cd /data
+              [ -d bohdi/.git ] || git clone -q --no-checkout incoming/bodhi.bundle bohdi
+              git -C bohdi fetch -q /data/incoming/bodhi.bundle
+              git -C bohdi checkout -q --detach "$COMMIT"
+              git -C bohdi log --oneline -1
+              tar -xzf incoming/payload.tar.gz -C bohdi
+              cd bohdi
+              # The envs of the cells, package for package (requirements-infer.txt says
+              # how the locks are known); --no-deps installs exactly the lock.
+              [ -x .venv/bin/python ] || python3 -m venv .venv
+              [ -x .venv-infer/bin/python ] || python3 -m venv .venv-infer
+              .venv/bin/python -m pip install -q --no-deps -r requirements-train.lock.txt
+              .venv/bin/python -m pip install -q --no-deps -e .
+              .venv-infer/bin/python -m pip install -q --no-deps -r requirements-infer.lock.txt
+              .venv/bin/python -m pip check
+              .venv-infer/bin/python -m pip check
+              .venv/bin/python -c 'import torch, transformers, peft, trl; print("train env", torch.__version__, transformers.__version__, peft.__version__, trl.__version__)'
+              .venv-infer/bin/python -c 'import vllm, torch, transformers; print("infer env", vllm.__version__, torch.__version__, transformers.__version__)'
+              # The token must read every model the reruns load, at its pinned revision.
+              .venv/bin/python - <<'PY'
+              import yaml
+              from huggingface_hub import HfApi
+              api = HfApi()
+              for mid in ("mistral-small-24b", "llama-3.1-8b", "medgemma-27b-text"):
+                  rec = yaml.safe_load(open(f"configs/models/{mid}.yaml"))
+                  info = api.model_info(rec["hf_id"], revision=rec["revision"], files_metadata=False)
+                  print("readable:", rec["hf_id"], rec["revision"][:10], len(info.siblings), "files")
+              PY
+              for cell in healthbench__mistral-small-24b__bodhi mediq-paired__mistral-small-24b__bodhi \
+                          healthbench__mistral-small-24b__bodhi__labelled healthbench__mistral-small-24b__ask-first \
+                          mediq-paired__mistral-small-24b__ask-first; do
+                .venv/bin/python -m bodhi_lora run "$cell" --dry-run > "/data/dryrun_${cell}.log" 2>&1 \
+                  && echo "dry run ok: $cell" || { echo "dry run FAILED: $cell"; tail -20 "/data/dryrun_${cell}.log"; exit 1; }
+              done
+              .venv/bin/python scripts/task_pool.py --dag configs/queues/eos_rerun_nrp.yaml \
+                --state /data/pool/eos_rerun --repo /data/bohdi --list | head -5
+              echo "=== setup done $(date -u +%FT%TZ)"
+          resources:
+            requests: {cpu: "4", memory: 16Gi, ephemeral-storage: 20Gi}
+            limits: {cpu: 4800m, memory: 19Gi, ephemeral-storage: 24Gi}
+          volumeMounts:
+            - {name: data, mountPath: /data}
+      volumes:
+        - name: data
+          persistentVolumeClaim: {claimName: bodhi-lora-rerun}

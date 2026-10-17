@@ -111,8 +111,9 @@ is in. R3 to R6 finished on 2026-10-15 and GPU 3 was released; the lease file sa
 cards are free now.
 
 Scope decided on 2026-10-17: "R2–R5 adapters" (the table below), not the 2026-07 cells
-(ANALYSIS_PLAN.md section 12). Still yours: the go to claim cards, and how many (at most
-three, D21). You said not to claim yet.
+(ANALYSIS_PLAN.md section 12). Then, the same day: run them on NRP, on at most three
+A100-80GB cards, with the base conditions made again there too (DECISIONS.md D29,
+docs/NRP.md). Nothing is left for you here.
 
 | Run | What runs again | H100-hours |
 |---|---|---|
