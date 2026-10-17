@@ -4,7 +4,8 @@ Every stage writes <stage folder>/manifest.json when it finishes, and the runner
 the cell's manifest.json. A manifest holds:
   - the resolved settings and their sha256,
   - the git commit, a dirty flag and the sha256 of the uncommitted diff,
-  - the python, torch, transformers, vllm and peft versions,
+  - the python, torch, transformers, vllm and peft versions of the env that did the work
+    (the runner writes some manifests itself and names the stage's env, not its own),
   - each model by registry id, with its repo, family and the revision it loaded,
   - the adapter sha256 and the eval-id hashes,
   - input and output file hashes and stage counts (tau, kept traces, tokens, ...),
@@ -26,7 +27,9 @@ from typing import Optional
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 # 2: models by registry id, timing and GPU fields (schema 1 had repo ids only).
-MANIFEST_SCHEMA = 2
+# 3: manifests the runner writes record the packages of the env that ran the stage
+#    (schema 2 recorded the runner's own env there); the cell manifest records both envs.
+MANIFEST_SCHEMA = 3
 
 # Packages whose version changes what a run produces. vllm is read from the
 # running interpreter: the engine starts the vllm binary that sits next to this
@@ -111,6 +114,26 @@ def package_versions(names=TRACKED_PACKAGES) -> dict:
         except metadata.PackageNotFoundError:
             versions[name] = None
     return versions
+
+
+def interpreter_package_versions(python, names=TRACKED_PACKAGES) -> dict:
+    """package_versions() as another interpreter sees it.
+
+    The runner starts each stage in the env of configs/project.yaml (python.infer or
+    python.train), which is not the env the runner itself runs in. A manifest the runner
+    writes for a stage records that stage's env, so it asks that interpreter.
+    """
+    code = ("import json, platform, sys\n"
+            "from importlib import metadata\n"
+            "v = {'python': platform.python_version()}\n"
+            "for n in sys.argv[1:]:\n"
+            "    try:\n"
+            "        v[n] = metadata.version(n)\n"
+            "    except metadata.PackageNotFoundError:\n"
+            "        v[n] = None\n"
+            "print(json.dumps(v))\n")
+    out = subprocess.run([str(python), "-c", code, *names], capture_output=True, text=True, check=True)
+    return json.loads(out.stdout)
 
 
 def hostname_sha256() -> str:
@@ -215,10 +238,12 @@ def _jsonable(obj):
 def build_manifest(stage, *, cell: Optional[str] = None, seed: Optional[int] = None,
                    config=None, models: Optional[dict] = None, engines=None, adapter_dir=None,
                    eval_ids=None, inputs=None, outputs=None, counts=None, timer: Optional[Timer] = None,
-                   extra=None, repo_root=REPO_ROOT) -> dict:
+                   extra=None, packages: Optional[dict] = None, repo_root=REPO_ROOT) -> dict:
     """Assemble a manifest dict. Every argument except stage is optional.
 
     models maps a role ("base", "grader", ...) to a model record (ModelConfig).
+    packages defaults to this interpreter's versions; a caller that writes the manifest
+    for work done in another env passes that env's versions.
     """
     manifest = {
         "schema": MANIFEST_SCHEMA,
@@ -227,7 +252,7 @@ def build_manifest(stage, *, cell: Optional[str] = None, seed: Optional[int] = N
         "seed": seed,
         "created_utc": datetime.now(timezone.utc).isoformat(),
         "git": git_state(repo_root),
-        "packages": package_versions(),
+        "packages": package_versions() if packages is None else packages,
         "host_sha256": hostname_sha256(),
         "hardware": gpu_info(),
     }

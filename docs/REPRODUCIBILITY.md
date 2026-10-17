@@ -89,7 +89,7 @@ first author's adoption of docs/ANALYSIS_PLAN.md on 2026-10-11 fixed (its choice
 |---|---|---|---|
 | Trainer | tunix on TPU v6e | `bodhi_lora/pipeline/train.py` (transformers, peft, trl) on H100 | the same, through `python -m bodhi_lora run` |
 | LoRA | r=8, alpha=16 (from the code; the saved adapters cannot be checked) | r=16, alpha=32 (from the saved adapter configs) | r=16, alpha=32, seven projections; QLoRA 4-bit for 24-27B bases |
-| Eval server | vLLM on Modal A100-80GB, `max_model_len` 4096, `--max-num-seqs` 32 | vLLM 0.9 subprocess on H100, `max_model_len` 8192, `--max-num-seqs` 64; the 24B base served in bf16 although trained in 4-bit | vLLM 0.9 subprocess, `max_model_len` 8192; the base served as it was trained |
+| Eval server | vLLM on Modal A100-80GB, `max_model_len` 4096, `--max-num-seqs` 32 | vLLM 0.10.2 subprocess on H100, `max_model_len` 8192, `--max-num-seqs` 64; the 24B base served in bf16 although trained in 4-bit | vLLM 0.10.2 subprocess, `max_model_len` 8192; the base served as it was trained |
 | Eval grader | `meta-llama/Llama-3.1-8B-Instruct` | `NousResearch/Meta-Llama-3.1-8B-Instruct`, a mirror of the same model | `meta-llama/Llama-3.1-8B-Instruct`, pinned |
 | HealthBench training pool | the 4,000 prompts outside Hard | the same | the 3,321 that remain after the physician-labelled holdout |
 | Eval prompts | a new 200-prompt draw from HealthBench-Hard per seed | HealthBench: the fixed `df10aa8:data/raw/hard_200_sample_ids.json` for every seed (now `results/*/shared/inputs/eval_ids.json`); other benchmarks: the first 200 prompts of the built JSONL | a separate random draw of 200 from the eval pool per seed |
@@ -102,10 +102,13 @@ first author's adoption of docs/ANALYSIS_PLAN.md on 2026-10-11 fixed (its choice
 - Training: the `train` extra of `pyproject.toml` in a `.venv` (torch 2.7.0,
   transformers 4.57.6, peft 0.19.1, trl 0.11.4, bodhi-llm 0.1.4). `bash setup.sh` runs
   `pip install -e '.[train,gpu,dev]'` and `pip check`.
-- Inference: a second env, `.venv-infer`, for vLLM 0.9.2, which needs an older
-  transformers. The runner calls `.venv-infer/bin/python` for generation, grading
-  and eval. `requirements-infer.txt` pins it. The env that produced the posted cells
-  was not frozen (KNOWN_ISSUES).
+- Inference: a second env, `.venv-infer`, for vLLM 0.10.2 (torch 2.8.0, transformers
+  4.56.2). The runner calls `.venv-infer/bin/python` for generation, grading and eval.
+  `requirements-infer.txt` pins it and says how the versions are known: the 2026-07
+  cells and the 2026-10 runs used one env on the GPU host, unchanged since 2026-07-23
+  but for bitsandbytes (added 2026-10-11). `requirements-infer.lock.txt` is its full
+  freeze. The submitted cell (2026-05) ran on Modal; its vLLM is not recorded
+  (legacy/README.md).
 - Hardware for a cell: one H100 80GB per seed. Measured on the shared host, a 2026-07
   cell took 4.1 to 15.6 H100-hours: 11.2 for Mistral-Small-24B on HealthBench, 4.5 for
   Med42-8B (docs/RUN_PLAN.md section 3.1 gives every cell and stage).

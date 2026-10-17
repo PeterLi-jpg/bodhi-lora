@@ -1,10 +1,12 @@
 # The judge of the cells whose base is in the Gemma family (EXPERIMENTS.md E10). The
 # panel's clinical judge, MedGemma-27B, is a Gemma model, so the family rule (R3) bars it
 # there, and the task asks for a judge outside Qwen and Llama as well. No clinical model
-# outside Gemma, Llama, Qwen and Mistral was found that is instruction-tuned and that
-# vLLM 0.9.2 serves: Meditron3-Phi4-14B is a base model by its card ("NOT been
-# fine-tuned or instruction-tuned"), and gpt-oss needs vLLM 0.10.1 or later. Phi-4 is a
-# general model, so on these cells the panel compares a general judge, not a clinical one.
+# outside Gemma, Llama, Qwen and Mistral was found that is instruction-tuned:
+# Meditron3-Phi4-14B is a base model by its card ("NOT been fine-tuned or
+# instruction-tuned"). gpt-oss, which vLLM 0.10.2 on the host serves, is a general model
+# too. Phi-4 is a general model, so on these cells the panel compares a general judge,
+# not a clinical one. (Until 2026-10-13 this note said gpt-oss was out because it needs
+# vLLM 0.10.1 or later; the host env has had 0.10.2 since 2026-07-23.)
 # Revision: HEAD of the Hugging Face API on 2026-10-09.
 id: phi-4
 hf_id: microsoft/phi-4

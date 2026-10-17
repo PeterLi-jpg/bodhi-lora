@@ -58,9 +58,10 @@ Linux-only, so this is expected.
 ## 4. Inference environment
 
 The runner (`python -m bodhi_lora run`) runs generation, grading and eval with
-`.venv-infer/bin/python`, a second environment for vLLM 0.9.2, which cannot import with
-the transformers version that training pins. `requirements-infer.txt` pins it; the
-environment behind the posted cells was not frozen (KNOWN_ISSUES.md). If your
+`.venv-infer/bin/python`, a second environment for vLLM 0.10.2, which pins another torch
+than training. `requirements-infer.txt` pins it, and `requirements-infer.lock.txt` is the
+full freeze of the env that ran the 2026-07 and 2026-10 cells; `setup.sh` installs the
+first with the second as constraints. If your
 environments live elsewhere, change `python.train` and `python.infer` in
 `configs/project.yaml`.
 

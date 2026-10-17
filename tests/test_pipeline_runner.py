@@ -70,6 +70,37 @@ def test_stub_run_writes_every_stage_and_manifest(reg, smoke_run):
         assert [c["name"] for c in grades["configs"]] == cell.eval.conditions
 
 
+def test_runner_manifests_record_the_stage_env(smoke_run):
+    """Roll-up and pointer manifests record the env that ran the stage, and the cell
+    manifest records both envs. Schema 2 stamped the runner's own env on them, which on a
+    two-env install named vLLM 0.9.2 for stages that ran under 0.10.2."""
+    cell = _manifest(smoke_run / "manifest.json")
+    assert cell["schema"] == 3 and set(cell["packages"]) == {"infer", "train"}
+    sd = smoke_run / "seed_1"
+    assert _manifest(sd / "traces" / "manifest.json")["packages"] == \
+        _manifest(smoke_run / "shared" / "traces" / "manifest.json")["packages"]
+    part = _manifest(next((sd / "eval").glob("*.manifest.json")))
+    assert _manifest(sd / "eval" / "manifest.json")["packages"] == part["packages"]
+
+
+def test_in_a_gpu_run_the_runner_asks_each_stage_interpreter(tmp_path):
+    from types import SimpleNamespace
+    from bodhi_lora.pipeline.runner import Runner
+    fakes = {}
+    for env, version in (("infer", "0.10.2"), ("train", "0.9.2")):
+        fake = tmp_path / f"python-{env}"
+        fake.write_text(f"#!/bin/sh\necho '{{\"python\": \"3.12.3\", \"vllm\": \"{version}\"}}'\n")
+        fake.chmod(0o755)
+        fakes[env] = fake
+    proj = SimpleNamespace(python_infer=fakes["infer"], python_train=fakes["train"])
+    runner = Runner(SimpleNamespace(project=proj), "gpu", [0])
+    assert runner.packages("infer")["vllm"] == "0.10.2"
+    assert runner.packages("train")["vllm"] == "0.9.2"
+    # the cpu filter split runs inside the runner, so its env is the runner's
+    from bodhi_lora import manifest as mf
+    assert runner.packages("cpu") == mf.package_versions()
+
+
 def test_per_seed_filter_splits_differ_by_seed(smoke_run):
     a = (smoke_run / "seed_1" / "filter" / "val.jsonl").read_text()
     b = (smoke_run / "seed_2" / "filter" / "val.jsonl").read_text()

@@ -1075,6 +1075,12 @@ Eval prompts/seed & 200 (from \statHBMedGemmaMayPopulationPrompts{} \hbhard{}) \
 %                   scripts/_vllm_engine.py:154 (max_model_len 8192) and :298-314
 %                   (--enable-lora, --dtype bfloat16: the base is served unquantized)
 %   hardware        the comment at the top of each config (one H100 80GB)
+%   software        the GPU host's two envs (requirements-train.lock.txt and
+%                   requirements-infer.lock.txt, frozen 2026-10-13; every package of both was
+%                   installed on 2026-07-23 before the first output, except bitsandbytes in
+%                   .venv-infer, added 2026-10-11 for the 2026-10 runs). run_cell.sh:21-22 trains with .venv and serves
+%                   with .venv-infer. All 36 saved adapters record peft 0.19.1, and all 144
+%                   eval files record transformers 4.56.2, which only .venv-infer has.
 % Rank, alpha, dropout, target modules, epochs, per-device batch and accumulation come
 % from the synced results_rebuttal/*/seed_*/ckpt/best/{adapter_config,trainer_state}.json
 % through rebuttal/results/cell_recipe.json (\statCells* macros). The base model of each
@@ -1113,6 +1119,10 @@ Precision & bfloat16 compute & bfloat16 & bfloat16 \\
 Training hardware & one H100 80GB & same & same \\
 Eval serving & bfloat16 base + adapter & same & same \\
 Eval context length & 8,192 tokens (vLLM) & same & same \\
+Training software & PyTorch 2.7.0, Transformers 4.57.6, & same & same \\
+ & PEFT 0.19.1, TRL 0.11.4 & & \\
+Eval software & vLLM 0.10.2, PyTorch 2.8.0, & same & same \\
+ & Transformers 4.56.2 & & \\
 \bottomrule
 \end{tabular}
 \end{table}

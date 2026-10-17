@@ -47,7 +47,8 @@ if [ "$(uname -s)" = "Linux" ] && [ "${SKIP_INFER_ENV:-0}" != "1" ]; then
     echo "=== .venv-infer (requirements-infer.txt) ==="
     python -m venv .venv-infer
     .venv-infer/bin/python -m pip install --upgrade pip
-    .venv-infer/bin/python -m pip install -r requirements-infer.txt
+    # The lock holds every package of the env that ran the 2026-07 and 2026-10 cells.
+    .venv-infer/bin/python -m pip install -r requirements-infer.txt -c requirements-infer.lock.txt
 else
     echo "skipping .venv-infer (not Linux, or SKIP_INFER_ENV=1); vLLM stages will not run here"
 fi

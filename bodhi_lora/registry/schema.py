@@ -15,9 +15,8 @@ gives the design and an example of each record.
 
 API used: pydantic 2.x (BaseModel, ConfigDict(extra="forbid", frozen=True),
 model_validator(mode="after"), Field(discriminator=...)), per the pydantic v2 docs
-pages "Models", "Validators" and "Unions". pyproject.toml and requirements-infer.txt pin
-pydantic>=2.10,<3,
-the floor vLLM 0.9.2 already needs.
+pages "Models", "Validators" and "Unions". pyproject.toml pins pydantic>=2.10,<3 and
+requirements-infer.txt pydantic>=2.11.7,<3, the floor vLLM 0.10.2 needs.
 """
 from __future__ import annotations
 

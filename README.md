@@ -103,7 +103,7 @@ scripts/             repository tools: doc and secrets checks, figure scripts, p
 tests/               pytest suite, no GPU needed
 .github/workflows/   CI (checks, paper numbers and figures, tests) and shellcheck
 pyproject.toml       the package and its pins (analysis, train, gpu and dev extras)
-requirements-infer.txt   the separate vLLM environment (vLLM 0.9.2 cannot share an env with training)
+requirements-infer.txt   the separate vLLM environment (vLLM 0.10.2 pins another torch than training); its .lock.txt is the full freeze
 Makefile, setup.sh   the make targets below, and the one-time setup of a GPU machine
 ```
 

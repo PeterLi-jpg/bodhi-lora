@@ -349,11 +349,24 @@ The two costs, by the measured times of section 3.1:
   high figures double the inference, as A3 does; R7 also scales it by A5). The other
   cells draw their prompts per seed, so their base conditions still run for each seed.
 
-Not in the estimate, because nothing measured them: CUDA graphs on the servers without an
-adapter (traces, filter, graders, and the judges, which are all of R6), the tail of the
-batch, which now comes once per eval step and not once per condition and seed, and the
+Not in the estimate, because nothing measured them: CUDA graphs on the servers that make
+replies without an adapter (traces and the base conditions; graders, the filter and the
+judges stay eager, DECISIONS.md D27), the tail of the batch, which now comes once per eval step and not once per condition and seed, and the
 speed of one server with five adapters against one with one adapter. The batch sizes are
 those of the records; section 4.3 lists a change to them as the first author's choice.
+
+**Measured on GPU 3 (2026-10-13).** Times from the stage manifests (`time.seconds`), no
+scores. R3 took 4.5 hours on the clock (eval 4.1, epistemic grading 0.4), against 8.8 to
+15.2. R4 took 7.1 hours (eval 6.5, grading 0.6), against 17.5 to 31.1. So on an idle card
+the section 4 figures run 2 to 4 times high; the 2026-07 times they scale came from a
+shared host (section 3.1). R2, which ran before the serving of 2026-10-12: teacher traces
+0.67 hours, filter 1.0, training 4.2 for five seeds, eval 6.9 over 45 condition servers,
+epistemic grading 0.4, and its bench 3.8 hours against 0.4 to 0.6. The bench answers one
+prompt at a time on its own server per condition (`bodhi_lora/pipeline/bench.py`), so the
+0.4 to 0.6 of section 4 was far too low, and A8 scales the other bench figures from it;
+they should start from R2's 3.8 hours. R5's
+teacher traces, the first traces with CUDA graphs, took 9 minutes for 3,321 prompts, where
+R2's took 40 in eager mode.
 
 ### 4.3 Readiness of R3 to R7 on GPU 3 (2026-10-12)
 

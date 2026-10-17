@@ -351,6 +351,7 @@ class Runner:
     results_root: Optional[Path] = None
     force: bool = False
     _print_lock: threading.Lock = field(default_factory=threading.Lock)
+    _packages: dict = field(default_factory=dict)
 
     def say(self, msg: str) -> None:
         with self._print_lock:
@@ -372,6 +373,21 @@ class Runner:
         if root is not None:
             cmd += ["--results-root", str(root)]
         return cmd
+
+    def packages(self, env: str) -> dict:
+        """Package versions of the interpreter that runs a stage of this env, as command()
+        and run_step() choose it. A manifest the runner writes for a stage records these,
+        not the runner's own env."""
+        if self.mode != "gpu" or env == "cpu":
+            python = sys.executable
+        else:
+            proj: Project = self.ctx.project
+            python = proj.python_train if env == "train" else proj.python_infer
+        key = str(python)
+        if key not in self._packages:
+            self._packages[key] = (mf.package_versions() if key == sys.executable
+                                   else mf.interpreter_package_versions(python))
+        return self._packages[key]
 
     def gpu_env(self, gpu: int) -> dict:
         return {"CUDA_VISIBLE_DEVICES": str(gpu), "BODHI_VLLM_PORT": str(self.ctx.project.vllm_port_base + gpu)}
@@ -448,13 +464,17 @@ class Runner:
             done = [m for m in parts if is_complete(m)]
             expected = (len(ctx.cell.eval.conditions) if stage == "eval"
                         else 1 + len(ctx.cell.grading.judges))
-            ctx.write_manifest(folder, stage, seed=seed,
+            # eval and grade steps run in the infer env (Step.env)
+            ctx.write_manifest(folder, stage, seed=seed, packages=self.packages("infer"),
                                extra={"status": "complete" if len(done) == expected else "incomplete",
                                       "parts": {m.name: mf.sha256_file(m) for m in done}})
 
 
 def _pointer(ctx: StageContext, seed: int, stage: str, target: Path, note: str = "") -> None:
-    ctx.write_manifest(ctx.paths.stage(seed, stage), stage, seed=seed,
+    # The env of the stage pointed to, from its own manifest; empty when that manifest
+    # records none (a migrated record of a run made before this package).
+    packages = json.loads(target.read_text()).get("packages", {})
+    ctx.write_manifest(ctx.paths.stage(seed, stage), stage, seed=seed, packages=packages,
                        extra={"status": "complete", "points_to": ctx.project.rel(target),
                               "points_to_sha256": mf.sha256_file(target), "note": note})
 
@@ -533,7 +553,9 @@ def run_cell(reg: Registry, proj: Project, cell_id: str, *, stages: Sequence[str
                   "filter": reg.models[cell.grading.filter],
                   "evaluator": reg.models[cell.grading.evaluator],
                   **{f"judge:{j}": reg.models[j] for j in cell.grading.judges}}
+        # A cell's stages run in two envs, so the cell manifest records both.
         ctx.write_manifest(ctx.paths.root, "cell", timer=timer, models=models,
+                           packages={"infer": runner.packages("infer"), "train": runner.packages("train")},
                            config=cell.model_dump(mode="json"),
                            extra={"status": status, "mode": mode, "seeds_run": seeds,
                                   "stages_run": list(stages), "judges_run": judges,

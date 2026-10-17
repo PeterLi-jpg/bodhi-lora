@@ -20,8 +20,8 @@ Where a stage runs is the runner's choice: it sets CUDA_VISIBLE_DEVICES and
 BODHI_VLLM_PORT for each stage (placement_from_env), so stages on different GPUs never
 share a port.
 
-The response fields follow vLLM 0.9.2's OpenAI protocol
-(vllm/entrypoints/openai/protocol.py at tag v0.9.2): choices[0].message.content,
+The response fields follow vLLM 0.10.2's OpenAI protocol
+(vllm/entrypoints/openai/protocol.py at tag v0.10.2): choices[0].message.content,
 choices[0].finish_reason ("length" when the token limit stopped the reply),
 usage.prompt_tokens and usage.completion_tokens.
 
@@ -29,7 +29,7 @@ The contamination probe needs raw text, not a chat turn: a chat template would w
 prefix in a user message, and the model would answer it instead of continuing it. For
 that the engine also has tokenize(), detokenize() and continue_ids(), on the server's
 /tokenize, /detokenize and /v1/completions routes (vllm/entrypoints/openai/api_server.py
-and protocol.py at tag v0.9.2: TokenizeCompletionRequest with add_special_tokens,
+and protocol.py at tag v0.10.2: TokenizeCompletionRequest with add_special_tokens,
 DetokenizeRequest, and CompletionRequest, whose prompt may be a list of token ids).
 
 One server can serve the base and several adapters at once, each adapter a named LoRA
@@ -78,10 +78,10 @@ class ContextLengthError(ValueError):
     """The server refused a request that does not fit its context window.
 
     A retry fails the same way, so a stage records such an item as too long and skipped
-    instead of asking for a rerun. vLLM 0.9.2 answers HTTP 400 with "This model's maximum
-    context length is N tokens. However, you requested M tokens ..." when prompt tokens
-    plus max_tokens exceed max_model_len (OpenAIServing._validate_input in
-    vllm/entrypoints/openai/serving_engine.py at tag v0.9.2).
+    instead of asking for a rerun. vLLM 0.10.2 answers HTTP 400 with a message that holds
+    "This model's maximum context length is N tokens" when the prompt alone, or prompt
+    tokens plus max_tokens, exceed max_model_len (OpenAIServing._validate_input in
+    vllm/entrypoints/openai/serving_engine.py at tag v0.10.2; 0.9.2 used the same words).
     """
 
 
@@ -162,8 +162,9 @@ class VLLMEngine:
         self.revision = revision
         self.dtype = dtype
         # "bitsandbytes" quantizes the base to 4-bit NF4 with double quantization while
-        # loading (vLLM 0.9.2 bitsandbytes_loader.py calls quantize_4bit with
-        # compress_statistics=True and quant_type="nf4"), the base QLoRA training used.
+        # loading (vllm/model_executor/model_loader/bitsandbytes_loader.py at tag v0.10.2
+        # calls quantize_4bit with compress_statistics=True and quant_type="nf4"), the base
+        # QLoRA training used.
         self.quantization = quantization
         if lora_path and lora_modules:
             raise ValueError("give lora_path (one adapter) or lora_modules (named adapters), not both")

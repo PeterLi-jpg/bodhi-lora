@@ -64,7 +64,7 @@ def test_build_manifest_records_models_hardware_time_and_hashes(tmp_path):
         "eval", cell="c", seed=7, config={"max_model_len": 4096},
         models={"grader": reg.models["llama-3.1-8b"], "judge": reg.models["meditron3-8b"]},
         eval_ids=ids, counts={"n": 2}, timer=timer, extra={"status": "complete"})
-    assert m["schema"] == 2 and (m["cell"], m["seed"], m["status"]) == ("c", 7, "complete")
+    assert m["schema"] == 3 and (m["cell"], m["seed"], m["status"]) == ("c", 7, "complete")
     assert m["config_sha256"] == rm.sha256_json({"max_model_len": 4096})
     assert len(m["host_sha256"]) == 64 and "hostname" not in json.dumps(m)
     grader = m["models"]["grader"]
@@ -75,3 +75,14 @@ def test_build_manifest_records_models_hardware_time_and_hashes(tmp_path):
     assert set(m["packages"]) >= {"python", "torch", "transformers", "vllm", "peft"}
     path = rm.write_manifest(tmp_path / "out" / "manifest.json", m)
     assert json.loads(path.read_text())["stage"] == "eval"
+
+
+def test_another_interpreter_reports_the_same_versions_as_this_one():
+    """The runner reads a stage env's versions through that env's interpreter."""
+    import sys
+    assert rm.interpreter_package_versions(sys.executable) == rm.package_versions()
+
+
+def test_a_caller_can_record_the_env_that_did_the_work():
+    m = rm.build_manifest("eval", packages={"python": "3.12.3", "vllm": "0.10.2"})
+    assert m["packages"] == {"python": "3.12.3", "vllm": "0.10.2"}

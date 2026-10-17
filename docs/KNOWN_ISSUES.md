@@ -121,12 +121,14 @@ D-numbers refer to [DECISIONS.md](DECISIONS.md). Issue numbers such as #5 are Gi
 
 ### Reproducibility gaps
 
-- **The posted cells' environment is not recorded (REPRO-10, EVAL-12).** The code side is
-  fixed (see Fixed below). What stays open is the record of the runs that produced the
-  posted numbers: the exact `.venv-infer` versions (no pip freeze was kept;
-  `requirements-infer.txt` gives the range and why; each eval JSON records only its
-  transformers and bodhi-llm versions) and an overlap-check output (the gate came after
-  these runs). The eval ids are synced: each non-HealthBench cell has its `eval_ids.json`,
+- **The submitted cell's environment is not recorded (REPRO-10, EVAL-12).** The code side
+  is fixed (see Fixed below). The 2026-05 cell ran on Modal with a vLLM range, and no
+  freeze was kept (legacy/README.md). The 2026-07 cells are no longer open: since
+  2026-10-13 `requirements-infer.lock.txt` and `requirements-train.lock.txt` are the full
+  freezes of the two host envs that ran them, unchanged since 2026-07-23 (but for
+  bitsandbytes in `.venv-infer`, added 2026-10-11), and the eval JSONs and adapters
+  confirm the versions (`requirements-infer.txt` gives the evidence). Still open for all
+  posted cells: an overlap-check output (the gate came after these runs). The eval ids are synced: each non-HealthBench cell has its `eval_ids.json`,
   and the HealthBench cells used `df10aa8:data/raw/hard_200_sample_ids.json`. New runs record all
   of this in their manifests (`bodhi_lora/manifest.py`).
 - **The host's `multi_seed_summary.json` files are wrong.** They predate 2c13550 and list
@@ -290,11 +292,25 @@ D-numbers refer to [DECISIONS.md](DECISIONS.md). Issue numbers such as #5 are Gi
   only.
 - **#3** The filter grader (Qwen2.5-14B) and the evaluator (Llama-3.1-8B) come from
   different families. Med42-8B breaks this rule for its own cells (see above).
-- **Dependency pins (REPRO-10, fc496d7).** `requirements-infer.txt` pins
-  `vllm==0.9.2` and `torch==2.7.0` and bounds transformers below 4.54, and each model
-  record in `configs/models/` pins a Hugging Face revision (481f998; the records replaced
+- **Dependency pins (REPRO-10, fc496d7).** `requirements-infer.txt` pins the env that
+  ran the 2026-07 and 2026-10 cells: vllm 0.10.2, torch 2.8.0, transformers 4.56.2, with
+  its full freeze in `requirements-infer.lock.txt` as constraints for `setup.sh`. Until
+  2026-10-13 it pinned vllm 0.9.2, torch 2.7.0 and transformers below 4.54, a range that
+  no run of the 2026-07 or 2026-10 cells used. Each model record in `configs/models/`
+  pins a Hugging Face revision (481f998; the records replaced
   `df10aa8:configs/families.yaml`). Every run manifest records the package versions it
   ran with.
+- **Manifests the runner writes named the runner's env (2026-10-13).** The runner runs in
+  the training env and starts each stage in `python.infer` or `python.train`. The manifests
+  it writes itself (the cell manifest, and the roll-up or pointer manifest in each seed's
+  stage folders) recorded its own packages, so on the GPU host they said vllm 0.9.2, torch
+  2.7.0 and transformers 4.57.6 for eval and grade work that ran under 0.10.2, 2.8.0 and
+  4.56.2. Schema 3 records the env that ran the stage, and both envs on the cell
+  manifest (`bodhi_lora/manifest.py`, `bodhi_lora/pipeline/runner.py`). The R1 to R6
+  outputs (runs at commit a5aa4d6 and before) keep the old roll-ups; their per-part manifests
+  (`<condition>.manifest.json`, `<grader>.manifest.json`, traces, filter, train, bench)
+  were written by the stage itself and hold the right versions. No analysis reads the
+  `packages` field.
 - **Benchmark data pinning (REPRO-11, 28c5873).** Each benchmark record pins its source:
   a dataset commit, or a sha256 per downloaded file. `bodhi_lora/data/loaders.py` builds
   the rows from it, and `bodhi_lora/data/splits.py` draws the pool and the holdout with a
