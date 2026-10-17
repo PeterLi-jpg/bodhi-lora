@@ -110,7 +110,9 @@ uses their adapter conditions until they are trained again. The code fix needs n
 is in. R3 to R6 finished on 2026-10-15 and GPU 3 was released; the lease file says which
 cards are free now.
 
-Action: say which runs may start and on how many GPUs (at most three, D21).
+Scope decided on 2026-10-17: "R2–R5 adapters" (the table below), not the 2026-07 cells
+(ANALYSIS_PLAN.md section 12). Still yours: the go to claim cards, and how many (at most
+three, D21). You said not to claim yet.
 
 | Run | What runs again | H100-hours |
 |---|---|---|

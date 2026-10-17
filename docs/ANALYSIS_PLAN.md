@@ -875,3 +875,12 @@ parse-failure counts only. What this changes:
 
 Which runs train again waits for the first author (BLOCKED.md item 2.1).
 
+**2026-10-17, the first author. The rerun scope.** Asked in chat which runs train again
+after the EOS fix, the first author chose "R2–R5 adapters": R2 and R5 train again with the
+fix, and the adapter conditions of R2, R3, R4 and both R5 cells are evaluated and graded
+again, with R2's MedGemma-27B judge, which never ran. Traces, filter and the base replies
+are kept; the base conditions are graded again because one grade file holds every
+condition, and the new base grades are compared with the archived ones as a check of the
+evaluator's determinism. The 2026-07 cells are not trained again. He asked that no GPU be
+claimed yet. No score of R2 to R5 had been read.
+
