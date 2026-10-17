@@ -20,6 +20,7 @@ import yaml
 ROOT = Path(__file__).resolve().parent.parent
 QUEUE_SH = ROOT / "scripts" / "gpu_queue.sh"
 TIER_A = ROOT / "configs" / "queues" / "tier_a.txt"
+EOS_RERUN = ROOT / "configs" / "queues" / "eos_rerun.txt"
 RUN_PLAN = ROOT / "docs" / "RUN_PLAN.md"
 # The last commit with the node's lease tool in the repo (docs/RUN_PLAN.md section 1).
 LEASE_TOOL_AT = "7e02348:scripts/gpu_lease.sh"
@@ -47,17 +48,33 @@ case $1 in
 esac
 """
 
-# has-session -t =NAME succeeds while the file $FAKE_TMUX_DIR/NAME exists.
+# A session is the file $FAKE_TMUX_DIR/NAME. has-session succeeds while it exists;
+# new-session -d -s NAME starts a sleep and keeps its PID in the file, which
+# display-message prints as the pane PID; kill-session stops it and removes the file.
 FAKE_TMUX = r"""#!/usr/bin/env bash
-[ "$1" = has-session ] || exit 2
-[ -e "$FAKE_TMUX_DIR/${3#=}" ]
+case $1 in
+    has-session) [ -e "$FAKE_TMUX_DIR/${3#=}" ] ;;
+    new-session) [ ! -e "$FAKE_TMUX_DIR/$4" ] || exit 1
+                 sleep 1000 </dev/null >/dev/null 2>&1 &
+                 echo $! >"$FAKE_TMUX_DIR/$4" ;;
+    display-message) [ -s "$FAKE_TMUX_DIR/${4#=}" ] && cat "$FAKE_TMUX_DIR/${4#=}" ;;
+    kill-session) f="$FAKE_TMUX_DIR/${3#=}"; [ -e "$f" ] || exit 1
+                  [ -s "$f" ] && kill "$(cat "$f")" 2>/dev/null; rm -f "$f" ;;
+    *) exit 2 ;;
+esac
 """
 
-# The memory query prints the number in $FAKE_GPU_MIB_FILE, so a step can change it, or
-# else $FAKE_GPU_MIB; any other call prints a line for the log.
+# The memory query of card N prints $FAKE_GPU_MIB_N if set, else the number in
+# $FAKE_GPU_MIB_FILE, so a step can change it, or else $FAKE_GPU_MIB; any other call
+# prints a line for the log.
 FAKE_NVIDIA_SMI = r"""#!/usr/bin/env bash
+gpu=""; prev=""
+for a in "$@"; do [ "$prev" = -i ] && gpu=$a; prev=$a; done
 case "$*" in
-    *--query-gpu=memory.used*) cat "$FAKE_GPU_MIB_FILE" 2>/dev/null || echo "${FAKE_GPU_MIB:-0}" ;;
+    *--query-gpu=memory.used*)
+        per="FAKE_GPU_MIB_$gpu"
+        if [ -n "$gpu" ] && [ -n "${!per:-}" ]; then echo "${!per}"
+        else cat "$FAKE_GPU_MIB_FILE" 2>/dev/null || echo "${FAKE_GPU_MIB:-0}"; fi ;;
     *) echo "fake nvidia-smi $*" ;;
 esac
 """
@@ -155,7 +172,16 @@ class Node:
 
 @pytest.fixture
 def node(tmp_path):
-    return Node(tmp_path)
+    n = Node(tmp_path)
+    yield n
+    # Stop the sleeps of fake holder sessions.
+    for f in n.sessions.iterdir():
+        pid = f.read_text().strip()
+        if pid:
+            try:
+                os.kill(int(pid), signal.SIGTERM)
+            except (ProcessLookupError, ValueError):
+                pass
 
 
 def _wait_for(path: Path, timeout=20.0):
@@ -204,15 +230,90 @@ def test_stops_at_the_first_failing_line(node):
 
 
 def test_refuses_a_gpu_that_another_job_holds(node):
+    """Even a row the node's tool would count stale (PID 4242 gone, card empty): a
+    launcher's PID often exits while its job is still starting."""
     node.lease_file.write_text(_lease_table(owner_of_3=("other", "4242")))
     out = node.tmp / "out.txt"
     proc = node.run([f"echo ran >> {out}"])
     assert proc.returncode == 4
     assert not out.exists()
     assert _row(node.lease_file)[1:4] == ["busy", "other", "4242"]
-    # The queue never releases a lease it does not hold.
+    # It asks the tool for nothing, and never releases a lease it does not hold.
+    assert node.lease_calls() == []
+    assert "never taken" in node.marker()[1]
+
+
+def _all_busy(lease_file: Path, except_gpus=()) -> None:
+    """Every row busy with another job (PID 4242, gone), but those in except_gpus."""
+    lines = []
+    for line in lease_file.read_text().splitlines():
+        f = line.split()
+        if f and f[0].isdigit() and f[0] not in except_gpus:
+            line = f"{f[0]:<4} busy   other      4242      2026-10-17T00:00:00Z  other job"
+        lines.append(line)
+    lease_file.write_text("\n".join(lines) + "\n")
+
+
+def test_any_waits_for_a_free_row_and_never_takes_a_busy_one(node):
+    _all_busy(node.lease_file)
+    out = node.tmp / "out.txt"
+    proc = node.start([f"echo $CUDA_VISIBLE_DEVICES --gpus {{gpu}} >> {out}"], "--gpu", "any",
+                      env={"FAKE_GPU_MIB_5": "41000"})
+    try:
+        time.sleep(2.5)
+        assert proc.poll() is None
+        assert node.lease_calls() == [] and not out.exists()
+        # Card 5 frees up, but holds memory; card 6 frees up and is empty.
+        text = node.lease_file.read_text().splitlines()
+        for g in ("5", "6"):
+            text = [f"{g:<4} free   -          -         -                    -" if l.split()[:1] == [g] else l
+                    for l in text]
+        node.lease_file.write_text("\n".join(text) + "\n")
+        proc.wait(timeout=20)
+    finally:
+        if proc.poll() is None:
+            proc.kill()
+    assert proc.returncode == 0, proc.stdout.read()
+    assert out.read_text() == "6 --gpus 6\n"
+    assert [c.split()[:2] for c in node.lease_calls()] == [["claim", "6"], ["release", "6"]]
+    assert _row(node.lease_file, "5")[1] == "free" and _row(node.lease_file, "6")[1] == "free"
+
+
+def test_keep_lease_keeps_the_card_with_a_live_holder(node):
+    proc = node.run(["true"], "--keep-lease")
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    holder = node.sessions / "tester-hold-gpu3"
+    pid = holder.read_text().strip()
+    row = _row(node.lease_file)
+    assert row[1:4] == ["busy", "tester", pid]
+    os.kill(int(pid), 0)                      # the lease PID is alive
     assert [c.split()[0] for c in node.lease_calls()] == ["claim"]
-    assert node.marker()[0] == "4"
+    assert node.lease_calls()[0] == f"claim {GPU} CLAIM_PID={pid}"
+    assert "GPU 3 kept" in node.marker()[1]
+
+
+def test_a_later_queue_uses_the_card_this_owner_holds(node):
+    assert node.run(["true"], "--keep-lease").returncode == 0
+    _all_busy(node.lease_file, except_gpus=(GPU,))
+    out = node.tmp / "out.txt"
+    proc = node.run([f"echo {{gpu}} >> {out}"], "--gpu", "any", "--keep-lease")
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert out.read_text() == "3\n"
+    # The second queue made no claim and kept the same holder.
+    assert [c.split()[0] for c in node.lease_calls()] == ["claim"]
+    assert _row(node.lease_file)[3] == (node.sessions / "tester-hold-gpu3").read_text().strip()
+    # Without --keep-lease, a run on the held card gives it back, holder and all.
+    proc = node.run(["true"])
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert _row(node.lease_file)[1] == "free"
+    assert not (node.sessions / "tester-hold-gpu3").exists()
+
+
+def test_a_failed_claim_leaves_no_holder(node):
+    node.lease_file.write_text(_lease_table(owner_of_3=("other", "4242")))
+    proc = node.run(["true"], "--keep-lease")
+    assert proc.returncode == 4
+    assert list(node.sessions.iterdir()) == []
 
 
 def test_does_not_claim_a_card_that_holds_memory(node):
@@ -581,16 +682,26 @@ def _run_lines(text: str) -> list:
     return found
 
 
-def _plan_block() -> str:
+def _plan_block(name: str = "tier_a.txt") -> str:
     """The fenced block of RUN_PLAN.md whose first line names the queue file."""
     blocks = re.findall(r"```bash\n(.*?)```", RUN_PLAN.read_text(), flags=re.S)
-    named = [b for b in blocks if b.splitlines()[0].strip() == "# configs/queues/tier_a.txt"]
-    assert len(named) == 1, "RUN_PLAN.md needs one block that starts with # configs/queues/tier_a.txt"
+    named = [b for b in blocks if b.splitlines()[0].strip() == f"# configs/queues/{name}"]
+    assert len(named) == 1, f"RUN_PLAN.md needs one block that starts with # configs/queues/{name}"
     return named[0]
 
 
 def test_tier_a_queue_holds_the_commands_of_the_run_plan():
     assert _run_lines(TIER_A.read_text()) == _run_lines(_plan_block())
+
+
+def test_eos_rerun_queue_holds_the_commands_of_the_run_plan_on_any_card():
+    lines = _run_lines(EOS_RERUN.read_text())
+    assert lines == _run_lines(_plan_block("eos_rerun.txt")) and all(on for on, _ in lines)
+    for _, command in lines:
+        argv = shlex.split(command)
+        assert argv[:4] == ["python", "-m", "bodhi_lora", "run"]
+        assert (ROOT / "configs" / "cells" / f"{argv[4]}.yaml").is_file(), command
+        assert argv[argv.index("--gpus") + 1] == "{gpu}", command
 
 
 def test_tier_a_commands_name_real_records_and_run_on_gpu_3():

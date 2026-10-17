@@ -1,20 +1,24 @@
 #!/usr/bin/env bash
 # Run a queue of commands on one GPU of the shared node, one after the other.
 #
-#   gpu_queue.sh --gpu 3 --owner bohdi --purpose "BODHI R3-R7" \
+#   gpu_queue.sh --gpu 3|any --owner bohdi --purpose "BODHI R3-R7" \
 #       --queue configs/queues/tier_a.txt --log-dir /data/PROJECTS/bohdi-queue \
 #       [--name tier_a] [--repo DIR] [--after SESSION [--after-marker FILE | --after-check CMD]] \
 #       [--bundle FILE --commit SHA [--keep-local PATH]... [--allow-untracked PATH]...] \
-#       [--env FILE] [--lease-tool PATH] [--lease-file PATH]
+#       [--env FILE] [--lease-tool PATH] [--lease-file PATH] [--keep-lease]
 #
 # The steps, in order:
 #   a. With --after: wait until that tmux session has exited, then read its exit marker.
 #      Stop unless the marker's first line is 0. With --after-check instead, run that
 #      command in the checkout and stop unless it exits 0: for a job that this script did
 #      not start, which leaves no marker.
-#   b. Claim the GPU with the node's lease tool, with this shell's PID as the lease PID.
-#      Stop if the card holds memory, or if the tool refuses: it never gives out a card
-#      that another job holds a lease on.
+#   b. Claim the GPU with the node's lease tool. Only a row that says free, on a card
+#      that holds no memory, is claimed; a busy row is never taken, even one the tool
+#      would count stale. With --gpu any: wait, a check every poll, for the first such
+#      card. A card this owner already holds (a row of this owner whose PID is its holder
+#      session, below) is used again with no claim. The lease PID is this shell, or with
+#      --keep-lease a holder: a tmux session <owner>-hold-gpu<N> that only sleeps, so the
+#      lease stays live after the queue ends. In a queue line, {gpu} becomes the index.
 #   c. With --bundle and --commit: fetch the bundle into the checkout and switch it to
 #      the commit. Stop if the checkout has changes, or untracked files outside the
 #      --allow-untracked paths (the run outputs under results/, for example). This
@@ -22,7 +26,8 @@
 #   d. With --env: source the run env file.
 #   e. Run each line of the queue file in the checkout, pinned to the GPU, and stop at
 #      the first line that fails.
-#   f. On every exit: release the GPU and write the exit marker <log-dir>/<name>.exit.
+#   f. On every exit: release the GPU (with --keep-lease: keep it, with its holder
+#      session) and write the exit marker <log-dir>/<name>.exit.
 #
 # docs/GPU_QUEUE.md is the manual: the queue file format, the logs, the exit codes and
 # how to chain one queue after another.
@@ -53,9 +58,11 @@ AFTER="" AFTER_MARKER="" AFTER_CHECK="" BUNDLE="" COMMIT="" ENV_FILE=""
 # The node's lease tool and the file it keeps the leases in (its own default).
 LEASE_TOOL=/data/PROJECTS/bohdi/gpu_lease.sh
 LEASE_FILE="${GPU_LEASE_FILE:-/home/nvidia/GPUS.txt}"
-KEEP=() ALLOW=()
+KEEP=() ALLOW=() KEEP_LEASE=0
 
 QLOG="" MARKER="" REASON="" STEP=0 CHILD_PID="" CLAIM_TRIED=0
+# The PID the lease names, and with --keep-lease the holder session that owns it.
+LEASE_PID=$$ HOLD="" HOLD_MADE=0
 SAVED=() OWN=() CMDS=()
 
 usage() {
@@ -113,6 +120,7 @@ parse_args() {
     while [ $# -gt 0 ]; do
         case $1 in
             -h | --help) usage; exit 0 ;;
+            --keep-lease) KEEP_LEASE=1; shift; continue ;;
         esac
         if [ $# -lt 2 ]; then
             echo "gpu_queue.sh: $1 needs a value" >&2
@@ -150,7 +158,8 @@ parse_args() {
 # waiting for the --after session.
 validate() {
     case $GPU in
-        '' | *[!0-9]*) die 2 "--gpu must be a GPU index, got '$GPU'" ;;
+        any) ;;
+        '' | *[!0-9]*) die 2 "--gpu must be a GPU index or any, got '$GPU'" ;;
     esac
     case $OWNER in
         '' | *[[:space:]]*) die 2 "--owner must be one word, got '$OWNER'" ;;
@@ -215,27 +224,120 @@ wait_for_session() {
 # node's copy of the tool does not break the check.
 lease_is_mine() {
     [ -r "$LEASE_FILE" ] || return 1
-    awk -v i="$GPU" -v o="$OWNER" -v p="$$" '
+    awk -v i="$GPU" -v o="$OWNER" -v p="$LEASE_PID" '
         $1 == i { for (f = 2; f <= NF; f++) { if ($f == o) own = 1; if ($f == p) pid = 1 } }
         END { exit !(own && pid) }' "$LEASE_FILE"
+}
+
+# A lease row's fields by position: state (2), owner (3) and PID (4).
+row_field() {
+    awk -v i="$1" -v f="$2" '!/^#/ && $1 == i { print $f; exit }' "$LEASE_FILE" 2>/dev/null
+}
+
+hold_name() { printf '%s-hold-gpu%s\n' "$OWNER" "$1"; }
+
+# The PID of a holder session's process, or nothing.
+hold_pid() {
+    tmux display-message -p -t "=$1" '#{pane_pid}' 2>/dev/null
+}
+
+# True when GPU $1 is one this owner already holds: its row is busy with this owner,
+# and the PID is the process of this owner's holder session for that card.
+held_by_me() {
+    local pid
+    [ "$(row_field "$1" 2)" = busy ] && [ "$(row_field "$1" 3)" = "$OWNER" ] || return 1
+    pid="$(hold_pid "$(hold_name "$1")")"
+    [ -n "$pid" ] && [ "$(row_field "$1" 4)" = "$pid" ]
+}
+
+# With --keep-lease, the lease names a holder, so it stays live after this shell exits:
+# the lease tool frees a row only when its PID is gone and the card is empty.
+make_holder() {
+    [ "$KEEP_LEASE" = 1 ] || return 0
+    HOLD="$(hold_name "$1")"
+    tmux has-session -t "=$HOLD" 2>/dev/null && die 4 "holder session $HOLD exists, but GPU $1's row does not name it; not claiming"
+    tmux new-session -d -s "$HOLD" "sleep infinity" || die 4 "could not start the holder session $HOLD"
+    HOLD_MADE=1
+    LEASE_PID="$(hold_pid "$HOLD")"
+    [ -n "$LEASE_PID" ] || die 4 "the holder session $HOLD has no PID"
+}
+
+drop_holder() {
+    [ "$HOLD_MADE" = 1 ] && tmux kill-session -t "=$HOLD" 2>/dev/null
+    HOLD_MADE=0 HOLD="" LEASE_PID=$$
+}
+
+# Claim GPU $GPU, whose row says free and whose card is empty. Returns 1 when the lease
+# tool does not give it (another job claimed it first).
+claim_row() {
+    make_holder "$GPU"
+    log "claiming GPU $GPU for $OWNER, lease pid $LEASE_PID: $PURPOSE"
+    CLAIM_TRIED=1
+    if ! logged env CLAIM_PID="$LEASE_PID" "$LEASE_TOOL" claim "$GPU" "$OWNER" "$PURPOSE"; then
+        CLAIM_TRIED=0
+        drop_holder
+        return 1
+    fi
+    lease_is_mine || die 4 "the lease tool reported a claim, but $LEASE_FILE does not show GPU $GPU for $OWNER, pid $LEASE_PID"
+    log "claimed GPU $GPU"
+}
+
+# Use a card this owner holds: no claim, the lease and its holder stay as they are.
+adopt_held() {
+    HOLD="$(hold_name "$GPU")"
+    LEASE_PID="$(hold_pid "$HOLD")"
+    CLAIM_TRIED=1
+    log "GPU $GPU is held by $OWNER (holder session $HOLD, pid $LEASE_PID); using it"
 }
 
 # b. Claim the GPU. The lease tool gives out a card whose row is free whatever the card
 # holds (only its find checks memory), and a vLLM server that outlived a killed job holds
 # a card with no lease. So the card must be empty first, after up to MEM_WAIT_S for the
-# job before this queue to let go of it.
+# job before this queue to let go of it. A busy row is never claimed: the tool would give
+# out one whose PID is gone and whose card is empty, but a launcher's PID often exits
+# while its job is still starting (the note in the node's lease file).
 claim_gpu() {
-    card_empty || die 4 "GPU $GPU is in use, whatever its lease row says (see the nvidia-smi table above); nothing ran"
-    log "claiming GPU $GPU for $OWNER, pid $$: $PURPOSE"
-    CLAIM_TRIED=1
-    # The lease records CLAIM_PID. This shell lives as long as the queue, so the lease
-    # stays live between steps, and the tool counts it stale only after the queue is
-    # gone and the card is empty.
-    if ! logged env CLAIM_PID=$$ "$LEASE_TOOL" claim "$GPU" "$OWNER" "$PURPOSE"; then
-        die 4 "the lease tool did not give GPU $GPU (another job holds it, or the tool failed); nothing ran"
+    # The node's tool writes a missing lease file with every row free on first use.
+    [ -e "$LEASE_FILE" ] || "$LEASE_TOOL" status >/dev/null 2>&1
+    if [ "$GPU" = any ]; then
+        wait_for_gpu
+        return
     fi
-    lease_is_mine || die 4 "the lease tool reported a claim, but $LEASE_FILE does not show GPU $GPU for $OWNER, pid $$"
-    log "claimed GPU $GPU"
+    card_empty || die 4 "GPU $GPU is in use, whatever its lease row says (see the nvidia-smi table above); nothing ran"
+    if held_by_me "$GPU"; then
+        adopt_held
+        return
+    fi
+    [ "$(row_field "$GPU" 2)" = free ] ||
+        die 4 "GPU $GPU's lease row says $(row_field "$GPU" 2), owner $(row_field "$GPU" 3); a busy row is never taken; nothing ran"
+    claim_row || die 4 "the lease tool did not give GPU $GPU (another job holds it, or the tool failed); nothing ran"
+}
+
+# --gpu any: a card this owner holds, else the first row that says free on an empty card.
+wait_for_gpu() {
+    local i rows free
+    log "waiting for a GPU: one $OWNER holds, or a free row on an empty card (a check every ${POLL_S}s)"
+    while :; do
+        rows="$(awk '!/^#/ && $1 ~ /^[0-9]+$/ { print $1 }' "$LEASE_FILE" 2>/dev/null)"
+        free="$(awk '!/^#/ && $1 ~ /^[0-9]+$/ && $2 == "free" { print $1 }' "$LEASE_FILE" 2>/dev/null)"
+        while read -r i; do
+            [ -n "$i" ] || continue
+            GPU=$i
+            # stdin is the loop's list, so the commands inside read /dev/null
+            if [ "$(card_used_mib)" -lt "$EMPTY_MIB" ] && held_by_me "$i" </dev/null; then
+                adopt_held </dev/null
+                return 0
+            fi
+        done <<<"$rows"
+        while read -r i; do
+            [ -n "$i" ] || continue
+            GPU=$i
+            [ "$(card_used_mib)" -lt "$EMPTY_MIB" ] || continue
+            claim_row </dev/null && return 0
+        done <<<"$free"
+        GPU=any
+        sleep "$POLL_S"
+    done
 }
 
 tracked() {
@@ -434,12 +536,14 @@ gpus_flag_ok() {
 read_queue() {
     local path=$QUEUE line
     case $path in /*) ;; *) path="$REPO/$path" ;; esac
+    # The claimed card is known now: {gpu} in a line becomes its index.
     [ -f "$path" ] || die 7 "queue file $path not found"
     CMDS=()
     while IFS= read -r line || [ -n "$line" ]; do
         line="${line#"${line%%[![:space:]]*}"}"
         line="${line%"${line##*[![:space:]]}"}"
         case $line in '' | '#'*) continue ;; esac
+        line="${line//\{gpu\}/$GPU}"
         gpus_flag_ok "$line" || die 7 "this line names a GPU other than $GPU: $line"
         CMDS+=("$line")
     done <"$path"
@@ -544,7 +648,12 @@ card_empty() {
 # keeps its lease: the lease tool counts it stale, and so free, once this shell is gone
 # and the card is empty, and until then nobody is given a card that is in use.
 release_gpu() {
-    [ "$CLAIM_TRIED" = 1 ] || return 0
+    [ "$CLAIM_TRIED" = 1 ] || { drop_holder; return 0; }
+    if [ "$KEEP_LEASE" = 1 ] && [ -n "$HOLD" ]; then
+        log "GPU $GPU kept for $OWNER (--keep-lease): holder session $HOLD, pid $LEASE_PID. To give it back: $LEASE_TOOL release $GPU; tmux kill-session -t $HOLD"
+        REASON="$REASON; GPU $GPU kept (holder $HOLD)"
+        return 0
+    fi
     if ! lease_is_mine; then
         log "the lease of GPU $GPU does not name this queue; not releasing it"
         return 0
@@ -560,6 +669,8 @@ release_gpu() {
         REASON="$REASON; release of GPU $GPU failed"
     else
         log "released GPU $GPU"
+        # An adopted card's holder goes with its lease.
+        [ -z "$HOLD" ] || tmux kill-session -t "=$HOLD" 2>/dev/null
     fi
 }
 

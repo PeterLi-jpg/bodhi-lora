@@ -501,8 +501,18 @@ come from the stage manifests of R2 to R5:
 - **R5 again, MediQ paired.** The two adapter conditions of four, 1.5 to 3.0; the evaluator
   0.3. About 2 to 3.
 
-Order: R2 and R5 first (on two cards at once if there are two), then R3, R4 and the MediQ
-ask-first cell, which read their adapters.
+Order: R2 first, then R3 and R4, which read its adapters, then R5 and its MediQ cell. One
+card runs them one after another from `configs/queues/eos_rerun.txt`, which waits for a
+free card and keeps it at the end (GPU_QUEUE.md section 9):
+
+```bash
+# configs/queues/eos_rerun.txt
+python -m bodhi_lora run healthbench__mistral-small-24b__bodhi --gpus {gpu}
+python -m bodhi_lora run mediq-paired__mistral-small-24b__bodhi --gpus {gpu}
+python -m bodhi_lora run healthbench__mistral-small-24b__bodhi__labelled --gpus {gpu}
+python -m bodhi_lora run healthbench__mistral-small-24b__ask-first --gpus {gpu}
+python -m bodhi_lora run mediq-paired__mistral-small-24b__ask-first --gpus {gpu}
+```
 
 ## 5. Minimal first batch
 

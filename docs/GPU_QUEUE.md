@@ -23,11 +23,17 @@ In this order:
    whose row is free whatever the card holds, and a vLLM server that outlived a killed
    job holds its card with no lease, because the engine starts the server in a session
    of its own. If the card is in use, the queue logs the `nvidia-smi` table, stops and
-   claims nothing. Then it runs `<lease tool> claim <gpu> <owner> <purpose>` with
-   `CLAIM_PID` set to its own PID. That shell lives as long as the queue, so the lease
-   stays live between commands. The lease tool takes its own lock and refuses a card
-   that another live job holds. If the tool refuses, or the lease file does not then
-   show the card with this owner and PID, the queue stops and runs nothing.
+   claims nothing. The row must say `free`: the queue never claims a busy row, even one
+   the lease tool would count stale (its PID gone, the card empty), because a launcher's
+   PID often exits while its job is still starting (the note at the top of the node's
+   lease file). A row of this owner held by its holder session (section 9) is used again
+   with no claim. Then it runs `<lease tool> claim <gpu> <owner> <purpose>` with
+   `CLAIM_PID` set to its own PID, or to the holder's with `--keep-lease`. That process
+   lives as long as the queue, so the lease stays live between commands. The lease tool
+   takes its own lock and refuses a card that another live job holds. If the tool
+   refuses, or the lease file does not then show the card with this owner and PID, the
+   queue stops and runs nothing. With `--gpu any` it does not stop: it waits for a card
+   (section 9).
 3. **Switch the checkout** (with `--bundle` and `--commit`). It stops if `git status`
    shows a change to a tracked file other than a `--keep-local` file, or an untracked
    file outside the `--allow-untracked` paths; ignored files are allowed. It makes this check at the start too, before the
@@ -52,10 +58,12 @@ In this order:
    `CUDA_VISIBLE_DEVICES` set to the claimed card and `CUDA_DEVICE_ORDER=PCI_BUS_ID`, so
    CUDA numbers the cards as `nvidia-smi` and the lease file do. A line whose `--gpus`
    names another card stops the queue before any line runs, because the runner sets
-   `CUDA_VISIBLE_DEVICES` from `--gpus`. The queue stops at the first command that
-   fails.
+   `CUDA_VISIBLE_DEVICES` from `--gpus`. `{gpu}` in a line becomes the claimed card's
+   index, for a queue that does not know its card in advance. The queue stops at the
+   first command that fails.
 6. **Release and mark**, on every exit: success, a failed command, a refused setup step,
-   or SIGINT, SIGTERM or SIGHUP. It releases the card only if the lease file still names
+   or SIGINT, SIGTERM or SIGHUP. With `--keep-lease` it keeps the card and its holder
+   (section 9). Otherwise it releases the card only if the lease file still names
    this queue, and only once the card uses less than 2,000 MiB (the lease tool's own
    limit), after up to 60 seconds of waiting. Otherwise it keeps the lease and logs the
    `nvidia-smi` table: a vLLM server can outlive a step that was killed, because the
@@ -215,6 +223,12 @@ complete and skip them.
 
 ## 8. Tests
 
+Since 2026-10-17 it also covers `--gpu any` (it waits while every row is busy, takes no
+busy row, skips a free row on a card in use, and puts the card in `{gpu}`),
+`--keep-lease` (the row stays busy under a live holder), a later queue that uses the
+held card with no claim, a run without `--keep-lease` that gives a held card back, and a
+failed claim that leaves no holder.
+
 `tests/test_gpu_queue.py` runs the script with bash on the CPU: a fake lease tool, tmux
 and `nvidia-smi` on PATH, and short shell commands as the queue. It covers the order and
 the GPU pin, the stop at a failure, a refused claim, a card in use at the claim, the
@@ -234,3 +248,37 @@ switched the checkout clean (30 kept files copied back), and ran from the new co
 with `python` from the env file, the dry runs of R2 at seed 42, of R4, and of R6 on the
 2026-05 cell, whose stub judge graded the kept eval files. All three passed, and the
 card was released.
+
+## 9. Waiting for a card and keeping it (2026-10-17)
+
+The first author's rule since 2026-10-17: take no card that someone else holds, wait in a
+queue instead, and keep the card when our runs end. Two flags do it.
+
+- `--gpu any` waits, a check every minute, until a card is free: its row says `free` and
+  it uses less than 2,000 MiB. It claims that card through the lease tool, and the lines
+  get its index through `{gpu}`. A card this owner already holds comes first.
+- `--keep-lease` names a holder in the lease instead of the queue's shell: a tmux session
+  `<owner>-hold-gpu<N>` that only sleeps. The lease tool frees a row only when its PID is
+  gone and the card is empty, so the lease stays live after the queue ends, and the card
+  stays ours, empty, until we give it back. The next queue with the same owner finds the
+  card held by its holder and uses it with no claim.
+
+This holds a card that no job uses between our runs, which the group's posted rules
+("free GPUs the moment the job ends") do not do; the first author chose it. To give the
+card back: `/data/PROJECTS/bohdi/gpu_lease.sh release <N>` and
+`tmux kill-session -t PeterLi-hold-gpu<N>`. A run without `--keep-lease` on the held card
+gives it back at its end.
+
+The reruns after the EOS fix (RUN_PLAN.md section 4.4) start like this on the host, with
+the bundle and the env file of section 4 in `/data/PROJECTS/bohdi/_queue`:
+
+```bash
+cd /data/PROJECTS/bohdi/_queue
+tmux new-session -d -s eos_rerun "bash gpu_queue.sh --gpu any --keep-lease --owner PeterLi \
+    --purpose 'BODHI EOS reruns R2-R5 (Peter Li)' \
+    --queue configs/queues/eos_rerun.txt --log-dir /data/PROJECTS/bohdi/_queue --name eos_rerun \
+    --repo /data/PROJECTS/bohdi --bundle eos.bundle --commit <commit> --allow-untracked results/ \
+    --keep-local /data/PROJECTS/bohdi/scripts/gpu_lease.sh \
+    --env /data/PROJECTS/bohdi/_queue/tier_a.env --lease-tool /data/PROJECTS/bohdi/gpu_lease.sh"
+```
+
