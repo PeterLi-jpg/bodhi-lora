@@ -912,3 +912,11 @@ was read" is false: on 2026-10-17 the same rule counted loops in the R4 and R5 r
 (KNOWN_ISSUES.md, Training). What holds is that no score of R2 to R5 was read. The
 threshold's figures were computed on the recorded cells only.
 
+**2026-10-18, the run operator. A score read before a grade stage ended; no method changed.**
+At 15:11 PDT a progress check on the NRP workers printed the last line of each running
+eval log. For R3 (mediq-paired, Mistral-Small-24B, BODHI) that line was the eval stage's
+mean score of one condition, the base of seed 42, which the stage prints as it writes that
+condition's result file. The R3 grade stage had not finished, so this breaks section 2.5.
+No contrast was computed, no other score of R2 to R5 was read, and the value is not
+repeated here; nothing in this plan or in the analysis was chosen after it. The progress
+checks now drop every log line with a score in it, as the run watcher already did.
