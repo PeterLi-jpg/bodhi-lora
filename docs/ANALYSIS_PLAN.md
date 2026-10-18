@@ -903,3 +903,12 @@ to 0.54 and their 5th percentile stays at 0.24 or above outside BioMistral-7B. I
 computed on the recorded cells only; no output of R2 to R5 was read. The new cells get the
 same counts as a check of the fix, not as a result.
 
+**2026-10-18, a correction of the reply-health entry above; no method changed.** Two of its
+statements were wrong, found by a check that recomputed them from the raw files. (1) The
+threshold's grounds: outside BioMistral-7B, replies over 400 characters compress to a
+per-condition median of 0.39 to 0.50 (not 0.39 to 0.54, which mixed in BioMistral-7B's base),
+with a 5th percentile of 0.239 or above (0.24 only after rounding). (2) "No output of R2 to R5
+was read" is false: on 2026-10-17 the same rule counted loops in the R4 and R5 replies
+(KNOWN_ISSUES.md, Training). What holds is that no score of R2 to R5 was read. The
+threshold's figures were computed on the recorded cells only.
+

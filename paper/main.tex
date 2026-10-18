@@ -1473,6 +1473,11 @@ inference server was starting, and it left no outputs. BioMistral-7B on MedQA wa
 prompts).
 % Loop counts: reply_health in each cell's analysis/stats.json (configs/report.yaml, reply_health;
 % docs/KNOWN_ISSUES.md, Training). "At most": the largest adapter count of the other added cells.
+% MedGemma-27B: the converter copies every reply token into the labels
+% (5bd9265:scripts/convert_traces_to_maxtext.py:216-219), and the loader cuts each row to
+% max_seq_length (5bd9265:scripts/maxtext_lora/dataset_loader.py:112-113): 96 of the 2,816
+% seed-7 training rows were longer than 2,048 tokens by the Gemma 3 tokenizer (the May config's
+% own comment: 3.7% truncated).
 % Run history: rebuttal/results/cell_recipe.json ("cells" for the host folders,
 % "runs_without_folder" for the Gemma-2-9B run, from logs/host/gemma2_9b_hb.log).
 
@@ -1490,8 +1495,11 @@ that compress to less than \statCrossCellsReplyLoopMaxRatio{} of their size. For
 \hbhard{}, \statHBBioMistralJulLoopsLoRABodhi{} of \statHBBioMistralJulLoopsLoRABodhiN{} LoRA+BODHI replies
 and \statHBBioMistralJulLoopsLoRA{} LoRA replies do this, against \statHBBioMistralJulLoopsBase{} base
 replies. In the other added cells, at most \statMQMistralJulLoopsLoRA{} of
-\statMQMistralJulLoopsLoRAN{} adapter replies do (Mistral-Small-24B on MedQuAD). The MedGemma-27B cell
-kept every token of the reply in the loss. The evaluation settings also differ. The context is 8,192 tokens
+\statMQMistralJulLoopsLoRAN{} adapter replies do (Mistral-Small-24B on MedQuAD). One base condition
+loops more: ChatDoctor with Med42-8B, \statCDMedFortyTwoJulLoopsBase{} of \statCDMedFortyTwoJulLoopsBaseN{} base
+replies, against \statCDMedFortyTwoJulLoopsLoRA{} LoRA replies. The MedGemma-27B cell kept the end of the
+reply in the loss, except in rows longer than its maximum sequence length
+(Table~\ref{tab:hparams}), which were cut before the reply ended. The evaluation settings also differ. The context is 8,192 tokens
 instead of 4,096, and the server runs 64 concurrent sequences instead of 32. Every seed uses one
 fixed set of 200 \hbhard{} prompts instead of a draw per seed. The ChatDoctor and MedQuAD test sets
 are the first 200 rows of each file. The evaluator's weights come from a mirror repository, and

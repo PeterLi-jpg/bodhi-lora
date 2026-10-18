@@ -20,7 +20,9 @@ D-numbers refer to [DECISIONS.md](DECISIONS.md). Issue numbers such as #5 are Gi
   that is, all 2026-07 adapters (their saved tokenizer configs say pad = EOS) and the
   2026-10 adapters of R2 and R5. R3 and R4 evaluate the R2 adapters. Not affected: the
   2026-05 MedGemma-27B cell, whose converter copied every reply token into the labels
-  (`5bd9265:scripts/convert_traces_to_maxtext.py:217-219`), and every Gemma, MedGemma,
+  (`5bd9265:scripts/convert_traces_to_maxtext.py:217-219`; its loader cut rows longer than
+  2,048 tokens before the reply ended: 96 of the 2,816 seed-7 rows by the Gemma 3 tokenizer, and
+  3.7% by the comment in `5bd9265:configs/lora_medgemma27b_tunix.yaml`), and every Gemma, MedGemma,
   Qwen or Phi-4 tokenizer, which has its own pad token. What it did to the replies, by
   the content checks (a loop is a reply over 400 characters whose zlib ratio is below
   0.15; no score was read):
@@ -32,7 +34,9 @@ D-numbers refer to [DECISIONS.md](DECISIONS.md). Issue numbers such as #5 are Gi
     `lora+red-flags-first` 26 and 160, `lora` 2 and 83; `base` 0 and 45.
   - 2026-07 cells (their files do not flag the limit): BioMistral-7B `lora_bodhi` loops
     in 514 of 1,000 replies and `lora_no_wrapper` in 268, against 32 and 37 for the base;
-    in the other cells at most 35 adapter replies of 1,000 loop.
+    in the other cells at most 35 adapter replies of 1,000 loop. One base condition loops
+    more than any of those: ChatDoctor with Med42-8B, 44 of 1,000 base replies against 0
+    and 4 for its adapters, so there the base is the worse one.
   The code is fixed (see Fixed). Since 2026-10-18 the analysis counts these loops in every
   cell (`reply_health` in each stats.json; ANALYSIS_PLAN.md section 12), and the paper's
   appendix paragraph "What differs from the MedGemma-27B cell" says how the 2026-07

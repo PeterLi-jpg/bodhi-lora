@@ -702,7 +702,7 @@ evaluator's grade counts, and the tokenizer used. Columns
 | Group | Columns |
 |---|---|
 | key | `cell`, `seed`, `condition`, `prompt_id`, `pair_id` (rows of one pair of a paired benchmark share it; empty otherwise) |
-| response | `chars`, `tokens` (the model's tokenizer), `tokens_engine` (the serving engine's count, one-call conditions), `calls`, `tokens_total`, `finish_length`, `response_sha256` (the first 16 hex digits of the reply's sha256, so two runs compare without the text) |
+| response | `chars`, `zlib_ratio` (the reply's zlib-compressed size over its UTF-8 size; empty for an empty reply; read by the reply-health counts), `tokens` (the model's tokenizer), `tokens_engine` (the serving engine's count, one-call conditions), `calls`, `tokens_total`, `finish_length`, `response_sha256` (the first 16 hex digits of the reply's sha256, so two runs compare without the text) |
 | rubric | `rubric_score`, `rubric_score_worst`, `rubric_items`, `rubric_parse_failures`, `neg_items_met`, `neg_points_lost`, `axis_<axis>` for each rubric axis tag |
 | evaluator | `epi_status` (`scored`, `parse_failure`, `missing`, `not_graded`); `uncertainty_ack`, `active_inquiry`, `context_seeking`, `red_flag`, `scope_bounding`, `specificity`, `hedging_quality`, `questions`, `red_flag_rate`, `scope_bounded_rate`, `specificity_rate`, `blanket_disclaimer`, `appropriate_hedging`, empty unless scored |
 | format | `leak_<protocol>__<rule>`: how many markers of the rule match where a header starts, for each leak rule of each protocol the cell uses; no column reads meaning from the reply text (CONVENTIONS.md rule 15) |
