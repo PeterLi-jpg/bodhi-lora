@@ -602,6 +602,32 @@ def leakage(d: CellData, reg: Registry, pairs) -> dict:
     return res
 
 
+def reply_health_section(d: CellData, rh) -> dict:
+    """Per condition: the replies that loop and the replies the token limit stopped.
+
+    A loop is a reply over rh.loop_min_chars whose zlib ratio is under
+    rh.loop_max_zlib_ratio (configs/report.yaml). The limit count reads finish_length,
+    which only the package's eval stage stores, so older files count none. Descriptive and
+    post hoc (2026-10-18): it reports the EOS fault of the training and decides no claim
+    (docs/ANALYSIS_PLAN.md section 12)."""
+    t = d.table
+    if "zlib_ratio" not in t:
+        return {"measured": False}
+    res = {"measured": True, "loop_min_chars": rh.loop_min_chars,
+           "loop_max_zlib_ratio": rh.loop_max_zlib_ratio, "conditions": {}}
+    for c in d.conditions:
+        sub = t[t["condition"] == c]
+        # an empty reply has no ratio (NaN), and NaN < x is False: not a loop
+        loop = (sub["chars"] > rh.loop_min_chars) & (sub["zlib_ratio"] < rh.loop_max_zlib_ratio)
+        limit = sub["finish_length"].dropna()
+        res["conditions"][c] = {
+            "n": int(len(sub)), "n_loops": int(loop.sum()), "loop_share": _f(loop.mean()) if len(sub) else None,
+            "per_seed_loops": {str(s): int(loop[sub["seed"] == s].sum()) for s in d.seeds},
+            "n_limit_known": int(len(limit)), "n_at_limit": int((limit == 1).sum()),
+            "limit_share": _f((limit == 1).mean()) if len(limit) else None}
+    return res
+
+
 def paired_probe_section(d: CellData, reg: Registry, cfg: ReportConfig, metrics: list[Metric], pairs) -> dict:
     """The paired probe of docs/ANALYSIS_PLAN.md section 5.1 (H3, E14).
 
@@ -987,6 +1013,7 @@ def analyze_tables(reg: Registry, cell: CellConfig, table: pd.DataFrame, prompts
         "prompts": prompts_section(d, train_ids, _read_json(paths.analysis() / "extract.json")),
         "themes": themes_section(d),
         "leakage": leakage(d, reg, pairs),
+        "reply_health": reply_health_section(d, cfg.reply_health),
         "discrimination": discrimination_section(d, reg, cfg, metrics, pairs, boot),
         "paired_probe": paired_probe_section(d, reg, cfg, metrics, pairs),
         "askers_gap": askers_gap_section(d, boot),

@@ -92,19 +92,19 @@
     }
   },
   "inputs": {
-    "results/chatdoctor__med42-8b__bodhi__2026-07/analysis/stats.json": "d0139086c97c0f5fc04b70574d14ff0d9014835a0207cd04e7e92006d7447d15",
-    "results/chatdoctor__mistral-small-24b__bodhi__2026-07/analysis/stats.json": "52faa42d951e3c56b02d8c63f5fdd8a13287911a809fd3546631508923600e92",
+    "results/chatdoctor__med42-8b__bodhi__2026-07/analysis/stats.json": "88168e83363fd2d9e365aba1e77646cc0f9f9933d6eaf1ea1d7fa6aff4ccc480",
+    "results/chatdoctor__mistral-small-24b__bodhi__2026-07/analysis/stats.json": "dbdec3982fac6413a0bffa7a95d03b3429c7714ca9ebc8fcd99c7e327a9d7051",
     "results/cross_cell/stats.json": "c70dc8e486bba418761dfd514c8421b778567e4a2218b9f03facf2e0a764e2e9",
-    "results/healthbench__biomistral-7b__bodhi__2026-07/analysis/stats.json": "282f4bef8110452376d021338856e2cf67408d6ee4d384d39f781142f451853f",
-    "results/healthbench__med42-8b__bodhi__2026-07/analysis/stats.json": "7053a83a47c258bf620de486e9eec0919fe68c86be1e0052f3e1e6a4622b356c",
-    "results/healthbench__medgemma-27b-text__bodhi__2026-04/analysis/stats.json": "862f529ffb7ef3a2524c7fb938a800bb2b4cd13e8b6f4dbd633f099cec80aed2",
-    "results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/stats.json": "e3c757633f9b5e8aa2cfafb481b589ff86955e6e66d88a2131782fa7c0368172",
-    "results/healthbench__mistral-small-24b__bodhi__2026-07/analysis/stats.json": "779c39b76e0c7432b4d70d6a20ec037e4ae13c452076d35415bb03c194cfa482",
-    "results/medqa-open-preamble__biomistral-7b__bodhi__2026-07/analysis/stats.json": "ada0801041826cac8ccffeaabd3c6be4abac2bf14646c9a3164f7351e742981e",
-    "results/medqa-open-preamble__mistral-small-24b__bodhi__2026-07/analysis/stats.json": "36014d6ca2517ebd6a16ccb4fbb40934d1a39b2de2114440dba61d38a282f904",
-    "results/medquad__mistral-small-24b__bodhi__2026-07/analysis/stats.json": "218aa5f41d32465b43ac333230257604fd1502b1bcc5b8663cb6a9a85af247f7"
+    "results/healthbench__biomistral-7b__bodhi__2026-07/analysis/stats.json": "7612655aa1b58d7651635bc8ced75990c93c94e33309133dbcb6df8c7ea90eed",
+    "results/healthbench__med42-8b__bodhi__2026-07/analysis/stats.json": "9ecf2048116cdcbf4febd4b446e7d702c31c916945914c987d83be3beeba127f",
+    "results/healthbench__medgemma-27b-text__bodhi__2026-04/analysis/stats.json": "5dc49ed71073ac0d6a49cb387161ce25167348897bd69af2e847a1c14ffd23ae",
+    "results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/stats.json": "d0e8beddd3e1f9eb629fe00a717b2495e5664a865bb664192aff87b69007d9df",
+    "results/healthbench__mistral-small-24b__bodhi__2026-07/analysis/stats.json": "254e1c3ff2018cefa87852d46ff7e2cb62e86e2449a6e67490f39ff67da6130b",
+    "results/medqa-open-preamble__biomistral-7b__bodhi__2026-07/analysis/stats.json": "0322d5547468469029d6fcffd33c7670c071c6f59e01e8ed237d505bed75c34a",
+    "results/medqa-open-preamble__mistral-small-24b__bodhi__2026-07/analysis/stats.json": "22b521353714b52d39dc479d4702342274d88acaf74758f83b24f025240dd2b0",
+    "results/medquad__mistral-small-24b__bodhi__2026-07/analysis/stats.json": "0a2f452cfe46051cff9affc907d54074a2061b6c13cebcc226330b0689c2c24d"
   },
-  "macros": 10131,
+  "macros": 10250,
   "not_reported": {},
   "tables": [
     "tab_axes_HBMedGemmaMay",

@@ -8715,6 +8715,73 @@
   "not_measured": "no adapter files in the cell's train folders",
   "seeds_trained": []
  },
+ "reply_health": {
+  "conditions": {
+   "base": {
+    "limit_share": null,
+    "loop_share": 0.005,
+    "n": 1000,
+    "n_at_limit": 0,
+    "n_limit_known": 0,
+    "n_loops": 5,
+    "per_seed_loops": {
+     "101": 0,
+     "13": 1,
+     "42": 1,
+     "7": 2,
+     "99": 1
+    }
+   },
+   "base+bodhi": {
+    "limit_share": null,
+    "loop_share": 0.00417973,
+    "n": 957,
+    "n_at_limit": 0,
+    "n_limit_known": 0,
+    "n_loops": 4,
+    "per_seed_loops": {
+     "101": 1,
+     "13": 1,
+     "42": 2,
+     "7": 0,
+     "99": 0
+    }
+   },
+   "lora": {
+    "limit_share": null,
+    "loop_share": 0.001,
+    "n": 1000,
+    "n_at_limit": 0,
+    "n_limit_known": 0,
+    "n_loops": 1,
+    "per_seed_loops": {
+     "101": 1,
+     "13": 0,
+     "42": 0,
+     "7": 0,
+     "99": 0
+    }
+   },
+   "lora+bodhi": {
+    "limit_share": null,
+    "loop_share": 0.00208551,
+    "n": 959,
+    "n_at_limit": 0,
+    "n_limit_known": 0,
+    "n_loops": 2,
+    "per_seed_loops": {
+     "101": 0,
+     "13": 1,
+     "42": 0,
+     "7": 1,
+     "99": 0
+    }
+   }
+  },
+  "loop_max_zlib_ratio": 0.15,
+  "loop_min_chars": 400,
+  "measured": true
+ },
  "seeds": [
   7,
   13,

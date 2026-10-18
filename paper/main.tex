@@ -1471,6 +1471,8 @@ inference server was starting, and it left no outputs. BioMistral-7B on MedQA wa
 (\statMedQAPreBioMistralJulSeeds{} seed, \statMedQAPreBioMistralJulFilterRaw{} traces,
 \statMedQAPreBioMistralJulSteps{} optimizer steps, \statMedQAPreBioMistralJulPrompts{} evaluation
 prompts).
+% Loop counts: reply_health in each cell's analysis/stats.json (configs/report.yaml, reply_health;
+% docs/KNOWN_ISSUES.md, Training). "At most": the largest adapter count of the other added cells.
 % Run history: rebuttal/results/cell_recipe.json ("cells" for the host folders,
 % "runs_without_folder" for the Gemma-2-9B run, from logs/host/gemma2_9b_hb.log).
 
@@ -1480,7 +1482,16 @@ and TRL on one H100 GPU, against JAX (tunix) on a TPU v6e-8 host. The training r
 $r{=}\statGroupAddedRecipeRank$, $\alpha{=}\statGroupAddedRecipeAlpha$ on seven projection types,
 \statGroupAddedRecipeEffectiveBatch{} examples per optimizer step, and \statGroupAddedRecipeEpochs{} epochs with a
 cosine schedule. The sequence length is 4,096. Mistral-Small-24B has a 4-bit base in training and
-a bfloat16 base at evaluation. The evaluation settings also differ. The context is 8,192 tokens
+a bfloat16 base at evaluation. The training loss also differs. The code padded each batch with the
+end-of-sequence token, and the data collator takes every padding token out of the loss, so these
+adapters never trained on where a reply ends. We found this after the rebuttal. Some adapter
+replies then repeat the same text: replies longer than \statCrossCellsReplyLoopMinChars{} characters
+that compress to less than \statCrossCellsReplyLoopMaxRatio{} of their size. For BioMistral-7B on
+\hbhard{}, \statHBBioMistralJulLoopsLoRABodhi{} of \statHBBioMistralJulLoopsLoRABodhiN{} LoRA+BODHI replies
+and \statHBBioMistralJulLoopsLoRA{} LoRA replies do this, against \statHBBioMistralJulLoopsBase{} base
+replies. In the other added cells, at most \statMQMistralJulLoopsLoRA{} of
+\statMQMistralJulLoopsLoRAN{} adapter replies do (Mistral-Small-24B on MedQuAD). The MedGemma-27B cell
+kept every token of the reply in the loss. The evaluation settings also differ. The context is 8,192 tokens
 instead of 4,096, and the server runs 64 concurrent sequences instead of 32. Every seed uses one
 fixed set of 200 \hbhard{} prompts instead of a draw per seed. The ChatDoctor and MedQuAD test sets
 are the first 200 rows of each file. The evaluator's weights come from a mirror repository, and

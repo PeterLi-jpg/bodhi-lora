@@ -37,7 +37,7 @@ def synthetic_table(cell, seeds=(1, 2, 3)):
         for ci, c in enumerate(cell.eval.conditions):
             for pi, p in enumerate(PROMPTS):
                 row = {"cell": cell.id, "seed": s, "condition": c, "prompt_id": p, "pair_id": np.nan,
-                       "chars": 100.0 + 10 * ci + pi, "tokens": np.nan, "tokens_engine": np.nan,
+                       "chars": 100.0 + 10 * ci + pi, "zlib_ratio": 0.5, "tokens": np.nan, "tokens_engine": np.nan,
                        "calls": np.nan, "tokens_total": np.nan, "finish_length": 0.0,
                        "rubric_score": 0.5 + 0.01 * ci, "rubric_score_worst": 0.5,
                        "rubric_items": 2.0, "rubric_parse_failures": 0.0, "neg_items_met": 0.0,
@@ -203,7 +203,7 @@ def test_the_paired_probe_gives_delta_and_the_difference_in_differences(reg, tmp
                 # every incomplete row.
                 ask = float(k < s or (c == "lora" and variant == "incomplete"))
                 row = {"cell": cell.id, "seed": s, "condition": c, "prompt_id": pid, "pair_id": pair,
-                       "chars": 100.0, "tokens": np.nan, "tokens_engine": np.nan, "calls": np.nan,
+                       "chars": 100.0, "zlib_ratio": 0.5, "tokens": np.nan, "tokens_engine": np.nan, "calls": np.nan,
                        "tokens_total": np.nan, "finish_length": 0.0, "rubric_score": 0.5,
                        "rubric_score_worst": 0.5, "rubric_items": 1.0, "rubric_parse_failures": 0.0,
                        "neg_items_met": 0.0, "neg_points_lost": 0.0, "epi_status": "scored"}
@@ -308,3 +308,37 @@ def test_judges_recompute_the_contrasts_and_decide_against_the_evaluator(reg, tm
     flipped = judges["flipped"]
     assert flipped["contrasts"]["lora - base"]["metrics"]["active_inquiry"]["decision"] == "reversed"
     assert flipped["dimension_kappa"]["active_inquiry"]["kappa"] < 0
+
+
+def test_reply_health_counts_loops_and_the_token_limit(reg, tmp_path):
+    """A loop: over loop_min_chars and a zlib ratio under loop_max_zlib_ratio; an empty
+    reply (no ratio) is not one. The limit count reads finish_length where it is stored."""
+    table = synthetic_table(reg.cells[SMOKE])
+    lora = table["condition"] == "lora"
+    first = table["prompt_id"] == "p0"
+    table.loc[lora & first, ["chars", "zlib_ratio"]] = [900.0, 0.05]          # a loop in every seed
+    table.loc[lora & (table["prompt_id"] == "p1"), ["chars", "zlib_ratio"]] = [300.0, 0.05]   # too short
+    table.loc[lora & (table["prompt_id"] == "p2"), ["chars", "zlib_ratio"]] = [0.0, np.nan]   # empty
+    table.loc[lora & (table["prompt_id"] == "p3") & (table["seed"] == 1), "finish_length"] = 1.0
+    table.loc[table["condition"] == "base", "finish_length"] = np.nan          # not stored
+    rh = run(reg, table, tmp_path)["reply_health"]
+    assert rh["measured"] and (rh["loop_min_chars"], rh["loop_max_zlib_ratio"]) == (400, 0.15)
+    r = rh["conditions"]["lora"]
+    assert (r["n"], r["n_loops"], r["per_seed_loops"]) == (18, 3, {"1": 1, "2": 1, "3": 1})
+    assert r["loop_share"] == pytest.approx(3 / 18)
+    assert (r["n_limit_known"], r["n_at_limit"]) == (18, 1)
+    b = rh["conditions"]["base"]
+    assert (b["n_loops"], b["n_limit_known"], b["n_at_limit"], b["limit_share"]) == (0, 0, 0, None)
+    # a table from before the column says so
+    assert run(reg, table.drop(columns=["zlib_ratio"]), tmp_path)["reply_health"] == {"measured": False}
+
+
+def test_zlib_ratio_of_prose_and_of_a_loop():
+    from bodhi_lora.analysis.extract import zlib_ratio
+    prose = ("Chest pain with shortness of breath can have many causes, from a pulled muscle to a "
+             "heart problem. Since yours started an hour ago and spreads to your left arm, call "
+             "emergency services now. While you wait, sit down and stay calm.")
+    loop = "If symptoms worsen, seek urgent care. " * 40
+    assert zlib_ratio(prose) > 0.5 and zlib_ratio(loop) < 0.15
+    assert np.isnan(zlib_ratio(""))
+

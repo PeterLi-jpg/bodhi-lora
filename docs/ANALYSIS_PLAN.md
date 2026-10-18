@@ -891,3 +891,15 @@ base conditions of these cells stand" in the EOS entry above: their replies from
 shared host's H100 are kept as a record, and no contrast uses them. The envs are the same
 packages as on the host. No score of R2 to R5 had been read.
 
+**2026-10-18, reply health. A descriptive measure added after the outputs of the recorded
+cells existed; post hoc, and it decides no claim.** To report the EOS fault of the training
+(KNOWN_ISSUES.md, Training), the extract now stores each reply's zlib ratio (its
+compressed size over its size in bytes), and the analysis counts, per condition, the
+replies over 400 characters with a ratio under 0.15 (repetition loops; configs/report.yaml,
+`reply_health`) and the replies the token limit stopped, where the eval stored that. It reads
+how much a reply repeats, not what it means (CONVENTIONS.md rule 15). The threshold was set
+from the recorded HealthBench cells: replies over 400 characters compress to a median of 0.39
+to 0.54 and their 5th percentile stays at 0.24 or above outside BioMistral-7B. It was
+computed on the recorded cells only; no output of R2 to R5 was read. The new cells get the
+same counts as a check of the fix, not as a result.
+

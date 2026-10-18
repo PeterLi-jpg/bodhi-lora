@@ -33,9 +33,11 @@ D-numbers refer to [DECISIONS.md](DECISIONS.md). Issue numbers such as #5 are Gi
   - 2026-07 cells (their files do not flag the limit): BioMistral-7B `lora_bodhi` loops
     in 514 of 1,000 replies and `lora_no_wrapper` in 268, against 32 and 37 for the base;
     in the other cells at most 35 adapter replies of 1,000 loop.
-  The code is fixed (see Fixed). Open: the reruns of R2 to R5 (BLOCKED.md item 2.1;
-  DECISIONS.md D28) and what the paper does with the 2026-07 cells beyond saying it
-  (Appendix "What differs from the MedGemma-27B cell").
+  The code is fixed (see Fixed). Since 2026-10-18 the analysis counts these loops in every
+  cell (`reply_health` in each stats.json; ANALYSIS_PLAN.md section 12), and the paper's
+  appendix paragraph "What differs from the MedGemma-27B cell" says how the 2026-07
+  adapters were trained, with those counts as macros. Open: the reruns of R2 to R5, which
+  run on NRP (docs/NRP.md, DECISIONS.md D29).
 
 ### Blocked on data outside the repo
 

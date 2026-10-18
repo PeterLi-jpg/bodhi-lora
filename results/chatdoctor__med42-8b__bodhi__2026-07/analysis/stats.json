@@ -6431,6 +6431,73 @@
   ],
   "train_batch_size": 4
  },
+ "reply_health": {
+  "conditions": {
+   "base": {
+    "limit_share": null,
+    "loop_share": 0.044,
+    "n": 1000,
+    "n_at_limit": 0,
+    "n_limit_known": 0,
+    "n_loops": 44,
+    "per_seed_loops": {
+     "101": 10,
+     "13": 9,
+     "42": 6,
+     "7": 10,
+     "99": 9
+    }
+   },
+   "base+bodhi": {
+    "limit_share": null,
+    "loop_share": 0.0,
+    "n": 1000,
+    "n_at_limit": 0,
+    "n_limit_known": 0,
+    "n_loops": 0,
+    "per_seed_loops": {
+     "101": 0,
+     "13": 0,
+     "42": 0,
+     "7": 0,
+     "99": 0
+    }
+   },
+   "lora": {
+    "limit_share": null,
+    "loop_share": 0.0,
+    "n": 1000,
+    "n_at_limit": 0,
+    "n_limit_known": 0,
+    "n_loops": 0,
+    "per_seed_loops": {
+     "101": 0,
+     "13": 0,
+     "42": 0,
+     "7": 0,
+     "99": 0
+    }
+   },
+   "lora+bodhi": {
+    "limit_share": null,
+    "loop_share": 0.004,
+    "n": 1000,
+    "n_at_limit": 0,
+    "n_limit_known": 0,
+    "n_loops": 4,
+    "per_seed_loops": {
+     "101": 0,
+     "13": 1,
+     "42": 3,
+     "7": 0,
+     "99": 0
+    }
+   }
+  },
+  "loop_max_zlib_ratio": 0.15,
+  "loop_min_chars": 400,
+  "measured": true
+ },
  "seeds": [
   7,
   13,

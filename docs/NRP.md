@@ -33,7 +33,7 @@ scheduler instead: the pods share one state folder on the volume.
 
 ## 2. The task pool
 
-`configs/queues/eos_rerun_nrp.yaml` lists 35 tasks, each one `python -m bodhi_lora run`
+`configs/queues/eos_rerun_nrp.yaml` lists 34 tasks, each one `python -m bodhi_lora run`
 with `--gpus 0` (a pod sees its one card as 0), with the tasks it comes after and an
 estimate of its A100-hours. A worker:
 

@@ -27,6 +27,15 @@ class Bootstrap(_Record):
     seed: int
 
 
+class ReplyHealth(_Record):
+    """A reply longer than loop_min_chars whose zlib-compressed size is under
+    loop_max_zlib_ratio of its own size counts as a repetition loop: a loop repeats the
+    same text, which compresses far more than prose does. It reads no meaning from the
+    reply, only how much it repeats."""
+    loop_min_chars: int = Field(default=400, gt=0)
+    loop_max_zlib_ratio: float = Field(default=0.15, gt=0, lt=1)
+
+
 class Discrimination(_Record):
     """P(response | label positive) - P(response | label negative) for each label.
 
@@ -249,6 +258,7 @@ class ReportConfig(_Record):
     alpha: float = Field(gt=0, lt=1)
     discrimination: list[Discrimination]
     length_reference: str
+    reply_health: ReplyHealth = Field(default_factory=ReplyHealth)
     cross_cells: list[CellId]
     detail_cells: list[CellId] = Field(default_factory=list)
     groups: dict[RegistryId, Group]

@@ -17,7 +17,9 @@ Response table columns (docs/ARCHITECTURE.md section 6):
 
     key        cell, seed, condition, prompt_id, pair_id (the rows of one pair of a paired
                benchmark share it; empty for other benchmarks and in older files)
-    response   chars; tokens (the model's own tokenizer on the reply, when its
+    response   chars; zlib_ratio (the reply's zlib-compressed size over its size in
+               UTF-8 bytes; empty for an empty reply: how much the reply repeats, for the
+               reply-health counts of the analysis); tokens (the model's own tokenizer on the reply, when its
                tokenizer.json is in the local Hugging Face cache); tokens_engine (the count
                the serving engine stored, single-call conditions only); calls, tokens_total,
                finish_length (stored by the package's eval stage; empty in older files);
@@ -45,6 +47,7 @@ import hashlib
 import json
 import math
 import re
+import zlib
 from pathlib import Path
 from typing import Optional
 
@@ -67,7 +70,7 @@ SEVEN = ("uncertainty_ack", "active_inquiry", "context_seeking", "red_flag", "sc
          "hedging_quality", "specificity")
 
 KEY = ["cell", "seed", "condition", "prompt_id", "pair_id"]
-RESPONSE = ["chars", "tokens", "tokens_engine", "calls", "tokens_total", "finish_length"]
+RESPONSE = ["chars", "zlib_ratio", "tokens", "tokens_engine", "calls", "tokens_total", "finish_length"]
 # The first 16 hex digits of the reply's sha256: whether two runs made the same reply,
 # without the reply text in a tracked file (the cross-cell grader comparison reads it).
 RESPONSE_ID = "response_sha256"
@@ -77,6 +80,13 @@ RUBRIC = ["rubric_score", "rubric_score_worst", "rubric_items", "rubric_parse_fa
 
 class ExtractError(RuntimeError):
     """A cell's raw outputs are missing or disagree with each other."""
+
+
+def zlib_ratio(text: str) -> float:
+    """The zlib-compressed size of the text over its size in UTF-8 bytes (default level).
+    A reply that repeats itself compresses far more than prose; NaN for an empty reply."""
+    data = text.encode("utf-8")
+    return len(zlib.compress(data)) / len(data) if data else float("nan")
 
 
 def _num(x) -> float:
@@ -296,6 +306,7 @@ def seed_table(reg: Registry, cell: CellConfig, paths: CellPaths, seed: int, cfg
             neg_met = [c for c in criteria if c["points"] < 0 and c["criteria_met"]]
             row = {"cell": cell.id, "seed": seed, "condition": condition, "prompt_id": r["prompt_id"],
                    "pair_id": r.get("pair_id"), "chars": float(len(r["response"])),
+                   "zlib_ratio": zlib_ratio(r["response"] or ""),
                    RESPONSE_ID: hashlib.sha256(r["response"].encode("utf-8")).hexdigest()[:16],
                    "tokens": float(tokens[i]) if tokens is not None else float("nan"),
                    "tokens_engine": float(r["response_token_count"]) if r.get("response_token_count") else float("nan"),

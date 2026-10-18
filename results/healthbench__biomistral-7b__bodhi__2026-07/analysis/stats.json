@@ -8703,6 +8703,73 @@
   ],
   "train_batch_size": 4
  },
+ "reply_health": {
+  "conditions": {
+   "base": {
+    "limit_share": null,
+    "loop_share": 0.037,
+    "n": 1000,
+    "n_at_limit": 0,
+    "n_limit_known": 0,
+    "n_loops": 37,
+    "per_seed_loops": {
+     "101": 7,
+     "13": 8,
+     "42": 6,
+     "7": 7,
+     "99": 9
+    }
+   },
+   "base+bodhi": {
+    "limit_share": null,
+    "loop_share": 0.032,
+    "n": 1000,
+    "n_at_limit": 0,
+    "n_limit_known": 0,
+    "n_loops": 32,
+    "per_seed_loops": {
+     "101": 7,
+     "13": 4,
+     "42": 8,
+     "7": 7,
+     "99": 6
+    }
+   },
+   "lora": {
+    "limit_share": null,
+    "loop_share": 0.268,
+    "n": 1000,
+    "n_at_limit": 0,
+    "n_limit_known": 0,
+    "n_loops": 268,
+    "per_seed_loops": {
+     "101": 41,
+     "13": 60,
+     "42": 59,
+     "7": 66,
+     "99": 42
+    }
+   },
+   "lora+bodhi": {
+    "limit_share": null,
+    "loop_share": 0.514,
+    "n": 1000,
+    "n_at_limit": 0,
+    "n_limit_known": 0,
+    "n_loops": 514,
+    "per_seed_loops": {
+     "101": 99,
+     "13": 109,
+     "42": 97,
+     "7": 96,
+     "99": 113
+    }
+   }
+  },
+  "loop_max_zlib_ratio": 0.15,
+  "loop_min_chars": 400,
+  "measured": true
+ },
  "seeds": [
   7,
   13,

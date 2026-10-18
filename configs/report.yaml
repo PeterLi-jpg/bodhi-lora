@@ -19,6 +19,14 @@ bootstrap: {resamples: 5000, seed: 0}
 # each cell's DimsUp and DimsDown macros (decisions D2 and D7).
 alpha: 0.05
 
+# Reply health (post hoc, 2026-10-18; docs/ANALYSIS_PLAN.md section 12): a reply over
+# loop_min_chars whose zlib-compressed size is under loop_max_zlib_ratio of its own is a
+# repetition loop. In the 2026-07 HealthBench cells, replies over 400 characters
+# compress to a median of 0.39 to 0.54 and their 5th percentile stays at 0.24 or above
+# outside BioMistral-7B, so 0.15 separates loops from prose. Descriptive; it decides no
+# claim. It reports the EOS fault of the training (docs/KNOWN_ISSUES.md, Training).
+reply_health: {loop_min_chars: 400, loop_max_zlib_ratio: 0.15}
+
 # No rule here reads the reply text. Until 2026-10-10 two keyword rules did (a
 # second-person question rule and an emergency-mention rule); keyword rules miss
 # negation, hypotheticals and quotes, so they were removed (docs/CONVENTIONS.md rule 15,

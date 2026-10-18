@@ -108,6 +108,7 @@ def cell_macros(rep, stats: dict, cell: CellConfig, cfg: ReportConfig, src: str)
     _anchor_lengths_axes(rep, n, T, stats, src)
     _discrimination(rep, n, T, stats, src)
     _leakage(rep, n, T, stats, src)
+    _reply_health(rep, n, T, stats, src)
     for c, r in stats["askers_gap"].items():
         rep.add(f"{T}AskersGap{n.cond_token(c)}", fmt(r.get("gap"), 3, sign=True), f"{src}: askers_gap.{c}.gap")
         rep.add(f"{T}AskersGap{n.cond_token(c)}CI", fmt_ci(r.get("gap_ci95"), 3), "prompt-clustered bootstrap interval")
@@ -232,6 +233,22 @@ def _discrimination(rep, n: Names, T: str, stats: dict, src: str) -> None:
                             f"{w}.diff, over {t['n_seeds']} seeds (pp)")
                     rep.add(f"{P}{G}Rate{K}CI", fmt_ci(scaled(t["ci95"], 100), 1), f"{w}.ci95, t({t['df']})")
                     rep.add(f"{P}{G}Rate{K}P", fmt_p(t.get("p")), f"{w}.p, paired t over seeds")
+
+
+def _reply_health(rep, n: Names, T: str, stats: dict, src: str) -> None:
+    rh = stats.get("reply_health") or {}
+    if not rh.get("measured"):
+        return
+    rule = f"over {rh['loop_min_chars']} characters, zlib ratio under {rh['loop_max_zlib_ratio']}"
+    for c in stats["conditions_order"]:
+        r, where, C = rh["conditions"][c], f"{src}: reply_health.conditions.{c}", n.cond_token(c)
+        rep.add(f"{T}Loops{C}", fmt_int(r["n_loops"]), f"{where}.n_loops (replies {rule})")
+        rep.add(f"{T}Loops{C}N", fmt_int(r["n"]), f"{where}.n (every reply)")
+        if r["loop_share"] is not None:
+            rep.add(f"{T}Loops{C}Pct", fmt(100 * r["loop_share"], 1), f"{where}.loop_share (%)")
+        if r["n_limit_known"]:
+            rep.add(f"{T}AtLimit{C}", fmt_int(r["n_at_limit"]), f"{where}.n_at_limit (replies the token limit stopped)")
+            rep.add(f"{T}AtLimit{C}Pct", fmt(100 * r["limit_share"], 1), f"{where}.limit_share (%)")
 
 
 def _leakage(rep, n: Names, T: str, stats: dict, src: str) -> None:

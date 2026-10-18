@@ -33,7 +33,7 @@ from bodhi_lora.registry import Registry
 from bodhi_lora.report.cell import cell_macros, cell_table, detail_tables
 from bodhi_lora.report.cross import (cell_detail_tables, count_macros, cross_table, family_macros, grader_macros,
                                      group_macros, posted_macros)
-from bodhi_lora.report.latex import MISSING
+from bodhi_lora.report.latex import MISSING, fmt, fmt_int
 
 
 @dataclass
@@ -87,6 +87,11 @@ def report(reg: Registry, cfg: ReportConfig, proj: Project) -> Report:
         cells_rec[cid] = {"token": cell.report.token, "label": cell.report.label, "stats": src,
                           "in_cross_cells": cid in cfg.cross_cells, "detail": cid in cfg.detail_cells,
                           "set_aside": cell.report.set_aside, "family_waiver": cell.grading.same_family_waiver}
+    # The loop rule of the reply-health counts, so the paper states it from the config.
+    rep.add("CrossCellsReplyLoopMinChars", fmt_int(cfg.reply_health.loop_min_chars),
+            "configs/report.yaml: reply_health.loop_min_chars")
+    rep.add("CrossCellsReplyLoopMaxRatio", fmt(cfg.reply_health.loop_max_zlib_ratio, 2),
+            "configs/report.yaml: reply_health.loop_max_zlib_ratio")
     cross_path = proj.results_root / "cross_cell" / "stats.json"
     if not cross_path.is_file():
         raise FileNotFoundError(f"{proj.rel(cross_path)} is missing; run make analyze")
