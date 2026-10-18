@@ -57,7 +57,11 @@ spec:
               POOL="python scripts/task_pool.py --dag configs/queues/eos_rerun_nrp.yaml --state $STATE --repo /data/bohdi"
               echo "=== $POD_NAME $(date -u +%FT%TZ) on $(cat /etc/hostname) $(nvidia-smi --query-gpu=name,memory.total --format=csv,noheader)"
               # A pod that would find nothing to run stops before it downloads the models.
-              $POOL --has-work || { echo "no task for this pod; done"; exit 0; }
+              # Only exit 3 means that; any other failure of the check fails the pod, so the
+              # Job replaces it instead of counting it as done.
+              rc=0; $POOL --has-work || rc=$?
+              if [ "$rc" = 3 ]; then echo "no task for this pod; done"; exit 0; fi
+              [ "$rc" = 0 ] || { echo "the work check failed (exit $rc)"; exit "$rc"; }
               # The three models the reruns load, at the revisions of their records, to this
               # pod's disk. The duplicate full-model files are left out: vLLM and
               # transformers load the shards that model.safetensors.index.json lists.
