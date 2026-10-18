@@ -118,6 +118,15 @@ kubectl exec -n aiea-interns <worker pod> -- tail -n 20 /data/pool/eos_rerun/wor
 kubectl exec -n aiea-interns <worker pod> -- ls /data/pool/eos_rerun/done
 ```
 
+Read a running task's logs only from the pod that runs it. When another node reads a
+file that a pod is writing, CephFS takes back that pod's write caching, and the writer then
+waits on the metadata server at each write until it gets the caching back. A vLLM server
+writes a log line per request, so its throughput falls: on 2026-10-18, while one pod read
+every pod's logs every 3 minutes, R4's grading on another node ran at about a quarter of
+its speed, with its card idle. A plain `stat` of a log that another node wrote took about
+0.9 s there, against under 0.1 ms for a pod's own logs. Files that no process writes any
+more (the pool records, finished manifests and result files) are safe to read from any pod.
+
 When every worker has exited, `/data/pool/eos_rerun/summary.json` lists the tasks done,
 failed and blocked. Copy the cell folders back with the copy pod (`kubectl cp` of a tar of
 `/data/bohdi/results/<cell>`), to the shared host and to this machine (RUN_PLAN.md section
