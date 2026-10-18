@@ -5,7 +5,9 @@
 # (RUN_PLAN.md section 4.4); they only order the tasks. Each pod has one card, index 0.
 # The runner skips every stage whose manifest is complete, so a task run again goes on
 # where it stopped. The finish task of a cell runs every stage once more; all are
-# complete, so it only writes the cell manifest with the index of every stage.
+# complete, so it only writes the cell manifest with the index of every stage. A cell that
+# reads another's adapters finishes after that cell does: the source's finish rewrites the
+# pointer manifests whose sha256 the reader's pointers record.
 tasks:
   # R2: the five seeds train apart, so up to three train at once.
   - id: r2-train-s42
@@ -68,7 +70,7 @@ tasks:
     run: python -m bodhi_lora run mediq-paired__mistral-small-24b__bodhi --stages eval,grade --judges none --gpus 0
   - id: r3-finish
     hours: 0.1
-    after: [r3]
+    after: [r3, r2-finish]
     run: python -m bodhi_lora run mediq-paired__mistral-small-24b__bodhi --gpus 0
   - id: r4
     hours: 14.0
@@ -76,7 +78,7 @@ tasks:
     run: python -m bodhi_lora run healthbench__mistral-small-24b__bodhi__labelled --stages eval,grade --judges none --gpus 0
   - id: r4-finish
     hours: 0.1
-    after: [r4]
+    after: [r4, r2-finish]
     run: python -m bodhi_lora run healthbench__mistral-small-24b__bodhi__labelled --gpus 0
   # R5: the ask-first adapters, then their MediQ cell.
   - id: r5-train-s42
@@ -136,5 +138,5 @@ tasks:
     run: python -m bodhi_lora run mediq-paired__mistral-small-24b__ask-first --stages eval,grade --judges none --gpus 0
   - id: r5m-finish
     hours: 0.1
-    after: [r5m]
+    after: [r5m, r5-finish]
     run: python -m bodhi_lora run mediq-paired__mistral-small-24b__ask-first --gpus 0

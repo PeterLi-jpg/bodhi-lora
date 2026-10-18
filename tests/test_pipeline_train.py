@@ -168,3 +168,16 @@ def test_set_pad_token_refuses_eos_and_unknown_tokens():
     with pytest.raises(SystemExit, match="not in the vocabulary"):
         train_stage.set_pad_token(tok, "<no-such-token>")
 
+
+
+
+def test_a_half_written_checkpoint_is_not_resumed(tmp_path):
+    """Trainer writes trainer_state.json last; a folder without it is one a killed run left."""
+    from bodhi_lora.pipeline import train as train_stage
+    for step, complete in ((118, True), (236, False)):
+        d = tmp_path / f"checkpoint-{step}"
+        d.mkdir()
+        if complete:
+            (d / "trainer_state.json").write_text("{}")
+    assert train_stage.latest_checkpoint(tmp_path) == str(tmp_path / "checkpoint-118")
+    assert train_stage.latest_checkpoint(tmp_path / "none") is None

@@ -57,6 +57,10 @@ import yaml
 POLL_S = float(os.environ.get("TASK_POOL_POLL_S", "60"))
 HEARTBEAT_S = float(os.environ.get("TASK_POOL_HEARTBEAT_S", "30"))
 STALE_S = float(os.environ.get("TASK_POOL_STALE_S", "600"))
+# For the exit rule a claim counts as running only with a heartbeat this recent: a pod
+# that died leaves a claim that is not yet stale, and the workers must not all leave on
+# the strength of it.
+LIVE_S = float(os.environ.get("TASK_POOL_LIVE_S", str(3 * HEARTBEAT_S)))
 MAX_ATTEMPTS = int(os.environ.get("TASK_POOL_MAX_ATTEMPTS", "2"))
 STOP_GRACE_S = float(os.environ.get("TASK_POOL_STOP_GRACE_S", "120"))
 # A card that uses at least this many MiB before a task holds a process that outlived
@@ -120,13 +124,13 @@ class Pool:
                 continue
         return float("inf")
 
-    def running(self) -> set:
-        """Tasks with a live claim."""
+    def running(self, within: float = STALE_S) -> set:
+        """Tasks with a claim whose heartbeat is at most `within` seconds old."""
         out = set()
         for d in (self.state / "claims").iterdir():
             if d.name.startswith(".") or not d.is_dir():
                 continue
-            if self.claim_age(d.name) <= STALE_S:
+            if self.claim_age(d.name) <= within:
                 out.add(d.name)
         return out
 
@@ -160,15 +164,32 @@ class Pool:
         return out - failed
 
     def plan(self):
-        """(ready, pending, running, failed): ready is in the order to take."""
+        """(ready, pending, live, failed): ready is in the order to take; live are the
+        claims with a recent heartbeat (claimed but not live tasks are neither pending
+        nor live until their claim goes stale)."""
         self.reclaim_stale()
-        done, failed, running = self.done(), self.failed(), self.running()
+        done, failed, claimed = self.done(), self.failed(), self.running()
         blocked = self.blocked(failed)
         pending = [t["id"] for t in self.tasks
-                   if t["id"] not in done | failed | running | blocked]
+                   if t["id"] not in done | failed | claimed | blocked]
         ready = [tid for tid in pending if all(a in done for a in self.by_id[tid]["after"])]
         ready.sort(key=lambda tid: (-self.rank[tid], self.order[tid]))
-        return ready, pending, running, failed | blocked
+        live = self.running(LIVE_S)
+        # a claim whose heartbeat stopped is work no live worker will finish
+        pending += sorted(claimed - live)
+        return ready, pending, live, failed | blocked
+
+    def mine(self, tid: str) -> bool:
+        """Whether the claim of tid is still this worker's (another worker may have taken
+        it over after its heartbeat looked stale)."""
+        try:
+            return json.loads((self.claim_dir(tid) / "claim.json").read_text()).get("worker") == self.worker
+        except (OSError, ValueError):
+            return False
+
+    def drop_claim(self, tid: str) -> None:
+        if self.mine(tid):
+            shutil.rmtree(self.claim_dir(tid), ignore_errors=True)
 
     def claim(self, tid: str) -> bool:
         try:
@@ -180,7 +201,7 @@ class Pool:
         (self.claim_dir(tid) / "heartbeat").touch()
         # Another worker may have finished it between its plan and this claim.
         if tid in self.done():
-            shutil.rmtree(self.claim_dir(tid), ignore_errors=True)
+            self.drop_claim(tid)
             return False
         return True
 
@@ -214,9 +235,20 @@ class Pool:
         log.write(f"=== {start} {self.worker} attempt {attempt}: {task['run']}\n")
         log.flush()
         stop_beat = threading.Event()
+        self.lost = False
 
         def beat():
             while not stop_beat.wait(HEARTBEAT_S):
+                if not self.mine(tid):
+                    # Another worker took the task over: stop this copy, so one task never
+                    # runs twice (two trainers on one adapter folder).
+                    self.lost = True
+                    if self.child is not None:
+                        try:
+                            os.killpg(self.child.pid, signal.SIGINT)
+                        except OSError:
+                            pass
+                    return
                 try:
                     (self.claim_dir(tid) / "heartbeat").touch()
                 except OSError:
@@ -238,6 +270,9 @@ class Pool:
         if self.stopping:
             self.log(f"stopped during {tid} (exit {rc}); its claim stays until it goes stale")
             return rc
+        if self.lost:
+            self.log(f"lost the claim of {tid} to another worker; stopped this copy (exit {rc}), no record")
+            return rc
         if rc == 0:
             # done first, then the claim goes: no moment when neither marks the task.
             (self.state / "done" / f"{tid}.json").write_text(json.dumps(record) + "\n")
@@ -248,7 +283,7 @@ class Pool:
             left = MAX_ATTEMPTS - attempt
             self.log(f"failed {tid} with exit {rc} after {hours:.2f} h; "
                      + (f"{left} attempt(s) left" if left > 0 else "no attempts left, tasks after it are blocked"))
-        shutil.rmtree(self.claim_dir(tid), ignore_errors=True)
+        self.drop_claim(tid)
         return rc
 
     def has_work(self) -> bool:
@@ -269,12 +304,12 @@ class Pool:
         self.stopping = True
         self.log(f"got signal {signum}")
         child = self.child
-        if child is not None and child.poll() is None:
+        if child is not None and not exited(child.pid):
             os.killpg(child.pid, signal.SIGINT)
             end = time.time() + STOP_GRACE_S
-            while child.poll() is None and time.time() < end:
+            while not exited(child.pid) and time.time() < end:
                 time.sleep(1)
-            if child.poll() is None:
+            if not exited(child.pid):
                 os.killpg(child.pid, signal.SIGKILL)
         sys.exit(128 + signum)
 
@@ -285,6 +320,10 @@ class Pool:
         said_wait = False
         while True:
             ready, pending, running, stuck = self.plan()
+            # The card first, before any claim: a claim must not wait without a heartbeat.
+            if ready and not self.card_empty():
+                self.log(f"the card holds {self.card_used_mib()} MiB before a task; stopping so the pod is replaced")
+                return 75
             taken = None
             for tid in ready:
                 if self.claim(tid):
@@ -292,10 +331,6 @@ class Pool:
                     break
             if taken:
                 said_wait = False
-                if not self.card_empty():
-                    shutil.rmtree(self.claim_dir(taken), ignore_errors=True)
-                    self.log(f"the card holds {self.card_used_mib()} MiB before {taken}; stopping so the pod is replaced")
-                    return 75
                 self.run(taken)
                 continue
             if not pending and not running:
@@ -315,6 +350,17 @@ class Pool:
                 self.log(f"nothing ready; waiting for {sorted(running)} ({len(pending)} task(s) left)")
                 said_wait = True
             time.sleep(POLL_S)
+
+
+def exited(pid: int) -> bool:
+    """Whether the child has exited. The signal handler runs inside child.wait(), which
+    holds the Popen lock that poll() needs, so poll() would always say "running"; waitpid
+    itself answers."""
+    try:
+        done, _ = os.waitpid(pid, os.WNOHANG)
+    except ChildProcessError:
+        return True
+    return done == pid
 
 
 def load_dag(path: Path) -> list[dict]:

@@ -465,3 +465,30 @@ def test_every_grading_stage_builds_its_engine_with_grader_eager():
         text = (root / name).read_text()
         calls = [line for line in text.splitlines() if needle in line]
         assert calls and all("enforce_eager=grader_eager(" in line for line in calls), (name, needle)
+
+
+def test_a_failed_start_stops_the_server(monkeypatch, tmp_path):
+    """__exit__ does not run when __enter__ raises, so a server that never got ready must be
+    stopped by start() itself, or it keeps the card (its own session outlives the stage)."""
+    eng = make_engine(MODEL, serving=SERVING)
+    monkeypatch.setattr(eng, "log_path", tmp_path / "vllm.log")
+
+    class FakePopen:
+        pid = 4321
+
+        def __init__(self, *a, **k):
+            pass
+
+    stopped = []
+    monkeypatch.setattr(ve.subprocess, "Popen", FakePopen)
+    monkeypatch.setattr(eng, "_wait_port_free", lambda: None)
+    monkeypatch.setattr(eng, "stop", lambda: stopped.append(True))
+
+    def never_ready():
+        raise TimeoutError("vllm serve did not answer")
+
+    monkeypatch.setattr(eng, "_wait_ready", never_ready)
+    with pytest.raises(TimeoutError):
+        with eng:
+            pass
+    assert stopped == [True]

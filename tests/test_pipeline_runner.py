@@ -342,3 +342,20 @@ def test_a_dry_run_never_downloads_and_names_the_fetch_command(tmp_path, capsys,
         run_cell(load_registry(configs), project(configs), cell, mode="dry_run", seeds=[42],
                  configs_dir=configs)
     assert "DRY-RUN [gpu" in capsys.readouterr().out
+
+
+
+def test_an_input_that_already_holds_the_text_is_not_rewritten(tmp_path):
+    """Runners of one cell in other pods read the inputs while another runner starts
+    (docs/NRP.md): an input that is already right is left alone."""
+    import os
+    from bodhi_lora.pipeline.runner import _write_once
+    path = tmp_path / "pools.json"
+    _write_once(path, {"a": 1}, "test")
+    old = path.stat().st_mtime_ns
+    os.utime(path, ns=(old - 10**9, old - 10**9))
+    _write_once(path, {"a": 1}, "test")
+    assert path.stat().st_mtime_ns == old - 10**9
+    with pytest.raises(RunError, match="differs"):
+        _write_once(path, {"a": 2}, "test")
+    assert list(tmp_path.iterdir()) == [path]          # no temporary file left

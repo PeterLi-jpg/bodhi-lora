@@ -283,7 +283,13 @@ class VLLMEngine:
         self._proc = subprocess.Popen(self.serve_args(), stdout=log_fh, stderr=subprocess.STDOUT,
                                       env=self.server_env(), preexec_fn=os.setsid)
         print(f"  pid={self._proc.pid}, log={self.log_path}", flush=True)
-        self._wait_ready()
+        try:
+            self._wait_ready()
+        except BaseException:
+            # __exit__ does not run when __enter__ raises, and the server is in a session of
+            # its own: without this it would keep the card after a failed start.
+            self.stop()
+            raise
         self._serving = True
         return self
 

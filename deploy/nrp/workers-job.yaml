@@ -47,6 +47,10 @@ spec:
           args:
             - |
               set -euo pipefail
+              # The envs, at the paths .venv and .venv-infer link to (deploy/nrp/setup-job.yaml).
+              for env in train infer; do
+                [ -x "/local/venv-$env/bin/python" ] || tar -xf "/data/venvs/venv-$env.tar" -C /local
+              done
               cd /data/bohdi
               source .venv/bin/activate
               STATE=/data/pool/eos_rerun

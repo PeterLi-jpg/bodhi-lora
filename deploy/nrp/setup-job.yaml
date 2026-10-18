@@ -20,7 +20,7 @@ spec:
           image: vllm/vllm-openai:v0.10.2
           env:
             - {name: COMMIT, value: "SET-ME"}
-            - {name: PIP_CACHE_DIR, value: /data/pip-cache}
+            - {name: PIP_CACHE_DIR, value: /local/pip-cache}
             - {name: PYTHONUNBUFFERED, value: "1"}
             - name: HF_TOKEN
               valueFrom: {secretKeyRef: {name: nfootprint-hf, key: token}}
@@ -33,20 +33,50 @@ spec:
               python3 -c 'import sys; assert sys.version_info[:2] == (3, 12), sys.version'
               cd /data
               [ -d bohdi/.git ] || git clone -q --no-checkout incoming/bodhi.bundle bohdi
-              git -C bohdi fetch -q /data/incoming/bodhi.bundle
+              # The bundle holds the branch ref only, no HEAD, so name what to fetch.
+              git -C bohdi fetch -q /data/incoming/bodhi.bundle 'refs/heads/*:refs/remotes/bundle/*'
               git -C bohdi checkout -q --detach "$COMMIT"
               git -C bohdi log --oneline -1
               tar -xzf incoming/payload.tar.gz -C bohdi
               cd bohdi
               # The envs of the cells, package for package (requirements-infer.txt says
-              # how the locks are known); --no-deps installs exactly the lock.
-              [ -x .venv/bin/python ] || python3 -m venv .venv
-              [ -x .venv-infer/bin/python ] || python3 -m venv .venv-infer
-              .venv/bin/python -m pip install -q --no-deps -r requirements-train.lock.txt
-              .venv/bin/python -m pip install -q --no-deps -e .
-              .venv-infer/bin/python -m pip install -q --no-deps -r requirements-infer.lock.txt
-              .venv/bin/python -m pip check
-              .venv-infer/bin/python -m pip check
+              # how the locks are known); --no-deps installs exactly the lock. They are
+              # built on this pod's disk: CephFS is slow with the tens of thousands of
+              # small files of a venv, for the install and for every import. Each is
+              # saved to the volume as one tar, and every worker unpacks it at the same
+              # path; .venv and .venv-infer here link to those paths, which are the ones
+              # configs/project.yaml names.
+              for env in train infer; do
+                rm -rf "/local/venv-$env"
+                python3 -m venv "/local/venv-$env"
+              done
+              /local/venv-train/bin/python -m pip install -q --no-deps -r requirements-train.lock.txt
+              /local/venv-train/bin/python -m pip install -q --no-deps -e .
+              /local/venv-infer/bin/python -m pip install -q --no-deps -r requirements-infer.lock.txt
+              # The host's training env never had the analysis-only openpyxl and
+              # statsmodels that pyproject.toml lists, so its copy lacks them too; pip
+              # check may name those two and nothing else.
+              out="$(/local/venv-train/bin/python -m pip check 2>&1)" || true
+              rest="$(printf '%s\n' "$out" | grep -v -x -e 'No broken requirements found.' \
+                  -e 'bodhi-lora 0.1.0 requires openpyxl, which is not installed.' \
+                  -e 'bodhi-lora 0.1.0 requires statsmodels, which is not installed.' || true)"
+              [ -z "$rest" ] || { echo "pip check of the train env: $rest"; exit 1; }
+              /local/venv-infer/bin/python -m pip check
+              echo "envs built $(date -u +%FT%TZ)"
+              # A venv left on the volume by an earlier start moves aside (a rename; no
+              # file-by-file delete on CephFS).
+              mkdir -p /data/trash
+              for link in .venv:/local/venv-train .venv-infer:/local/venv-infer; do
+                name=${link%%:*}; target=${link#*:}
+                if [ -e "$name" ] && [ ! -L "$name" ]; then mv "$name" "/data/trash/$name.$(date +%s)"; fi
+                ln -sfn "$target" "$name"
+              done
+              mkdir -p /data/venvs
+              for env in train infer; do
+                tar -cf "/data/venvs/venv-$env.tar.tmp" -C /local "venv-$env"
+                mv "/data/venvs/venv-$env.tar.tmp" "/data/venvs/venv-$env.tar"
+              done
+              (cd /data/venvs && sha256sum venv-train.tar venv-infer.tar > SHA256SUMS && cat SHA256SUMS && du -sh .)
               .venv/bin/python -c 'import torch, transformers, peft, trl; print("train env", torch.__version__, transformers.__version__, peft.__version__, trl.__version__)'
               .venv-infer/bin/python -c 'import vllm, torch, transformers; print("infer env", vllm.__version__, torch.__version__, transformers.__version__)'
               # The token must read every model the reruns load, at its pinned revision.
@@ -66,13 +96,16 @@ spec:
                   && echo "dry run ok: $cell" || { echo "dry run FAILED: $cell"; tail -20 "/data/dryrun_${cell}.log"; exit 1; }
               done
               .venv/bin/python scripts/task_pool.py --dag configs/queues/eos_rerun_nrp.yaml \
-                --state /data/pool/eos_rerun --repo /data/bohdi --list | head -5
+                --state /data/pool/eos_rerun --repo /data/bohdi --list
               echo "=== setup done $(date -u +%FT%TZ)"
           resources:
-            requests: {cpu: "4", memory: 16Gi, ephemeral-storage: 20Gi}
-            limits: {cpu: 4800m, memory: 19Gi, ephemeral-storage: 24Gi}
+            requests: {cpu: "4", memory: 16Gi, ephemeral-storage: 50Gi}
+            limits: {cpu: 4800m, memory: 19Gi, ephemeral-storage: 60Gi}
           volumeMounts:
             - {name: data, mountPath: /data}
+            - {name: local, mountPath: /local}
       volumes:
         - name: data
           persistentVolumeClaim: {claimName: bodhi-lora-rerun}
+        - name: local
+          emptyDir: {sizeLimit: 45Gi}

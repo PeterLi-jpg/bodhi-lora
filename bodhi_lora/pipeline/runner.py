@@ -45,6 +45,7 @@ from __future__ import annotations
 import json
 import os
 import shlex
+import socket
 import subprocess
 import sys
 import threading
@@ -112,14 +113,22 @@ def is_complete(manifest_path: Optional[Union[Path, list]]) -> bool:
 # -- prepare --------------------------------------------------------------------------
 
 def _write_once(path: Path, data, what: str) -> None:
-    """Write a JSON input; refuse to change one an earlier run of the cell wrote."""
+    """Write a JSON input; refuse to change one an earlier run of the cell wrote.
+
+    A file that already holds the text is left alone, and a new one is written whole
+    (a temporary file, then a rename): runners of one cell in other pods may read it at
+    the same time (docs/NRP.md)."""
     text = json.dumps(data, indent=2) + "\n"
-    if path.is_file() and path.read_text() != text:
-        raise RunError(f"{path} differs from what this run computes ({what}). The data, the "
-                       "split or the cell record changed since the cell first ran; a changed "
-                       "design is a new cell.")
+    if path.is_file():
+        if path.read_text() != text:
+            raise RunError(f"{path} differs from what this run computes ({what}). The data, the "
+                           "split or the cell record changed since the cell first ran; a changed "
+                           "design is a new cell.")
+        return
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text)
+    tmp = path.with_name(f"{path.name}.{socket.gethostname()}.{os.getpid()}.tmp")
+    tmp.write_text(text)
+    os.replace(tmp, path)
 
 
 def same_record(cell_yaml: Path, cell: CellConfig) -> bool:

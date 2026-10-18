@@ -163,8 +163,13 @@ def check_replies_in_loss(dataset, collator, tokenizer, n=16):
 
 
 def latest_checkpoint(output_dir):
+    """The newest checkpoint the trainer finished writing. Trainer._save_checkpoint writes
+    trainer_state.json last, so a folder without it is one a killed run left half done,
+    and resuming from it fails the same way every time."""
     checkpoints = []
     for path in Path(output_dir).glob("checkpoint-*"):
+        if not (path / "trainer_state.json").is_file():
+            continue
         try:
             checkpoints.append((int(path.name.split("-", 1)[1]), path))
         except (IndexError, ValueError):

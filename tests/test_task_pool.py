@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parent.parent
 POOL = ROOT / "scripts" / "task_pool.py"
 EOS_NRP = ROOT / "configs" / "queues" / "eos_rerun_nrp.yaml"
 FAST = {"TASK_POOL_POLL_S": "0.2", "TASK_POOL_HEARTBEAT_S": "0.2", "TASK_POOL_STALE_S": "3",
+        "TASK_POOL_LIVE_S": "0.8",
         "TASK_POOL_STOP_GRACE_S": "5", "TASK_POOL_CARD_WAIT_S": "0"}
 
 
@@ -167,11 +168,46 @@ def test_sigterm_stops_the_task_with_sigint_and_keeps_its_claim(pool):
     while not (claim / "heartbeat").exists() and time.time() < end:
         time.sleep(0.05)
     time.sleep(0.5)
+    t0 = time.time()
     proc.send_signal(signal.SIGTERM)
     assert proc.wait(timeout=30) == 128 + signal.SIGTERM
+    # The task stops on SIGINT at once; the worker sees that (waitpid), not the grace time.
+    assert time.time() - t0 < 3
     assert seen.read_text().strip() == "int"
     assert claim.is_dir() and not (pool.state / "done" / "a.json").exists()
     assert not (pool.state / "failed" / "a.json").exists()
+
+
+def test_a_dead_pods_claim_does_not_send_the_workers_away(pool):
+    """A pod that died leaves a claim that is not stale yet. A new worker must not count it
+    as running and leave: it waits for the claim to go stale, then runs the task."""
+    dag = pool.dag([{"id": "a", "run": pool.step("a")}])
+    claim = pool.state / "claims" / "a"
+    claim.mkdir(parents=True)
+    (claim / "claim.json").write_text('{"worker": "dead"}')
+    (claim / "heartbeat").touch()
+    old = time.time() - 1.5                        # past LIVE_S, not yet STALE_S
+    os.utime(claim / "heartbeat", (old, old))
+    proc = pool.run(dag)
+    assert proc.returncode == 0, proc.stdout
+    assert (pool.state / "done" / "a.json").is_file()
+    assert "stale" in proc.stdout
+
+
+def test_a_worker_whose_claim_is_taken_over_stops_its_copy(pool):
+    dag = pool.dag([{"id": "a", "run": pool.step("a", 20)}])
+    proc = pool.start(dag, "w1")
+    claim = pool.state / "claims" / "a"
+    _wait = time.time() + 20
+    while not (claim / "claim.json").exists() and time.time() < _wait:
+        time.sleep(0.05)
+    time.sleep(0.3)
+    (claim / "claim.json").write_text('{"worker": "w2"}')   # w2 took the task over
+    assert proc.wait(timeout=30) == 0
+    out = proc.stdout.read()
+    assert "lost the claim of a" in out
+    assert not (pool.state / "done" / "a.json").exists() and not (pool.state / "failed" / "a.json").exists()
+    assert json.loads((claim / "claim.json").read_text())["worker"] == "w2"      # w2's claim stays
 
 
 def test_a_card_that_holds_memory_stops_the_worker_before_the_task(pool, tmp_path):
@@ -227,6 +263,10 @@ def test_the_eos_rerun_tasks_name_real_cells_on_card_0():
     plan = {shlex.split(line)[4] for line in (ROOT / "configs" / "queues" / "eos_rerun.txt").read_text().splitlines()
             if line.startswith("python ")}
     assert cells == plan
+    # a cell that reads another's adapters finishes after that cell finishes
+    by_id = {t["id"]: t for t in tasks}
+    for tid, src in (("r3-finish", "r2-finish"), ("r4-finish", "r2-finish"), ("r5m-finish", "r5-finish")):
+        assert src in by_id[tid]["after"], tid
     # every cell that reads another's adapters comes after all of that cell's training
     for t in tasks:
         cell = shlex.split(t["run"])[4]

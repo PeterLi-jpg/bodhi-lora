@@ -7,17 +7,22 @@ most three A100-80GB cards at once. This page says how. The specs are in `deploy
 ## 1. What runs where
 
 - **The volume** (`deploy/nrp/pvc.yaml`): a 200 GiB CephFS claim, `bodhi-lora-rerun`,
-  that every pod mounts at `/data`. It holds the checkout (`/data/bohdi`), both envs
-  inside it (`.venv` and `.venv-infer`, as `configs/project.yaml` names them), the cell
-  folders under `results/`, and the task pool's state (`/data/pool/eos_rerun`).
+  that every pod mounts at `/data`. It holds the checkout (`/data/bohdi`), the cell
+  folders under `results/`, the task pool's state (`/data/pool/eos_rerun`), and both envs
+  as one tar each (`/data/venvs`). The envs run from each pod's own disk: CephFS is slow
+  with the tens of thousands of small files of a venv (a first install on the volume made
+  no headway in 25 minutes), for the install and for every import. Each env is built at a
+  fixed path (`/local/venv-train`, `/local/venv-infer`) and unpacked at the same path in
+  every worker, and `.venv` and `.venv-infer` in the checkout are links to those paths, so
+  the paths `configs/project.yaml` names work in every pod.
 - **The setup job** (`deploy/nrp/setup-job.yaml`, CPU only): checks out the commit from a
   bundle, unpacks the inputs copied from the shared host, builds both envs from their
-  lock files with `--no-deps` (so each package is the version that ran the cells), runs
-  `pip check` on both, checks that the Hugging Face token reads the three models at their
+  lock files with `--no-deps` (so each package is the version that ran the cells) on its
+  disk, runs `pip check` on both, saves them to the volume as tars, checks that the Hugging Face token reads the three models at their
   pinned revisions, and dry-runs every cell.
 - **The workers** (`deploy/nrp/workers-job.yaml`): one Job of three pods, one A100-80GB
   each (`nvidia.com/a100` with the 80 GB products in the node affinity; the namespace
-  quota is five). Each pod downloads the three models it loads (Mistral-Small-24B,
+  quota is five). Each pod unpacks the two envs, then downloads the three models it loads (Mistral-Small-24B,
   Llama-3.1-8B, MedGemma-27B, at their records' revisions, without the duplicate
   full-model files) to its own disk, goes offline, and runs `scripts/task_pool.py` on
   `configs/queues/eos_rerun_nrp.yaml`.
@@ -38,13 +43,20 @@ estimate of its A100-hours. A worker:
    in the claim every 30 s;
 3. records the attempt in the state folder's `done` folder, or in `failed`, and then runs
    the task once more; after two failures every task after it is blocked;
-4. checks before each task that the card holds no memory (a vLLM server that outlived a
-   killed task); if it does, the pod exits 75 and the Job replaces it;
+4. checks, before it claims a task, that the card holds no memory (a vLLM server that
+   outlived a killed task); if it does, the pod exits 75 and the Job replaces it;
 5. exits when nothing is ready and the tasks left are no more than the other workers are
-   running: those workers take them, and this card goes back to the cluster.
+   running: those workers take them, and this card goes back to the cluster. Here a claim
+   counts as running only with a heartbeat in the last 90 s, so the claim of a pod that
+   died does not send the others away.
 
 A claim with no heartbeat for 10 minutes (its pod was stopped or evicted) is moved to
-`claims/.stale/`, and the task runs again on another worker. The runner skips every stage
+`claims/.stale/`, and the task runs again on another worker. A worker touches or removes
+only a claim whose `claim.json` names it; if its claim is taken over, it stops its own copy
+of the task, so no task runs twice. A training task run again resumes from the newest
+checkpoint the trainer finished writing (`bodhi_lora/pipeline/train.py`), and an input file
+that is already right is never rewritten (`bodhi_lora/pipeline/runner.py`), since runners
+in other pods may be reading it. The runner skips every stage
 whose manifest is complete, and the eval stage keeps each reply as it comes, so a task run
 again goes on where it stopped. Runner processes in different pods can write one cell
 manifest at once; its temporary file carries the host and the PID
@@ -65,17 +77,23 @@ git bundle create ../bodhi.bundle cleanup/resubmission
 
 On the shared host, pack the inputs: each rerun cell's folder without its `train`, `eval`,
 `grade` and `bench` folders, logs and cell manifest (so every condition, the base too,
-runs again on NRP; D29), and the benchmark data the cells read:
+runs again on NRP; D29) and without the H100 runs' records in `shared/eval`, and the
+benchmark data the cells read. The payload of 2026-10-17 held no train, eval, grade, bench
+or log file and kept every traces, filter and inputs manifest:
 
 ```bash
 cd /data/PROJECTS/bohdi
 CELLS="healthbench__mistral-small-24b__bodhi mediq-paired__mistral-small-24b__bodhi
        healthbench__mistral-small-24b__bodhi__labelled healthbench__mistral-small-24b__ask-first
        mediq-paired__mistral-small-24b__ask-first"
-tar -czf /data/PROJECTS/bohdi/hf_cache/tmp/payload.tar.gz \
-    --exclude='seed_*/train' --exclude='seed_*/eval' --exclude='seed_*/grade' --exclude='seed_*/bench' \
-    --exclude='*/logs' --exclude='results/*/manifest.json' \
-    data/raw/healthbench data/raw/mediq-paired $(for c in $CELLS; do printf "%s/%s " results "$c"; done)
+# --no-wildcards-match-slash: without it 'results/*/manifest.json' would also drop the
+# traces, filter and inputs manifests, and the runner would make them again.
+R=results
+tar -czf /data/PROJECTS/bohdi/hf_cache/tmp/payload.tar.gz --no-wildcards-match-slash \
+    --exclude="$R/*/seed_*/train" --exclude="$R/*/seed_*/eval" --exclude="$R/*/seed_*/grade" \
+    --exclude="$R/*/seed_*/bench" --exclude="$R/*/shared/eval" --exclude="$R/*/logs" \
+    --exclude="$R/*/manifest.json" \
+    data/raw/healthbench data/raw/mediq-paired $(for c in $CELLS; do printf "%s/%s " "$R" "$c"; done)
 ```
 
 Copy the bundle and the payload to the volume, then start the setup job with `COMMIT`
