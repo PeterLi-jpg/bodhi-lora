@@ -1,0 +1,165 @@
+{
+  "schema": 3,
+  "stage": "train",
+  "cell": "healthbench__mistral-small-24b__bodhi",
+  "seed": 7,
+  "created_utc": "2026-10-18T07:31:08.883332+00:00",
+  "git": {
+    "sha": "dc4ccac80eb252bf1f0e8793d20b5e64e7347874",
+    "dirty": false,
+    "diff_sha256": null,
+    "n_untracked": 7
+  },
+  "packages": {
+    "python": "3.12.11",
+    "torch": "2.7.0",
+    "transformers": "4.57.6",
+    "vllm": "0.9.2",
+    "peft": "0.19.1",
+    "trl": "0.11.4",
+    "accelerate": "1.13.0",
+    "bitsandbytes": "0.47.0",
+    "datasets": "3.6.0",
+    "bodhi-llm": "0.1.4",
+    "huggingface-hub": "0.36.2",
+    "numpy": "2.2.6"
+  },
+  "host_sha256": "47ab991b993efd570adbabdd0a3ba6c6010998f7d1591e3ba4dd4c9357ba6750",
+  "hardware": {
+    "visible_devices": "0",
+    "gpus": [
+      {
+        "index": "0",
+        "name": "NVIDIA A100-SXM4-80GB",
+        "memory": "81920 MiB"
+      }
+    ]
+  },
+  "time": {
+    "started_utc": "2026-10-18T05:46:01.896317+00:00",
+    "finished_utc": "2026-10-18T07:31:25.445133+00:00",
+    "seconds": 6323.549
+  },
+  "config": {
+    "model": {
+      "id": "mistral-small-24b",
+      "hf_id": "mistralai/Mistral-Small-24B-Instruct-2501",
+      "revision": "9527884be6e5616bdd54de542f9ae13384489724",
+      "dtype": "bfloat16",
+      "quantization": "4bit",
+      "tokenizer_kwargs": {
+        "fix_mistral_regex": true
+      },
+      "response_template": "[/INST]",
+      "pad_token": "<pad>"
+    },
+    "lora": {
+      "method": "lora",
+      "r": 16,
+      "alpha": 32.0,
+      "dropout": 0.05,
+      "target_modules": [
+        "q_proj",
+        "k_proj",
+        "v_proj",
+        "o_proj",
+        "gate_proj",
+        "up_proj",
+        "down_proj"
+      ]
+    },
+    "training": {
+      "epochs": 3.0,
+      "max_steps": null,
+      "per_device_train_batch_size": 2,
+      "gradient_accumulation_steps": 8,
+      "learning_rate": 0.0001,
+      "lr_scheduler_type": "cosine",
+      "warmup_ratio": 0.05,
+      "max_seq_length": 4096,
+      "gradient_checkpointing": true,
+      "checkpoint": "best_val_loss",
+      "eval_every": "epoch",
+      "eval_steps": null,
+      "logging_steps": 10
+    }
+  },
+  "config_sha256": "689a34b236281a8ac06042fa42037e43592ca82feaee465aef2fffdb42134e73",
+  "models": {
+    "base": {
+      "id": "mistral-small-24b",
+      "repo_id": "mistralai/Mistral-Small-24B-Instruct-2501",
+      "family": "mistral",
+      "revision": "9527884be6e5616bdd54de542f9ae13384489724",
+      "revision_source": "record",
+      "unpinned_reason": null
+    }
+  },
+  "adapter": {
+    "path": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi/seed_7/train",
+    "sha256": "4cfa9d8d8c70f1bf87ae48ba6c48801f3f9cfd11ff8d81c94893091a2db89d50",
+    "files": {
+      "adapter_model.safetensors": "3bd31637a055433250997c1e6367bdd1fb61c0c727450e62b3239d5738515486",
+      "adapter_config.json": "142112b188dd59b412141e5f420d919a9d3122651dabf62744b04482f46139ae"
+    },
+    "r": 16,
+    "lora_alpha": 32.0,
+    "lora_dropout": 0.05,
+    "target_modules": [
+      "k_proj",
+      "o_proj",
+      "q_proj",
+      "v_proj",
+      "up_proj",
+      "down_proj",
+      "gate_proj"
+    ],
+    "base_model_name_or_path": "mistralai/Mistral-Small-24B-Instruct-2501",
+    "revision": null,
+    "use_dora": false,
+    "use_rslora": false
+  },
+  "inputs": [
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi/seed_7/filter/train.jsonl",
+      "bytes": 27418790,
+      "sha256": "a7da21586c8834a52cffc168d64dda443078655d213912c859c1cf969dafb17f",
+      "n_lines": 1882
+    },
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi/seed_7/filter/val.jsonl",
+      "bytes": 2941903,
+      "sha256": "de6dea3777c3187137ba1a1ce616d35dc09bf5201c66a5f0ce489becee98955e",
+      "n_lines": 209
+    }
+  ],
+  "counts": {
+    "seed": 7,
+    "effective_batch": 16,
+    "world_size": 1,
+    "global_step": 354,
+    "epoch": 3.0,
+    "max_steps": 354,
+    "num_train_epochs": 3,
+    "first_train_loss": 0.5693,
+    "last_train_loss": 0.1334,
+    "eval_loss_by_step": [
+      [
+        118,
+        0.3569365441799164
+      ],
+      [
+        236,
+        0.3566233813762665
+      ],
+      [
+        354,
+        0.37698686122894287
+      ]
+    ],
+    "best_metric": 0.3566233813762665,
+    "best_model_checkpoint": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi/seed_7/train/checkpoint-236"
+  },
+  "status": "complete",
+  "quantization": "4bit"
+}

@@ -1,0 +1,171 @@
+{
+  "schema": 3,
+  "stage": "grade",
+  "cell": "healthbench__mistral-small-24b__bodhi",
+  "seed": 42,
+  "created_utc": "2026-10-19T05:41:39.276934+00:00",
+  "git": {
+    "sha": null,
+    "error": "TimeoutExpired: Command '['git', '-C', '/data/bohdi', 'status', '--porcelain']' timed out after 60 seconds"
+  },
+  "packages": {
+    "python": "3.12.11",
+    "torch": "2.8.0",
+    "transformers": "4.56.2",
+    "vllm": "0.10.2",
+    "peft": null,
+    "trl": null,
+    "accelerate": null,
+    "bitsandbytes": "0.47.0",
+    "datasets": "5.0.0",
+    "bodhi-llm": "0.1.4",
+    "huggingface-hub": "0.36.2",
+    "numpy": "2.2.6"
+  },
+  "host_sha256": "174023f8b2ca1169a04ab1f22fc9e6bdae510fd9311bdc64fb1cfeb32ad8dce6",
+  "hardware": {
+    "visible_devices": "0",
+    "gpus": [
+      {
+        "index": "0",
+        "name": "NVIDIA A100-SXM4-80GB",
+        "memory": "81920 MiB"
+      }
+    ]
+  },
+  "time": {
+    "started_utc": "2026-10-19T01:49:18.721404+00:00",
+    "finished_utc": "2026-10-19T05:42:40.177862+00:00",
+    "seconds": 14001.456
+  },
+  "models": {
+    "judge": {
+      "id": "medgemma-27b-text",
+      "repo_id": "google/medgemma-27b-text-it",
+      "family": "gemma",
+      "revision": "5b667cf2ddcf064085bc90952edb35a0edbfb79c",
+      "revision_source": "record",
+      "unpinned_reason": null
+    }
+  },
+  "engines": {
+    "judge": {
+      "model": "google/medgemma-27b-text-it",
+      "revision": "5b667cf2ddcf064085bc90952edb35a0edbfb79c",
+      "max_model_len": 8192,
+      "max_num_seqs": 32,
+      "tensor_parallel_size": 1,
+      "dtype": "bfloat16",
+      "quantization": null,
+      "enforce_eager": true,
+      "request_timeout_s": 900,
+      "lora_path": null,
+      "lora_modules": {},
+      "max_loras": null,
+      "max_lora_rank": null,
+      "env": {}
+    }
+  },
+  "inputs": [
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi/seed_42/eval/base.json",
+      "bytes": 2235809,
+      "sha256": "fbc4abba94b2e4c71c611de81a5dbaa84e3c256fb6be334c44ff5915b83d513d"
+    },
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi/seed_42/eval/base+bodhi.json",
+      "bytes": 2451312,
+      "sha256": "2e9be4d947e0a61888dbf86cef9f87f9ad1e89a8b16c91c3bbac7eac338a2bbb"
+    },
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi/seed_42/eval/lora.json",
+      "bytes": 2385727,
+      "sha256": "62e52a4746d75512d06269d64a50b1488026865d78b72b400bb9190dabb06992"
+    },
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi/seed_42/eval/lora+bodhi.json",
+      "bytes": 2863655,
+      "sha256": "a291fcbb4fc83a19c3a0cc9b4a9b1f8ce1f51d81e584ffff0a33ab34a502b1d3"
+    },
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi/seed_42/eval/base+clarify.json",
+      "bytes": 2195137,
+      "sha256": "76afe63c5aedb4678f1840d6f3c9c2e637aa205f7cda9e67bd7267b3ea5480a3"
+    },
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi/seed_42/eval/base+verbalized-confidence.json",
+      "bytes": 2279922,
+      "sha256": "d632d1df14e60c6d2bd8d572d44ff62e0d3eaa410994ea765db90fad5b89727c"
+    },
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi/seed_42/eval/base+mediq-abstain.json",
+      "bytes": 1939247,
+      "sha256": "4c32db879aee22da9b93051d3066816f64c22d98b7c61b45f3fb709da0fb3b6c"
+    },
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi/seed_42/eval/base+red-flags-first.json",
+      "bytes": 2421857,
+      "sha256": "b42cf5274fc334b5709a5298638bfff701fbd261dea0965880db844f846e6cbb"
+    },
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi/seed_42/eval/lora+red-flags-first.json",
+      "bytes": 2886457,
+      "sha256": "afb889ed8926504a5c8eb43adc4c38d5ce8c0c5a992f0ee8710879a600112aad"
+    }
+  ],
+  "outputs": [
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi/seed_42/grade/judge__medgemma-27b-text.json",
+      "bytes": 4579533,
+      "sha256": "ffb01d6762e20b3e782ccb050e60fc19157630abb65558b1ea8ea1ff2d644cdb"
+    }
+  ],
+  "counts": {
+    "base": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    },
+    "base+bodhi": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    },
+    "lora": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    },
+    "lora+bodhi": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    },
+    "base+clarify": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    },
+    "base+verbalized-confidence": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    },
+    "base+mediq-abstain": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    },
+    "base+red-flags-first": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    },
+    "lora+red-flags-first": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    }
+  },
+  "status": "complete"
+}

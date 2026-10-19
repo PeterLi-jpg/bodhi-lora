@@ -1,0 +1,151 @@
+{
+  "schema": 2,
+  "stage": "filter",
+  "cell": "healthbench__mistral-small-24b__ask-first",
+  "seed": null,
+  "created_utc": "2026-10-13T04:39:51.880531+00:00",
+  "git": {
+    "sha": "a5aa4d689771dd4bc223b3a70670a2887901fa63",
+    "dirty": false,
+    "diff_sha256": null,
+    "n_untracked": 14
+  },
+  "packages": {
+    "python": "3.12.3",
+    "torch": "2.8.0",
+    "transformers": "4.56.2",
+    "vllm": "0.10.2",
+    "peft": null,
+    "trl": null,
+    "accelerate": null,
+    "bitsandbytes": "0.47.0",
+    "datasets": "5.0.0",
+    "bodhi-llm": "0.1.4",
+    "huggingface-hub": "0.36.2",
+    "numpy": "2.2.6"
+  },
+  "host_sha256": "e57f9913e18993f3b7eea3afa676d9d0ae3c5a04f647be54a2f28299b57e4149",
+  "hardware": {
+    "visible_devices": "3",
+    "gpus": [
+      {
+        "index": "3",
+        "name": "NVIDIA H100 80GB HBM3",
+        "memory": "81559 MiB"
+      }
+    ]
+  },
+  "time": {
+    "started_utc": "2026-10-13T03:46:05.667626+00:00",
+    "finished_utc": "2026-10-13T04:39:52.015692+00:00",
+    "seconds": 3226.348
+  },
+  "config": {
+    "filter": {
+      "tau": {
+        "rule": "fixed",
+        "value": 0.4,
+        "percentile": null,
+        "min_kept_share": null,
+        "seed": 0
+      },
+      "val_ratio": 0.1,
+      "split_policy": "per_seed",
+      "split_seed": null,
+      "serving": {
+        "max_model_len": 8192,
+        "max_num_seqs": 64,
+        "concurrency": 16,
+        "request_timeout_s": 180,
+        "drain_s": 0.0,
+        "enforce_eager": null
+      }
+    }
+  },
+  "config_sha256": "797cdb86b91bcd5ae3377b292286e94ca0c66f94fdb33fc911bd58f242a6684d",
+  "models": {
+    "grader": {
+      "id": "qwen2.5-14b",
+      "repo_id": "Qwen/Qwen2.5-14B-Instruct",
+      "family": "qwen2",
+      "revision": "cf98f3b3bbb457ad9e2bb7baf9a0125b6b88caa8",
+      "revision_source": "record",
+      "unpinned_reason": null
+    }
+  },
+  "engines": {
+    "grader": {
+      "model": "Qwen/Qwen2.5-14B-Instruct",
+      "revision": "cf98f3b3bbb457ad9e2bb7baf9a0125b6b88caa8",
+      "max_model_len": 8192,
+      "max_num_seqs": 64,
+      "tensor_parallel_size": 1,
+      "dtype": "bfloat16",
+      "quantization": null,
+      "enforce_eager": true,
+      "request_timeout_s": 180,
+      "lora_path": null,
+      "lora_modules": {},
+      "max_loras": null,
+      "max_lora_rank": null,
+      "env": {}
+    }
+  },
+  "inputs": [
+    {
+      "path": "/data/PROJECTS/bohdi/results/healthbench__mistral-small-24b__ask-first/shared/traces/traces.jsonl",
+      "bytes": 8805334,
+      "sha256": "9a0b553f90c1b47ebaea3307938021292dd5cf2428edf663960d41c26d466a6c",
+      "n_lines": 3321
+    }
+  ],
+  "outputs": [
+    {
+      "path": "/data/PROJECTS/bohdi/results/healthbench__mistral-small-24b__ask-first/shared/filter/graded.jsonl",
+      "bytes": 36902019,
+      "sha256": "992c9e5fa6471cbb9189683159ef0e9c045ea96e60a38e62390affdecc9b80f4",
+      "n_lines": 3321
+    },
+    {
+      "path": "/data/PROJECTS/bohdi/results/healthbench__mistral-small-24b__ask-first/shared/filter/scores.json",
+      "bytes": 200128,
+      "sha256": "07b8e36c39196b56819b05714324426039a7e61bf9d99f167f0b06ad587f4d05"
+    },
+    {
+      "path": "/data/PROJECTS/bohdi/results/healthbench__mistral-small-24b__ask-first/shared/filter/kept.jsonl",
+      "bytes": 15381959,
+      "sha256": "5968493259c3359849e8926d0fcaa6ce7dc99fd0b6ea7bacb46a99f126f6728f",
+      "n_lines": 1393
+    }
+  ],
+  "counts": {
+    "n_traces": 3321,
+    "n_in_train_pool": 3321,
+    "n_outside_train_pool": 0,
+    "n_graded": 3321,
+    "n_failed_grading": 0,
+    "n_too_long": 0,
+    "n_kept": 1393,
+    "kept_of_graded": 0.41945197229750075,
+    "grader_parse_failures_total": 1,
+    "grader_rubric_items_total": 38607,
+    "n_grades_reused": 0
+  },
+  "status": "complete",
+  "tau": {
+    "rule": "fixed",
+    "value": 0.4,
+    "percentile": null,
+    "min_kept_share": null,
+    "score_field": "overall_score",
+    "tau": 0.4,
+    "score_summary": {
+      "min": 0.0,
+      "median": 0.37037037037037035,
+      "mean": 0.379512899907525,
+      "max": 1.0
+    }
+  },
+  "grades_from": null,
+  "too_long_ids": []
+}

@@ -920,3 +920,25 @@ condition's result file. The R3 grade stage had not finished, so this breaks sec
 No contrast was computed, no other score of R2 to R5 was read, and the value is not
 repeated here; nothing in this plan or in the analysis was chosen after it. The progress
 checks now drop every log line with a score in it, as the run watcher already did.
+
+**2026-10-19, the run operator. H3, H7 and H11 wired as written; no method changed.** All 34
+tasks of the reruns ended (RUN_PLAN.md section 4.4), and the first analysis of the five new
+cells left three planned analyses not measured. (1) H3 (section 5.1): the MediQ file was not
+on the machine that ran the extract, so neither `mediq-paired` cell's prompts table had the
+`incomplete` column. The file was copied from the run's volume, its sha256 matched the
+benchmark record, and the extract ran again. (2) H7 (section 7.2): `configs/report.yaml`
+listed no physician label for the red-flag rate. `emergent-physician` joins that entry, the
+step the adoption entry names, marked `drawn_only`: it counts only in a cell whose eval ids
+were drawn by it, the labelled cells. H7's primary outcome is the seed-level LoRA - Base
+test on the red-flag rate among its negative (non-emergent) prompts. (3) H11 (section 9.3)
+and H7's secondary outcomes on the rubric score and the harm proxy: no code computed them.
+`subsets` in `configs/report.yaml` and `subsets_section` in `bodhi_lora/analysis/cell.py`
+run every contrast of a labelled cell again on the `clinician-user` positive prompts and on
+the `emergent-physician` negative prompts, with the tests and Holm families of the whole
+cell (`tests/test_analysis_cell.py`). In every other cell both labels stay unseen. Before this
+entry the statistics of the five cells had been computed, and some of R2's were read while
+the file layout was checked: LoRA - Base on active inquiry, the askers gap and the axis
+scores per condition, and one judge contrast. When this entry was written, the paired-probe
+values had been computed after fix (1) and only their pair counts read, and the H7 and H11
+statistics were being computed, none of them read. Each test and decision is the one that
+sections 5.1, 7.2 and 9.3 fixed before any output existed.

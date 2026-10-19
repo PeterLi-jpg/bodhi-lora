@@ -1,0 +1,66 @@
+{
+  "cell": "healthbench__mistral-small-24b__ask-first",
+  "completions": {
+    "base": 200,
+    "base+ask-first": 200,
+    "base+bodhi": 200,
+    "lora": 200,
+    "lora+ask-first": 200
+  },
+  "grade": {
+    "counts": {
+      "base": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "base+ask-first": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "base+bodhi": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "lora": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "lora+ask-first": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      }
+    },
+    "file": "results/healthbench__mistral-small-24b__ask-first/seed_13/grade/epistemic__llama-3.1-8b.json",
+    "present": true
+  },
+  "n_examples": {
+    "base": 200,
+    "base+ask-first": 200,
+    "base+bodhi": 200,
+    "lora": 200,
+    "lora+ask-first": 200
+  },
+  "score_metric": {
+    "base": "normalized_score",
+    "base+ask-first": "normalized_score",
+    "base+bodhi": "normalized_score",
+    "lora": "normalized_score",
+    "lora+ask-first": "normalized_score"
+  },
+  "seed": 13,
+  "sources": {
+    "results/healthbench__mistral-small-24b__ask-first/seed_13/eval/base+ask-first.json": "c366e02fd28836bbed4e393f4214a95facc7c48122bc1e8506eae8d293f83483",
+    "results/healthbench__mistral-small-24b__ask-first/seed_13/eval/base+bodhi.json": "1126768ced92289fe21ef384cb771572304c13b0c488604d6163120a376ebcf4",
+    "results/healthbench__mistral-small-24b__ask-first/seed_13/eval/base.json": "cadcdb9fd5bb9e58819526b26b75bddbd1207e0eb52b8cc4593316c3b8fd1fe2",
+    "results/healthbench__mistral-small-24b__ask-first/seed_13/eval/lora+ask-first.json": "5a814f2930fd1c2e234ba2381eaf578d649a1356bd5edafa4be53e1ce2422c8f",
+    "results/healthbench__mistral-small-24b__ask-first/seed_13/eval/lora.json": "274e452d7255bcfa757aa23621992b6879e4f5c7922861c6aeb52ead9402bce0",
+    "results/healthbench__mistral-small-24b__ask-first/seed_13/grade/epistemic__llama-3.1-8b.json": "31b1293d4337881f133cd47d3f375ef3d93600d85e576d0151428132313b5cb8",
+    "results/healthbench__mistral-small-24b__ask-first/seed_13/grade/judge__medgemma-27b-text.json": "ddec24a595c83e4c957df57619f787bbac36c87ce4bb91b88503c8964c8ae5e3"
+  },
+  "tokenizer": "mistralai/Mistral-Small-24B-Instruct-2501@9527884be6e5616bdd54de542f9ae13384489724"
+}

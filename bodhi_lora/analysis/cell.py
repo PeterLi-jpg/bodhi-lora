@@ -489,6 +489,7 @@ def discrimination_section(d: CellData, reg: Registry, cfg: ReportConfig, metric
     """
     bench = reg.benchmarks[d.cell.benchmark]
     by_key = {m.key: m for m in metrics}
+    analyzed = cfg.labels_for(d.cell)
     res = {}
     for spec in cfg.discrimination:
         resp = spec.response
@@ -496,7 +497,7 @@ def discrimination_section(d: CellData, reg: Registry, cfg: ReportConfig, metric
             raise ValueError(f"discrimination response {resp!r} is not a 0/1 column of the response table")
         base = d.frame(by_key[resp])
         res[resp] = {}
-        for lab in spec.labels:
+        for lab in [x for x in spec.labels if x in analyzed]:
             col = f"label_{lab}"
             if lab not in bench.labels:
                 res[resp][lab] = {"not_measured": f"benchmark {bench.id} has no label {lab}"}
@@ -647,7 +648,7 @@ def paired_probe_section(d: CellData, reg: Registry, cfg: ReportConfig, metrics:
     for spec in cfg.discrimination:
         for lab in spec.labels:
             rule = bench.labels.get(lab)
-            if rule is None or rule.pair_field is None:
+            if rule is None or rule.pair_field is None or lab not in cfg.labels_for(d.cell):
                 continue
             col = f"label_{lab}"
             if col not in d.prompts or t["pair_id"].isna().all():
@@ -685,6 +686,43 @@ def paired_probe_section(d: CellData, reg: Registry, cfg: ReportConfig, metrics:
             for a, b in pairs:
                 out["contrasts"][contrast_key(a, b)] = {"did": _seed_test(delta[a], delta[b], d.seeds)}
             res.setdefault(spec.response, {})[lab] = out
+    return res
+
+
+def subsets_section(d: CellData, reg: Registry, cfg: ReportConfig, metrics: list[Metric], pairs) -> dict:
+    """Every contrast of the cell again on one group of a label's prompts only, with the
+    same seed-level tests and Holm families as the whole cell (docs/ANALYSIS_PLAN.md
+    section 9.3, H11: H1's rule on the clinician-user positive prompts, H2's contrast as a
+    secondary test). The bootstrap resamples the subset's own prompts."""
+    bench = reg.benchmarks[d.cell.benchmark]
+    res = {}
+    for spec in cfg.subsets:
+        if spec.label not in cfg.labels_for(d.cell):
+            continue
+        key = f"{spec.label}={spec.group}"
+        col = f"label_{spec.label}"
+        if spec.label not in bench.labels:
+            res[key] = {"not_measured": f"benchmark {bench.id} has no label {spec.label}"}
+            continue
+        if col not in d.prompts:
+            res[key] = {"not_measured": f"prompts.csv has no column {col}; run analyze --extract "
+                                        "where the cell's raw outputs are"}
+            continue
+        want = 1.0 if spec.group == "positive" else 0.0
+        ids = set(d.prompts.loc[d.prompts[col] == want, "prompt_id"])
+        table = d.table[d.table["prompt_id"].isin(ids)]
+        if table.empty:
+            res[key] = {"not_measured": f"no evaluated prompt is in the {spec.group} group"}
+            continue
+        sub = CellData(table, d.prompts[d.prompts["prompt_id"].isin(ids)], d.cell)
+        # Keep the cell's seeds: a seed with no prompt of the group then shows in
+        # seeds_missing, as section 2.3 asks, instead of leaving without a word.
+        sub.seeds = d.seeds
+        boot = st.ClusterBootstrap(table["prompt_id"].unique().tolist(), cfg.bootstrap.resamples, cfg.bootstrap.seed)
+        rule = bench.labels[spec.label]
+        res[key] = {"label": spec.label, "group": spec.group, "timing": rule.timing, "source": rule.source,
+                    "n_prompts": int(table["prompt_id"].nunique()), "seeds": sub.seeds,
+                    "contrasts": contrasts_section(sub, metrics, pairs, boot)}
     return res
 
 
@@ -1016,6 +1054,7 @@ def analyze_tables(reg: Registry, cell: CellConfig, table: pd.DataFrame, prompts
         "reply_health": reply_health_section(d, cfg.reply_health),
         "discrimination": discrimination_section(d, reg, cfg, metrics, pairs, boot),
         "paired_probe": paired_probe_section(d, reg, cfg, metrics, pairs),
+        "subsets": subsets_section(d, reg, cfg, metrics, pairs),
         "askers_gap": askers_gap_section(d, boot),
         "filter": filt,
         "recipe": recipe,

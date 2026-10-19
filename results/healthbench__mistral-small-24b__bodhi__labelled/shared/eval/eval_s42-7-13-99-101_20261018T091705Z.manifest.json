@@ -1,0 +1,399 @@
+{
+  "schema": 3,
+  "stage": "eval",
+  "cell": "healthbench__mistral-small-24b__bodhi__labelled",
+  "seed": null,
+  "created_utc": "2026-10-18T23:03:52.584283+00:00",
+  "git": {
+    "sha": "dc4ccac80eb252bf1f0e8793d20b5e64e7347874",
+    "dirty": false,
+    "diff_sha256": null,
+    "n_untracked": 7
+  },
+  "packages": {
+    "python": "3.12.11",
+    "torch": "2.8.0",
+    "transformers": "4.56.2",
+    "vllm": "0.10.2",
+    "peft": null,
+    "trl": null,
+    "accelerate": null,
+    "bitsandbytes": "0.47.0",
+    "datasets": "5.0.0",
+    "bodhi-llm": "0.1.4",
+    "huggingface-hub": "0.36.2",
+    "numpy": "2.2.6"
+  },
+  "host_sha256": "47ab991b993efd570adbabdd0a3ba6c6010998f7d1591e3ba4dd4c9357ba6750",
+  "hardware": {
+    "visible_devices": "0",
+    "gpus": [
+      {
+        "index": "0",
+        "name": "NVIDIA A100-SXM4-80GB",
+        "memory": "81920 MiB"
+      }
+    ]
+  },
+  "time": {
+    "started_utc": "2026-10-18T09:17:05.741116+00:00",
+    "finished_utc": "2026-10-18T23:03:53.759584+00:00",
+    "seconds": 49608.018
+  },
+  "config": {
+    "seeds": [
+      42,
+      7,
+      13,
+      99,
+      101
+    ],
+    "eval": {
+      "conditions": [
+        "base",
+        "base+bodhi",
+        "lora",
+        "lora+bodhi",
+        "lora+red-flags-first"
+      ],
+      "ids": {
+        "policy": "fixed_pool",
+        "n": 775,
+        "unit": "row",
+        "only": [
+          {
+            "label": "emergent-physician",
+            "groups": [
+              "positive",
+              "negative"
+            ]
+          },
+          {
+            "label": "clinician-user",
+            "groups": [
+              "positive"
+            ]
+          }
+        ],
+        "file": null
+      },
+      "base_precision": "train",
+      "base_precision_reason": null,
+      "max_new_tokens": 1024,
+      "max_new_tokens_per_pass": 2048,
+      "serving": {
+        "max_model_len": 8192,
+        "max_num_seqs": 64,
+        "concurrency": 64,
+        "request_timeout_s": 900,
+        "drain_s": 0.0,
+        "enforce_eager": null
+      },
+      "shared_server": true
+    }
+  },
+  "config_sha256": "67e4fab560b976b82e83e66a395f0403d81143e7631c593c62b3be55b8e7913d",
+  "models": {
+    "policy": {
+      "id": "mistral-small-24b",
+      "repo_id": "mistralai/Mistral-Small-24B-Instruct-2501",
+      "family": "mistral",
+      "revision": "9527884be6e5616bdd54de542f9ae13384489724",
+      "revision_source": "record",
+      "unpinned_reason": null
+    },
+    "grader": {
+      "id": "llama-3.1-8b",
+      "repo_id": "meta-llama/Llama-3.1-8B-Instruct",
+      "family": "llama3",
+      "revision": "0e9e39f249a16976918f6564b8830bc894c89659",
+      "revision_source": "record",
+      "unpinned_reason": null
+    }
+  },
+  "engines": {
+    "policy": {
+      "model": "mistralai/Mistral-Small-24B-Instruct-2501",
+      "revision": "9527884be6e5616bdd54de542f9ae13384489724",
+      "max_model_len": 8192,
+      "max_num_seqs": 64,
+      "tensor_parallel_size": 1,
+      "dtype": "bfloat16",
+      "quantization": "bitsandbytes",
+      "enforce_eager": true,
+      "request_timeout_s": 900,
+      "lora_path": null,
+      "lora_modules": {
+        "adapter-s42": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi/seed_42/train",
+        "adapter-s7": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi/seed_7/train",
+        "adapter-s13": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi/seed_13/train",
+        "adapter-s99": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi/seed_99/train",
+        "adapter-s101": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi/seed_101/train"
+      },
+      "max_loras": 5,
+      "max_lora_rank": 16,
+      "env": {}
+    },
+    "grader": {
+      "model": "meta-llama/Llama-3.1-8B-Instruct",
+      "revision": "0e9e39f249a16976918f6564b8830bc894c89659",
+      "max_model_len": 8192,
+      "max_num_seqs": 64,
+      "tensor_parallel_size": 1,
+      "dtype": "bfloat16",
+      "quantization": null,
+      "enforce_eager": true,
+      "request_timeout_s": 900,
+      "lora_path": null,
+      "lora_modules": {},
+      "max_loras": null,
+      "max_lora_rank": null,
+      "env": {}
+    }
+  },
+  "outputs": [
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi__labelled/seed_42/eval/base.json",
+      "bytes": 8483080,
+      "sha256": "e0912d0434e7b4e82449ab0ad2c83ac5e918e48d2f80a3be8ca46ec7cbaf3591"
+    },
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi__labelled/seed_42/eval/base+bodhi.json",
+      "bytes": 9131237,
+      "sha256": "31ac9bae7bc1a5e8b720d28c87bca820de0d20aac2c54ffd9702297df29912d1"
+    },
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi__labelled/seed_42/eval/lora.json",
+      "bytes": 8948911,
+      "sha256": "07da4a7b924199b6a96cec7fe8bbeb93e9dd8e35c96251e22a799560ee6bf0b2"
+    },
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi__labelled/seed_42/eval/lora+bodhi.json",
+      "bytes": 10699394,
+      "sha256": "bad0db1bc0cb59144b5bcaf06833fc41931e911a8ca6f59d924e81ae5f700777"
+    },
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi__labelled/seed_42/eval/lora+red-flags-first.json",
+      "bytes": 10600386,
+      "sha256": "4d172198cbacf2e45b1f3122380f3a00b2075c7d8602f5407462f9a8296562d3"
+    },
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi__labelled/seed_7/eval/base.json",
+      "bytes": 8483079,
+      "sha256": "83ecdb32028c41c973cddbdb339a4781d759493edfe9cd96a59162ea12862407"
+    },
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi__labelled/seed_7/eval/base+bodhi.json",
+      "bytes": 9131236,
+      "sha256": "05e7f11aabe066483b8e6127b78a65e79f5a0a82a37d83780d18eab23cc92fa8"
+    },
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi__labelled/seed_7/eval/lora.json",
+      "bytes": 8884123,
+      "sha256": "1c6e10ebc2fe87769eb56163949d7260271ae45d1854da4d27a6ddc834b75f01"
+    },
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi__labelled/seed_7/eval/lora+bodhi.json",
+      "bytes": 10548103,
+      "sha256": "5c47c0fe8ee35ad939d40517ca03d5df987d54ac7fe9033535bb140115f81c20"
+    },
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi__labelled/seed_7/eval/lora+red-flags-first.json",
+      "bytes": 10662744,
+      "sha256": "3c66307fe1af7a4a4be95644d6ad37c14eced4c35f80587132069027f652186d"
+    },
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi__labelled/seed_13/eval/base.json",
+      "bytes": 8483080,
+      "sha256": "7c2382e6025f109d91751cbdf2941374d6ef6a31ac3e6e495b4e13fb28a468d8"
+    },
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi__labelled/seed_13/eval/base+bodhi.json",
+      "bytes": 9131237,
+      "sha256": "9b2bb1569a2342089f2884db51dee03eff20e0c741f2227f313c74f53c0072d4"
+    },
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi__labelled/seed_13/eval/lora.json",
+      "bytes": 8904931,
+      "sha256": "6406a2fcd95d8b8930b42c2089f97475cad877683641b74783004791c2bba34f"
+    },
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi__labelled/seed_13/eval/lora+bodhi.json",
+      "bytes": 10676257,
+      "sha256": "4f7f3a937e45eb11e2ca9e6fab94e44c12abcd081b2b92adaf1cdc5f0eb59a78"
+    },
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi__labelled/seed_13/eval/lora+red-flags-first.json",
+      "bytes": 9967858,
+      "sha256": "8e09d4d4220e1540d71053162d333185ddc77768d7db9d5d9c3cb0a540f6eb17"
+    },
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi__labelled/seed_99/eval/base.json",
+      "bytes": 8483080,
+      "sha256": "f2af038e4167acb2e7b1fa2ecd2246eae7bf1c2fa4bdd67f01328726f50bc0a2"
+    },
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi__labelled/seed_99/eval/base+bodhi.json",
+      "bytes": 9131237,
+      "sha256": "62d45f7bbfe3ccd851a3b0cc0012439bb4f6599564f52f3f1e20899576676b49"
+    },
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi__labelled/seed_99/eval/lora.json",
+      "bytes": 8502985,
+      "sha256": "1e26b539a2e22d04e05106ef85b86b60adee40369f3a46469802404ec1d0db26"
+    },
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi__labelled/seed_99/eval/lora+bodhi.json",
+      "bytes": 9992937,
+      "sha256": "909aa3309d768a7b14573ce347d5602044c7de53a63196ce4a77552664b72096"
+    },
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi__labelled/seed_99/eval/lora+red-flags-first.json",
+      "bytes": 9844644,
+      "sha256": "0b447214e9a545de2a11d7a37878a290c9e321261ed7a37d4cdce4fc8ec63cb0"
+    },
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi__labelled/seed_101/eval/base.json",
+      "bytes": 8483081,
+      "sha256": "dbc9262f92e5f2184b5aef9406962105a292b0e0b9aa2e32cddf2f0a91a90efe"
+    },
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi__labelled/seed_101/eval/base+bodhi.json",
+      "bytes": 9131238,
+      "sha256": "3edf1c0b327daedbbc29e81cd6149242ade68804fab44c5f53d21ae78048cf20"
+    },
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi__labelled/seed_101/eval/lora.json",
+      "bytes": 8934302,
+      "sha256": "89af73829b15dcb5ce105ee33ec0ef297e612b2cfdccb4b48bd28846ffa10ad3"
+    },
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi__labelled/seed_101/eval/lora+bodhi.json",
+      "bytes": 10610548,
+      "sha256": "3c21f410791446b2e68ae7fa04a3ba8a07ccfd346eaa486ec963d3732b779dac"
+    },
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi__labelled/seed_101/eval/lora+red-flags-first.json",
+      "bytes": 10573533,
+      "sha256": "cf6a32b97d23ac17a00482968b842ba060843176f3cb03cf2cfe3767abd64f56"
+    }
+  ],
+  "counts": {
+    "n_examples": 13175,
+    "n_generated": 13175,
+    "n_graded": 13175,
+    "calls": 21700,
+    "completion_tokens_total": 13640723,
+    "n_files": 25,
+    "n_conditions_run": 17,
+    "n_incomplete": 0
+  },
+  "status": "complete",
+  "shared_server": {
+    "run_manifest": "results/healthbench__mistral-small-24b__bodhi__labelled/shared/eval/eval_s42-7-13-99-101_20261018T091705Z.manifest.json",
+    "seeds": [
+      42,
+      7,
+      13,
+      99,
+      101
+    ],
+    "conditions_run": [
+      [
+        42,
+        "base"
+      ],
+      [
+        42,
+        "base+bodhi"
+      ],
+      [
+        42,
+        "lora"
+      ],
+      [
+        42,
+        "lora+bodhi"
+      ],
+      [
+        42,
+        "lora+red-flags-first"
+      ],
+      [
+        7,
+        "lora"
+      ],
+      [
+        7,
+        "lora+bodhi"
+      ],
+      [
+        7,
+        "lora+red-flags-first"
+      ],
+      [
+        13,
+        "lora"
+      ],
+      [
+        13,
+        "lora+bodhi"
+      ],
+      [
+        13,
+        "lora+red-flags-first"
+      ],
+      [
+        99,
+        "lora"
+      ],
+      [
+        99,
+        "lora+bodhi"
+      ],
+      [
+        99,
+        "lora+red-flags-first"
+      ],
+      [
+        101,
+        "lora"
+      ],
+      [
+        101,
+        "lora+bodhi"
+      ],
+      [
+        101,
+        "lora+red-flags-first"
+      ]
+    ],
+    "client_threads": 64,
+    "replies_kept_from_an_earlier_run": 0
+  },
+  "incomplete": [],
+  "base_evaluated_once": [
+    {
+      "condition": "base",
+      "evaluated_with_seed": 42,
+      "written_for_seeds": [
+        42,
+        7,
+        13,
+        99,
+        101
+      ]
+    },
+    {
+      "condition": "base+bodhi",
+      "evaluated_with_seed": 42,
+      "written_for_seeds": [
+        42,
+        7,
+        13,
+        99,
+        101
+      ]
+    }
+  ]
+}

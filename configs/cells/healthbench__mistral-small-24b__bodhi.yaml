@@ -59,7 +59,7 @@ bench:
 report:
   label: HealthBench-Hard, Mistral-Small-24B
   token: HBMistral
-  status: planned
+  status: complete
   # Contrasts the analysis rule does not make. H6 (ANALYSIS_PLAN.md section 7.1): the
   # primary contrast, and the order alone on the base.
   contrasts:

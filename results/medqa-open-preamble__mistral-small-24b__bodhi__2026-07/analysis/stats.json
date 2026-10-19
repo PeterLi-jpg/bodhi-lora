@@ -6775,6 +6775,7 @@
   "not_measured": "no stage manifest of this cell records a time"
  },
  "status": "complete",
+ "subsets": {},
  "themes": {
   "not_measured": "no theme tags: the benchmark rows were not read at extract"
  },

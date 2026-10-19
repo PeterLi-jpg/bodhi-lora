@@ -418,7 +418,7 @@ def prompt_table(reg: Registry, cell: CellConfig, paths: CellPaths, project: Pro
                        "theme": [_theme(by_id[p].tags) for p in ids],
                        "rubric_points_pos": [float(sum(r["points"] for r in by_id[p].rubrics if r["points"] > 0))
                                              for p in ids]})
-    listed = {lab for spec in cfg.discrimination for lab in spec.labels}
+    listed = cfg.labels_for(cell)
     info["labels"] = {}
     for name, rule in sorted(bench.labels.items()):
         values = [by_id[p].labels[name] for p in ids]

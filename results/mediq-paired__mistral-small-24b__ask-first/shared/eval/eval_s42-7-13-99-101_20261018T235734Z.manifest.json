@@ -1,0 +1,348 @@
+{
+  "schema": 3,
+  "stage": "eval",
+  "cell": "mediq-paired__mistral-small-24b__ask-first",
+  "seed": null,
+  "created_utc": "2026-10-19T02:31:09.939099+00:00",
+  "git": {
+    "sha": "dc4ccac80eb252bf1f0e8793d20b5e64e7347874",
+    "dirty": false,
+    "diff_sha256": null,
+    "n_untracked": 7
+  },
+  "packages": {
+    "python": "3.12.11",
+    "torch": "2.8.0",
+    "transformers": "4.56.2",
+    "vllm": "0.10.2",
+    "peft": null,
+    "trl": null,
+    "accelerate": null,
+    "bitsandbytes": "0.47.0",
+    "datasets": "5.0.0",
+    "bodhi-llm": "0.1.4",
+    "huggingface-hub": "0.36.2",
+    "numpy": "2.2.6"
+  },
+  "host_sha256": "066a5c167485bc309082b4528ce9bdd70a2f71f0fb76e809ca20c735587ba308",
+  "hardware": {
+    "visible_devices": "0",
+    "gpus": [
+      {
+        "index": "0",
+        "name": "NVIDIA A100-SXM4-80GB",
+        "memory": "81920 MiB"
+      }
+    ]
+  },
+  "time": {
+    "started_utc": "2026-10-18T23:57:34.679068+00:00",
+    "finished_utc": "2026-10-19T02:31:11.541226+00:00",
+    "seconds": 9216.862
+  },
+  "config": {
+    "seeds": [
+      42,
+      7,
+      13,
+      99,
+      101
+    ],
+    "eval": {
+      "conditions": [
+        "base",
+        "base+ask-first",
+        "lora",
+        "lora+ask-first"
+      ],
+      "ids": {
+        "policy": "per_seed_draw",
+        "n": 200,
+        "unit": "pair",
+        "only": [],
+        "file": null
+      },
+      "base_precision": "train",
+      "base_precision_reason": null,
+      "max_new_tokens": 1024,
+      "max_new_tokens_per_pass": 2048,
+      "serving": {
+        "max_model_len": 8192,
+        "max_num_seqs": 64,
+        "concurrency": 64,
+        "request_timeout_s": 900,
+        "drain_s": 0.0,
+        "enforce_eager": null
+      },
+      "shared_server": true
+    }
+  },
+  "config_sha256": "1e57a4facfa4a5975bdaa01086c29c0bc5c10f17bc89a3b661ecf7c0a3b641fe",
+  "models": {
+    "policy": {
+      "id": "mistral-small-24b",
+      "repo_id": "mistralai/Mistral-Small-24B-Instruct-2501",
+      "family": "mistral",
+      "revision": "9527884be6e5616bdd54de542f9ae13384489724",
+      "revision_source": "record",
+      "unpinned_reason": null
+    },
+    "grader": {
+      "id": "llama-3.1-8b",
+      "repo_id": "meta-llama/Llama-3.1-8B-Instruct",
+      "family": "llama3",
+      "revision": "0e9e39f249a16976918f6564b8830bc894c89659",
+      "revision_source": "record",
+      "unpinned_reason": null
+    }
+  },
+  "engines": {
+    "policy": {
+      "model": "mistralai/Mistral-Small-24B-Instruct-2501",
+      "revision": "9527884be6e5616bdd54de542f9ae13384489724",
+      "max_model_len": 8192,
+      "max_num_seqs": 64,
+      "tensor_parallel_size": 1,
+      "dtype": "bfloat16",
+      "quantization": "bitsandbytes",
+      "enforce_eager": true,
+      "request_timeout_s": 900,
+      "lora_path": null,
+      "lora_modules": {
+        "adapter-s42": "/data/bohdi/results/healthbench__mistral-small-24b__ask-first/seed_42/train",
+        "adapter-s7": "/data/bohdi/results/healthbench__mistral-small-24b__ask-first/seed_7/train",
+        "adapter-s13": "/data/bohdi/results/healthbench__mistral-small-24b__ask-first/seed_13/train",
+        "adapter-s99": "/data/bohdi/results/healthbench__mistral-small-24b__ask-first/seed_99/train",
+        "adapter-s101": "/data/bohdi/results/healthbench__mistral-small-24b__ask-first/seed_101/train"
+      },
+      "max_loras": 5,
+      "max_lora_rank": 16,
+      "env": {}
+    },
+    "grader": {
+      "model": "meta-llama/Llama-3.1-8B-Instruct",
+      "revision": "0e9e39f249a16976918f6564b8830bc894c89659",
+      "max_model_len": 8192,
+      "max_num_seqs": 64,
+      "tensor_parallel_size": 1,
+      "dtype": "bfloat16",
+      "quantization": null,
+      "enforce_eager": true,
+      "request_timeout_s": 900,
+      "lora_path": null,
+      "lora_modules": {},
+      "max_loras": null,
+      "max_lora_rank": null,
+      "env": {}
+    }
+  },
+  "outputs": [
+    {
+      "path": "/data/bohdi/results/mediq-paired__mistral-small-24b__ask-first/seed_42/eval/base.json",
+      "bytes": 2592313,
+      "sha256": "277ff4014023e88916d4da2a57e68b88b21e46a5588e608ef1f17c368f31bf92"
+    },
+    {
+      "path": "/data/bohdi/results/mediq-paired__mistral-small-24b__ask-first/seed_42/eval/base+ask-first.json",
+      "bytes": 2479782,
+      "sha256": "42653b0f49467933b82b8ec5207f28cda384a6bad4092630b4f5effb78be5ff5"
+    },
+    {
+      "path": "/data/bohdi/results/mediq-paired__mistral-small-24b__ask-first/seed_42/eval/lora.json",
+      "bytes": 2356254,
+      "sha256": "1ab788e56758050222f79c430e5e85fba83249e370675633764f1f54bbba1ebf"
+    },
+    {
+      "path": "/data/bohdi/results/mediq-paired__mistral-small-24b__ask-first/seed_42/eval/lora+ask-first.json",
+      "bytes": 2347266,
+      "sha256": "101bb95d2cfa3aff4cf09c16a818ed9a38c97d26863a92de83c53afe550c1db6"
+    },
+    {
+      "path": "/data/bohdi/results/mediq-paired__mistral-small-24b__ask-first/seed_7/eval/base.json",
+      "bytes": 2623109,
+      "sha256": "8126bce73c00af3527d95b8fd244ef96165400896c62f50d9929d7dafe8b6fea"
+    },
+    {
+      "path": "/data/bohdi/results/mediq-paired__mistral-small-24b__ask-first/seed_7/eval/base+ask-first.json",
+      "bytes": 2459163,
+      "sha256": "e8424f663d9342e2d2a72950623a5c7411206fa598311db5bb445b183329de01"
+    },
+    {
+      "path": "/data/bohdi/results/mediq-paired__mistral-small-24b__ask-first/seed_7/eval/lora.json",
+      "bytes": 2372536,
+      "sha256": "b90ee64f5cf93b1c0a583431a2140e99502f1e488f3e78e2d3f04d7592832441"
+    },
+    {
+      "path": "/data/bohdi/results/mediq-paired__mistral-small-24b__ask-first/seed_7/eval/lora+ask-first.json",
+      "bytes": 2359923,
+      "sha256": "a1c25a3e028f16deb9424748f678ce93b281ad51918976f2c001f0c48d917b1f"
+    },
+    {
+      "path": "/data/bohdi/results/mediq-paired__mistral-small-24b__ask-first/seed_13/eval/base.json",
+      "bytes": 2623963,
+      "sha256": "95d50073023f44652bb116b545ff8e70b877395109a88371eb3631d9581d6aab"
+    },
+    {
+      "path": "/data/bohdi/results/mediq-paired__mistral-small-24b__ask-first/seed_13/eval/base+ask-first.json",
+      "bytes": 2489479,
+      "sha256": "7a8c6aa522370f7496520252f82f5ee48209a31ffc5c222f6d0cd621f9881f9a"
+    },
+    {
+      "path": "/data/bohdi/results/mediq-paired__mistral-small-24b__ask-first/seed_13/eval/lora.json",
+      "bytes": 2359234,
+      "sha256": "6ecef3c5c0709009848a53b30a8e1ee034b5dcb037a69fd3301f80aa46b4286e"
+    },
+    {
+      "path": "/data/bohdi/results/mediq-paired__mistral-small-24b__ask-first/seed_13/eval/lora+ask-first.json",
+      "bytes": 2351840,
+      "sha256": "96e776fbce3059edcc665002d6019a8770ecd3fb30a7dfaad3f2a6fb8c7285aa"
+    },
+    {
+      "path": "/data/bohdi/results/mediq-paired__mistral-small-24b__ask-first/seed_99/eval/base.json",
+      "bytes": 2611650,
+      "sha256": "5e81febef654bd98130c0122ce0295c7799c6322c214e4a0b1e6b82b5b5ffa03"
+    },
+    {
+      "path": "/data/bohdi/results/mediq-paired__mistral-small-24b__ask-first/seed_99/eval/base+ask-first.json",
+      "bytes": 2468265,
+      "sha256": "20de5669f138fbf55b2bcf5b4913b89aeabce4f97517ed1a0a9523206d4a94ed"
+    },
+    {
+      "path": "/data/bohdi/results/mediq-paired__mistral-small-24b__ask-first/seed_99/eval/lora.json",
+      "bytes": 2391656,
+      "sha256": "7e613ee547c418d4710541721362705abea797fbb87e97228e33fd5569ed1805"
+    },
+    {
+      "path": "/data/bohdi/results/mediq-paired__mistral-small-24b__ask-first/seed_99/eval/lora+ask-first.json",
+      "bytes": 2381137,
+      "sha256": "3fd1d567209cf83d137dd221c9e507e052b8b1dc145ff8ba182be0bb5474ecb0"
+    },
+    {
+      "path": "/data/bohdi/results/mediq-paired__mistral-small-24b__ask-first/seed_101/eval/base.json",
+      "bytes": 2604166,
+      "sha256": "574199e18ac096f38d83a9cc6c2a4ac4188b3620fda26999e51f8746a2f0d7a8"
+    },
+    {
+      "path": "/data/bohdi/results/mediq-paired__mistral-small-24b__ask-first/seed_101/eval/base+ask-first.json",
+      "bytes": 2468084,
+      "sha256": "2a04edbe9cd7b3d3f4d07c5ce66fdefc054f8e30f3e75014f8e58c85f1bd0c5d"
+    },
+    {
+      "path": "/data/bohdi/results/mediq-paired__mistral-small-24b__ask-first/seed_101/eval/lora.json",
+      "bytes": 2384774,
+      "sha256": "6c1d461f51d3b338657e537d67c977ae78218212727273d2e4a60f271d55b85e"
+    },
+    {
+      "path": "/data/bohdi/results/mediq-paired__mistral-small-24b__ask-first/seed_101/eval/lora+ask-first.json",
+      "bytes": 2382389,
+      "sha256": "2f2dc90bc9e41a3b509de61babf9bc15f2bcd6681dd83bec4b05cbe2dab61c55"
+    }
+  ],
+  "counts": {
+    "n_examples": 8000,
+    "n_generated": 8000,
+    "n_graded": 8000,
+    "calls": 8000,
+    "completion_tokens_total": 1751303,
+    "n_files": 20,
+    "n_conditions_run": 20,
+    "n_incomplete": 0
+  },
+  "status": "complete",
+  "shared_server": {
+    "run_manifest": "results/mediq-paired__mistral-small-24b__ask-first/shared/eval/eval_s42-7-13-99-101_20261018T235734Z.manifest.json",
+    "seeds": [
+      42,
+      7,
+      13,
+      99,
+      101
+    ],
+    "conditions_run": [
+      [
+        42,
+        "base"
+      ],
+      [
+        42,
+        "base+ask-first"
+      ],
+      [
+        42,
+        "lora"
+      ],
+      [
+        42,
+        "lora+ask-first"
+      ],
+      [
+        7,
+        "base"
+      ],
+      [
+        7,
+        "base+ask-first"
+      ],
+      [
+        7,
+        "lora"
+      ],
+      [
+        7,
+        "lora+ask-first"
+      ],
+      [
+        13,
+        "base"
+      ],
+      [
+        13,
+        "base+ask-first"
+      ],
+      [
+        13,
+        "lora"
+      ],
+      [
+        13,
+        "lora+ask-first"
+      ],
+      [
+        99,
+        "base"
+      ],
+      [
+        99,
+        "base+ask-first"
+      ],
+      [
+        99,
+        "lora"
+      ],
+      [
+        99,
+        "lora+ask-first"
+      ],
+      [
+        101,
+        "base"
+      ],
+      [
+        101,
+        "base+ask-first"
+      ],
+      [
+        101,
+        "lora"
+      ],
+      [
+        101,
+        "lora+ask-first"
+      ]
+    ],
+    "client_threads": 64,
+    "replies_kept_from_an_earlier_run": 0
+  },
+  "incomplete": [],
+  "base_evaluated_once": []
+}

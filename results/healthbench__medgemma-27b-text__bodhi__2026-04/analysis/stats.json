@@ -2872,6 +2872,7 @@
   "not_measured": "no stage manifest of this cell records a time"
  },
  "status": "pilot",
+ "subsets": {},
  "themes": {
   "communication": {
    "conditions": {

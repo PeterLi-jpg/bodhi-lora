@@ -1,0 +1,102 @@
+{
+  "cell": "healthbench__mistral-small-24b__bodhi",
+  "completions": {
+    "base": 200,
+    "base+bodhi": 200,
+    "base+clarify": 200,
+    "base+mediq-abstain": 200,
+    "base+red-flags-first": 200,
+    "base+verbalized-confidence": 200,
+    "lora": 200,
+    "lora+bodhi": 200,
+    "lora+red-flags-first": 200
+  },
+  "grade": {
+    "counts": {
+      "base": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "base+bodhi": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "base+clarify": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "base+mediq-abstain": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "base+red-flags-first": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "base+verbalized-confidence": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "lora": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "lora+bodhi": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "lora+red-flags-first": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      }
+    },
+    "file": "results/healthbench__mistral-small-24b__bodhi/seed_101/grade/epistemic__llama-3.1-8b.json",
+    "present": true
+  },
+  "n_examples": {
+    "base": 200,
+    "base+bodhi": 200,
+    "base+clarify": 200,
+    "base+mediq-abstain": 200,
+    "base+red-flags-first": 200,
+    "base+verbalized-confidence": 200,
+    "lora": 200,
+    "lora+bodhi": 200,
+    "lora+red-flags-first": 200
+  },
+  "score_metric": {
+    "base": "normalized_score",
+    "base+bodhi": "normalized_score",
+    "base+clarify": "normalized_score",
+    "base+mediq-abstain": "normalized_score",
+    "base+red-flags-first": "normalized_score",
+    "base+verbalized-confidence": "normalized_score",
+    "lora": "normalized_score",
+    "lora+bodhi": "normalized_score",
+    "lora+red-flags-first": "normalized_score"
+  },
+  "seed": 101,
+  "sources": {
+    "results/healthbench__mistral-small-24b__bodhi/seed_101/eval/base+bodhi.json": "232ab67903c8494ce9800d1317a65b1aa2149a0c5a01e9457e1524dbfe58016a",
+    "results/healthbench__mistral-small-24b__bodhi/seed_101/eval/base+clarify.json": "76fd60a119093b143d1f7c59a9b92d6ec2f71f9f063358165705e9cb39898b66",
+    "results/healthbench__mistral-small-24b__bodhi/seed_101/eval/base+mediq-abstain.json": "b5118504945e467e5274625b389f24d38e5781d412577f6bd98e77af0098721f",
+    "results/healthbench__mistral-small-24b__bodhi/seed_101/eval/base+red-flags-first.json": "48d3e8f3acbeec8ad6935880254c5e09713f34f8530a6e2a01d9852bd3a530fe",
+    "results/healthbench__mistral-small-24b__bodhi/seed_101/eval/base+verbalized-confidence.json": "5f4490e0a98db937551c494a8b4add2786c29df63af201d25e56f48e97d42307",
+    "results/healthbench__mistral-small-24b__bodhi/seed_101/eval/base.json": "26d7baad6ed02176ed2ba89efdc4062d6599e5babd5cee8c47491e2d8769cda6",
+    "results/healthbench__mistral-small-24b__bodhi/seed_101/eval/lora+bodhi.json": "3932f8411f602f8f1ad261a75c15a448fa25a4989a05b7294f6ddb829c1dab88",
+    "results/healthbench__mistral-small-24b__bodhi/seed_101/eval/lora+red-flags-first.json": "2b3963c64e6ea3802f38dbb0567fb7df68fff48ea203e0fb81a2f6a06afe0203",
+    "results/healthbench__mistral-small-24b__bodhi/seed_101/eval/lora.json": "713a9f6d36404b08166c7b63ea09cd473394ee22fc8917c5b0997ed5e995569a",
+    "results/healthbench__mistral-small-24b__bodhi/seed_101/grade/epistemic__llama-3.1-8b.json": "c1475d52784fdece0802349082103d473abf773ed5dcb8221256d850cfa5b963",
+    "results/healthbench__mistral-small-24b__bodhi/seed_101/grade/judge__medgemma-27b-text.json": "ba85b2a2b3dfd7fdbea8e15bc63463b7b597133fc7cdd4d87ebf21fe5f75ddbc"
+  },
+  "tokenizer": "mistralai/Mistral-Small-24B-Instruct-2501@9527884be6e5616bdd54de542f9ae13384489724"
+}

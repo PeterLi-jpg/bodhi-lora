@@ -31,4 +31,4 @@ eval:
 report:
   label: HealthBench labelled probes, Mistral-Small-24B
   token: HBMistralLabelled
-  status: planned
+  status: complete

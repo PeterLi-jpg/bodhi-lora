@@ -1,0 +1,173 @@
+{
+  "schema": 3,
+  "stage": "grade",
+  "cell": "healthbench__mistral-small-24b__bodhi",
+  "seed": 13,
+  "created_utc": "2026-10-19T06:26:57.461027+00:00",
+  "git": {
+    "sha": "dc4ccac80eb252bf1f0e8793d20b5e64e7347874",
+    "dirty": false,
+    "diff_sha256": null,
+    "n_untracked": 7
+  },
+  "packages": {
+    "python": "3.12.11",
+    "torch": "2.8.0",
+    "transformers": "4.56.2",
+    "vllm": "0.10.2",
+    "peft": null,
+    "trl": null,
+    "accelerate": null,
+    "bitsandbytes": "0.47.0",
+    "datasets": "5.0.0",
+    "bodhi-llm": "0.1.4",
+    "huggingface-hub": "0.36.2",
+    "numpy": "2.2.6"
+  },
+  "host_sha256": "47ab991b993efd570adbabdd0a3ba6c6010998f7d1591e3ba4dd4c9357ba6750",
+  "hardware": {
+    "visible_devices": "0",
+    "gpus": [
+      {
+        "index": "0",
+        "name": "NVIDIA A100-SXM4-80GB",
+        "memory": "81920 MiB"
+      }
+    ]
+  },
+  "time": {
+    "started_utc": "2026-10-19T03:03:59.052989+00:00",
+    "finished_utc": "2026-10-19T06:27:01.038327+00:00",
+    "seconds": 12181.985
+  },
+  "models": {
+    "judge": {
+      "id": "medgemma-27b-text",
+      "repo_id": "google/medgemma-27b-text-it",
+      "family": "gemma",
+      "revision": "5b667cf2ddcf064085bc90952edb35a0edbfb79c",
+      "revision_source": "record",
+      "unpinned_reason": null
+    }
+  },
+  "engines": {
+    "judge": {
+      "model": "google/medgemma-27b-text-it",
+      "revision": "5b667cf2ddcf064085bc90952edb35a0edbfb79c",
+      "max_model_len": 8192,
+      "max_num_seqs": 32,
+      "tensor_parallel_size": 1,
+      "dtype": "bfloat16",
+      "quantization": null,
+      "enforce_eager": true,
+      "request_timeout_s": 900,
+      "lora_path": null,
+      "lora_modules": {},
+      "max_loras": null,
+      "max_lora_rank": null,
+      "env": {}
+    }
+  },
+  "inputs": [
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi/seed_13/eval/base.json",
+      "bytes": 2209889,
+      "sha256": "5be5f35838396406c87f78d9e5146957e2833d309ab0c1a30dc771cf8f14205c"
+    },
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi/seed_13/eval/base+bodhi.json",
+      "bytes": 2435826,
+      "sha256": "8f734f65ce69c307b3de5ba8ae22ceaeebc33fc97012c3b1b1bfe0d9cc180d50"
+    },
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi/seed_13/eval/lora.json",
+      "bytes": 2334341,
+      "sha256": "dbbf13a5ee9fca32950b34837be00eed97df2091a63a39dd73bfc389dd7de4e4"
+    },
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi/seed_13/eval/lora+bodhi.json",
+      "bytes": 2736456,
+      "sha256": "3bff6a4f60a4869b076304ba20113f811b6e8885d32771e7948869eb070788bb"
+    },
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi/seed_13/eval/base+clarify.json",
+      "bytes": 2201431,
+      "sha256": "2902b009ac630ba46bdb93b516e49a76ab0a8cb1a5d1759a864cf5b341ffa934"
+    },
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi/seed_13/eval/base+verbalized-confidence.json",
+      "bytes": 2233662,
+      "sha256": "e81bc4672667bfc4ce6857be6ad8535357258e4dfaa03b26cdcdc17927536dbe"
+    },
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi/seed_13/eval/base+mediq-abstain.json",
+      "bytes": 1931860,
+      "sha256": "6e875bf47c9b546f4eb4a13a241156bcf1e8cf748461e3a6b320b9045962e142"
+    },
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi/seed_13/eval/base+red-flags-first.json",
+      "bytes": 2397720,
+      "sha256": "c63593a23b2a8919deddb41f41c2e16b4592b510fe014595d2cd29fe9a4c17a5"
+    },
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi/seed_13/eval/lora+red-flags-first.json",
+      "bytes": 2580127,
+      "sha256": "0b0e433e5ecd1fe8924459907a89ad43e93699257925ac717722d763aa989111"
+    }
+  ],
+  "outputs": [
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__bodhi/seed_13/grade/judge__medgemma-27b-text.json",
+      "bytes": 4511887,
+      "sha256": "90269c9708c6fff6b4bfe6e18876b9cc5bdaaf109439651c54667a6a28b2a9da"
+    }
+  ],
+  "counts": {
+    "base": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    },
+    "base+bodhi": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    },
+    "lora": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    },
+    "lora+bodhi": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    },
+    "base+clarify": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    },
+    "base+verbalized-confidence": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    },
+    "base+mediq-abstain": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    },
+    "base+red-flags-first": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    },
+    "lora+red-flags-first": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    }
+  },
+  "status": "complete"
+}

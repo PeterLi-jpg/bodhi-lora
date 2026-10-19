@@ -54,6 +54,24 @@
       "stats": "results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/stats.json",
       "token": "HBMedGemmaMay"
     },
+    "healthbench__mistral-small-24b__ask-first": {
+      "detail": false,
+      "family_waiver": null,
+      "in_cross_cells": false,
+      "label": "HealthBench-Hard, Mistral-Small-24B, ask-first",
+      "set_aside": null,
+      "stats": "results/healthbench__mistral-small-24b__ask-first/analysis/stats.json",
+      "token": "HBMistralAskFirst"
+    },
+    "healthbench__mistral-small-24b__bodhi": {
+      "detail": false,
+      "family_waiver": null,
+      "in_cross_cells": false,
+      "label": "HealthBench-Hard, Mistral-Small-24B",
+      "set_aside": null,
+      "stats": "results/healthbench__mistral-small-24b__bodhi/analysis/stats.json",
+      "token": "HBMistral"
+    },
     "healthbench__mistral-small-24b__bodhi__2026-07": {
       "detail": false,
       "family_waiver": null,
@@ -62,6 +80,33 @@
       "set_aside": null,
       "stats": "results/healthbench__mistral-small-24b__bodhi__2026-07/analysis/stats.json",
       "token": "HBMistralJul"
+    },
+    "healthbench__mistral-small-24b__bodhi__labelled": {
+      "detail": false,
+      "family_waiver": null,
+      "in_cross_cells": false,
+      "label": "HealthBench labelled probes, Mistral-Small-24B",
+      "set_aside": null,
+      "stats": "results/healthbench__mistral-small-24b__bodhi__labelled/analysis/stats.json",
+      "token": "HBMistralLabelled"
+    },
+    "mediq-paired__mistral-small-24b__ask-first": {
+      "detail": false,
+      "family_waiver": null,
+      "in_cross_cells": false,
+      "label": "MediQ paired probe, Mistral-Small-24B, ask-first",
+      "set_aside": null,
+      "stats": "results/mediq-paired__mistral-small-24b__ask-first/analysis/stats.json",
+      "token": "MediqMistralAskFirst"
+    },
+    "mediq-paired__mistral-small-24b__bodhi": {
+      "detail": false,
+      "family_waiver": null,
+      "in_cross_cells": false,
+      "label": "MediQ paired probe, Mistral-Small-24B",
+      "set_aside": null,
+      "stats": "results/mediq-paired__mistral-small-24b__bodhi/analysis/stats.json",
+      "token": "MediqMistral"
     },
     "medqa-open-preamble__biomistral-7b__bodhi__2026-07": {
       "detail": false,
@@ -92,19 +137,24 @@
     }
   },
   "inputs": {
-    "results/chatdoctor__med42-8b__bodhi__2026-07/analysis/stats.json": "88168e83363fd2d9e365aba1e77646cc0f9f9933d6eaf1ea1d7fa6aff4ccc480",
-    "results/chatdoctor__mistral-small-24b__bodhi__2026-07/analysis/stats.json": "dbdec3982fac6413a0bffa7a95d03b3429c7714ca9ebc8fcd99c7e327a9d7051",
+    "results/chatdoctor__med42-8b__bodhi__2026-07/analysis/stats.json": "7452a77f11c6f8b637ad81cdabecb2435e6d056578cddff508c81681ab3b74f6",
+    "results/chatdoctor__mistral-small-24b__bodhi__2026-07/analysis/stats.json": "3f7bd465f33835eba512aaeefe8ac7d3bf9da040a65fb97fceec109d232d10fd",
     "results/cross_cell/stats.json": "c70dc8e486bba418761dfd514c8421b778567e4a2218b9f03facf2e0a764e2e9",
-    "results/healthbench__biomistral-7b__bodhi__2026-07/analysis/stats.json": "7612655aa1b58d7651635bc8ced75990c93c94e33309133dbcb6df8c7ea90eed",
-    "results/healthbench__med42-8b__bodhi__2026-07/analysis/stats.json": "9ecf2048116cdcbf4febd4b446e7d702c31c916945914c987d83be3beeba127f",
-    "results/healthbench__medgemma-27b-text__bodhi__2026-04/analysis/stats.json": "5dc49ed71073ac0d6a49cb387161ce25167348897bd69af2e847a1c14ffd23ae",
-    "results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/stats.json": "d0e8beddd3e1f9eb629fe00a717b2495e5664a865bb664192aff87b69007d9df",
-    "results/healthbench__mistral-small-24b__bodhi__2026-07/analysis/stats.json": "254e1c3ff2018cefa87852d46ff7e2cb62e86e2449a6e67490f39ff67da6130b",
-    "results/medqa-open-preamble__biomistral-7b__bodhi__2026-07/analysis/stats.json": "0322d5547468469029d6fcffd33c7670c071c6f59e01e8ed237d505bed75c34a",
-    "results/medqa-open-preamble__mistral-small-24b__bodhi__2026-07/analysis/stats.json": "22b521353714b52d39dc479d4702342274d88acaf74758f83b24f025240dd2b0",
-    "results/medquad__mistral-small-24b__bodhi__2026-07/analysis/stats.json": "0a2f452cfe46051cff9affc907d54074a2061b6c13cebcc226330b0689c2c24d"
+    "results/healthbench__biomistral-7b__bodhi__2026-07/analysis/stats.json": "4c1cfca5edf2958f7bccfc2111a0dd79f2294408a010a58d95d06c4c8079c20a",
+    "results/healthbench__med42-8b__bodhi__2026-07/analysis/stats.json": "3475810537475829fe466607ddec459a5a4f7062ddd5d50061e217c2174ed2ea",
+    "results/healthbench__medgemma-27b-text__bodhi__2026-04/analysis/stats.json": "f5eabcd1a9d6daf60b7865d3777e47b8f77f9529d7acadc62ed345e163ee91cd",
+    "results/healthbench__medgemma-27b-text__bodhi__2026-05/analysis/stats.json": "971615d58cb8786aa9a05322918c326c23ff6f4b4786c8a597a4135c46b4eed0",
+    "results/healthbench__mistral-small-24b__ask-first/analysis/stats.json": "effce601ef0beac1712ceb6f5221a36b71df9080e2ced953aaed867a900f0ef7",
+    "results/healthbench__mistral-small-24b__bodhi/analysis/stats.json": "713708c6084e4c2980552ba43ed3b4ee1ee2add1fd23b7ee65c0d4fecb1a1c72",
+    "results/healthbench__mistral-small-24b__bodhi__2026-07/analysis/stats.json": "88d8088442fb8bd4f26db20d24b0ce6d72a177063cb3831f33684d22dd42f743",
+    "results/healthbench__mistral-small-24b__bodhi__labelled/analysis/stats.json": "71bf2f6b39b04cf46c41d521617a66ce2135a57ccec72e1aa1958c55fce9c74e",
+    "results/mediq-paired__mistral-small-24b__ask-first/analysis/stats.json": "5b42f6edbf60b697bbfba5f4512f37dbb5180cf1c81ce229a13b83253bd41ee5",
+    "results/mediq-paired__mistral-small-24b__bodhi/analysis/stats.json": "24b4868b68a1bb73c117ed2e0defeac4358babf1d0785ace1af7f8a7ad85f50c",
+    "results/medqa-open-preamble__biomistral-7b__bodhi__2026-07/analysis/stats.json": "14f636537caf0e3046b36583e90a6b7b64f94d790ed4bfacd771315bdd37e43b",
+    "results/medqa-open-preamble__mistral-small-24b__bodhi__2026-07/analysis/stats.json": "0d6e4ee2681d2d3c77e3431c0fd9a2ad201aa403454baea9dd7fdcbd4c229976",
+    "results/medquad__mistral-small-24b__bodhi__2026-07/analysis/stats.json": "654db723d747f48e1c11355731f06a2d729512119869f1734ccd0391ec68a969"
   },
-  "macros": 10250,
+  "macros": 21498,
   "not_reported": {},
   "tables": [
     "tab_axes_HBMedGemmaMay",
@@ -115,10 +165,15 @@
     "tab_cell_HBMedFortyTwoJul",
     "tab_cell_HBMedGemmaApr",
     "tab_cell_HBMedGemmaMay",
+    "tab_cell_HBMistral",
+    "tab_cell_HBMistralAskFirst",
     "tab_cell_HBMistralJul",
+    "tab_cell_HBMistralLabelled",
     "tab_cell_MQMistralJul",
     "tab_cell_MedQAPreBioMistralJul",
     "tab_cell_MedQAPreMistralJul",
+    "tab_cell_MediqMistral",
+    "tab_cell_MediqMistralAskFirst",
     "tab_cell_detail_1",
     "tab_cell_detail_2",
     "tab_cell_filter",

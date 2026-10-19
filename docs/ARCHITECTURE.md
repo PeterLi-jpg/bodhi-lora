@@ -709,8 +709,10 @@ evaluator's grade counts, and the tokenizer used. Columns
 | judges | `j_<judge>__rubric_score`, `j_<judge>__<dimension>`, and `j_<judge>__crit_<e><j>`, the 2x2 counts of rubric criteria met by the evaluator and the judge |
 
 The labels of a prompt are in `results/*/analysis/prompts.csv`, not in the table: `label_<name>`
-(1, 0 or empty) for each label that `configs/report.yaml` lists, with the prompt's theme
-and positive rubric points. The other labels of the benchmark have only their
+(1, 0 or empty) for each label that `configs/report.yaml` lists for the cell
+(`ReportConfig.labels_for`: a `drawn_only` label and a `subsets` label count only in a
+cell whose `eval.ids.only` drew by it, the labelled cells), with the prompt's theme and
+positive rubric points. The other labels of the benchmark have only their
 population counts, in `extract.json` (ANALYSIS_PLAN.md section 12, 2026-10-10).
 `extract.json` also holds the hash of each leak rule's patterns and each label's
 definition. The analysis reads the tables, `prompts.csv`, `extract.json`, the filter and
@@ -772,8 +774,10 @@ get their own Holm correction.
 | Counts: prompts, unique prompts, completions, missing completions, parse failures of both graders | eval, grade | D13, LxMF 1 |
 | Worst case: failed grades scored at the undesirable end | evaluator | D13 |
 | Blanket disclaimers: counts and two-sided Fisher exact test | evaluator | D10 |
-| Discrimination index for every response and label of `configs/report.yaml` with both groups present: the rate in each group, P(response given positive) minus P(response given negative), odds ratio, bootstrap intervals, seed-level intervals, and per contrast the difference of the indices and of each group's rate | labels, evaluator | D9, MR-W4 |
+| Discrimination index for every response and label of `configs/report.yaml` that the cell analyzes (`labels_for`), with both groups present: the rate in each group, P(response given positive) minus P(response given negative), odds ratio, bootstrap intervals, seed-level intervals, and per contrast the difference of the indices and of each group's rate | labels, evaluator | D9, MR-W4 |
 | Red-flag rate by the `emergency-theme` label (post hoc, descriptive): the evaluator's red-flag rate on prompts of the emergency-referrals theme and on the others; not an over-flagging rate (ANALYSIS_PLAN.md section 12, 2026-10-10) | labels, evaluator | C30 |
+| Red-flag rate by the `emergent-physician` label (H7, labelled cells only): LoRA - Base on the rate among the non-emergent prompts is the over-flagging test (ANALYSIS_PLAN.md section 7.2) | labels, evaluator | C18, C30 |
+| Subsets (`subsets`): every contrast again on one group of a label's prompts, with the same tests and Holm families: the clinician-user positive prompts (H11, section 9.3) and the emergent-physician negative prompts (H7 secondary outcomes), in the labelled cells only | labels, evaluator, rubric | C32 |
 | Format leakage for every leak rule of every protocol used: leak share, dimensions by leak status, red flag by length quartile in non-leaked responses | format, evaluator | D11, LxMF 4 |
 | Length and token cost: characters, tokens, calls, total tokens per condition | eval | C25 |
 | Measured cost (`bench`): service time per reply on an idle GPU (median, mean, p90), calls and tokens per condition and seed, and per contrast the ratio of the medians; `stage_times`: wall-clock seconds and GPUs of every stage from its manifests (E08, E20) | bench, manifests | C25, FzpA-S |

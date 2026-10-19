@@ -1,6 +1,7 @@
 """The per-cell analysis on a synthetic response table: contrasts come from the cell's
 conditions by rule, the seed is the unit of every test, the Holm family is the seven
 dimensions of one contrast, and a statistic without its input says "not measured"."""
+import json
 from dataclasses import replace
 
 import numpy as np
@@ -342,3 +343,40 @@ def test_zlib_ratio_of_prose_and_of_a_loop():
     assert zlib_ratio(prose) > 0.5 and zlib_ratio(loop) < 0.15
     assert np.isnan(zlib_ratio(""))
 
+
+
+LABELLED = "healthbench__mistral-small-24b__bodhi__labelled"
+
+
+def test_a_subset_gets_the_whole_analysis_of_its_prompts_only(reg, tmp_path):
+    """docs/ANALYSIS_PLAN.md 9.3 (H11): the contrasts on the clinician-user positive
+    prompts are the cell's contrasts computed on those prompts alone, with the same tests,
+    Holm families and bootstrap; a cell with no label column says "not measured"."""
+    cell = reg.cells[LABELLED]
+    table = synthetic_table(cell)
+    clinician = {"p0", "p1", "p2"}
+    prompts = synthetic_prompts().assign(**{"label_clinician-user": [float(p in clinician) for p in PROMPTS]})
+    meta = [{"n_examples": {c: len(PROMPTS) for c in cell.eval.conditions}} for _ in table["seed"].unique()]
+    paths = replace(project(CONFIGS_DIR), results_root=tmp_path).cell(LABELLED)
+    out = analyze_tables(reg, cell, table, prompts, meta, paths, report_config())
+    sub = out["subsets"]["clinician-user=positive"]
+    assert sub["n_prompts"] == 3 and sub["group"] == "positive" and sub["timing"] == "pre_specified"
+    alone = analyze_tables(reg, cell, table[table["prompt_id"].isin(clinician)],
+                           prompts[prompts["prompt_id"].isin(clinician)], meta, paths, report_config())
+    # As JSON: a test with no spread gives NaN, which is not equal to itself.
+    same = [json.dumps(x, sort_keys=True) for x in (sub["contrasts"], alone["contrasts"], out["contrasts"])]
+    assert same[0] == same[1] and same[0] != same[2]
+    bare = analyze_tables(reg, cell, table, synthetic_prompts(), meta, paths, report_config())
+    assert "not_measured" in bare["subsets"]["clinician-user=positive"]
+
+
+def test_the_h7_and_h11_labels_count_only_in_the_cells_drawn_by_them(reg):
+    """emergent-physician (H7) and the clinician-user subset (H11) are analyzed in the
+    labelled cells, whose eval ids were drawn by those labels, and stay unseen elsewhere;
+    the labels of E02 and the paired probe count wherever their groups occur."""
+    cfg = report_config()
+    labelled = cfg.labels_for(reg.cells[LABELLED])
+    training = cfg.labels_for(reg.cells["healthbench__mistral-small-24b__bodhi"])
+    assert {"emergent-physician", "clinician-user"} <= labelled
+    assert not {"emergent-physician", "clinician-user"} & training
+    assert {"needs-info-physician", "emergency-theme", "incomplete"} <= training

@@ -1,0 +1,277 @@
+{
+  "schema": 3,
+  "stage": "eval",
+  "cell": "mediq-paired__mistral-small-24b__ask-first",
+  "seed": 7,
+  "created_utc": "2026-10-19T02:30:09.319452+00:00",
+  "git": {
+    "sha": "dc4ccac80eb252bf1f0e8793d20b5e64e7347874",
+    "dirty": false,
+    "diff_sha256": null,
+    "n_untracked": 7
+  },
+  "packages": {
+    "python": "3.12.11",
+    "torch": "2.8.0",
+    "transformers": "4.56.2",
+    "vllm": "0.10.2",
+    "peft": null,
+    "trl": null,
+    "accelerate": null,
+    "bitsandbytes": "0.47.0",
+    "datasets": "5.0.0",
+    "bodhi-llm": "0.1.4",
+    "huggingface-hub": "0.36.2",
+    "numpy": "2.2.6"
+  },
+  "host_sha256": "066a5c167485bc309082b4528ce9bdd70a2f71f0fb76e809ca20c735587ba308",
+  "hardware": {
+    "visible_devices": "0",
+    "gpus": [
+      {
+        "index": "0",
+        "name": "NVIDIA A100-SXM4-80GB",
+        "memory": "81920 MiB"
+      }
+    ]
+  },
+  "config": {
+    "condition": "lora",
+    "eval": {
+      "conditions": [
+        "base",
+        "base+ask-first",
+        "lora",
+        "lora+ask-first"
+      ],
+      "ids": {
+        "policy": "per_seed_draw",
+        "n": 200,
+        "unit": "pair",
+        "only": [],
+        "file": null
+      },
+      "base_precision": "train",
+      "base_precision_reason": null,
+      "max_new_tokens": 1024,
+      "max_new_tokens_per_pass": 2048,
+      "serving": {
+        "max_model_len": 8192,
+        "max_num_seqs": 64,
+        "concurrency": 64,
+        "request_timeout_s": 900,
+        "drain_s": 0.0,
+        "enforce_eager": null
+      },
+      "shared_server": true
+    }
+  },
+  "config_sha256": "4f6fc5caf230e433372590c69fe9d5c875f32a93ed1c5cf45d4f910fd5ad3b07",
+  "models": {
+    "policy": {
+      "id": "mistral-small-24b",
+      "repo_id": "mistralai/Mistral-Small-24B-Instruct-2501",
+      "family": "mistral",
+      "revision": "9527884be6e5616bdd54de542f9ae13384489724",
+      "revision_source": "record",
+      "unpinned_reason": null
+    },
+    "grader": {
+      "id": "llama-3.1-8b",
+      "repo_id": "meta-llama/Llama-3.1-8B-Instruct",
+      "family": "llama3",
+      "revision": "0e9e39f249a16976918f6564b8830bc894c89659",
+      "revision_source": "record",
+      "unpinned_reason": null
+    }
+  },
+  "engines": {
+    "policy": {
+      "model": "mistralai/Mistral-Small-24B-Instruct-2501",
+      "revision": "9527884be6e5616bdd54de542f9ae13384489724",
+      "max_model_len": 8192,
+      "max_num_seqs": 64,
+      "tensor_parallel_size": 1,
+      "dtype": "bfloat16",
+      "quantization": "bitsandbytes",
+      "enforce_eager": true,
+      "request_timeout_s": 900,
+      "lora_path": null,
+      "lora_modules": {
+        "adapter-s42": "/data/bohdi/results/healthbench__mistral-small-24b__ask-first/seed_42/train",
+        "adapter-s7": "/data/bohdi/results/healthbench__mistral-small-24b__ask-first/seed_7/train",
+        "adapter-s13": "/data/bohdi/results/healthbench__mistral-small-24b__ask-first/seed_13/train",
+        "adapter-s99": "/data/bohdi/results/healthbench__mistral-small-24b__ask-first/seed_99/train",
+        "adapter-s101": "/data/bohdi/results/healthbench__mistral-small-24b__ask-first/seed_101/train"
+      },
+      "max_loras": 5,
+      "max_lora_rank": 16,
+      "env": {}
+    },
+    "grader": {
+      "model": "meta-llama/Llama-3.1-8B-Instruct",
+      "revision": "0e9e39f249a16976918f6564b8830bc894c89659",
+      "max_model_len": 8192,
+      "max_num_seqs": 64,
+      "tensor_parallel_size": 1,
+      "dtype": "bfloat16",
+      "quantization": null,
+      "enforce_eager": true,
+      "request_timeout_s": 900,
+      "lora_path": null,
+      "lora_modules": {},
+      "max_loras": null,
+      "max_lora_rank": null,
+      "env": {}
+    }
+  },
+  "adapter": {
+    "path": "/data/bohdi/results/healthbench__mistral-small-24b__ask-first/seed_7/train",
+    "sha256": "ec7c9226f446797bee0690f56131f613fe092d3e181d3a74b707de47c0e72d5d",
+    "files": {
+      "adapter_model.safetensors": "3e6e140fd59b505d5cc00ad6fb65eaf7fb5ca6a74e61fe8165aded84f260d606",
+      "adapter_config.json": "8a60b844efb88e196bb56b54d682a3ae5ee6acf0d0d31922ac2a1aa0becf17f8"
+    },
+    "r": 16,
+    "lora_alpha": 32.0,
+    "lora_dropout": 0.05,
+    "target_modules": [
+      "k_proj",
+      "down_proj",
+      "q_proj",
+      "o_proj",
+      "up_proj",
+      "v_proj",
+      "gate_proj"
+    ],
+    "base_model_name_or_path": "mistralai/Mistral-Small-24B-Instruct-2501",
+    "revision": null,
+    "use_dora": false,
+    "use_rslora": false
+  },
+  "eval_ids": {
+    "path": "/data/bohdi/results/mediq-paired__mistral-small-24b__ask-first/shared/inputs/eval_ids_seed_7.json",
+    "n": 400,
+    "ids_sha256": "d1d272097f69170259f1113f75a8a448e8d3a6fab8d98a98257a044e0b0abdef",
+    "file_sha256": "7b77458b56e0a2a4628ca041657403b36899a051b282580ff775cb84f3c19e1d"
+  },
+  "outputs": [
+    {
+      "path": "/data/bohdi/results/mediq-paired__mistral-small-24b__ask-first/seed_7/eval/lora.json",
+      "bytes": 2372536,
+      "sha256": "b90ee64f5cf93b1c0a583431a2140e99502f1e488f3e78e2d3f04d7592832441"
+    }
+  ],
+  "counts": {
+    "n_examples": 400,
+    "n_generated": 400,
+    "n_failed_inference": 0,
+    "n_graded": 400,
+    "n_failed_grading": 0,
+    "n_too_long": 0,
+    "grader_parse_failures_total": 2,
+    "grader_rubric_items_total": 3200,
+    "calls": 400,
+    "completion_tokens_total": 54208,
+    "n_finish_length": 0,
+    "n_format_unparsed": 0
+  },
+  "status": "complete",
+  "condition": "lora",
+  "shared_server": {
+    "run_manifest": "results/mediq-paired__mistral-small-24b__ask-first/shared/eval/eval_s42-7-13-99-101_20261018T235734Z.manifest.json",
+    "seeds": [
+      42,
+      7,
+      13,
+      99,
+      101
+    ],
+    "conditions_run": [
+      [
+        42,
+        "base"
+      ],
+      [
+        42,
+        "base+ask-first"
+      ],
+      [
+        42,
+        "lora"
+      ],
+      [
+        42,
+        "lora+ask-first"
+      ],
+      [
+        7,
+        "base"
+      ],
+      [
+        7,
+        "base+ask-first"
+      ],
+      [
+        7,
+        "lora"
+      ],
+      [
+        7,
+        "lora+ask-first"
+      ],
+      [
+        13,
+        "base"
+      ],
+      [
+        13,
+        "base+ask-first"
+      ],
+      [
+        13,
+        "lora"
+      ],
+      [
+        13,
+        "lora+ask-first"
+      ],
+      [
+        99,
+        "base"
+      ],
+      [
+        99,
+        "base+ask-first"
+      ],
+      [
+        99,
+        "lora"
+      ],
+      [
+        99,
+        "lora+ask-first"
+      ],
+      [
+        101,
+        "base"
+      ],
+      [
+        101,
+        "base+ask-first"
+      ],
+      [
+        101,
+        "lora"
+      ],
+      [
+        101,
+        "lora+ask-first"
+      ]
+    ],
+    "client_threads": 64,
+    "replies_kept_from_an_earlier_run": 0,
+    "route": "adapter-s7"
+  },
+  "too_long_ids": []
+}

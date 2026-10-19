@@ -43,6 +43,29 @@ class Discrimination(_Record):
     only) or a rate of every completion, such as the harm proxy neg_any."""
     response: str
     labels: list[RegistryId] = Field(min_length=1)
+    # Labels whose analysis the plan names for the cells drawn by the label only (H7 on
+    # emergent-physician: the labelled cells). They count in a cell whose eval.ids.only
+    # names the label, and stay unseen in every other cell.
+    drawn_only: list[RegistryId] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _drawn_only(self) -> "Discrimination":
+        if not set(self.drawn_only) <= set(self.labels):
+            raise ValueError(f"discrimination {self.response}: drawn_only names labels it does not list")
+        return self
+
+
+class Subset(_Record):
+    """Every contrast of the cell again, on the prompts of one group of a label only
+    (docs/ANALYSIS_PLAN.md section 9.3, H11: the clinician-user positive prompts). It
+    runs in a cell whose eval.ids.only drew from that group, the cells the plan names."""
+    label: RegistryId
+    group: Literal["positive", "negative"]
+
+
+def drawn_groups(cell) -> dict[str, set[str]]:
+    """The label groups a cell's eval ids were drawn from (eval.ids.only), by label."""
+    return {g.label: set(g.groups) for g in cell.eval.ids.only}
 
 
 class Where(_Record):
@@ -257,6 +280,7 @@ class ReportConfig(_Record):
     bootstrap: Bootstrap
     alpha: float = Field(gt=0, lt=1)
     discrimination: list[Discrimination]
+    subsets: list[Subset] = Field(default_factory=list)
     length_reference: str
     reply_health: ReplyHealth = Field(default_factory=ReplyHealth)
     cross_cells: list[CellId]
@@ -303,6 +327,15 @@ class ReportConfig(_Record):
             if not name.startswith("tab_"):
                 raise ValueError(f"cross table {name!r}: a table name starts with tab_")
         return self
+
+    def labels_for(self, cell) -> set[str]:
+        """The labels whose analysis runs in this cell, so its prompts table gets a column
+        for each; every other label stays unseen (docs/ANALYSIS_PLAN.md section 12,
+        2026-10-10). A drawn_only label and a subset count only where the cell drew by them."""
+        drawn = drawn_groups(cell)
+        out = {lab for spec in self.discrimination for lab in spec.labels
+               if lab not in spec.drawn_only or lab in drawn}
+        return out | {s.label for s in self.subsets if s.group in drawn.get(s.label, set())}
 
 
 def load_report_config(path: Path) -> ReportConfig:

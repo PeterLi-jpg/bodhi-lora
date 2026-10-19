@@ -1,0 +1,46 @@
+{
+  "schema": 3,
+  "stage": "eval",
+  "cell": "healthbench__mistral-small-24b__ask-first",
+  "seed": 42,
+  "created_utc": "2026-10-19T11:59:48.130052+00:00",
+  "git": {
+    "sha": "dc4ccac80eb252bf1f0e8793d20b5e64e7347874",
+    "dirty": false,
+    "diff_sha256": null,
+    "n_untracked": 7
+  },
+  "packages": {
+    "python": "3.12.11",
+    "torch": "2.8.0",
+    "transformers": "4.56.2",
+    "vllm": "0.10.2",
+    "peft": null,
+    "trl": null,
+    "accelerate": null,
+    "bitsandbytes": "0.47.0",
+    "datasets": "5.0.0",
+    "bodhi-llm": "0.1.4",
+    "huggingface-hub": "0.36.2",
+    "numpy": "2.2.6"
+  },
+  "host_sha256": "066a5c167485bc309082b4528ce9bdd70a2f71f0fb76e809ca20c735587ba308",
+  "hardware": {
+    "visible_devices": null,
+    "gpus": [
+      {
+        "index": "0",
+        "name": "NVIDIA A100-SXM4-80GB",
+        "memory": "81920 MiB"
+      }
+    ]
+  },
+  "status": "complete",
+  "parts": {
+    "base+ask-first.manifest.json": "a7d2cc9cee407054516f8d1738b565db4768aaa5522280dfd5372ef6294b37e5",
+    "base+bodhi.manifest.json": "ac6937619a85b8655e2a5eefa0cbabf36504b72236e96aab935db6dd3fb6d06a",
+    "base.manifest.json": "abaffc346f285ccbe81f2dc3cf6d94af3c3a0273bde07906bc632189c9978833",
+    "lora+ask-first.manifest.json": "77985f4e29ed28c4e8219e5555ea5752cd22bdf4e76334edb07b78e88f690f32",
+    "lora.manifest.json": "b59780980712736e73f1d060b76661b8c395740a6e1e80296afee06c61059cdb"
+  }
+}

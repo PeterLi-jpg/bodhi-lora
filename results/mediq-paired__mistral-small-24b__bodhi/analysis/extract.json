@@ -1,0 +1,61 @@
+{
+  "cell": "mediq-paired__mistral-small-24b__bodhi",
+  "leak_rules": {
+    "leak_bodhi__analysis-format": "89c61bf07cdee9f21b7f46db39f0c3cce0f53bc748cd183600ce216748edcb84",
+    "leak_mediq-abstain__rating-format": "26dea0b6093eedc1aa19ef02389f023bc126e06efbd509bea542592cd7fbfa51"
+  },
+  "prompts": {
+    "benchmark": "mediq-paired",
+    "draw_check": {
+      "101": {
+        "drawn": 400,
+        "evaluated": 400,
+        "evaluated_not_drawn": 0
+      },
+      "13": {
+        "drawn": 400,
+        "evaluated": 400,
+        "evaluated_not_drawn": 0
+      },
+      "42": {
+        "drawn": 400,
+        "evaluated": 400,
+        "evaluated_not_drawn": 0
+      },
+      "7": {
+        "drawn": 400,
+        "evaluated": 400,
+        "evaluated_not_drawn": 0
+      },
+      "99": {
+        "drawn": 400,
+        "evaluated": 400,
+        "evaluated_not_drawn": 0
+      }
+    },
+    "labels": {
+      "incomplete": {
+        "definition_sha256": "6603a30f10331214d168fc5146d6a2d624a937bcf4ae72dcb6b803f9d08a92aa",
+        "in_prompts_table": true,
+        "population": {
+          "negative": 1258,
+          "positive": 1258,
+          "unlabelled": 0
+        },
+        "source": "MediQ case construction",
+        "timing": "pre_specified"
+      }
+    },
+    "n_population": 2516,
+    "rows": "loaded",
+    "split": "default"
+  },
+  "seeds": [
+    42,
+    7,
+    13,
+    99,
+    101
+  ],
+  "tokenizer": "mistralai/Mistral-Small-24B-Instruct-2501@9527884be6e5616bdd54de542f9ae13384489724"
+}

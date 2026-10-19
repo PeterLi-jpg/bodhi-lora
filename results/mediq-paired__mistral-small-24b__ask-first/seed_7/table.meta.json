@@ -1,0 +1,56 @@
+{
+  "cell": "mediq-paired__mistral-small-24b__ask-first",
+  "completions": {
+    "base": 400,
+    "base+ask-first": 400,
+    "lora": 400,
+    "lora+ask-first": 400
+  },
+  "grade": {
+    "counts": {
+      "base": {
+        "examples": 400,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "base+ask-first": {
+        "examples": 400,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "lora": {
+        "examples": 400,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "lora+ask-first": {
+        "examples": 400,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      }
+    },
+    "file": "results/mediq-paired__mistral-small-24b__ask-first/seed_7/grade/epistemic__llama-3.1-8b.json",
+    "present": true
+  },
+  "n_examples": {
+    "base": 400,
+    "base+ask-first": 400,
+    "lora": 400,
+    "lora+ask-first": 400
+  },
+  "score_metric": {
+    "base": "normalized_score",
+    "base+ask-first": "normalized_score",
+    "lora": "normalized_score",
+    "lora+ask-first": "normalized_score"
+  },
+  "seed": 7,
+  "sources": {
+    "results/mediq-paired__mistral-small-24b__ask-first/seed_7/eval/base+ask-first.json": "e8424f663d9342e2d2a72950623a5c7411206fa598311db5bb445b183329de01",
+    "results/mediq-paired__mistral-small-24b__ask-first/seed_7/eval/base.json": "8126bce73c00af3527d95b8fd244ef96165400896c62f50d9929d7dafe8b6fea",
+    "results/mediq-paired__mistral-small-24b__ask-first/seed_7/eval/lora+ask-first.json": "a1c25a3e028f16deb9424748f678ce93b281ad51918976f2c001f0c48d917b1f",
+    "results/mediq-paired__mistral-small-24b__ask-first/seed_7/eval/lora.json": "b90ee64f5cf93b1c0a583431a2140e99502f1e488f3e78e2d3f04d7592832441",
+    "results/mediq-paired__mistral-small-24b__ask-first/seed_7/grade/epistemic__llama-3.1-8b.json": "f8fd709c6f7c08ea38c4ae34171521d4072acf59019fbbe471710189c0876794"
+  },
+  "tokenizer": "mistralai/Mistral-Small-24B-Instruct-2501@9527884be6e5616bdd54de542f9ae13384489724"
+}

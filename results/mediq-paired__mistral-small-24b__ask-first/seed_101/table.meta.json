@@ -1,0 +1,56 @@
+{
+  "cell": "mediq-paired__mistral-small-24b__ask-first",
+  "completions": {
+    "base": 400,
+    "base+ask-first": 400,
+    "lora": 400,
+    "lora+ask-first": 400
+  },
+  "grade": {
+    "counts": {
+      "base": {
+        "examples": 400,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "base+ask-first": {
+        "examples": 400,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "lora": {
+        "examples": 400,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "lora+ask-first": {
+        "examples": 400,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      }
+    },
+    "file": "results/mediq-paired__mistral-small-24b__ask-first/seed_101/grade/epistemic__llama-3.1-8b.json",
+    "present": true
+  },
+  "n_examples": {
+    "base": 400,
+    "base+ask-first": 400,
+    "lora": 400,
+    "lora+ask-first": 400
+  },
+  "score_metric": {
+    "base": "normalized_score",
+    "base+ask-first": "normalized_score",
+    "lora": "normalized_score",
+    "lora+ask-first": "normalized_score"
+  },
+  "seed": 101,
+  "sources": {
+    "results/mediq-paired__mistral-small-24b__ask-first/seed_101/eval/base+ask-first.json": "2a04edbe9cd7b3d3f4d07c5ce66fdefc054f8e30f3e75014f8e58c85f1bd0c5d",
+    "results/mediq-paired__mistral-small-24b__ask-first/seed_101/eval/base.json": "574199e18ac096f38d83a9cc6c2a4ac4188b3620fda26999e51f8746a2f0d7a8",
+    "results/mediq-paired__mistral-small-24b__ask-first/seed_101/eval/lora+ask-first.json": "2f2dc90bc9e41a3b509de61babf9bc15f2bcd6681dd83bec4b05cbe2dab61c55",
+    "results/mediq-paired__mistral-small-24b__ask-first/seed_101/eval/lora.json": "6c1d461f51d3b338657e537d67c977ae78218212727273d2e4a60f271d55b85e",
+    "results/mediq-paired__mistral-small-24b__ask-first/seed_101/grade/epistemic__llama-3.1-8b.json": "dbe205dbc4dbaed2aa2fa6f014fdc72ff68d60a7168211078882b6b8fc9bf410"
+  },
+  "tokenizer": "mistralai/Mistral-Small-24B-Instruct-2501@9527884be6e5616bdd54de542f9ae13384489724"
+}

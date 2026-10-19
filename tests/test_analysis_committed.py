@@ -57,7 +57,7 @@ def test_prompts_tables_hold_only_the_listed_labels(cell_id):
     labels among them) unseen until the analysis that reads them may run, so no tracked
     prompts.csv carries them next to the outcome tables (docs/ANALYSIS_PLAN.md section 12,
     2026-10-10)."""
-    listed = {lab for spec in CFG.discrimination for lab in spec.labels}
+    listed = CFG.labels_for(REG.cells[cell_id])
     header = (PROJ.cell(cell_id).analysis() / "prompts.csv").read_text().split("\n", 1)[0].split(",")
     extra = sorted(c for c in header if c.startswith("label_") and c.removeprefix("label_") not in listed)
     assert not extra, f"{cell_id}: prompts.csv has unlisted label columns {extra}"

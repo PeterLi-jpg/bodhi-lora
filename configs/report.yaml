@@ -43,26 +43,40 @@ reply_health: {loop_min_chars: 400, loop_max_zlib_ratio: 0.15}
 # benchmark records stayed out until the first author adopted the analysis plan on
 # 2026-10-11 (docs/ANALYSIS_PLAN.md section 12; convention 3). That adoption let
 # `needs-info-physician` in: it is E02, the secondary test of H3 (ANALYSIS_PLAN.md section
-# 5.2), read with the F6 family below. The other physician labels wait for the runs whose
-# analyses read them (H7 and H11 on the labelled cells).
+# 5.2), read with the F6 family below. The other two came in on 2026-10-19, once the first
+# labelled cell had run (ANALYSIS_PLAN.md section 12): `emergent-physician` below for H7
+# (section 7.2) and `clinician-user` in `subsets` for H11 (section 9.3).
 # The two theme labels read the theme tag only (configs/benchmarks/healthbench.yaml says
 # why no other structured field can stand in), and both are post hoc (decision D9).
 # `incomplete` is the label of the MediQ paired probe (configs/benchmarks/mediq-paired.yaml):
 # it comes from how each pair was built, and its rule pairs the rows, so a cell on that
-# benchmark also gets the paired statistics of ANALYSIS_PLAN.md section 5.1 (H3). No cell
-# with that benchmark has run.
+# benchmark also gets the paired statistics of ANALYSIS_PLAN.md section 5.1 (H3).
 #   active_inquiry: does the reply ask more on prompts that HealthBench physicians labelled
 #     as lacking context, on prompts of the context_seeking theme, or on the incomplete row
 #     of a pair than on the complete one.
 #   red_flag_rate: the evaluator's red-flag rate (share of replies with red-flag score 2)
 #     on prompts of the emergency_referrals theme and on the others. The rate on the
-#     others counts warranted flags too, so it is not an over-flagging rate; the test of
-#     over-flagging is H7 on the physician labels (ANALYSIS_PLAN.md section 7.2).
+#     others counts warranted flags too, so it is not an over-flagging rate. The test of
+#     over-flagging is H7 on the physician labels: on `emergent-physician`, LoRA - Base on
+#     the rate among the negative (non-emergent) prompts is its primary outcome, and the
+#     same on the positive prompts and the index are its secondary ones (section 7.2).
 discrimination:
   - response: active_inquiry
     labels: [needs-info-physician, needs-info-theme, incomplete]
   - response: red_flag_rate
-    labels: [emergency-theme]
+    labels: [emergency-theme, emergent-physician]
+    drawn_only: [emergent-physician]
+
+# Every contrast of a cell again on one group of a label's prompts (analysis/cell.py,
+# subsets_section). H11 (ANALYSIS_PLAN.md section 9.3): H1's rule, and H2's contrast as a
+# secondary test, on the clinician-user positive prompts of the labelled cells. H7's
+# secondary outcomes (section 7.2): the rubric score and the harm proxy (neg_any,
+# neg_points_lost) on the emergent-physician negative (non-emergent) prompts. Both this
+# and `emergent-physician` above count only in a cell whose eval ids were drawn by the label
+# (eval.ids.only), the cells the plan names; in every other cell the label stays unseen.
+subsets:
+  - {label: clinician-user, group: positive}
+  - {label: emergent-physician, group: negative}
 
 # Response-length quartile edges come from this condition's scored replies.
 length_reference: base
@@ -290,6 +304,7 @@ display:
     needs-info-physician: 'physicians: context missing'
     needs-info-theme: 'context-seeking theme'
     emergency-theme: 'emergency-referral theme'
+    emergent-physician: 'physicians: emergent'
   benchmarks:
     HealthBench-Hard: HB-Hard
     MedQA with the asking preamble: MedQA

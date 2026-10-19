@@ -1,0 +1,106 @@
+{
+  "cell": "healthbench__mistral-small-24b__bodhi",
+  "leak_rules": {
+    "leak_bodhi__analysis-format": "89c61bf07cdee9f21b7f46db39f0c3cce0f53bc748cd183600ce216748edcb84",
+    "leak_mediq-abstain__rating-format": "26dea0b6093eedc1aa19ef02389f023bc126e06efbd509bea542592cd7fbfa51",
+    "leak_red-flags-first__analysis-format": "89c61bf07cdee9f21b7f46db39f0c3cce0f53bc748cd183600ce216748edcb84"
+  },
+  "prompts": {
+    "benchmark": "healthbench",
+    "draw_check": {
+      "101": {
+        "drawn": 200,
+        "evaluated": 200,
+        "evaluated_not_drawn": 0
+      },
+      "13": {
+        "drawn": 200,
+        "evaluated": 200,
+        "evaluated_not_drawn": 0
+      },
+      "42": {
+        "drawn": 200,
+        "evaluated": 200,
+        "evaluated_not_drawn": 0
+      },
+      "7": {
+        "drawn": 200,
+        "evaluated": 200,
+        "evaluated_not_drawn": 0
+      },
+      "99": {
+        "drawn": 200,
+        "evaluated": 200,
+        "evaluated_not_drawn": 0
+      }
+    },
+    "labels": {
+      "clinician-user": {
+        "definition_sha256": "8b602729aeec5c6429fba959fe7006fba0f8d800b405eece183de0d37a7afb99",
+        "in_prompts_table": false,
+        "population": {
+          "negative": 23,
+          "positive": 40,
+          "unlabelled": 937
+        },
+        "source": "HealthBench physician-agreed categories",
+        "timing": "pre_specified"
+      },
+      "emergency-theme": {
+        "definition_sha256": "d1ed849efdb041186cfa1f80f6883ab8677b223bfd048e04dc8613277e7d50f4",
+        "in_prompts_table": true,
+        "population": {
+          "negative": 934,
+          "positive": 66,
+          "unlabelled": 0
+        },
+        "source": "HealthBench theme tags",
+        "timing": "post_hoc"
+      },
+      "emergent-physician": {
+        "definition_sha256": "a4410875befb21fc5a6471bba5fdc7c6bb89b6ba0390723af33b6a0d41ba096e",
+        "in_prompts_table": false,
+        "population": {
+          "negative": 8,
+          "positive": 48,
+          "unlabelled": 944
+        },
+        "source": "HealthBench physician-agreed categories",
+        "timing": "pre_specified"
+      },
+      "needs-info-physician": {
+        "definition_sha256": "c06012df6b3bd85432e100ae23d9e5c12c08897bda51216dcbcba12524bc1167",
+        "in_prompts_table": true,
+        "population": {
+          "negative": 113,
+          "positive": 204,
+          "unlabelled": 683
+        },
+        "source": "HealthBench physician-agreed categories",
+        "timing": "pre_specified"
+      },
+      "needs-info-theme": {
+        "definition_sha256": "bf7d1528a06041ef1f681deaa35ac4db82b9e8d889e0789fb6b34b7fb0046ee2",
+        "in_prompts_table": true,
+        "population": {
+          "negative": 821,
+          "positive": 179,
+          "unlabelled": 0
+        },
+        "source": "HealthBench theme tags",
+        "timing": "post_hoc"
+      }
+    },
+    "n_population": 1000,
+    "rows": "loaded",
+    "split": "default"
+  },
+  "seeds": [
+    42,
+    7,
+    13,
+    99,
+    101
+  ],
+  "tokenizer": "mistralai/Mistral-Small-24B-Instruct-2501@9527884be6e5616bdd54de542f9ae13384489724"
+}

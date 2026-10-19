@@ -1,0 +1,102 @@
+{
+  "cell": "healthbench__mistral-small-24b__bodhi",
+  "completions": {
+    "base": 200,
+    "base+bodhi": 200,
+    "base+clarify": 200,
+    "base+mediq-abstain": 200,
+    "base+red-flags-first": 200,
+    "base+verbalized-confidence": 200,
+    "lora": 200,
+    "lora+bodhi": 200,
+    "lora+red-flags-first": 200
+  },
+  "grade": {
+    "counts": {
+      "base": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "base+bodhi": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "base+clarify": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "base+mediq-abstain": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "base+red-flags-first": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "base+verbalized-confidence": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "lora": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "lora+bodhi": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "lora+red-flags-first": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      }
+    },
+    "file": "results/healthbench__mistral-small-24b__bodhi/seed_13/grade/epistemic__llama-3.1-8b.json",
+    "present": true
+  },
+  "n_examples": {
+    "base": 200,
+    "base+bodhi": 200,
+    "base+clarify": 200,
+    "base+mediq-abstain": 200,
+    "base+red-flags-first": 200,
+    "base+verbalized-confidence": 200,
+    "lora": 200,
+    "lora+bodhi": 200,
+    "lora+red-flags-first": 200
+  },
+  "score_metric": {
+    "base": "normalized_score",
+    "base+bodhi": "normalized_score",
+    "base+clarify": "normalized_score",
+    "base+mediq-abstain": "normalized_score",
+    "base+red-flags-first": "normalized_score",
+    "base+verbalized-confidence": "normalized_score",
+    "lora": "normalized_score",
+    "lora+bodhi": "normalized_score",
+    "lora+red-flags-first": "normalized_score"
+  },
+  "seed": 13,
+  "sources": {
+    "results/healthbench__mistral-small-24b__bodhi/seed_13/eval/base+bodhi.json": "8f734f65ce69c307b3de5ba8ae22ceaeebc33fc97012c3b1b1bfe0d9cc180d50",
+    "results/healthbench__mistral-small-24b__bodhi/seed_13/eval/base+clarify.json": "2902b009ac630ba46bdb93b516e49a76ab0a8cb1a5d1759a864cf5b341ffa934",
+    "results/healthbench__mistral-small-24b__bodhi/seed_13/eval/base+mediq-abstain.json": "6e875bf47c9b546f4eb4a13a241156bcf1e8cf748461e3a6b320b9045962e142",
+    "results/healthbench__mistral-small-24b__bodhi/seed_13/eval/base+red-flags-first.json": "c63593a23b2a8919deddb41f41c2e16b4592b510fe014595d2cd29fe9a4c17a5",
+    "results/healthbench__mistral-small-24b__bodhi/seed_13/eval/base+verbalized-confidence.json": "e81bc4672667bfc4ce6857be6ad8535357258e4dfaa03b26cdcdc17927536dbe",
+    "results/healthbench__mistral-small-24b__bodhi/seed_13/eval/base.json": "5be5f35838396406c87f78d9e5146957e2833d309ab0c1a30dc771cf8f14205c",
+    "results/healthbench__mistral-small-24b__bodhi/seed_13/eval/lora+bodhi.json": "3bff6a4f60a4869b076304ba20113f811b6e8885d32771e7948869eb070788bb",
+    "results/healthbench__mistral-small-24b__bodhi/seed_13/eval/lora+red-flags-first.json": "0b0e433e5ecd1fe8924459907a89ad43e93699257925ac717722d763aa989111",
+    "results/healthbench__mistral-small-24b__bodhi/seed_13/eval/lora.json": "dbbf13a5ee9fca32950b34837be00eed97df2091a63a39dd73bfc389dd7de4e4",
+    "results/healthbench__mistral-small-24b__bodhi/seed_13/grade/epistemic__llama-3.1-8b.json": "1dbe8f29271853a1a47d13b810b17795d4015c56382271dfbd9ce82f30523d66",
+    "results/healthbench__mistral-small-24b__bodhi/seed_13/grade/judge__medgemma-27b-text.json": "90269c9708c6fff6b4bfe6e18876b9cc5bdaaf109439651c54667a6a28b2a9da"
+  },
+  "tokenizer": "mistralai/Mistral-Small-24B-Instruct-2501@9527884be6e5616bdd54de542f9ae13384489724"
+}

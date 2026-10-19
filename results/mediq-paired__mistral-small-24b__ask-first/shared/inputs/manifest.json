@@ -1,0 +1,110 @@
+{
+  "schema": 3,
+  "stage": "inputs",
+  "cell": "mediq-paired__mistral-small-24b__ask-first",
+  "seed": null,
+  "created_utc": "2026-10-19T11:59:56.129350+00:00",
+  "git": {
+    "sha": "dc4ccac80eb252bf1f0e8793d20b5e64e7347874",
+    "dirty": false,
+    "diff_sha256": null,
+    "n_untracked": 7
+  },
+  "packages": {
+    "python": "3.12.11",
+    "torch": "2.7.0",
+    "transformers": "4.57.6",
+    "vllm": "0.9.2",
+    "peft": "0.19.1",
+    "trl": "0.11.4",
+    "accelerate": "1.13.0",
+    "bitsandbytes": "0.47.0",
+    "datasets": "3.6.0",
+    "bodhi-llm": "0.1.4",
+    "huggingface-hub": "0.36.2",
+    "numpy": "2.2.6"
+  },
+  "host_sha256": "066a5c167485bc309082b4528ce9bdd70a2f71f0fb76e809ca20c735587ba308",
+  "hardware": {
+    "visible_devices": null,
+    "gpus": [
+      {
+        "index": "0",
+        "name": "NVIDIA A100-SXM4-80GB",
+        "memory": "81920 MiB"
+      }
+    ]
+  },
+  "config": {
+    "benchmark": "mediq-paired",
+    "split": "default",
+    "eval_ids": {
+      "policy": "per_seed_draw",
+      "n": 200,
+      "unit": "pair",
+      "only": [],
+      "file": null
+    }
+  },
+  "config_sha256": "52d985f73bfe2104fb962475545ab2f1dabb4da1635a3bc1de42bc833789b784",
+  "outputs": [
+    {
+      "path": "/data/bohdi/results/mediq-paired__mistral-small-24b__ask-first/shared/inputs/pools.json",
+      "bytes": 90938,
+      "sha256": "a09201cdb555bafe89709d0ea1de70adf1c41525ef521b6a472ad0c6164c2f46"
+    },
+    {
+      "path": "/data/bohdi/results/mediq-paired__mistral-small-24b__ask-first/shared/inputs/eval_ids_seed_42.json",
+      "bytes": 14498,
+      "sha256": "aa4002c5c4a90bf8ea3ace6153cf1a7f325b44fa53721b93780937ddeeb52f35"
+    },
+    {
+      "path": "/data/bohdi/results/mediq-paired__mistral-small-24b__ask-first/shared/inputs/eval_ids_seed_7.json",
+      "bytes": 14497,
+      "sha256": "7b77458b56e0a2a4628ca041657403b36899a051b282580ff775cb84f3c19e1d"
+    },
+    {
+      "path": "/data/bohdi/results/mediq-paired__mistral-small-24b__ask-first/shared/inputs/eval_ids_seed_13.json",
+      "bytes": 14498,
+      "sha256": "eb49061e587d7fd07ac6c3de3bf1892841f1ea8448f33df221d7c1e37297f9f2"
+    },
+    {
+      "path": "/data/bohdi/results/mediq-paired__mistral-small-24b__ask-first/shared/inputs/eval_ids_seed_99.json",
+      "bytes": 14498,
+      "sha256": "28d960422f98bd8dec5776bdf4b277f7f016d148e4795a3f3c372029e4859202"
+    },
+    {
+      "path": "/data/bohdi/results/mediq-paired__mistral-small-24b__ask-first/shared/inputs/eval_ids_seed_101.json",
+      "bytes": 14499,
+      "sha256": "8fbdc3b79deef5dbc8a3076c147e010e6b1b5c68c0a888dd2e43d619377bce0b"
+    }
+  ],
+  "counts": {
+    "n_rows": 2516,
+    "n_train_pool": 0,
+    "n_eval_pool": 2516,
+    "n_probe_pool": 0,
+    "n_train_text_twins": 0,
+    "n_eval_ids": {
+      "42": 400,
+      "7": 400,
+      "13": 400,
+      "99": 400,
+      "101": 400
+    }
+  },
+  "status": "complete",
+  "source": {
+    "kind": "url",
+    "files": {
+      "dev": {
+        "url": "https://raw.githubusercontent.com/stellalisy/mediQ/63acb4ccbbc082a3a7895b79d27f51204f6f9aa7/data/all_dev_good.jsonl",
+        "sha256": "3bfc7090d060dd8d11e4237344ed78846707faab433a84d078191627ad3c9526",
+        "unpinned_reason": null
+      }
+    }
+  },
+  "source_read": {
+    "dev": "3bfc7090d060dd8d11e4237344ed78846707faab433a84d078191627ad3c9526"
+  }
+}

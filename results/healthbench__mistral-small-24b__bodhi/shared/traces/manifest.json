@@ -1,0 +1,137 @@
+{
+  "schema": 2,
+  "stage": "traces",
+  "cell": "healthbench__mistral-small-24b__bodhi",
+  "seed": null,
+  "created_utc": "2026-10-11T23:38:32.298635+00:00",
+  "git": {
+    "sha": "854761fffe22144d96121aee80d581a67a89b654",
+    "dirty": false,
+    "diff_sha256": null,
+    "n_untracked": 11
+  },
+  "packages": {
+    "python": "3.12.3",
+    "torch": "2.8.0",
+    "transformers": "4.56.2",
+    "vllm": "0.10.2",
+    "peft": null,
+    "trl": null,
+    "accelerate": null,
+    "bitsandbytes": "0.47.0",
+    "datasets": "5.0.0",
+    "bodhi-llm": "0.1.4",
+    "huggingface-hub": "0.36.2",
+    "numpy": "2.2.6"
+  },
+  "host_sha256": "e57f9913e18993f3b7eea3afa676d9d0ae3c5a04f647be54a2f28299b57e4149",
+  "hardware": {
+    "visible_devices": "3",
+    "gpus": [
+      {
+        "index": "3",
+        "name": "NVIDIA H100 80GB HBM3",
+        "memory": "81559 MiB"
+      }
+    ]
+  },
+  "time": {
+    "started_utc": "2026-10-11T22:58:38.022221+00:00",
+    "finished_utc": "2026-10-11T23:38:32.440885+00:00",
+    "seconds": 2394.419
+  },
+  "config": {
+    "traces": {
+      "max_prompts": 4200,
+      "decoding": "greedy",
+      "temperature": 0.0,
+      "top_p": 1.0,
+      "seed": 0,
+      "max_new_tokens_per_pass": 2048,
+      "serving": {
+        "max_model_len": 8192,
+        "max_num_seqs": 64,
+        "concurrency": 32,
+        "request_timeout_s": 180,
+        "drain_s": 0.0
+      }
+    },
+    "protocol": {
+      "id": "bodhi",
+      "title": "BODHI two-pass analysis, then reply",
+      "kind": "wrapper",
+      "impl": "bodhi_llm",
+      "package": "bodhi-llm==0.1.4",
+      "passes": 2,
+      "instructions": null,
+      "params": {
+        "ablate": "none"
+      },
+      "leak_rules": {
+        "analysis-format": {
+          "description": "two or more of the seven pass-1 section headers of bodhi-llm 0.1.4 (the posted nine-marker rule also counted DIFFERENTIAL and SCOPE OF/BOUNDAR, free words, and is withdrawn in rebuttal/withdrawals.md W25)",
+          "markers": [
+            "TASK TYPE",
+            "KEY UNCERTAINT",
+            "SAFE RECOMMENDATION",
+            "RED FLAGS?\\s*:",
+            "WHAT I THINK",
+            "QUESTIONS TO ASK",
+            "AUDIENCE\\s*:"
+          ],
+          "threshold": 2
+        }
+      },
+      "reference": "BODHI (bodhi-llm 0.1.4, https://github.com/sebasmos/bodhi-llms): pass 1 writes an analysis, pass 2 writes the reply from it"
+    }
+  },
+  "config_sha256": "80a67c64c00e67984ecc9190deca8c3f69fee2820e4defb12c53d193f858f83b",
+  "models": {
+    "teacher": {
+      "id": "mistral-small-24b",
+      "repo_id": "mistralai/Mistral-Small-24B-Instruct-2501",
+      "family": "mistral",
+      "revision": "9527884be6e5616bdd54de542f9ae13384489724",
+      "revision_source": "record",
+      "unpinned_reason": null
+    }
+  },
+  "engines": {
+    "teacher": {
+      "model": "mistralai/Mistral-Small-24B-Instruct-2501",
+      "revision": "9527884be6e5616bdd54de542f9ae13384489724",
+      "max_model_len": 8192,
+      "max_num_seqs": 64,
+      "tensor_parallel_size": 1,
+      "dtype": "bfloat16",
+      "quantization": null,
+      "enforce_eager": true,
+      "request_timeout_s": 180,
+      "lora_path": null
+    }
+  },
+  "outputs": [
+    {
+      "path": "/data/PROJECTS/bohdi/results/healthbench__mistral-small-24b__bodhi/shared/traces/traces.jsonl",
+      "bytes": 19679264,
+      "sha256": "e25c8b55372672e93b069433daa7e3a05945c3aacdb7e89a4e465e3fe69c2675",
+      "n_lines": 3321
+    }
+  ],
+  "counts": {
+    "n_pool_cap": 3321,
+    "n_resumed": 0,
+    "n_ok": 3321,
+    "n_failed": 0,
+    "n_too_long": 0,
+    "n_unreadable_lines": 0,
+    "tokens": {
+      "calls": 6642,
+      "prompt_tokens": 4885960,
+      "completion_tokens": 3100758,
+      "finish_length": 24
+    }
+  },
+  "status": "complete",
+  "too_long_ids": []
+}
