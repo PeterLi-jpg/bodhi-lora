@@ -1630,6 +1630,7 @@
     }
    },
    "family": true,
+   "reference": null,
    "rule": "physician_index",
    "subset": null,
    "token": "HThreeIndex"
@@ -1675,6 +1676,7 @@
     }
    },
    "family": false,
+   "reference": null,
    "rule": "asking",
    "subset": null,
    "token": "HOne"
@@ -1720,6 +1722,7 @@
     }
    },
    "family": false,
+   "reference": null,
    "rule": "asking",
    "subset": "clinician-user=positive",
    "token": "HEleven"
@@ -1758,6 +1761,7 @@
     }
    },
    "family": true,
+   "reference": null,
    "rule": "cost",
    "subset": null,
    "token": "HTwo"
@@ -1848,6 +1852,7 @@
     }
    },
    "family": true,
+   "reference": null,
    "rule": "paired_probe",
    "subset": null,
    "token": "HThree"
@@ -1978,6 +1983,7 @@
     }
    },
    "family": false,
+   "reference": null,
    "rule": "baselines",
    "subset": null,
    "token": "HFour"
@@ -2023,6 +2029,7 @@
     }
    },
    "family": false,
+   "reference": null,
    "rule": "asking",
    "subset": null,
    "token": "HFive"
@@ -2056,6 +2063,7 @@
     }
    },
    "family": true,
+   "reference": null,
    "rule": "red_flags_first",
    "subset": null,
    "token": "HSix"
@@ -2111,6 +2119,7 @@
     }
    },
    "family": true,
+   "reference": null,
    "rule": "over_flagging",
    "subset": null,
    "token": "HSeven"

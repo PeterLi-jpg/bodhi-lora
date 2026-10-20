@@ -215,7 +215,7 @@ def analyze_cross(reg: Registry, project: Project, cfg: ReportConfig) -> dict:
     # The cells of the pre-registered questions sit next to the cross cells (the plan's
     # choice 3), so they are read here but join no group.
     hyp_stats = dict(all_stats)
-    for cid in sorted({c for h in cfg.hypotheses for c in h.cells} - set(all_stats)):
+    for cid in sorted({c for h in cfg.hypotheses for c in [*h.cells, h.reference] if c} - set(all_stats)):
         p = project.cell(cid).analysis() / "stats.json"
         if p.is_file():
             hyp_stats[cid] = json.loads(p.read_text())

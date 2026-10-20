@@ -17,7 +17,8 @@ from bodhi_lora.report.latex import MISSING, escape, fmt, fmt_ci, fmt_p, tabular
 OUTCOME_KIND = {"active_inquiry": "rate", "context_seeking": "score02", "rubric_score": "score",
                 "did": "rate", "complete_rate": "rate", "index": "rate", "red_flag": "score02",
                 "precondition": "score02", "non_emergent_rate": "rate", "emergent_rate": "rate",
-                "non_emergent_rubric_score": "score", "non_emergent_neg_any": "rate"}
+                "non_emergent_rubric_score": "score", "non_emergent_neg_any": "rate",
+                "precondition_full": "score02"}
 # Printed names of the outcomes in the table.
 OUTCOME_NAME = {"active_inquiry": "Active inquiry (pp)", "context_seeking": "Context-seeking (0--2)",
                 "rubric_score": "Aggregate score (0--1)", "did": "Ask gap, incomplete $-$ complete (pp)",
@@ -25,12 +26,14 @@ OUTCOME_NAME = {"active_inquiry": "Active inquiry (pp)", "context_seeking": "Con
                 "index": "Asking index, physician labels (pp)",
                 "red_flag": "Red flags (0--2), red flags first $-$ \\bodhi{}",
                 "precondition": "Red flags (0--2), LoRA+\\bodhi{} $-$ LoRA",
-                "non_emergent_rate": "Red-flag rate, non-emergent (pp)"}
+                "non_emergent_rate": "Red-flag rate, non-emergent (pp)",
+                "precondition_full": "Red flags (0--2), LoRA+\\bodhi{} $-$ LoRA, full context"}
 # The outcomes the table prints for each rule, in order; the others get macros only.
 TABLE_OUTCOMES = {"asking": ("active_inquiry", "context_seeking"), "cost": ("rubric_score",),
                   "paired_probe": ("did", "complete_rate"), "physician_index": ("index",),
                   "baselines": ("active_inquiry", "context_seeking"), "red_flags_first": ("precondition", "red_flag"),
-                  "over_flagging": ("non_emergent_rate",)}
+                  "over_flagging": ("non_emergent_rate",),
+                  "context_pair": ("precondition", "precondition_full", "red_flag")}
 
 
 def _outcome_macros(rep, name: str, key: str, o: dict, where: str) -> None:

@@ -8,7 +8,7 @@ import pytest
 pytest.importorskip("statsmodels")
 
 from bodhi_lora.analysis import report_config  # noqa: E402
-from bodhi_lora.analysis.hypotheses import asking, baselines, hypotheses_summary  # noqa: E402
+from bodhi_lora.analysis.hypotheses import asking, baselines, context_pair, hypotheses_summary  # noqa: E402
 from bodhi_lora.paths import CONFIGS_DIR, project  # noqa: E402
 from bodhi_lora.registry import load_registry  # noqa: E402
 
@@ -82,7 +82,7 @@ def test_a_two_call_baseline_never_narrows_the_claim():
 
 def summary(rule: str, stats_by_cell: dict, **spec):
     h = SimpleNamespace(id="HX", token="HX", rule=rule, cells=list(stats_by_cell), subset=None,
-                        baselines=[], **spec)
+                        baselines=[], reference=None, **spec)
     cfg = SimpleNamespace(hypotheses=[h], alpha=ALPHA)
     reg = SimpleNamespace(cells={c: SimpleNamespace(protocol="bodhi") for c in stats_by_cell}, protocols={})
     return hypotheses_summary(stats_by_cell, cfg, reg)["HX"]["cells"]
@@ -148,7 +148,7 @@ def test_committed_decisions_are_what_the_rules_give():
     """cross_cell/stats.json holds the decisions of the committed cells' stats."""
     reg, cfg, proj = load_registry(CONFIGS_DIR), report_config(), project(CONFIGS_DIR)
     path = proj.results_root / "cross_cell" / "stats.json"
-    cells = {c for h in cfg.hypotheses for c in h.cells}
+    cells = {c for h in cfg.hypotheses for c in [*h.cells, h.reference] if c}
     if not path.is_file() or not all((proj.cell(c).analysis() / "stats.json").is_file() for c in cells):
         pytest.skip("the hypothesis cells are not in this checkout")
     all_stats = {c: json.loads((proj.cell(c).analysis() / "stats.json").read_text()) for c in cells}
@@ -156,3 +156,28 @@ def test_committed_decisions_are_what_the_rules_give():
     committed = json.loads(path.read_text())["hypotheses"]
     assert {h: {c: r.get("decision") for c, r in v["cells"].items()} for h, v in fresh.items()} == \
         {h: {c: r.get("decision") for c, r in v["cells"].items()} for h, v in committed.items()}
+
+
+def ctx_cell(drop, primary=None):
+    m = {"lora+bodhi - lora": {"red_flag": drop}}
+    if primary:
+        m["lora+red-flags-first - lora+bodhi"] = {"red_flag": primary}
+    return cell(m)
+
+
+@pytest.mark.parametrize("short, full, decision", [
+    (DOWN, FLAT, "context implicated"),
+    (DOWN, UP, "context implicated"),
+    (FLAT, DOWN, "context not implicated"),
+    (UP, FLAT, "context not implicated"),
+    (DOWN, DOWN, "not resolved"),
+])
+def test_the_4096_pair_follows_the_2026_10_19_entry(short, full, decision):
+    r = context_pair(ctx_cell(short, FLAT), ctx_cell(full), "bodhi")
+    assert r["decision"] == decision
+    assert r["outcomes"]["red_flag"]["diff"] == FLAT["diff"]
+
+
+def test_the_4096_pair_waits_for_its_reference_only_when_there_is_a_drop():
+    assert context_pair(ctx_cell(FLAT), None, "bodhi")["decision"] == "context not implicated"
+    assert context_pair(ctx_cell(DOWN), None, "bodhi")["decision"] is None

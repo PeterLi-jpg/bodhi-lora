@@ -37,7 +37,8 @@ def test_committed_cross_cell_stats_are_current(tmp_path):
         pytest.skip("the cross-cell statistics are not in this checkout")
     # analyze_cross writes under results_root/cross_cell; point it at a copy of what it reads:
     # the cross cells and the cells of the pre-registered questions.
-    for cid in [*CFG.cross_cells, *sorted({c for h in CFG.hypotheses for c in h.cells} - set(CFG.cross_cells))]:
+    named = {c for h in CFG.hypotheses for c in [*h.cells, h.reference] if c}
+    for cid in [*CFG.cross_cells, *sorted(named - set(CFG.cross_cells))]:
         if not (PROJ.cell(cid).analysis() / "stats.json").is_file():
             continue
         dst = tmp_path / cid / "analysis" / "stats.json"

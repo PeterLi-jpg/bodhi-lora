@@ -135,14 +135,17 @@ class Hypothesis(_Record):
     the cells are the question's correction family across cells (section 2.7), so Holm
     runs over them where the plan names a family. `subset` ("<label>=<group>") reads the
     contrasts of that subset of each cell (H11). `baselines` lists the prompt baselines
-    that the rule `baselines` compares the adapter with (H4, E12)."""
-    id: str = Field(pattern=r"^[A-Z][0-9]+$")
+    that the rule `baselines` compares the adapter with (H4, E12). `reference` names the
+    cell that the rule `context_pair` reads at the full context (the 2026-10-19 plan entry
+    on R7)."""
+    id: str = Field(pattern=r"^[A-Z][0-9]+[a-z]?$")
     token: MacroToken
     rule: Literal["asking", "cost", "paired_probe", "baselines", "red_flags_first", "over_flagging",
-                  "physician_index"]
+                  "physician_index", "context_pair"]
     cells: list[CellId] = Field(min_length=1)
     subset: Optional[str] = Field(default=None, pattern=r"^[a-z0-9-]+=(positive|negative)$")
     baselines: list[str] = Field(default_factory=list)
+    reference: Optional[CellId] = None
 
     @model_validator(mode="after")
     def _baselines(self) -> "Hypothesis":
@@ -150,6 +153,8 @@ class Hypothesis(_Record):
             check_condition(b)
         if (self.rule == "baselines") != bool(self.baselines):
             raise ValueError(f"hypothesis {self.id}: the rule baselines, and only it, lists baselines")
+        if (self.rule == "context_pair") != (self.reference is not None):
+            raise ValueError(f"hypothesis {self.id}: the rule context_pair, and only it, names a reference")
         return self
 
 

@@ -207,6 +207,33 @@ def physician_index(stats: dict) -> dict:
     return {"outcomes": {"index": _outcome(ctr.get("seed_test"))}}
 
 
+def context_pair(stats: dict, reference: Optional[dict], protocol: str) -> dict:
+    """The 4,096-token pair (ANALYSIS_PLAN.md section 12, the 2026-10-19 entry on R7). In the
+    short-context cell, section 7.1's precondition (`lora+<protocol>` minus `lora` on
+    red-flag identification) and primary test (`lora+red-flags-first` minus
+    `lora+<protocol>`) run with their own p; the cell joins no family. Context implicated:
+    the precondition's interval lies below 0 here and not in the reference cell at the full
+    context. Not implicated: its interval here includes 0 or lies above it. Not resolved: a
+    drop at both. With no reference stats there is no decision."""
+    short = _outcome(_contrast(stats, f"lora+{protocol} - lora").get("red_flag"))
+    primary = _outcome(_contrast(stats, f"lora+red-flags-first - lora+{protocol}").get("red_flag"))
+    full = _outcome(_contrast(reference, f"lora+{protocol} - lora").get("red_flag")) if reference else None
+    out = {"outcomes": {"precondition": short, "red_flag": primary, "precondition_full": full}}
+
+    def drop(o):
+        return o is not None and o["ci95"] is not None and o["ci95"][1] < 0
+
+    if short is None or short["ci95"] is None:
+        out["decision"] = None
+    elif not drop(short):
+        out["decision"] = "context not implicated"
+    elif full is None:
+        out["decision"] = None
+    else:
+        out["decision"] = "not resolved" if drop(full) else "context implicated"
+    return out
+
+
 def decide_up(res: dict, alpha: float, key: str, yes: str, no: str) -> None:
     o = res["outcomes"].get(key)
     res["decision"] = None if o is None else (yes if _up(o, alpha) else no)
@@ -248,6 +275,8 @@ def hypotheses_summary(all_stats: dict, cfg, reg) -> dict:
                 cells[cid] = over_flagging(stats)
             elif h.rule == "physician_index":
                 cells[cid] = physician_index(stats)
+            elif h.rule == "context_pair":
+                cells[cid] = context_pair(stats, all_stats.get(h.reference), reg.cells[cid].protocol)
         if h.rule in FAMILY:
             key, decide = FAMILY[h.rule]
             tested = [(cid, r["outcomes"][key]) for cid, r in cells.items()
@@ -259,5 +288,5 @@ def hypotheses_summary(all_stats: dict, cfg, reg) -> dict:
                 if "outcomes" in r:
                     decide(r, cfg.alpha)
         out[h.id] = {"token": h.token, "rule": h.rule, "subset": h.subset, "family": h.rule in FAMILY,
-                     "cells": cells}
+                     "reference": h.reference, "cells": cells}
     return out
