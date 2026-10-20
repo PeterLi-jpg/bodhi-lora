@@ -154,7 +154,7 @@
     "results/medqa-open-preamble__mistral-small-24b__bodhi__2026-07/analysis/stats.json": "0d6e4ee2681d2d3c77e3431c0fd9a2ad201aa403454baea9dd7fdcbd4c229976",
     "results/medquad__mistral-small-24b__bodhi__2026-07/analysis/stats.json": "531df7dc66a898f5b31d33b5fb38f1bc741d4e4e41e92228eb9cb898e8bd346b"
   },
-  "macros": 24489,
+  "macros": 24516,
   "not_reported": {},
   "tables": [
     "tab_axes_HBMedGemmaMay",
@@ -179,6 +179,7 @@
     "tab_cell_filter",
     "tab_conditions_HBMedGemmaMay",
     "tab_contrasts_HBMedGemmaMay",
+    "tab_cost",
     "tab_counts_HBMedGemmaMay",
     "tab_cross_cell",
     "tab_cross_cell_axes",

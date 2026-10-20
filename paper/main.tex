@@ -513,7 +513,7 @@ wrote, the \bodhi{} adapter lowers it too (\statHypHElevenHBMistralLabelledRubri
 The adapter also did not save time as we served it. On an otherwise idle GPU, the \bodhi{} adapter
 took a median of \statHBMistralBenchLoRAMedianS{}\,s per reply, against
 \statHBMistralBenchBaseBodhiMedianS{}\,s for the two-pass protocol (\statHBMistralBenchPrompts{}
-prompts). We served it unmerged on the 4-bit base, at \statHBMistralBenchLoRATokPerS{} output
+prompts; Table~\ref{tab:cost}). We served it unmerged on the 4-bit base, at \statHBMistralBenchLoRATokPerS{} output
 tokens per second against \statHBMistralBenchBaseTokPerS{} for Base, and we did not time merged
 weights.
 
@@ -1634,15 +1634,30 @@ model in the evaluator's family.}
 \input{generated/tab_judges}
 \end{table}
 
-\paragraph{Timing (E20).} On seed 42 and \statHBMistralBenchPrompts{} prompts, one reply at a time
-on an otherwise idle GPU, the median time per reply in the \bodhi{} cell is
-\statHBMistralBenchBaseMedianS\,s for Base, \statHBMistralBenchBaseBodhiMedianS\,s for Base+\bodhi{}
-and \statHBMistralBenchLoRAMedianS\,s for LoRA. In the ask-first cell it is
-\statHBMistralAskFirstBenchBaseMedianS\,s, \statHBMistralAskFirstBenchBaseAskFirstMedianS\,s and
-\statHBMistralAskFirstBenchLoRAMedianS\,s. Served this way, the adapter halves the output speed
-(\statHBMistralBenchLoRATokPerS{} against \statHBMistralBenchBaseTokPerS{} tokens per second), and the
-\bodhi{} adapter writes longer replies (\statHBMistralBenchLoRATokens{} against
-\statHBMistralBenchBaseTokens{} output tokens).
+\paragraph{Cost (E08, E20).} Table~\ref{tab:cost} gives what each training cell cost to make
+and to run. Making the \bodhi{} adapter took \statHBMistralTimeTracesH{}\,h of teacher traces and
+\statHBMistralTimeFilterH{}\,h of filtering, once for the cell, and
+\statHBMistralTimeTrainSeedH{}\,h of training per seed. To time a reply, we answered
+\statHBMistralBenchPrompts{} prompts of seed 42 one at a time on an otherwise idle GPU. In the
+\bodhi{} cell, the median time per reply is \statHBMistralBenchBaseMedianS\,s for Base,
+\statHBMistralBenchBaseBodhiMedianS\,s for Base+\bodhi{} and \statHBMistralBenchLoRAMedianS\,s for
+LoRA. Served this way, the adapter halves the output speed (\statHBMistralBenchLoRATokPerS{}
+against \statHBMistralBenchBaseTokPerS{} tokens per second), and the \bodhi{} adapter writes longer
+replies (\statHBMistralBenchLoRATokens{} against \statHBMistralBenchBaseTokens{} output tokens). The
+ask-first protocol needs one call, so its teacher costs about as much as Base.
+
+\begin{table}[!ht]
+\centering
+\caption{The cost of each training cell of \S\ref{sec:rerun}. Traces and filter: wall-clock hours,
+once for the cell. Train: mean hours per seed. Base, Teacher and LoRA: median seconds per reply,
+one reply at a time on an otherwise idle GPU, \statHBMistralBenchPrompts{} prompts of seed 42; the
+teacher is Base with the cell's protocol. The traces and the filter ran on an H100 of a shared host,
+and training and the timing on A100s with one card per job.}
+\label{tab:cost}
+\small
+\setlength{\tabcolsep}{3pt}
+\resizebox{\linewidth}{!}{\input{generated/tab_cost}}
+\end{table}
 
 \section{Prior Approaches}
 \label{app:prior}

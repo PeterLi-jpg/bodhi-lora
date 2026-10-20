@@ -22,6 +22,7 @@ Tables:
                              (bodhi_lora/report/hypotheses.py); tab_hypotheses_short.tex
                              keeps the first outcome of each question, for the main text
     tab_judges.tex           H8: each judge against the evaluator, in every cell it graded
+    tab_cost.tex             C25: hours to make each training cell and seconds per reply
 """
 from __future__ import annotations
 
@@ -37,7 +38,7 @@ from bodhi_lora.registry import Registry
 from bodhi_lora.report.cell import cell_macros, cell_table, detail_tables
 from bodhi_lora.report.cross import (cell_detail_tables, count_macros, cross_table, family_macros, grader_macros,
                                      group_macros, posted_macros)
-from bodhi_lora.report.hypotheses import hypothesis_macros, hypothesis_table, judge_table
+from bodhi_lora.report.hypotheses import cost_table, hypothesis_macros, hypothesis_table, judge_table
 from bodhi_lora.report.latex import MISSING, fmt, fmt_int
 
 
@@ -115,6 +116,7 @@ def report(reg: Registry, cfg: ReportConfig, proj: Project) -> Report:
         rep.tables["tab_hypotheses_short"] = hypothesis_table(cross, reg, cfg, src, short=True)
     rep.tables["tab_judges"] = judge_table(all_stats, order, reg, cfg,
                                            f"{proj.rel(proj.results_root)}/*/analysis/stats.json")
+    rep.tables["tab_cost"] = cost_table(all_stats, reg, cfg, f"{proj.rel(proj.results_root)}/*/analysis/stats.json")
     every = f"{proj.rel(proj.results_root)}/*/analysis/stats.json"
     for name, spec in cfg.cross_tables.items():
         rep.tables[name] = cross_table(spec, all_stats, members, reg, cfg, every, name)

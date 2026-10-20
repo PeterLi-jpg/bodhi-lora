@@ -11,7 +11,7 @@ from __future__ import annotations
 from bodhi_lora.analysis.config import ReportConfig
 from bodhi_lora.registry import Registry
 from bodhi_lora.report.common import DIFF_DECIMALS, KIND_FORMAT, Names, marks, scaled
-from bodhi_lora.report.latex import MISSING, escape, fmt, fmt_ci, fmt_p, tabular, token
+from bodhi_lora.report.latex import MISSING, escape, finite, fmt, fmt_ci, fmt_p, tabular, token
 
 # The kind of each outcome a rule returns, for its scale and decimals.
 OUTCOME_KIND = {"active_inquiry": "rate", "context_seeking": "score02", "rubric_score": "score",
@@ -102,6 +102,45 @@ def judge_table(all_stats: dict, order: list[str], reg: Registry, cfg: ReportCon
     header = [["Prompts", "Base model", "Judge", "$\\kappa$, criteria", "95\\% CI",
                "Active inquiry", "Context-seeking", "Reversed"]]
     return tabular("lllrrllr", header, [b for b in blocks if b], f"{src} (judges)")
+
+
+def cost_table(all_stats: dict, reg: Registry, cfg: ReportConfig, src: str) -> str:
+    """E08, E20 and C25: what each training cell of the pre-registered questions (the cells
+    of the rule `cost`) cost to make and to run. Hours of the teacher traces and the filter
+    (once per cell), training hours per seed (mean), and the median seconds per reply on an
+    otherwise idle card, one reply at a time, for Base, the teacher (Base with the protocol)
+    and LoRA, with the GPU each ran on."""
+    n = Names(cfg)
+    rows = []
+    for spec in cfg.hypotheses:
+        if spec.rule != "cost":
+            continue
+        for cid in spec.cells:
+            stats = all_stats.get(cid)
+            if not stats:
+                continue
+            cell = reg.cells[cid]
+            st = stats.get("stage_times") or {}
+            shared, per_seed = st.get("shared") or {}, st.get("per_seed") or {}
+
+            def hours(r):
+                return fmt(r["seconds"] / 3600, 1) if r and finite(r.get("seconds")) else MISSING
+
+            train = [r["seconds"] for r in (per_seed.get("train") or {}).values() if finite(r.get("seconds"))]
+            train_h = fmt(sum(train) / len(train) / 3600, 1) if train else MISSING
+            bench = (stats.get("bench") or {}).get("conditions") or {}
+
+            def median(cond):
+                r = next(iter((bench.get(cond) or {}).values()), None)
+                return fmt(r.get("median_s"), 1) if r else MISSING
+
+            gpus = sorted({g for r in [*shared.values(), *[x for v in per_seed.values() for x in v.values()]]
+                           for g in r.get("gpus", [])})
+            rows.append([_cell_text(cell, n), hours(shared.get("traces")), hours(shared.get("filter")), train_h,
+                         median("base"), median(f"base+{cell.protocol}"), median("lora"),
+                         escape("; ".join(g.replace("NVIDIA ", "") for g in gpus)) or MISSING])
+    header = [["Cell", "Traces (h)", "Filter (h)", "Train (h/seed)", "Base (s)", "Teacher (s)", "LoRA (s)", "GPUs"]]
+    return tabular("lrrrrrrl", header, [rows], f"{src} (stage_times, bench)")
 
 
 def _cell_text(cell, n: Names) -> str:

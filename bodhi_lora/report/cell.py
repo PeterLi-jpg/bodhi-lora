@@ -111,6 +111,7 @@ def cell_macros(rep, stats: dict, cell: CellConfig, cfg: ReportConfig, src: str)
     _reply_health(rep, n, T, stats, src)
     _judges(rep, n, T, stats, src)
     _bench(rep, n, T, stats, src)
+    _stage_times(rep, T, stats, src)
     for c, r in stats["askers_gap"].items():
         rep.add(f"{T}AskersGap{n.cond_token(c)}", fmt(r.get("gap"), 3, sign=True), f"{src}: askers_gap.{c}.gap")
         rep.add(f"{T}AskersGap{n.cond_token(c)}CI", fmt_ci(r.get("gap_ci95"), 3), "prompt-clustered bootstrap interval")
@@ -302,6 +303,19 @@ def _bench(rep, n: Names, T: str, stats: dict, src: str) -> None:
     if bench.get("n_prompts"):
         for seed, k in bench["n_prompts"].items():
             rep.add(f"{T}BenchPrompts", fmt_int(k), f"{src}: bench.n_prompts.{seed}")
+
+
+def _stage_times(rep, T: str, stats: dict, src: str) -> None:
+    """E08 and C25, the cost of the recipe: wall-clock hours of the shared stages, and the
+    mean over seeds of the per-seed ones, from the stage manifests."""
+    st = stats.get("stage_times") or {}
+    for stage, r in (st.get("shared") or {}).items():
+        rep.add(f"{T}Time{token(stage)}H", fmt(r["seconds"] / 3600, 1), f"{src}: stage_times.shared.{stage}.seconds")
+    for stage, seeds in (st.get("per_seed") or {}).items():
+        secs = [r["seconds"] for r in seeds.values() if finite(r.get("seconds")) and r["seconds"] > 0]
+        if secs:
+            rep.add(f"{T}Time{token(stage)}SeedH", fmt(sum(secs) / len(secs) / 3600, 1),
+                    f"{src}: stage_times.per_seed.{stage}, mean over {len(secs)} seeds")
 
 
 def _leakage(rep, n: Names, T: str, stats: dict, src: str) -> None:
