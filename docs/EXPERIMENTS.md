@@ -358,7 +358,7 @@ bench:
 report:
   label: HealthBench-Hard, Mistral-Small-24B
   token: HBMistral
-  status: planned
+  status: complete
 ```
 
 **E15. MedQA without the preamble.** Answers W12, C24 (follow-through), FzpA-Q3 (the
@@ -434,7 +434,7 @@ eval:
 report:
   label: HealthBench labelled probes, Mistral-Small-24B
   token: HBMistralLabelled
-  status: planned
+  status: complete
 ```
 
 **E19. Clinician-posed evaluation.** Answers FzpA-Q3, C32, D4. MIMIC-IV and eICU need

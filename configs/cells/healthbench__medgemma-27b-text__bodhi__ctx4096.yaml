@@ -1,0 +1,33 @@
+# E17 at the 2026-05 context: the R7 adapters (healthbench__medgemma-27b-text__bodhi) with
+# and without the BODHI protocol, and with red flags first, at the 4,096-token eval context
+# of the 2026-05 cell. The red-flag drop under LoRA plus the protocol occurred only in that
+# cell (r 8, bf16 on TPU, 4,096 tokens); R7 changes the recipe and the context at once, so
+# this pair separates the context (RUN_PLAN.md, "R7 and C31"; ANALYSIS_PLAN.md section 12,
+# the 2026-10-19 entry on R7). Same seeds and draw rule as R7, so each seed sees R7's
+# prompts. Run: python -m bodhi_lora run healthbench__medgemma-27b-text__bodhi__ctx4096 --gpus 0
+id: healthbench__medgemma-27b-text__bodhi__ctx4096
+benchmark: healthbench
+split: default
+model: medgemma-27b-text
+protocol: bodhi
+seeds: [42, 7, 13, 99, 101]
+adapters_from: healthbench__medgemma-27b-text__bodhi
+grading:
+  filter: qwen2.5-14b
+  evaluator: llama-3.1-8b
+eval:
+  conditions: [lora, lora+bodhi, lora+red-flags-first]
+  ids: {policy: per_seed_draw, n: 200}
+  # The base is served as it was trained, 4-bit under a QLoRA adapter (audit REPRO-12).
+  base_precision: train
+  max_new_tokens: 1024
+  max_new_tokens_per_pass: 2048
+  serving: {max_model_len: 4096, max_num_seqs: 32, concurrency: 32, request_timeout_s: 900}
+report:
+  label: HealthBench-Hard, MedGemma-27B, 4,096-token context
+  token: HBMedGemmaCtxFour
+  status: planned
+  # H6 at this context (ANALYSIS_PLAN.md section 7.1): the analysis makes the precondition
+  # (lora+bodhi - lora) by itself; the primary contrast it does not.
+  contrasts:
+    - lora+red-flags-first - lora+bodhi
