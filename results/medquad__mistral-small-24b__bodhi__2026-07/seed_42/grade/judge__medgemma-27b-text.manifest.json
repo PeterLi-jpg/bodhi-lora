@@ -1,0 +1,123 @@
+{
+  "schema": 2,
+  "stage": "grade",
+  "cell": "medquad__mistral-small-24b__bodhi__2026-07",
+  "seed": 42,
+  "created_utc": "2026-10-14T06:18:11.885348+00:00",
+  "git": {
+    "sha": "a5aa4d689771dd4bc223b3a70670a2887901fa63",
+    "dirty": false,
+    "diff_sha256": null,
+    "n_untracked": 25
+  },
+  "packages": {
+    "python": "3.12.3",
+    "torch": "2.8.0",
+    "transformers": "4.56.2",
+    "vllm": "0.10.2",
+    "peft": null,
+    "trl": null,
+    "accelerate": null,
+    "bitsandbytes": "0.47.0",
+    "datasets": "5.0.0",
+    "bodhi-llm": "0.1.4",
+    "huggingface-hub": "0.36.2",
+    "numpy": "2.2.6"
+  },
+  "host_sha256": "e57f9913e18993f3b7eea3afa676d9d0ae3c5a04f647be54a2f28299b57e4149",
+  "hardware": {
+    "visible_devices": "3",
+    "gpus": [
+      {
+        "index": "3",
+        "name": "NVIDIA H100 80GB HBM3",
+        "memory": "81559 MiB"
+      }
+    ]
+  },
+  "time": {
+    "started_utc": "2026-10-14T05:33:42.359580+00:00",
+    "finished_utc": "2026-10-14T06:18:12.020402+00:00",
+    "seconds": 2669.661
+  },
+  "models": {
+    "judge": {
+      "id": "medgemma-27b-text",
+      "repo_id": "google/medgemma-27b-text-it",
+      "family": "gemma",
+      "revision": "5b667cf2ddcf064085bc90952edb35a0edbfb79c",
+      "revision_source": "record",
+      "unpinned_reason": null
+    }
+  },
+  "engines": {
+    "judge": {
+      "model": "google/medgemma-27b-text-it",
+      "revision": "5b667cf2ddcf064085bc90952edb35a0edbfb79c",
+      "max_model_len": 8192,
+      "max_num_seqs": 64,
+      "tensor_parallel_size": 1,
+      "dtype": "bfloat16",
+      "quantization": null,
+      "enforce_eager": true,
+      "request_timeout_s": 180,
+      "lora_path": null,
+      "lora_modules": {},
+      "max_loras": null,
+      "max_lora_rank": null,
+      "env": {}
+    }
+  },
+  "inputs": [
+    {
+      "path": "/data/PROJECTS/bohdi/results/medquad__mistral-small-24b__bodhi__2026-07/seed_42/eval/base.json",
+      "bytes": 1337662,
+      "sha256": "fe20349379c7e7706e81200da3cc91cb318e20d0093f673b385cb8a024c24b39"
+    },
+    {
+      "path": "/data/PROJECTS/bohdi/results/medquad__mistral-small-24b__bodhi__2026-07/seed_42/eval/base+bodhi.json",
+      "bytes": 1354875,
+      "sha256": "d7817f53cb54095da1ffd02ac46a37d46fd20d6778fb79acf5d64046d7ff297a"
+    },
+    {
+      "path": "/data/PROJECTS/bohdi/results/medquad__mistral-small-24b__bodhi__2026-07/seed_42/eval/lora.json",
+      "bytes": 1585957,
+      "sha256": "50ff8570c4368f46bf24635ad9dae5c6499f91e200b336fed6d82a884f128ba7"
+    },
+    {
+      "path": "/data/PROJECTS/bohdi/results/medquad__mistral-small-24b__bodhi__2026-07/seed_42/eval/lora+bodhi.json",
+      "bytes": 1715131,
+      "sha256": "7916c9b0913c345f424e21fb1510018875d8b3845821ae021eb3f54566066416"
+    }
+  ],
+  "outputs": [
+    {
+      "path": "/data/PROJECTS/bohdi/results/medquad__mistral-small-24b__bodhi__2026-07/seed_42/grade/judge__medgemma-27b-text.json",
+      "bytes": 1692238,
+      "sha256": "095f5873baffc7bfda27c4d731d9bcd2bb24b606c317fde6b7fd95c0d5b7ff6a"
+    }
+  ],
+  "counts": {
+    "base": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    },
+    "base+bodhi": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    },
+    "lora": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    },
+    "lora+bodhi": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    }
+  },
+  "status": "complete"
+}

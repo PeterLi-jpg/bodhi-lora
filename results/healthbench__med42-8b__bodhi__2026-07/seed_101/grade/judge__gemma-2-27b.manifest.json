@@ -1,0 +1,119 @@
+{
+  "schema": 2,
+  "stage": "grade",
+  "cell": "healthbench__med42-8b__bodhi__2026-07",
+  "seed": 101,
+  "created_utc": "2026-10-11T20:24:51.445230+00:00",
+  "git": {
+    "sha": "7e02348b57fe7862af3676db9d8ce2ed03465580",
+    "dirty": false,
+    "diff_sha256": null,
+    "n_untracked": 4
+  },
+  "packages": {
+    "python": "3.12.3",
+    "torch": "2.8.0",
+    "transformers": "4.56.2",
+    "vllm": "0.10.2",
+    "peft": null,
+    "trl": null,
+    "accelerate": null,
+    "bitsandbytes": null,
+    "datasets": "5.0.0",
+    "bodhi-llm": "0.1.4",
+    "huggingface-hub": "0.36.2",
+    "numpy": "2.2.6"
+  },
+  "host_sha256": "e57f9913e18993f3b7eea3afa676d9d0ae3c5a04f647be54a2f28299b57e4149",
+  "hardware": {
+    "visible_devices": "3",
+    "gpus": [
+      {
+        "index": "3",
+        "name": "NVIDIA H100 80GB HBM3",
+        "memory": "81559 MiB"
+      }
+    ]
+  },
+  "time": {
+    "started_utc": "2026-10-11T19:45:52.635479+00:00",
+    "finished_utc": "2026-10-11T20:24:51.583809+00:00",
+    "seconds": 2338.948
+  },
+  "models": {
+    "judge": {
+      "id": "gemma-2-27b",
+      "repo_id": "google/gemma-2-27b-it",
+      "family": "gemma",
+      "revision": "aaf20e6b9f4c0fcf043f6fb2a2068419086d77b0",
+      "revision_source": "record",
+      "unpinned_reason": null
+    }
+  },
+  "engines": {
+    "judge": {
+      "model": "google/gemma-2-27b-it",
+      "revision": "aaf20e6b9f4c0fcf043f6fb2a2068419086d77b0",
+      "max_model_len": 8192,
+      "max_num_seqs": 64,
+      "tensor_parallel_size": 1,
+      "dtype": "bfloat16",
+      "quantization": null,
+      "enforce_eager": true,
+      "request_timeout_s": 180,
+      "lora_path": null
+    }
+  },
+  "inputs": [
+    {
+      "path": "/data/PROJECTS/bohdi/results/healthbench__med42-8b__bodhi__2026-07/seed_101/eval/base.json",
+      "bytes": 2126543,
+      "sha256": "c167647b72ace333f0938c96e5d2669b5cfa16ebdfb9cd17304ef5e926c42532"
+    },
+    {
+      "path": "/data/PROJECTS/bohdi/results/healthbench__med42-8b__bodhi__2026-07/seed_101/eval/base+bodhi.json",
+      "bytes": 2209749,
+      "sha256": "0acd38ff2a7162c327ebf418101e8b1535c5961bcdf91a11c96029dd994f40b6"
+    },
+    {
+      "path": "/data/PROJECTS/bohdi/results/healthbench__med42-8b__bodhi__2026-07/seed_101/eval/lora.json",
+      "bytes": 2238515,
+      "sha256": "288755fe111cd83b967e75bfb4b868ed8bf9818f23529f7817ac46cbbdb5ce95"
+    },
+    {
+      "path": "/data/PROJECTS/bohdi/results/healthbench__med42-8b__bodhi__2026-07/seed_101/eval/lora+bodhi.json",
+      "bytes": 2405174,
+      "sha256": "49aa769ccefb850da92954c9fbfa9f30449a250731522586e99db67c2e394c30"
+    }
+  ],
+  "outputs": [
+    {
+      "path": "/data/PROJECTS/bohdi/results/healthbench__med42-8b__bodhi__2026-07/seed_101/grade/judge__gemma-2-27b.json",
+      "bytes": 1950041,
+      "sha256": "849a770abc3396fcdd06b2030c23682227cf40b8c1f55481b64d47b8bd2abb76"
+    }
+  ],
+  "counts": {
+    "base": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    },
+    "base+bodhi": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    },
+    "lora": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    },
+    "lora+bodhi": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    }
+  },
+  "status": "complete"
+}

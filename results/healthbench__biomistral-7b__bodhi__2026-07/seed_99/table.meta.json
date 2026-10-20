@@ -50,7 +50,8 @@
     "results/healthbench__biomistral-7b__bodhi__2026-07/seed_99/eval/base.json": "132034d36e34e575d0b02bdcd081784030ef7ab88a6c079e0e29b391b5ecf644",
     "results/healthbench__biomistral-7b__bodhi__2026-07/seed_99/eval/lora+bodhi.json": "caead8267dbe013270b368629bb572235cd85becbd93a797abe43f197ad9e8ea",
     "results/healthbench__biomistral-7b__bodhi__2026-07/seed_99/eval/lora.json": "11a921de3ec61451b6995d30736feb2de93f390c8f880444bcf474cc51eb0377",
-    "results/healthbench__biomistral-7b__bodhi__2026-07/seed_99/grade/epistemic__llama-3.1-8b-nous.json": "91ca050f53b697ee383e44c29328b93f48bdfb809d4ad986a03c4bb8bb170d3c"
+    "results/healthbench__biomistral-7b__bodhi__2026-07/seed_99/grade/epistemic__llama-3.1-8b-nous.json": "91ca050f53b697ee383e44c29328b93f48bdfb809d4ad986a03c4bb8bb170d3c",
+    "results/healthbench__biomistral-7b__bodhi__2026-07/seed_99/grade/judge__medgemma-27b-text.json": "c08285883568becdac956b00fda2da7ecd8f487f25c66a913ff5da058fdff6e3"
   },
   "tokenizer": "tokenizer.json of BioMistral/BioMistral-7B at 9a11e1ffa817c211cbb52ee1fb312dc6b61b40a5 is not in the local Hugging Face cache (fetch it with: huggingface-cli download BioMistral/BioMistral-7B tokenizer.json --revision 9a11e1ffa817c211cbb52ee1fb312dc6b61b40a5)"
 }

@@ -50,7 +50,9 @@
     "results/chatdoctor__med42-8b__bodhi__2026-07/seed_42/eval/base.json": "ebbd5376b38de852fdd27c77818fb76361f092a49a12737c1bddb8d06f520500",
     "results/chatdoctor__med42-8b__bodhi__2026-07/seed_42/eval/lora+bodhi.json": "939cde35fa2e7e62515cb21c381f58231ba7f9eddd9f5ab6ab9a84093e542d57",
     "results/chatdoctor__med42-8b__bodhi__2026-07/seed_42/eval/lora.json": "bce742008ca40736ab2bf775882b0831dd4311c345da50655fcbf4a908b15aa8",
-    "results/chatdoctor__med42-8b__bodhi__2026-07/seed_42/grade/epistemic__llama-3.1-8b-nous.json": "8727bbb8835dda5ccd9bfaf5e14b8a62daec7c5e87a232914af550bda0eb4483"
+    "results/chatdoctor__med42-8b__bodhi__2026-07/seed_42/grade/epistemic__llama-3.1-8b-nous.json": "8727bbb8835dda5ccd9bfaf5e14b8a62daec7c5e87a232914af550bda0eb4483",
+    "results/chatdoctor__med42-8b__bodhi__2026-07/seed_42/grade/judge__gemma-2-27b.json": "75e9ee5dafe79a1c341226eb8477d746ef74680ec9f9394353b42f5714e79ce5",
+    "results/chatdoctor__med42-8b__bodhi__2026-07/seed_42/grade/judge__medgemma-27b-text.json": "780c38c91ce8d532522de0f9dd9411facfcad4bec93629d7ab4306ae2b3fc9fc"
   },
   "tokenizer": "tokenizer.json of m42-health/Llama3-Med42-8B at ceab7e7ee4b9dbde7ba82867f34274db51487d83 is not in the local Hugging Face cache (fetch it with: huggingface-cli download m42-health/Llama3-Med42-8B tokenizer.json --revision ceab7e7ee4b9dbde7ba82867f34274db51487d83)"
 }

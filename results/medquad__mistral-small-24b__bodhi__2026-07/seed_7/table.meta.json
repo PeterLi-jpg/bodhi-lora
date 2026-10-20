@@ -50,7 +50,8 @@
     "results/medquad__mistral-small-24b__bodhi__2026-07/seed_7/eval/base.json": "cbf3b1e799357ef68bcdfae09d127be607216af111657dc734738ca13d4bc402",
     "results/medquad__mistral-small-24b__bodhi__2026-07/seed_7/eval/lora+bodhi.json": "c8ebe9b33ded4488e9d407f5a457ed6e6a2f6be1019da5dd59f714486a14002c",
     "results/medquad__mistral-small-24b__bodhi__2026-07/seed_7/eval/lora.json": "3907a0621708d38d1e4e7c38a742c6ae06aa0402f94f47bec8f8a6373b810fbe",
-    "results/medquad__mistral-small-24b__bodhi__2026-07/seed_7/grade/epistemic__llama-3.1-8b-nous.json": "211535af0cccdb384a3206a689a0216d3fa570e0f10cf119861de7231ec349c3"
+    "results/medquad__mistral-small-24b__bodhi__2026-07/seed_7/grade/epistemic__llama-3.1-8b-nous.json": "211535af0cccdb384a3206a689a0216d3fa570e0f10cf119861de7231ec349c3",
+    "results/medquad__mistral-small-24b__bodhi__2026-07/seed_7/grade/judge__medgemma-27b-text.json": "2f30ef15be6312f6840d2b95b6561b0b83e614e3a0dfa5006eb8ff3eb7887705"
   },
   "tokenizer": "mistralai/Mistral-Small-24B-Instruct-2501@9527884be6e5616bdd54de542f9ae13384489724"
 }

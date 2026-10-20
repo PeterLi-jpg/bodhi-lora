@@ -50,7 +50,8 @@
     "results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_42/eval/base.json": "f05c14929c5a9f4b7ce70928098475e015c64dd3327bac35d60d3e804c1af573",
     "results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_42/eval/lora+bodhi.json": "9e4b8c407f8de0524454a5591be58180d3b3ff8e9cfea745004d3c603c32f680",
     "results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_42/eval/lora.json": "617c2ba108c136b690a5949892fc7f73e730bfc5185c9c5239451e153b382c45",
-    "results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_42/grade/epistemic__llama-3.1-8b.json": "f08a54b316b996d3534a06c71314f1edba33dfa88e2d7b065b9b14b6cd4fa2a7"
+    "results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_42/grade/epistemic__llama-3.1-8b.json": "f08a54b316b996d3534a06c71314f1edba33dfa88e2d7b065b9b14b6cd4fa2a7",
+    "results/healthbench__medgemma-27b-text__bodhi__2026-05/seed_42/grade/judge__phi-4.json": "32d585f4bb7767e176670f2941a86c5138a7733bad450f1a3e733506af1a0b2c"
   },
   "tokenizer": "tokenizer.json of google/medgemma-27b-text-it at 5b667cf2ddcf064085bc90952edb35a0edbfb79c is not in the local Hugging Face cache (fetch it with: huggingface-cli download google/medgemma-27b-text-it tokenizer.json --revision 5b667cf2ddcf064085bc90952edb35a0edbfb79c)"
 }

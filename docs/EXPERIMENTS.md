@@ -597,7 +597,7 @@ changes already in `paper/main.tex`, with the commitment that records them.
 |---|---|---|
 | C1 to C24 | done or changed (text, figures and tables; `rebuttal/commitments.md` says which changed and why) | E01 recomputes every number they cite from the response tables |
 | C25 cost per configuration | built, awaiting GPU (R2) | E08, E20 |
-| C26 clinical judge panel | built, awaiting GPU (R1, R6; R2 and R5 for the new cells) | E10 (E09 for the Med42-8B cells), read by H8 |
+| C26 clinical judge panel | ran: R1 and R6 on the shared host, R2 and R5 on NRP; H8 is in each cell's `analysis/stats.json` (`judges`); the paper text is pending | E10 (E09 for the Med42-8B cells), read by H8 |
 | C27 inference-time baseline | built, awaiting GPU (R2) | E12 |
 | C28 three-physician validation | deferred (D20) | E27 |
 | C29 second CoT protocol | built, awaiting GPU (R5) | E16 |
