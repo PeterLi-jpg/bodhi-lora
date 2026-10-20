@@ -67,7 +67,7 @@ def test_macro_names_are_letters_unique_and_named_by_the_cell(setup):
     assert len(names) == len(set(names))
     assert all(re.fullmatch(r"[A-Za-z]+", n) for n in names)
     tokens = {reg.cells[c].report.token for c in rep.record["cells"]}
-    tokens |= {"Group", "Posted", "CrossCells", "Family"} | {g.token for g in cfg.grader_comparisons}
+    tokens |= {"Group", "Posted", "CrossCells", "Family", "Hyp"} | {g.token for g in cfg.grader_comparisons}
     assert all(any(n.startswith(t) for t in tokens) for n in names)
     # every macro names its source in stats.json
     assert all(src for _, _, src in rep.macros)

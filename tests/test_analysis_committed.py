@@ -35,8 +35,11 @@ def test_committed_cross_cell_stats_are_current(tmp_path):
     committed_path = PROJ.results_root / "cross_cell" / "stats.json"
     if not committed_path.is_file() or not all(c in CELLS for c in CFG.cross_cells):
         pytest.skip("the cross-cell statistics are not in this checkout")
-    # analyze_cross writes under results_root/cross_cell; point it at a copy of what it reads.
-    for cid in CFG.cross_cells:
+    # analyze_cross writes under results_root/cross_cell; point it at a copy of what it reads:
+    # the cross cells and the cells of the pre-registered questions.
+    for cid in [*CFG.cross_cells, *sorted({c for h in CFG.hypotheses for c in h.cells} - set(CFG.cross_cells))]:
+        if not (PROJ.cell(cid).analysis() / "stats.json").is_file():
+            continue
         dst = tmp_path / cid / "analysis" / "stats.json"
         dst.parent.mkdir(parents=True)
         dst.write_text((PROJ.cell(cid).analysis() / "stats.json").read_text())

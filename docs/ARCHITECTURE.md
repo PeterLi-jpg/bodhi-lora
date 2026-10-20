@@ -350,10 +350,12 @@ bodhi_lora/
                                                         <- df10aa8:scripts/paper_stats.py
     cell.py        every statistic of one cell, judge agreement included
     cross.py       cross-cell groups, Holm over cells, the posted-value check
+    hypotheses.py  the plan's decision rules (H1 to H7, H11, E02) on the cells that ran them
   report/
     __init__.py    report(): every macro and table of paper/generated/; write()
     cell.py        one cell's macros, its table, and the detail tables of detail_cells
     cross.py       tables with a row per cell, group counts, recipe, posted values
+    hypotheses.py  the decision macros and tab_hypotheses
     common.py      printed names, paths into stats.json, number formats
     latex.py       number formats and booktabs tables
 ```
@@ -798,7 +800,11 @@ A group contrast may write `{protocol}` for each cell's own protocol id (for exa
 teacher. `families` of `configs/report.yaml` names a correction family of
 ANALYSIS_PLAN.md section 2.7: Holm over a group's cells of one p-value path (F6, the E02
 test, is the first). The grader comparison counts the shared prompts whose replies are
-the same in both cells (`response_sha256` of the response tables).
+the same in both cells (`response_sha256` of the response tables). `hypotheses` of
+`configs/report.yaml` lists the cells that ran each pre-registered question; these cells
+sit next to the cross cells and join no group (the plan's choice 3). Each cell gets its
+question's decision by the plan's rule, with Holm across the question's cells where the
+plan names a family (F2 to F6), under `hypotheses` of the cross-cell stats.json.
 
 **Report.** `report` turns `results/<cell_id>/analysis/stats.json` and
 `results/cross_cell/stats.json` into every macro and table the paper prints, and

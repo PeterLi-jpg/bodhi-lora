@@ -18,6 +18,8 @@ Tables:
     tab_<kind>_<token>.tex   the detail tables of each cell in report.detail_cells
     tab_<name>.tex           each table of report.cross_tables, one row per cross cell
     tab_cell_detail_<n>.tex  every cross cell's metrics by condition (report.cell_detail_tables)
+    tab_hypotheses.tex       the plan's decisions on the cells of report.hypotheses
+                             (bodhi_lora/report/hypotheses.py)
 """
 from __future__ import annotations
 
@@ -33,6 +35,7 @@ from bodhi_lora.registry import Registry
 from bodhi_lora.report.cell import cell_macros, cell_table, detail_tables
 from bodhi_lora.report.cross import (cell_detail_tables, count_macros, cross_table, family_macros, grader_macros,
                                      group_macros, posted_macros)
+from bodhi_lora.report.hypotheses import hypothesis_macros, hypothesis_table
 from bodhi_lora.report.latex import MISSING, fmt, fmt_int
 
 
@@ -104,6 +107,9 @@ def report(reg: Registry, cfg: ReportConfig, proj: Project) -> Report:
     grader_macros(rep, cross, reg, cfg, src)
     posted_macros(rep, cross, cfg, src)
     family_macros(rep, cross, all_stats, reg, cfg, src)
+    hypothesis_macros(rep, cross, reg, cfg, src)
+    if cross.get("hypotheses"):
+        rep.tables["tab_hypotheses"] = hypothesis_table(cross, reg, cfg, src)
     every = f"{proj.rel(proj.results_root)}/*/analysis/stats.json"
     for name, spec in cfg.cross_tables.items():
         rep.tables[name] = cross_table(spec, all_stats, members, reg, cfg, every, name)

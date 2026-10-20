@@ -109,6 +109,8 @@ def cell_macros(rep, stats: dict, cell: CellConfig, cfg: ReportConfig, src: str)
     _discrimination(rep, n, T, stats, src)
     _leakage(rep, n, T, stats, src)
     _reply_health(rep, n, T, stats, src)
+    _judges(rep, n, T, stats, src)
+    _bench(rep, n, T, stats, src)
     for c, r in stats["askers_gap"].items():
         rep.add(f"{T}AskersGap{n.cond_token(c)}", fmt(r.get("gap"), 3, sign=True), f"{src}: askers_gap.{c}.gap")
         rep.add(f"{T}AskersGap{n.cond_token(c)}CI", fmt_ci(r.get("gap_ci95"), 3), "prompt-clustered bootstrap interval")
@@ -249,6 +251,57 @@ def _reply_health(rep, n: Names, T: str, stats: dict, src: str) -> None:
         if r["n_limit_known"]:
             rep.add(f"{T}AtLimit{C}", fmt_int(r["n_at_limit"]), f"{where}.n_at_limit (replies the token limit stopped)")
             rep.add(f"{T}AtLimit{C}Pct", fmt(100 * r["limit_share"], 1), f"{where}.limit_share (%)")
+
+
+def _judges(rep, n: Names, T: str, stats: dict, src: str) -> None:
+    """H8 (docs/ANALYSIS_PLAN.md section 8): each judge's agreement with the evaluator,
+    and each contrast again under the judge, with the plan's decision for the seven
+    dimensions (confirmed, not confirmed or reversed). The rubric score gets no decision
+    here: its correction runs across cells (F2)."""
+    for jid, j in (stats.get("judges") or {}).items():
+        if "contrasts" not in j:
+            continue
+        J, where = f"{T}Judge{token(jid)}", f"{src}: judges.{jid}"
+        rep.add(f"{J}CriterionKappa", fmt(j.get("criterion_kappa"), 2),
+                f"{where}.criterion_kappa (rubric criteria, judge against the evaluator)")
+        rep.add(f"{J}CriterionKappaCI", fmt_ci(j.get("criterion_kappa_ci95"), 2, sign=False),
+                f"{where}.criterion_kappa_ci95, prompt-clustered bootstrap")
+        rep.add(f"{J}RubricR", fmt(j.get("rubric_score_pearson_r"), 2), f"{where}.rubric_score_pearson_r")
+        for d, r in (j.get("dimension_kappa") or {}).items():
+            rep.add(f"{J}{token(d)}Kappa", fmt(r.get("kappa"), 2), f"{where}.dimension_kappa.{d}.kappa")
+        reversed_ = 0
+        for k, c in j["contrasts"].items():
+            for m, r in c["metrics"].items():
+                if not finite(r.get("diff")):
+                    continue
+                scale, _ = KIND_FORMAT[_kind(stats, m)]
+                ddp = DIFF_DECIMALS[_kind(stats, m)]
+                name, w = f"{J}{token(m)}{n.ctr_token(k)}", f"{where}.contrasts.{k}.metrics.{m}"
+                rep.add(name + "Diff", fmt(r["diff"] * scale, ddp, sign=True), f"{w}.diff")
+                rep.add(name + "CI", fmt_ci(scaled(r.get("ci95"), scale), ddp), f"{w}.ci95, t over seeds")
+                rep.add(name + "P", fmt_p(r.get("p")), f"{w}.p")
+                if r.get("p_holm_within_contrast") is not None:
+                    rep.add(name + "PHolm", fmt_p(r["p_holm_within_contrast"]), f"{w}.p_holm_within_contrast")
+                if r.get("decision"):
+                    rep.add(name + "Decision", escape(r["decision"]), f"{w}.decision, the plan's rule")
+                    reversed_ += r["decision"] == "reversed"
+        rep.add(f"{J}Reversed", fmt_int(reversed_), f"{where}.contrasts: dimension results the judge reverses")
+
+
+def _bench(rep, n: Names, T: str, stats: dict, src: str) -> None:
+    """E20, the timing of one reply at a time on an otherwise idle card: per condition and
+    bench seed, the median seconds per reply, the output tokens and the output speed."""
+    bench = stats.get("bench") or {}
+    for c, per_seed in (bench.get("conditions") or {}).items():
+        for seed, r in per_seed.items():
+            B, where = f"{T}Bench{n.cond_token(c)}", f"{src}: bench.conditions.{c}.{seed}"
+            rep.add(f"{B}MedianS", fmt(r.get("median_s"), 1), f"{where}.median_s (seconds per reply)")
+            rep.add(f"{B}Tokens", fmt(r.get("mean_completion_tokens"), 0), f"{where}.mean_completion_tokens")
+            rep.add(f"{B}TokPerS", fmt(r.get("throughput_tok_per_s"), 1), f"{where}.throughput_tok_per_s")
+            rep.add(f"{B}Calls", fmt(r.get("mean_calls"), 0), f"{where}.mean_calls")
+    if bench.get("n_prompts"):
+        for seed, k in bench["n_prompts"].items():
+            rep.add(f"{T}BenchPrompts", fmt_int(k), f"{src}: bench.n_prompts.{seed}")
 
 
 def _leakage(rep, n: Names, T: str, stats: dict, src: str) -> None:

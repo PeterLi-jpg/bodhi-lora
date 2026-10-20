@@ -5,7 +5,8 @@
 One row per cell of report.cross_cells with its marks; the groups of configs/report.yaml
 with, per contrast and metric, how many cells move each way, the range of the
 differences, and Holm over the group's cells; the recipe values every cell of a group
-shares; the grader comparisons; and the check of the posted values against the outputs.
+shares; the grader comparisons; the check of the posted values against the outputs; and
+the decisions of the pre-registered questions on the cells that ran them (hypotheses.py).
 """
 from __future__ import annotations
 
@@ -19,6 +20,7 @@ from bodhi_lora.analysis import stats as st
 from bodhi_lora.analysis.cell import _f, round6
 from bodhi_lora.analysis.config import Group, ReportConfig
 from bodhi_lora.analysis.extract import RESPONSE_ID, read_table
+from bodhi_lora.analysis.hypotheses import hypotheses_summary
 from bodhi_lora.paths import Project
 from bodhi_lora.registry import CellConfig, Registry
 
@@ -210,6 +212,13 @@ def analyze_cross(reg: Registry, project: Project, cfg: ReportConfig) -> dict:
         if not p.is_file():
             raise FileNotFoundError(f"{project.rel(p)} is missing; run python -m bodhi_lora analyze {cid}")
         all_stats[cid] = json.loads(p.read_text())
+    # The cells of the pre-registered questions sit next to the cross cells (the plan's
+    # choice 3), so they are read here but join no group.
+    hyp_stats = dict(all_stats)
+    for cid in sorted({c for h in cfg.hypotheses for c in h.cells} - set(all_stats)):
+        p = project.cell(cid).analysis() / "stats.json"
+        if p.is_file():
+            hyp_stats[cid] = json.loads(p.read_text())
     cells = [reg.cells[cid] for cid in cfg.cross_cells]
     out = {"cells": cfg.cross_cells,
            "marks": {c.id: {"family_waiver": c.grading.same_family_waiver, "set_aside": c.report.set_aside,
@@ -225,6 +234,7 @@ def analyze_cross(reg: Registry, project: Project, cfg: ReportConfig) -> dict:
         out["grader_comparisons"][gc.token] = {"description": gc.description,
                                                **grader_comparison(project, reg, gc.cells, gc.seed)}
     out["posted_check"] = posted_check(project.repo_root, cfg, all_stats)
+    out["hypotheses"] = hypotheses_summary(hyp_stats, cfg, reg)
     out = round6(out)
     root = project.results_root / "cross_cell"
     root.mkdir(parents=True, exist_ok=True)

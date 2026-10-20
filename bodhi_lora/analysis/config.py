@@ -129,6 +129,30 @@ class Family(_Record):
     diff: str
 
 
+class Hypothesis(_Record):
+    """One pre-registered question of docs/ANALYSIS_PLAN.md sections 3 to 9 on the cells
+    that ran it. `rule` names the decision rule (bodhi_lora/analysis/hypotheses.py), and
+    the cells are the question's correction family across cells (section 2.7), so Holm
+    runs over them where the plan names a family. `subset` ("<label>=<group>") reads the
+    contrasts of that subset of each cell (H11). `baselines` lists the prompt baselines
+    that the rule `baselines` compares the adapter with (H4, E12)."""
+    id: str = Field(pattern=r"^[A-Z][0-9]+$")
+    token: MacroToken
+    rule: Literal["asking", "cost", "paired_probe", "baselines", "red_flags_first", "over_flagging",
+                  "physician_index"]
+    cells: list[CellId] = Field(min_length=1)
+    subset: Optional[str] = Field(default=None, pattern=r"^[a-z0-9-]+=(positive|negative)$")
+    baselines: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _baselines(self) -> "Hypothesis":
+        for b in self.baselines:
+            check_condition(b)
+        if (self.rule == "baselines") != bool(self.baselines):
+            raise ValueError(f"hypothesis {self.id}: the rule baselines, and only it, lists baselines")
+        return self
+
+
 class GraderComparison(_Record):
     token: MacroToken
     description: str
@@ -294,6 +318,7 @@ class ReportConfig(_Record):
     posted: Optional[Posted] = None
     display: Display = Field(default_factory=Display)
     families: list[Family] = Field(default_factory=list)
+    hypotheses: list[Hypothesis] = Field(default_factory=list)
     cross_tables: dict[str, CrossTable] = Field(default_factory=dict)
     cell_detail_tables: Optional[CellDetailTables] = None
 
@@ -304,7 +329,7 @@ class ReportConfig(_Record):
         if len(set(responses)) != len(responses):
             raise ValueError("a discrimination response repeats; list all its labels in one entry")
         tokens = ([g.token for g in self.groups.values()] + [g.token for g in self.grader_comparisons]
-                  + [f.token for f in self.families])
+                  + [f.token for f in self.families] + [h.token for h in self.hypotheses])
         if len(set(tokens)) != len(tokens):
             raise ValueError("group, comparison and family tokens repeat")
         left_out = [c for t in self.cross_tables.values() for c in t.leave_out]

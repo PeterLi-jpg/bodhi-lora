@@ -232,6 +232,28 @@ families:
     p: 'discrimination.active_inquiry.needs-info-physician.contrasts.lora - base.seed_test.p'
     diff: 'discrimination.active_inquiry.needs-info-physician.contrasts.lora - base.seed_test.diff'
 
+# The pre-registered questions of docs/ANALYSIS_PLAN.md on the cells that ran them, each
+# decided by the plan's rule (bodhi_lora/analysis/hypotheses.py). These cells sit next to
+# the cells above, which stay the record (the plan's choice 3, section 12), so they join
+# no group. Where the plan names a correction family across cells (section 2.7: F2 cost,
+# F3 paired probe, F4 red flags first, F5 over-flagging, F6 the new HealthBench cells of
+# E02), Holm runs over the question's cells; a cell that runs later joins its list.
+hypotheses:
+  - {id: H1, token: HOne, rule: asking, cells: [healthbench__mistral-small-24b__bodhi]}
+  - {id: H2, token: HTwo, rule: cost,
+     cells: [healthbench__mistral-small-24b__bodhi, healthbench__mistral-small-24b__ask-first]}
+  - {id: H3, token: HThree, rule: paired_probe,
+     cells: [mediq-paired__mistral-small-24b__bodhi, mediq-paired__mistral-small-24b__ask-first]}
+  - {id: E02, token: HThreeIndex, rule: physician_index,
+     cells: [healthbench__mistral-small-24b__bodhi, healthbench__mistral-small-24b__ask-first]}
+  - {id: H4, token: HFour, rule: baselines, cells: [healthbench__mistral-small-24b__bodhi],
+     baselines: [base+clarify, base+verbalized-confidence, base+mediq-abstain]}
+  - {id: H5, token: HFive, rule: asking, cells: [healthbench__mistral-small-24b__ask-first]}
+  - {id: H6, token: HSix, rule: red_flags_first, cells: [healthbench__mistral-small-24b__bodhi]}
+  - {id: H7, token: HSeven, rule: over_flagging, cells: [healthbench__mistral-small-24b__bodhi__labelled]}
+  - {id: H11, token: HEleven, rule: asking, subset: clinician-user=positive,
+     cells: [healthbench__mistral-small-24b__bodhi__labelled]}
+
 # Two cells that graded the same base model on the same benchmark with different
 # evaluators: rubric scores on the prompts both drew in `seed`.
 grader_comparisons:
@@ -305,9 +327,12 @@ display:
     needs-info-theme: 'context-seeking theme'
     emergency-theme: 'emergency-referral theme'
     emergent-physician: 'physicians: emergent'
+    clinician-user: 'physicians: clinician-written'
   benchmarks:
     HealthBench-Hard: HB-Hard
     MedQA with the asking preamble: MedQA
+    MediQ paired probe: MediQ pairs
+    HealthBench labelled probes: HB labelled
   module_order: [q, k, v, o, gate, up, down]
 
 # Tables with one row per cell of cross_cells, every cell with the same columns, "--"

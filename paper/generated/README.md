@@ -22,7 +22,7 @@ it needs nothing outside git:
 | Input | Used for |
 |---|---|
 | `results/<cell>/analysis/stats.json`, every analyzed cell | `\stat<token>*`, `tab_cell_<token>`, and the detail tables of the cells in `detail_cells` |
-| `results/cross_cell/stats.json` | `\statGroup*`, the grader comparison (`\statPilotGrader*`) and the posted values the paper cites (`\statPosted*`, from `rebuttal/posted_values.json` through the posted-value check) |
+| `results/cross_cell/stats.json` | `\statGroup*`, the grader comparison (`\statPilotGrader*`), the posted values the paper cites (`\statPosted*`, from `rebuttal/posted_values.json` through the posted-value check), and the decisions of the pre-registered questions (`\statHyp*`, `tab_hypotheses`) |
 | `configs/report.yaml` | which cells, groups, counts and tables; display names |
 
 The analysis itself reads each cell's `seed_*/table.csv`, `analysis/prompts.csv`, its
@@ -50,6 +50,7 @@ resamples prompt ids (docs/ANALYSIS_PLAN.md section 2.1).
 | `tab_cell_filter` | the filter and training record of each trained cell |
 | `tab_cell_detail_<n>` | every cell's metrics in the four conditions, with two contrasts, four cells to a table |
 | `tab_cell_<token>` | one per analyzed cell: every condition, the two adapter contrasts, labels, leakage, length |
+| `tab_hypotheses` | the plan's decision for each pre-registered question on the cells that ran it, with the outcomes that decide it (`hypotheses` in `configs/report.yaml`) |
 | `tab_<kind>_<token>` | the detail tables of a cell in `detail_cells`: `conditions`, `per_seed`, `dimensions`, `contrasts`, `counts`, `worst_case`, `disclaimers`, `bootstrap`, `axes`, `length_quartiles`, `themes`, `gap`, `tau`, `kappa_<grader>` |
 
 A dagger marks a cell whose base model shares the evaluator's family (decision D6), a
