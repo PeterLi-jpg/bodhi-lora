@@ -75,8 +75,7 @@ needs, the adapter asks about as often in both versions, where the base model as
 are missing. A short prompt makes the base model ask more often than the adapter, and the adapter
 flags \statHBMistralLabelledRedFlagRateEmergentPhysicianNegRateLoRA\% of cases that physicians
 judged not emergent (base model: \statHBMistralLabelledRedFlagRateEmergentPhysicianNegRateBase\%).
-The recipe moves a style of response into the weights, not the clinical judgment behind it. All
-scores are LLM-graded; the one physician who returned grades agrees with the evaluator at $\kappa =
+The weights learn a style of response and apply it to every case alike. All scores are LLM-graded; the one physician who returned grades agrees with the evaluator at $\kappa =
 \statHBMedGemmaMayKappaEvalLlamaAll$.
 \end{abstract}
 
@@ -177,7 +176,8 @@ magister2023teaching}, a larger teacher trains a smaller student. Context distil
 \citep{askell2021general, snell2022learning} instead trains a model on its own outputs under a
 prompt, so that it acts the same way without the prompt. Our recipe is context distillation with a
 filter: the prompt is a clinical CoT protocol, and a rubric grade decides which outputs to train on.
-What is new is the filter, the clinical target and the evaluation, not the transfer. We use LoRA
+What is new is the filter, the clinical target and the evaluation; the transfer itself is context
+distillation. We use LoRA
 \citep{hu2022lora} to change behavior, not to add knowledge; QLoRA \citep{dettmers2023qlora}, DoRA
 \citep{liu2024dora} and rsLoRA \citep{kalajdzievski2023scaling} are variants.
 
@@ -558,7 +558,7 @@ protocol, with two protocols and under a judge from another family. It does not 
 behaviors help. It asks as often where nothing is missing as where facts are missing
 (\S\ref{sec:rerun}), it flags most cases that physicians judged not emergent, and a short
 prompt makes the base model ask more often. So the recipe moves a style of response into the
-weights, not the clinical judgment behind it. That is still of use where the style is the goal:
+weights, and the adapter applies it to every case alike. That is still of use where the style is the goal:
 the adapter needs no prompt, and in the \bodhi{} cell it scores higher on the rubrics than every
 prompt baseline. But a model that asks whether or not facts are missing, and flags cases that are
 not emergent, is not safer for it.
@@ -582,8 +582,8 @@ past the available evidence, so that a confident answer does not replace an exam
 that carries none. On one prompt about starting antidepressants, Base asks nothing, and LoRA asks
 about duration, sleep and self-harm and gives a crisis line (Appendix~\ref{app:examples}). Active
 inquiry and context-seeking help only where facts are missing and the user can give them, and red
-flags help only where a warning sign is present. The adapter does not target either case, so its
-gain on these dimensions is a rate, not a skill.
+flags help only where a warning sign is present. The adapter does not target either case, so its gain on these dimensions is a higher rate of the
+behavior, spread over the cases that need it and the cases that do not.
 
 \subsection{Comparison to Prior Calibration Approaches}
 \label{sec:prior}
