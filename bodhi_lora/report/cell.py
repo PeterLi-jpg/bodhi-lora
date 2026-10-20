@@ -362,9 +362,20 @@ def _prompts_filter_recipe(rep, T: str, stats: dict, src: str) -> None:
         s = f["scores"]
         rep.add(f"{T}FilterTrainSplit", fmt_int(s["n_train_split"]), f"{src}: filter.scores.n_train_split (seed {s['seed']})")
         rep.add(f"{T}FilterMinScore", fmt(s["min"], 2), f"{src}: filter.scores.min")
+    gs, rule = f.get("graded_scores") or {}, f.get("tau_rule") or {}
+    if gs.get("n") and rule.get("rule") == "fixed":
+        # The share kept at the cell's fixed threshold, from the filter's own score file.
+        share = [g["share_of_graded"] for g in gs.get("tau_grid", []) if g["tau"] == rule.get("value")]
+        rep.add(f"{T}FilterGradedN", fmt_int(gs["n"]), f"{src}: filter.graded_scores.n")
+        if share:
+            rep.add(f"{T}FilterKeptAtTauPct", fmt(100 * share[0], 1),
+                    f"{src}: filter.graded_scores.tau_grid at tau_rule.value {rule['value']} (%)")
     rec = stats["recipe"]
     if rec.get("max_steps"):
         rep.add(f"{T}Steps", fmt_int(rec["max_steps"]), f"{src}: recipe.max_steps")
+    for key, name in (("r", "Rank"), ("lora_alpha", "Alpha"), ("num_train_epochs", "Epochs")):
+        if rec.get(key) is not None:
+            rep.add(f"{T}Recipe{name}", fmt_int(rec[key]), f"{src}: recipe.{key}")
 
 
 def _validation(rep, n: Names, T: str, stats: dict, src: str) -> None:
