@@ -72,7 +72,7 @@ and \hbhard{}, active inquiry rises from \statHBMedGemmaMayActiveInquiryBase\% t
 Mistral-Small-24B the recipe works with two different protocols, and judges from two other model
 families confirm the rises. The judgment does not transfer. On MediQ cases with and without the facts that the answer
 needs, the adapter asks about as often in both versions, where the base model asks mostly when facts
-are missing. A one-line prompt makes the base model ask more often than the adapter, and the adapter
+are missing. A short prompt makes the base model ask more often than the adapter, and the adapter
 flags \statHBMistralLabelledRedFlagRateEmergentPhysicianNegRateLoRA\% of cases that physicians
 judged not emergent (base model: \statHBMistralLabelledRedFlagRateEmergentPhysicianNegRateBase\%).
 The recipe moves a style of response into the weights, not the clinical judgment behind it. All
@@ -130,7 +130,7 @@ Our contributions:
     \item Tests that a dated analysis plan fixed before the runs, at one set of settings
     (\S\ref{sec:rerun}). The behavior transfers with a second protocol and holds under judges
     from two other model families. The judgment does not: the adapter asks as often where nothing
-    is missing as where facts are missing, a one-line prompt asks more often, and the adapter
+    is missing as where facts are missing, a short prompt asks more often, and the adapter
     flags cases that physicians judged not emergent. We report these results against the method
     as the main finding.
 \end{enumerate}
@@ -482,7 +482,7 @@ detects no gain in either cell, nor in the recorded \hbhard{} cells (Table~\ref{
 answers the reviewers' question of calibration against mimicry, and it answers it against the
 method.
 
-\paragraph{A one-line prompt asks as much.} Within the \bodhi{} cell, we compared the adapter
+\paragraph{A short prompt asks as much.} Within the \bodhi{} cell, we compared the adapter
 with three prompts on the base model (H4). A prompt that tells the model to clarify first asks
 more often than the adapter (LoRA minus this prompt:
 \statHypHFourHBMistralBaseClarifyActiveInquiryDiff{} points of active inquiry), and so does a
@@ -557,7 +557,7 @@ leakage detail).
 context, to name warning signs and to bound its scope, and it keeps these behaviors without the
 protocol, with two protocols and under a judge from another family. It does not learn when these
 behaviors help. It asks as often where nothing is missing as where facts are missing
-(\S\ref{sec:rerun}), it flags most cases that physicians judged not emergent, and a one-line
+(\S\ref{sec:rerun}), it flags most cases that physicians judged not emergent, and a short
 prompt makes the base model ask more often. So the recipe moves a style of response into the
 weights, not the clinical judgment behind it. That is still of use where the style is the goal:
 the adapter needs no prompt, and in the \bodhi{} cell it scores higher on the rubrics than every
