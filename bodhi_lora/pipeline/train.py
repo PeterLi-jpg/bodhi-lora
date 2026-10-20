@@ -215,6 +215,10 @@ def recipe(ctx: StageContext) -> dict:
                  "target_modules": t.target_modules},
         "training": {"epochs": t.epochs, "max_steps": t.max_steps,
                      "per_device_train_batch_size": t.per_device_batch,
+                     # The validation loss runs at the training batch, not the transformers
+                     # default of 8: eight rows of full-vocabulary logits (262k for Gemma 3)
+                     # ran a card out of memory at the end of an epoch (R7, seed 7).
+                     "per_device_eval_batch_size": t.per_device_batch,
                      "gradient_accumulation_steps": t.grad_accum, "learning_rate": t.lr,
                      "lr_scheduler_type": t.scheduler, "warmup_ratio": t.warmup_ratio,
                      "max_seq_length": t.max_seq_length,
@@ -301,6 +305,7 @@ def run(ctx: StageContext, seed: int) -> dict:
         num_train_epochs=train_cfg["epochs"] or 1,
         max_steps=train_cfg["max_steps"] or -1,
         per_device_train_batch_size=train_cfg["per_device_train_batch_size"],
+        per_device_eval_batch_size=train_cfg["per_device_eval_batch_size"],
         gradient_accumulation_steps=train_cfg["gradient_accumulation_steps"],
         learning_rate=train_cfg["learning_rate"],
         warmup_ratio=train_cfg["warmup_ratio"],

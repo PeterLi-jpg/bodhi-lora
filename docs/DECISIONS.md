@@ -307,3 +307,16 @@ D29, at most three at once, from `configs/queues/r7_nrp.yaml` with their own sta
 2026-10-19 entry on R7) fixes how it is read. The physician grades stay a stated limitation
 until the other two raters return them (D20). The bench with merged weights (O9) is not
 part of this run.
+
+### D31. The validation loss at the training batch (2026-10-20)
+
+R7's seed 7 ran out of card memory at step 140 of 420, the end of its first epoch, in the
+validation loss: transformers measures it eight rows at a time by default, and eight rows
+of MedGemma-27B's full-vocabulary logits (262k tokens) did not fit next to the 4-bit model on
+an 80 GB A100. The train stage now measures the validation loss at the training batch
+(`per_device_batch`), and the train manifest records it. Nothing else in the recipe
+changes: the effective batch, the rows of each optimizer step and the loss of each step are
+the same. The validation loss picks the seed's checkpoint (`best_val_loss`), so all five R7
+seeds train again with this code, seed 42 too, which had passed its first validation at
+batch 8; one cell's seeds keep one recipe. The cells trained before this date keep batch 8
+in their records.

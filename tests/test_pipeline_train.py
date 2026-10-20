@@ -33,6 +33,8 @@ def test_recipe_comes_from_the_cell_and_the_model_record(tmp_path):
     assert cfg["model"]["pad_token"] == "<pad>"
     assert cfg["lora"]["r"] == 16 and len(cfg["lora"]["target_modules"]) == 7
     assert train_stage.effective_batch(cfg["training"], world_size=1) == 16
+    # The validation loss runs at the training batch (R7's out-of-memory at batch 8).
+    assert cfg["training"]["per_device_eval_batch_size"] == cfg["training"]["per_device_train_batch_size"] == 2
 
 
 def test_train_manifest_records_recipe_batch_adapter_and_losses(tmp_path, monkeypatch):
