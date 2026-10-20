@@ -918,8 +918,11 @@ with the cross-seed SD as subscript. Top: dimensions graded 0--2. Bottom: rates 
 per response. $\uparrow$: higher is better; $\downarrow$: lower is better (blanket disclaimer
 only). Questions per response and active inquiry ($\circ$) have no better direction: asking helps
 only where facts are missing. Red-flag identification and rate measure sensitivity to warning signs that need
-escalation. The anchor credits only red flags relevant to the case, but we have no labelled test of
-over-flagging. The last row gives the responses with a parsed grade.}
+escalation. The anchor credits only red flags relevant to the case, but a high rate can still
+include false flags: in the labelled test of \S\ref{sec:rerun}, the Mistral-Small-24B adapter
+flags \statHBMistralLabelledRedFlagRateEmergentPhysicianNegRateLoRA\% of the prompts that
+physicians judged not emergent, against \statHBMistralLabelledRedFlagRateEmergentPhysicianNegRateBase\%
+for Base. The last row gives the responses with a parsed grade.}
 \label{tab:epistemic}
 \input{generated/tab_dimensions_HBMedGemmaMay}
 \end{table}

@@ -296,3 +296,14 @@ The envs are the host's, package for package (the lock files of D28's day). A ta
 on the shared volume keeps the three cards busy (scripts/task_pool.py), because Argo is not
 open to the namespace.
 
+### D30. R7, R10 and the 4,096-token pair on NRP (2026-10-19)
+
+The first author's instruction of 2026-10-19: keep going until the resubmission meets every
+review requirement, with the runs on NRP. R7 (the three MedGemma-27B cells at the settings
+of R2, the area chair's ask) and R10 (the two NLM cells, C32) run on the A100-80GB cards of
+D29, at most three at once, from `configs/queues/r7_nrp.yaml` with their own state folder
+(`/data/pool/r7`). The 4,096-token pair of BLOCKED.md item 1 runs as the eval-only cell
+`healthbench__medgemma-27b-text__bodhi__ctx4096`; ANALYSIS_PLAN.md section 12 (the
+2026-10-19 entry on R7) fixes how it is read. The physician grades stay a stated limitation
+until the other two raters return them (D20). The bench with merged weights (O9) is not
+part of this run.

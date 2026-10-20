@@ -138,3 +138,29 @@ Names carry the project, never a person's name (NRP stamps the account on every 
 anyway). Jobs, not Deployments, so a card goes back when its pod ends. At most three
 A100s at once, of the namespace's five. The Hugging Face token is the namespace secret
 `nfootprint-hf` (key `token`); it never goes into a file or a log.
+
+## 5. R7 and R10 (2026-10-19)
+
+R7 (the three MedGemma-27B cells and the 4,096-token pair) and R10 (the two NLM cells) run
+from `configs/queues/r7_nrp.yaml` (36 tasks, about 110 A100-hours by the estimates) on the
+same volume, envs and rules, with their own state folder `/data/pool/r7` (DECISIONS.md D30).
+The volume's checkout holds the EOS reruns' outputs as untracked files, and the new commit
+tracks some of them, so `deploy/nrp/setup-r7-job.yaml` checks that each one equals the
+commit's copy (or differs only in the purged commit id) before it moves the checkout. Its
+payload is only the NLM files:
+
+```bash
+git bundle create ../bodhi.bundle cleanup/resubmission
+tar -czf ../payload_r7.tar.gz data/raw/nlm-clinical-questions
+kubectl apply -n aiea-interns -f deploy/nrp/io-pod.yaml
+kubectl cp ../bodhi.bundle aiea-interns/bodhi-lora-io:/data/incoming/bodhi.bundle
+kubectl cp ../payload_r7.tar.gz aiea-interns/bodhi-lora-io:/data/incoming/payload_r7.tar.gz
+kubectl delete pod -n aiea-interns bodhi-lora-io
+kubectl apply -n aiea-interns -f deploy/nrp/setup-r7-job.yaml   # with COMMIT set
+kubectl apply -n aiea-interns -f deploy/nrp/workers-r7-job.yaml
+```
+
+The workers download five models (MedGemma-27B, Qwen2.5-14B, Llama-3.1-8B, Phi-4 and
+Mistral-Small-24B), about 180 GB, so each pod's local volume is 270 GiB. The namespace's
+A100 quota is shared with other groups: while it is full, the Job's pods are not created,
+and the Job controller tries again, so the run waits in line and takes no one's card.

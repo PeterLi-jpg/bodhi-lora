@@ -29,7 +29,9 @@ O1, O2, O7 and O8 ([DECISIONS.md](DECISIONS.md) D26 and ANALYSIS_PLAN.md section
 
 Still yours:
 
-1. R7 and C31: the red-flag drop that C31 promised to recover occurred only at r 8 and a
+1. Decided 2026-10-19 (DECISIONS.md D30): R7 runs on NRP with the 4,096-token pair, as the
+   cell `healthbench__medgemma-27b-text__bodhi__ctx4096`, and R10 runs with it. The question
+   as it stood: R7 and C31: the red-flag drop that C31 promised to recover occurred only at r 8 and a
    4,096-token eval context, and R7 runs at r 16 and 8,192, so it may find no drop to
    recover. Should R7 add `lora+bodhi` and `lora+red-flags-first` at 4,096 tokens
    (RUN_PLAN.md, "R7 and C31")? Needed before R7 starts, and it blocks R7 only. The

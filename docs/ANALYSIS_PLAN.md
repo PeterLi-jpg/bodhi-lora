@@ -942,3 +942,30 @@ scores per condition, and one judge contrast. When this entry was written, the p
 values had been computed after fix (1) and only their pair counts read, and the H7 and H11
 statistics were being computed, none of them read. Each test and decision is the one that
 sections 5.1, 7.2 and 9.3 fixed before any output existed.
+
+**2026-10-19, the first author. R7 and R10 run; the 4,096-token pair is added.** Asked
+which reviews the resubmission still leaves open, the first author wrote that we should
+"keep going until it's fully finished and it actually meets all the review requirements",
+that the runs go on NRP, and that the other two physicians' grades are not in yet. Two
+planned runs follow from that: R7 (the three MedGemma-27B cells of E13, E14 and E18 at the
+settings of R2, which the area chair's final justification asked for) and R10 (the two NLM
+cells, the secondary set of H11, section 9.3; C32). Both run on NRP's A100-80GB cards, at
+most three at once (DECISIONS.md D29, D30). The 4,096-token pair of RUN_PLAN.md ("R7 and
+C31"; BLOCKED.md item 1) was proposed to the first author on 2026-10-19 as the default and
+is added before any R7 output exists, as its own eval-only cell,
+`healthbench__medgemma-27b-text__bodhi__ctx4096`: the R7 adapters in `lora`, `lora+bodhi`
+and `lora+red-flags-first` at the 4,096-token context of the 2026-05 cell, on the same
+seeds, draw rule and prompts as R7. Its reading, fixed now:
+
+- In the new cell, section 7.1's precondition and primary test run as written. The cell is
+  not a training cell, so it does not join F4; its tests are reported with their own p.
+- **Context implicated**: the precondition (`lora+bodhi` minus `lora` on red-flag
+  identification) has an interval below 0 at 4,096 tokens, and the same contrast in
+  `healthbench__medgemma-27b-text__bodhi` (8,192 tokens) does not. **Not implicated**: the
+  interval at 4,096 tokens includes 0 or lies above it. **Not resolved**: a drop at both.
+- The paper reports the reading next to H6; C31 is "run" either way.
+
+The R7 and R10 cells join the families of section 2.7 as that section says: R7's training
+cell joins F2 and F4, its paired cell F3, its labelled cell F5, and its training cell the
+new-cell family of F6. No output of R7, R10 or the new cell existed when this entry was
+written; none of their folders is under `results/`.
