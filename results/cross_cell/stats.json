@@ -1598,6 +1598,10 @@
  "hypotheses": {
   "E02": {
    "cells": {
+    "healthbench__medgemma-27b-text__bodhi": {
+     "decision": null,
+     "not_measured": "no stats.json for this cell"
+    },
     "healthbench__mistral-small-24b__ask-first": {
      "decision": "not detected",
      "outcomes": {
@@ -1637,6 +1641,10 @@
   },
   "H1": {
    "cells": {
+    "healthbench__medgemma-27b-text__bodhi": {
+     "decision": null,
+     "not_measured": "no stats.json for this cell"
+    },
     "healthbench__mistral-small-24b__bodhi": {
      "decision": "supported",
      "outcomes": {
@@ -1683,6 +1691,10 @@
   },
   "H11": {
    "cells": {
+    "healthbench__medgemma-27b-text__bodhi__labelled": {
+     "decision": null,
+     "not_measured": "no stats.json for this cell"
+    },
     "healthbench__mistral-small-24b__bodhi__labelled": {
      "decision": "supported",
      "outcomes": {
@@ -1727,8 +1739,29 @@
    "subset": "clinician-user=positive",
    "token": "HEleven"
   },
+  "H11b": {
+   "cells": {
+    "nlm-clinical-questions__medgemma-27b-text__bodhi": {
+     "decision": null,
+     "not_measured": "no stats.json for this cell"
+    },
+    "nlm-clinical-questions__mistral-small-24b__bodhi": {
+     "decision": null,
+     "not_measured": "no stats.json for this cell"
+    }
+   },
+   "family": false,
+   "reference": null,
+   "rule": "asking",
+   "subset": null,
+   "token": "HElevenNLM"
+  },
   "H2": {
    "cells": {
+    "healthbench__medgemma-27b-text__bodhi": {
+     "decision": null,
+     "not_measured": "no stats.json for this cell"
+    },
     "healthbench__mistral-small-24b__ask-first": {
      "decision": "lowers the score",
      "outcomes": {
@@ -1768,6 +1801,10 @@
   },
   "H3": {
    "cells": {
+    "mediq-paired__medgemma-27b-text__bodhi": {
+     "decision": null,
+     "not_measured": "no stats.json for this cell"
+    },
     "mediq-paired__mistral-small-24b__ask-first": {
      "decision": "mimicry indicated",
      "delta": {
@@ -1859,6 +1896,10 @@
   },
   "H4": {
    "cells": {
+    "healthbench__medgemma-27b-text__bodhi": {
+     "decision": null,
+     "not_measured": "no stats.json for this cell"
+    },
     "healthbench__mistral-small-24b__bodhi": {
      "baselines": {
       "base+clarify": {
@@ -2036,6 +2077,10 @@
   },
   "H6": {
    "cells": {
+    "healthbench__medgemma-27b-text__bodhi": {
+     "decision": null,
+     "not_measured": "no stats.json for this cell"
+    },
     "healthbench__mistral-small-24b__bodhi": {
      "decision": "no drop to recover",
      "outcomes": {
@@ -2068,8 +2113,25 @@
    "subset": null,
    "token": "HSix"
   },
+  "H6c": {
+   "cells": {
+    "healthbench__medgemma-27b-text__bodhi__ctx4096": {
+     "decision": null,
+     "not_measured": "no stats.json for this cell"
+    }
+   },
+   "family": false,
+   "reference": "healthbench__medgemma-27b-text__bodhi",
+   "rule": "context_pair",
+   "subset": null,
+   "token": "HSixCtx"
+  },
   "H7": {
    "cells": {
+    "healthbench__medgemma-27b-text__bodhi__labelled": {
+     "decision": null,
+     "not_measured": "no stats.json for this cell"
+    },
     "healthbench__mistral-small-24b__bodhi__labelled": {
      "decision": "over-flagging found",
      "outcomes": {

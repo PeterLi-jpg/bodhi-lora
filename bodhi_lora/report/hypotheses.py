@@ -11,7 +11,7 @@ from __future__ import annotations
 from bodhi_lora.analysis.config import ReportConfig
 from bodhi_lora.registry import Registry
 from bodhi_lora.report.common import DIFF_DECIMALS, KIND_FORMAT, Names, marks, scaled
-from bodhi_lora.report.latex import MISSING, escape, finite, fmt, fmt_ci, fmt_p, tabular, token
+from bodhi_lora.report.latex import MISSING, escape, finite, fmt, fmt_ci, fmt_int, fmt_p, tabular, token
 
 # The kind of each outcome a rule returns, for its scale and decimals.
 OUTCOME_KIND = {"active_inquiry": "rate", "context_seeking": "score02", "rubric_score": "score",
@@ -93,7 +93,10 @@ def judge_table(all_stats: dict, order: list[str], reg: Registry, cfg: ReportCon
             tested = [r for c in j["contrasts"].values() for r in c["metrics"].values() if r.get("decision")]
             reversed_ = sum(r["decision"] == "reversed" for r in tested)
             if rerun:
-                label = [_cell_text(cell, n), escape(cell.report.label.split(", ")[1])]
+                prompts = cell.report.label.split(", ")[0]
+                label = [f"{escape(n.d.benchmarks.get(prompts, prompts))}, "
+                         f"{n.d.protocols.get(cell.protocol, escape(cell.protocol))}",
+                         escape(cell.report.label.split(", ")[1])]
             else:
                 label = n.cell_parts(cell.report.label)
             blocks[rerun].append([*label, escape(n.d.models.get(jid, jid)) + marks(cell),
@@ -145,10 +148,11 @@ def cost_table(all_stats: dict, reg: Registry, cfg: ReportConfig, src: str) -> s
 
 def _cell_text(cell, n: Names) -> str:
     """The prompts of a cell (its label up to the base model, shortened by
-    display.benchmarks) and its teaching protocol."""
+    display.benchmarks), its base model (display.models) and its teaching protocol."""
     prompts = cell.report.label.split(", ")[0]
     prompts = n.d.benchmarks.get(prompts, prompts)
-    return f"{escape(prompts)}, {n.d.protocols.get(cell.protocol, escape(cell.protocol))}"
+    model = n.d.models.get(cell.model, cell.model)
+    return f"{escape(prompts)}, {escape(model)}, {n.d.protocols.get(cell.protocol, escape(cell.protocol))}"
 
 
 def hypothesis_table(cross: dict, reg: Registry, cfg: ReportConfig, src: str, short: bool = False) -> str:
@@ -168,7 +172,12 @@ def hypothesis_table(cross: dict, reg: Registry, cfg: ReportConfig, src: str, sh
         rule = h["rule"]
         for cid in spec.cells:
             r = h["cells"][cid]
+            # A cell that has not run is in the plan's list but not in the table.
+            if r.get("not_measured"):
+                continue
             label = _cell_text(reg.cells[cid], n)
+            if rule == "context_pair":
+                label += f", {fmt_int(reg.cells[cid].eval.serving.max_model_len)} tokens"
             subs = [(b, r["baselines"][b]) for b in spec.baselines] if "baselines" in r else [("", r)]
             for b, rr in subs:
                 cell_text = label + (f" vs {n.cond(b)}" if b else "")
@@ -186,6 +195,7 @@ def hypothesis_table(cross: dict, reg: Registry, cfg: ReportConfig, src: str, sh
                     p = fmt_p(o["p_adj"] if o.get("p_adj") is not None else o["p"]) if o else MISSING
                     rows.append([spec.id if not rows else "", cell_text if i == 0 else "", OUTCOME_NAME[key],
                                  diff, ci, p, decision if i == 0 else ""])
-        blocks.append(rows)
+        if rows:
+            blocks.append(rows)
     header = [["Question", "Cell", "Outcome", "Difference", "95\\% CI", "$p$", "Decision"]]
     return tabular("lllrrrl", header, blocks, f"{src} (hypotheses)")

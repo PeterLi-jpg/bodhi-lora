@@ -3,36 +3,36 @@
 \toprule
 Question & Cell & Outcome & Difference & 95\% CI & $p$ & Decision \\
 \midrule
-H1 & HB-Hard, \bodhi{} & Active inquiry (pp) & \ensuremath{+19.5} & \ensuremath{[+15.0,\,+24.0]} & \ensuremath{0.0011} & supported \\
+H1 & HB-Hard, Mistral-24B, \bodhi{} & Active inquiry (pp) & \ensuremath{+19.5} & \ensuremath{[+15.0,\,+24.0]} & \ensuremath{0.0011} & supported \\
  &  & Context-seeking (0--2) & \ensuremath{+0.808} & \ensuremath{[+0.648,\,+0.968]} & \ensuremath{7.6\times10^{-4}} &  \\
 \midrule
-H2 & HB-Hard, \bodhi{} & Aggregate score (0--1) & \ensuremath{+0.004} & \ensuremath{[-0.010,\,+0.018]} & \ensuremath{0.46} & no change detected \\
- & HB-Hard, ask-first & Aggregate score (0--1) & \ensuremath{-0.051} & \ensuremath{[-0.056,\,-0.045]} & \ensuremath{2.5\times10^{-5}} & lowers the score \\
+H2 & HB-Hard, Mistral-24B, \bodhi{} & Aggregate score (0--1) & \ensuremath{+0.004} & \ensuremath{[-0.010,\,+0.018]} & \ensuremath{0.46} & no change detected \\
+ & HB-Hard, Mistral-24B, ask-first & Aggregate score (0--1) & \ensuremath{-0.051} & \ensuremath{[-0.056,\,-0.045]} & \ensuremath{2.5\times10^{-5}} & lowers the score \\
 \midrule
-H3 & MediQ pairs, \bodhi{} & Ask gap, incomplete $-$ complete (pp) & \ensuremath{-25.4} & \ensuremath{[-30.3,\,-20.5]} & \ensuremath{1.6\times10^{-4}} & mimicry indicated \\
+H3 & MediQ pairs, Mistral-24B, \bodhi{} & Ask gap, incomplete $-$ complete (pp) & \ensuremath{-25.4} & \ensuremath{[-30.3,\,-20.5]} & \ensuremath{1.6\times10^{-4}} & mimicry indicated \\
  &  & Asking on complete prompts (pp) & \ensuremath{+13.9} & \ensuremath{[+6.6,\,+21.2]} & \ensuremath{0.0061} &  \\
- & MediQ pairs, ask-first & Ask gap, incomplete $-$ complete (pp) & \ensuremath{-24.4} & \ensuremath{[-28.5,\,-20.3]} & \ensuremath{1.6\times10^{-4}} & mimicry indicated \\
+ & MediQ pairs, Mistral-24B, ask-first & Ask gap, incomplete $-$ complete (pp) & \ensuremath{-24.4} & \ensuremath{[-28.5,\,-20.3]} & \ensuremath{1.6\times10^{-4}} & mimicry indicated \\
  &  & Asking on complete prompts (pp) & \ensuremath{+96.9} & \ensuremath{[+93.4,\,+100.4]} & \ensuremath{1.7\times10^{-7}} &  \\
 \midrule
-E02 & HB-Hard, \bodhi{} & Asking index, physician labels (pp) & \ensuremath{+6.4} & \ensuremath{[-15.6,\,+28.4]} & \ensuremath{0.93} & not detected \\
- & HB-Hard, ask-first & Asking index, physician labels (pp) & \ensuremath{-1.7} & \ensuremath{[-31.0,\,+27.6]} & \ensuremath{0.93} & not detected \\
+E02 & HB-Hard, Mistral-24B, \bodhi{} & Asking index, physician labels (pp) & \ensuremath{+6.4} & \ensuremath{[-15.6,\,+28.4]} & \ensuremath{0.93} & not detected \\
+ & HB-Hard, Mistral-24B, ask-first & Asking index, physician labels (pp) & \ensuremath{-1.7} & \ensuremath{[-31.0,\,+27.6]} & \ensuremath{0.93} & not detected \\
 \midrule
-H4 & HB-Hard, \bodhi{} vs Base+clarify & Active inquiry (pp) & \ensuremath{-30.3} & \ensuremath{[-35.4,\,-25.2]} & \ensuremath{4.0\times10^{-4}} & baseline ahead \\
+H4 & HB-Hard, Mistral-24B, \bodhi{} vs Base+clarify & Active inquiry (pp) & \ensuremath{-30.3} & \ensuremath{[-35.4,\,-25.2]} & \ensuremath{4.0\times10^{-4}} & baseline ahead \\
  &  & Context-seeking (0--2) & \ensuremath{+0.033} & \ensuremath{[-0.137,\,+0.203]} & \ensuremath{0.85} &  \\
- & HB-Hard, \bodhi{} vs Base+verbalized-confidence & Active inquiry (pp) & \ensuremath{+28.5} & \ensuremath{[+22.8,\,+34.2]} & \ensuremath{7.8\times10^{-4}} & adapter ahead \\
+ & HB-Hard, Mistral-24B, \bodhi{} vs Base+verbalized-confidence & Active inquiry (pp) & \ensuremath{+28.5} & \ensuremath{[+22.8,\,+34.2]} & \ensuremath{7.8\times10^{-4}} & adapter ahead \\
  &  & Context-seeking (0--2) & \ensuremath{+0.553} & \ensuremath{[+0.341,\,+0.765]} & \ensuremath{0.0077} &  \\
- & HB-Hard, \bodhi{} vs Base+mediq-abstain & Active inquiry (pp) & \ensuremath{-7.2} & \ensuremath{[-11.9,\,-2.5]} & \ensuremath{0.013} & baseline ahead \\
+ & HB-Hard, Mistral-24B, \bodhi{} vs Base+mediq-abstain & Active inquiry (pp) & \ensuremath{-7.2} & \ensuremath{[-11.9,\,-2.5]} & \ensuremath{0.013} & baseline ahead \\
  &  & Context-seeking (0--2) & \ensuremath{+0.659} & \ensuremath{[+0.553,\,+0.765]} & \ensuremath{1.3\times10^{-4}} &  \\
 \midrule
-H5 & HB-Hard, ask-first & Active inquiry (pp) & \ensuremath{+72.1} & \ensuremath{[+68.1,\,+76.1]} & \ensuremath{6.9\times10^{-6}} & supported \\
+H5 & HB-Hard, Mistral-24B, ask-first & Active inquiry (pp) & \ensuremath{+72.1} & \ensuremath{[+68.1,\,+76.1]} & \ensuremath{6.9\times10^{-6}} & supported \\
  &  & Context-seeking (0--2) & \ensuremath{+1.005} & \ensuremath{[+0.937,\,+1.073]} & \ensuremath{1.1\times10^{-5}} &  \\
 \midrule
-H6 & HB-Hard, \bodhi{} & Red flags (0--2), LoRA+\bodhi{} $-$ LoRA & \ensuremath{-0.012} & \ensuremath{[-0.097,\,+0.072]} & \ensuremath{0.71} & no drop to recover \\
+H6 & HB-Hard, Mistral-24B, \bodhi{} & Red flags (0--2), LoRA+\bodhi{} $-$ LoRA & \ensuremath{-0.012} & \ensuremath{[-0.097,\,+0.072]} & \ensuremath{0.71} & no drop to recover \\
  &  & Red flags (0--2), red flags first $-$ \bodhi{} & \ensuremath{+0.013} & \ensuremath{[-0.077,\,+0.102]} & \ensuremath{0.71} &  \\
 \midrule
-H7 & HB labelled, \bodhi{} & Red-flag rate, non-emergent (pp) & \ensuremath{+38.1} & \ensuremath{[+35.9,\,+40.2]} & \ensuremath{1.1\times10^{-6}} & over-flagging found \\
+H7 & HB labelled, Mistral-24B, \bodhi{} & Red-flag rate, non-emergent (pp) & \ensuremath{+38.1} & \ensuremath{[+35.9,\,+40.2]} & \ensuremath{1.1\times10^{-6}} & over-flagging found \\
 \midrule
-H11 & HB labelled, \bodhi{} (clinician-written) & Active inquiry (pp) & \ensuremath{+19.3} & \ensuremath{[+14.1,\,+24.5]} & \ensuremath{0.0015} & supported \\
+H11 & HB labelled, Mistral-24B, \bodhi{} (clinician-written) & Active inquiry (pp) & \ensuremath{+19.3} & \ensuremath{[+14.1,\,+24.5]} & \ensuremath{0.0015} & supported \\
  &  & Context-seeking (0--2) & \ensuremath{+1.145} & \ensuremath{[+1.084,\,+1.207]} & \ensuremath{5.9\times10^{-6}} &  \\
 \bottomrule
 \end{tabular}

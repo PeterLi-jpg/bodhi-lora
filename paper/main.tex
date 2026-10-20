@@ -424,8 +424,9 @@ the rubric axes).
 \begin{table}[t]
 \centering
 \caption{The tests that our analysis plan fixed before these cells ran, with the plan's decision
-for each cell. Every cell uses Mistral-Small-24B with one recipe and one set of evaluation
-settings. A difference is LoRA $-$ Base unless the row names another pair. For H3 it is the
+for each cell. Every cell uses one recipe and one set of evaluation settings; the Cell column
+names the prompts, the base model and the teaching protocol. A difference is LoRA $-$ Base unless
+the row names another pair. For H3 it is the
 change in the ask gap between the two versions of a MediQ case, and for H4 it is LoRA minus the
 prompt baseline. $p$: Holm-adjusted over the seven dimensions for active inquiry, and over the
 question's cells for H2, H3, E02, H6 and H7; the paired $t$ for the first row of H6, which is
