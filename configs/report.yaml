@@ -304,6 +304,7 @@ posted:
 display:
   weights: {base: Base, lora: LoRA}
   protocols: {bodhi: '\bodhi{}'}
+  models: {phi-4: Phi-4, medgemma-27b-text: MedGemma-27B, gemma-2-27b: Gemma-2-27B}
   metrics:
     uncertainty_ack: 'Uncertainty ack.\ (0--2)'
     active_inquiry: 'Active inquiry (\%)'
@@ -327,7 +328,7 @@ display:
     needs-info-theme: 'context-seeking theme'
     emergency-theme: 'emergency-referral theme'
     emergent-physician: 'physicians: emergent'
-    clinician-user: 'physicians: clinician-written'
+    clinician-user: 'clinician-written'
   benchmarks:
     HealthBench-Hard: HB-Hard
     MedQA with the asking preamble: MedQA

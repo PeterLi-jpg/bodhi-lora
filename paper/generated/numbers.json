@@ -188,6 +188,8 @@
     "tab_disclaimers_HBMedGemmaMay",
     "tab_gap_HBMedGemmaMay",
     "tab_hypotheses",
+    "tab_hypotheses_short",
+    "tab_judges",
     "tab_kappa_EvalLlama_HBMedGemmaMay",
     "tab_kappa_FilterQwen_HBMedGemmaMay",
     "tab_length_quartiles_HBMedGemmaMay",

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from bodhi_lora.analysis.config import ReportConfig
 from bodhi_lora.registry import Registry
-from bodhi_lora.report.common import DIFF_DECIMALS, KIND_FORMAT, Names, scaled
+from bodhi_lora.report.common import DIFF_DECIMALS, KIND_FORMAT, Names, marks, scaled
 from bodhi_lora.report.latex import MISSING, escape, fmt, fmt_ci, fmt_p, tabular, token
 
 # The kind of each outcome a rule returns, for its scale and decimals.
@@ -68,6 +68,39 @@ def hypothesis_macros(rep, cross: dict, reg: Registry, cfg: ReportConfig, src: s
                             f"{where}.delta.{c}.ci95 (pp)")
 
 
+def judge_table(all_stats: dict, order: list[str], reg: Registry, cfg: ReportConfig, src: str) -> str:
+    """H8 (docs/ANALYSIS_PLAN.md section 8): one row per cell and judge, for every analyzed
+    cell whose record lists a judge that graded it: the judge's agreement with the
+    evaluator on the rubric criteria, its decision on the two primary outcomes of H1
+    (LoRA - Base), and how many dimension results of all the cell's contrasts it reverses."""
+    n = Names(cfg)
+    blocks = [[], []]
+    for cid in order:
+        stats = all_stats.get(cid)
+        if not stats:
+            continue
+        cell = reg.cells[cid]
+        # The cross cells first; the cells of the pre-registered questions in their own block.
+        rerun = cid not in cfg.cross_cells
+        for jid, j in (stats.get("judges") or {}).items():
+            if "contrasts" not in j:
+                continue
+            m = j["contrasts"].get("lora - base", {}).get("metrics", {})
+            decisions = [escape(m.get(k, {}).get("decision") or MISSING) for k in ("active_inquiry", "context_seeking")]
+            tested = [r for c in j["contrasts"].values() for r in c["metrics"].values() if r.get("decision")]
+            reversed_ = sum(r["decision"] == "reversed" for r in tested)
+            if rerun:
+                label = [_cell_text(cell, n), escape(cell.report.label.split(", ")[1])]
+            else:
+                label = n.cell_parts(cell.report.label)
+            blocks[rerun].append([*label, escape(n.d.models.get(jid, jid)) + marks(cell),
+                         fmt(j.get("criterion_kappa"), 2), fmt_ci(j.get("criterion_kappa_ci95"), 2, sign=False),
+                         *decisions, f"{reversed_} of {len(tested)}"])
+    header = [["Prompts", "Base model", "Judge", "$\\kappa$, criteria", "95\\% CI",
+               "Active inquiry", "Context-seeking", "Reversed"]]
+    return tabular("lllrrllr", header, [b for b in blocks if b], f"{src} (judges)")
+
+
 def _cell_text(cell, n: Names) -> str:
     """The prompts of a cell (its label up to the base model, shortened by
     display.benchmarks) and its teaching protocol."""
@@ -76,12 +109,13 @@ def _cell_text(cell, n: Names) -> str:
     return f"{escape(prompts)}, {n.d.protocols.get(cell.protocol, escape(cell.protocol))}"
 
 
-def hypothesis_table(cross: dict, reg: Registry, cfg: ReportConfig, src: str) -> str:
+def hypothesis_table(cross: dict, reg: Registry, cfg: ReportConfig, src: str, short: bool = False) -> str:
     """One row per question, cell and primary outcome, in the order of
     configs/report.yaml: the difference with its 95% t interval, its p (Holm-adjusted as the
     plan names it: within the contrast for the seven dimensions, across the question's
     cells for a family; the paired t where the plan names no correction) and the plan's
-    decision on the cell's first row."""
+    decision on the cell's first row. short keeps the first outcome of each rule, for the
+    main text."""
     n = Names(cfg)
     blocks = []
     for spec in cfg.hypotheses:
@@ -98,9 +132,10 @@ def hypothesis_table(cross: dict, reg: Registry, cfg: ReportConfig, src: str) ->
                 cell_text = label + (f" vs {n.cond(b)}" if b else "")
                 if spec.subset:
                     lab, _, group = spec.subset.partition("=")
-                    cell_text += f" ({n.label(lab)}: {group})"
+                    cell_text += f" ({'' if group == 'positive' else 'not '}{n.label(lab)})"
                 decision = escape(rr.get("decision") or MISSING)
-                for i, key in enumerate(TABLE_OUTCOMES[rule]):
+                keys = TABLE_OUTCOMES[rule][:1] if short else TABLE_OUTCOMES[rule]
+                for i, key in enumerate(keys):
                     o = (rr.get("outcomes") or {}).get(key)
                     kind = OUTCOME_KIND[key]
                     scale, dp = KIND_FORMAT[kind][0], DIFF_DECIMALS[kind]
