@@ -343,8 +343,7 @@ cells. $^{\ddagger}$Set aside, because its prompt told the model to ask; its dim
 \resizebox{\linewidth}{!}{\input{generated/tab_cross_cell}}
 \end{table}
 
-The MedGemma-27B cell on \hbhard{} is the cell of the submitted version. After the submission we
-ran the recipe in \statGroupAddedCells{} added cells (Table~\ref{tab:cells}): Mistral-Small-24B, Med42-8B
+Our first cell is MedGemma-27B on \hbhard{}. We then ran the recipe in \statGroupAddedCells{} added cells (Table~\ref{tab:cells}): Mistral-Small-24B, Med42-8B
 and BioMistral-7B \citep{labrak2024biomistral} on \hbhard{}; Mistral-Small-24B and Med42-8B on
 ChatDoctor \citep{li2023chatdoctor}, questions that real patients asked physicians online; and
 Mistral-Small-24B on MedQuAD \citep{benabacha2019medquad}, NIH consumer-health questions, and on
@@ -438,8 +437,8 @@ gives every outcome of every test.}
 \resizebox{\linewidth}{!}{\input{generated/tab_hypotheses_short}}
 \end{table}
 
-The cells of \S\ref{sec:cells} used two recipes and several evaluation settings, and the reviews of
-our earlier version asked whether the adapter learned when to ask. Before we ran more cells, we
+The cells of \S\ref{sec:cells} used two recipes and several evaluation settings, and they cannot
+tell whether the adapter learned when to ask. Before we ran more cells, we
 wrote an analysis plan into the repository: each question, its test and the rule that decides it.
 We then trained Mistral-Small-24B on \hbhard{} with one recipe and one set of settings, once with
 the \bodhi{} protocol as the teacher and once with a second protocol, written for this study, that
@@ -478,9 +477,8 @@ less where facts are missing. Against Base, the gap between the two versions cha
 $p_{\text{Holm}} = \statHypHThreeMediqMistralDidPAdj$), and the ask-first adapter shows the same
 pattern. By the plan's rule, mimicry is indicated in both cells: the rise in asking does not depend
 on missing information. The secondary test on the physicians' labels of missing context (E02)
-detects no gain in either cell, nor in the recorded \hbhard{} cells (Table~\ref{tab:risk}). This
-answers the reviewers' question of calibration against mimicry, and it answers it against the
-method.
+detects no gain in either cell, nor in the recorded \hbhard{} cells (Table~\ref{tab:risk}). So the
+question of calibration against mimicry has an answer, and it goes against the method.
 
 \paragraph{A short prompt asks as much.} Within the \bodhi{} cell, we compared the adapter
 with three prompts on the base model (H4). A prompt that tells the model to clarify first asks
@@ -521,8 +519,8 @@ weights.
 
 \paragraph{No red-flag drop to recover.} In this cell, adding the \bodhi{} protocol to the adapter
 does not lower red-flag identification (\statHypHSixHBMistralPreconditionDiff, 95\% CI
-\statHypHSixHBMistralPreconditionCI). So the fix that our earlier version proposed, which states
-red flags first (H6), has nothing to recover here.
+\statHypHSixHBMistralPreconditionCI). So a fix that states red flags first (H6) has nothing to
+recover here.
 
 \subsection{The CoT Protocol on the Adapter}
 \label{sec:interference}
@@ -620,8 +618,9 @@ not on the seven dimensions, and agreement is below the target. On the negative 
 physicians are co-authors. The evaluator does not always follow its anchors, and its prompt names
 the \bodhi{} protocol and says that it trains active inquiry, which may favor responses in the
 protocol's style, although it is not told the condition.
-\emph{Selectivity.} We withdraw our posted claim that the adapter asks selectively; the plan's test
-indicates mimicry (\S\ref{sec:rerun}).
+\emph{Selectivity.} The adapter does not ask selectively; the plan's test indicates mimicry
+(\S\ref{sec:rerun}). Appendix~\ref{app:changes} lists the claims of an earlier version that we
+withdraw.
 \emph{Cells.} The cells of \S\ref{sec:cells} used two training stacks, recipes and evaluation
 settings, so a difference between them can come from the settings. The Mistral-Small-24B adapters
 were trained against a 4-bit base; in the 2026-07 cells they were evaluated on the bfloat16 base.
@@ -692,9 +691,7 @@ kept, is future work (\S\ref{sec:future}).
 2026-04-29, before the main evaluation; it was not registered with an outside registry. It measured
 Cohen's $\kappa$ between the filter grader (Qwen2.5-14B) and the consensus of at least two
 board-certified physicians. It used 50 responses per condition (200 in total), and $\kappa \geq 0.6$
-was the threshold for a reliable grader. One posted reply described the plan as a
-quadratic-weighted $\kappa$ against a three-physician consensus. The plan in the repository is the
-one above.
+was the threshold for a reliable grader.
 
 \paragraph{What we ran.} On 2026-05-01, before the main evaluation, the evaluator became
 Llama-3.1-8B-Instruct. We sent three physicians one sheet of 50 responses. The sheet had 40
@@ -794,8 +791,8 @@ curiosity and humility, but not the five components one by one. So the component
 reading of the names, and Balanced and Open-minded have no dimension of their own. The Pass~1
 fields come from the protocol prompt of the reference implementation, bodhi-llm 0.1.4, which
 cites an earlier paper by the same group \citep{bodhiplos2026}. That package expands the acronym
-as Bridging, Open, Discerning, Humble, Inquiring. The submitted version of this paper and our
-posted replies used that expansion, and they mapped scope bounding to Open and Bridging. This
+as Bridging, Open, Discerning, Humble, Inquiring. An earlier version of this
+paper used that expansion, and it mapped scope bounding to Open and Bridging. This
 version uses the expansion of the cited source, so the mapping changed. The evaluator's prompt
 names the \bodhi{} protocol as the source of these behaviors, but the evaluator is not told the
 condition.
@@ -1278,9 +1275,7 @@ those quartiles. We ran no length-controlled test. The quartile counts are uneve
 \statHBMedGemmaMayScoredLoRA{} graded responses, spread unequally over the Base quartiles. The serving engine
 stored the number of output tokens for the one-pass conditions: \statHBMedGemmaMayTokensEngineBase{} per Base
 response and \statHBMedGemmaMayTokensEngineLoRA{} per LoRA response on average. The two-pass conditions kept
-only their final response, so we cannot count their tokens. Our posted reply said that the adapter
-needs about \statPostedFewerTokensPct\% fewer output tokens than the protocol. No file in the
-repository supports that value, and we withdraw it.
+only their final response, so we cannot count their tokens.
 
 \begin{table}[!ht]
 \centering
@@ -1359,12 +1354,7 @@ the rate on self-contained prompts. LoRA $-$ Base on this index is
 \statHBMedGemmaMayActiveInquiryNeedsInfoThemeIndexLoRAvsBaseDiff{} percentage points (95\% CI \statHBMedGemmaMayActiveInquiryNeedsInfoThemeIndexLoRAvsBaseCI, bootstrap
 over prompts). The interval includes zero, so we do not claim that the adapter asks selectively.
 The adapter also asks more on self-contained prompts: \statHBMedGemmaMayActiveInquiryNeedsInfoThemeNegRateBase\% under Base against
-\statHBMedGemmaMayActiveInquiryNeedsInfoThemeNegRateLoRA\% under LoRA. Our posted replies claimed selective asking from the adapter's own
-index (\statPostedDiscriminationLoRA{} points) against Base's (\statPostedDiscriminationBase{}
-points). That compares each condition with zero, not the two conditions with each other, and its
-labeling also counted a prompt as context-seeking when a rubric criterion contained a keyword such
-as ``ask'' or ``clarify''. A keyword match cannot tell a criterion that rewards asking from one
-that only mentions it, so we withdraw that labeling and the claim. With the theme tag, the
+\statHBMedGemmaMayActiveInquiryNeedsInfoThemeNegRateLoRA\% under LoRA. With the theme tag, the
 adapter's own index is \statHBMedGemmaMayActiveInquiryNeedsInfoThemeIndexLoRA{} points (\statHBMedGemmaMayActiveInquiryNeedsInfoThemeIndexLoRACI) and Base's is
 \statHBMedGemmaMayActiveInquiryNeedsInfoThemeIndexBase{} points (\statHBMedGemmaMayActiveInquiryNeedsInfoThemeIndexBaseCI). The data do not show that the adapter learned
 when to ask, and template imitation remains possible. Table~\ref{tab:checks} gives LoRA $-$ Base on
@@ -1376,29 +1366,6 @@ are labelled as missing context and \statHBMedGemmaMayActiveInquiryNeedsInfoPhys
 not; in each added \hbhard{} cell, \statHBMistralJulActiveInquiryNeedsInfoPhysicianPosPrompts{} and
 \statHBMistralJulActiveInquiryNeedsInfoPhysicianNegPrompts. These groups are small, so a null result is
 ``not detected''.
-
-\paragraph{Clinician-posed prompts.} Our posted reply said that \statPostedClinicianPrompts{} of
-the \statHBMedGemmaMayPopulationPrompts{} \hbhard{} prompts identify the speaker as a clinician. That count came from
-a keyword audit whose rule we did not keep, and no committed script reproduces it. A keyword rule
-cannot tell a clinician who writes about a patient from a patient who quotes a doctor, so we report
-no keyword count. HealthBench's own tag marks
-\statHBMedGemmaMayLabelClinicianUserPopPos{} of the \statHBMedGemmaMayPopulationPrompts{} prompts as written by a health
-professional, among the \statHBMedGemmaMayLabelClinicianUserPopLabelled{} prompts that carry the tag. The tag count
-replaces the posted value.
-
-\paragraph{Format leakage: the posted rule.} Our posted replies counted a response as leaked when
-it had at least two of nine markers: the seven Pass~1 headers and the words ``differential'' and
-``scope of''. These two words are not part of the protocol's format, and they occur in ordinary
-clinical text. A rule that counts them reads meaning from the words of a reply, so we withdraw it
-and its posted rate of \statPostedLeakagePctLoRABodhi\% for LoRA+\bodhi{}. The rule of
-\S\ref{sec:interference} counts the seven headers only.
-
-\paragraph{Questions without the evaluator.} Our posted reply gave a second-person question rate:
-\statPostedSecondPersonBase\% of Base responses and \statPostedSecondPersonLoRA\% of LoRA
-responses had a sentence that ends in a question mark and contains ``you'' or ``your''. Such a rule
-counts quoted and rhetorical questions and misses indirect ones, so we withdraw the rate and report
-no count of this kind. The evaluator's active-inquiry grade is the measure of asking. A check of
-it by a judge from another model family is future work (\S\ref{sec:future}).
 
 \paragraph{Checks in every cell.} Table~\ref{tab:checks} gives three post hoc, descriptive checks
 for every cell, from the response-level outputs of each cell. The theme tags exist only on
@@ -1556,7 +1523,7 @@ family, this gap is positive in \statGroupAddedOutsideFamilyAskersGapLoRAUp{} an
 \statHBBioMistralJulAskersGapLoRA{} in BioMistral-7B. With its bootstrap interval over prompts
 (Table~\ref{tab:checks}), the gap lies above zero on ChatDoctor
 (\statCDMistralJulAskersGapLoRACI) and MedQuAD (\statMQMistralJulAskersGapLoRACI), and its interval
-includes zero in the other cells outside the evaluator's family. Our posted count also had the two
+includes zero in the other cells outside the evaluator's family. The earlier version also counted the two
 Med42-8B cells, where the gap is \statHBMedFortyTwoJulAskersGapLoRA{} and
 \statCDMedFortyTwoJulAskersGapLoRA, with intervals below zero
 (\statHBMedFortyTwoJulAskersGapLoRACI{} and \statCDMedFortyTwoJulAskersGapLoRACI). In BioMistral-7B,
@@ -1571,7 +1538,7 @@ scores above Base on both (\statMQMistralJulScopeBoundingLoRA{} and
 \statMQMistralJulHedgingQualityLoRA). Specificity goes the other way. It falls from
 \statMQMistralJulSpecificityBase{} under Base to \statMQMistralJulSpecificityBaseBodhi{}
 under the teacher and \statMQMistralJulSpecificityLoRA{} under LoRA, so the adapter lowers
-specificity on MedQuAD. Our first posted account quoted scope bounding and hedging only; it should
+specificity on MedQuAD. The earlier version quoted scope bounding and hedging only; it should
 have given specificity next to them. So the adapter does not copy every property of its teacher,
 and it has costs on single dimensions as well as on the aggregate score. We have no arm trained
 without the filter, so we cannot attribute this to the filter.
@@ -1580,10 +1547,10 @@ without the filter, so we cannot attribute this to the filter.
 preamble that told the model to ask for missing information. In the
 \statMedQAPreMistralJulSeedsGraded{} seeds with an epistemic grade, Base asked in
 \statMedQAPreMistralJulActiveInquiryBaseSeedMin\% to \statMedQAPreMistralJulActiveInquiryBaseSeedMax\% of
-responses; we posted \statPostedMedQAPreambleAI\% for the preamble run. So this is the preamble run,
+responses; the earlier version reported \statPostedMedQAPreambleAI\% for the preamble run. So this is the preamble run,
 and it measures instruction following. Its aggregate score rose by
 \statMedQAPreMistralJulRubricScoreLoRAvsBaseDiff{} (\statMedQAPreMistralJulRubricScoreLoRAvsBaseCI; $p =
-\statMedQAPreMistralJulRubricScoreLoRAvsBaseP$). This is the rise that our posted replies reported without a
+\statMedQAPreMistralJulRubricScoreLoRAvsBaseP$). This is the rise that the earlier version reported without a
 value. The epistemic grading of seed 42 found none of the MedQA prompts, so the dimensions of this
 cell in Table~\ref{tab:cells} use the other \statMedQAPreMistralJulSeedsGraded{} seeds. No run
 without the preamble exists.
@@ -1707,6 +1674,58 @@ This recipe & weights & 1 & protocol, rubric, grader & epistemic behaviors & our
 \bottomrule
 \end{tabular}
 \end{table}
+
+\section{Changes from an Earlier Version}
+\label{app:changes}
+
+An earlier version of this paper reported one cell, MedGemma-27B on \hbhard{}. Its review asked
+for more base models and benchmarks, a comparison with other methods, a second teaching protocol,
+a clinically tuned judge, a test of whether the adapter asks selectively and the cost of each
+setup, and our replies promised a test of over-flagging. \S\ref{sec:cells} and \S\ref{sec:rerun}
+give these, except a clinically tuned evaluator (\S\ref{sec:limitations}). The earlier version also made claims that we
+withdraw: that the recipe is a general framework, that it preserves clinical quality, that it is
+for clinical decision support, that adapted models converge on one rate of asking, that the
+adapter and the protocol compete for capacity, and that the adapter asks selectively. The values
+below are the ones it reported, and each paragraph says what replaces it.
+
+\paragraph{Fewer output tokens.} The earlier version said that the adapter needs about
+\statPostedFewerTokensPct\% fewer output tokens than the protocol. No file in the repository
+supports that value, and we withdraw it. The timing of \S\ref{sec:rerun} replaces it.
+
+\paragraph{Selective asking.} The earlier version claimed selective asking from the adapter's own
+asking index (\statPostedDiscriminationLoRA{} points) against Base's
+(\statPostedDiscriminationBase{} points). That compares each condition with zero, not the two
+conditions with each other, and its labeling counted a prompt as context-seeking when a rubric
+criterion contained a keyword such as ``ask'' or ``clarify''. A keyword match cannot tell a
+criterion that rewards asking from one that only mentions it, so we withdraw that labeling and the
+claim. The test that our analysis plan fixed indicates mimicry (\S\ref{sec:rerun}).
+
+\paragraph{Clinician-posed prompts.} The earlier version said that \statPostedClinicianPrompts{} of
+the \statHBMedGemmaMayPopulationPrompts{} \hbhard{} prompts identify the speaker as a clinician. That count came from
+a keyword audit whose rule we did not keep, and no committed script reproduces it. A keyword rule
+cannot tell a clinician who writes about a patient from a patient who quotes a doctor, so we report
+no keyword count. HealthBench's own tag marks
+\statHBMedGemmaMayLabelClinicianUserPopPos{} of the \statHBMedGemmaMayPopulationPrompts{} prompts as written by a health
+professional, among the \statHBMedGemmaMayLabelClinicianUserPopLabelled{} prompts that carry the tag. The tag count
+replaces that value.
+
+\paragraph{Format leakage.} The earlier version counted a response as leaked when
+it had at least two of nine markers: the seven Pass~1 headers and the words ``differential'' and
+``scope of''. These two words are not part of the protocol's format, and they occur in ordinary
+clinical text. A rule that counts them reads meaning from the words of a reply, so we withdraw it
+and its rate of \statPostedLeakagePctLoRABodhi\% for LoRA+\bodhi{}. The rule of
+\S\ref{sec:interference} counts the seven headers only.
+
+\paragraph{Questions without the evaluator.} The earlier version gave a second-person question rate:
+\statPostedSecondPersonBase\% of Base responses and \statPostedSecondPersonLoRA\% of LoRA
+responses had a sentence that ends in a question mark and contains ``you'' or ``your''. Such a rule
+counts quoted and rhetorical questions and misses indirect ones, so we withdraw the rate and report
+no count of this kind. The evaluator's active-inquiry grade is the measure of asking, and judges
+from two other model families confirm it (\S\ref{sec:rerun}).
+
+\paragraph{The physician plan.} One reply of the earlier discussion described the physician plan
+as a quadratic-weighted $\kappa$ against a three-physician consensus. The plan in the repository
+is the one of Appendix~\ref{app:human}.
 
 \section{Qualitative Examples}
 \label{app:examples}
