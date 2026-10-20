@@ -27,12 +27,13 @@ OUTCOME_NAME = {"active_inquiry": "Active inquiry (pp)", "context_seeking": "Con
                 "red_flag": "Red flags (0--2), red flags first $-$ \\bodhi{}",
                 "precondition": "Red flags (0--2), LoRA+\\bodhi{} $-$ LoRA",
                 "non_emergent_rate": "Red-flag rate, non-emergent (pp)",
+                "emergent_rate": "Red-flag rate, emergent (pp)",
                 "precondition_full": "Red flags (0--2), LoRA+\\bodhi{} $-$ LoRA, full context"}
 # The outcomes the table prints for each rule, in order; the others get macros only.
 TABLE_OUTCOMES = {"asking": ("active_inquiry", "context_seeking"), "cost": ("rubric_score",),
                   "paired_probe": ("did", "complete_rate"), "physician_index": ("index",),
                   "baselines": ("active_inquiry", "context_seeking"), "red_flags_first": ("precondition", "red_flag"),
-                  "over_flagging": ("non_emergent_rate",),
+                  "over_flagging": ("non_emergent_rate", "emergent_rate"),
                   "context_pair": ("precondition", "precondition_full", "red_flag")}
 
 
@@ -187,7 +188,7 @@ def hypothesis_table(cross: dict, reg: Registry, cfg: ReportConfig, src: str, sh
                 decision = escape(rr.get("decision") or MISSING)
                 keys = TABLE_OUTCOMES[rule][:1] if short else TABLE_OUTCOMES[rule]
                 for i, key in enumerate(keys):
-                    o = (rr.get("outcomes") or {}).get(key)
+                    o = (rr.get("outcomes") or {}).get(key) or (rr.get("secondary") or {}).get(key)
                     kind = OUTCOME_KIND[key]
                     scale, dp = KIND_FORMAT[kind][0], DIFF_DECIMALS[kind]
                     diff = fmt(o["diff"] * scale, dp, sign=True) if o else MISSING
