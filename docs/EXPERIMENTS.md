@@ -596,14 +596,14 @@ changes already in `paper/main.tex`, with the commitment that records them.
 | Commitment | Status now | Answered by |
 |---|---|---|
 | C1 to C24 | done or changed (text, figures and tables; `rebuttal/commitments.md` says which changed and why) | E01 recomputes every number they cite from the response tables |
-| C25 cost per configuration | built, awaiting GPU (R2) | E08, E20 |
-| C26 clinical judge panel | ran: R1 and R6 on the shared host, R2 and R5 on NRP; H8 is in each cell's `analysis/stats.json` (`judges`); the paper text is pending | E10 (E09 for the Med42-8B cells), read by H8 |
-| C27 inference-time baseline | built, awaiting GPU (R2) | E12 |
+| C25 cost per configuration | ran (R2 and R5 benches); in the paper (section 4.3, Appendix K): not faster as served, merged weights not timed (O9) | E08, E20 |
+| C26 clinical judge panel | ran: R1 and R6 on the shared host, R2 and R5 on NRP; in the paper (section 4.3, Table K.2) | E10 (E09 for the Med42-8B cells), read by H8 |
+| C27 inference-time baseline | ran (R2, H4); in the paper (section 4.3): two of three baselines ask more | E12 |
 | C28 three-physician validation | deferred (D20) | E27 |
-| C29 second CoT protocol | built, awaiting GPU (R5) | E16 |
-| C30 over-flagging set | changed (HealthBench physician labels); built, awaiting GPU (R4) | E18 |
-| C31 red flags early | built, awaiting GPU (R2, R7); R7 may find no drop to recover (E17) | E17 |
-| C32 clinician-posed benchmark | changed (open sets in place of MIMIC and eICU); built, awaiting GPU (R4, R10) | E19 |
+| C29 second CoT protocol | ran (R5, H5 supported); in the paper (section 4.3) | E16 |
+| C30 over-flagging set | changed (HealthBench physician labels); ran (R4, H7: over-flagging found); in the paper (section 4.3) | E18 |
+| C31 red flags early | ran in R2: no drop to recover (H6, section 4.3); R7 and its 4,096-token pair not run | E17 |
+| C32 clinician-posed benchmark | changed (open sets in place of MIMIC and eICU); HealthBench part ran (R4, H11 supported); NLM set (R10) not run | E19 |
 | C33 harm grading | deferred (E28); the LLM-graded proxy is in the paper | E06 now (proxy), E28 deferred |
 
 Audit items that need a run: REPRO-8 (E23), EVAL-12 and NUM-7 (E11), REPRO-12 (E13
