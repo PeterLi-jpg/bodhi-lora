@@ -148,10 +148,12 @@ def test_committed_decisions_are_what_the_rules_give():
     """cross_cell/stats.json holds the decisions of the committed cells' stats."""
     reg, cfg, proj = load_registry(CONFIGS_DIR), report_config(), project(CONFIGS_DIR)
     path = proj.results_root / "cross_cell" / "stats.json"
+    if not path.is_file():
+        pytest.skip("the cross-cell statistics are not in this checkout")
+    # A cell that has not run yet has no stats; the rules list it as not measured, in both.
     cells = {c for h in cfg.hypotheses for c in [*h.cells, h.reference] if c}
-    if not path.is_file() or not all((proj.cell(c).analysis() / "stats.json").is_file() for c in cells):
-        pytest.skip("the hypothesis cells are not in this checkout")
-    all_stats = {c: json.loads((proj.cell(c).analysis() / "stats.json").read_text()) for c in cells}
+    all_stats = {c: json.loads(p.read_text()) for c in cells
+                 if (p := proj.cell(c).analysis() / "stats.json").is_file()}
     fresh = json.loads(json.dumps(hypotheses_summary(all_stats, cfg, reg)))
     committed = json.loads(path.read_text())["hypotheses"]
     assert {h: {c: r.get("decision") for c, r in v["cells"].items()} for h, v in fresh.items()} == \
