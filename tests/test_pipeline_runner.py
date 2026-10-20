@@ -337,10 +337,13 @@ def test_a_dry_run_never_downloads_and_names_the_fetch_command(tmp_path, capsys,
 
     monkeypatch.setattr(urllib.request, "urlopen", no_download)
     configs = fixture_configs(tmp_path)          # its data root is empty
-    cell = "healthbench__mistral-small-24b__bodhi"
+    reg = load_registry(configs)
+    # Any HealthBench cell that has not run: a cell whose record says complete refuses a
+    # new run before it reaches the data check.
+    cell = sorted(c.id for c in reg.cells.values()
+                  if c.benchmark == "healthbench" and c.report.status == "planned" and 42 in c.seeds)[0]
     with pytest.raises(RunError, match="python -m bodhi_lora fetch healthbench"):
-        run_cell(load_registry(configs), project(configs), cell, mode="dry_run", seeds=[42],
-                 configs_dir=configs)
+        run_cell(reg, project(configs), cell, mode="dry_run", seeds=[42], configs_dir=configs)
     assert "DRY-RUN [gpu" in capsys.readouterr().out
 
 
