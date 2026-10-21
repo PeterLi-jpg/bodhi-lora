@@ -134,12 +134,21 @@
       "set_aside": null,
       "stats": "results/medquad__mistral-small-24b__bodhi__2026-07/analysis/stats.json",
       "token": "MQMistralJul"
+    },
+    "nlm-clinical-questions__mistral-small-24b__bodhi": {
+      "detail": false,
+      "family_waiver": null,
+      "in_cross_cells": false,
+      "label": "NLM clinician questions, Mistral-Small-24B",
+      "set_aside": null,
+      "stats": "results/nlm-clinical-questions__mistral-small-24b__bodhi/analysis/stats.json",
+      "token": "QuestionsMistral"
     }
   },
   "inputs": {
     "results/chatdoctor__med42-8b__bodhi__2026-07/analysis/stats.json": "ee6ec63ddbbc0eeda316f0a24e33047b285e07331a73811f79fd6cd539b45640",
     "results/chatdoctor__mistral-small-24b__bodhi__2026-07/analysis/stats.json": "f5a6d16c0de56f727f58a453958f56305b53f1fd978b97037514a6f5179f8935",
-    "results/cross_cell/stats.json": "e1d5bbb2c0983742b2a85858e3b2de83dd06f9b6ca5e4b3d3db169e80b853362",
+    "results/cross_cell/stats.json": "b0d64f37ea4c7a826cd5fa72880cce675d636beb275372b535b64b5e2a674a01",
     "results/healthbench__biomistral-7b__bodhi__2026-07/analysis/stats.json": "473260cb83c0b5eb5ab29cce01b3b0c3c6fda42b32be881e8a75ac5ba586ce26",
     "results/healthbench__med42-8b__bodhi__2026-07/analysis/stats.json": "3758d4800d474a33ee2cf32c2b71d5e4c06c5aec372a36fff73aa9c61ad4f600",
     "results/healthbench__medgemma-27b-text__bodhi__2026-04/analysis/stats.json": "f5eabcd1a9d6daf60b7865d3777e47b8f77f9529d7acadc62ed345e163ee91cd",
@@ -152,9 +161,10 @@
     "results/mediq-paired__mistral-small-24b__bodhi/analysis/stats.json": "24b4868b68a1bb73c117ed2e0defeac4358babf1d0785ace1af7f8a7ad85f50c",
     "results/medqa-open-preamble__biomistral-7b__bodhi__2026-07/analysis/stats.json": "14f636537caf0e3046b36583e90a6b7b64f94d790ed4bfacd771315bdd37e43b",
     "results/medqa-open-preamble__mistral-small-24b__bodhi__2026-07/analysis/stats.json": "0d6e4ee2681d2d3c77e3431c0fd9a2ad201aa403454baea9dd7fdcbd4c229976",
-    "results/medquad__mistral-small-24b__bodhi__2026-07/analysis/stats.json": "531df7dc66a898f5b31d33b5fb38f1bc741d4e4e41e92228eb9cb898e8bd346b"
+    "results/medquad__mistral-small-24b__bodhi__2026-07/analysis/stats.json": "531df7dc66a898f5b31d33b5fb38f1bc741d4e4e41e92228eb9cb898e8bd346b",
+    "results/nlm-clinical-questions__mistral-small-24b__bodhi/analysis/stats.json": "b329396d164d49e27f8312a8984f466facfaa16a32f1b0503bbbd45d65cb2c41"
   },
-  "macros": 24516,
+  "macros": 27019,
   "not_reported": {},
   "tables": [
     "tab_axes_HBMedGemmaMay",
@@ -174,6 +184,7 @@
     "tab_cell_MedQAPreMistralJul",
     "tab_cell_MediqMistral",
     "tab_cell_MediqMistralAskFirst",
+    "tab_cell_QuestionsMistral",
     "tab_cell_detail_1",
     "tab_cell_detail_2",
     "tab_cell_filter",

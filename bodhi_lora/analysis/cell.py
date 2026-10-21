@@ -262,8 +262,10 @@ def counts_section(d: CellData, meta: list[dict]) -> dict:
     res["prompt_draws_per_condition"] = max(draws.values()) if draws else 0
     graded = [r for r in res["per_condition"].values() if r["epistemic_parse_failure_rate"] is not None]
     res["epistemic_parse_failure_rate_max"] = _f(max(r["epistemic_parse_failure_rate"] for r in graded)) if graded else None
-    res["rubric_parse_failure_rate_max_run"] = _f(max(r["rubric_parse_failure_rate_max_run"]
-                                                      for r in res["per_condition"].values()))
+    # None on a benchmark without a rubric, where no condition has rubric items.
+    rubric_runs = [r["rubric_parse_failure_rate_max_run"] for r in res["per_condition"].values()
+                   if r["rubric_parse_failure_rate_max_run"] is not None]
+    res["rubric_parse_failure_rate_max_run"] = _f(max(rubric_runs)) if rubric_runs else None
     res["seeds_graded"] = sorted(int(s) for s in d.scored["seed"].unique())
     return res
 

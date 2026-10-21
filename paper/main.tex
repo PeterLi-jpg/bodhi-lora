@@ -459,8 +459,14 @@ inquiry by \statHypHOneHBMistralActiveInquiryDiff{} percentage points (95\% CI
 \statHypHOneHBMistralContextSeekingDiff{} (\statHypHOneHBMistralContextSeekingCI). The ask-first
 adapter raises active inquiry by \statHypHFiveHBMistralAskFirstActiveInquiryDiff{} points, so
 the recipe also works with a second protocol, on one base model and one benchmark. On the prompts
-that a health professional wrote, the \bodhi{} adapter raises both behaviors too. A judge from a
-third model family, MedGemma-27B, confirms both rises in both training cells. Judges outside the
+that a health professional wrote, the \bodhi{} adapter raises both behaviors too. It does so on
+the questions that clinicians asked in the NLM Clinical Questions Collection
+\citep{nlm2026clinicalquestions} as well (\statQuestionsMistralPrompts{} questions, no reference
+answers): active inquiry rises by \statHypHElevenNLMQuestionsMistralActiveInquiryDiff{} points
+(95\% CI \statHypHElevenNLMQuestionsMistralActiveInquiryCI) and context-seeking by
+\statHypHElevenNLMQuestionsMistralContextSeekingDiff{} (\statHypHElevenNLMQuestionsMistralContextSeekingCI). A judge from a
+third model family, MedGemma-27B, confirms both rises in both training cells and on the NLM
+questions. Judges outside the
 evaluator's family also confirm them in every cell of Table~\ref{tab:cells} where the evaluator
 found them, the Med42-8B cells included (Table~\ref{tab:judges}). On single rubric criteria,
 however, the judge and the evaluator agree only weakly ($\kappa =
@@ -639,8 +645,8 @@ Each item has its command and cost in \texttt{docs/RUN\_PLAN.md} and a reading t
 plan fixed before any run. (1) The MedGemma-27B cell at the settings of \S\ref{sec:rerun}, which
 the area chair asked for, with the CoT protocol also at a 4,096-token context, which tests whether
 context length caused the red-flag drop of \S\ref{sec:interference}. (2) Filter and teacher
-ablations, which test the BioMistral-7B hypothesis. (3) Clinician-posed prompts from the NLM
-Clinical Questions Collection. (4) A judge check of the active-inquiry grade, which counts only
+ablations, which test the BioMistral-7B hypothesis. (3) The NLM Clinical Questions Collection on
+MedGemma-27B (\S\ref{sec:rerun} has the Mistral-Small-24B cell). (4) A judge check of the active-inquiry grade, which counts only
 after it agrees with hand labels that we have not yet made. (5) The grades of the other two
 physicians. (6) The contamination probe of Appendix~\ref{app:contamination}, with its outputs kept.
 Beyond the plan, \S\ref{sec:rerun} points to a method that teaches when to ask, for example
@@ -1629,12 +1635,12 @@ Agreement on single rubric criteria is low in every cell, so no judge validates 
 judge against the evaluator on the rubric criteria, with a prompt-clustered bootstrap interval.
 Active inquiry and context-seeking: the judge's decision on LoRA $-$ Base. Reversed: dimension
 results that the judge reverses, over every contrast of the cell. Top block: the cells of
-Table~\ref{tab:cells}; bottom block: the training cells of \S\ref{sec:rerun}. $^{\dagger}$Base
+Table~\ref{tab:cells}; bottom block: the cells of \S\ref{sec:rerun}. $^{\dagger}$Base
 model in the evaluator's family.}
 \label{tab:judges}
 \scriptsize
 \setlength{\tabcolsep}{3pt}
-\input{generated/tab_judges}
+\resizebox{\linewidth}{!}{\input{generated/tab_judges}}
 \end{table}
 
 \paragraph{Cost (E08, E20).} Table~\ref{tab:cost} gives what each training cell cost to make

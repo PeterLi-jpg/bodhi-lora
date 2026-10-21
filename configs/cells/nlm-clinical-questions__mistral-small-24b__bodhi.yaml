@@ -26,4 +26,4 @@ eval:
 report:
   label: NLM clinician questions, Mistral-Small-24B
   token: QuestionsMistral
-  status: planned
+  status: complete

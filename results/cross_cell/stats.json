@@ -1746,8 +1746,32 @@
      "not_measured": "no stats.json for this cell"
     },
     "nlm-clinical-questions__mistral-small-24b__bodhi": {
-     "decision": null,
-     "not_measured": "no stats.json for this cell"
+     "decision": "supported",
+     "outcomes": {
+      "active_inquiry": {
+       "ci95": [
+        0.110536,
+        0.177293
+       ],
+       "diff": 0.143915,
+       "n_seeds": 5,
+       "p": 0.000279077,
+       "p_adj": 0.00111631
+      },
+      "context_seeking": {
+       "ci95": [
+        1.2307,
+        1.38997
+       ],
+       "diff": 1.31034,
+       "n_seeds": 5,
+       "p": 1.37294e-06,
+       "p_adj": 9.61058e-06
+      }
+     },
+     "secondary": {
+      "rubric_score": null
+     }
     }
    },
    "family": false,

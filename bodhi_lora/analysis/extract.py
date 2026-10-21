@@ -261,6 +261,7 @@ def seed_table(reg: Registry, cell: CellConfig, paths: CellPaths, seed: int, cfg
                tokenizer, project: Project) -> tuple[pd.DataFrame, dict]:
     """The response table of one seed and its meta record."""
     leaks = leak_rules(reg, cell)
+    no_rubric = reg.benchmarks[cell.benchmark].rubric == "none"
     grade_path = paths.grade_file(seed, cell.grading.evaluator)
     grades, grade_counts = _grade_examples(grade_path)
     judges = {}
@@ -296,13 +297,22 @@ def seed_table(reg: Registry, cell: CellConfig, paths: CellPaths, seed: int, cfg
         tokens = count_tokens(tokenizer, [r["response"] for r in results]) if tokenizer else None
         for i, r in enumerate(results):
             criteria = r["criteria_results"]
-            # The recompute of the stored score must equal it, or we do not read the
-            # verdicts the way the run did, and the worst case is not comparable.
-            again = STORED_SCORE[stored](criteria)
-            if not math.isclose(again, r["score"], abs_tol=1e-9):
-                raise ExtractError(f"{path}: {r['prompt_id']}: rubric score {r['score']} does not "
-                                   f"recompute ({again})")
-            score = float(r["score"]) if stored == "normalized_score" else rubric_score(criteria)
+            if no_rubric:
+                # A benchmark without a rubric (the NLM questions) has no score to read: the
+                # rubric columns stay empty, and a row that does carry one is an error.
+                if criteria or r["score"] is not None:
+                    raise ExtractError(f"{path}: {r['prompt_id']}: a rubric result on a benchmark "
+                                       "with rubric: none")
+            else:
+                # The recompute of the stored score must equal it, or we do not read the
+                # verdicts the way the run did, and the worst case is not comparable.
+                again = STORED_SCORE[stored](criteria)
+                if not math.isclose(again, r["score"], abs_tol=1e-9):
+                    raise ExtractError(f"{path}: {r['prompt_id']}: rubric score {r['score']} does not "
+                                       f"recompute ({again})")
+            nan = float("nan")
+            score = nan if no_rubric else (float(r["score"]) if stored == "normalized_score"
+                                           else rubric_score(criteria))
             neg_met = [c for c in criteria if c["points"] < 0 and c["criteria_met"]]
             row = {"cell": cell.id, "seed": seed, "condition": condition, "prompt_id": r["prompt_id"],
                    "pair_id": r.get("pair_id"), "chars": float(len(r["response"])),
@@ -314,7 +324,7 @@ def seed_table(reg: Registry, cell: CellConfig, paths: CellPaths, seed: int, cfg
                    "tokens_total": _num(r.get("completion_tokens_total")),
                    "finish_length": float(r["finish_length"]) if "finish_length" in r else float("nan"),
                    "rubric_score": score,
-                   "rubric_score_worst": rubric_score(criteria, flip_failed_negatives=True),
+                   "rubric_score_worst": nan if no_rubric else rubric_score(criteria, flip_failed_negatives=True),
                    "rubric_items": float(len(criteria)),
                    "rubric_parse_failures": float(sum(bool(c.get("parse_failed")) for c in criteria)),
                    "neg_items_met": float(len(neg_met)),
