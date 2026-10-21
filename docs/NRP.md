@@ -179,3 +179,9 @@ On the same day, a one-pod copy of the workers Job (to queue for the lost card) 
 by NRP's admission webhook: "Your pods resources utilization is too low" for the account
 (stats at https://nrp.ai/userinfo/). Running Jobs keep running and still replace their pods;
 new Jobs wait until the account's utilization recovers, so requests should stay close to use.
+The train manifests of R7 seeds 42 and 7 record no commit: `git status` timed out (60 s) on
+the volume when each training ended, and a killed `git status` left a stale
+`.git/index.lock` again (08:34 UTC). Both ran at 24c07d8: the pool log has them start at
+05:27 and 08:35 UTC, after the checkout moved at 05:27:06. Seed 13 started on the same commit
+at 11:42. From 13:31 UTC the checkout is at 57d583a, the same code plus manifests that keep
+the commit when only `git status` times out (merged into the branch as 71a8d7e).
