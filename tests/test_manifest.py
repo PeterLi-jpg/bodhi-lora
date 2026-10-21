@@ -55,6 +55,20 @@ def test_git_state_on_this_repo_and_outside_git(tmp_path):
     assert rm.git_state(tmp_path)["sha"] is None
 
 
+def test_git_state_keeps_the_commit_when_status_times_out(monkeypatch):
+    real = rm._git
+
+    def slow_status(args, repo_root):
+        if args[0] == "status":
+            raise rm.subprocess.TimeoutExpired(["git", *args], 60)
+        return real(args, repo_root)
+
+    monkeypatch.setattr(rm, "_git", slow_status)
+    state = rm.git_state(REPO)
+    assert SHA_RE.match(state["sha"])
+    assert state["dirty"] is None and state["error"].startswith("TimeoutExpired")
+
+
 def test_build_manifest_records_models_hardware_time_and_hashes(tmp_path):
     reg = load_registry(CONFIGS_DIR)
     ids = tmp_path / "ids.json"
