@@ -175,3 +175,7 @@ record in `/data/trash`) and trains again; seeds 7 and 13 got their attempts bac
 (`attempts/<task>` set to 0), and seed 99 was stopped and queued again. A worker that finds
 nothing ready while every other task is claimed exits and gives its card back: a hold made of
 claim files cost one of the two cards on 2026-10-21, so never hold tasks that way.
+On the same day, a one-pod copy of the workers Job (to queue for the lost card) was refused
+by NRP's admission webhook: "Your pods resources utilization is too low" for the account
+(stats at https://nrp.ai/userinfo/). Running Jobs keep running and still replace their pods;
+new Jobs wait until the account's utilization recovers, so requests should stay close to use.
