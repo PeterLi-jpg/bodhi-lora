@@ -184,4 +184,6 @@ the volume when each training ended, and a killed `git status` left a stale
 `.git/index.lock` again (08:34 UTC). Both ran at 24c07d8: the pool log has them start at
 05:27 and 08:35 UTC, after the checkout moved at 05:27:06. Seed 13 started on the same commit
 at 11:42. From 13:31 UTC the checkout is at 57d583a, the same code plus manifests that keep
-the commit when only `git status` times out (merged into the branch as 71a8d7e).
+the commit when only `git status` times out (merged into the branch as 71a8d7e). A manifest
+reads the commit when its stage ends, so seed 13's train manifest names 57d583a although the
+seed started at 24c07d8; the two commits differ only in `bodhi_lora/manifest.py`.
