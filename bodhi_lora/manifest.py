@@ -92,10 +92,15 @@ def git_state(repo_root=REPO_ROOT) -> dict:
     """
     try:
         sha = _git(["rev-parse", "HEAD"], repo_root).decode().strip()
+    except (OSError, subprocess.SubprocessError) as e:
+        return {"sha": None, "error": f"{type(e).__name__}: {e}"}
+    try:
         status = _git(["status", "--porcelain"], repo_root).decode().splitlines()
         diff = _git(["diff", "HEAD", "--binary"], repo_root)
     except (OSError, subprocess.SubprocessError) as e:
-        return {"sha": None, "error": f"{type(e).__name__}: {e}"}
+        # The commit is known even when status times out, as it did on NRP's CephFS
+        # volume (docs/NRP.md, 2026-10-21); only the dirty check is missing then.
+        return {"sha": sha, "dirty": None, "error": f"{type(e).__name__}: {e}"}
     tracked = [line for line in status if not line.startswith("??")]
     untracked = [line for line in status if line.startswith("??")]
     return {
