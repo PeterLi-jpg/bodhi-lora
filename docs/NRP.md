@@ -164,3 +164,14 @@ The workers download five models (MedGemma-27B, Qwen2.5-14B, Llama-3.1-8B, Phi-4
 Mistral-Small-24B), about 180 GB, so each pod's local volume is 270 GiB. The namespace's
 A100 quota is shared with other groups: while it is full, the Job's pods are not created,
 and the Job controller tries again, so the run waits in line and takes no one's card.
+
+**The D31 fix during the run (2026-10-21).** Seeds 7 and 13 ran out of card memory in the
+validation loss at the end of their first epoch (DECISIONS.md D31). On the first author's yes,
+the volume's checkout moved from d6ae732 to the commit with the fix (a bundle of the commits
+between them, `git fetch` and `git checkout --detach`; a stale `.git/index.lock` from the
+workers' start went to `/data/trash`). Seed 42, which had finished with batch 8, was set aside
+as `seed_42/train.batch8-pre-d31` (its log as `logs/train_s42.batch8-pre-d31.log`, its done
+record in `/data/trash`) and trains again; seeds 7 and 13 got their attempts back
+(`attempts/<task>` set to 0), and seed 99 was stopped and queued again. A worker that finds
+nothing ready while every other task is claimed exits and gives its card back: a hold made of
+claim files cost one of the two cards on 2026-10-21, so never hold tasks that way.
