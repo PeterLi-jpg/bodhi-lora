@@ -179,6 +179,10 @@ On the same day, a one-pod copy of the workers Job (to queue for the lost card) 
 by NRP's admission webhook: "Your pods resources utilization is too low" for the account
 (stats at https://nrp.ai/userinfo/). Running Jobs keep running and still replace their pods;
 new Jobs wait until the account's utilization recovers, so requests should stay close to use.
+NRP's floor is 20% of the request. A worker uses about 1 CPU and 11 to 39 GiB (training at the
+top), against the 8 CPUs and 64 GiB that `deploy/nrp/workers-r7-job.yaml` requests, so the next
+workers Job should request 4 CPUs (limit 4.8) and 48 GiB (limit 57). A running pod's requests
+cannot change.
 The train manifests of R7 seeds 42 and 7 record no commit: `git status` timed out (60 s) on
 the volume when each training ended, and a killed `git status` left a stale
 `.git/index.lock` again (08:34 UTC). Both ran at 24c07d8: the pool log has them start at
