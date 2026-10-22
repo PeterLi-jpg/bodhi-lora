@@ -602,8 +602,8 @@ changes already in `paper/main.tex`, with the commitment that records them.
 | C28 three-physician validation | deferred (D20) | E27 |
 | C29 second CoT protocol | ran (R5, H5 supported); in the paper (section 4.3) | E16 |
 | C30 over-flagging set | changed (HealthBench physician labels); ran (R4, H7: over-flagging found); in the paper (section 4.3) | E18 |
-| C31 red flags early | ran in R2: no drop to recover (H6, section 4.3); R7 and its 4,096-token pair not run | E17 |
-| C32 clinician-posed benchmark | changed (open sets in place of MIMIC and eICU); HealthBench part ran (R4, H11 supported); NLM set (R10) not run | E19 |
+| C31 red flags early | ran in R2: no drop to recover (H6, section 4.3); R7 and its 4,096-token pair run now (D30) | E17 |
+| C32 clinician-posed benchmark | changed (open sets in place of MIMIC and eICU); HealthBench part ran (R4, H11 supported); NLM set ran on Mistral-Small-24B (R10, H11b supported), section 4.3; its MedGemma-27B cell runs with R7 | E19 |
 | C33 harm grading | deferred (E28); the LLM-graded proxy is in the paper | E06 now (proxy), E28 deferred |
 
 Audit items that need a run: REPRO-8 (E23), EVAL-12 and NUM-7 (E11), REPRO-12 (E13
