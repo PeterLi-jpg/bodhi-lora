@@ -969,3 +969,19 @@ The R7 and R10 cells join the families of section 2.7 as that section says: R7's
 cell joins F2 and F4, its paired cell F3, its labelled cell F5, and its training cell the
 new-cell family of F6. No output of R7, R10 or the new cell existed when this entry was
 written; none of their folders is under `results/`.
+
+**2026-10-23, the run operator. A check on the replies below the token cap; no method
+changed.** The R7 eval stage of `healthbench__medgemma-27b-text__bodhi` stopped 420 of the
+1,000 Base replies at the 1,024-token cap (`eval.max_new_tokens`, the setting of R2 and of
+the 2026-05 cell). The other eight conditions stopped 5 to 234 of 1,000 there (LoRA 181).
+These are the reply-health counts of section 12 (2026-10-18); no grade or score of R7 was
+read, and its grade stage had not run. The 2026-05 cell had the same cap. It did not store
+`finish_length`, but its engine token counts put 387 of 1,000 Base and 361 of 1,000 LoRA
+replies at 1,020 tokens or more. A reply cut at the cap can lose its end, where questions
+often sit, so a contrast between two conditions that reach the cap at different rates can
+move for that reason alone. The analysis therefore adds a check that decides no claim:
+every contrast of a cell again on the prompts where neither reply of the pair stopped at
+the cap, with the same seed means, paired t over seeds and Holm family within the contrast
+(stats.json `below_cap`). It runs on every cell whose eval stored `finish_length`. The report
+gives it next to the decisions of H1, H2, H4 and H6, and where the check and the rule
+disagree, the paper says so next to the result. The cap and every rule stay as written.
