@@ -46,6 +46,9 @@
    "lora": 0.19322
   }
  },
+ "below_cap": {
+  "not_measured": "the eval stored no finish_length"
+ },
  "bench": {
   "not_measured": "no bench.json in the cell's seed folders"
  },
@@ -2799,12 +2802,15 @@
  "reply_health": {
   "conditions": {
    "base": {
+    "cap_share_by_tokens": 0.41,
     "limit_share": null,
     "loop_share": 0.005,
     "n": 200,
+    "n_at_cap_by_tokens": 82,
     "n_at_limit": 0,
     "n_limit_known": 0,
     "n_loops": 1,
+    "n_tokens_known": 200,
     "per_seed_loops": {
      "42": 1
     }
@@ -2821,12 +2827,15 @@
     }
    },
    "lora": {
+    "cap_share_by_tokens": 0.23,
     "limit_share": null,
     "loop_share": 0.0,
     "n": 200,
+    "n_at_cap_by_tokens": 46,
     "n_at_limit": 0,
     "n_limit_known": 0,
     "n_loops": 0,
+    "n_tokens_known": 200,
     "per_seed_loops": {
      "42": 0
     }

@@ -380,3 +380,34 @@ def test_the_h7_and_h11_labels_count_only_in_the_cells_drawn_by_them(reg):
     assert {"emergent-physician", "clinician-user"} <= labelled
     assert not {"emergent-physician", "clinician-user"} & training
     assert {"needs-info-physician", "emergency-theme", "incomplete"} <= training
+
+
+def test_below_cap_drops_every_pair_where_either_reply_hit_the_cap(reg, tmp_path):
+    """docs/ANALYSIS_PLAN.md section 12, 2026-10-23: a contrast again on the prompts where
+    neither reply of the pair stopped at the token cap, with the same seed-level test."""
+    table = synthetic_table(reg.cells[SMOKE])
+    # lora hits the cap on p5 in every seed, base on p4; an unknown stop reason (p3 of
+    # seed 1's base) also leaves the pair out.
+    table.loc[(table["condition"] == "lora") & (table["prompt_id"] == "p5"), "finish_length"] = 1.0
+    table.loc[(table["condition"] == "base") & (table["prompt_id"] == "p4"), "finish_length"] = 1.0
+    table.loc[(table["condition"] == "base") & (table["prompt_id"] == "p3") & (table["seed"] == 1),
+              "finish_length"] = np.nan
+    out = run(reg, table, tmp_path)
+    r = out["below_cap"]["contrasts"]["lora - base"]
+    assert (r["pairs"], r["pairs_below_cap"]) == (18, 11)
+    assert r["pairs_below_cap_per_seed"] == {"1": 3, "2": 4, "3": 4}
+    kept = table[table["condition"].isin(["lora", "base"]) & ~table["prompt_id"].isin(["p4", "p5"])
+                 & ~((table["seed"] == 1) & (table["prompt_id"] == "p3"))]
+    sm = kept.groupby(["condition", "seed"])["active_inquiry"].mean()
+    m = r["metrics"]["active_inquiry"]
+    assert m["diff"] == pytest.approx((sm["lora"].to_numpy() - sm["base"].to_numpy()).mean(), rel=1e-5)
+    assert "p_holm_within_contrast" in m
+    # A pair where neither reply hit the cap is untouched: lora+bodhi - lora+... keeps all
+    # prompts but p5 (lora's capped replies).
+    assert out["below_cap"]["contrasts"]["lora+bodhi - lora"]["pairs_below_cap"] == 15
+
+
+def test_below_cap_is_not_measured_without_stop_reasons(reg, tmp_path):
+    table = synthetic_table(reg.cells[SMOKE])
+    table["finish_length"] = np.nan
+    assert run(reg, table, tmp_path)["below_cap"] == {"not_measured": "the eval stored no finish_length"}

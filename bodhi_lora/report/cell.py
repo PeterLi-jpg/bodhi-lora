@@ -252,6 +252,11 @@ def _reply_health(rep, n: Names, T: str, stats: dict, src: str) -> None:
         if r["n_limit_known"]:
             rep.add(f"{T}AtLimit{C}", fmt_int(r["n_at_limit"]), f"{where}.n_at_limit (replies the token limit stopped)")
             rep.add(f"{T}AtLimit{C}Pct", fmt(100 * r["limit_share"], 1), f"{where}.limit_share (%)")
+        elif r.get("n_tokens_known"):
+            # Older files: the replies with exactly eval.max_new_tokens engine tokens.
+            rep.add(f"{T}AtLimit{C}", fmt_int(r["n_at_cap_by_tokens"]),
+                    f"{where}.n_at_cap_by_tokens (replies at the token cap, by engine token count)")
+            rep.add(f"{T}AtLimit{C}Pct", fmt(100 * r["cap_share_by_tokens"], 1), f"{where}.cap_share_by_tokens (%)")
 
 
 def _judges(rep, n: Names, T: str, stats: dict, src: str) -> None:

@@ -183,3 +183,30 @@ def test_the_4096_pair_follows_the_2026_10_19_entry(short, full, decision):
 def test_the_4096_pair_waits_for_its_reference_only_when_there_is_a_drop():
     assert context_pair(ctx_cell(FLAT), None, "bodhi")["decision"] == "context not implicated"
     assert context_pair(ctx_cell(DOWN), None, "bodhi")["decision"] is None
+
+
+def test_the_same_rule_runs_again_on_the_replies_below_the_cap():
+    """docs/ANALYSIS_PLAN.md section 12, 2026-10-23: H1's rule on stats.json `below_cap`
+    next to the decision, which stays the rule's on the whole cell."""
+    stats = cell({"lora - base": {"active_inquiry": UP, "context_seeking": UP}})
+    stats["below_cap"] = {"contrasts": {"lora - base": {"metrics": {"active_inquiry": FLAT, "context_seeking": UP}}}}
+    r = summary("asking", {"a": stats})["a"]
+    assert r["decision"] == "supported"
+    assert r["below_cap"]["decision"] == "partial"
+    assert r["below_cap"]["outcomes"]["active_inquiry"]["diff"] == FLAT["diff"]
+
+
+def test_a_cell_without_stop_reasons_gets_no_below_cap_decision():
+    stats = cell({"lora - base": {"active_inquiry": UP, "context_seeking": UP}})
+    stats["below_cap"] = {"not_measured": "the eval stored no finish_length"}
+    assert "below_cap" not in summary("asking", {"a": stats})["a"]
+
+
+def test_cost_runs_its_family_again_below_the_cap():
+    a = cell({"lora - base": {"rubric_score": seed_test(-0.02, -0.04, -0.002, 0.03)}})
+    b = cell({"lora - base": {"rubric_score": seed_test(-0.02, -0.04, -0.001, 0.04)}})
+    for s in (a, b):
+        s["below_cap"] = {"contrasts": s["contrasts"]}
+    both = summary("cost", {"a": a, "b": b})
+    assert [both[c]["below_cap"]["decision"] for c in "ab"] == ["no change detected"] * 2
+    assert both["a"]["below_cap"]["outcomes"]["rubric_score"]["p_adj"] == pytest.approx(0.06)

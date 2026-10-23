@@ -1668,6 +1668,29 @@ and training and the timing on A100s with one card per job.}
 \resizebox{\linewidth}{!}{\input{generated/tab_cost}}
 \end{table}
 
+\paragraph{The token cap.} In these cells and in the 2026-05 cell, a one-call reply stops at
+1,024 new tokens. On Mistral-Small-24B the cap stopped \statHBMistralAtLimitBasePct\% of the Base
+replies. On MedGemma-27B it matters more: in the 2026-05 cell it stopped
+\statHBMedGemmaMayAtLimitBasePct\% of the Base replies and \statHBMedGemmaMayAtLimitLoRAPct\% of the
+LoRA replies (by engine token count, because that cell did not store why a reply stopped). The
+graders read the replies as cut. A cut reply can lose its end, where questions often are, so a
+contrast between two conditions that reach the cap at different rates can change for that reason
+alone. Before any grade of the MedGemma-27B cell of \S\ref{sec:rerun} existed, a dated entry of
+the plan added a check that decides no claim: each contrast again on the prompts where neither
+reply of the pair stopped at the cap. Table~\ref{tab:below-cap} gives the plan's decisions next to
+the same rules on those prompts.
+
+\begin{table}[!ht]
+\centering
+\caption{The plan's decisions next to the same rules on the prompts where neither reply of the
+contrast stopped at the 1,024-token cap, for the questions that use the rules of H1, H2, H4 and
+H6. The check decides no claim. $p$ is adjusted as in Table~\ref{tab:hypotheses-full}.}
+\label{tab:below-cap}
+\small
+\setlength{\tabcolsep}{3pt}
+\resizebox{\linewidth}{!}{\input{generated/tab_below_cap}}
+\end{table}
+
 \section{Prior Approaches}
 \label{app:prior}
 

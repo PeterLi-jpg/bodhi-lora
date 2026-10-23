@@ -64,6 +64,19 @@ def hypothesis_macros(rep, cross: dict, reg: Registry, cfg: ReportConfig, src: s
                     for key, o in (rr.get(group) or {}).items():
                         if o is not None and key in OUTCOME_KIND:
                             _outcome_macros(rep, nm, key, o, f"{wb}.{group}.{key}")
+            # The same rule on the replies below the token cap (ANALYSIS_PLAN.md section 12,
+            # 2026-10-23): \statHyp<question><cell>[<baseline>]BelowCap<outcome><field>.
+            below = r.get("below_cap") or {}
+            for b, rr in (below.get("baselines", {}).items() if "baselines" in below else [("", below)]):
+                if not rr:
+                    continue
+                nm = name + (n.cond_token(b) if b else "") + "BelowCap"
+                wb = f"{where}.below_cap" + (f".baselines.{b}" if b else "")
+                if rr.get("decision"):
+                    rep.add(f"{nm}Decision", escape(rr["decision"]), f"{wb}.decision, the plan's rule below the cap")
+                for key, o in (rr.get("outcomes") or {}).items():
+                    if o is not None and key in OUTCOME_KIND:
+                        _outcome_macros(rep, nm, key, o, f"{wb}.outcomes.{key}")
             for c, d in (r.get("delta") or {}).items():
                 if d.get("seed_mean") is not None:
                     rep.add(f"{name}Delta{n.cond_token(c)}", fmt(d["seed_mean"] * 100, 1, sign=True),
@@ -145,6 +158,44 @@ def cost_table(all_stats: dict, reg: Registry, cfg: ReportConfig, src: str) -> s
                          escape("; ".join(g.replace("NVIDIA ", "") for g in gpus)) or MISSING])
     header = [["Cell", "Traces (h)", "Filter (h)", "Train (h/seed)", "Base (s)", "Teacher (s)", "LoRA (s)", "GPUs"]]
     return tabular("lrrrrrrl", header, [rows], f"{src} (stage_times, bench)")
+
+
+def below_cap_table(cross: dict, reg: Registry, cfg: ReportConfig, src: str) -> str:
+    """The plan's decision next to the same rule on the prompts where neither reply of a
+    contrast stopped at the token cap (ANALYSIS_PLAN.md section 12, 2026-10-23), for the
+    questions of BELOW_CAP_RULES and the first outcome of each rule. A cell without
+    finish_length in its eval outputs has no row."""
+    n = Names(cfg)
+    blocks = []
+    for spec in cfg.hypotheses:
+        h = cross.get("hypotheses", {}).get(spec.id)
+        if h is None:
+            continue
+        rows = []
+        key = TABLE_OUTCOMES[h["rule"]][0]
+        for cid in spec.cells:
+            r = h["cells"].get(cid) or {}
+            below = r.get("below_cap")
+            if not below:
+                continue
+            label = _cell_text(reg.cells[cid], n)
+            subs = [(b, r["baselines"][b], below["baselines"][b]) for b in spec.baselines] \
+                if "baselines" in r else [("", r, below)]
+            for b, rr, bb in subs:
+                o = (bb.get("outcomes") or {}).get(key)
+                kind = OUTCOME_KIND[key]
+                scale, dp = KIND_FORMAT[kind][0], DIFF_DECIMALS[kind]
+                rows.append([spec.id if not rows else "", label + (f" vs {n.cond(b)}" if b else ""), OUTCOME_NAME[key],
+                             escape(rr.get("decision") or MISSING),
+                             fmt(o["diff"] * scale, dp, sign=True) if o else MISSING,
+                             fmt_ci(scaled(o["ci95"], scale), dp) if o else MISSING,
+                             fmt_p(o["p_adj"] if o.get("p_adj") is not None else o["p"]) if o else MISSING,
+                             escape(bb.get("decision") or MISSING)])
+        if rows:
+            blocks.append(rows)
+    header = [["Question", "Cell", "Outcome", "Decision", "Difference below cap", "95\\% CI", "$p$",
+               "Decision below cap"]]
+    return tabular("lllllrrl", header, blocks, f"{src} (hypotheses.*.below_cap)")
 
 
 def _cell_text(cell, n: Names) -> str:

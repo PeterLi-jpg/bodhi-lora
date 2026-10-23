@@ -39,6 +39,9 @@
    "lora+bodhi": 0.0
   }
  },
+ "below_cap": {
+  "not_measured": "the eval stored no finish_length"
+ },
  "bench": {
   "not_measured": "no bench.json in the cell's seed folders"
  },
@@ -3508,12 +3511,15 @@
  "reply_health": {
   "conditions": {
    "base": {
+    "cap_share_by_tokens": 0.0,
     "limit_share": null,
     "loop_share": 0.0,
     "n": 10,
+    "n_at_cap_by_tokens": 0,
     "n_at_limit": 0,
     "n_limit_known": 0,
     "n_loops": 0,
+    "n_tokens_known": 10,
     "per_seed_loops": {
      "42": 0
     }
@@ -3530,12 +3536,15 @@
     }
    },
    "lora": {
+    "cap_share_by_tokens": 0.0,
     "limit_share": null,
     "loop_share": 0.0,
     "n": 10,
+    "n_at_cap_by_tokens": 0,
     "n_at_limit": 0,
     "n_limit_known": 0,
     "n_loops": 0,
+    "n_tokens_known": 10,
     "per_seed_loops": {
      "42": 0
     }

@@ -252,6 +252,55 @@ FAMILY = {
 }
 
 
+# The questions whose decision the report repeats on the replies below the token cap
+# (docs/ANALYSIS_PLAN.md section 12, 2026-10-23): H1, H2, H4 and H6. A question that reads
+# a subset of prompts keeps its own rule only.
+BELOW_CAP_RULES = ("asking", "cost", "baselines", "red_flags_first")
+
+
+def _decide(h, cid: str, stats: dict, all_stats: dict, cfg, reg) -> dict:
+    if h.rule == "asking":
+        return asking(stats, cfg.alpha, subset=h.subset)
+    if h.rule == "cost":
+        return cost(stats)
+    if h.rule == "paired_probe":
+        return paired_probe(stats)
+    if h.rule == "baselines":
+        return baselines(stats, cfg.alpha, reg.protocols, h.baselines)
+    if h.rule == "red_flags_first":
+        return red_flags_first(stats, reg.cells[cid].protocol)
+    if h.rule == "over_flagging":
+        return over_flagging(stats)
+    if h.rule == "physician_index":
+        return physician_index(stats)
+    if h.rule == "context_pair":
+        return context_pair(stats, all_stats.get(h.reference), reg.cells[cid].protocol)
+    raise ValueError(f"no rule {h.rule}")
+
+
+def _decide_family(h, cells: dict, cfg) -> None:
+    """Holm across the question's cells where the plan names a family, then each cell's
+    decision on the adjusted p."""
+    if h.rule not in FAMILY:
+        return
+    key, decide = FAMILY[h.rule]
+    tested = [(cid, r["outcomes"][key]) for cid, r in cells.items()
+              if r.get("outcomes", {}).get(key) and r["outcomes"][key]["p"] is not None]
+    holm = st.holm([o["p"] for _, o in tested])
+    for (cid, o), h_p in zip(tested, holm):
+        o["p_adj"] = _f(h_p) if np.isfinite(h_p) else None
+    for r in cells.values():
+        if "outcomes" in r:
+            decide(r, cfg.alpha)
+
+
+def _below_cap(stats: Optional[dict]) -> Optional[dict]:
+    """The cell's stats with the below-cap contrasts in place of the contrasts; None when
+    the cell has none."""
+    contrasts = ((stats or {}).get("below_cap") or {}).get("contrasts")
+    return {**stats, "contrasts": contrasts, "subsets": {}} if contrasts else None
+
+
 def hypotheses_summary(all_stats: dict, cfg, reg) -> dict:
     out = {}
     for h in cfg.hypotheses:
@@ -261,32 +310,14 @@ def hypotheses_summary(all_stats: dict, cfg, reg) -> dict:
             if stats is None:
                 cells[cid] = {"decision": None, "not_measured": "no stats.json for this cell"}
                 continue
-            if h.rule == "asking":
-                cells[cid] = asking(stats, cfg.alpha, subset=h.subset)
-            elif h.rule == "cost":
-                cells[cid] = cost(stats)
-            elif h.rule == "paired_probe":
-                cells[cid] = paired_probe(stats)
-            elif h.rule == "baselines":
-                cells[cid] = baselines(stats, cfg.alpha, reg.protocols, h.baselines)
-            elif h.rule == "red_flags_first":
-                cells[cid] = red_flags_first(stats, reg.cells[cid].protocol)
-            elif h.rule == "over_flagging":
-                cells[cid] = over_flagging(stats)
-            elif h.rule == "physician_index":
-                cells[cid] = physician_index(stats)
-            elif h.rule == "context_pair":
-                cells[cid] = context_pair(stats, all_stats.get(h.reference), reg.cells[cid].protocol)
-        if h.rule in FAMILY:
-            key, decide = FAMILY[h.rule]
-            tested = [(cid, r["outcomes"][key]) for cid, r in cells.items()
-                      if r.get("outcomes", {}).get(key) and r["outcomes"][key]["p"] is not None]
-            holm = st.holm([o["p"] for _, o in tested])
-            for (cid, o), h_p in zip(tested, holm):
-                o["p_adj"] = _f(h_p) if np.isfinite(h_p) else None
-            for r in cells.values():
-                if "outcomes" in r:
-                    decide(r, cfg.alpha)
+            cells[cid] = _decide(h, cid, stats, all_stats, cfg, reg)
+        _decide_family(h, cells, cfg)
+        if h.rule in BELOW_CAP_RULES and not h.subset:
+            below = {cid: _decide(h, cid, b, all_stats, cfg, reg) for cid in h.cells
+                     if (b := _below_cap(all_stats.get(cid))) is not None}
+            _decide_family(h, below, cfg)
+            for cid, r in below.items():
+                cells[cid]["below_cap"] = r
         out[h.id] = {"token": h.token, "rule": h.rule, "subset": h.subset, "family": h.rule in FAMILY,
                      "reference": h.reference, "cells": cells}
     return out

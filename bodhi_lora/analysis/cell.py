@@ -282,6 +282,33 @@ def worst_case_section(d: CellData, metrics: list[Metric], pairs) -> dict:
     return res
 
 
+def below_cap_section(d: CellData, metrics: list[Metric], pairs) -> dict:
+    """Every contrast again on the prompts where neither reply of the pair stopped at the
+    token cap (docs/ANALYSIS_PLAN.md section 12, 2026-10-23): the same seed means, paired t
+    over seeds and Holm family within the contrast as contrasts_section. A pair whose stop
+    reason is unknown for either reply stays out. Decides no claim."""
+    t = d.table
+    if "finish_length" not in t or t["finish_length"].isna().all():
+        return {"not_measured": "the eval stored no finish_length"}
+    res = {}
+    for a, b in pairs:
+        key = contrast_key(a, b)
+        two = t[t["condition"].isin([a, b])]
+        per = two.assign(below=two["finish_length"] == 0).groupby(["seed", "prompt_id"])["below"]
+        both = per.size() == 2
+        keep = per.all()[both]
+        keep = keep[keep].index
+        rows = two.set_index(["seed", "prompt_id"])
+        rows = rows[rows.index.isin(keep)].reset_index()
+        res[key] = {"a": a, "b": b, "pairs": int(both.sum()), "pairs_below_cap": int(len(keep)),
+                    "pairs_below_cap_per_seed": {str(s): int(sum(1 for k in keep if k[0] == s)) for s in d.seeds},
+                    "metrics": {m.key: paired(d.seed_means(d.frame(m, rows=rows)), a, b, d.seeds) for m in metrics}}
+        family = [res[key]["metrics"][k].get("p", float("nan")) for k in SEVEN]
+        for k, ph in zip(SEVEN, st.holm(family)):
+            res[key]["metrics"][k]["p_holm_within_contrast"] = _f(ph)
+    return {"contrasts": res}
+
+
 def disclaimers_section(d: CellData) -> dict:
     s = d.scored
     counts = {c: (int(s.loc[s["condition"] == c, "blanket_disclaimer"].sum()), int((s["condition"] == c).sum()))
@@ -628,6 +655,16 @@ def reply_health_section(d: CellData, rh) -> dict:
             "per_seed_loops": {str(s): int(loop[sub["seed"] == s].sum()) for s in d.seeds},
             "n_limit_known": int(len(limit)), "n_at_limit": int((limit == 1).sum()),
             "limit_share": _f((limit == 1).mean()) if len(limit) else None}
+        # Older files have no finish_length. A one-call condition (no protocol) that the cap
+        # stopped has exactly eval.max_new_tokens engine tokens, which the extract stores;
+        # on the R2 cell this count equals the finish_length count in every such condition
+        # (ANALYSIS_PLAN.md section 12, 2026-10-23).
+        engine = sub["tokens_engine"].dropna() if "tokens_engine" in sub else pd.Series(dtype=float)
+        if not len(limit) and len(engine) and parse_condition(c)[1] is None:
+            cap = d.cell.eval.max_new_tokens
+            res["conditions"][c].update({"n_tokens_known": int(len(engine)),
+                                         "n_at_cap_by_tokens": int((engine == cap).sum()),
+                                         "cap_share_by_tokens": _f((engine == cap).mean())})
     return res
 
 
@@ -1044,6 +1081,7 @@ def analyze_tables(reg: Registry, cell: CellConfig, table: pd.DataFrame, prompts
         "contrasts": contrasts,
         "counts": counts_section(d, meta),
         "worst_case": worst_case_section(d, metrics, pairs),
+        "below_cap": below_cap_section(d, metrics, pairs),
         "blanket_disclaimers": disclaimers_section(d),
         "length_quartiles": length_quartiles_section(d, cfg.length_reference),
         "cost": cost_section(d, reg, pairs, meta),

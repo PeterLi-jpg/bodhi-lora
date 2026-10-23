@@ -191,3 +191,10 @@ at 11:42. From 13:31 UTC the checkout is at 57d583a, the same code plus manifest
 the commit when only `git status` times out (merged into the branch as 71a8d7e). A manifest
 reads the commit when its stage ends, so seed 13's train manifest names 57d583a although the
 seed started at 24c07d8; the two commits differ only in `bodhi_lora/manifest.py`.
+On 2026-10-22, on the first author's "do what you need to do", the finished Jobs
+`bodhi-lora-setup` (failed), `bodhi-lora-setup-r7` and `bodhi-lora-workers` (the EOS reruns)
+and the copy pod `bodhi-lora-io` were deleted, after their pod logs were saved outside the
+repository (`BODHI/_nrp_pod_logs/`); `/data/setup.log`, `/data/setup_r7.log` and the pool
+folders keep the same lines on the volume. The volume and the R7 Job stay. At 14:33 UTC the
+same day Kubernetes stopped worker 4r2gd during the labelled eval (no reason in the events);
+the Job replaced it, and the eval resumed from its `<condition>.replies.jsonl` files.
