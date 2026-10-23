@@ -286,7 +286,9 @@ def below_cap_section(d: CellData, metrics: list[Metric], pairs) -> dict:
     """Every contrast again on the prompts where neither reply of the pair stopped at the
     token cap (docs/ANALYSIS_PLAN.md section 12, 2026-10-23): the same seed means, paired t
     over seeds and Holm family within the contrast as contrasts_section. A pair whose stop
-    reason is unknown for either reply stays out. Decides no claim."""
+    reason is unknown for either reply stays out, and so does a prompt that has a reply in
+    only one of the two conditions (the primary keeps it in that condition's mean). Decides
+    no claim."""
     t = d.table
     if "finish_length" not in t or t["finish_length"].isna().all():
         return {"not_measured": "the eval stored no finish_length"}

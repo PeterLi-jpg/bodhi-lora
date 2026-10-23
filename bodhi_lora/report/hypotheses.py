@@ -195,7 +195,7 @@ def below_cap_table(cross: dict, reg: Registry, cfg: ReportConfig, src: str) -> 
             blocks.append(rows)
     header = [["Question", "Cell", "Outcome", "Decision", "Difference below cap", "95\\% CI", "$p$",
                "Decision below cap"]]
-    return tabular("lllllrrl", header, blocks, f"{src} (hypotheses.*.below_cap)")
+    return tabular("llllrrrl", header, blocks, f"{src} (hypotheses.*.below_cap)")
 
 
 def _cell_text(cell, n: Names) -> str:
