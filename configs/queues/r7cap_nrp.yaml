@@ -1,0 +1,76 @@
+# The MedGemma-27B evals again at a 4,096-token cap (ANALYSIS_PLAN.md section 12, the
+# 2026-10-25 entry; docs/NRP.md section 5). scripts/task_pool.py runs them with one worker per
+# A100-80GB pod, from their own state folder (/data/pool/r7cap). They read the R7 adapters,
+# which are complete on the volume, so every eval can start at once. hours: guesses from the
+# R7 evals at the 1,024-token cap, scaled for replies up to four times as long; they only
+# order the tasks. The runner skips every stage whose manifest is complete, so a task run
+# again goes on where it stopped (an eval keeps its replies in <condition>.replies.jsonl).
+tasks:
+  - id: cmain
+    hours: 30.0
+    run: python -m bodhi_lora run healthbench__medgemma-27b-text__bodhi__cap4096 --stages eval,grade --judges none --gpus 0
+  - id: cmain-judge-s42
+    hours: 2.5
+    after: [cmain]
+    run: python -m bodhi_lora run healthbench__medgemma-27b-text__bodhi__cap4096 --stages grade --judges phi-4 --seeds 42 --gpus 0
+  - id: cmain-judge-s7
+    hours: 2.5
+    after: [cmain]
+    run: python -m bodhi_lora run healthbench__medgemma-27b-text__bodhi__cap4096 --stages grade --judges phi-4 --seeds 7 --gpus 0
+  - id: cmain-judge-s13
+    hours: 2.5
+    after: [cmain]
+    run: python -m bodhi_lora run healthbench__medgemma-27b-text__bodhi__cap4096 --stages grade --judges phi-4 --seeds 13 --gpus 0
+  - id: cmain-judge-s99
+    hours: 2.5
+    after: [cmain]
+    run: python -m bodhi_lora run healthbench__medgemma-27b-text__bodhi__cap4096 --stages grade --judges phi-4 --seeds 99 --gpus 0
+  - id: cmain-judge-s101
+    hours: 2.5
+    after: [cmain]
+    run: python -m bodhi_lora run healthbench__medgemma-27b-text__bodhi__cap4096 --stages grade --judges phi-4 --seeds 101 --gpus 0
+  - id: cmain-finish
+    hours: 0.1
+    after: [cmain-judge-s42, cmain-judge-s7, cmain-judge-s13, cmain-judge-s99, cmain-judge-s101]
+    run: python -m bodhi_lora run healthbench__medgemma-27b-text__bodhi__cap4096 --gpus 0
+  - id: clab
+    hours: 25.0
+    run: python -m bodhi_lora run healthbench__medgemma-27b-text__bodhi__labelled-cap4096 --stages eval,grade --judges none --gpus 0
+  - id: clab-finish
+    hours: 0.1
+    after: [clab]
+    run: python -m bodhi_lora run healthbench__medgemma-27b-text__bodhi__labelled-cap4096 --gpus 0
+  - id: cmediq
+    hours: 20.0
+    run: python -m bodhi_lora run mediq-paired__medgemma-27b-text__bodhi__cap4096 --stages eval,grade --judges none --gpus 0
+  - id: cmediq-finish
+    hours: 0.1
+    after: [cmediq]
+    run: python -m bodhi_lora run mediq-paired__medgemma-27b-text__bodhi__cap4096 --gpus 0
+  - id: cnlm
+    hours: 10.0
+    run: python -m bodhi_lora run nlm-clinical-questions__medgemma-27b-text__bodhi__cap4096 --stages eval,grade --judges none --gpus 0
+  - id: cnlm-judge-s42
+    hours: 2.5
+    after: [cnlm]
+    run: python -m bodhi_lora run nlm-clinical-questions__medgemma-27b-text__bodhi__cap4096 --stages grade --judges phi-4 --seeds 42 --gpus 0
+  - id: cnlm-judge-s7
+    hours: 2.5
+    after: [cnlm]
+    run: python -m bodhi_lora run nlm-clinical-questions__medgemma-27b-text__bodhi__cap4096 --stages grade --judges phi-4 --seeds 7 --gpus 0
+  - id: cnlm-judge-s13
+    hours: 2.5
+    after: [cnlm]
+    run: python -m bodhi_lora run nlm-clinical-questions__medgemma-27b-text__bodhi__cap4096 --stages grade --judges phi-4 --seeds 13 --gpus 0
+  - id: cnlm-judge-s99
+    hours: 2.5
+    after: [cnlm]
+    run: python -m bodhi_lora run nlm-clinical-questions__medgemma-27b-text__bodhi__cap4096 --stages grade --judges phi-4 --seeds 99 --gpus 0
+  - id: cnlm-judge-s101
+    hours: 2.5
+    after: [cnlm]
+    run: python -m bodhi_lora run nlm-clinical-questions__medgemma-27b-text__bodhi__cap4096 --stages grade --judges phi-4 --seeds 101 --gpus 0
+  - id: cnlm-finish
+    hours: 0.1
+    after: [cnlm-judge-s42, cnlm-judge-s7, cnlm-judge-s13, cnlm-judge-s99, cnlm-judge-s101]
+    run: python -m bodhi_lora run nlm-clinical-questions__medgemma-27b-text__bodhi__cap4096 --gpus 0
