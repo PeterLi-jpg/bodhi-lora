@@ -198,3 +198,11 @@ repository (`BODHI/_nrp_pod_logs/`); `/data/setup.log`, `/data/setup_r7.log` and
 folders keep the same lines on the volume. The volume and the R7 Job stay. At 14:33 UTC the
 same day Kubernetes stopped worker 4r2gd during the labelled eval (no reason in the events);
 the Job replaced it, and the eval resumed from its `<condition>.replies.jsonl` files.
+
+**The 4,096-token reruns (2026-10-25).** On the first author's "just go" (ANALYSIS_PLAN.md
+section 12, the 2026-10-25 entry), the volume's checkout moved to d51e977 (the four
+`*cap4096` cells, `configs/queues/r7cap_nrp.yaml` and `deploy/nrp/workers-r7cap-job.yaml`
+on top of 57d583a, merged into the branch as 28b1cd3), and the Job `bodhi-lora-workers-r7cap`
+was created with one pod, four CPUs and three models. The namespace's A100 quota was full, so
+the Job controller keeps retrying the pod until a card is free; when the R7 Job ends, patch its
+parallelism to 2. Its state folder is `/data/pool/r7cap`.
