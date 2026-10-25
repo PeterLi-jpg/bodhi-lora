@@ -985,3 +985,38 @@ the cap, with the same seed means, paired t over seeds and Holm family within th
 (stats.json `below_cap`). It runs on every cell whose eval stored `finish_length`. The report
 gives it next to the decisions of H1, H2, H4 and H6, and where the check and the rule
 disagree, the paper says so next to the result. The cap and every rule stay as written.
+
+**2026-10-25, the first author. The MedGemma-27B evals again at a 4,096-token cap.** The
+reply-health counts of the R7 and R10 MedGemma-27B cells (no grade or score of them read)
+show that the 1,024-token cap stops most of their one-call replies, and Base more often than
+LoRA: Base 420 of 1,000 and LoRA 181 of 1,000 on HealthBench-Hard, 2,160 and 1,120 of 3,875
+on the labelled prompts, 1,671 and 1,564 of 2,000 on MediQ, and 805 and 583 of 1,000 on the
+NLM questions. A reply cut there loses its end, where questions usually sit, so every test
+of asking on these cells leans toward the adapter, and the check of the 2026-10-23 entry
+keeps too few pairs on MediQ and NLM to stand in for it. Asked whether to run these evals
+again with a higher cap, the first author answered "just go" to the recommendation to do so.
+What changes:
+
+- Four eval-only cells run the R7 adapters again with `eval.max_new_tokens` 4,096 and every
+  other setting of their source cells (seeds, draw rule, prompts, serving, graders):
+  `healthbench__medgemma-27b-text__bodhi__cap4096`,
+  `healthbench__medgemma-27b-text__bodhi__labelled-cap4096`,
+  `mediq-paired__medgemma-27b-text__bodhi__cap4096` and
+  `nlm-clinical-questions__medgemma-27b-text__bodhi__cap4096`. The cap applies to one-call
+  conditions only (no protocol, or a prompt protocol); a wrapper protocol keeps its
+  per-pass limit of 2,048. Each cell runs the conditions whose replies the cap can change,
+  plus the conditions that a question of this plan contrasts with them in that cell:
+  `base`, `lora`, `base+clarify`, `base+verbalized-confidence`, `base+mediq-abstain`,
+  `lora+bodhi` and `lora+red-flags-first` on HealthBench-Hard (H1, H2, H4, H6, E02), and
+  `base` and `lora` on the labelled prompts (H7, H11), MediQ (H3) and NLM (H11b).
+- For MedGemma-27B, these cells answer the plan's questions: they take the place of the
+  1,024-token cells in each question's list and in the families of section 2.7. The
+  1,024-token cells, the settings of R2 that this plan first named, are reported next to
+  them under their own question ids (the id with a final `k`), each with its own p and no
+  family. Where the two disagree, the paper says so next to the result.
+- The 4,096-token pair (H6c) and its reference stay as the 2026-10-19 entry fixed them: that
+  question is about the context, not the cap.
+- Mistral-Small-24B is unchanged: the cap stopped at most 25 of its 1,000 replies in any
+  condition of R2.
+
+No output of the four new cells existed when this entry was written.
