@@ -1,0 +1,29 @@
+# nlm-clinical-questions__medgemma-27b-text__bodhi again at a 4,096-token cap
+# (ANALYSIS_PLAN.md section 12, the 2026-10-25 entry): the 1,024-token cap stopped 80% of
+# its Base and 58% of its LoRA replies. Same questions, seeds, serving and graders. Base and
+# LoRA only, the conditions of H11b. The request timeout is longer, because a reply can be
+# four times as long.
+# Run: python -m bodhi_lora run nlm-clinical-questions__medgemma-27b-text__bodhi__cap4096 --gpus 0
+id: nlm-clinical-questions__medgemma-27b-text__bodhi__cap4096
+benchmark: nlm-clinical-questions
+split: default
+model: medgemma-27b-text
+protocol: bodhi
+seeds: [42, 7, 13, 99, 101]
+adapters_from: healthbench__medgemma-27b-text__bodhi
+grading:
+  filter: qwen2.5-14b
+  evaluator: llama-3.1-8b
+  judges: [phi-4]
+eval:
+  conditions: [base, lora]
+  ids: {policy: per_seed_draw, n: 200}
+  # The base is served as it was trained, 4-bit under a QLoRA adapter (audit REPRO-12).
+  base_precision: train
+  max_new_tokens: 4096
+  max_new_tokens_per_pass: 2048
+  serving: {max_model_len: 8192, max_num_seqs: 32, concurrency: 32, request_timeout_s: 3600}
+report:
+  label: NLM clinician questions, MedGemma-27B, 4,096-token cap
+  token: QuestionsMedGemmaCap
+  status: planned

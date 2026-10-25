@@ -148,7 +148,7 @@
   "inputs": {
     "results/chatdoctor__med42-8b__bodhi__2026-07/analysis/stats.json": "c6bbfd2db80c8d176f4d3b1c9041113d3e119ae88a50f399eea2ab2feea5e226",
     "results/chatdoctor__mistral-small-24b__bodhi__2026-07/analysis/stats.json": "2dd8a2dd9e0cf3c48bab125c11617ab1f26fe1de86bfeb227967919f247a7446",
-    "results/cross_cell/stats.json": "704f47076a4a40db207d96f8215dfd50f8486481ff54cbd55aee9221bb7c9ffd",
+    "results/cross_cell/stats.json": "7349b5679c8b4e41c1d25832c4fd868f3f44f43db94ea0d9e07392342919a97e",
     "results/healthbench__biomistral-7b__bodhi__2026-07/analysis/stats.json": "20fdb0f5ee64a0955be4d9491d6d4d6abb0de8858c21adf0c83120ff27a2d911",
     "results/healthbench__med42-8b__bodhi__2026-07/analysis/stats.json": "99d774e85e9d95a0528b4121f744f56948c7c9534b2c0cf13d6b54d1bea99759",
     "results/healthbench__medgemma-27b-text__bodhi__2026-04/analysis/stats.json": "1bcaea585319fa02e19b574698ae2b277212c584a05e43df34456fae383a423f",

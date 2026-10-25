@@ -239,33 +239,47 @@ families:
 # F3 paired probe, F4 red flags first, F5 over-flagging, F6 the new HealthBench cells of
 # E02), Holm runs over the question's cells; a cell that runs later joins its list.
 hypotheses:
+  # For MedGemma-27B, the 4,096-token cells answer the questions (ANALYSIS_PLAN.md section
+  # 12, the 2026-10-25 entry); the 1,024-token cells follow under the same id with a final k,
+  # each with its own p and no family.
   - {id: H1, token: HOne, rule: asking,
-     cells: [healthbench__mistral-small-24b__bodhi, healthbench__medgemma-27b-text__bodhi]}
+     cells: [healthbench__mistral-small-24b__bodhi, healthbench__medgemma-27b-text__bodhi__cap4096]}
   - {id: H2, token: HTwo, rule: cost,
      cells: [healthbench__mistral-small-24b__bodhi, healthbench__mistral-small-24b__ask-first,
-             healthbench__medgemma-27b-text__bodhi]}
+             healthbench__medgemma-27b-text__bodhi__cap4096]}
   - {id: H3, token: HThree, rule: paired_probe,
      cells: [mediq-paired__mistral-small-24b__bodhi, mediq-paired__mistral-small-24b__ask-first,
-             mediq-paired__medgemma-27b-text__bodhi]}
+             mediq-paired__medgemma-27b-text__bodhi__cap4096]}
   - {id: E02, token: HThreeIndex, rule: physician_index,
      cells: [healthbench__mistral-small-24b__bodhi, healthbench__mistral-small-24b__ask-first,
-             healthbench__medgemma-27b-text__bodhi]}
+             healthbench__medgemma-27b-text__bodhi__cap4096]}
   - {id: H4, token: HFour, rule: baselines,
-     cells: [healthbench__mistral-small-24b__bodhi, healthbench__medgemma-27b-text__bodhi],
+     cells: [healthbench__mistral-small-24b__bodhi, healthbench__medgemma-27b-text__bodhi__cap4096],
      baselines: [base+clarify, base+verbalized-confidence, base+mediq-abstain]}
   - {id: H5, token: HFive, rule: asking, cells: [healthbench__mistral-small-24b__ask-first]}
   - {id: H6, token: HSix, rule: red_flags_first,
-     cells: [healthbench__mistral-small-24b__bodhi, healthbench__medgemma-27b-text__bodhi]}
+     cells: [healthbench__mistral-small-24b__bodhi, healthbench__medgemma-27b-text__bodhi__cap4096]}
   # The 4,096-token pair (ANALYSIS_PLAN.md section 12, the 2026-10-19 entry on R7): no family.
   - {id: H6c, token: HSixCtx, rule: context_pair, cells: [healthbench__medgemma-27b-text__bodhi__ctx4096],
      reference: healthbench__medgemma-27b-text__bodhi}
   - {id: H7, token: HSeven, rule: over_flagging,
-     cells: [healthbench__mistral-small-24b__bodhi__labelled, healthbench__medgemma-27b-text__bodhi__labelled]}
+     cells: [healthbench__mistral-small-24b__bodhi__labelled, healthbench__medgemma-27b-text__bodhi__labelled-cap4096]}
   - {id: H11, token: HEleven, rule: asking, subset: clinician-user=positive,
-     cells: [healthbench__mistral-small-24b__bodhi__labelled, healthbench__medgemma-27b-text__bodhi__labelled]}
+     cells: [healthbench__mistral-small-24b__bodhi__labelled, healthbench__medgemma-27b-text__bodhi__labelled-cap4096]}
   # H11's secondary set (section 9.3): the NLM questions, H1's rule; they have no rubric.
   - {id: H11b, token: HElevenNLM, rule: asking,
-     cells: [nlm-clinical-questions__mistral-small-24b__bodhi, nlm-clinical-questions__medgemma-27b-text__bodhi]}
+     cells: [nlm-clinical-questions__mistral-small-24b__bodhi, nlm-clinical-questions__medgemma-27b-text__bodhi__cap4096]}
+  # The MedGemma-27B cells at the 1,024-token cap of R2's settings.
+  - {id: H1k, token: HOneK, rule: asking, cells: [healthbench__medgemma-27b-text__bodhi]}
+  - {id: H2k, token: HTwoK, rule: cost, cells: [healthbench__medgemma-27b-text__bodhi]}
+  - {id: H3k, token: HThreeK, rule: paired_probe, cells: [mediq-paired__medgemma-27b-text__bodhi]}
+  - {id: E02k, token: HThreeIndexK, rule: physician_index, cells: [healthbench__medgemma-27b-text__bodhi]}
+  - {id: H4k, token: HFourK, rule: baselines, cells: [healthbench__medgemma-27b-text__bodhi],
+     baselines: [base+clarify, base+verbalized-confidence, base+mediq-abstain]}
+  - {id: H6k, token: HSixK, rule: red_flags_first, cells: [healthbench__medgemma-27b-text__bodhi]}
+  - {id: H7k, token: HSevenK, rule: over_flagging, cells: [healthbench__medgemma-27b-text__bodhi__labelled]}
+  - {id: H11k, token: HElevenK, rule: asking, subset: clinician-user=positive, cells: [healthbench__medgemma-27b-text__bodhi__labelled]}
+  - {id: H11bk, token: HElevenNLMK, rule: asking, cells: [nlm-clinical-questions__medgemma-27b-text__bodhi]}
 
 # Two cells that graded the same base model on the same benchmark with different
 # evaluators: rubric scores on the prompts both drew in `seed`.
