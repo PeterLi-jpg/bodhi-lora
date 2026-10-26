@@ -1,7 +1,7 @@
 {
   "cell": "mediq-paired__mistral-small-24b__ask-first",
   "leak_rules": {
-    "leak_ask-first__analysis-format": "6dbf7f4f9afdbfb115e243dcab1b912f1d374ac774b0d83e406daceefeb1ef91"
+    "leak_ask-first__analysis-format": "f685a7e4ffc820240d768c7ab201ef83f1c9fdb0ff1a137fe92cf419c25f27e0"
   },
   "prompts": {
     "benchmark": "mediq-paired",

@@ -365,7 +365,13 @@ class BenchmarkConfig(_Record):
 # markdown heading marks, emphasis, a quote mark, a bullet or a section number ("4." or
 # "4)"), each followed by optional spaces. "**4. KEY UNCERTAINTIES:**" and
 # "- RED FLAGS:" start here; the same words inside a sentence do not.
-LEAK_HEADER_START = r"^[ \t]*(?:(?:#{1,6}|[*_]{1,3}|[-+>\u2022]|\d{1,2}[.)])[ \t]*)*"
+# A run of heading marks or of emphasis marks is taken whole (the lookahead stops a
+# shorter split). Until 2026-10-26 the runs were split into pieces of up to six (#) or
+# three (* and _), and a reply with a line of thousands of asterisks made each search try
+# every split: the extract of the R7 labelled cell ran for ten hours on one reply. Every
+# marker starts with a letter or "<", which no piece of this prefix takes, so a header
+# matches here exactly where it matched before; only the time changes.
+LEAK_HEADER_START = r"^[ \t]*(?:(?:#+(?!#)|[*_]+(?![*_])|[-+>\u2022]|\d{1,2}[.)])[ \t]*)*"
 
 
 class LeakRule(_Record):
@@ -385,6 +391,12 @@ class LeakRule(_Record):
 
     @model_validator(mode="after")
     def _compiles(self) -> "LeakRule":
+        # LEAK_HEADER_START takes every run of these characters whole, so a marker that
+        # began with one of them could no longer match after it.
+        for m in self.markers:
+            if not m or m[0] in " \t#*_-+>•" or m[0].isdigit():
+                raise ValueError(f"leak marker {m!r} starts with a character the header "
+                                 "start takes; start it with the header's first word")
         self.patterns()
         return self
 

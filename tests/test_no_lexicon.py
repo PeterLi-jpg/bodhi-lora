@@ -133,6 +133,45 @@ def test_leak_markers_count_only_where_a_header_starts(reg):
     assert not problems, "\n".join(problems)
 
 
+# The header start until 2026-10-26: it split a run of marks into pieces of up to six (#)
+# or three (* and _), so a line of thousands of marks made one search try every split.
+SPLIT_HEADER_START = r"^[ \t]*(?:(?:#{1,6}|[*_]{1,3}|[-+>•]|\d{1,2}[.)])[ \t]*)*"
+
+
+def test_header_start_counts_where_the_split_version_did_and_returns_at_once():
+    import itertools
+    import time
+
+    from bodhi_lora.registry.schema import LEAK_HEADER_START
+
+    marker = "KEY UNCERTAINT"
+    new = re.compile(LEAK_HEADER_START + "(?:" + marker + ")", re.IGNORECASE | re.MULTILINE)
+    old = re.compile(SPLIT_HEADER_START + "(?:" + marker + ")", re.IGNORECASE | re.MULTILINE)
+    # Every line start of up to four pieces, where the split version is still fast.
+    pieces = ["#", "*", "_", "-", "+", ">", "•", "4.", "12)", "123.", " ", "\t", "x", "<"]
+    for n in range(5):
+        for combo in itertools.product(pieces, repeat=n):
+            start = "".join(combo)
+            for text in (start + marker + "IES:", start + "key uncertainties", "Intro.\n" + start + marker,
+                         start + "It says " + marker, start):
+                assert bool(new.search(text)) == bool(old.search(text)), repr(text)
+    # The degenerate replies of the R7 labelled cell held lines of up to 13,408 asterisks.
+    began = time.perf_counter()
+    for mark in "*_#":
+        assert new.search(mark * 20000 + " no header here") is None
+        assert new.search(mark * 20000 + " " + marker + "IES:")
+    assert time.perf_counter() - began < 1.0
+
+
+def test_a_marker_cannot_start_with_a_mark_the_header_start_takes():
+    from bodhi_lora.registry.schema import LeakRule
+
+    for marker in ["**KEY UNCERTAINT", "- RED FLAGS", "4. KEY", " KEY"]:
+        with pytest.raises(ValueError):
+            LeakRule(description="d", markers=[marker], threshold=1)
+    assert LeakRule(description="d", markers=["<plan>", "KEY UNCERTAINT"], threshold=1)
+
+
 @pytest.mark.parametrize("marker, ok", [
     ("KEY UNCERTAINT", True),            # a header up to its plural ending
     ("RED FLAGS?\\s*:", True),
