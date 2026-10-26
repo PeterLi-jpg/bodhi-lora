@@ -217,6 +217,8 @@ def hypothesis_table(cross: dict, reg: Registry, cfg: ReportConfig, src: str, sh
     n = Names(cfg)
     blocks = []
     for spec in cfg.hypotheses:
+        if short and spec.appendix_only:
+            continue
         h = cross.get("hypotheses", {}).get(spec.id)
         if h is None:
             continue

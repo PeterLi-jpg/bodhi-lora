@@ -152,6 +152,21 @@ def test_table_one_has_a_row_for_every_cross_cell(setup):
     assert {line.count(" & ") + 1 for line in rows} == {width}
 
 
+def test_the_short_hypothesis_table_leaves_out_appendix_only_questions(setup):
+    """The main text's table keeps the primary questions; a question marked appendix_only
+    (the 1,024-token MedGemma-27B cells) is in the appendix's full table only."""
+    reg, cfg, proj, rep = setup
+    only = [h.id for h in cfg.hypotheses if h.appendix_only]
+    assert only, "configs/report.yaml marks no question appendix_only"
+
+    def ids(text):
+        return {line.split(" & ", 1)[0] for line in text.splitlines() if " & " in line} - {"", "Question"}
+
+    short, full = ids(rep.tables["tab_hypotheses_short"]), ids(rep.tables["tab_hypotheses"])
+    assert not short & set(only)
+    assert set(only) & full, "no appendix_only question has a row in the full table"
+
+
 def test_the_committed_paper_numbers_are_what_the_report_writes(setup, tmp_path):
     """paper/generated/ is current: a fresh report writes the same bytes, and no other
     tab_*.tex is left over. CI checks the same with make numbers and git diff."""

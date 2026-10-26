@@ -26,4 +26,4 @@ eval:
 report:
   label: MediQ paired probe, MedGemma-27B
   token: MediqMedGemma
-  status: planned
+  status: complete

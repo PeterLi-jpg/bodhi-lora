@@ -30,6 +30,10 @@ H5 & HB-Hard, Mistral-24B, ask-first & Active inquiry (pp) & \ensuremath{+72.1} 
 H6 & HB-Hard, Mistral-24B, \bodhi{} & Red flags (0--2), LoRA+\bodhi{} $-$ LoRA & \ensuremath{-0.012} & \ensuremath{[-0.097,\,+0.072]} & \ensuremath{0.71} & no drop to recover \\
  &  & Red flags (0--2), red flags first $-$ \bodhi{} & \ensuremath{+0.013} & \ensuremath{[-0.077,\,+0.102]} & \ensuremath{0.71} &  \\
 \midrule
+H6c & HB-Hard, MedGemma-27B, \bodhi{}, 4{,}096 tokens & Red flags (0--2), LoRA+\bodhi{} $-$ LoRA & \ensuremath{+0.012} & \ensuremath{[-0.026,\,+0.050]} & \ensuremath{0.43} & context not implicated \\
+ &  & Red flags (0--2), LoRA+\bodhi{} $-$ LoRA, full context & \ensuremath{-0.026} & \ensuremath{[-0.103,\,+0.052]} & \ensuremath{0.41} &  \\
+ &  & Red flags (0--2), red flags first $-$ \bodhi{} & \ensuremath{-0.041} & \ensuremath{[-0.117,\,+0.034]} & \ensuremath{0.21} &  \\
+\midrule
 H7 & HB labelled, Mistral-24B, \bodhi{} & Red-flag rate, non-emergent (pp) & \ensuremath{+38.1} & \ensuremath{[+35.9,\,+40.2]} & \ensuremath{1.1\times10^{-6}} & over-flagging found \\
  &  & Red-flag rate, emergent (pp) & \ensuremath{+13.4} & \ensuremath{[+12.2,\,+14.6]} & \ensuremath{6.0\times10^{-6}} &  \\
 \midrule
@@ -38,5 +42,34 @@ H11 & HB labelled, Mistral-24B, \bodhi{} (clinician-written) & Active inquiry (p
 \midrule
 H11b & NLM questions, Mistral-24B, \bodhi{} & Active inquiry (pp) & \ensuremath{+14.4} & \ensuremath{[+11.1,\,+17.7]} & \ensuremath{0.0011} & supported \\
  &  & Context-seeking (0--2) & \ensuremath{+1.310} & \ensuremath{[+1.231,\,+1.390]} & \ensuremath{9.6\times10^{-6}} &  \\
+\midrule
+H1k & HB-Hard, MedGemma-27B, \bodhi{} & Active inquiry (pp) & \ensuremath{+30.5} & \ensuremath{[+26.8,\,+34.1]} & \ensuremath{1.4\times10^{-4}} & supported \\
+ &  & Context-seeking (0--2) & \ensuremath{+0.235} & \ensuremath{[+0.176,\,+0.294]} & \ensuremath{0.0023} &  \\
+\midrule
+H2k & HB-Hard, MedGemma-27B, \bodhi{} & Aggregate score (0--1) & \ensuremath{-0.007} & \ensuremath{[-0.016,\,+0.002]} & \ensuremath{0.1} & no change detected \\
+\midrule
+H3k & MediQ pairs, MedGemma-27B, \bodhi{} & Ask gap, incomplete $-$ complete (pp) & \ensuremath{-1.6} & \ensuremath{[-7.7,\,+4.4]} & \ensuremath{0.5} & mimicry indicated \\
+ &  & Asking on complete prompts (pp) & \ensuremath{+11.0} & \ensuremath{[+6.6,\,+15.5]} & \ensuremath{0.0024} &  \\
+\midrule
+E02k & HB-Hard, MedGemma-27B, \bodhi{} & Asking index, physician labels (pp) & \ensuremath{+0.5} & \ensuremath{[-13.4,\,+14.5]} & \ensuremath{0.92} & not detected \\
+\midrule
+H4k & HB-Hard, MedGemma-27B, \bodhi{} vs Base+clarify & Active inquiry (pp) & \ensuremath{-29.2} & \ensuremath{[-32.9,\,-25.5]} & \ensuremath{1.8\times10^{-4}} & baseline ahead \\
+ &  & Context-seeking (0--2) & \ensuremath{-0.087} & \ensuremath{[-0.153,\,-0.020]} & \ensuremath{0.045} &  \\
+ & HB-Hard, MedGemma-27B, \bodhi{} vs Base+verbalized-confidence & Active inquiry (pp) & \ensuremath{+37.4} & \ensuremath{[+32.3,\,+42.4]} & \ensuremath{2.3\times10^{-4}} & adapter ahead \\
+ &  & Context-seeking (0--2) & \ensuremath{+0.206} & \ensuremath{[+0.101,\,+0.311]} & \ensuremath{0.022} &  \\
+ & HB-Hard, MedGemma-27B, \bodhi{} vs Base+mediq-abstain & Active inquiry (pp) & \ensuremath{-13.0} & \ensuremath{[-20.3,\,-5.7]} & \ensuremath{0.0077} & baseline ahead \\
+ &  & Context-seeking (0--2) & \ensuremath{+0.384} & \ensuremath{[+0.288,\,+0.480]} & \ensuremath{7.4\times10^{-4}} &  \\
+\midrule
+H6k & HB-Hard, MedGemma-27B, \bodhi{} & Red flags (0--2), LoRA+\bodhi{} $-$ LoRA & \ensuremath{-0.026} & \ensuremath{[-0.103,\,+0.052]} & \ensuremath{0.41} & no drop to recover \\
+ &  & Red flags (0--2), red flags first $-$ \bodhi{} & \ensuremath{+0.025} & \ensuremath{[-0.042,\,+0.092]} & \ensuremath{0.36} &  \\
+\midrule
+H7k & HB labelled, MedGemma-27B, \bodhi{} & Red-flag rate, non-emergent (pp) & \ensuremath{-5.9} & \ensuremath{[-11.1,\,-0.7]} & \ensuremath{0.034} & not detected \\
+ &  & Red-flag rate, emergent (pp) & \ensuremath{-0.6} & \ensuremath{[-1.2,\,-0.1]} & \ensuremath{0.035} &  \\
+\midrule
+H11k & HB labelled, MedGemma-27B, \bodhi{} (clinician-written) & Active inquiry (pp) & \ensuremath{+8.9} & \ensuremath{[+7.3,\,+10.5]} & \ensuremath{6.3\times10^{-4}} & supported \\
+ &  & Context-seeking (0--2) & \ensuremath{+0.083} & \ensuremath{[+0.027,\,+0.139]} & \ensuremath{0.014} &  \\
+\midrule
+H11bk & NLM questions, MedGemma-27B, \bodhi{} & Active inquiry (pp) & \ensuremath{+19.4} & \ensuremath{[+13.6,\,+25.2]} & \ensuremath{0.0052} & supported \\
+ &  & Context-seeking (0--2) & \ensuremath{+0.254} & \ensuremath{[+0.148,\,+0.361]} & \ensuremath{0.014} &  \\
 \bottomrule
 \end{tabular}

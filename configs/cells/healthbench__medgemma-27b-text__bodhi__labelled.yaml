@@ -29,4 +29,4 @@ eval:
 report:
   label: HealthBench labelled probes, MedGemma-27B
   token: HBMedGemmaLabelled
-  status: planned
+  status: complete

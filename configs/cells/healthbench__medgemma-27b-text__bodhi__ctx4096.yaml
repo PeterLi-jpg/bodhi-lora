@@ -26,7 +26,7 @@ eval:
 report:
   label: HealthBench-Hard, MedGemma-27B, 4,096-token context
   token: HBMedGemmaCtxFour
-  status: planned
+  status: complete
   # H6 at this context (ANALYSIS_PLAN.md section 7.1): the analysis makes the precondition
   # (lora+bodhi - lora) by itself; the primary contrast it does not.
   contrasts:

@@ -1,0 +1,142 @@
+{
+  "schema": 3,
+  "stage": "traces",
+  "cell": "healthbench__medgemma-27b-text__bodhi",
+  "seed": null,
+  "created_utc": "2026-10-20T19:25:17.844280+00:00",
+  "git": {
+    "sha": "d6ae7325af23da3980d8ac83c5607ad4275625f1",
+    "dirty": false,
+    "diff_sha256": null,
+    "n_untracked": 4
+  },
+  "packages": {
+    "python": "3.12.11",
+    "torch": "2.8.0",
+    "transformers": "4.56.2",
+    "vllm": "0.10.2",
+    "peft": null,
+    "trl": null,
+    "accelerate": null,
+    "bitsandbytes": "0.47.0",
+    "datasets": "5.0.0",
+    "bodhi-llm": "0.1.4",
+    "huggingface-hub": "0.36.2",
+    "numpy": "2.2.6"
+  },
+  "host_sha256": "f901b2d54f777417d7649670880c9e0091a4ed3712c9d3219af5f63bf530c67c",
+  "hardware": {
+    "visible_devices": "0",
+    "gpus": [
+      {
+        "index": "0",
+        "name": "NVIDIA A100-SXM4-80GB",
+        "memory": "81920 MiB"
+      }
+    ]
+  },
+  "time": {
+    "started_utc": "2026-10-20T15:53:29.876156+00:00",
+    "finished_utc": "2026-10-20T19:25:19.297903+00:00",
+    "seconds": 12709.422
+  },
+  "config": {
+    "traces": {
+      "max_prompts": 4200,
+      "decoding": "greedy",
+      "temperature": 0.0,
+      "top_p": 1.0,
+      "seed": 0,
+      "max_new_tokens_per_pass": 2048,
+      "serving": {
+        "max_model_len": 8192,
+        "max_num_seqs": 64,
+        "concurrency": 32,
+        "request_timeout_s": 180,
+        "drain_s": 0.0,
+        "enforce_eager": null
+      }
+    },
+    "protocol": {
+      "id": "bodhi",
+      "title": "BODHI two-pass analysis, then reply",
+      "kind": "wrapper",
+      "impl": "bodhi_llm",
+      "package": "bodhi-llm==0.1.4",
+      "passes": 2,
+      "instructions": null,
+      "params": {
+        "ablate": "none"
+      },
+      "leak_rules": {
+        "analysis-format": {
+          "description": "two or more of the seven pass-1 section headers of bodhi-llm 0.1.4 (the posted nine-marker rule also counted DIFFERENTIAL and SCOPE OF/BOUNDAR, free words, and is withdrawn in rebuttal/withdrawals.md W25)",
+          "markers": [
+            "TASK TYPE",
+            "KEY UNCERTAINT",
+            "SAFE RECOMMENDATION",
+            "RED FLAGS?\\s*:",
+            "WHAT I THINK",
+            "QUESTIONS TO ASK",
+            "AUDIENCE\\s*:"
+          ],
+          "threshold": 2
+        }
+      },
+      "reference": "BODHI (bodhi-llm 0.1.4, https://github.com/sebasmos/bodhi-llms): pass 1 writes an analysis, pass 2 writes the reply from it"
+    }
+  },
+  "config_sha256": "dc82c5a2bebec518596dd71de29a03db0a0da8ed3f41fd7acfcb4d7118c4a8aa",
+  "models": {
+    "teacher": {
+      "id": "medgemma-27b-text",
+      "repo_id": "google/medgemma-27b-text-it",
+      "family": "gemma",
+      "revision": "5b667cf2ddcf064085bc90952edb35a0edbfb79c",
+      "revision_source": "record",
+      "unpinned_reason": null
+    }
+  },
+  "engines": {
+    "teacher": {
+      "model": "google/medgemma-27b-text-it",
+      "revision": "5b667cf2ddcf064085bc90952edb35a0edbfb79c",
+      "max_model_len": 8192,
+      "max_num_seqs": 64,
+      "tensor_parallel_size": 1,
+      "dtype": "bfloat16",
+      "quantization": null,
+      "enforce_eager": false,
+      "request_timeout_s": 180,
+      "lora_path": null,
+      "lora_modules": {},
+      "max_loras": null,
+      "max_lora_rank": null,
+      "env": {}
+    }
+  },
+  "outputs": [
+    {
+      "path": "/data/bohdi/results/healthbench__medgemma-27b-text__bodhi/shared/traces/traces.jsonl",
+      "bytes": 33880047,
+      "sha256": "87dd60eeec27a12ff595615d1087f81d1791484c073ef6a391bc84b5384b3494",
+      "n_lines": 3321
+    }
+  ],
+  "counts": {
+    "n_pool_cap": 3321,
+    "n_resumed": 0,
+    "n_ok": 3321,
+    "n_failed": 0,
+    "n_too_long": 0,
+    "n_unreadable_lines": 0,
+    "tokens": {
+      "calls": 6642,
+      "prompt_tokens": 5431303,
+      "completion_tokens": 5994534,
+      "finish_length": 101
+    }
+  },
+  "status": "complete",
+  "too_long_ids": []
+}

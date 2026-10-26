@@ -63,7 +63,7 @@ bench:
 report:
   label: HealthBench-Hard, MedGemma-27B
   token: HBMedGemma
-  status: planned
+  status: complete
   # Contrasts the analysis rule does not make. H6 (ANALYSIS_PLAN.md section 7.1): the
   # primary contrast, and the order alone on the base.
   contrasts:

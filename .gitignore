@@ -34,6 +34,13 @@ results/**/train/**
 !results/**/train/**/adapter_config.json
 !results/**/train/**/trainer_state.json
 !results/**/train/**/manifest.json
+# A training run set aside under another name (R7 seed 42's batch-8 run, DECISIONS.md D31)
+# keeps the same files as train/.
+results/**/train.*/**
+!results/**/train.*/**/
+!results/**/train.*/**/adapter_config.json
+!results/**/train.*/**/trainer_state.json
+!results/**/train.*/**/manifest.json
 # The answer key unblinds the physician grading sheets, so it stays outside the repo
 # (docs/KNOWN_ISSUES.md). make_irr_excel.py writes it next to the sheets.
 results/**/validation/answer_key.xlsx

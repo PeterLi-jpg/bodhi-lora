@@ -137,7 +137,9 @@ class Hypothesis(_Record):
     contrasts of that subset of each cell (H11). `baselines` lists the prompt baselines
     that the rule `baselines` compares the adapter with (H4, E12). `reference` names the
     cell that the rule `context_pair` reads at the full context (the 2026-10-19 plan entry
-    on R7)."""
+    on R7). `appendix_only` keeps a question out of the main text's short table; the full
+    table of the appendix still has it (the 1,024-token MedGemma-27B cells, which the
+    2026-10-25 plan entry reports next to the primary 4,096-token cells)."""
     id: str = Field(pattern=r"^[A-Z][0-9]+[a-z]{0,2}$")
     token: MacroToken
     rule: Literal["asking", "cost", "paired_probe", "baselines", "red_flags_first", "over_flagging",
@@ -146,6 +148,7 @@ class Hypothesis(_Record):
     subset: Optional[str] = Field(default=None, pattern=r"^[a-z0-9-]+=(positive|negative)$")
     baselines: list[str] = Field(default_factory=list)
     reference: Optional[CellId] = None
+    appendix_only: bool = False
 
     @model_validator(mode="after")
     def _baselines(self) -> "Hypothesis":

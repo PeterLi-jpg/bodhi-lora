@@ -1,0 +1,113 @@
+{
+  "schema": 3,
+  "stage": "grade",
+  "cell": "healthbench__medgemma-27b-text__bodhi__ctx4096",
+  "seed": 13,
+  "created_utc": "2026-10-25T04:06:01.465365+00:00",
+  "git": {
+    "sha": "57d583a6ed817183fb81f4773cba2422af6fcb4b",
+    "dirty": false,
+    "diff_sha256": null,
+    "n_untracked": 8
+  },
+  "packages": {
+    "python": "3.12.11",
+    "torch": "2.8.0",
+    "transformers": "4.56.2",
+    "vllm": "0.10.2",
+    "peft": null,
+    "trl": null,
+    "accelerate": null,
+    "bitsandbytes": "0.47.0",
+    "datasets": "5.0.0",
+    "bodhi-llm": "0.1.4",
+    "huggingface-hub": "0.36.2",
+    "numpy": "2.2.6"
+  },
+  "host_sha256": "1a0f66b435cfd84be5750769e2c6587c5bc24b35009b7cfdd98508726f6ce272",
+  "hardware": {
+    "visible_devices": "0",
+    "gpus": [
+      {
+        "index": "0",
+        "name": "NVIDIA A100-SXM4-80GB",
+        "memory": "81920 MiB"
+      }
+    ]
+  },
+  "time": {
+    "started_utc": "2026-10-25T04:00:19.343483+00:00",
+    "finished_utc": "2026-10-25T04:06:04.006605+00:00",
+    "seconds": 344.663
+  },
+  "models": {
+    "grader": {
+      "id": "llama-3.1-8b",
+      "repo_id": "meta-llama/Llama-3.1-8B-Instruct",
+      "family": "llama3",
+      "revision": "0e9e39f249a16976918f6564b8830bc894c89659",
+      "revision_source": "record",
+      "unpinned_reason": null
+    }
+  },
+  "engines": {
+    "grader": {
+      "model": "meta-llama/Llama-3.1-8B-Instruct",
+      "revision": "0e9e39f249a16976918f6564b8830bc894c89659",
+      "max_model_len": 4096,
+      "max_num_seqs": 32,
+      "tensor_parallel_size": 1,
+      "dtype": "bfloat16",
+      "quantization": null,
+      "enforce_eager": true,
+      "request_timeout_s": 900,
+      "lora_path": null,
+      "lora_modules": {},
+      "max_loras": null,
+      "max_lora_rank": null,
+      "env": {}
+    }
+  },
+  "inputs": [
+    {
+      "path": "/data/bohdi/results/healthbench__medgemma-27b-text__bodhi__ctx4096/seed_13/eval/lora.json",
+      "bytes": 2556889,
+      "sha256": "6447a9b737a67c9b1dc85ee2fffc9969f41acdcc8fdf0a05c6453dd7f527fd7d"
+    },
+    {
+      "path": "/data/bohdi/results/healthbench__medgemma-27b-text__bodhi__ctx4096/seed_13/eval/lora+bodhi.json",
+      "bytes": 2928590,
+      "sha256": "92cd9b6c013957cac898004bf813b15f78261e596c5de2aa6149704bb7d8eb0a"
+    },
+    {
+      "path": "/data/bohdi/results/healthbench__medgemma-27b-text__bodhi__ctx4096/seed_13/eval/lora+red-flags-first.json",
+      "bytes": 3003440,
+      "sha256": "da26f7763f075cc2c3f362a86a3c7287bcf1ed11541fdf50ebb6cc05745d93e9"
+    }
+  ],
+  "outputs": [
+    {
+      "path": "/data/bohdi/results/healthbench__medgemma-27b-text__bodhi__ctx4096/seed_13/grade/epistemic__llama-3.1-8b.json",
+      "bytes": 4038456,
+      "sha256": "9abdffcf6ca9ca4b547d8548561b7a28d4014992289535b5b0b37eb7a3ec6708"
+    }
+  ],
+  "counts": {
+    "lora": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    },
+    "lora+bodhi": {
+      "n": 192,
+      "n_grade_errors": 0,
+      "n_too_long": 2
+    },
+    "lora+red-flags-first": {
+      "n": 191,
+      "n_grade_errors": 0,
+      "n_too_long": 1
+    }
+  },
+  "status": "complete"
+}

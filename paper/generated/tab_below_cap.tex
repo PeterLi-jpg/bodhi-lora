@@ -17,5 +17,17 @@ H5 & HB-Hard, Mistral-24B, ask-first & Active inquiry (pp) & supported & \ensure
 H6 & HB-Hard, Mistral-24B, \bodhi{} & Red flags (0--2), LoRA+\bodhi{} $-$ LoRA & no drop to recover & \ensuremath{-0.010} & \ensuremath{[-0.094,\,+0.075]} & \ensuremath{0.76} & no drop to recover \\
 \midrule
 H11b & NLM questions, Mistral-24B, \bodhi{} & Active inquiry (pp) & supported & \ensuremath{+14.6} & \ensuremath{[+10.8,\,+18.4]} & \ensuremath{0.0016} & supported \\
+\midrule
+H1k & HB-Hard, MedGemma-27B, \bodhi{} & Active inquiry (pp) & supported & \ensuremath{+35.5} & \ensuremath{[+32.0,\,+39.0]} & \ensuremath{6.5\times10^{-5}} & supported \\
+\midrule
+H2k & HB-Hard, MedGemma-27B, \bodhi{} & Aggregate score (0--1) & no change detected & \ensuremath{+0.002} & \ensuremath{[-0.016,\,+0.021]} & \ensuremath{0.74} & no change detected \\
+\midrule
+H4k & HB-Hard, MedGemma-27B, \bodhi{} vs Base+clarify & Active inquiry (pp) & baseline ahead & \ensuremath{-23.5} & \ensuremath{[-29.2,\,-17.7]} & \ensuremath{0.0021} & baseline ahead \\
+ & HB-Hard, MedGemma-27B, \bodhi{} vs Base+verbalized-confidence & Active inquiry (pp) & adapter ahead & \ensuremath{+47.1} & \ensuremath{[+41.8,\,+52.4]} & \ensuremath{1.1\times10^{-4}} & adapter ahead \\
+ & HB-Hard, MedGemma-27B, \bodhi{} vs Base+mediq-abstain & Active inquiry (pp) & baseline ahead & \ensuremath{-6.3} & \ensuremath{[-12.1,\,-0.5]} & \ensuremath{0.039} & baseline ahead \\
+\midrule
+H6k & HB-Hard, MedGemma-27B, \bodhi{} & Red flags (0--2), LoRA+\bodhi{} $-$ LoRA & no drop to recover & \ensuremath{+0.104} & \ensuremath{[+0.024,\,+0.184]} & \ensuremath{0.022} & no drop to recover \\
+\midrule
+H11bk & NLM questions, MedGemma-27B, \bodhi{} & Active inquiry (pp) & supported & \ensuremath{+34.1} & \ensuremath{[+9.0,\,+59.2]} & \ensuremath{0.12} & not supported \\
 \bottomrule
 \end{tabular}
