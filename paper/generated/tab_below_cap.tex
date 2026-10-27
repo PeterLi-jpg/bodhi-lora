@@ -4,17 +4,23 @@
 Question & Cell & Outcome & Decision & Difference below cap & 95\% CI & $p$ & Decision below cap \\
 \midrule
 H1 & HB-Hard, Mistral-24B, \bodhi{} & Active inquiry (pp) & supported & \ensuremath{+19.6} & \ensuremath{[+15.0,\,+24.1]} & \ensuremath{0.0011} & supported \\
+ & HB-Hard, MedGemma-27B, \bodhi{} & Active inquiry (pp) & supported & \ensuremath{+33.8} & \ensuremath{[+30.5,\,+37.1]} & \ensuremath{6.5\times10^{-5}} & supported \\
 \midrule
 H2 & HB-Hard, Mistral-24B, \bodhi{} & Aggregate score (0--1) & no change detected & \ensuremath{+0.005} & \ensuremath{[-0.010,\,+0.019]} & \ensuremath{0.42} & no change detected \\
- & HB-Hard, Mistral-24B, ask-first & Aggregate score (0--1) & lowers the score & \ensuremath{-0.051} & \ensuremath{[-0.056,\,-0.045]} & \ensuremath{2.4\times10^{-5}} & lowers the score \\
+ & HB-Hard, Mistral-24B, ask-first & Aggregate score (0--1) & lowers the score & \ensuremath{-0.051} & \ensuremath{[-0.056,\,-0.045]} & \ensuremath{3.6\times10^{-5}} & lowers the score \\
+ & HB-Hard, MedGemma-27B, \bodhi{} & Aggregate score (0--1) & no change detected & \ensuremath{-0.012} & \ensuremath{[-0.022,\,-0.002]} & \ensuremath{0.066} & no change detected \\
 \midrule
 H4 & HB-Hard, Mistral-24B, \bodhi{} vs Base+clarify & Active inquiry (pp) & baseline ahead & \ensuremath{-30.6} & \ensuremath{[-35.6,\,-25.7]} & \ensuremath{3.3\times10^{-4}} & baseline ahead \\
  & HB-Hard, Mistral-24B, \bodhi{} vs Base+verbalized-confidence & Active inquiry (pp) & adapter ahead & \ensuremath{+28.9} & \ensuremath{[+23.2,\,+34.6]} & \ensuremath{7.4\times10^{-4}} & adapter ahead \\
  & HB-Hard, Mistral-24B, \bodhi{} vs Base+mediq-abstain & Active inquiry (pp) & baseline ahead & \ensuremath{-7.1} & \ensuremath{[-11.7,\,-2.5]} & \ensuremath{0.013} & baseline ahead \\
+ & HB-Hard, MedGemma-27B, \bodhi{} vs Base+clarify & Active inquiry (pp) & baseline ahead & \ensuremath{-28.3} & \ensuremath{[-33.5,\,-23.1]} & \ensuremath{5.5\times10^{-4}} & baseline ahead \\
+ & HB-Hard, MedGemma-27B, \bodhi{} vs Base+verbalized-confidence & Active inquiry (pp) & adapter ahead & \ensuremath{+40.4} & \ensuremath{[+36.6,\,+44.3]} & \ensuremath{6.0\times10^{-5}} & adapter ahead \\
+ & HB-Hard, MedGemma-27B, \bodhi{} vs Base+mediq-abstain & Active inquiry (pp) & baseline ahead & \ensuremath{-11.0} & \ensuremath{[-15.8,\,-6.1]} & \ensuremath{0.0033} & baseline ahead \\
 \midrule
 H5 & HB-Hard, Mistral-24B, ask-first & Active inquiry (pp) & supported & \ensuremath{+71.8} & \ensuremath{[+67.7,\,+75.9]} & \ensuremath{6.6\times10^{-6}} & supported \\
 \midrule
 H6 & HB-Hard, Mistral-24B, \bodhi{} & Red flags (0--2), LoRA+\bodhi{} $-$ LoRA & no drop to recover & \ensuremath{-0.010} & \ensuremath{[-0.094,\,+0.075]} & \ensuremath{0.76} & no drop to recover \\
+ & HB-Hard, MedGemma-27B, \bodhi{} & Red flags (0--2), LoRA+\bodhi{} $-$ LoRA & no drop to recover & \ensuremath{+0.053} & \ensuremath{[+0.007,\,+0.100]} & \ensuremath{0.034} & no drop to recover \\
 \midrule
 H11b & NLM questions, Mistral-24B, \bodhi{} & Active inquiry (pp) & supported & \ensuremath{+14.6} & \ensuremath{[+10.8,\,+18.4]} & \ensuremath{0.0016} & supported \\
 \midrule

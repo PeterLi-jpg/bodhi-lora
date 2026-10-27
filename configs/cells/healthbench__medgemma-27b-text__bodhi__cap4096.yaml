@@ -28,7 +28,7 @@ eval:
 report:
   label: HealthBench-Hard, MedGemma-27B, 4,096-token cap
   token: HBMedGemmaCap
-  status: planned
+  status: complete
   # H6 (ANALYSIS_PLAN.md section 7.1): the primary contrast.
   contrasts:
     - lora+red-flags-first - lora+bodhi
