@@ -83,7 +83,7 @@ dev = [
 bodhi-lora = "bodhi_lora.cli:main"
 
 [project.urls]
-Repository = "https://github.com/PeterLi-jpg/bohdi-lora"
+Repository = "https://github.com/PeterLi-jpg/bodhi-lora"
 
 # Only the package. scripts/, tests/ and legacy/ also look like packages to the flat-layout
 # discovery, which then refuses to build.

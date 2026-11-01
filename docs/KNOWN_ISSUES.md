@@ -2,7 +2,7 @@
 
 Open problems first, then the fixed ones, then a short history. IDs such as PROV-1 refer
 to the audit of 2026-10-07 ([AUDIT_IDS.md](AUDIT_IDS.md) says what each one found);
-D-numbers refer to [DECISIONS.md](DECISIONS.md). Issue numbers such as #5 are GitHub issues on `PeterLi-jpg/bohdi-lora`.
+D-numbers refer to [DECISIONS.md](DECISIONS.md). Issue numbers such as #5 are GitHub issues on `PeterLi-jpg/bodhi-lora`.
 
 ## Open
 
@@ -241,14 +241,16 @@ D-numbers refer to [DECISIONS.md](DECISIONS.md). Issue numbers such as #5 are Gi
   pilot (seed 42, 838 traces), not a submitted adapter; its weights match the local copy
   in the pilot cell's train folder. `scripts/maintenance/prune_branches.sh` lists them;
   `--apply` deletes them after the first author's yes (D16, BLOCKED.md item 4).
-- **The remote slug misspells the name (`bohdi-lora`, D15).** Renaming is a remote
-  action and is deferred.
 - **`make smoke` stops after the smoke record changes.** The runner freezes a cell's
   record at its first run, in the scratch root too, so a changed smoke record fails
   against the old `outputs/smoke/` folder. Move that folder away and run again.
 
 ## Fixed
 
+- **The repository name (D15).** The repository is now `bodhi-lora`; it was
+  `bohdi-lora`, which misspelled the name. GitHub redirects the old URL. The tracked docs
+  and `pyproject.toml` use the new name (2026-11-01); `legacy/` keeps the old one, as it
+  keeps the rest of the old code.
 - **EOS out of the training loss (2026-10-17).** `set_pad_token` in
   `bodhi_lora/pipeline/train.py` pads with the model record's `chat_template.pad_token`
   and stops a run that would pad with EOS. The four records whose tokenizers have no

@@ -1,6 +1,6 @@
 # BODHI-LoRA
 
-[![CI](https://github.com/PeterLi-jpg/bohdi-lora/actions/workflows/ci.yml/badge.svg)](https://github.com/PeterLi-jpg/bohdi-lora/actions/workflows/ci.yml)
+[![CI](https://github.com/PeterLi-jpg/bodhi-lora/actions/workflows/ci.yml/badge.svg)](https://github.com/PeterLi-jpg/bodhi-lora/actions/workflows/ci.yml)
 
 Code, configs and results for the paper **"Ask Before You Answer: Distilling Clinical
 Epistemic Behaviors into Model Weights"**.
@@ -21,8 +21,8 @@ scores on seven epistemic behaviors: uncertainty acknowledgment, hedging quality
 specificity, active inquiry, context-seeking, red-flag identification and scope
 bounding. Llama-3.1-8B-Instruct grades both.
 
-The repo slug `bohdi-lora` misspells the name. The project name is BODHI everywhere
-else. Renaming the remote repo is deferred (docs/DECISIONS.md, D15).
+The repository was called `bohdi-lora`, which misspelled the name, until it was renamed
+`bodhi-lora` (docs/DECISIONS.md, D15). GitHub redirects the old URL.
 
 ## Rebuild the paper's numbers on a CPU
 

@@ -19,8 +19,8 @@ neither.
 ## 1. Clone
 
 ```bash
-git clone https://github.com/PeterLi-jpg/bohdi-lora.git
-cd bohdi-lora
+git clone https://github.com/PeterLi-jpg/bodhi-lora.git
+cd bodhi-lora
 git config core.hooksPath hooks     # activates the repo hooks, see CONTRIBUTING.md
 ```
 

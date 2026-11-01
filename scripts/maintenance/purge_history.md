@@ -120,9 +120,9 @@ PY
 
 ```bash
 cd "$SECURE"
-git clone --mirror git@github.com:PeterLi-jpg/bohdi-lora.git backup.git
+git clone --mirror git@github.com:PeterLi-jpg/bodhi-lora.git backup.git
 git -C backup.git fsck --no-dangling && git -C backup.git rev-list --all --count
-git clone --bare git@github.com:PeterLi-jpg/bohdi-lora.git purge.git
+git clone --bare git@github.com:PeterLi-jpg/bodhi-lora.git purge.git
 ```
 
 Open `backup.git` and check the counts before going on. Keep it until step 9 is done
@@ -186,7 +186,7 @@ Only after the first author says so, and only after step 7b:
 
 ```bash
 cd "$SECURE/purge.git"
-git remote add origin git@github.com:PeterLi-jpg/bohdi-lora.git   # filter-repo removes it
+git remote add origin git@github.com:PeterLi-jpg/bodhi-lora.git   # filter-repo removes it
 git push --force origin 'refs/heads/*:refs/heads/*' 'refs/tags/*:refs/tags/*'
 ```
 
@@ -196,7 +196,7 @@ The explicit refspecs leave `refs/pull/*` alone, which GitHub refuses anyway. Th
    Support the first changed commits (filter-repo writes them under
    `.git/filter-repo/` with `--sensitive-data-removal`) so they purge pull-request
    refs and cached views.
-2. List forks with `gh api repos/PeterLi-jpg/bohdi-lora/forks --jq '.[].full_name'`.
+2. List forks with `gh api repos/PeterLi-jpg/bodhi-lora/forks --jq '.[].full_name'`.
 3. Delete or refresh the anonymous mirror of the old submission
    (`anonymous.4open.science/r/bodhi-lora-CEB5`).
 

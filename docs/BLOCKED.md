@@ -192,10 +192,11 @@ there is no privacy purge (D18).
    `<commit>:<path>` references, and the pre-commit hook blocks every later commit. Every
    commit id from the first rewritten commit onward changes, and commit links in the
    OpenReview replies stop working.
-4. **Optional: rename the repository** `bohdi-lora` to `bodhi-lora` (D15). Then update
-   the URLs in `README.md`, `docs/KNOWN_ISSUES.md`, `CONTRIBUTING.md`,
-   `docs/INSTALL.md`, `pyproject.toml` and `scripts/maintenance/purge_history.md`, and run
-   `git remote set-url origin git@github.com:PeterLi-jpg/bodhi-lora.git`.
+4. **Rename the repository** `bohdi-lora` to `bodhi-lora` (D15). Done: the repository is
+   renamed, and on 2026-11-01 the URLs in `README.md`, `docs/KNOWN_ISSUES.md`,
+   `CONTRIBUTING.md`, `docs/INSTALL.md`, `pyproject.toml` and
+   `scripts/maintenance/purge_history.md` were updated. Left in each clone: `git remote
+   set-url origin git@github.com:PeterLi-jpg/bodhi-lora.git` (GitHub redirects meanwhile).
 5. **Local-only refs.** Check, then delete, the backup refs and tags that
    `scripts/maintenance/purge_history.md` step 9 lists. Run `git worktree prune` for the
    stale `/private/tmp/bohdi-main` entry. The merged branches `cleanup/lane-*` can go with

@@ -6,8 +6,8 @@ made. The lab rules behind these steps are in [docs/CONVENTIONS.md](docs/CONVENT
 ## Set up a clone
 
 ```bash
-git clone https://github.com/PeterLi-jpg/bohdi-lora.git
-cd bohdi-lora
+git clone https://github.com/PeterLi-jpg/bodhi-lora.git
+cd bodhi-lora
 git config core.hooksPath hooks
 ```
 
