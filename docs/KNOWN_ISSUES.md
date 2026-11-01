@@ -20,9 +20,9 @@ D-numbers refer to [DECISIONS.md](DECISIONS.md). Issue numbers such as #5 are Gi
   that is, all 2026-07 adapters (their saved tokenizer configs say pad = EOS) and the
   2026-10 adapters of R2 and R5. R3 and R4 evaluate the R2 adapters. Not affected: the
   2026-05 MedGemma-27B cell, whose converter copied every reply token into the labels
-  (`5bd9265:scripts/convert_traces_to_maxtext.py:217-219`; its loader cut rows longer than
+  (`2cd73d3:scripts/convert_traces_to_maxtext.py:217-219`; its loader cut rows longer than
   2,048 tokens before the reply ended: 96 of the 2,816 seed-7 rows by the Gemma 3 tokenizer, and
-  3.7% by the comment in `5bd9265:configs/lora_medgemma27b_tunix.yaml`), and every Gemma, MedGemma,
+  3.7% by the comment in `2cd73d3:configs/lora_medgemma27b_tunix.yaml`), and every Gemma, MedGemma,
   Qwen or Phi-4 tokenizer, which has its own pad token. What it did to the replies, by
   the content checks (a loop is a reply over 400 characters whose zlib ratio is below
   0.15; no score was read):

@@ -164,7 +164,7 @@ tmux new-session -d -s tier_a "bash gpu_queue.sh --gpu 3 --owner PeterLi \
   `.git/info/exclude` on the host.
 - The host has two copies of the group's lease tool, and other projects call both. The
   in-place deploy of 2026-10-11 kept both out of git: `.git/info/exclude` lists them,
-  and a sparse-checkout pattern keeps `854761f:scripts/gpu_lease.sh` out of the
+  and a sparse-checkout pattern keeps `9dc5b4b:scripts/gpu_lease.sh` out of the
   checkout. `/data/PROJECTS/bohdi/gpu_lease.sh` is the node's tool, the one that
   claims and releases here (`--lease-tool`, also the default). `--keep-local
   /data/PROJECTS/bohdi/scripts/gpu_lease.sh` brings the other copy through the switch unchanged: the commit
