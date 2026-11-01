@@ -252,7 +252,7 @@ hypotheses:
              mediq-paired__medgemma-27b-text__bodhi__cap4096]}
   - {id: E02, token: HThreeIndex, rule: physician_index,
      cells: [healthbench__mistral-small-24b__bodhi, healthbench__mistral-small-24b__ask-first,
-             healthbench__medgemma-27b-text__bodhi__cap4096]}
+             healthbench__medgemma-27b-text__bodhi__cap4096], appendix_only: true}
   - {id: H4, token: HFour, rule: baselines,
      cells: [healthbench__mistral-small-24b__bodhi, healthbench__medgemma-27b-text__bodhi__cap4096],
      baselines: [base+clarify, base+verbalized-confidence, base+mediq-abstain]}

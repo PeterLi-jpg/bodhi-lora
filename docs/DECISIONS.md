@@ -320,3 +320,14 @@ the same. The validation loss picks the seed's checkpoint (`best_val_loss`), so 
 seeds train again with this code, seed 42 too, which had passed its first validation at
 batch 8; one cell's seeds keep one recipe. The cells trained before this date keep batch 8
 in their records.
+
+### D32. The NLM 4,096-token cell: the shared-host run counts (2026-11-01)
+
+The cell `nlm-clinical-questions__medgemma-27b-text__bodhi__cap4096` ran twice. A collaborator
+claimed it in GitHub issue 256 on 2026-10-27 and ran it on an H100 of the shared host at e88d924
+(clean tree); the NRP queue still held it, because the claim came while no session could take it
+off, and NRP ran it on an A100 at 404f193 (clean tree). Both runs finished every seed's eval,
+evaluator grade and Phi-4 judge, and both copies are sha256-checked. The first author chose on
+2026-11-01, before any result of either run was read: the claimed run counts ("if his is done use
+his"). It is the cell in `results/`; the NRP run stays outside the repository as a second run on
+another GPU type, and no claim reads it.

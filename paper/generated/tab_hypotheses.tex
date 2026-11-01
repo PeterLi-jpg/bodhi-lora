@@ -44,7 +44,7 @@ H6 & HB-Hard, Mistral-24B, \bodhi{} & Red flags (0--2), LoRA+\bodhi{} $-$ LoRA &
  & HB-Hard, MedGemma-27B, \bodhi{} & Red flags (0--2), LoRA+\bodhi{} $-$ LoRA & \ensuremath{+0.009} & \ensuremath{[-0.024,\,+0.042]} & \ensuremath{0.47} & no drop to recover \\
  &  & Red flags (0--2), red flags first $-$ \bodhi{} & \ensuremath{-0.028} & \ensuremath{[-0.059,\,+0.003]} & \ensuremath{0.13} &  \\
 \midrule
-H6c & HB-Hard, MedGemma-27B, \bodhi{}, 4{,}096 tokens & Red flags (0--2), LoRA+\bodhi{} $-$ LoRA & \ensuremath{+0.012} & \ensuremath{[-0.026,\,+0.050]} & \ensuremath{0.43} & context not implicated \\
+H6c & HB-Hard, MedGemma-27B, \bodhi{}, 4{,}096-token context & Red flags (0--2), LoRA+\bodhi{} $-$ LoRA & \ensuremath{+0.012} & \ensuremath{[-0.026,\,+0.050]} & \ensuremath{0.43} & context not implicated \\
  &  & Red flags (0--2), LoRA+\bodhi{} $-$ LoRA, full context & \ensuremath{-0.026} & \ensuremath{[-0.103,\,+0.052]} & \ensuremath{0.41} &  \\
  &  & Red flags (0--2), red flags first $-$ \bodhi{} & \ensuremath{-0.041} & \ensuremath{[-0.117,\,+0.034]} & \ensuremath{0.21} &  \\
 \midrule
@@ -60,6 +60,8 @@ H11 & HB labelled, Mistral-24B, \bodhi{} (clinician-written) & Active inquiry (p
 \midrule
 H11b & NLM questions, Mistral-24B, \bodhi{} & Active inquiry (pp) & \ensuremath{+14.4} & \ensuremath{[+11.1,\,+17.7]} & \ensuremath{0.0011} & supported \\
  &  & Context-seeking (0--2) & \ensuremath{+1.310} & \ensuremath{[+1.231,\,+1.390]} & \ensuremath{9.6\times10^{-6}} &  \\
+ & NLM questions, MedGemma-27B, \bodhi{} & Active inquiry (pp) & \ensuremath{+32.8} & \ensuremath{[+22.7,\,+42.8]} & \ensuremath{0.0049} & supported \\
+ &  & Context-seeking (0--2) & \ensuremath{+0.168} & \ensuremath{[+0.127,\,+0.209]} & \ensuremath{0.0023} &  \\
 \midrule
 H1k & HB-Hard, MedGemma-27B, \bodhi{} & Active inquiry (pp) & \ensuremath{+30.5} & \ensuremath{[+26.8,\,+34.1]} & \ensuremath{1.4\times10^{-4}} & supported \\
  &  & Context-seeking (0--2) & \ensuremath{+0.235} & \ensuremath{[+0.176,\,+0.294]} & \ensuremath{0.0023} &  \\

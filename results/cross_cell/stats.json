@@ -1917,8 +1917,60 @@
   "H11b": {
    "cells": {
     "nlm-clinical-questions__medgemma-27b-text__bodhi__cap4096": {
-     "decision": null,
-     "not_measured": "no stats.json for this cell"
+     "below_cap": {
+      "decision": "supported",
+      "outcomes": {
+       "active_inquiry": {
+        "ci95": [
+         0.230251,
+         0.430171
+        ],
+        "diff": 0.330211,
+        "n_seeds": 5,
+        "p": 0.000784643,
+        "p_adj": 0.00470786
+       },
+       "context_seeking": {
+        "ci95": [
+         0.127437,
+         0.210482
+        ],
+        "diff": 0.168959,
+        "n_seeds": 5,
+        "p": 0.000349821,
+        "p_adj": 0.00244875
+       }
+      },
+      "secondary": {
+       "rubric_score": null
+      }
+     },
+     "decision": "supported",
+     "outcomes": {
+      "active_inquiry": {
+       "ci95": [
+        0.227298,
+        0.428059
+       ],
+       "diff": 0.327678,
+       "n_seeds": 5,
+       "p": 0.000821393,
+       "p_adj": 0.00492836
+      },
+      "context_seeking": {
+       "ci95": [
+        0.127354,
+        0.208723
+       ],
+       "diff": 0.168038,
+       "n_seeds": 5,
+       "p": 0.000330041,
+       "p_adj": 0.00231029
+      }
+     },
+     "secondary": {
+      "rubric_score": null
+     }
     },
     "nlm-clinical-questions__mistral-small-24b__bodhi": {
      "below_cap": {

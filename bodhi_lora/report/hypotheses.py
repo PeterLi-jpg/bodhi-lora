@@ -109,7 +109,7 @@ def judge_table(all_stats: dict, order: list[str], reg: Registry, cfg: ReportCon
             if rerun:
                 prompts = cell.report.label.split(", ")[0]
                 label = [f"{escape(n.d.benchmarks.get(prompts, prompts))}, "
-                         f"{n.d.protocols.get(cell.protocol, escape(cell.protocol))}",
+                         f"{n.d.protocols.get(cell.protocol, escape(cell.protocol))}{_reply_cap_note(cell, reg)}",
                          escape(cell.report.label.split(", ")[1])]
             else:
                 label = n.cell_parts(cell.report.label)
@@ -134,9 +134,11 @@ def cost_table(all_stats: dict, reg: Registry, cfg: ReportConfig, src: str) -> s
             continue
         for cid in spec.cells:
             stats = all_stats.get(cid)
-            if not stats:
-                continue
             cell = reg.cells[cid]
+            # An eval-only cell (adapters_from) neither trains nor times a bench: its training
+            # cell has the row.
+            if not stats or cell.adapters_from:
+                continue
             st = stats.get("stage_times") or {}
             shared, per_seed = st.get("shared") or {}, st.get("per_seed") or {}
 
@@ -198,6 +200,18 @@ def below_cap_table(cross: dict, reg: Registry, cfg: ReportConfig, src: str) -> 
     return tabular("llllrrrl", header, blocks, f"{src} (hypotheses.*.below_cap)")
 
 
+def _reply_cap_note(cell, reg: Registry) -> str:
+    """", 4,096-token replies" for an eval-only cell whose reply cap differs from that of the
+    cell that trained its adapters (the 2026-10-25 plan entry), so its rows differ from the
+    training cell's."""
+    if not cell.adapters_from:
+        return ""
+    cap = cell.eval.max_new_tokens
+    if cap == reg.cells[cell.adapters_from].eval.max_new_tokens:
+        return ""
+    return f", {fmt_int(cap)}-token replies"
+
+
 def _cell_text(cell, n: Names) -> str:
     """The prompts of a cell (its label up to the base model, shortened by
     display.benchmarks), its base model (display.models) and its teaching protocol."""
@@ -231,7 +245,7 @@ def hypothesis_table(cross: dict, reg: Registry, cfg: ReportConfig, src: str, sh
                 continue
             label = _cell_text(reg.cells[cid], n)
             if rule == "context_pair":
-                label += f", {fmt_int(reg.cells[cid].eval.serving.max_model_len)} tokens"
+                label += f", {fmt_int(reg.cells[cid].eval.serving.max_model_len)}-token context"
             subs = [(b, r["baselines"][b]) for b in spec.baselines] if "baselines" in r else [("", r)]
             for b, rr in subs:
                 cell_text = label + (f" vs {n.cond(b)}" if b else "")

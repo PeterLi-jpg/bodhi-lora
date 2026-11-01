@@ -1,0 +1,39 @@
+{
+  "cell": "nlm-clinical-questions__medgemma-27b-text__bodhi__cap4096",
+  "completions": {
+    "base": 200,
+    "lora": 200
+  },
+  "grade": {
+    "counts": {
+      "base": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "lora": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      }
+    },
+    "file": "results/nlm-clinical-questions__medgemma-27b-text__bodhi__cap4096/seed_7/grade/epistemic__llama-3.1-8b.json",
+    "present": true
+  },
+  "n_examples": {
+    "base": 200,
+    "lora": 200
+  },
+  "score_metric": {
+    "base": "normalized_score",
+    "lora": "normalized_score"
+  },
+  "seed": 7,
+  "sources": {
+    "results/nlm-clinical-questions__medgemma-27b-text__bodhi__cap4096/seed_7/eval/base.json": "51b535b1ffd335ad21f7cd250e55a8d42b11543b9bf1a16051ec5df6d93da6a1",
+    "results/nlm-clinical-questions__medgemma-27b-text__bodhi__cap4096/seed_7/eval/lora.json": "766b5ff47688cd821be8a137ede665f7249988cf2753dfaae033e563a74e7e46",
+    "results/nlm-clinical-questions__medgemma-27b-text__bodhi__cap4096/seed_7/grade/epistemic__llama-3.1-8b.json": "4d68a01faf66601c6f4d647cad1d7f02706c005dccbdbf9170ac40d6a93e9e51",
+    "results/nlm-clinical-questions__medgemma-27b-text__bodhi__cap4096/seed_7/grade/judge__phi-4.json": "ae0c731fea5f1079335d9ed02f7335ce583257e6dbb479cecdd976bdce43b32d"
+  },
+  "tokenizer": "tokenizer.json of google/medgemma-27b-text-it at 5b667cf2ddcf064085bc90952edb35a0edbfb79c is not in the local Hugging Face cache (fetch it with: huggingface-cli download google/medgemma-27b-text-it tokenizer.json --revision 5b667cf2ddcf064085bc90952edb35a0edbfb79c)"
+}
