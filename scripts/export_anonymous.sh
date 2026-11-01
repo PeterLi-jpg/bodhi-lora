@@ -197,6 +197,11 @@ MODEL_OUTPUT = re.compile(r"^(results_modal/seed_[^/]+|results_rebuttal/.+/eval"
 
 OFFICE = {".xlsx", ".docx", ".pptx"}
 
+# The paper cites the BODHI papers in the third person, as double-blind review allows,
+# and the PDF's reference list prints the same author lists, so deny-file tokens skip the
+# bibliography. The built-in patterns still scan it.
+CITATIONS = {"paper/references.bib"}
+
 def redact_text(s):
     for pat, rep in REDACT:
         s = pat.sub(rep, s)
@@ -260,7 +265,7 @@ for p in files:
                 for m in HEX.finditer(line):
                     if is_commit(m.group(0)):
                         problems.append(f"{label}:{lineno}: commit id: {m.group(0)!r}")
-            if MODEL_OUTPUT.match(label):
+            if MODEL_OUTPUT.match(label) or label in CITATIONS:
                 continue
             for k, pat in enumerate(deny, 1):
                 for m in pat.finditer(line):

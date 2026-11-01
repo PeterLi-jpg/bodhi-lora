@@ -10,7 +10,7 @@ method has four steps:
 
 1. Run the BODHI two-pass chain-of-thought prompt on a base model to make
    demonstrations. BODHI stands for Balanced, Open-minded, Diagnostic, Humble, and
-   Inquisitive (Arslan et al., BMJ Health & Care Informatics 33(1):e101877, 2026).
+   Inquisitive (BMJ Health & Care Informatics 33(1):e101877, 2026).
 2. Grade each demonstration against its rubric with Qwen2.5-14B-Instruct.
 3. Keep the demonstrations that score at or above the threshold tau.
 4. Train a LoRA adapter on the kept demonstrations.
