@@ -130,6 +130,13 @@ REDACT = [
      "https://pypi.org/project/bodhi-llm/"),
     (re.compile(r"github\.com([/:])(PeterLi-jpg|sebasmos)/", re.I), r"github.com\1anonymous/"),
     (re.compile(r"\b(PeterLi-jpg|sebasmos)\b", re.I), "anonymous"),
+    # The lease owner on the GPU host, and a collaborator's home folder there, which every
+    # manifest of the cells that ran in it records.
+    (re.compile(r"\bPeterLi\b"), "anonymous"),
+    (re.compile(r"\bmaximinl\b", re.I), "collaborator"),
+    # The NRP namespace and its token secret name the group that hosts the runs.
+    (re.compile(r"\baiea-interns\b", re.I), "anonymous-namespace"),
+    (re.compile(r"\bnfootprint-hf\b", re.I), "hf-token"),
     (re.compile(r"\banqipeter[\w.+-]*@[\w.-]+", re.I), "anonymous@example.org"),
     (re.compile(r"[\w.+-]+@[\w-]+(\.[\w-]+)*\.local(domain)?\b", re.I), "anonymous@example.org"),
     (re.compile(r"/Users/[^/\s\"'`)]+"), "/home/user"),
@@ -152,7 +159,8 @@ REDACT = [
 
 # Anything that still matches after redaction fails the export.
 GATE = [
-    ("github handle", re.compile(r"PeterLi-jpg|sebasmos", re.I)),
+    ("github handle", re.compile(r"PeterLi|sebasmos|maximinl", re.I)),
+    ("cluster namespace", re.compile(r"aiea|nfootprint", re.I)),
     ("author name", re.compile(r"\bPeter Li\b|\bAnqi\b", re.I)),
     ("local username", re.compile(r"anqipeter", re.I)),
     ("lab or host", re.compile(r"\bmit[ -]critical|substrate labs", re.I)),
