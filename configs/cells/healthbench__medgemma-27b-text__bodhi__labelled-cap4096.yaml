@@ -30,4 +30,4 @@ eval:
 report:
   label: HealthBench labelled probes, MedGemma-27B, 4,096-token cap
   token: HBMedGemmaLabelledCap
-  status: planned
+  status: complete

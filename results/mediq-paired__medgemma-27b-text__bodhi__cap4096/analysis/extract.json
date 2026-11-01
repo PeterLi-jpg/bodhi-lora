@@ -1,0 +1,60 @@
+{
+  "cell": "mediq-paired__medgemma-27b-text__bodhi__cap4096",
+  "leak_rules": {
+    "leak_bodhi__analysis-format": "ac34ac6776a406b8655785761edd14119041d29184b66a538678a70c38126a50"
+  },
+  "prompts": {
+    "benchmark": "mediq-paired",
+    "draw_check": {
+      "101": {
+        "drawn": 400,
+        "evaluated": 400,
+        "evaluated_not_drawn": 0
+      },
+      "13": {
+        "drawn": 400,
+        "evaluated": 400,
+        "evaluated_not_drawn": 0
+      },
+      "42": {
+        "drawn": 400,
+        "evaluated": 400,
+        "evaluated_not_drawn": 0
+      },
+      "7": {
+        "drawn": 400,
+        "evaluated": 400,
+        "evaluated_not_drawn": 0
+      },
+      "99": {
+        "drawn": 400,
+        "evaluated": 400,
+        "evaluated_not_drawn": 0
+      }
+    },
+    "labels": {
+      "incomplete": {
+        "definition_sha256": "6603a30f10331214d168fc5146d6a2d624a937bcf4ae72dcb6b803f9d08a92aa",
+        "in_prompts_table": true,
+        "population": {
+          "negative": 1258,
+          "positive": 1258,
+          "unlabelled": 0
+        },
+        "source": "MediQ case construction",
+        "timing": "pre_specified"
+      }
+    },
+    "n_population": 2516,
+    "rows": "loaded",
+    "split": "default"
+  },
+  "seeds": [
+    42,
+    7,
+    13,
+    99,
+    101
+  ],
+  "tokenizer": "tokenizer.json of google/medgemma-27b-text-it at 5b667cf2ddcf064085bc90952edb35a0edbfb79c is not in the local Hugging Face cache (fetch it with: huggingface-cli download google/medgemma-27b-text-it tokenizer.json --revision 5b667cf2ddcf064085bc90952edb35a0edbfb79c)"
+}

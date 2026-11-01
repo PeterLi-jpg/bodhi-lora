@@ -1834,8 +1834,41 @@
   "H11": {
    "cells": {
     "healthbench__medgemma-27b-text__bodhi__labelled-cap4096": {
-     "decision": null,
-     "not_measured": "no stats.json for this cell"
+     "decision": "supported",
+     "outcomes": {
+      "active_inquiry": {
+       "ci95": [
+        0.13328,
+        0.236948
+       ],
+       "diff": 0.185114,
+       "n_seeds": 5,
+       "p": 0.000580761,
+       "p_adj": 0.00174228
+      },
+      "context_seeking": {
+       "ci95": [
+        0.0393217,
+        0.0767019
+       ],
+       "diff": 0.0580118,
+       "n_seeds": 5,
+       "p": 0.000996697,
+       "p_adj": 0.00199339
+      }
+     },
+     "secondary": {
+      "rubric_score": {
+       "ci95": [
+        -0.0610349,
+        -0.02086
+       ],
+       "diff": -0.0409475,
+       "n_seeds": 5,
+       "p": 0.00480397,
+       "p_adj": null
+      }
+     }
     },
     "healthbench__mistral-small-24b__bodhi__labelled": {
      "decision": "supported",
@@ -2285,8 +2318,45 @@
   "H3": {
    "cells": {
     "mediq-paired__medgemma-27b-text__bodhi__cap4096": {
-     "decision": null,
-     "not_measured": "no stats.json for this cell"
+     "decision": "mimicry indicated",
+     "delta": {
+      "base": {
+       "ci95": [
+        0.104531,
+        0.230964
+       ],
+       "seed_mean": 0.167747
+      },
+      "lora": {
+       "ci95": [
+        0.0562715,
+        0.135376
+       ],
+       "seed_mean": 0.0958236
+      }
+     },
+     "outcomes": {
+      "complete_rate": {
+       "ci95": [
+        0.144893,
+        0.344152
+       ],
+       "diff": 0.244523,
+       "n_seeds": 5,
+       "p": 0.00242415,
+       "p_adj": null
+      },
+      "did": {
+       "ci95": [
+        -0.152137,
+        0.00828904
+       ],
+       "diff": -0.0719238,
+       "n_seeds": 5,
+       "p": 0.0675182,
+       "p_adj": 0.0675182
+      }
+     }
     },
     "mediq-paired__mistral-small-24b__ask-first": {
      "decision": "mimicry indicated",
@@ -2325,7 +2395,7 @@
        "diff": -0.244,
        "n_seeds": 5,
        "p": 7.88757e-05,
-       "p_adj": 0.000157751
+       "p_adj": 0.000236627
       }
      }
     },
@@ -2366,7 +2436,7 @@
        "diff": -0.254,
        "n_seeds": 5,
        "p": 0.000132925,
-       "p_adj": 0.000157751
+       "p_adj": 0.00026585
       }
      }
     }
@@ -3475,8 +3545,51 @@
   "H7": {
    "cells": {
     "healthbench__medgemma-27b-text__bodhi__labelled-cap4096": {
-     "decision": null,
-     "not_measured": "no stats.json for this cell"
+     "decision": "not detected",
+     "outcomes": {
+      "non_emergent_rate": {
+       "ci95": [
+        -0.116087,
+        -0.0070866
+       ],
+       "diff": -0.0615868,
+       "n_seeds": 5,
+       "p": 0.034933,
+       "p_adj": 0.034933
+      }
+     },
+     "secondary": {
+      "emergent_rate": {
+       "ci95": [
+        -0.0157981,
+        0.00210386
+       ],
+       "diff": -0.00684713,
+       "n_seeds": 5,
+       "p": 0.100902,
+       "p_adj": null
+      },
+      "non_emergent_neg_any": {
+       "ci95": [
+        0.0142135,
+        0.084294
+       ],
+       "diff": 0.0492537,
+       "n_seeds": 5,
+       "p": 0.017502,
+       "p_adj": null
+      },
+      "non_emergent_rubric_score": {
+       "ci95": [
+        -0.0281434,
+        0.013541
+       ],
+       "diff": -0.0073012,
+       "n_seeds": 5,
+       "p": 0.385821,
+       "p_adj": null
+      }
+     }
     },
     "healthbench__mistral-small-24b__bodhi__labelled": {
      "decision": "over-flagging found",
@@ -3489,7 +3602,7 @@
        "diff": 0.380563,
        "n_seeds": 5,
        "p": 1.05743e-06,
-       "p_adj": 1.05743e-06
+       "p_adj": 2.11486e-06
       }
      },
      "secondary": {
