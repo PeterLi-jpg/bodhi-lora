@@ -424,17 +424,13 @@ the rubric axes).
 
 \begin{table}[t]
 \centering
-\caption{The tests that our analysis plan fixed before these cells ran, with the plan's decision
-for each cell. Every cell uses one recipe and one set of evaluation settings, with two exceptions
-on MedGemma-27B: a reply can run to 4,096 tokens, and the H6c cell uses a 4,096-token context with
-replies of up to 1,024 tokens. The Cell column names the prompts, the base model and the teaching
-protocol. A difference is LoRA $-$ Base unless
-the row names another pair. For H3 it is the
-change in the ask gap between the two versions of a MediQ case, and for H4 it is LoRA minus the
-prompt baseline. $p$: Holm-adjusted over the seven dimensions for active inquiry, and over the
-question's cells for H2, H3, H6 and H7; the paired $t$ for the first row of H6, which is
-its precondition. pp: percentage points. Appendix~\ref{app:rerun} gives every outcome of every
-test, E02 included.}
+\caption{The plan's decision for each pre-registered test and cell (Cell: prompts, base model,
+teaching protocol). One recipe and one set of evaluation settings, except that a MedGemma-27B
+reply can run to 4,096 tokens and the H6c cell uses a 4,096-token context with 1,024-token replies.
+A difference is LoRA $-$ Base unless the row names another pair; for H3 it is the change in the
+ask gap between the two versions of a MediQ case. $p$: Holm-adjusted over the seven dimensions for
+active inquiry, and over the question's cells for H2, H3 and H7; the paired $t$ for H6 and H6c,
+their precondition. pp: percentage points. Appendix~\ref{app:rerun} gives every test, E02 included.}
 \label{tab:hypotheses}
 \scriptsize
 \setlength{\tabcolsep}{2pt}
@@ -454,7 +450,7 @@ two probe sets that no adapter trained on. The first holds MediQ cases \citep{li
 versions, with and without the facts that the answer needs. The second holds
 \statHBMistralLabelledPrompts{} HealthBench prompts that HealthBench's physicians labelled as
 emergent or not, or as written by a health professional. Table~\ref{tab:hypotheses} gives the
-plan's decision for every test. These cells sit next to those of \S\ref{sec:cells}, which stay
+plan's decision for every primary test, and Table~\ref{tab:hypotheses-full} for every test. These cells sit next to those of \S\ref{sec:cells}, which stay
 the record; Appendix~\ref{app:rerun} lists where we departed from the plan.
 
 \paragraph{The behavior transfers.} Without CoT at inference, the \bodhi{} adapter raises active
@@ -485,13 +481,12 @@ $p_{\text{Holm}} = \statHypHThreeMediqMistralDidPAdj$), and the ask-first adapte
 pattern. On MedGemma-27B, Base asks on \statMediqMedGemmaCapActiveInquiryIncompletePosRateBase\% and
 \statMediqMedGemmaCapActiveInquiryIncompleteNegRateBase\%, and the adapter on
 \statMediqMedGemmaCapActiveInquiryIncompletePosRateLoRA\% and
-\statMediqMedGemmaCapActiveInquiryIncompleteNegRateLoRA\%: it asks more in both versions, and the
-gap shrinks from \statHypHThreeMediqMedGemmaCapDeltaBase{} to \statHypHThreeMediqMedGemmaCapDeltaLoRA{}
-points (change \statHypHThreeMediqMedGemmaCapDidDiff, 95\% CI \statHypHThreeMediqMedGemmaCapDidCI,
-which includes zero). By the plan's rule, mimicry is indicated in all three cells:
+\statMediqMedGemmaCapActiveInquiryIncompleteNegRateLoRA\%: it asks more in both versions, and we
+detect no change in the gap between them (\statHypHThreeMediqMedGemmaCapDidDiff, 95\% CI
+\statHypHThreeMediqMedGemmaCapDidCI). By the plan's rule, mimicry is indicated in all three cells:
 the rise in asking does not depend on missing information. The secondary test on the physicians'
-labels of missing context (E02) detects no gain in any of them, nor in the recorded \hbhard{}
-cells (Table~\ref{tab:risk}).
+labels of missing context (E02) detects no gain in any of them (Table~\ref{tab:hypotheses-full}),
+nor in the recorded \hbhard{} cells (Table~\ref{tab:risk}).
 
 \paragraph{A short prompt asks as much.} Within each \bodhi{} cell, we compared the adapter
 with three prompts on the base model (H4). A prompt that tells the model to clarify first asks
@@ -577,7 +572,8 @@ adapter and the protocol compete for capacity (Appendix~\ref{app:robustness}).
 
 \paragraph{The behavior transfers; the judgment does not.} The adapter learns to ask and to seek
 context without the protocol, on two base models, with two protocols and under judges from other
-families; on Mistral-Small-24B it also names more warning signs and bounds its scope more. It does
+families. It also names more warning signs and bounds its scope more in the 2026-05 cell and on
+Mistral-Small-24B, but not in the MedGemma-27B cell of \S\ref{sec:rerun}. It does
 not learn when these behaviors help: on both base models it asks more often where nothing is
 missing, a short prompt makes the base model ask more often, and on Mistral-Small-24B it raises the
 flag rate on cases that physicians judged not emergent (\S\ref{sec:rerun}). So the recipe moves a
@@ -602,7 +598,7 @@ presentations that need escalation, not reassurance. \emph{Scope bounding} is de
 past the available evidence, so that a confident answer does not replace an examination. On one prompt about starting antidepressants, Base asks nothing, and LoRA asks
 about duration, sleep and self-harm and gives a crisis line (Appendix~\ref{app:examples}). Active
 inquiry and context-seeking help only where facts are missing and the user can give them, and red
-flags help only where a warning sign is present. The adapter does not target either case.
+flags help only where a warning sign is present.
 
 \subsection{Comparison to Prior Calibration Approaches}
 \label{sec:prior}
@@ -662,8 +658,7 @@ where facts are missing, may teach when to ask; we have not tested it.
 \paragraph{Ethics and broader impact.} We use public benchmark data, with patient questions posted
 online (ChatDoctor) and no patient records. Before patient-facing use, the adapter needs a clinician
 harm review (Appendix~\ref{app:harm}), physician validation of the grades (Appendix~\ref{app:human})
-and a way to reduce false red flags: both adapters flag most prompts that physicians judged not
-emergent (\S\ref{sec:rerun}). An
+and a way to reduce false red flags (\S\ref{sec:rerun}). An
 LLM-graded harm proxy already rose on ChatDoctor (\S\ref{sec:cells}) and on prompts that physicians
 judged not emergent (\S\ref{sec:rerun}).
 
@@ -1606,7 +1601,7 @@ Mistral-Small-24B, \statHBMistralAskFirstFilterKeptAtTauPct\% of its ask-first t
 MedGemma-27B, at $\tau = 0.4$. Evaluation uses an 8,192-token context (the H6c cell: 4,096), greedy
 decoding and the adapter served unmerged on the 4-bit base. A one-call reply stops at 1,024 new
 tokens, and at
-4,096 in the MedGemma-27B cells of Table~\ref{tab:hypotheses} (the token cap, below). The cells ran
+4,096 in the MedGemma-27B cells of Table~\ref{tab:hypotheses} other than H6c (the token cap, below). The cells ran
 on A100-80GB GPUs, except the MedGemma-27B \hbhard{} and NLM cells with replies of up to 4,096
 tokens, which ran on H100s of a shared host; every condition of a cell ran on one GPU type. In the \hbhard{} cells each seed
 draws its own 200 prompts, and in the MediQ cells its own 200 pairs. The labelled cell evaluates the
@@ -1720,8 +1715,8 @@ H6. The check decides no claim. $p$ is adjusted as in Table~\ref{tab:hypotheses-
 
 Table~\ref{tab:prior} is the comparison of \S\ref{sec:prior}. It compares what each approach changes,
 its model calls per response, what it needs, its target and what it was tested on. It is a
-positioning. Only its last two rows ran on our cells, and the prompt baselines of H4, which follow
-its first and seventh rows, ran in two cells (\S\ref{sec:rerun}).
+positioning. Only its last two rows ran on our cells, and two of the prompt baselines of H4, which
+follow its first and seventh rows, ran in two cells (\S\ref{sec:rerun}).
 
 \begin{table}[!ht]
 \centering

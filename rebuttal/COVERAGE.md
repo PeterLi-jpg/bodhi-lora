@@ -13,7 +13,7 @@ Outcome values (at the end of the discussion):
 - `not run`: planned or promised, but not done.
 
 The last column, "Resubmission", says where each concern stands in the resubmission on
-2026-10-11, and for the rows that the reruns of 2026-10-19 answered, on 2026-10-19. "built, awaiting GPU" means the code exists and passes its CPU tests, the run
+2026-10-11, and for the rows that the reruns of 2026-10-19 and the MedGemma-27B cells of 2026-11-01 answered, on those dates. "built, awaiting GPU" means the code exists and passes its CPU tests, the run
 is in `docs/RUN_PLAN.md`, and the paper names it as not run (section 5.3).
 
 ## A. Generality
@@ -29,21 +29,21 @@ is in `docs/RUN_PLAN.md`, and the paper names it as not run (section 5.3).
 
 | ID | Source | Concern | Outcome | Answered in | Open | Resubmission |
 |---|---|---|---|---|---|---|
-| B1 | MW4, LxMF Q2 | Real calibration or surface mimicry? LxMF's split of withholding against self-contained prompts | done: discrimination index on the submitted data | `LxMF_1_rebuttal.md:9-30` | none | answered against the method: the MediQ probe (H3) indicates mimicry in both cells, and E02 detects no rise in any cell (section 4.3, Table 2, Table C.1); the posted index stays withdrawn (W24) |
-| B2 | MW4 | Restraint on well-specified prompts | partial: MedQuAD reported; MedQA set aside | `LxMF_1_rebuttal.md:74` | C24 | answered against the method: on the complete MediQ versions the adapter asks more than Base (H3, section 4.3); MedQA stays set aside (W12) |
-| B3 | MW4, LxMF Q2 | Asks when information is missing, holds back when it is not | not run: the MediQ probe | none | none | answered against the method: R3 and the ask-first MediQ cell ran; mimicry indicated (H3, section 4.3, Table 2) |
+| B1 | MW4, LxMF Q2 | Real calibration or surface mimicry? LxMF's split of withholding against self-contained prompts | done: discrimination index on the submitted data | `LxMF_1_rebuttal.md:9-30` | none | answered against the method: the MediQ probe (H3) indicates mimicry in all three cells, on Mistral-Small-24B and MedGemma-27B, and E02 detects no rise in any cell (section 4.3, Tables 2 and K.1, Table C.1); the posted index stays withdrawn (W24) |
+| B2 | MW4 | Restraint on well-specified prompts | partial: MedQuAD reported; MedQA set aside | `LxMF_1_rebuttal.md:74` | C24 | answered against the method: on the complete MediQ versions the adapter asks more than Base on both base models (H3, section 4.3); MedQA stays set aside (W12) |
+| B3 | MW4, LxMF Q2 | Asks when information is missing, holds back when it is not | not run: the MediQ probe | none | none | answered against the method: R3, the ask-first MediQ cell and the MedGemma-27B MediQ cell ran; mimicry indicated in all three (H3, section 4.3, Table 2) |
 
 ## C. Interference mechanism (LxMF W4)
 
 | ID | Source | Concern | Outcome | Answered in | Open | Resubmission |
 |---|---|---|---|---|---|---|
-| C1 | LxMF W4 | "Competition" is speculative; it could be truncation or attention dilution | done: format leakage, 54.6% under LoRA+CoT; the mechanism claim was restated | `LxMF_1_rebuttal.md:40-50` | W9, C31 | done: section 4.4 keeps the post hoc leakage account; R2 shows no drop to recover (H6), and the Phi-4 judge reverses the 2026-05 drop, so it is reported as grader-dependent; R7 with the 4,096-token pair is not run |
+| C1 | LxMF W4 | "Competition" is speculative; it could be truncation or attention dilution | done: format leakage, 54.6% under LoRA+CoT; the mechanism claim was restated | `LxMF_1_rebuttal.md:40-50` | W9, C31 | done: section 4.4 keeps the post hoc leakage account; the drop does not recur on either base model at the settings of section 4.3 (H6), nor on MedGemma-27B at the 4,096-token context of the 2026-05 cell (H6c: context not implicated), and the Phi-4 judge reverses the 2026-05 drop, so it is reported as grader-dependent |
 
 ## D. Grading (MW3, LxMF Q3, HomM W3/Q4)
 
 | ID | Source | Concern | Outcome | Answered in | Open | Resubmission |
 |---|---|---|---|---|---|---|
-| D1 | LxMF Q3, HomM Q4 | Why a Llama-3.1-8B judge and not a clinical model? | partial: the structural reason was given. The clinical-judge re-grade did not run. | `LxMF_1_rebuttal.md:32-36`, `HomM_1_rebuttal.md:35`, `HomM_3_followup_part2.md:22` | C13, C26 | done: R1 and R6 (shared host) and R2 and R5 (NRP) ran; the judges confirm both H1 rises wherever the evaluator found them, with weak criterion agreement (section 4.3, Table K.2) |
+| D1 | LxMF Q3, HomM Q4 | Why a Llama-3.1-8B judge and not a clinical model? | partial: the structural reason was given. The clinical-judge re-grade did not run. | `LxMF_1_rebuttal.md:32-36`, `HomM_1_rebuttal.md:35`, `HomM_3_followup_part2.md:22` | C13, C26 | done: R1 and R6 (shared host) and R2, R5, R7 and R10 (NRP and the shared host) ran; the judges confirm both H1 rises wherever the evaluator found them, with weak criterion agreement (section 4.3, Table K.2) |
 | D2 | MW3, HomM W3 | Claims rest on automatic grading of subjective dimensions | partial: physician validation, 1 of 3 raters, kappa 0.35 against a 0.6 target | `HomM_1_rebuttal.md:37`, `FzpA_2_followup.md:9` | C28 | deferred (D20): one of three raters (section 3.3, Appendix B) |
 
 ## E. Prior work (MW6, HomM W4/Q3)
@@ -70,7 +70,7 @@ is in `docs/RUN_PLAN.md`, and the paper names it as not run (section 5.3).
 
 | ID | Source | Concern | Outcome | Answered in | Open | Resubmission |
 |---|---|---|---|---|---|---|
-| G1 | FzpA | Training and inference cost across setups | promised: cost per configuration, timed in isolation | `FzpA_1_rebuttal.md:62-64` | C25 | done: the R2 and R5 benches ran (E20); as served (unmerged, 4-bit base) the adapter is not faster than the two-pass protocol; merged weights not timed (section 4.3, Appendix K) |
+| G1 | FzpA | Training and inference cost across setups | promised: cost per configuration, timed in isolation | `FzpA_1_rebuttal.md:62-64` | C25 | done: the R2, R5 and R7 benches ran (E20); as served (unmerged, 4-bit base) the Mistral-Small-24B adapter is not faster than the two-pass protocol and the MedGemma-27B adapter is; merged weights not timed (section 4.3, Appendix K) |
 
 ## H. Framing
 
@@ -94,5 +94,5 @@ is in `docs/RUN_PLAN.md`, and the paper names it as not run (section 5.3).
 | I9 | HomM follow-up (W4, Q3) | An empirical comparison with one or two of the closest published methods | answered: a justified scope limit; the comparison is promised | `HomM_3_followup_part2.md:24-26` | C14, C27 | done: three prompt baselines, Tian et al. (2023) among them (H4, section 4.3, section 5.1) |
 | I10 | HomM final justification | Consistent aggregate drops, and when the behavioral gain justifies them | final, no reply possible | `HomM_4_consolidation.md:3` | C8, C9, C10 | done: the trade-off is in the abstract and Table 1 for every cell (C8, C9); the criterion and its measurable parts are in section 5 and Table C.1 (C10, E07); the axes of the drop are in Table H.2 (E05) |
 | I11 | HomM final justification | Claims, terms and readings corrected or withdrawn during the discussion | final, no reply possible | `HomM_4_consolidation.md:3` | C11 | done: `withdrawals.md` W1 to W25; the paper carries only the corrected forms (C11) |
-| I12 | AC final justification (MR-F) | Limited baselines, narrow teaching protocols and base models; the discussion changed the scope; a full new review is needed | final | none | C24, C27, C29 | partial: baselines (R2) and a second protocol (R5) ran at one set of settings (section 4.3); the clinical base at those settings (R7) is running on NRP (D30): its five adapters are trained, its evals run now |
+| I12 | AC final justification (MR-F) | Limited baselines, narrow teaching protocols and base models; the discussion changed the scope; a full new review is needed | final | none | C24, C27, C29 | done: baselines (R2), a second protocol (R5) and the clinical base at the same recipe (R7, MedGemma-27B, with 4,096-token replies after the 2026-10-25 plan entry) ran (section 4.3); the planned tests now cover two base models |
 | I13 | Program chairs' citation check | 0 of 22 references flagged | no action needed | none | none | done: the check ran again on all 45 references of the resubmission on 2026-10-11, and one title was fixed (EXPERIMENTS.md P2) |
