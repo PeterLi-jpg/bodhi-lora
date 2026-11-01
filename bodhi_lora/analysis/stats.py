@@ -122,6 +122,25 @@ def mcnemar_exact_p(table) -> float:
     return float(mcnemar(table, exact=True).pvalue)
 
 
+def welch_test(a, b) -> dict:
+    """Welch's t-test of mean(a) - mean(b) on two sets of seed values that do not pair (a
+    contrast between cells whose prompts differ, ANALYSIS_PLAN.md section 2.1), with its 95%
+    interval (scipy.stats.ttest_ind with equal_var=False, and its confidence_interval)."""
+    a = np.asarray(a, dtype=float)
+    b = np.asarray(b, dtype=float)
+    a, b = a[np.isfinite(a)], b[np.isfinite(b)]
+    n = int(min(len(a), len(b)))
+    nan = float("nan")
+    if n < 2:
+        return {"diff": float(a.mean() - b.mean()) if n else nan, "ci95": [nan, nan], "t": nan,
+                "df": nan, "p": nan, "n_seeds": n}
+    with np.errstate(all="ignore"):
+        res = stats.ttest_ind(a, b, equal_var=False)
+        ci = res.confidence_interval(0.95)
+    return {"diff": float(a.mean() - b.mean()), "ci95": [float(ci.low), float(ci.high)],
+            "t": float(res.statistic), "df": float(res.df), "p": float(res.pvalue), "n_seeds": n}
+
+
 def welch_p(a, b) -> float:
     """Welch's t-test p, which treats every value as independent (descriptive only)."""
     with np.errstate(all="ignore"):

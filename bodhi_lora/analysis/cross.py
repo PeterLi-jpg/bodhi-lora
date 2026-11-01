@@ -21,6 +21,7 @@ from bodhi_lora.analysis.cell import _f, round6
 from bodhi_lora.analysis.config import Group, ReportConfig
 from bodhi_lora.analysis.extract import RESPONSE_ID, read_table
 from bodhi_lora.analysis.hypotheses import hypotheses_summary
+from bodhi_lora.pipeline.context import eval_ids_file
 from bodhi_lora.paths import Project
 from bodhi_lora.registry import CellConfig, Registry
 
@@ -204,6 +205,23 @@ def posted_check(root: Path, cfg: ReportConfig, all_stats: dict) -> Optional[dic
     return out
 
 
+def same_prompts(project: Project, reg: Registry, cid: str, ref: str) -> Optional[bool]:
+    """Whether two cells evaluated the same prompt ids for every seed of both (the pairing
+    condition of contrasts between cells, ANALYSIS_PLAN.md section 2.1). None when a list
+    is missing."""
+    seeds = sorted(set(reg.cells[cid].seeds) | set(reg.cells[ref].seeds))
+    for seed in seeds:
+        lists = []
+        for c in (cid, ref):
+            f = project.cell(c).inputs() / eval_ids_file(seed)
+            if not f.is_file():
+                return None
+            lists.append(json.loads(f.read_text())["prompt_ids"])
+        if lists[0] != lists[1]:
+            return False
+    return True
+
+
 def analyze_cross(reg: Registry, project: Project, cfg: ReportConfig) -> dict:
     """Read every cross cell's stats.json; write and return <results root>/cross_cell/stats.json."""
     all_stats = {}
@@ -234,7 +252,9 @@ def analyze_cross(reg: Registry, project: Project, cfg: ReportConfig) -> dict:
         out["grader_comparisons"][gc.token] = {"description": gc.description,
                                                **grader_comparison(project, reg, gc.cells, gc.seed)}
     out["posted_check"] = posted_check(project.repo_root, cfg, all_stats)
-    out["hypotheses"] = hypotheses_summary(hyp_stats, cfg, reg)
+    pairs = {(cid, h.reference) for h in cfg.hypotheses if h.rule == "cell_pair" for cid in h.cells}
+    out["hypotheses"] = hypotheses_summary(hyp_stats, cfg, reg,
+                                           {pr: same_prompts(project, reg, *pr) for pr in pairs})
     out = round6(out)
     root = project.results_root / "cross_cell"
     root.mkdir(parents=True, exist_ok=True)

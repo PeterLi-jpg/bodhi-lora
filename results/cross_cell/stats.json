@@ -1831,6 +1831,34 @@
    "subset": null,
    "token": "HOne"
   },
+  "H10": {
+   "cells": {
+    "healthbench__mistral-small-24b__bodhi": {
+     "decision": null,
+     "not_measured": "no stats.json for the reference cell",
+     "outcomes": {}
+    }
+   },
+   "family": false,
+   "reference": "healthbench__mistral-small-24b__bodhi__random-same-count",
+   "rule": "cell_pair",
+   "subset": null,
+   "token": "HTen"
+  },
+  "H10u": {
+   "cells": {
+    "healthbench__mistral-small-24b__bodhi": {
+     "decision": null,
+     "not_measured": "no stats.json for the reference cell",
+     "outcomes": {}
+    }
+   },
+   "family": false,
+   "reference": "healthbench__mistral-small-24b__bodhi__unfiltered",
+   "rule": "cell_pair",
+   "subset": null,
+   "token": "HTenUnfiltered"
+  },
   "H11": {
    "cells": {
     "healthbench__medgemma-27b-text__bodhi__labelled-cap4096": {
@@ -3752,6 +3780,23 @@
    "rule": "over_flagging",
    "subset": null,
    "token": "HSevenK"
+  },
+  "H9": {
+   "cells": {
+    "healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b": {
+     "decision": null,
+     "not_measured": "no stats.json for this cell"
+    },
+    "healthbench__mistral-7b-instruct__bodhi": {
+     "decision": null,
+     "not_measured": "no stats.json for this cell"
+    }
+   },
+   "family": false,
+   "reference": null,
+   "rule": "asking",
+   "subset": null,
+   "token": "HNine"
   }
  },
  "marks": {

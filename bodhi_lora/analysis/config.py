@@ -137,13 +137,13 @@ class Hypothesis(_Record):
     contrasts of that subset of each cell (H11). `baselines` lists the prompt baselines
     that the rule `baselines` compares the adapter with (H4, E12). `reference` names the
     cell that the rule `context_pair` reads at the full context (the 2026-10-19 plan entry
-    on R7). `appendix_only` keeps a question out of the main text's short table; the full
+    on R7), or the cell that the rule `cell_pair` subtracts (H10). `appendix_only` keeps a question out of the main text's short table; the full
     table of the appendix still has it (the 1,024-token cells, which the 2026-10-25 plan
     entry reports next to the primary 4,096-token cells)."""
     id: str = Field(pattern=r"^[A-Z][0-9]+[a-z]{0,2}$")
     token: MacroToken
     rule: Literal["asking", "cost", "paired_probe", "baselines", "red_flags_first", "over_flagging",
-                  "physician_index", "context_pair"]
+                  "physician_index", "context_pair", "cell_pair"]
     cells: list[CellId] = Field(min_length=1)
     subset: Optional[str] = Field(default=None, pattern=r"^[a-z0-9-]+=(positive|negative)$")
     baselines: list[str] = Field(default_factory=list)
@@ -156,8 +156,9 @@ class Hypothesis(_Record):
             check_condition(b)
         if (self.rule == "baselines") != bool(self.baselines):
             raise ValueError(f"hypothesis {self.id}: the rule baselines, and only it, lists baselines")
-        if (self.rule == "context_pair") != (self.reference is not None):
-            raise ValueError(f"hypothesis {self.id}: the rule context_pair, and only it, names a reference")
+        if (self.rule in ("context_pair", "cell_pair")) != (self.reference is not None):
+            raise ValueError(f"hypothesis {self.id}: the rules context_pair and cell_pair, and only they, "
+                             "name a reference")
         return self
 
 

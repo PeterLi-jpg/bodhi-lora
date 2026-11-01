@@ -1,4 +1,4 @@
-"""The decision rules of docs/ANALYSIS_PLAN.md sections 3 to 7 and 9.3, applied to the
+"""The decision rules of docs/ANALYSIS_PLAN.md sections 3 to 7, 9.2 and 9.3, applied to the
 cells that ran each question (configs/report.yaml, `hypotheses`).
 
     hypotheses_summary(all_stats, cfg, reg) -> {question id: {cells: {cell: result}, ...}}
@@ -234,6 +234,42 @@ def context_pair(stats: dict, reference: Optional[dict], protocol: str) -> dict:
     return out
 
 
+def cell_pair(stats: dict, reference: Optional[dict], alpha: float, same_prompts: Optional[bool]) -> dict:
+    """H10 (section 9.2): `lora` of this cell minus `lora` of the reference cell, seed s with
+    seed s (section 2.1, contrasts between cells), on active inquiry and context-seeking,
+    Holm-adjusted over the two (F1); the rubric score is secondary, with no correction.
+    Seeds pair only when both cells evaluated the same prompts for every seed
+    (`same_prompts`); otherwise each outcome takes Welch's t on the seed values, and `test`
+    says so. Rises: either primary outcome above 0 with adjusted p below alpha (the plan's
+    "the filter helps"). Otherwise: no rise detected."""
+    if reference is None:
+        return {"decision": None, "outcomes": {}, "not_measured": "no stats.json for the reference cell"}
+    if same_prompts is None:
+        return {"decision": None, "outcomes": {}, "not_measured": "the eval ids of a seed are missing"}
+
+    def per_seed(s: dict, metric: str) -> dict:
+        return ((s.get("conditions", {}).get(metric) or {}).get("lora") or {}).get("per_seed") or {}
+
+    def test(metric: str) -> Optional[dict]:
+        a, b = per_seed(stats, metric), per_seed(reference, metric)
+        if not a or not b:
+            return None
+        if same_prompts:
+            seeds = sorted(set(a) & set(b), key=int)
+            return st.paired_test([a[s] for s in seeds], [b[s] for s in seeds])
+        return st.welch_test(list(a.values()), list(b.values()))
+
+    raw = {k: test(k) for k in PRIMARY_ASKING}
+    if any(r is None for r in raw.values()):
+        return {"decision": None, "outcomes": {k: None for k in raw}, "not_measured": "a primary outcome is missing"}
+    for r, h_p in zip(raw.values(), st.holm([r["p"] for r in raw.values()])):
+        r["p_holm"] = h_p
+    out = {k: _outcome(r, "p_holm") for k, r in raw.items()}
+    decision = "rises" if any(_up(o, alpha) for o in out.values()) else "no rise detected"
+    return {"decision": decision, "outcomes": out, "secondary": {"rubric_score": _outcome(test("rubric_score"))},
+            "test": "paired t over seeds" if same_prompts else "Welch t (the cells' prompts differ)"}
+
+
 def decide_up(res: dict, alpha: float, key: str, yes: str, no: str) -> None:
     o = res["outcomes"].get(key)
     res["decision"] = None if o is None else (yes if _up(o, alpha) else no)
@@ -258,7 +294,7 @@ FAMILY = {
 BELOW_CAP_RULES = ("asking", "cost", "baselines", "red_flags_first")
 
 
-def _decide(h, cid: str, stats: dict, all_stats: dict, cfg, reg) -> dict:
+def _decide(h, cid: str, stats: dict, all_stats: dict, cfg, reg, same_prompts=None) -> dict:
     if h.rule == "asking":
         return asking(stats, cfg.alpha, subset=h.subset)
     if h.rule == "cost":
@@ -275,6 +311,8 @@ def _decide(h, cid: str, stats: dict, all_stats: dict, cfg, reg) -> dict:
         return physician_index(stats)
     if h.rule == "context_pair":
         return context_pair(stats, all_stats.get(h.reference), reg.cells[cid].protocol)
+    if h.rule == "cell_pair":
+        return cell_pair(stats, all_stats.get(h.reference), cfg.alpha, (same_prompts or {}).get((cid, h.reference)))
     raise ValueError(f"no rule {h.rule}")
 
 
@@ -301,7 +339,10 @@ def _below_cap(stats: Optional[dict]) -> Optional[dict]:
     return {**stats, "contrasts": contrasts, "subsets": {}} if contrasts else None
 
 
-def hypotheses_summary(all_stats: dict, cfg, reg) -> dict:
+def hypotheses_summary(all_stats: dict, cfg, reg, same_prompts: Optional[dict] = None) -> dict:
+    """same_prompts maps (cell, reference) of each cell_pair question to whether the two
+    cells evaluated the same prompt ids for every seed of both (None when a list is
+    missing); analyze_cross reads the lists."""
     out = {}
     for h in cfg.hypotheses:
         cells = {}
@@ -310,7 +351,7 @@ def hypotheses_summary(all_stats: dict, cfg, reg) -> dict:
             if stats is None:
                 cells[cid] = {"decision": None, "not_measured": "no stats.json for this cell"}
                 continue
-            cells[cid] = _decide(h, cid, stats, all_stats, cfg, reg)
+            cells[cid] = _decide(h, cid, stats, all_stats, cfg, reg, same_prompts)
         _decide_family(h, cells, cfg)
         if h.rule in BELOW_CAP_RULES and not h.subset:
             below = {cid: _decide(h, cid, b, all_stats, cfg, reg) for cid in h.cells

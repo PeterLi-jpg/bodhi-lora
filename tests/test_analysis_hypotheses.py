@@ -8,7 +8,8 @@ import pytest
 pytest.importorskip("statsmodels")
 
 from bodhi_lora.analysis import report_config  # noqa: E402
-from bodhi_lora.analysis.hypotheses import asking, baselines, context_pair, hypotheses_summary  # noqa: E402
+from bodhi_lora.analysis import stats as st  # noqa: E402
+from bodhi_lora.analysis.hypotheses import asking, baselines, cell_pair, context_pair, hypotheses_summary  # noqa: E402
 from bodhi_lora.paths import CONFIGS_DIR, project  # noqa: E402
 from bodhi_lora.registry import load_registry  # noqa: E402
 
@@ -210,3 +211,45 @@ def test_cost_runs_its_family_again_below_the_cap():
     both = summary("cost", {"a": a, "b": b})
     assert [both[c]["below_cap"]["decision"] for c in "ab"] == ["no change detected"] * 2
     assert both["a"]["below_cap"]["outcomes"]["rubric_score"]["p_adj"] == pytest.approx(0.06)
+
+
+def lora_seeds(**metrics) -> dict:
+    """A cell's stats with per-seed values of `lora` for the given metrics."""
+    return {"conditions": {m: {"lora": {"per_seed": dict(zip(["42", "7", "13", "99", "101"], v))}}
+                           for m, v in metrics.items()}}
+
+
+FILTERED = lora_seeds(active_inquiry=[0.50, 0.52, 0.49, 0.55, 0.51], context_seeking=[1.0, 1.1, 0.9, 1.0, 1.0],
+                      rubric_score=[0.40, 0.41, 0.42, 0.40, 0.41])
+SAME = lora_seeds(active_inquiry=[0.48, 0.53, 0.50, 0.54, 0.50], context_seeking=[1.0, 1.0, 1.0, 1.1, 0.9],
+                  rubric_score=[0.40, 0.40, 0.41, 0.41, 0.40])
+LOWER = lora_seeds(active_inquiry=[0.30, 0.33, 0.31, 0.36, 0.32], context_seeking=[1.0, 1.0, 1.0, 1.1, 0.9],
+                   rubric_score=[0.40, 0.40, 0.41, 0.41, 0.40])
+
+
+def test_cell_pair_pairs_seeds_when_the_prompts_match():
+    r = cell_pair(FILTERED, LOWER, ALPHA, same_prompts=True)
+    assert r["decision"] == "rises" and r["test"] == "paired t over seeds"
+    ai = r["outcomes"]["active_inquiry"]
+    want = st.paired_test([0.50, 0.52, 0.49, 0.55, 0.51], [0.30, 0.33, 0.31, 0.36, 0.32])
+    assert ai["diff"] == pytest.approx(want["diff"]) and ai["p"] == pytest.approx(want["p"])
+    # Holm over the two primary outcomes (F1): never below the raw p.
+    assert ai["p_adj"] >= ai["p"]
+    assert r["secondary"]["rubric_score"]["p_adj"] is None
+
+
+def test_cell_pair_takes_welch_when_the_prompts_differ():
+    r = cell_pair(FILTERED, LOWER, ALPHA, same_prompts=False)
+    assert r["test"].startswith("Welch")
+    want = st.welch_test([0.50, 0.52, 0.49, 0.55, 0.51], [0.30, 0.33, 0.31, 0.36, 0.32])
+    assert r["outcomes"]["active_inquiry"]["p"] == pytest.approx(want["p"])
+    assert want["ci95"][0] < want["diff"] < want["ci95"][1]
+
+
+def test_cell_pair_detects_no_rise_between_close_cells():
+    assert cell_pair(FILTERED, SAME, ALPHA, same_prompts=True)["decision"] == "no rise detected"
+
+
+def test_cell_pair_needs_the_reference_and_the_eval_ids():
+    assert cell_pair(FILTERED, None, ALPHA, same_prompts=True)["decision"] is None
+    assert cell_pair(FILTERED, LOWER, ALPHA, same_prompts=None)["decision"] is None

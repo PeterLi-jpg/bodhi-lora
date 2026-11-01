@@ -34,7 +34,8 @@ TABLE_OUTCOMES = {"asking": ("active_inquiry", "context_seeking"), "cost": ("rub
                   "paired_probe": ("did", "complete_rate"), "physician_index": ("index",),
                   "baselines": ("active_inquiry", "context_seeking"), "red_flags_first": ("precondition", "red_flag"),
                   "over_flagging": ("non_emergent_rate", "emergent_rate"),
-                  "context_pair": ("precondition", "precondition_full", "red_flag")}
+                  "context_pair": ("precondition", "precondition_full", "red_flag"),
+                  "cell_pair": ("active_inquiry", "context_seeking")}
 
 
 def _outcome_macros(rep, name: str, key: str, o: dict, where: str) -> None:
@@ -246,6 +247,10 @@ def hypothesis_table(cross: dict, reg: Registry, cfg: ReportConfig, src: str, sh
             label = _cell_text(reg.cells[cid], n)
             if rule == "context_pair":
                 label += f", {fmt_int(reg.cells[cid].eval.serving.max_model_len)}-token context"
+            if rule == "cell_pair":
+                # The reference differs from this cell in what follows its base model.
+                ref = reg.cells[spec.reference].report.label.split(", ")
+                label += f" vs {escape(', '.join(ref[2:]) or ', '.join(ref))}"
             subs = [(b, r["baselines"][b]) for b in spec.baselines] if "baselines" in r else [("", r)]
             for b, rr in subs:
                 cell_text = label + (f" vs {n.cond(b)}" if b else "")
