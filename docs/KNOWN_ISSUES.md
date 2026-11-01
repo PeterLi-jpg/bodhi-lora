@@ -168,6 +168,17 @@ D-numbers refer to [DECISIONS.md](DECISIONS.md). Issue numbers such as #5 are Gi
   posted cells: an overlap-check output (the gate came after these runs). The eval ids are synced: each non-HealthBench cell has its `eval_ids.json`,
   and the HealthBench cells used `df10aa8:data/raw/hard_200_sample_ids.json`. New runs record all
   of this in their manifests (`bodhi_lora/manifest.py`).
+- **Two copies of the Llama-3.1-8B evaluator (checked 2026-11-01).** The 2026-07 cells
+  used `NousResearch/Meta-Llama-3.1-8B-Instruct` at d10aef7; the 2026-05 cell and every
+  new cell use `meta-llama/Llama-3.1-8B-Instruct` at 0e9e39f. The weights are the same: the
+  LFS sha256 of all four safetensors files match, and so do `config.json`,
+  `generation_config.json`, `tokenizer.json` and `special_tokens_map.json`. The two
+  `tokenizer_config.json` files differ only in `chat_template`: the meta-llama template
+  starts every chat with a system header ("Cutting Knowledge Date: December 2023", "Today
+  Date: 26 Jul 2024"), and the NousResearch template at d10aef7 has no such header. So
+  where a grader prompt goes through the chat template, the two evaluators read the same
+  prompt with a different first block. Each test compares conditions inside one cell, so
+  each test has one evaluator.
 - **The host's `multi_seed_summary.json` files are wrong.** They predate 2c13550 and list
   their seeds as `["eval"]`, so each holds one seed. They are gitignored and unused;
   `make cells` recomputes from the per-seed files.

@@ -1,5 +1,6 @@
 # Ungated re-upload of Llama-3.1-8B-Instruct, the evaluator of the 2026-07 cells.
-# Byte identity with the meta-llama weights is not checked.
+# Same weights as the meta-llama record (LFS sha256 of all four safetensors match, 2026-11-01);
+# only the chat template differs (docs/KNOWN_ISSUES.md, reproducibility gaps).
 id: llama-3.1-8b-nous
 hf_id: NousResearch/Meta-Llama-3.1-8B-Instruct
 revision: d10aef7999a2b5ba950ab3974312feeedbfe0b77

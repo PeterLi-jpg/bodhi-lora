@@ -1,12 +1,12 @@
 # Clinical judge candidate (EXPERIMENTS.md E10).
 id: meditron3-8b
-hf_id: OpenMeditron/Meditron3-8B
-revision: null
-unpinned_reason: >-
-  Gated repo; the token in use had no access, so the revision could not be read
-  (docs/BLOCKED.md item 3).
+# The model moved from OpenMeditron to EPFLiGHT; the HF API listed this sha on 2026-10-09
+# and again on 2026-11-01. No cell uses this record.
+hf_id: EPFLiGHT/Meditron3-8B
+revision: 783c241b18b84692689e0336170b345e5732e48e
+last_modified: "2026-06-25"
 family: llama3
 domain: clinical
 params_b: 8
 gated: true
-license: see upstream
+license: llama3.1

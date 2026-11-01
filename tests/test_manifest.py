@@ -76,7 +76,7 @@ def test_build_manifest_records_models_hardware_time_and_hashes(tmp_path):
     timer = rm.Timer()
     m = rm.build_manifest(
         "eval", cell="c", seed=7, config={"max_model_len": 4096},
-        models={"grader": reg.models["llama-3.1-8b"], "judge": reg.models["meditron3-8b"]},
+        models={"grader": reg.models["llama-3.1-8b"], "judge": reg.models["gemma-2-9b"]},
         eval_ids=ids, counts={"n": 2}, timer=timer, extra={"status": "complete"})
     assert m["schema"] == 3 and (m["cell"], m["seed"], m["status"]) == ("c", 7, "complete")
     assert m["config_sha256"] == rm.sha256_json({"max_model_len": 4096})

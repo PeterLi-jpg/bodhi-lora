@@ -146,15 +146,13 @@ want that too.
 Why: two model facts need a token with access to gated repositories. Neither blocks a
 planned run.
 
-1. `configs/models/meditron3-8b.yaml` is stale, and no cell uses it. On 2026-10-09 the
-   HF API listed the model as `EPFLiGHT/Meditron3-8B` (sha
-   783c241b18b84692689e0336170b345e5732e48e, gated, licence llama3.1), and the
-   OpenMeditron organisation listed only Meditron-CHUV. Update the record if E10 should
-   use it again; otherwise it can go.
-2. Compare the LFS sha256 of the weight files of `NousResearch/Meta-Llama-3.1-8B-Instruct`
-   (the evaluator of the 2026-07 cells) with `meta-llama/Llama-3.1-8B-Instruct` (the
-   evaluator of the 2026-05 cell and the new cells). If they match, KNOWN_ISSUES.md can
-   say the two evaluators are the same weights.
+1. Done 2026-11-01: `configs/models/meditron3-8b.yaml` now names `EPFLiGHT/Meditron3-8B`
+   at 783c241b18b84692689e0336170b345e5732e48e (gated, licence llama3.1), the sha the HF
+   API listed on 2026-10-09 and again on 2026-11-01. No cell uses it.
+2. Done 2026-11-01: the weight files of `NousResearch/Meta-Llama-3.1-8B-Instruct` (the
+   evaluator of the 2026-07 cells) and `meta-llama/Llama-3.1-8B-Instruct` (the evaluator
+   of the 2026-05 cell and the new cells) have the same LFS sha256. Only the chat
+   template differs (KNOWN_ISSUES.md, reproducibility gaps).
 
 ## 4. Remote cleanup (needs your yes)
 
@@ -263,14 +261,9 @@ and C28.
   settle the table and math formatting that the rendered copy cannot show.
 - **Byte-exact submitted source.** In the Overleaf project, download the version from
   just before the NeurIPS deadline and diff it with `paper/submitted/neurips2026/main.tex`.
-- **Host environments of the 2026-07 cells (REPRO-10).** With a login to the host:
-
-  ```bash
-  ssh mit-critical-data-1 'cd /data/PROJECTS/bohdi && .venv/bin/pip freeze' > requirements-train.lock
-  ssh mit-critical-data-1 'cd /data/PROJECTS/bohdi && .venv-infer/bin/pip freeze' > requirements-infer.lock
-  ```
-
-  Commit both with the freeze date, and point `REPRODUCIBILITY.md` section 4 at them.
+- **Host environments of the 2026-07 cells (REPRO-10).** Done 2026-10-13:
+  `requirements-train.lock.txt` and `requirements-infer.lock.txt` are the full freezes of the
+  two host envs (KNOWN_ISSUES.md, reproducibility gaps).
 - **Reviewer copy at resubmission (convention 10).** The repository stays public, so a
   double-blind review still needs an anonymous export:
   `scripts/export_anonymous.sh ../_export_review --deny-file "$PRIVATE/deny.txt"`, with the
@@ -281,9 +274,8 @@ and C28.
 - **Clean-environment install.** The dependency pins were never installed in a fresh
   environment (it downloads packages):
   `python3 -m venv /tmp/v && /tmp/v/bin/pip install -e '.[train,dev]' && /tmp/v/bin/python -m pytest -q`.
-- **Names file.** `../_wt/.clinician_names.txt` starts with a blank line. The grep on this
-  machine ignores a blank pattern; GNU grep without `-w` would match every line. Delete
-  the blank line.
+- **Names file.** Done 2026-11-01: the blank first line of `../_wt/.clinician_names.txt`
+  is gone.
 
 ## Old item numbers
 

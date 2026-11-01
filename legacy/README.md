@@ -161,7 +161,7 @@ below gives where each posted setting came from:
 | Eval base precision | bf16 for every cell, so the Mistral-24B adapters were trained on a 4-bit base and evaluated on a bf16 base. In the package, a cell record with `eval.base_precision: train` evaluates on the matching 4-bit base. | bf16 | `20f1ca1:scripts/_vllm_engine.py:236`, `:314` |
 | Context length / slots | 8192 / 64 | 4096 / 32 | `20f1ca1:scripts/_vllm_engine.py:154`, `:250` |
 | Client threads | 16 | 32 | `20f1ca1:scripts/eval_healthbench.py:380` |
-| Grader | NousResearch/Meta-Llama-3.1-8B-Instruct (a re-upload; byte identity with the meta-llama weights is not checked here) | meta-llama/Llama-3.1-8B-Instruct | `20f1ca1:rebuttal/launch/run_cell.sh:38` |
+| Grader | NousResearch/Meta-Llama-3.1-8B-Instruct (a re-upload with the same weights as meta-llama and an older chat template; docs/KNOWN_ISSUES.md) | meta-llama/Llama-3.1-8B-Instruct | `20f1ca1:rebuttal/launch/run_cell.sh:38` |
 | HealthBench eval prompts | one fixed set (`data/raw/hard_200_sample_ids.json`) for every seed; it shares 141 of 200 prompts with the submitted union | a separate 200 per seed | `20f1ca1:rebuttal/launch/run_cell.sh:97` |
 | Other benchmarks | pool = first 4900 usable rows in HF order; holdout = first 200 ids of that file | n/a | `20f1ca1:rebuttal/launch/run_cell.sh:113`, `:116-121` |
 | tau | 0.4 in every cell (`results/cross_cell/cell_recipe.json`). The rule re-filters a non-HealthBench cell at the 22nd-percentile tau when its train/raw is below 40%; no cell met it, and no log shows a second cut. MedQuAD kept 78.4% at 0.4, close to what a 22nd-percentile cut keeps, which caused an earlier misreading (`rebuttal/withdrawals.md` W11). | 0.4 | `20f1ca1:rebuttal/launch/run_cell.sh:159-201` |

@@ -213,7 +213,7 @@ name one judge per cell, which the adoption kept with the cell records (plan cho
 the Gemma bases, so the MedGemma-27B cells get a general judge, not a clinical one, because no
 clinical model outside Gemma, Llama and Qwen fits (Meditron3-Phi4-14B is a base model by
 its card; gpt-oss, which the host's vLLM 0.10.2 serves, is a general model too). No record uses Med42-8B, Meditron3-8B
-or Aloe-Beta-8B as a judge: the Meditron3-8B record is stale (BLOCKED.md item 3), and
+or Aloe-Beta-8B as a judge: the Meditron3-8B record was stale when the judges were chosen (BLOCKED.md item 3), and
 Aloe-Beta-8B has no record. The set-aside MedQA record lists `medgemma-27b-text`, but R6
 leaves that cell out, as section 5.3 of the paper does.
 
