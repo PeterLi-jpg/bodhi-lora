@@ -156,7 +156,7 @@ def cost_table(all_stats: dict, reg: Registry, cfg: ReportConfig, src: str) -> s
 
             gpus = sorted({g for r in [*shared.values(), *[x for v in per_seed.values() for x in v.values()]]
                            for g in r.get("gpus", [])})
-            rows.append([_cell_text(cell, n), hours(shared.get("traces")), hours(shared.get("filter")), train_h,
+            rows.append([_cell_text(cell, n, reg), hours(shared.get("traces")), hours(shared.get("filter")), train_h,
                          median("base"), median(f"base+{cell.protocol}"), median("lora"),
                          escape("; ".join(g.replace("NVIDIA ", "") for g in gpus)) or MISSING])
     header = [["Cell", "Traces (h)", "Filter (h)", "Train (h/seed)", "Base (s)", "Teacher (s)", "LoRA (s)", "GPUs"]]
@@ -181,7 +181,7 @@ def below_cap_table(cross: dict, reg: Registry, cfg: ReportConfig, src: str) -> 
             below = r.get("below_cap")
             if not below:
                 continue
-            label = _cell_text(reg.cells[cid], n)
+            label = _cell_text(reg.cells[cid], n, reg)
             subs = [(b, r["baselines"][b], below["baselines"][b]) for b in spec.baselines] \
                 if "baselines" in r else [("", r, below)]
             for b, rr, bb in subs:
@@ -213,13 +213,18 @@ def _reply_cap_note(cell, reg: Registry) -> str:
     return f", {fmt_int(cap)}-token replies"
 
 
-def _cell_text(cell, n: Names) -> str:
+def _cell_text(cell, n: Names, reg: Registry) -> str:
     """The prompts of a cell (its label up to the base model, shortened by
     display.benchmarks), its base model (display.models) and its teaching protocol."""
     prompts = cell.report.label.split(", ")[0]
     prompts = n.d.benchmarks.get(prompts, prompts)
     model = n.d.models.get(cell.model, cell.model)
-    return f"{escape(prompts)}, {escape(model)}, {n.d.protocols.get(cell.protocol, escape(cell.protocol))}"
+    text = f"{escape(prompts)}, {escape(model)}, {n.d.protocols.get(cell.protocol, escape(cell.protocol))}"
+    if cell.traces_from:
+        # A student trained on another cell's traces (H9) names whose traces they are.
+        src = reg.cells[cell.traces_from].model
+        text += f" ({escape(n.d.models.get(src, src))} traces)"
+    return text
 
 
 def hypothesis_table(cross: dict, reg: Registry, cfg: ReportConfig, src: str, short: bool = False) -> str:
@@ -244,7 +249,7 @@ def hypothesis_table(cross: dict, reg: Registry, cfg: ReportConfig, src: str, sh
             # A cell that has not run is in the plan's list but not in the table.
             if r.get("not_measured"):
                 continue
-            label = _cell_text(reg.cells[cid], n)
+            label = _cell_text(reg.cells[cid], n, reg)
             if rule == "context_pair":
                 label += f", {fmt_int(reg.cells[cid].eval.serving.max_model_len)}-token context"
             if rule == "cell_pair":

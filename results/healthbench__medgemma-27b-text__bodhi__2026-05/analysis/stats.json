@@ -9754,7 +9754,28 @@
  },
  "paired_probe": {},
  "probe": {
-  "not_measured": "no probe.json in the cell's shared/probe folder"
+  "benchmark": {
+   "exact_match_rate": 0.0,
+   "mean_prefix_overlap_tokens": 0.185,
+   "n": 200,
+   "n_exact_match": 0,
+   "n_rows_in_set": 1000
+  },
+  "benchmark_id": "healthbench",
+  "control": {
+   "exact_match_rate": 0.0,
+   "mean_prefix_overlap_tokens": 0.225,
+   "n": 200,
+   "n_exact_match": 0,
+   "n_rows_in_set": 112002
+  },
+  "control_id": "chatdoctor",
+  "fisher_p": 1.0,
+  "method": "raw continuation of token ids, greedy",
+  "model": "google/medgemma-27b-text-it",
+  "model_revision": "5b667cf2ddcf064085bc90952edb35a0edbfb79c",
+  "rate_diff": 0.0,
+  "test": "fisher_exact"
  },
  "prompts": {
   "filter_train_overlap_with_population": 0,
@@ -9999,7 +10020,15 @@
     }
    }
   },
-  "shared": {}
+  "shared": {
+   "probe": {
+    "gpus": [
+     "NVIDIA H100 80GB HBM3"
+    ],
+    "n_manifests": 1,
+    "seconds": 116.395
+   }
+  }
  },
  "status": "complete",
  "subsets": {},

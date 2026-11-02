@@ -3784,12 +3784,152 @@
   "H9": {
    "cells": {
     "healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b": {
-     "decision": null,
-     "not_measured": "no stats.json for this cell"
+     "below_cap": {
+      "decision": "supported",
+      "outcomes": {
+       "active_inquiry": {
+        "ci95": [
+         0.285526,
+         0.450232
+        ],
+        "diff": 0.367879,
+        "n_seeds": 5,
+        "p": 0.000242945,
+        "p_adj": 0.000242945
+       },
+       "context_seeking": {
+        "ci95": [
+         1.19351,
+         1.44441
+        ],
+        "diff": 1.31896,
+        "n_seeds": 5,
+        "p": 8.20024e-06,
+        "p_adj": 2.46007e-05
+       }
+      },
+      "secondary": {
+       "rubric_score": {
+        "ci95": [
+         0.0215839,
+         0.0442798
+        ],
+        "diff": 0.0329319,
+        "n_seeds": 5,
+        "p": 0.00128845,
+        "p_adj": null
+       }
+      }
+     },
+     "decision": "supported",
+     "outcomes": {
+      "active_inquiry": {
+       "ci95": [
+        0.256487,
+        0.414418
+       ],
+       "diff": 0.335452,
+       "n_seeds": 5,
+       "p": 0.000295723,
+       "p_adj": 0.000295723
+      },
+      "context_seeking": {
+       "ci95": [
+        1.1708,
+        1.42063
+       ],
+       "diff": 1.29571,
+       "n_seeds": 5,
+       "p": 8.65141e-06,
+       "p_adj": 2.59542e-05
+      }
+     },
+     "secondary": {
+      "rubric_score": {
+       "ci95": [
+        0.0242269,
+        0.042922
+       ],
+       "diff": 0.0335745,
+       "n_seeds": 5,
+       "p": 0.000568045,
+       "p_adj": null
+      }
+     }
     },
     "healthbench__mistral-7b-instruct__bodhi": {
-     "decision": null,
-     "not_measured": "no stats.json for this cell"
+     "below_cap": {
+      "decision": "not supported",
+      "outcomes": {
+       "active_inquiry": {
+        "ci95": [
+         0.0361395,
+         0.180453
+        ],
+        "diff": 0.108296,
+        "n_seeds": 5,
+        "p": 0.014065,
+        "p_adj": 0.070325
+       },
+       "context_seeking": {
+        "ci95": [
+         0.0453648,
+         0.351385
+        ],
+        "diff": 0.198375,
+        "n_seeds": 5,
+        "p": 0.022766,
+        "p_adj": 0.0886775
+       }
+      },
+      "secondary": {
+       "rubric_score": {
+        "ci95": [
+         -0.0300627,
+         -0.00610667
+        ],
+        "diff": -0.0180847,
+        "n_seeds": 5,
+        "p": 0.0137849,
+        "p_adj": null
+       }
+      }
+     },
+     "decision": "not supported",
+     "outcomes": {
+      "active_inquiry": {
+       "ci95": [
+        0.0318372,
+        0.180163
+       ],
+       "diff": 0.106,
+       "n_seeds": 5,
+       "p": 0.0165617,
+       "p_adj": 0.0828083
+      },
+      "context_seeking": {
+       "ci95": [
+        0.0311639,
+        0.338836
+       ],
+       "diff": 0.185,
+       "n_seeds": 5,
+       "p": 0.0288655,
+       "p_adj": 0.102726
+      }
+     },
+     "secondary": {
+      "rubric_score": {
+       "ci95": [
+        -0.0294017,
+        -0.00570927
+       ],
+       "diff": -0.0175555,
+       "n_seeds": 5,
+       "p": 0.0146775,
+       "p_adj": null
+      }
+     }
     }
    },
    "family": false,

@@ -48,4 +48,4 @@ eval:
 report:
   label: HealthBench-Hard, BioMistral-7B, Mistral-Small-24B teacher
   token: HBBioMistralTeacher
-  status: planned
+  status: complete

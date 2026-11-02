@@ -1,0 +1,164 @@
+{
+  "schema": 3,
+  "stage": "train",
+  "cell": "healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b",
+  "seed": 7,
+  "created_utc": "2026-11-01T17:55:40.138855+00:00",
+  "git": {
+    "sha": "f76b10cc471cbd7648529f2df2310de63c3dff32",
+    "dirty": false,
+    "diff_sha256": null,
+    "n_untracked": 5
+  },
+  "packages": {
+    "python": "3.12.3",
+    "torch": "2.7.0",
+    "transformers": "4.57.6",
+    "vllm": "0.9.2",
+    "peft": "0.19.1",
+    "trl": "0.11.4",
+    "accelerate": "1.13.0",
+    "bitsandbytes": "0.47.0",
+    "datasets": "3.6.0",
+    "bodhi-llm": "0.1.4",
+    "huggingface-hub": "0.36.2",
+    "numpy": "2.2.6"
+  },
+  "host_sha256": "e57f9913e18993f3b7eea3afa676d9d0ae3c5a04f647be54a2f28299b57e4149",
+  "hardware": {
+    "visible_devices": "6",
+    "gpus": [
+      {
+        "index": "6",
+        "name": "NVIDIA H100 80GB HBM3",
+        "memory": "81559 MiB"
+      }
+    ]
+  },
+  "time": {
+    "started_utc": "2026-11-01T17:40:43.482346+00:00",
+    "finished_utc": "2026-11-01T17:55:40.323490+00:00",
+    "seconds": 896.841
+  },
+  "config": {
+    "model": {
+      "id": "biomistral-7b",
+      "hf_id": "BioMistral/BioMistral-7B",
+      "revision": "9a11e1ffa817c211cbb52ee1fb312dc6b61b40a5",
+      "dtype": "bfloat16",
+      "quantization": null,
+      "tokenizer_kwargs": {},
+      "response_template": "[/INST]",
+      "pad_token": "<unk>"
+    },
+    "lora": {
+      "method": "lora",
+      "r": 16,
+      "alpha": 32.0,
+      "dropout": 0.05,
+      "target_modules": [
+        "q_proj",
+        "k_proj",
+        "v_proj",
+        "o_proj",
+        "gate_proj",
+        "up_proj",
+        "down_proj"
+      ]
+    },
+    "training": {
+      "epochs": 3.0,
+      "max_steps": null,
+      "per_device_train_batch_size": 4,
+      "per_device_eval_batch_size": 4,
+      "gradient_accumulation_steps": 4,
+      "learning_rate": 0.0001,
+      "lr_scheduler_type": "cosine",
+      "warmup_ratio": 0.05,
+      "max_seq_length": 4096,
+      "gradient_checkpointing": true,
+      "checkpoint": "best_val_loss",
+      "eval_every": "epoch",
+      "eval_steps": null,
+      "logging_steps": 10
+    }
+  },
+  "config_sha256": "01099f1714f288ba7e9fa890b7f8d199f244bfbdb5f871aa3dd081a3a36b2b98",
+  "models": {
+    "base": {
+      "id": "biomistral-7b",
+      "repo_id": "BioMistral/BioMistral-7B",
+      "family": "mistral",
+      "revision": "9a11e1ffa817c211cbb52ee1fb312dc6b61b40a5",
+      "revision_source": "record",
+      "unpinned_reason": null
+    }
+  },
+  "adapter": {
+    "path": "/data/PROJECTS/bohdi/runs-2026-11/results/healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b/seed_7/train",
+    "sha256": "9345022b48fd2bd38fb0b2ce68f77439670b3c0e2e21f1d975003d240e5be99e",
+    "files": {
+      "adapter_model.safetensors": "5936f51a45e4536045e2d991d54a9b86f8a3512eb8d62eb48fb50182199472a4",
+      "adapter_config.json": "71ec816bdc8a03913e288495e7bc0ff26c44f8d1a8ec07710b55505be8cc429c"
+    },
+    "r": 16,
+    "lora_alpha": 32.0,
+    "lora_dropout": 0.05,
+    "target_modules": [
+      "k_proj",
+      "q_proj",
+      "o_proj",
+      "gate_proj",
+      "v_proj",
+      "down_proj",
+      "up_proj"
+    ],
+    "base_model_name_or_path": "BioMistral/BioMistral-7B",
+    "revision": null,
+    "use_dora": false,
+    "use_rslora": false
+  },
+  "inputs": [
+    {
+      "path": "/data/PROJECTS/bohdi/runs-2026-11/results/healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b/seed_7/filter/train.jsonl",
+      "bytes": 27524182,
+      "sha256": "8f61542915b7026222260a4c1d6df6f60952aab86f4a556f3c91e426965d82f8",
+      "n_lines": 1882
+    },
+    {
+      "path": "/data/PROJECTS/bohdi/runs-2026-11/results/healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b/seed_7/filter/val.jsonl",
+      "bytes": 2953607,
+      "sha256": "75e609156de8d7024848c2e4619276a3b97e517d8cf874072bbda187ede762a1",
+      "n_lines": 209
+    }
+  ],
+  "counts": {
+    "seed": 7,
+    "effective_batch": 16,
+    "world_size": 1,
+    "global_step": 354,
+    "epoch": 3.0,
+    "max_steps": 354,
+    "num_train_epochs": 3,
+    "first_train_loss": 1.0708,
+    "last_train_loss": 0.2611,
+    "eval_loss_by_step": [
+      [
+        118,
+        0.5741490721702576
+      ],
+      [
+        236,
+        0.5583409070968628
+      ],
+      [
+        354,
+        0.5828917026519775
+      ]
+    ],
+    "best_metric": 0.5583409070968628,
+    "best_model_checkpoint": "/data/PROJECTS/bohdi/runs-2026-11/results/healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b/seed_7/train/checkpoint-236"
+  },
+  "status": "complete",
+  "quantization": null
+}

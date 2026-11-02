@@ -112,6 +112,7 @@ def cell_macros(rep, stats: dict, cell: CellConfig, cfg: ReportConfig, src: str)
     _judges(rep, n, T, stats, src)
     _bench(rep, n, T, stats, src)
     _stage_times(rep, T, stats, src)
+    _probe(rep, T, stats, src)
     for c, r in stats["askers_gap"].items():
         rep.add(f"{T}AskersGap{n.cond_token(c)}", fmt(r.get("gap"), 3, sign=True), f"{src}: askers_gap.{c}.gap")
         rep.add(f"{T}AskersGap{n.cond_token(c)}CI", fmt_ci(r.get("gap_ci95"), 3), "prompt-clustered bootstrap interval")
@@ -321,6 +322,21 @@ def _stage_times(rep, T: str, stats: dict, src: str) -> None:
         if secs:
             rep.add(f"{T}Time{token(stage)}SeedH", fmt(sum(secs) / len(secs) / 3600, 1),
                     f"{src}: stage_times.per_seed.{stage}, mean over {len(secs)} seeds")
+
+
+def _probe(rep, T: str, stats: dict, src: str) -> None:
+    """E11, the contamination probe of the cell's base model (analysis probe_section): the
+    prompts probed, exact completions and mean prefix overlap in tokens, on the benchmark
+    and on the control text, and the stage's two-sided Fisher p."""
+    pr = stats.get("probe") or {}
+    if pr.get("not_measured"):
+        return
+    for side, S in (("benchmark", ""), ("control", "Control")):
+        r, where = pr.get(side) or {}, f"{src}: probe.{side}"
+        rep.add(f"{T}Probe{S}N", fmt_int(r.get("n")), f"{where}.n")
+        rep.add(f"{T}Probe{S}Exact", fmt_int(r.get("n_exact_match")), f"{where}.n_exact_match")
+        rep.add(f"{T}Probe{S}Overlap", fmt(r.get("mean_prefix_overlap_tokens"), 2), f"{where}.mean_prefix_overlap_tokens")
+    rep.add(f"{T}ProbeFisherP", fmt_p(pr.get("fisher_p")), f"{src}: probe.fisher_p, two-sided Fisher exact")
 
 
 def _leakage(rep, n: Names, T: str, stats: dict, src: str) -> None:

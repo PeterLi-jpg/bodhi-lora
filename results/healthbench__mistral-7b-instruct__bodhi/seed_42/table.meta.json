@@ -1,0 +1,57 @@
+{
+  "cell": "healthbench__mistral-7b-instruct__bodhi",
+  "completions": {
+    "base": 200,
+    "base+bodhi": 200,
+    "lora": 200,
+    "lora+bodhi": 200
+  },
+  "grade": {
+    "counts": {
+      "base": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "base+bodhi": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "lora": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "lora+bodhi": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      }
+    },
+    "file": "results/healthbench__mistral-7b-instruct__bodhi/seed_42/grade/epistemic__llama-3.1-8b.json",
+    "present": true
+  },
+  "n_examples": {
+    "base": 200,
+    "base+bodhi": 200,
+    "lora": 200,
+    "lora+bodhi": 200
+  },
+  "score_metric": {
+    "base": "normalized_score",
+    "base+bodhi": "normalized_score",
+    "lora": "normalized_score",
+    "lora+bodhi": "normalized_score"
+  },
+  "seed": 42,
+  "sources": {
+    "results/healthbench__mistral-7b-instruct__bodhi/seed_42/eval/base+bodhi.json": "c6960223d6329dd73d11835b49eda2ac921b2a4fe85f330bf29bfeb4e3cd5170",
+    "results/healthbench__mistral-7b-instruct__bodhi/seed_42/eval/base.json": "a43455fec5589dc3938ffffab6c0e2cb7304207e777ece05f6427358f5b7a480",
+    "results/healthbench__mistral-7b-instruct__bodhi/seed_42/eval/lora+bodhi.json": "6983189a4a26bb03af663357056a092b9cd17574f7422d6f824166c2544ff221",
+    "results/healthbench__mistral-7b-instruct__bodhi/seed_42/eval/lora.json": "c002633fa6ca3671e3e833784036682d4c67028c6623a171f28134045fc74260",
+    "results/healthbench__mistral-7b-instruct__bodhi/seed_42/grade/epistemic__llama-3.1-8b.json": "03d02d4ba11a62c1a8da6016d850f48fa1e01eed0c586211e28b2da3db18f1fb",
+    "results/healthbench__mistral-7b-instruct__bodhi/seed_42/grade/judge__medgemma-27b-text.json": "a349db54edeaad2eae16bd574cc365cbd62f30f6ea80ed501477b5d4e40b0373"
+  },
+  "tokenizer": "tokenizer.json of mistralai/Mistral-7B-Instruct-v0.3 at c170c708c41dac9275d15a8fff4eca08d52bab71 is not in the local Hugging Face cache (fetch it with: huggingface-cli download mistralai/Mistral-7B-Instruct-v0.3 tokenizer.json --revision c170c708c41dac9275d15a8fff4eca08d52bab71)"
+}

@@ -60,4 +60,4 @@ probe:
 report:
   label: HealthBench-Hard, Mistral-7B-Instruct
   token: HBMistralSeven
-  status: planned
+  status: complete

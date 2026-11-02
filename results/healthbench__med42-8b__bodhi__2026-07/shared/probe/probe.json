@@ -1,0 +1,42 @@
+{
+  "benchmark_id": "healthbench",
+  "control_id": "chatdoctor",
+  "model": "m42-health/Llama3-Med42-8B",
+  "model_revision": "ceab7e7ee4b9dbde7ba82867f34274db51487d83",
+  "method": "raw continuation of token ids, greedy",
+  "benchmark": {
+    "n": 200,
+    "n_rows_in_set": 1000,
+    "n_rows_tokenized": 402,
+    "n_exact_match": 0,
+    "exact_match_rate": 0.0,
+    "mean_prefix_overlap_tokens": 0.68
+  },
+  "control": {
+    "n": 200,
+    "n_rows_in_set": 112002,
+    "n_rows_tokenized": 206,
+    "n_exact_match": 0,
+    "exact_match_rate": 0.0,
+    "mean_prefix_overlap_tokens": 0.68
+  },
+  "fisher_p_value": 1.0,
+  "test_used": "fisher_exact",
+  "settings": {
+    "control": "chatdoctor",
+    "n_prompts": 200,
+    "prefix_tokens": 15,
+    "continuation_tokens": 25,
+    "seed": 0,
+    "serving": {
+      "max_model_len": 8192,
+      "max_num_seqs": 64,
+      "concurrency": 32,
+      "request_timeout_s": 180,
+      "drain_s": 0.0,
+      "enforce_eager": null
+    }
+  },
+  "interpretation": "p < 0.05 with a benchmark rate well above the control rate is evidence that the benchmark text was in the base model's pretraining data. Equal rates do not rule it out: the probe sees only verbatim recall of the drawn rows.",
+  "samples_file": "samples.jsonl"
+}

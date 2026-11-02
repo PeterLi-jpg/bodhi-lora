@@ -342,7 +342,8 @@ posted:
 display:
   weights: {base: Base, lora: LoRA}
   protocols: {bodhi: '\bodhi{}'}
-  models: {phi-4: Phi-4, medgemma-27b-text: MedGemma-27B, gemma-2-27b: Gemma-2-27B, mistral-small-24b: Mistral-24B}
+  models: {phi-4: Phi-4, medgemma-27b-text: MedGemma-27B, gemma-2-27b: Gemma-2-27B, mistral-small-24b: Mistral-24B,
+           mistral-7b-instruct: Mistral-7B, biomistral-7b: BioMistral-7B}
   metrics:
     uncertainty_ack: 'Uncertainty ack.\ (0--2)'
     active_inquiry: 'Active inquiry (\%)'

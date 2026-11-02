@@ -1,0 +1,348 @@
+{
+  "schema": 3,
+  "stage": "eval",
+  "cell": "healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b",
+  "seed": null,
+  "created_utc": "2026-11-01T20:02:21.418599+00:00",
+  "git": {
+    "sha": "f76b10cc471cbd7648529f2df2310de63c3dff32",
+    "dirty": false,
+    "diff_sha256": null,
+    "n_untracked": 5
+  },
+  "packages": {
+    "python": "3.12.3",
+    "torch": "2.8.0",
+    "transformers": "4.56.2",
+    "vllm": "0.10.2",
+    "peft": null,
+    "trl": null,
+    "accelerate": null,
+    "bitsandbytes": "0.47.0",
+    "datasets": "5.0.0",
+    "bodhi-llm": "0.1.4",
+    "huggingface-hub": "0.36.2",
+    "numpy": "2.2.6"
+  },
+  "host_sha256": "e57f9913e18993f3b7eea3afa676d9d0ae3c5a04f647be54a2f28299b57e4149",
+  "hardware": {
+    "visible_devices": "6",
+    "gpus": [
+      {
+        "index": "6",
+        "name": "NVIDIA H100 80GB HBM3",
+        "memory": "81559 MiB"
+      }
+    ]
+  },
+  "time": {
+    "started_utc": "2026-11-01T18:40:38.319706+00:00",
+    "finished_utc": "2026-11-01T20:02:21.556717+00:00",
+    "seconds": 4903.237
+  },
+  "config": {
+    "seeds": [
+      42,
+      7,
+      13,
+      99,
+      101
+    ],
+    "eval": {
+      "conditions": [
+        "base",
+        "base+bodhi",
+        "lora",
+        "lora+bodhi"
+      ],
+      "ids": {
+        "policy": "per_seed_draw",
+        "n": 200,
+        "unit": "row",
+        "only": [],
+        "file": null
+      },
+      "base_precision": "train",
+      "base_precision_reason": null,
+      "max_new_tokens": 1024,
+      "max_new_tokens_per_pass": 2048,
+      "serving": {
+        "max_model_len": 8192,
+        "max_num_seqs": 32,
+        "concurrency": 32,
+        "request_timeout_s": 900,
+        "drain_s": 0.0,
+        "enforce_eager": null
+      },
+      "shared_server": true
+    }
+  },
+  "config_sha256": "16ef9c172adcae7bfdd3d97f89666272acf1ebe432a50eb0c987bb6d3c2e7274",
+  "models": {
+    "policy": {
+      "id": "biomistral-7b",
+      "repo_id": "BioMistral/BioMistral-7B",
+      "family": "mistral",
+      "revision": "9a11e1ffa817c211cbb52ee1fb312dc6b61b40a5",
+      "revision_source": "record",
+      "unpinned_reason": null
+    },
+    "grader": {
+      "id": "llama-3.1-8b",
+      "repo_id": "meta-llama/Llama-3.1-8B-Instruct",
+      "family": "llama3",
+      "revision": "0e9e39f249a16976918f6564b8830bc894c89659",
+      "revision_source": "record",
+      "unpinned_reason": null
+    }
+  },
+  "engines": {
+    "policy": {
+      "model": "BioMistral/BioMistral-7B",
+      "revision": "9a11e1ffa817c211cbb52ee1fb312dc6b61b40a5",
+      "max_model_len": 8192,
+      "max_num_seqs": 32,
+      "tensor_parallel_size": 1,
+      "dtype": "bfloat16",
+      "quantization": null,
+      "enforce_eager": true,
+      "request_timeout_s": 900,
+      "lora_path": null,
+      "lora_modules": {
+        "adapter-s42": "/data/PROJECTS/bohdi/runs-2026-11/results/healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b/seed_42/train",
+        "adapter-s7": "/data/PROJECTS/bohdi/runs-2026-11/results/healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b/seed_7/train",
+        "adapter-s13": "/data/PROJECTS/bohdi/runs-2026-11/results/healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b/seed_13/train",
+        "adapter-s99": "/data/PROJECTS/bohdi/runs-2026-11/results/healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b/seed_99/train",
+        "adapter-s101": "/data/PROJECTS/bohdi/runs-2026-11/results/healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b/seed_101/train"
+      },
+      "max_loras": 5,
+      "max_lora_rank": 16,
+      "env": {}
+    },
+    "grader": {
+      "model": "meta-llama/Llama-3.1-8B-Instruct",
+      "revision": "0e9e39f249a16976918f6564b8830bc894c89659",
+      "max_model_len": 8192,
+      "max_num_seqs": 32,
+      "tensor_parallel_size": 1,
+      "dtype": "bfloat16",
+      "quantization": null,
+      "enforce_eager": true,
+      "request_timeout_s": 900,
+      "lora_path": null,
+      "lora_modules": {},
+      "max_loras": null,
+      "max_lora_rank": null,
+      "env": {}
+    }
+  },
+  "outputs": [
+    {
+      "path": "/data/PROJECTS/bohdi/runs-2026-11/results/healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b/seed_42/eval/base.json",
+      "bytes": 1979397,
+      "sha256": "f0ade7741c30d7e03558b34c1d86ab4cc2cf8e5c3b85071d8b1d76cec162183c"
+    },
+    {
+      "path": "/data/PROJECTS/bohdi/runs-2026-11/results/healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b/seed_42/eval/base+bodhi.json",
+      "bytes": 1962088,
+      "sha256": "8d80082ba7a450b463bcd5aac6bd1f7c9bafed4fa10a28f01b150743ae1646a4"
+    },
+    {
+      "path": "/data/PROJECTS/bohdi/runs-2026-11/results/healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b/seed_42/eval/lora.json",
+      "bytes": 2384289,
+      "sha256": "0ea31e0d94f822fb943116a20b47cd9b0ac31b8bb5693f12d94d6a7955d53d20"
+    },
+    {
+      "path": "/data/PROJECTS/bohdi/runs-2026-11/results/healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b/seed_42/eval/lora+bodhi.json",
+      "bytes": 3244089,
+      "sha256": "878828e8f9a4abe00de7dc92621f81c1bbac8b2a9375851f048c24153967cfc9"
+    },
+    {
+      "path": "/data/PROJECTS/bohdi/runs-2026-11/results/healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b/seed_7/eval/base.json",
+      "bytes": 1875969,
+      "sha256": "f00c1bae37bffad8b7ab2c679b33b9ac0395e5ce5b9664a69b9f219e17cbf910"
+    },
+    {
+      "path": "/data/PROJECTS/bohdi/runs-2026-11/results/healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b/seed_7/eval/base+bodhi.json",
+      "bytes": 1858944,
+      "sha256": "0a9782031260608c85b8b00504430362715f6d57abf685d0808c2e80ee50d3e2"
+    },
+    {
+      "path": "/data/PROJECTS/bohdi/runs-2026-11/results/healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b/seed_7/eval/lora.json",
+      "bytes": 2281273,
+      "sha256": "bf7eea239c004ba2c716c0a03ed6cd78b12392a190ec5a6d27ab41de424ede2f"
+    },
+    {
+      "path": "/data/PROJECTS/bohdi/runs-2026-11/results/healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b/seed_7/eval/lora+bodhi.json",
+      "bytes": 3130109,
+      "sha256": "78bd74161335f7236ba66128589cbac86cbf7ec98622506d535dd17c20861446"
+    },
+    {
+      "path": "/data/PROJECTS/bohdi/runs-2026-11/results/healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b/seed_13/eval/base.json",
+      "bytes": 1931484,
+      "sha256": "ec8d2ff9b7e75557f80e91315658f63370377c68091176bb453065dcbeec12be"
+    },
+    {
+      "path": "/data/PROJECTS/bohdi/runs-2026-11/results/healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b/seed_13/eval/base+bodhi.json",
+      "bytes": 1947818,
+      "sha256": "cbb1f62faab3b1a63d0ff9eefdc2308d078da8d6c71f0e208677dc80c1bf6074"
+    },
+    {
+      "path": "/data/PROJECTS/bohdi/runs-2026-11/results/healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b/seed_13/eval/lora.json",
+      "bytes": 2328584,
+      "sha256": "dda6b18a4835777d0a1b4cece52ce75ad82cdb967f6ac4e32795b0f43a0ce022"
+    },
+    {
+      "path": "/data/PROJECTS/bohdi/runs-2026-11/results/healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b/seed_13/eval/lora+bodhi.json",
+      "bytes": 3127318,
+      "sha256": "e5541ad1aab00baf6df8c96f03eafb423b9ee6f4b49dd41c5dc686b32a1dd3a3"
+    },
+    {
+      "path": "/data/PROJECTS/bohdi/runs-2026-11/results/healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b/seed_99/eval/base.json",
+      "bytes": 2026308,
+      "sha256": "e82728ab9e3ebfb1dfb7cee6358c95a265f54231b5f66460cd6e2dc861ec55f3"
+    },
+    {
+      "path": "/data/PROJECTS/bohdi/runs-2026-11/results/healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b/seed_99/eval/base+bodhi.json",
+      "bytes": 1988883,
+      "sha256": "27df2993751066c74096461c9cb985d964a99dfe3d7a418130e061335a3e1add"
+    },
+    {
+      "path": "/data/PROJECTS/bohdi/runs-2026-11/results/healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b/seed_99/eval/lora.json",
+      "bytes": 2432238,
+      "sha256": "81d5b5e1d517f8678d0da141482d638135cfb5a760ef25278955de0a0f384d5c"
+    },
+    {
+      "path": "/data/PROJECTS/bohdi/runs-2026-11/results/healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b/seed_99/eval/lora+bodhi.json",
+      "bytes": 3402595,
+      "sha256": "3ac48eeffd56434dfb93e2abc48141aa054702f28783518bc4aad187b56767ba"
+    },
+    {
+      "path": "/data/PROJECTS/bohdi/runs-2026-11/results/healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b/seed_101/eval/base.json",
+      "bytes": 2059414,
+      "sha256": "8d4a93387ff312f3cf09ab1c1e7f43ed2c5383971a34b4268486f564981ec495"
+    },
+    {
+      "path": "/data/PROJECTS/bohdi/runs-2026-11/results/healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b/seed_101/eval/base+bodhi.json",
+      "bytes": 2052711,
+      "sha256": "6076a3d8b638af06360c80d4a97561fc2b0fd8c6bfb2e7a81193eebf5ade453b"
+    },
+    {
+      "path": "/data/PROJECTS/bohdi/runs-2026-11/results/healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b/seed_101/eval/lora.json",
+      "bytes": 2493233,
+      "sha256": "248b39872b51b95e45bc700d3ab08dd4351e3dd6e58d0bfc7da532ae7211cd96"
+    },
+    {
+      "path": "/data/PROJECTS/bohdi/runs-2026-11/results/healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b/seed_101/eval/lora+bodhi.json",
+      "bytes": 3244878,
+      "sha256": "21850fa1aff96ae7251ea76da1d01c5c17091069193a8b89d7b970c6416dc0e0"
+    }
+  ],
+  "counts": {
+    "n_examples": 4000,
+    "n_generated": 4000,
+    "n_graded": 4000,
+    "calls": 6000,
+    "completion_tokens_total": 3270559,
+    "n_files": 20,
+    "n_conditions_run": 20,
+    "n_incomplete": 0
+  },
+  "status": "complete",
+  "shared_server": {
+    "run_manifest": "results/healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b/shared/eval/eval_s42-7-13-99-101_20261101T184038Z.manifest.json",
+    "seeds": [
+      42,
+      7,
+      13,
+      99,
+      101
+    ],
+    "conditions_run": [
+      [
+        42,
+        "base"
+      ],
+      [
+        42,
+        "base+bodhi"
+      ],
+      [
+        42,
+        "lora"
+      ],
+      [
+        42,
+        "lora+bodhi"
+      ],
+      [
+        7,
+        "base"
+      ],
+      [
+        7,
+        "base+bodhi"
+      ],
+      [
+        7,
+        "lora"
+      ],
+      [
+        7,
+        "lora+bodhi"
+      ],
+      [
+        13,
+        "base"
+      ],
+      [
+        13,
+        "base+bodhi"
+      ],
+      [
+        13,
+        "lora"
+      ],
+      [
+        13,
+        "lora+bodhi"
+      ],
+      [
+        99,
+        "base"
+      ],
+      [
+        99,
+        "base+bodhi"
+      ],
+      [
+        99,
+        "lora"
+      ],
+      [
+        99,
+        "lora+bodhi"
+      ],
+      [
+        101,
+        "base"
+      ],
+      [
+        101,
+        "base+bodhi"
+      ],
+      [
+        101,
+        "lora"
+      ],
+      [
+        101,
+        "lora+bodhi"
+      ]
+    ],
+    "client_threads": 32,
+    "replies_kept_from_an_earlier_run": 0
+  },
+  "incomplete": [],
+  "base_evaluated_once": []
+}

@@ -6603,7 +6603,28 @@
  },
  "paired_probe": {},
  "probe": {
-  "not_measured": "no probe.json in the cell's shared/probe folder"
+  "benchmark": {
+   "exact_match_rate": 0.0,
+   "mean_prefix_overlap_tokens": 0.92,
+   "n": 100,
+   "n_exact_match": 0,
+   "n_rows_in_set": 200
+  },
+  "benchmark_id": "medqa-open-preamble",
+  "control": {
+   "exact_match_rate": 0.0,
+   "mean_prefix_overlap_tokens": 0.66,
+   "n": 100,
+   "n_exact_match": 0,
+   "n_rows_in_set": 5000
+  },
+  "control_id": "healthbench",
+  "fisher_p": 1.0,
+  "method": "raw continuation of token ids, greedy",
+  "model": "mistralai/Mistral-Small-24B-Instruct-2501",
+  "model_revision": "9527884be6e5616bdd54de542f9ae13384489724",
+  "rate_diff": 0.0,
+  "test": "fisher_exact"
  },
  "prompts": {
   "labels": {},
@@ -6781,7 +6802,16 @@
   }
  },
  "stage_times": {
-  "not_measured": "no stage manifest of this cell records a time"
+  "per_seed": {},
+  "shared": {
+   "probe": {
+    "gpus": [
+     "NVIDIA H100 80GB HBM3"
+    ],
+    "n_manifests": 1,
+    "seconds": 54.408
+   }
+  }
  },
  "status": "complete",
  "subsets": {},
