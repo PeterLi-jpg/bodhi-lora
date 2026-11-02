@@ -44,6 +44,15 @@ def test_committed_cross_cell_stats_are_current(tmp_path):
         dst = tmp_path / cid / "analysis" / "stats.json"
         dst.parent.mkdir(parents=True)
         dst.write_text((PROJ.cell(cid).analysis() / "stats.json").read_text())
+    # A cell_pair question pairs seeds only when both cells' eval ids match, so it reads them too.
+    for h in CFG.hypotheses:
+        if h.rule != "cell_pair":
+            continue
+        for cid in [*h.cells, h.reference]:
+            for src in PROJ.cell(cid).inputs().glob("eval_ids_seed_*.json"):
+                dst = tmp_path / src.relative_to(PROJ.results_root)
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                dst.write_text(src.read_text())
     for gc in CFG.grader_comparisons:
         for cid in gc.cells:
             src = PROJ.cell(cid).table(gc.seed)

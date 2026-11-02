@@ -47,4 +47,4 @@ eval:
 report:
   label: HealthBench-Hard, Mistral-Small-24B, a random sample as large as the filtered set
   token: HBMistralRandomCount
-  status: planned
+  status: complete

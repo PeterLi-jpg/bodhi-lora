@@ -47,4 +47,4 @@ eval:
 report:
   label: HealthBench-Hard, Mistral-Small-24B, every trace kept
   token: HBMistralUnfiltered
-  status: planned
+  status: complete

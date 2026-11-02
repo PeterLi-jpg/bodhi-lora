@@ -241,17 +241,19 @@ def cell_pair(stats: dict, reference: Optional[dict], alpha: float, same_prompts
     Seeds pair only when both cells evaluated the same prompts for every seed
     (`same_prompts`); otherwise each outcome takes Welch's t on the seed values, and `test`
     says so. Rises: either primary outcome above 0 with adjusted p below alpha (the plan's
-    "the filter helps"). Otherwise: no rise detected."""
+    "the filter helps"). Otherwise: no rise detected. `base_check` runs the same test on
+    `base`, which no training touches, so it shows how far the two cells' serving alone
+    moves the outcomes (descriptive; it decides nothing)."""
     if reference is None:
         return {"decision": None, "outcomes": {}, "not_measured": "no stats.json for the reference cell"}
     if same_prompts is None:
         return {"decision": None, "outcomes": {}, "not_measured": "the eval ids of a seed are missing"}
 
-    def per_seed(s: dict, metric: str) -> dict:
-        return ((s.get("conditions", {}).get(metric) or {}).get("lora") or {}).get("per_seed") or {}
+    def per_seed(s: dict, metric: str, cond: str) -> dict:
+        return ((s.get("conditions", {}).get(metric) or {}).get(cond) or {}).get("per_seed") or {}
 
-    def test(metric: str) -> Optional[dict]:
-        a, b = per_seed(stats, metric), per_seed(reference, metric)
+    def test(metric: str, cond: str = "lora") -> Optional[dict]:
+        a, b = per_seed(stats, metric, cond), per_seed(reference, metric, cond)
         if not a or not b:
             return None
         if same_prompts:
@@ -267,6 +269,7 @@ def cell_pair(stats: dict, reference: Optional[dict], alpha: float, same_prompts
     out = {k: _outcome(r, "p_holm") for k, r in raw.items()}
     decision = "rises" if any(_up(o, alpha) for o in out.values()) else "no rise detected"
     return {"decision": decision, "outcomes": out, "secondary": {"rubric_score": _outcome(test("rubric_score"))},
+            "base_check": {k: _outcome(test(k, "base")) for k in (*PRIMARY_ASKING, "rubric_score")},
             "test": "paired t over seeds" if same_prompts else "Welch t (the cells' prompts differ)"}
 
 

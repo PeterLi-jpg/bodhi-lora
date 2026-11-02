@@ -65,6 +65,10 @@ def hypothesis_macros(rep, cross: dict, reg: Registry, cfg: ReportConfig, src: s
                     for key, o in (rr.get(group) or {}).items():
                         if o is not None and key in OUTCOME_KIND:
                             _outcome_macros(rep, nm, key, o, f"{wb}.{group}.{key}")
+                # cell_pair: the same test on Base, \statHyp<question><cell>Base<outcome><field>.
+                for key, o in (rr.get("base_check") or {}).items():
+                    if o is not None and key in OUTCOME_KIND:
+                        _outcome_macros(rep, nm + "Base", key, o, f"{wb}.base_check.{key}")
             # The same rule on the replies below the token cap (ANALYSIS_PLAN.md section 12,
             # 2026-10-23): \statHyp<question><cell>[<baseline>]BelowCap<outcome><field>.
             below = r.get("below_cap") or {}
@@ -253,9 +257,7 @@ def hypothesis_table(cross: dict, reg: Registry, cfg: ReportConfig, src: str, sh
             if rule == "context_pair":
                 label += f", {fmt_int(reg.cells[cid].eval.serving.max_model_len)}-token context"
             if rule == "cell_pair":
-                # The reference differs from this cell in what follows its base model.
-                ref = reg.cells[spec.reference].report.label.split(", ")
-                label += f" vs {escape(', '.join(ref[2:]) or ', '.join(ref))}"
+                label += f" vs {escape(n.d.references.get(spec.reference, spec.reference))}"
             subs = [(b, r["baselines"][b]) for b in spec.baselines] if "baselines" in r else [("", r)]
             for b, rr in subs:
                 cell_text = label + (f" vs {n.cond(b)}" if b else "")

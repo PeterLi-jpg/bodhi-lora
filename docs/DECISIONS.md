@@ -331,3 +331,19 @@ evaluator grade and Phi-4 judge, and both copies are sha256-checked. The first a
 2026-11-01, before any result of either run was read: the claimed run counts ("if his is done use
 his"). It is the cell in `results/`; the NRP run stays outside the repository as a second run on
 another GPU type, and no claim reads it.
+
+### D33. R9, R11 and R12 on the shared host (2026-11-01)
+
+The first author asked on 2026-11-01 to "do everything" and to take the shared host's GPUs that
+were free on the lease and idle. GPUs 5 to 7 were leased as `bohdi` at 17:25 UTC and the runs used a
+fresh checkout at f76b10c (`/data/PROJECTS/bohdi/runs-2026-11`), with the R2 traces and filter
+outputs copied in after a sha256 match with this repository's copies. The analysis code of H9 and
+H10 (`cell_pair`) was committed (89d49ab) before any of their outputs existed. To finish sooner, the
+last three seeds of `healthbench__mistral-small-24b__bodhi__random-same-count` moved from one card
+to three after seed 7 had finished training, so no training was cut and resumed; those seeds were
+evaluated on per-seed servers, every condition of a seed on one server. Every cell ran on H100s,
+while the filtered R2 cell that H10 compares against ran on A100s; H10's `base_check` (added after
+the outputs existed, descriptive only) gives the size of that difference. All cells were copied back
+sha256-checked (527 and 288 files). The leases of GPUs 6 and 7 were released after the runs; 5 is
+kept.
+

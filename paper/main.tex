@@ -370,8 +370,7 @@ result: active inquiry goes from \statHBBioMistralJulActiveInquiryBase\% to
 (\statHBBioMistralJulBlanketDisclaimerPctBase\% to \statHBBioMistralJulBlanketDisclaimerPctLoRA\%, Fisher
 $p = \statHBBioMistralJulBlanketDisclaimerFisherPLoRA$). Its teacher was the weakest
 (\statHBBioMistralJulActiveInquiryBaseBodhi\%), and its filter kept the fewest traces
-(\statHBBioMistralJulFilterKeptPct\%). So the recipe may need a teacher whose traces the filter keeps
-at a usable rate, but one null cannot separate this from model size or settings.
+(\statHBBioMistralJulFilterKeptPct\%), and H9 (\S\ref{sec:rerun}) traces the null to the teacher.
 
 \paragraph{Aggregate score.} The aggregate score falls under LoRA in all
 \statGroupAddedOutsideFamilyRubricScoreLoRAvsBaseMeasured{} added cells outside the evaluator's family, by
@@ -445,12 +444,13 @@ the \bodhi{} protocol as the teacher and once with a second protocol, written fo
 plans up to three questions and asks them first (ask-first). As the area chair asked, we then
 trained MedGemma-27B with the same recipe and the \bodhi{} protocol. Its replies often reached the
 1,024-token cap of these settings. So, before we read any of its grades, a dated plan entry moved
-its tests to the same evaluation with replies of up to 4,096 tokens (Appendix~\ref{app:rerun}). The \bodhi{} adapters also answered
+its tests to the same evaluation with replies of up to 4,096 tokens (Appendix~\ref{app:rerun}). Four
+more cells test the BioMistral-7B null (H9) and the filter (H10). The \bodhi{} adapters also answered
 two probe sets that no adapter trained on. The first holds MediQ cases \citep{li2024mediq} in two
 versions, with and without the facts that the answer needs. The second holds
 \statHBMistralLabelledPrompts{} HealthBench prompts that HealthBench's physicians labelled as
 emergent or not, or as written by a health professional. Table~\ref{tab:hypotheses} gives the
-plan's decision for every primary test, and Table~\ref{tab:hypotheses-full} for every test. These cells sit next to those of \S\ref{sec:cells}, which stay
+plan's decision for every primary test but those of H9 and H10, and Table~\ref{tab:hypotheses-full} for every test. These cells sit next to those of \S\ref{sec:cells}, which stay
 the record; Appendix~\ref{app:rerun} lists where we departed from the plan.
 
 \paragraph{The behavior transfers.} Without CoT at inference, the \bodhi{} adapter raises active
@@ -527,20 +527,27 @@ over-flagging that the adapter adds. Its harm proxy still rises on these prompts
 over the question's three cells; the interval is not adjusted). The
 ask-first adapter lowers the score (\statHypHTwoHBMistralAskFirstRubricScoreDiff). On the prompts that a health professional
 wrote, both \bodhi{} adapters lower it too (\statHypHElevenHBMistralLabelledRubricScoreDiff{} and
-\statHypHElevenHBMedGemmaLabelledCapRubricScoreDiff). On an otherwise idle GPU, the Mistral-Small-24B
-adapter did not save time as we served it: a median of \statHBMistralBenchLoRAMedianS{}\,s per
-reply, against \statHBMistralBenchBaseBodhiMedianS{}\,s for the two-pass protocol
-(\statHBMistralBenchPrompts{} prompts; Table~\ref{tab:cost}). The MedGemma-27B adapter did, because
-that protocol's two passes are long there (\statHBMedGemmaBenchLoRAMedianS{}\,s against
-\statHBMedGemmaBenchBaseBodhiMedianS{}\,s, timed at the 1,024-token cap). Both adapters were served
-unmerged on the 4-bit base, so they wrote fewer tokens per second than Base; we did not time merged
-weights.
+\statHypHElevenHBMedGemmaLabelledCapRubricScoreDiff). Served unmerged on the 4-bit base, the adapter
+saved no time over the two-pass protocol on Mistral-Small-24B (median \statHBMistralBenchLoRAMedianS{}\,s
+against \statHBMistralBenchBaseBodhiMedianS{}\,s per reply) and saved time on MedGemma-27B, whose two
+passes are long (Table~\ref{tab:cost}); we did not time merged weights.
 
 \paragraph{No red-flag drop to recover.} Adding the \bodhi{} protocol to the adapter does not
 lower red-flag identification on either base model (H6), nor in a MedGemma-27B cell at the
 4,096-token context of the 2026-05 cell (H6c, 1,024-token replies). So a fix that states red flags
 first has nothing to recover, and the context length does not explain the drop of
 \S\ref{sec:interference}.
+
+\paragraph{The teacher matters; the filter's choice does not.} Trained on the traces of
+Mistral-Small-24B, BioMistral-7B, the null of \S\ref{sec:cells}, raises active inquiry by
+\statHypHNineHBBioMistralTeacherActiveInquiryDiff{} pp (\statHypHNineHBBioMistralTeacherActiveInquiryCI, H9).
+Mistral-7B on its own traces does not pass H1's rule (\statHypHNineHBMistralSevenActiveInquiryDiff{} pp,
+$p_{\text{Holm}} = \statHypHNineHBMistralSevenActiveInquiryPAdj$), though its teacher asks more than its
+base (\statHBMistralSevenActiveInquiryBaseBodhivsBaseDiff{} pp). By the plan's reading, the teacher caused
+the null, not the size. At a fixed count, adapters trained on the filtered traces and on a random
+draw of the same size differ by \statHypHTenHBMistralActiveInquiryDiff{} pp in active inquiry
+(\statHypHTenHBMistralActiveInquiryCI, H10). We detect no filter effect, so the claim that the filter
+removes the teacher's failures stays withdrawn.
 
 \subsection{The CoT Protocol on the Adapter}
 \label{sec:interference}
@@ -557,8 +564,8 @@ LoRA+\bodhi{} responses leak, against \statHBMedGemmaMayLeakBodhiAnalysisFormatB
 \statHBMedGemmaMayLeakBodhiAnalysisFormatBaseBodhi\% in the other conditions
 (Figure~\ref{fig:interference}). Leaked responses score
 \statHBMedGemmaMayLeakBodhiAnalysisFormatLoRABodhiRedFlagLeaked{} on red-flag identification and
-the others \statHBMedGemmaMayLeakBodhiAnalysisFormatLoRABodhiRedFlagClean. The observation is
-weak. It does not survive Holm correction, and it does not repeat in the added cells
+the others \statHBMedGemmaMayLeakBodhiAnalysisFormatLoRABodhiRedFlagClean. This is weak: it does not
+survive Holm correction, and it does not repeat in the added cells
 (Appendix~\ref{app:perseed}), in the reruns on either base model, or on MedGemma-27B at the
 4,096-token context of the 2026-05 cell (\S\ref{sec:rerun}, H6 and H6c). Under the Phi-4 judge the
 same contrast reverses (\statHBMedGemmaMayJudgePhiFourRedFlagLoRABodhivsLoRADiff;
@@ -620,7 +627,7 @@ ask from simulated dialogue; we tested two single-turn protocols.
 \label{sec:limitations}
 
 \emph{Two base models for the new tests.} The tests of \S\ref{sec:rerun} ran on two base models
-with one fine-tuning method (LoRA). The second CoT protocol (ask-first) ran on Mistral-Small-24B
+(H9: two 7B students) with one fine-tuning method (LoRA). The second CoT protocol (ask-first) ran on Mistral-Small-24B
 only. The MedGemma-27B cells used other reply caps and, in part, another context length and GPU
 type (Appendix~\ref{app:rerun}). We make no claim about
 tasks with no missing information to seek, such as closed-form multiple choice, extraction or
@@ -642,18 +649,13 @@ were trained against a 4-bit base; in the 2026-07 cells they were evaluated on t
 \emph{Design.} Red-flag identification measures sensitivity only. The labelled test (H7) measures
 flags on cases that physicians judged not emergent, on one benchmark and with labels per prompt,
 not per response. The seeds do not vary the teacher traces, and decoding was greedy. We ran no
-ablation over $\tau$, rank or data size, and no arm without the filter, so we cannot attribute any
-effect to the filter.
+ablation over $\tau$, rank or data size. The filter test (H10) ran in one cell, and its intervals
+cannot rule out a small effect.
 
-\subsection{Future Work}
-\label{sec:future}
-
-\texttt{docs/RUN\_PLAN.md} has each item's command and cost. (1) Filter and teacher ablations, which test the BioMistral-7B
-hypothesis. (2) A judge check of the active-inquiry grade, which counts only after it agrees with
-hand labels that we have not yet made. (3) The grades of the other two physicians. (4) The
-contamination probe of Appendix~\ref{app:contamination}, with its outputs kept.
-Beyond the plan, training on both versions of a case, so that the filter rewards a question only
-where facts are missing, may teach when to ask; we have not tested it.
+\paragraph{Future work.}\label{sec:future} Two planned items have not run (\texttt{docs/RUN\_PLAN.md}): a
+judge check of the active-inquiry grade, which counts only after it agrees with hand labels that we
+have not made, and the grades of two more physicians. Untested: training on both versions of a
+case, so that the filter rewards a question only where facts are missing, may teach when to ask.
 
 \paragraph{Ethics and broader impact.} We use public benchmark data, with patient questions posted
 online (ChatDoctor) and no patient records. Before patient-facing use, the adapter needs a clinician
@@ -683,15 +685,42 @@ Funding: None declared.
 \section{Contamination Probe}
 \label{app:contamination}
 
-We tested whether MedGemma-27B had memorized \hbhard{} prompts in pretraining. The probe
-(\texttt{bodhi\_lora/pipeline/probe.py}) gives the base model the first 15 tokens of an
-\hbhard{} prompt and asks for a 25-token continuation. It then measures the exact-completion rate
-and the mean prefix overlap in tokens, on the sampled prompts that have at least 40 tokens. The
-run for the submitted version found no exact completion and no prefix overlap. We did not keep
-that run's output file, so no file in the repository supports its counts, and we do not rely on
-it: it is a check from an unretained run, not evidence of no memorization. A PubMedQA control gave
-no usable samples, because its questions are shorter than 40 tokens. A new run, with its output
-kept, is future work (\S\ref{sec:future}).
+We tested whether a base model had memorized the prompts that it was evaluated on. The probe
+(\texttt{bodhi\_lora/pipeline/probe.py}) gives the base model the first 15 tokens of a prompt and
+asks for a 25-token greedy continuation. It counts exact completions and the mean prefix overlap in
+tokens, on prompts with at least 40 tokens, and does the same on a control set from another source.
+Table~\ref{tab:probe} gives the run of 2026-11-01 on seven cells of Table~\ref{tab:cells} (R11 of
+\texttt{docs/RUN\_PLAN.md}) and on Mistral-7B (H9), with every output file kept. No model completed a
+prompt exactly, on its benchmark or on the control, and the mean overlap stays under one token, so
+Fisher's test cannot separate the two sets ($p = 1$ in every row). This probe detects only verbatim
+recall of prompt text: it shows no sign of memorization, not that there was none. MedQuAD is not
+probed, because its questions are shorter than 40 tokens. The probe of the submitted version also
+found no exact completion, but its output file was not kept.
+
+\begin{table}[h]
+\centering
+\caption{Contamination probe of each base model on its evaluation prompts and on a control set:
+prompts probed, exact completions and mean prefix overlap (tokens) of a 25-token continuation after
+a 15-token prefix.}
+\label{tab:probe}
+\scriptsize
+\begin{tabular}{lrrrlrr}
+\toprule
+ & \multicolumn{3}{c}{Evaluation prompts} & \multicolumn{3}{c}{Control} \\
+\cmidrule(lr){2-4}\cmidrule(lr){5-7}
+Prompts, base model & Probed & Exact & Overlap & Set & Exact & Overlap \\
+\midrule
+\hbhard{}, MedGemma-27B (2026-05) & \statHBMedGemmaMayProbeN & \statHBMedGemmaMayProbeExact & \statHBMedGemmaMayProbeOverlap & ChatDoctor & \statHBMedGemmaMayProbeControlExact & \statHBMedGemmaMayProbeControlOverlap \\
+\hbhard{}, Mistral-Small-24B & \statHBMistralJulProbeN & \statHBMistralJulProbeExact & \statHBMistralJulProbeOverlap & ChatDoctor & \statHBMistralJulProbeControlExact & \statHBMistralJulProbeControlOverlap \\
+ChatDoctor, Mistral-Small-24B & \statCDMistralJulProbeN & \statCDMistralJulProbeExact & \statCDMistralJulProbeOverlap & \hbhard{} & \statCDMistralJulProbeControlExact & \statCDMistralJulProbeControlOverlap \\
+MedQA, Mistral-Small-24B & \statMedQAPreMistralJulProbeN & \statMedQAPreMistralJulProbeExact & \statMedQAPreMistralJulProbeOverlap & \hbhard{} & \statMedQAPreMistralJulProbeControlExact & \statMedQAPreMistralJulProbeControlOverlap \\
+\hbhard{}, Med42-8B & \statHBMedFortyTwoJulProbeN & \statHBMedFortyTwoJulProbeExact & \statHBMedFortyTwoJulProbeOverlap & ChatDoctor & \statHBMedFortyTwoJulProbeControlExact & \statHBMedFortyTwoJulProbeControlOverlap \\
+ChatDoctor, Med42-8B & \statCDMedFortyTwoJulProbeN & \statCDMedFortyTwoJulProbeExact & \statCDMedFortyTwoJulProbeOverlap & \hbhard{} & \statCDMedFortyTwoJulProbeControlExact & \statCDMedFortyTwoJulProbeControlOverlap \\
+\hbhard{}, BioMistral-7B & \statHBBioMistralJulProbeN & \statHBBioMistralJulProbeExact & \statHBBioMistralJulProbeOverlap & ChatDoctor & \statHBBioMistralJulProbeControlExact & \statHBBioMistralJulProbeControlOverlap \\
+\hbhard{}, Mistral-7B (H9) & \statHBMistralSevenProbeN & \statHBMistralSevenProbeExact & \statHBMistralSevenProbeOverlap & ChatDoctor & \statHBMistralSevenProbeControlExact & \statHBMistralSevenProbeControlOverlap \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \section{Physician Check: Amended Protocol}
 \label{app:human}
@@ -1487,7 +1516,10 @@ and \statHBBioMistralJulLoopsLoRA{} LoRA replies do this, against \statHBBioMist
 replies. In the other added cells, at most \statMQMistralJulLoopsLoRA{} of
 \statMQMistralJulLoopsLoRAN{} adapter replies do (Mistral-Small-24B on MedQuAD). One base condition
 loops more: ChatDoctor with Med42-8B, \statCDMedFortyTwoJulLoopsBase{} of \statCDMedFortyTwoJulLoopsBaseN{} base
-replies, against \statCDMedFortyTwoJulLoopsLoRA{} LoRA replies. The MedGemma-27B cell kept the end of the
+replies, against \statCDMedFortyTwoJulLoopsLoRA{} LoRA replies. The H9 cells (\S\ref{sec:rerun}) keep the
+end of the reply in the loss. There, BioMistral-7B loops in \statHBBioMistralTeacherLoopsLoRA{} of
+\statHBBioMistralTeacherLoopsLoRAN{} LoRA replies but still in \statHBBioMistralTeacherLoopsLoRABodhi{} LoRA+BODHI
+replies, and Mistral-7B in at most \statHBMistralSevenLoopsLoRABodhi{} in any condition. The MedGemma-27B cell kept the end of the
 reply in the loss, except in rows longer than its maximum sequence length
 (Table~\ref{tab:hparams}), which were cut before the reply ended. The evaluation settings also differ. The context is 8,192 tokens
 instead of 4,096, and the server runs 64 concurrent sequences instead of 32. Every seed uses one
@@ -1554,8 +1586,9 @@ scores above Base on both (\statMQMistralJulScopeBoundingLoRA{} and
 under the teacher and \statMQMistralJulSpecificityLoRA{} under LoRA, so the adapter lowers
 specificity on MedQuAD. The earlier version quoted scope bounding and hedging only; it should
 have given specificity next to them. So the adapter does not copy every property of its teacher,
-and it has costs on single dimensions as well as on the aggregate score. We have no arm trained
-without the filter, so we cannot attribute this to the filter.
+and it has costs on single dimensions as well as on the aggregate score. This cell has no arm
+trained without the filter, so we cannot attribute this to the filter; the filter test (H10) ran on
+\hbhard{} only.
 
 \paragraph{MedQA cell.} The MedQA outputs come from one run. We made it before we removed a
 preamble that told the model to ask for missing information. In the
@@ -1591,7 +1624,7 @@ ended. Nothing in the plan or the analysis was chosen after it. Third, we wrote 
 of three planned tests (H3, H7 and H11) after the outputs existed, as the plan described them,
 and before we read their values.
 
-\paragraph{Settings.} Every cell uses Mistral-Small-24B-Instruct or MedGemma-27B, trained with
+\paragraph{Settings.} Every cell other than those of H9 uses Mistral-Small-24B-Instruct or MedGemma-27B, trained with
 4-bit QLoRA ($r{=}\statHBMistralRecipeRank$, $\alpha{=}\statHBMistralRecipeAlpha$ on seven
 projection types, \statHBMistralRecipeEpochs{} epochs) on the training stack of
 Appendix~\ref{app:generality}, now with the end of each reply in the loss. The filter kept
@@ -1603,7 +1636,7 @@ decoding and the adapter served unmerged on the 4-bit base. A one-call reply sto
 tokens, and at
 4,096 in the MedGemma-27B cells of Table~\ref{tab:hypotheses} other than H6c (the token cap, below). The cells ran
 on A100-80GB GPUs, except the MedGemma-27B \hbhard{} and NLM cells with replies of up to 4,096
-tokens, which ran on H100s of a shared host; every condition of a cell ran on one GPU type. In the \hbhard{} cells each seed
+tokens, and the H9 and H10 cells, which ran on H100s of a shared host; every condition of a cell ran on one GPU type. In the \hbhard{} cells each seed
 draws its own 200 prompts, and in the MediQ cells its own 200 pairs. The labelled cell evaluates the
 same \statHBMistralLabelledPrompts{} prompts in every seed, so there Base is the same in every seed,
 and its seed tests measure the spread of the adapters and the grader only. The prompt baselines run
@@ -1614,6 +1647,19 @@ question if not. With the fix, adapter replies loop as rarely as base replies: i
 Mistral-Small-24B \bodhi{} cell,
 \statHBMistralLoopsLoRA{} of \statHBMistralLoopsLoRAN{} LoRA replies, against \statHBMistralLoopsBase{}
 for Base.
+
+\paragraph{H9 and H10.} The H9 cells train Mistral-7B-Instruct-v0.3 on its own \bodhi{} traces, and
+BioMistral-7B on the traces of the Mistral-Small-24B \bodhi{} cell with their filter grades, with the
+recipe above, except that these 7B bases train in bfloat16, not 4-bit. The H10 cells train Mistral-Small-24B on the same traces, once on every trace and once
+on a random draw as large as the set that the filter kept. We wrote the analysis code of H9 and H10
+before any of their outputs existed. H10 compares adapters across cells: the filtered cell ran on
+A100s and the H10 cells on H100s, and greedy decoding can differ by a token between GPU types. Base,
+which no training touches, shows the size of this: it differs between the filtered cell and the
+random-draw cell by \statHypHTenHBMistralBaseActiveInquiryDiff{} pp in active inquiry
+(\statHypHTenHBMistralBaseActiveInquiryCI) and by \statHypHTenHBMistralBaseContextSeekingDiff{} in
+context-seeking. The two H10 cells evaluated the same prompts as the filtered cell in every seed, so
+the test pairs seed with seed. The plan names the H10 decisions ``the filter helps'' and ``no filter
+effect detected''; the tables print them as ``rises'' and ``no rise detected''.
 
 \begin{table}[!ht]
 \centering

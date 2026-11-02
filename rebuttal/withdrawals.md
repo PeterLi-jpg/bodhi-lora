@@ -159,7 +159,10 @@ HealthBench bases), and its filter clearance was the lowest (20.4% against 50.8%
 78%). Our hypothesis is that the recipe needs a teacher that produces demonstrations the filter
 keeps at a usable rate. We have not tested this hypothesis. One null cannot separate teacher
 strength from model size, instruction tuning, or a configuration that does not suit a 7B
-model. The table label is "null", not "scope cond.".
+model. The table label is "null", not "scope cond.". Tested 2026-11-01 (H9, E21): trained on
+Mistral-Small-24B's traces, BioMistral-7B passes H1's rule, and Mistral-7B on its own traces
+does not, so by the plan's reading the teacher caused the null; the paper says so (sections 4.1
+and 4.3).
 
 ---
 
@@ -683,6 +686,8 @@ paper must decide on each one.
   (`HomM_1_rebuttal.md:25`; `LxMF_1_rebuttal.md:76` says "the quality filter"), live paper `paper/main.tex:777-778`. The
   study has no unfiltered-SFT arm, so it cannot attribute the effect to the filter. A later
   post (`HomM_2_followup_part1.md:25`) leaves out the causal clause but does not withdraw it.
+  Tested 2026-11-01 (H10, E22): at a fixed count, a random draw of the same size gives the same
+  asking, so the claim stays withdrawn and the paper says that no filter effect was detected.
 - **"blanket disclaimers eliminated"** Submitted `main.tex:36`, live `paper/main.tex:78`,
   `:103`. This rests on 5 of 998 against 0 of 985 responses (Fisher p = 0.062, audit CLAIM-8).
 - **MedQuAD base hedging, 1.45 against 1.46.** Settled by the raw outputs; see W21.

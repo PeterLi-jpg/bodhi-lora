@@ -476,8 +476,8 @@ BioMistral-7B, general instruction tuning. (b)
 `healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b`: BioMistral trained on the
 filtered traces of the Mistral-Small-24B cell (`traces_from`). If (b) transfers, the null
 was the teacher; if (a) transfers and (b) does not, it is the student. GPU: yes, about 4
-H100-hours each (no trace generation for b). Status: built (`traces_from`), then to
-run.
+H100-hours each (no trace generation for b). Status: ran 2026-11-01 (D33). (b) passes H1's
+rule and (a) does not, so by the plan's reading the teacher caused the null (H9).
 
 **E22. Filter ablation.** Answers a posted claim the discussion never corrected ("the
 filter removes the teacher's failures before they reach the weights",
@@ -486,7 +486,8 @@ filter removes the teacher's failures before they reach the weights",
 and `__random-same-count` (a random sample as large as the filtered set). Contrasts on the
 dimensions where teacher and student differ (the selectivity table). GPU: yes, about 8
 H100-hours each (traces shared). Status: built (tau rules `none` and `random_same_count`;
-both cells reuse the filter grades of the E13 cell), then to run.
+both cells reuse the filter grades of the E13 cell). Status: ran 2026-11-01 (D33); no filter
+effect detected at a fixed count (H10), and none against every trace kept (H10u).
 
 **E23. Teacher-trace seed variance.** Answers REPRO-8, HomM-final (consolidation). Today
 seeds vary training and the eval draw, never the teacher traces (greedy decoding, one

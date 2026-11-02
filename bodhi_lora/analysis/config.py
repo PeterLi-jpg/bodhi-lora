@@ -300,7 +300,8 @@ class Display(_Record):
     """Names the tables print. A key without one prints as its id. `benchmarks` shortens
     the benchmark part of a cell label in a table with label_columns. `module_order` is
     the order in which the report names LoRA target modules (without _proj). `models`
-    names a model record in a table, such as a judge."""
+    names a model record in a table, such as a judge. `references` names the reference
+    cell of a cell_pair question in its table row (H10)."""
     weights: dict[str, str] = Field(default_factory=dict)
     models: dict[RegistryId, str] = Field(default_factory=dict)
     protocols: dict[RegistryId, str] = Field(default_factory=dict)
@@ -308,6 +309,7 @@ class Display(_Record):
     labels: dict[RegistryId, str] = Field(default_factory=dict)
     benchmarks: dict[str, str] = Field(default_factory=dict)
     module_order: list[str] = Field(default_factory=list)
+    references: dict[CellId, str] = Field(default_factory=dict)
 
 
 class ReportConfig(_Record):

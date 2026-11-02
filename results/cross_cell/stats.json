@@ -1834,9 +1834,74 @@
   "H10": {
    "cells": {
     "healthbench__mistral-small-24b__bodhi": {
-     "decision": null,
-     "not_measured": "no stats.json for the reference cell",
-     "outcomes": {}
+     "base_check": {
+      "active_inquiry": {
+       "ci95": [
+        -0.000873846,
+        0.0248738
+       ],
+       "diff": 0.012,
+       "n_seeds": 5,
+       "p": 0.0608129,
+       "p_adj": null
+      },
+      "context_seeking": {
+       "ci95": [
+        -0.0251193,
+        0.0271193
+       ],
+       "diff": 0.001,
+       "n_seeds": 5,
+       "p": 0.920463,
+       "p_adj": null
+      },
+      "rubric_score": {
+       "ci95": [
+        -0.00622562,
+        0.00540642
+       ],
+       "diff": -0.0004096,
+       "n_seeds": 5,
+       "p": 0.854506,
+       "p_adj": null
+      }
+     },
+     "decision": "no rise detected",
+     "outcomes": {
+      "active_inquiry": {
+       "ci95": [
+        -0.103688,
+        0.0756882
+       ],
+       "diff": -0.014,
+       "n_seeds": 5,
+       "p": 0.687078,
+       "p_adj": 1.0
+      },
+      "context_seeking": {
+       "ci95": [
+        -0.167573,
+        0.0975734
+       ],
+       "diff": -0.035,
+       "n_seeds": 5,
+       "p": 0.504203,
+       "p_adj": 1.0
+      }
+     },
+     "secondary": {
+      "rubric_score": {
+       "ci95": [
+        -0.00657394,
+        0.0103947
+       ],
+       "diff": 0.0019104,
+       "n_seeds": 5,
+       "p": 0.565757,
+       "p_adj": null
+      }
+     },
+     "test": "paired t over seeds"
     }
    },
    "family": false,
@@ -1848,9 +1913,74 @@
   "H10u": {
    "cells": {
     "healthbench__mistral-small-24b__bodhi": {
-     "decision": null,
-     "not_measured": "no stats.json for the reference cell",
-     "outcomes": {}
+     "base_check": {
+      "active_inquiry": {
+       "ci95": [
+        -0.0141929,
+        0.0381929
+       ],
+       "diff": 0.012,
+       "n_seeds": 5,
+       "p": 0.272294,
+       "p_adj": null
+      },
+      "context_seeking": {
+       "ci95": [
+        -0.0666526,
+        0.0186526
+       ],
+       "diff": -0.024,
+       "n_seeds": 5,
+       "p": 0.193257,
+       "p_adj": null
+      },
+      "rubric_score": {
+       "ci95": [
+        -0.00813309,
+        0.00600269
+       ],
+       "diff": -0.0010652,
+       "n_seeds": 5,
+       "p": 0.697117,
+       "p_adj": null
+      }
+     },
+     "decision": "no rise detected",
+     "outcomes": {
+      "active_inquiry": {
+       "ci95": [
+        -0.146825,
+        0.11189
+       ],
+       "diff": -0.0174674,
+       "n_seeds": 5,
+       "p": 0.72676,
+       "p_adj": 0.72676
+      },
+      "context_seeking": {
+       "ci95": [
+        -0.0930766,
+        0.405901
+       ],
+       "diff": 0.156412,
+       "n_seeds": 5,
+       "p": 0.156721,
+       "p_adj": 0.313442
+      }
+     },
+     "secondary": {
+      "rubric_score": {
+       "ci95": [
+        -0.00567477,
+        0.012954
+       ],
+       "diff": 0.0036396,
+       "n_seeds": 5,
+       "p": 0.33898,
+       "p_adj": null
+      }
+     },
+     "test": "paired t over seeds"
     }
    },
    "family": false,

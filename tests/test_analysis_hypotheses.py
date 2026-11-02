@@ -155,7 +155,10 @@ def test_committed_decisions_are_what_the_rules_give():
     cells = {c for h in cfg.hypotheses for c in [*h.cells, h.reference] if c}
     all_stats = {c: json.loads(p.read_text()) for c in cells
                  if (p := proj.cell(c).analysis() / "stats.json").is_file()}
-    fresh = json.loads(json.dumps(hypotheses_summary(all_stats, cfg, reg)))
+    from bodhi_lora.analysis.cross import same_prompts
+    pairs = {(c, h.reference) for h in cfg.hypotheses if h.rule == "cell_pair" for c in h.cells}
+    fresh = json.loads(json.dumps(hypotheses_summary(all_stats, cfg, reg,
+                                                     {pr: same_prompts(proj, reg, *pr) for pr in pairs})))
     committed = json.loads(path.read_text())["hypotheses"]
     assert {h: {c: r.get("decision") for c, r in v["cells"].items()} for h, v in fresh.items()} == \
         {h: {c: r.get("decision") for c, r in v["cells"].items()} for h, v in committed.items()}
@@ -248,6 +251,17 @@ def test_cell_pair_takes_welch_when_the_prompts_differ():
 
 def test_cell_pair_detects_no_rise_between_close_cells():
     assert cell_pair(FILTERED, SAME, ALPHA, same_prompts=True)["decision"] == "no rise detected"
+
+
+def test_cell_pair_runs_the_same_test_on_base():
+    stats = {"conditions": {**FILTERED["conditions"]}}
+    ref = {"conditions": {**LOWER["conditions"]}}
+    for s in (stats, ref):
+        for m in ("active_inquiry", "context_seeking", "rubric_score"):
+            s["conditions"][m] = {**s["conditions"][m], "base": {"per_seed": dict(zip(["42", "7", "13", "99", "101"], [0.1] * 5))}}
+    r = cell_pair(stats, ref, ALPHA, same_prompts=True)
+    assert r["base_check"]["active_inquiry"]["diff"] == pytest.approx(0.0)
+    assert r["decision"] == "rises"
 
 
 def test_cell_pair_needs_the_reference_and_the_eval_ids():

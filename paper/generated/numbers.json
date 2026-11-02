@@ -153,6 +153,24 @@
       "stats": "results/healthbench__mistral-small-24b__bodhi__labelled/analysis/stats.json",
       "token": "HBMistralLabelled"
     },
+    "healthbench__mistral-small-24b__bodhi__random-same-count": {
+      "detail": false,
+      "family_waiver": null,
+      "in_cross_cells": false,
+      "label": "HealthBench-Hard, Mistral-Small-24B, a random sample as large as the filtered set",
+      "set_aside": null,
+      "stats": "results/healthbench__mistral-small-24b__bodhi__random-same-count/analysis/stats.json",
+      "token": "HBMistralRandomCount"
+    },
+    "healthbench__mistral-small-24b__bodhi__unfiltered": {
+      "detail": false,
+      "family_waiver": null,
+      "in_cross_cells": false,
+      "label": "HealthBench-Hard, Mistral-Small-24B, every trace kept",
+      "set_aside": null,
+      "stats": "results/healthbench__mistral-small-24b__bodhi__unfiltered/analysis/stats.json",
+      "token": "HBMistralUnfiltered"
+    },
     "mediq-paired__medgemma-27b-text__bodhi": {
       "detail": false,
       "family_waiver": null,
@@ -247,7 +265,7 @@
   "inputs": {
     "results/chatdoctor__med42-8b__bodhi__2026-07/analysis/stats.json": "ab021e240aa9c988b84246516269b3c151e40a82f38630665b4311171dc39c91",
     "results/chatdoctor__mistral-small-24b__bodhi__2026-07/analysis/stats.json": "8175c09bc43792bbae5f8fc6e99ecca96710cb49e029e0ceff746e1f39428157",
-    "results/cross_cell/stats.json": "274d4555ae59cf788b0e47d6c2bae22dc8479394200e283663a2c5edfd3025b0",
+    "results/cross_cell/stats.json": "0b1f6bd2ff84687f6a4e89dc065bac47d6884c49bf4bb91d8f11b32a9e85b85e",
     "results/healthbench__biomistral-7b__bodhi__2026-07/analysis/stats.json": "2a7c5dc19c6f9451725d56a8c03eedebf1e3473025b7c3334a64cf574fafb9f8",
     "results/healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b/analysis/stats.json": "e010928a881952062753e822ce640c029c1248fa07e607048252f7f93dd470c4",
     "results/healthbench__med42-8b__bodhi__2026-07/analysis/stats.json": "074f604bae717c559b19fb550da396bd7f429b04d315dd801ebd8730487bfe4b",
@@ -263,6 +281,8 @@
     "results/healthbench__mistral-small-24b__bodhi/analysis/stats.json": "a4de57f97eec0622845105e3ef08b5a28529496d1c9e7a715b6e83f386aeef3b",
     "results/healthbench__mistral-small-24b__bodhi__2026-07/analysis/stats.json": "972e74884c560608404913e8f5827a193b25226b47d41b4c31cd7db42798063a",
     "results/healthbench__mistral-small-24b__bodhi__labelled/analysis/stats.json": "ff0e0e9cb2fea6c375ac87c1bac6d544c8e768f013c2aa04a621e9f6cb899ebd",
+    "results/healthbench__mistral-small-24b__bodhi__random-same-count/analysis/stats.json": "f112fd6c457809a110562567f03a30702ca0b2103dc7b180e48a63d742c2b6ec",
+    "results/healthbench__mistral-small-24b__bodhi__unfiltered/analysis/stats.json": "3c612a127ea41b2350f6f6ed989817af0808bb6e190d7d4b37ab7f4a5393a19a",
     "results/mediq-paired__medgemma-27b-text__bodhi/analysis/stats.json": "cefb1171633a02ca8ab14724f4b52c50bd950378948284ec59cb5c128d22b619",
     "results/mediq-paired__medgemma-27b-text__bodhi__cap4096/analysis/stats.json": "90b73c2e269ac9abedd32efffd2896e65c17f34d1c58cd730fb950183d2be17f",
     "results/mediq-paired__mistral-small-24b__ask-first/analysis/stats.json": "d6fd103e0bdf324434e2d6afd053feac3a53f72b91e7e7989da92169e1697038",
@@ -274,7 +294,7 @@
     "results/nlm-clinical-questions__medgemma-27b-text__bodhi__cap4096/analysis/stats.json": "4fc6a34335558f7d9b747b089f2701c34ce9e8d5f54453cc3ef54ee0a6e15255",
     "results/nlm-clinical-questions__mistral-small-24b__bodhi/analysis/stats.json": "83145f5e853d3a1d26411f132576041354c6d0753222b6b507ed52fc18bb85b7"
   },
-  "macros": 46742,
+  "macros": 47606,
   "not_reported": {},
   "tables": [
     "tab_axes_HBMedGemmaMay",
@@ -296,7 +316,9 @@
     "tab_cell_HBMistralAskFirst",
     "tab_cell_HBMistralJul",
     "tab_cell_HBMistralLabelled",
+    "tab_cell_HBMistralRandomCount",
     "tab_cell_HBMistralSeven",
+    "tab_cell_HBMistralUnfiltered",
     "tab_cell_MQMistralJul",
     "tab_cell_MedQAPreBioMistralJul",
     "tab_cell_MedQAPreMistralJul",
