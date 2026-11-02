@@ -229,7 +229,8 @@ D-numbers refer to [DECISIONS.md](DECISIONS.md). Issue numbers such as #5 are Gi
   checks only that each planned cell is named in docs/ANALYSIS_PLAN.md and that the plans
   name no cell without a record.
 - **`analyze` does not compute every planned statistic yet.** The judges' harm grades
-  (C33) and the contrasts between cells (H9, H10, E24) are missing, and so is the tool
+  (C33) and the contrasts between cells of E24 are missing (H10's, `cell_pair`, exists since
+  2026-11-01; H9 uses H1's rule in each cell), and so is the tool
   that draws the 300 replies for R17's hand labels (docs/ARCHITECTURE.md section 7). Each
   is needed only once its cell has run. The paired-probe statistics (E14) and the
   declared contrasts of H5 and H6 (since 2026-10-10), and the H8 judge analysis and the

@@ -686,16 +686,16 @@ Funding: None declared.
 \label{app:contamination}
 
 We tested whether a base model had memorized the prompts that it was evaluated on. The probe
-(\texttt{bodhi\_lora/pipeline/probe.py}) gives the base model the first 15 tokens of a prompt and
-asks for a 25-token greedy continuation. It counts exact completions and the mean prefix overlap in
+(\texttt{bodhi\_lora/pipeline/probe.py}) gives the base model the first 15 tokens of a prompt, with no
+chat template, and asks for a 25-token greedy continuation. It counts exact completions and the mean prefix overlap in
 tokens, on prompts with at least 40 tokens, and does the same on a control set from another source.
 Table~\ref{tab:probe} gives the run of 2026-11-01 on seven cells of Table~\ref{tab:cells} (R11 of
 \texttt{docs/RUN\_PLAN.md}) and on Mistral-7B (H9), with every output file kept. No model completed a
 prompt exactly, on its benchmark or on the control, and the mean overlap stays under one token, so
 Fisher's test cannot separate the two sets ($p = 1$ in every row). This probe detects only verbatim
 recall of prompt text: it shows no sign of memorization, not that there was none. MedQuAD is not
-probed, because its questions are shorter than 40 tokens. The probe of the submitted version also
-found no exact completion, but its output file was not kept.
+probed, because its questions are shorter than 40 tokens. The probe of the submitted version, which
+prompted in chat mode, also found no exact completion, but its output file was not kept.
 
 \begin{table}[h]
 \centering
@@ -1652,14 +1652,19 @@ for Base.
 BioMistral-7B on the traces of the Mistral-Small-24B \bodhi{} cell with their filter grades, with the
 recipe above, except that these 7B bases train in bfloat16, not 4-bit. The H10 cells train Mistral-Small-24B on the same traces, once on every trace and once
 on a random draw as large as the set that the filter kept. We wrote the analysis code of H9 and H10
-before any of their outputs existed. H10 compares adapters across cells: the filtered cell ran on
+before any of their replies were evaluated. H10 compares adapters across cells: the filtered cell ran on
 A100s and the H10 cells on H100s, and greedy decoding can differ by a token between GPU types. Base,
 which no training touches, shows the size of this: it differs between the filtered cell and the
 random-draw cell by \statHypHTenHBMistralBaseActiveInquiryDiff{} pp in active inquiry
 (\statHypHTenHBMistralBaseActiveInquiryCI) and by \statHypHTenHBMistralBaseContextSeekingDiff{} in
 context-seeking. The two H10 cells evaluated the same prompts as the filtered cell in every seed, so
 the test pairs seed with seed. The plan names the H10 decisions ``the filter helps'' and ``no filter
-effect detected''; the tables print them as ``rises'' and ``no rise detected''.
+effect detected''; the tables print them as ``rises'' and ``no rise detected''. The MedGemma-27B judge
+finds both rises in the Mistral-7B cell (active inquiry
+\statHBMistralSevenJudgeMedgemmaTwoSevenbTextActiveInquiryLoRAvsBaseDiff{} pp, $p_{\text{Holm}} =
+\statHBMistralSevenJudgeMedgemmaTwoSevenbTextActiveInquiryLoRAvsBasePHolm$; Table~\ref{tab:judges}), where the
+evaluator's rises do not pass Holm correction. The evaluator decides H9, and under either grader the
+plan's reading puts the null on the teacher.
 
 \begin{table}[!ht]
 \centering
@@ -1667,6 +1672,8 @@ effect detected''; the tables print them as ``rises'' and ``no rise detected''.
 each cell's first row. Notation as in Table~\ref{tab:hypotheses}. For H3, the second row of each
 cell is LoRA $-$ Base on the asking rate of the complete versions, which the mimicry rule reads.
 For H6, the second row is the plan's primary test, read only if the first row shows a drop. For
+H10 and H10u, the difference is the filtered adapter minus the named one, with $p$ Holm-adjusted over
+the two asking outcomes. For
 H7, the second row is a secondary outcome, the same rate on the emergent prompts, with its paired
 $t$. Questions marked k: the MedGemma-27B cells with replies of up to 1,024 tokens (the token cap,
 below).}

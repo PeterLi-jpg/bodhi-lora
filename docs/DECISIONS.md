@@ -338,7 +338,7 @@ The first author asked on 2026-11-01 to "do everything" and to take the shared h
 were free on the lease and idle. GPUs 5 to 7 were leased as `bohdi` at 17:25 UTC and the runs used a
 fresh checkout at f76b10c (`/data/PROJECTS/bohdi/runs-2026-11`), with the R2 traces and filter
 outputs copied in after a sha256 match with this repository's copies. The analysis code of H9 and
-H10 (`cell_pair`) was committed (89d49ab) before any of their outputs existed. To finish sooner, the
+H10 (`cell_pair`) was committed (89d49ab, 17:58 UTC) before any of their replies were evaluated (the first eval began at 18:40 UTC). To finish sooner, the
 last three seeds of `healthbench__mistral-small-24b__bodhi__random-same-count` moved from one card
 to three after seed 7 had finished training, so no training was cut and resumed; those seeds were
 evaluated on per-seed servers, every condition of a seed on one server. Every cell ran on H100s,
