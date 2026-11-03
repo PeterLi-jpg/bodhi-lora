@@ -1,6 +1,9 @@
-"""The repository tools around the paper's numbers: the macro check and the tracked
-score copies (scripts/check_paper_macros.py, scripts/export_derived_inputs.py)."""
+"""The repository tools around the paper's numbers: the macro check, the tracked score
+copies and the doc path check (scripts/check_paper_macros.py,
+scripts/export_derived_inputs.py, scripts/check_doc_paths.py)."""
 import json
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -56,3 +59,25 @@ def test_check_paper_macros_names_missing(tmp_path, monkeypatch, capsys):
     assert cm.main() == 1
     out = capsys.readouterr().out
     assert name in out and "1 macro(s) not in" in out
+
+
+def test_check_doc_paths_accepts_only_the_paths_the_copy_withheld(tmp_path):
+    """The anonymous copy drops internal files that its docs still name. The list of them
+    excuses those paths and no others."""
+    (tmp_path / "scripts").mkdir()
+    shutil.copy(ROOT / "scripts" / "check_doc_paths.py", tmp_path / "scripts")
+    (tmp_path / "README.md").write_text("See `docs/GONE.md`, `hooks/run.sh` and `scripts/check_doc_paths.py`.\n")
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "add", "-A"], cwd=tmp_path, check=True)
+
+    def check():
+        return subprocess.run([sys.executable, "scripts/check_doc_paths.py"], cwd=tmp_path,
+                              capture_output=True, text=True)
+
+    first = check()
+    assert first.returncode == 1 and "docs/GONE.md" in first.stdout and "hooks/run.sh" in first.stdout
+    (tmp_path / "WITHHELD_PATHS.txt").write_text("docs/GONE.md\n")
+    second = check()
+    assert second.returncode == 1 and "docs/GONE.md" not in second.stdout and "hooks/run.sh" in second.stdout
+    (tmp_path / "WITHHELD_PATHS.txt").write_text("docs/GONE.md\nhooks/\n")
+    assert check().returncode == 0

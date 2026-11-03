@@ -54,6 +54,11 @@ TEXTT = re.compile(r"\\texttt\{([^{}]*)\}")
 # Paths the docs name that are not in the repo yet. Each entry is a promise, not
 # a file: the check warns when one exists, so the entry can be removed.
 PENDING: dict[str, str] = {}
+# The anonymous copy drops internal files that its docs still name, and lists them in
+# this file (scripts/export_anonymous.sh). This repository has no such file.
+WITHHELD = ROOT / "WITHHELD_PATHS.txt"
+if WITHHELD.exists():
+    PENDING.update((line, "withheld from the anonymous copy") for line in WITHHELD.read_text().splitlines())
 
 TOP_FILES_EXT = (".sh", ".md", ".txt", ".py", ".toml", ".cfg", ".yaml", ".yml")
 # A relative path ending in one of these is checked even when its first folder is

@@ -72,6 +72,8 @@ sha="$(git -C "$repo" rev-parse --verify "${ref}^{commit}")"
 echo "export: ${ref} (${sha:0:9}) -> $out"
 git -C "$repo" archive --format=tar "$sha" | tar -x -C "$out"
 for p in "${EXCLUDE[@]}"; do
+    # The docs still name what goes, so scripts/check_doc_paths.py reads this list.
+    if [ -d "$out/$p" ]; then echo "$p/"; else echo "$p"; fi >> "$out/WITHHELD_PATHS.txt"
     rm -rf "${out:?}/$p"
 done
 
@@ -303,5 +305,8 @@ if [ "$make_git" -eq 1 ]; then
         bash -c 'cd "$1" && git init -q -b main && git add -A --force \
             && git -c core.hooksPath=/dev/null -c commit.gpgsign=false commit -q -m "Anonymous code release"' _ "$out"
     echo "git: one commit in $out ($(git -C "$out" rev-parse --short HEAD))"
+    # A reader's first command must pass on the copy itself, not only in this repository.
+    PYTHONDONTWRITEBYTECODE=1 make -C "$out" check \
+        || { echo "export: make check fails on the copy" >&2; exit 1; }
 fi
 echo "export done: $out"
