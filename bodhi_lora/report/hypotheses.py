@@ -118,7 +118,9 @@ def judge_table(all_stats: dict, order: list[str], reg: Registry, cfg: ReportCon
                          escape(cell.report.label.split(", ")[1])]
             else:
                 label = n.cell_parts(cell.report.label)
-            blocks[rerun].append([*label, escape(n.d.models.get(jid, jid)) + marks(cell),
+            # The mark belongs to the base model (its family is the evaluator's), not to the judge.
+            label[-1] += marks(cell)
+            blocks[rerun].append([*label, escape(n.d.models.get(jid, jid)),
                          fmt(j.get("criterion_kappa"), 2), fmt_ci(j.get("criterion_kappa_ci95"), 2, sign=False),
                          *decisions, f"{reversed_} of {len(tested)}"])
     header = [["Prompts", "Base model", "Judge", "$\\kappa$, criteria", "95\\% CI",
