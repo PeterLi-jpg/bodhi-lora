@@ -169,12 +169,17 @@ def test_the_short_hypothesis_table_leaves_out_appendix_only_questions(setup):
 
 def test_the_committed_paper_numbers_are_what_the_report_writes(setup, tmp_path):
     """paper/generated/ is current: a fresh report writes the same bytes, and no other
-    tab_*.tex is left over. CI checks the same with make numbers and git diff."""
+    tab_*.tex or numbers_*.tex is left over. CI checks the same with make numbers and git diff."""
     reg, cfg, proj, rep = setup
     written = write(rep, tmp_path)
     for name in written:
         assert (tmp_path / name).read_bytes() == (GENERATED / name).read_bytes(), name
-    assert sorted(p.name for p in GENERATED.glob("tab_*.tex")) == sorted(n for n in written if n.startswith("tab_"))
+    for prefix in ("tab_", "numbers_"):
+        assert (sorted(p.name for p in GENERATED.glob(f"{prefix}*.tex"))
+                == sorted(n for n in written if n.startswith(prefix)))
+    # The anonymous reviewer mirror does not serve a file over 8 MB.
+    for name in written:
+        assert (GENERATED / name).stat().st_size < 8 * 2**20, name
 
 
 def test_every_macro_names_its_source_and_no_absolute_path(setup, tmp_path):
@@ -185,7 +190,9 @@ def test_every_macro_names_its_source_and_no_absolute_path(setup, tmp_path):
     home = re.compile(r"/(Users|home)" + r"/[A-Za-z]")
     for path in tmp_path.iterdir():
         assert not home.search(path.read_text()), path.name
-    for line in (tmp_path / "numbers.tex").read_text().splitlines():
+    lines = [line for path in sorted(tmp_path.glob("numbers_*.tex")) for line in path.read_text().splitlines()]
+    assert sum(line.startswith("\\newcommand") for line in lines) == len(rep.macros)
+    for line in lines:
         if line.startswith("\\newcommand"):
             assert re.search(r"\} % \S", line), line
 

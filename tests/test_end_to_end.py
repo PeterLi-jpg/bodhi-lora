@@ -177,4 +177,4 @@ def test_a_new_cell_reaches_table_one_its_macros_and_the_counts(run):
     for kind in ("conditions", "dimensions", "contrasts", "counts", "worst_case", "bootstrap", "gap"):
         assert (out / f"tab_{kind}_{t}.tex").is_file(), kind
     assert (out / "tab_cell_detail_1.tex").is_file() and (out / f"tab_cell_{t}.tex").is_file()
-    assert (out / "numbers.tex").read_text().count("\\newcommand") == len(rep.macros)
+    assert sum(p.read_text().count("\\newcommand") for p in out.glob("numbers_*.tex")) == len(rep.macros)

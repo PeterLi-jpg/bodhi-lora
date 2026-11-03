@@ -42,14 +42,17 @@ def test_derived_inputs_match_their_sources(tmp_path, which):
 
 def test_check_paper_macros_names_missing(tmp_path, monkeypatch, capsys):
     from scripts import check_paper_macros as cm
-    full = (ROOT / "paper" / "generated" / "numbers.tex").read_text()
-    assert cm.main() == 0
-    # Drop one macro the paper uses: the check must fail and name it.
+    parts = sorted((ROOT / "paper" / "generated").glob("numbers_*.tex"))
+    full = "".join(p.read_text() for p in parts)
+    assert parts and cm.main() == 0
+    # Drop one macro the paper uses: the check must fail and name it, and only it.
     name = "statHBMedGemmaMayFilterTrainSplit"
+    assert f"\\newcommand{{\\{name}}}" in full
     cut = "\n".join(line for line in full.splitlines() if not line.startswith(f"\\newcommand{{\\{name}}}"))
     (tmp_path / "numbers.tex").write_text(cut)
     monkeypatch.setattr(cm, "NUMBERS", tmp_path / "numbers.tex")
     monkeypatch.setattr(cm, "ROOT", ROOT)
     capsys.readouterr()
     assert cm.main() == 1
-    assert name in capsys.readouterr().out
+    out = capsys.readouterr().out
+    assert name in out and "1 macro(s) not in" in out

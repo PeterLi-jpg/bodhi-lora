@@ -1,5 +1,5 @@
 # One command from the committed results to the paper's numbers, figures and PDF.
-#   make report    paper/generated/{numbers.tex,numbers.json,tab_*.tex}, from each cell's
+#   make report    paper/generated/{numbers*.tex,numbers.json,tab_*.tex}, from each cell's
 #                  analysis/stats.json and the cross-cell statistics (make numbers is the same)
 #   make figures   paper/figures/*.pdf, for the first detail cell of configs/report.yaml
 #   make paper     both, then paper/build/main.pdf

@@ -42,7 +42,7 @@ environments for real runs.
 
 | In the paper | File | Made by | From |
 |---|---|---|---|
-| Every number in the text (`\stat...` macros) | `paper/generated/numbers.tex` | `make numbers` | each cell's `results/<cell_id>/analysis/stats.json` and `results/cross_cell/stats.json` |
+| Every number in the text (`\stat...` macros) | `paper/generated/numbers_<n>.tex`, which `numbers.tex` inputs | `make numbers` | each cell's `results/<cell_id>/analysis/stats.json` and `results/cross_cell/stats.json` |
 | Table 1, every cell | `paper/generated/tab_cross_cell.tex` | `make numbers` | the same two kinds of file, and the groups of `configs/report.yaml` |
 | Appendix tables (B, C, E, G, H, J) | `paper/generated/tab_*.tex` | `make numbers` | the same |
 | Figure 1 | `paper/figures/pipeline.pdf` (tracked) | `make figures` | `paper/figures/pipeline_standalone.tex` |

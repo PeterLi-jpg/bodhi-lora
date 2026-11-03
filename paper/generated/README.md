@@ -7,8 +7,12 @@ report writes).
 
 ## Files
 
-- `numbers.tex` holds one `\newcommand` per number. Each macro name starts with
-  `\stat`, and a comment on each line names the statistic it comes from.
+- `numbers_<n>.tex` hold one `\newcommand` per number, 10,000 to a file, and
+  `numbers.tex` inputs them all. Each macro name starts with `\stat`, and a comment on
+  each line names the statistic it comes from. The split keeps every file under the
+  8 MB that the anonymous reviewer mirror serves. A document outside `paper/` sets
+  `\numbersdir` to this folder before it inputs `numbers.tex`, as
+  `paper/figures/pipeline_standalone.tex` does.
 - `numbers.json` is the record of the report: the cells it read, the sha256 of each
   input, the tables and the macro count.
 - `tab_*.tex` are complete `tabular` blocks. The paper keeps its own `table` float,

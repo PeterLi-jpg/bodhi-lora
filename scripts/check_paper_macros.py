@@ -1,4 +1,5 @@
-"""Check that every \\stat macro the paper uses is defined in paper/generated/numbers.tex.
+"""Check that every \\stat macro the paper uses is defined in paper/generated/numbers.tex
+or one of the parts it inputs (numbers_<n>.tex).
 
 `make numbers` leaves out the macros of a section whose input is missing. LaTeX then
 stops on the first undefined one, with a message that does not name the input. This
@@ -21,7 +22,9 @@ NUMBERS = ROOT / "paper" / "generated" / "numbers.tex"
 
 
 def main() -> int:
-    defined = set(re.findall(r"\\newcommand\{\\(stat[A-Za-z]+)\}", NUMBERS.read_text()))
+    numbers = [NUMBERS] + sorted(NUMBERS.parent.glob("numbers_*.tex"))
+    defined = {name for path in numbers
+               for name in re.findall(r"\\newcommand\{\\(stat[A-Za-z]+)\}", path.read_text())}
     missing = {}
     for rel in SOURCES:
         path = ROOT / rel

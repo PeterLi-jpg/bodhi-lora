@@ -490,7 +490,7 @@ def analyze_cross(reg, report_cfg=None, proj=None) -> dict    # every cell's sta
 
 # bodhi_lora.report (python -m bodhi_lora report; make numbers)
 def report(reg, cfg, proj) -> Report   # every stats.json -> macros, tables, record for paper/generated/
-def write(rep: Report, out_dir: Path) -> list[str]   # numbers.tex, numbers.json, tab_*.tex
+def write(rep: Report, out_dir: Path) -> list[str]   # numbers.tex, numbers_<n>.tex, numbers.json, tab_*.tex
 ```
 
 ### 4.2 Serving on one GPU

@@ -4,7 +4,8 @@
 \usepackage{xcolor}
 \usetikzlibrary{arrows.meta, positioning, fit, backgrounds, matrix, calc}
 % Counts come from the same generated macros as the paper (make numbers), so the
-% figure cannot drift from the data.
+% figure cannot drift from the data. numbers.tex inputs its parts from \numbersdir.
+\newcommand{\numbersdir}{../generated/}
 \input{../generated/numbers}
 
 % ── Palette (Tol bright, matches every other figure in the paper) ────────────
