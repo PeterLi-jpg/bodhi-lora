@@ -16,8 +16,8 @@ decision 8; docs/DECISIONS.md D16). Ask the raters about consent first (EVAL-6).
 
 It does not remove:
 
-- MedGemma weights and optimizer state on `origin/results-temp`. Delete that branch with
-  `prune_branches.sh` (step 0).
+- MedGemma weights and optimizer state that were on `origin/results-temp`. That branch
+  was deleted on 2026-11-03, but its commits stay in existing clones and caches.
 - Local-only refs in the working repo (step 9).
 - Clones, forks and caches that already exist. GitHub keeps pull-request refs and
   cached views until GitHub Support purges them (step 8).

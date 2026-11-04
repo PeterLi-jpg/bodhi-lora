@@ -42,8 +42,8 @@ each one's status.
   format. Eval ran with vLLM on one A100-80GB on Modal. The launchers are frozen in
   `legacy/`.
 - LoRA rank 8 and alpha 16, from repo evidence: the export step in the tunix launcher
-  passes `--r 8 --alpha 16`, and the only committed adapter (commit `607440e`, branch
-  `results-temp`) has r=8 and alpha=16. **This cannot be confirmed** against the
+  passes `--r 8 --alpha 16`, and the only committed adapter (commit `607440e`; its config is
+  `results/healthbench__medgemma-27b-text__bodhi__2026-04/seed_42/train/adapter_config.json`) has r=8 and alpha=16. **This cannot be confirmed** against the
   `adapter_config.json` of the five submitted adapters: the GCS bucket that held them
   returned 404 on 2026-10-08, and the adapters are treated as not retained (D19,
   section 7). The early committed adapter comes from an HF-path run on 838 traces (the

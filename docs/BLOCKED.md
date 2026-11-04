@@ -156,28 +156,20 @@ planned run.
 
 ## 4. Remote cleanup (needs your yes)
 
-Why: D16 keeps remote changes yours. None of this ran. The repository stays public, and
-there is no privacy purge (D18).
+Why: D16 keeps remote changes yours. Only item 3 is left. The repository stays public,
+and there is no privacy purge (D18).
 
-1. **Push.** `git push origin cleanup/resubmission` runs CI on this work for the first
-   time. The CI step that downloads HealthBench, runs `make numbers` and diffs
-   `paper/generated/` has never run off this machine. Check it with `gh pr checks` or the
-   Actions tab.
-2. **Delete the scratch branches.** Done on 2026-10-11: the remote scratch branches (the
-   name prefixes that `hooks/pre-push` rejects) are deleted.
-   `scripts/maintenance/prune_branches.sh --apply` also deletes the temp branches and the
-   branches already merged into the mainline; this checkout has not fetched since, so
-   whether those went too is not confirmed here. One temp branch, `origin/results-temp`,
-   holds the 2026-04 pilot adapter (seed 42, 838 traces), not a submitted adapter. Its
-   weights have the same git blob as the local copy in
-   `results/healthbench__medgemma-27b-text__bodhi__2026-04/seed_42/train/`. Keep
-   `origin/results-scaffold`: it is the only branch that holds aa7eec4, the commit that
-   dates the physician-check plan to 2026-04-29 (`paper/NUMBERS.md`, withdrawals W19). The
-   prune script lists it as unmerged and does not delete it.
+1. **Push.** Done: the branch is on the remote, and CI, with its step that rebuilds
+   `paper/generated/` from a clean checkout, passes on draft PR #268.
+2. **Delete the old branches.** Done. The scratch branches went on 2026-10-11 and the
+   other 103 on 2026-11-03 (D34). The remote keeps `main`, this branch, `review` and
+   `origin/results-scaffold`. Keep that last one: it is the only branch that holds aa7eec4,
+   the commit that dates the physician-check plan to 2026-04-29 (`paper/NUMBERS.md`,
+   withdrawals W19). The 2026-04 pilot adapter (seed 42, 838 traces) from the deleted
+   `results-temp` is in `results/healthbench__medgemma-27b-text__bodhi__2026-04/seed_42/train/`, same git blob.
 3. **Remove the two tool trailers** (`def7eee` and its twin `9a0dbd6`), and nothing else
    (D18). On 2026-10-11 you asked for this purge. It is not done: it rewrites the history
-   of `main` and of this branch (`def7eee` is in 20 refs, local and remote, the stash
-   among them; `9a0dbd6` is in `origin/results-scaffold`, after aa7eec4, which keeps its
+   of `main` and of this branch (`def7eee` is on `main` and this branch; `9a0dbd6` is in `origin/results-scaffold`, after aa7eec4, which keeps its
    id), and it needs a force-push, so it waits for your yes on each. The four other
    `Co-authored-by` lines in history name a human collaborator and stay. Follow
    `scripts/maintenance/purge_history.md` with five changes: skip steps 2 and 3 (no name
@@ -195,15 +187,9 @@ there is no privacy purge (D18).
    `CONTRIBUTING.md`, `docs/INSTALL.md`, `pyproject.toml` and
    `scripts/maintenance/purge_history.md` were updated. Left in each clone: `git remote
    set-url origin git@github.com:PeterLi-jpg/bodhi-lora.git` (GitHub redirects meanwhile).
-5. **Local-only refs.** Check, then delete, the backup refs and tags that
-   `scripts/maintenance/purge_history.md` step 9 lists. Run `git worktree prune` for the
-   stale `/private/tmp/bohdi-main` entry. The merged branches `cleanup/lane-*` can go with
-   `git branch -d`. One stash is left, `stash@{0}`, "interrupted integrator WIP 2026-10-09
-   (paper table fitting)", on 176475f: it changes `paper/main.tex` (462 lines),
-   `paper/generated/numbers.tex`, `paper/generated/numbers.json` and the removed
-   `b533908:scripts/paper_stats.py`. Its paper text is older than the current tables.
-   Drop it (`git stash drop`) or recover what you need from it before the purge, which
-   rewrites it too.
+5. **Local-only refs.** Done 2026-11-03 (D34): the backup refs and tags, the stale
+   worktree entry, the stash and the local branches are gone. Step 9 of
+   `scripts/maintenance/purge_history.md` has nothing left to check here.
 
 ## 5. The hooks path (done 2026-10-11 in this clone)
 

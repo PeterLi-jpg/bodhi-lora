@@ -347,3 +347,19 @@ the outputs existed, descriptive only) gives the size of that difference. All ce
 sha256-checked (527 and 288 files). The leases of GPUs 6 and 7 were released after the runs; 5 is
 kept.
 
+### D34. The old branches (2026-11-03)
+
+The first author said to merge the old branches that are good and delete the rest. None was
+merged. Every patch on them is already on this branch, or changes the TPU, MaxText and Tunix
+code that this branch replaced and keeps in `legacy/` only as a record of what ran. That
+includes the two open PRs, #195 and #249, which were closed. `workshop-analysis-suite`, the one
+branch with new analysis code and no PR, reads the old TPU output layout and the rebuilt
+analysis does not use it.
+
+103 remote and 60 local branches were deleted. `results-scaffold` stays, because `paper/NUMBERS.md`
+cites aa7eec4 on it. Before the deletion, a clone with only the kept refs passed
+`scripts/check_doc_paths.py` and `tests/test_migration_provenance.py`, and the pilot adapter from
+`results-temp` was checked byte for byte against the local copy. Every old ref is in a git bundle
+kept outside the repository, opened and checked ref by ref first. Commit ids that tracked files cite
+and no kept branch reaches stay in this clone under `refs/keep/`; pull-request refs on GitHub
+hold most of them too.
