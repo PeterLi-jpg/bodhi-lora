@@ -1,0 +1,54 @@
+{
+  "schema": 3,
+  "stage": "traces",
+  "cell": "healthbench__mistral-small-24b__bodhi__unfiltered",
+  "seed": null,
+  "created_utc": "2026-11-01T17:25:20.420408+00:00",
+  "git": {
+    "sha": "f76b10cc471cbd7648529f2df2310de63c3dff32",
+    "dirty": false,
+    "diff_sha256": null,
+    "n_untracked": 3
+  },
+  "packages": {
+    "python": "3.12.3",
+    "torch": "2.8.0",
+    "transformers": "4.56.2",
+    "vllm": "0.10.2",
+    "peft": null,
+    "trl": null,
+    "accelerate": null,
+    "bitsandbytes": "0.47.0",
+    "datasets": "5.0.0",
+    "bodhi-llm": "0.1.4",
+    "huggingface-hub": "0.36.2",
+    "numpy": "2.2.6"
+  },
+  "host_sha256": "e57f9913e18993f3b7eea3afa676d9d0ae3c5a04f647be54a2f28299b57e4149",
+  "hardware": {
+    "visible_devices": "5",
+    "gpus": [
+      {
+        "index": "5",
+        "name": "NVIDIA H100 80GB HBM3",
+        "memory": "81559 MiB"
+      }
+    ]
+  },
+  "time": {
+    "started_utc": "2026-11-01T17:25:20.420373+00:00",
+    "finished_utc": "2026-11-01T17:25:20.562026+00:00",
+    "seconds": 0.142
+  },
+  "inputs": [
+    {
+      "path": "/data/PROJECTS/bohdi/runs-2026-11/results/healthbench__mistral-small-24b__bodhi/shared/traces/traces.jsonl",
+      "bytes": 19679264,
+      "sha256": "e25c8b55372672e93b069433daa7e3a05945c3aacdb7e89a4e465e3fe69c2675",
+      "n_lines": 3321
+    }
+  ],
+  "status": "complete",
+  "traces_from": "healthbench__mistral-small-24b__bodhi",
+  "traces_file": "/data/PROJECTS/bohdi/runs-2026-11/results/healthbench__mistral-small-24b__bodhi/shared/traces/traces.jsonl"
+}

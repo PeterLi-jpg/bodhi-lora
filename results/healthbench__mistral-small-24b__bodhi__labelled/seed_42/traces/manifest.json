@@ -1,0 +1,42 @@
+{
+  "schema": 3,
+  "stage": "traces",
+  "cell": "healthbench__mistral-small-24b__bodhi__labelled",
+  "seed": 42,
+  "created_utc": "2026-10-19T11:24:06.664814+00:00",
+  "git": {
+    "sha": "dc4ccac80eb252bf1f0e8793d20b5e64e7347874",
+    "dirty": false,
+    "diff_sha256": null,
+    "n_untracked": 7
+  },
+  "packages": {
+    "python": "3.12.3",
+    "torch": "2.8.0",
+    "transformers": "4.56.2",
+    "vllm": "0.10.2",
+    "peft": null,
+    "trl": null,
+    "accelerate": null,
+    "bitsandbytes": "0.47.0",
+    "datasets": "5.0.0",
+    "bodhi-llm": "0.1.4",
+    "huggingface-hub": "0.36.2",
+    "numpy": "2.2.6"
+  },
+  "host_sha256": "174023f8b2ca1169a04ab1f22fc9e6bdae510fd9311bdc64fb1cfeb32ad8dce6",
+  "hardware": {
+    "visible_devices": null,
+    "gpus": [
+      {
+        "index": "0",
+        "name": "NVIDIA A100-SXM4-80GB",
+        "memory": "81920 MiB"
+      }
+    ]
+  },
+  "status": "complete",
+  "points_to": "results/healthbench__mistral-small-24b__bodhi/seed_42/traces/manifest.json",
+  "points_to_sha256": "6755e02807bcf93ca1fd071eea8d15ff421f93da35c189b3a73c8b31dea2cf7d",
+  "note": "adapters of healthbench__mistral-small-24b__bodhi"
+}

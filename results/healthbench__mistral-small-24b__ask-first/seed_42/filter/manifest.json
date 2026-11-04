@@ -1,0 +1,72 @@
+{
+  "schema": 2,
+  "stage": "filter",
+  "cell": "healthbench__mistral-small-24b__ask-first",
+  "seed": 42,
+  "created_utc": "2026-10-13T04:39:52.642278+00:00",
+  "git": {
+    "sha": "a5aa4d689771dd4bc223b3a70670a2887901fa63",
+    "dirty": false,
+    "diff_sha256": null,
+    "n_untracked": 14
+  },
+  "packages": {
+    "python": "3.12.3",
+    "torch": "2.7.0",
+    "transformers": "4.57.6",
+    "vllm": "0.9.2",
+    "peft": "0.19.1",
+    "trl": "0.11.4",
+    "accelerate": "1.13.0",
+    "bitsandbytes": "0.47.0",
+    "datasets": "3.6.0",
+    "bodhi-llm": "0.1.4",
+    "huggingface-hub": "0.36.2",
+    "numpy": "2.2.6"
+  },
+  "host_sha256": "e57f9913e18993f3b7eea3afa676d9d0ae3c5a04f647be54a2f28299b57e4149",
+  "hardware": {
+    "visible_devices": "3",
+    "gpus": [
+      {
+        "index": "3",
+        "name": "NVIDIA H100 80GB HBM3",
+        "memory": "81559 MiB"
+      }
+    ]
+  },
+  "time": {
+    "started_utc": "2026-10-13T04:39:52.467310+00:00",
+    "finished_utc": "2026-10-13T04:39:52.776720+00:00",
+    "seconds": 0.309
+  },
+  "inputs": [
+    {
+      "path": "/data/PROJECTS/bohdi/results/healthbench__mistral-small-24b__ask-first/shared/filter/kept.jsonl",
+      "bytes": 15381959,
+      "sha256": "5968493259c3359849e8926d0fcaa6ce7dc99fd0b6ea7bacb46a99f126f6728f",
+      "n_lines": 1393
+    }
+  ],
+  "outputs": [
+    {
+      "path": "/data/PROJECTS/bohdi/results/healthbench__mistral-small-24b__ask-first/seed_42/filter/train.jsonl",
+      "bytes": 13746869,
+      "sha256": "80ff8c967f47ae73e288224061550c54936f940b948097fd1e6d4cbe55e30108",
+      "n_lines": 1254
+    },
+    {
+      "path": "/data/PROJECTS/bohdi/results/healthbench__mistral-small-24b__ask-first/seed_42/filter/val.jsonl",
+      "bytes": 1635090,
+      "sha256": "5f8e90e6201be7f8da527ba01416b5366667dd7b5b1d4f58ac9ab24fb0d8069c",
+      "n_lines": 139
+    }
+  ],
+  "counts": {
+    "n_kept": 1393,
+    "n_train": 1254,
+    "n_val": 139
+  },
+  "status": "complete",
+  "split_seed": 42
+}

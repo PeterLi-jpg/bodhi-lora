@@ -1,0 +1,128 @@
+{
+  "schema": 3,
+  "stage": "inputs",
+  "cell": "nlm-clinical-questions__mistral-small-24b__bodhi",
+  "seed": null,
+  "created_utc": "2026-10-21T02:07:39.691862+00:00",
+  "git": {
+    "sha": "d6ae7325af23da3980d8ac83c5607ad4275625f1",
+    "dirty": false,
+    "diff_sha256": null,
+    "n_untracked": 4
+  },
+  "packages": {
+    "python": "3.12.11",
+    "torch": "2.7.0",
+    "transformers": "4.57.6",
+    "vllm": "0.9.2",
+    "peft": "0.19.1",
+    "trl": "0.11.4",
+    "accelerate": "1.13.0",
+    "bitsandbytes": "0.47.0",
+    "datasets": "3.6.0",
+    "bodhi-llm": "0.1.4",
+    "huggingface-hub": "0.36.2",
+    "numpy": "2.2.6"
+  },
+  "host_sha256": "f901b2d54f777417d7649670880c9e0091a4ed3712c9d3219af5f63bf530c67c",
+  "hardware": {
+    "visible_devices": null,
+    "gpus": [
+      {
+        "index": "0",
+        "name": "NVIDIA A100-SXM4-80GB",
+        "memory": "81920 MiB"
+      }
+    ]
+  },
+  "config": {
+    "benchmark": "nlm-clinical-questions",
+    "split": "default",
+    "eval_ids": {
+      "policy": "per_seed_draw",
+      "n": 200,
+      "unit": "row",
+      "only": [],
+      "file": null
+    }
+  },
+  "config_sha256": "5010a35c7f57a2f2c1eb972a7d8c6f2ceb471ca8d4188737c2b88256ef5bfef7",
+  "outputs": [
+    {
+      "path": "/data/bohdi/results/nlm-clinical-questions__mistral-small-24b__bodhi/shared/inputs/pools.json",
+      "bytes": 74826,
+      "sha256": "a5efbe0d853e874c229f6d36410d330fcf1efe890bfcc051790db37d979e9d80"
+    },
+    {
+      "path": "/data/bohdi/results/nlm-clinical-questions__mistral-small-24b__bodhi/shared/inputs/eval_ids_seed_42.json",
+      "bytes": 3280,
+      "sha256": "c8cd8c8c9445b1048eaa8d6ec0e86dd865589694715905a945358fc6716e96d6"
+    },
+    {
+      "path": "/data/bohdi/results/nlm-clinical-questions__mistral-small-24b__bodhi/shared/inputs/eval_ids_seed_7.json",
+      "bytes": 3279,
+      "sha256": "5dfada29efb75e9a117a00931c06b8a40c1c27fea7fee820c027adfa82dc59a2"
+    },
+    {
+      "path": "/data/bohdi/results/nlm-clinical-questions__mistral-small-24b__bodhi/shared/inputs/eval_ids_seed_13.json",
+      "bytes": 3280,
+      "sha256": "9d6c93a2dfb05e62547d7524457cb0fde0d8cc4469ed9c6836cfab01b06caa48"
+    },
+    {
+      "path": "/data/bohdi/results/nlm-clinical-questions__mistral-small-24b__bodhi/shared/inputs/eval_ids_seed_99.json",
+      "bytes": 3280,
+      "sha256": "03c628d3aee947572fe39c264d231cbd8dfa871089a038fd66b6b0155ac89cd3"
+    },
+    {
+      "path": "/data/bohdi/results/nlm-clinical-questions__mistral-small-24b__bodhi/shared/inputs/eval_ids_seed_101.json",
+      "bytes": 3281,
+      "sha256": "a5285400f17f5dc45a96d9bdd1eb3b6b1d954c2268eba25a3bc088b8a845d6d8"
+    }
+  ],
+  "counts": {
+    "n_rows": 4654,
+    "n_train_pool": 0,
+    "n_eval_pool": 4654,
+    "n_probe_pool": 0,
+    "n_train_text_twins": 0,
+    "n_eval_ids": {
+      "42": 200,
+      "7": 200,
+      "13": 200,
+      "99": 200,
+      "101": 200
+    }
+  },
+  "status": "complete",
+  "source": {
+    "kind": "url",
+    "files": {
+      "ia": {
+        "url": "https://data.lhncbc.nlm.nih.gov/public/Clinical-Questions/Collection-IA-1095-Questions.xml",
+        "sha256": "0245f98996e14defbf7a56e1a80d5b6ce9a1e6bd2a8cf6cc4cae8a3ee9ef0fb0",
+        "unpinned_reason": null
+      },
+      "ib": {
+        "url": "https://data.lhncbc.nlm.nih.gov/public/Clinical-Questions/Collection-IB-1892-Questions.xml",
+        "sha256": "b4da5498aef345f19594a197e6451c6d43fa64c948a7d82fb4152bfcc38892d1",
+        "unpinned_reason": null
+      },
+      "ic": {
+        "url": "https://data.lhncbc.nlm.nih.gov/public/Clinical-Questions/Collection-IC-1062-Questions.xml",
+        "sha256": "df8e2a6d46a7b736939792c4590107fc06a5a0c4a82490b68d4d73f0b394629b",
+        "unpinned_reason": null
+      },
+      "id": {
+        "url": "https://data.lhncbc.nlm.nih.gov/public/Clinical-Questions/Collection-ID-605-Questions.xml",
+        "sha256": "58ab04fb32277570828c3200cbbcda1a6df3549c3208624c006cfb38794ed526",
+        "unpinned_reason": null
+      }
+    }
+  },
+  "source_read": {
+    "ia": "0245f98996e14defbf7a56e1a80d5b6ce9a1e6bd2a8cf6cc4cae8a3ee9ef0fb0",
+    "ib": "b4da5498aef345f19594a197e6451c6d43fa64c948a7d82fb4152bfcc38892d1",
+    "ic": "df8e2a6d46a7b736939792c4590107fc06a5a0c4a82490b68d4d73f0b394629b",
+    "id": "58ab04fb32277570828c3200cbbcda1a6df3549c3208624c006cfb38794ed526"
+  }
+}

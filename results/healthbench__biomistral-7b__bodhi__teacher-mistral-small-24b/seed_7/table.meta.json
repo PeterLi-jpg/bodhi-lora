@@ -1,0 +1,57 @@
+{
+  "cell": "healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b",
+  "completions": {
+    "base": 200,
+    "base+bodhi": 200,
+    "lora": 200,
+    "lora+bodhi": 200
+  },
+  "grade": {
+    "counts": {
+      "base": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "base+bodhi": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "lora": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "lora+bodhi": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      }
+    },
+    "file": "results/healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b/seed_7/grade/epistemic__llama-3.1-8b.json",
+    "present": true
+  },
+  "n_examples": {
+    "base": 200,
+    "base+bodhi": 200,
+    "lora": 200,
+    "lora+bodhi": 200
+  },
+  "score_metric": {
+    "base": "normalized_score",
+    "base+bodhi": "normalized_score",
+    "lora": "normalized_score",
+    "lora+bodhi": "normalized_score"
+  },
+  "seed": 7,
+  "sources": {
+    "results/healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b/seed_7/eval/base+bodhi.json": "0a9782031260608c85b8b00504430362715f6d57abf685d0808c2e80ee50d3e2",
+    "results/healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b/seed_7/eval/base.json": "f00c1bae37bffad8b7ab2c679b33b9ac0395e5ce5b9664a69b9f219e17cbf910",
+    "results/healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b/seed_7/eval/lora+bodhi.json": "78bd74161335f7236ba66128589cbac86cbf7ec98622506d535dd17c20861446",
+    "results/healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b/seed_7/eval/lora.json": "bf7eea239c004ba2c716c0a03ed6cd78b12392a190ec5a6d27ab41de424ede2f",
+    "results/healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b/seed_7/grade/epistemic__llama-3.1-8b.json": "62fcf766dd11139bd7d9c466fb6184bdd4402bfaa5401e27ce18e796b9e52ba9",
+    "results/healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b/seed_7/grade/judge__medgemma-27b-text.json": "528f5e99eadf66f53363bf083cd3cbe0374c0d7a10fceb8ceba56495a81e1401"
+  },
+  "tokenizer": "tokenizer.json of BioMistral/BioMistral-7B at 9a11e1ffa817c211cbb52ee1fb312dc6b61b40a5 is not in the local Hugging Face cache (fetch it with: huggingface-cli download BioMistral/BioMistral-7B tokenizer.json --revision 9a11e1ffa817c211cbb52ee1fb312dc6b61b40a5)"
+}

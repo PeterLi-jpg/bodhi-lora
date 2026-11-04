@@ -1,0 +1,162 @@
+{
+  "schema": 3,
+  "stage": "train",
+  "cell": "healthbench__medgemma-27b-text__bodhi",
+  "seed": 42,
+  "created_utc": "2026-10-21T08:33:15.799195+00:00",
+  "git": {
+    "sha": null,
+    "error": "TimeoutExpired: Command '['git', '-C', '/data/bohdi', 'status', '--porcelain']' timed out after 60 seconds"
+  },
+  "packages": {
+    "python": "3.12.11",
+    "torch": "2.7.0",
+    "transformers": "4.57.6",
+    "vllm": "0.9.2",
+    "peft": "0.19.1",
+    "trl": "0.11.4",
+    "accelerate": "1.13.0",
+    "bitsandbytes": "0.47.0",
+    "datasets": "3.6.0",
+    "bodhi-llm": "0.1.4",
+    "huggingface-hub": "0.36.2",
+    "numpy": "2.2.6"
+  },
+  "host_sha256": "f901b2d54f777417d7649670880c9e0091a4ed3712c9d3219af5f63bf530c67c",
+  "hardware": {
+    "visible_devices": "0",
+    "gpus": [
+      {
+        "index": "0",
+        "name": "NVIDIA A100-SXM4-80GB",
+        "memory": "81920 MiB"
+      }
+    ]
+  },
+  "time": {
+    "started_utc": "2026-10-21T05:27:58.044544+00:00",
+    "finished_utc": "2026-10-21T08:34:16.835589+00:00",
+    "seconds": 11178.791
+  },
+  "config": {
+    "model": {
+      "id": "medgemma-27b-text",
+      "hf_id": "google/medgemma-27b-text-it",
+      "revision": "5b667cf2ddcf064085bc90952edb35a0edbfb79c",
+      "dtype": "bfloat16",
+      "quantization": "4bit",
+      "tokenizer_kwargs": {},
+      "response_template": null,
+      "pad_token": null
+    },
+    "lora": {
+      "method": "lora",
+      "r": 16,
+      "alpha": 32.0,
+      "dropout": 0.05,
+      "target_modules": [
+        "q_proj",
+        "k_proj",
+        "v_proj",
+        "o_proj",
+        "gate_proj",
+        "up_proj",
+        "down_proj"
+      ]
+    },
+    "training": {
+      "epochs": 3.0,
+      "max_steps": null,
+      "per_device_train_batch_size": 2,
+      "per_device_eval_batch_size": 2,
+      "gradient_accumulation_steps": 8,
+      "learning_rate": 0.0001,
+      "lr_scheduler_type": "cosine",
+      "warmup_ratio": 0.05,
+      "max_seq_length": 4096,
+      "gradient_checkpointing": true,
+      "checkpoint": "best_val_loss",
+      "eval_every": "epoch",
+      "eval_steps": null,
+      "logging_steps": 10
+    }
+  },
+  "config_sha256": "235ad169635f2cb720df1df0f28aa6ef1c3a0131638347359f45180ed0db6ed4",
+  "models": {
+    "base": {
+      "id": "medgemma-27b-text",
+      "repo_id": "google/medgemma-27b-text-it",
+      "family": "gemma",
+      "revision": "5b667cf2ddcf064085bc90952edb35a0edbfb79c",
+      "revision_source": "record",
+      "unpinned_reason": null
+    }
+  },
+  "adapter": {
+    "path": "/data/bohdi/results/healthbench__medgemma-27b-text__bodhi/seed_42/train",
+    "sha256": "683283ba8a54248fe94d60d2cd9f08a4cda58df5a0480fa2e96e1ed3d2de1bec",
+    "files": {
+      "adapter_model.safetensors": "c358f2899531c56d2cfd06cf5163e4c83b92791d65c5121113017c45b940cb4e",
+      "adapter_config.json": "7b9948f5831f4aed628191780acb43d11e6263e1febe2f53823a5acaed961efc"
+    },
+    "r": 16,
+    "lora_alpha": 32.0,
+    "lora_dropout": 0.05,
+    "target_modules": [
+      "v_proj",
+      "gate_proj",
+      "down_proj",
+      "k_proj",
+      "q_proj",
+      "up_proj",
+      "o_proj"
+    ],
+    "base_model_name_or_path": "google/medgemma-27b-text-it",
+    "revision": null,
+    "use_dora": false,
+    "use_rslora": false
+  },
+  "inputs": [
+    {
+      "path": "/data/bohdi/results/healthbench__medgemma-27b-text__bodhi/seed_42/filter/train.jsonl",
+      "bytes": 42344371,
+      "sha256": "52e6a109613dd17ce30bf86ee1d41f495caf31dd00ee6b6bbbbbbcae72bb44a8",
+      "n_lines": 2234
+    },
+    {
+      "path": "/data/bohdi/results/healthbench__medgemma-27b-text__bodhi/seed_42/filter/val.jsonl",
+      "bytes": 4740089,
+      "sha256": "ed0acc2302567236829acc8a213241586f379a74c1129f1bfa9540e8143e4546",
+      "n_lines": 248
+    }
+  ],
+  "counts": {
+    "seed": 42,
+    "effective_batch": 16,
+    "world_size": 1,
+    "global_step": 420,
+    "epoch": 3.0,
+    "max_steps": 420,
+    "num_train_epochs": 3,
+    "first_train_loss": 0.5509,
+    "last_train_loss": 0.1623,
+    "eval_loss_by_step": [
+      [
+        140,
+        0.3801926374435425
+      ],
+      [
+        280,
+        0.37657153606414795
+      ],
+      [
+        420,
+        0.3941985070705414
+      ]
+    ],
+    "best_metric": 0.37657153606414795,
+    "best_model_checkpoint": "/data/bohdi/results/healthbench__medgemma-27b-text__bodhi/seed_42/train/checkpoint-280"
+  },
+  "status": "complete",
+  "quantization": "4bit"
+}

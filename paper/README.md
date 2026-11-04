@@ -1,40 +1,57 @@
-# SD4H 2026 workshop submission
+# Paper
 
-Target: **Structured Data for Health (SD4H)** workshop at ICML 2026, Seoul.
-
-## Key constraints
-
-- **Deadline**: April 28, 2026 AoE
-- **Format**: ICML 2026 LaTeX style, double-blind, fully anonymized
-- **Length**: 4 pages main body (excluding references and appendix)
-- **Archival**: No — we can still submit a full version elsewhere later
-
-## Files
-
-- `main.tex` — the paper itself
-- `references.bib` — citations (seeded with core refs, expand as needed)
-- `outline.md` — plain-prose version of the paper for quick review without LaTeX
-- `figures/` — paper figures, including the source-controlled pipeline diagram in `figures/pipeline.tex`
-- `TODO.md` — what's still a placeholder and blocks a real submission
-
-## Before compiling
-
-Download the official ICML 2026 style file from
-https://icml.cc/Conferences/2026/StyleAuthorInstructions (or the 2025 one as a
-near-equivalent). Place `icml2026.sty` in this directory. Main.tex uses it.
+`paper/main.tex` is the canonical source of the paper. It is the only copy we edit.
+`checklist.tex` and `references.bib` are its inputs.
 
 ## Build
 
 ```bash
-cd paper/
-pdflatex main.tex && bibtex main && pdflatex main.tex && pdflatex main.tex
-# or: latexmk -pdf main.tex
+make paper
 ```
 
-## Anonymization
+`make paper` runs `make numbers` and `make figures`, then
+`tectonic -X compile --outdir paper/build paper/main.tex`. The output is
+`paper/build/main.pdf`. Git ignores `paper/build/`. To remove old PNG figures from
+`paper/figures/`, run `python3 scripts/build_paper_figures.py --clean-legacy` once.
 
-- `main.tex` currently has no author list (blind). DO NOT add names before
-  submission.
-- Any code link must go to an anonymized mirror, e.g.
-  https://anonymous.4open.science/r/bohdi-lora
-- Do not reference `PeterLi-jpg/bohdi-lora` or MIT by name in acknowledgments.
+The figure PDFs in `paper/figures/` are build outputs and git ignores them. The one
+exception is `figures/pipeline.pdf`, which is tracked. Its source is
+`figures/pipeline_standalone.tex`.
+
+## Numbers
+
+Numbers in the paper come from `paper/generated/`. `make numbers`
+(`python -m bodhi_lora report`) writes that folder; see its README. Do not type a result
+into `main.tex` by hand. A table that still holds typed numbers must be changed to
+`\input` the generated file.
+
+[NUMBERS.md](NUMBERS.md) maps every number and claim in the abstract, introduction and
+results to its macro, the function that writes it and the input file. It also lists
+the few numbers that are design settings, transcribed from the posted replies, or not
+reproducible from the repository. Update it when the text changes. The claim-level
+ledger, with the status of each claim, is [docs/CLAIMS.md](../docs/CLAIMS.md).
+
+`prior_work_candidates.bib` is a record, not a build input: the candidate references
+found for meta-review weakness W6. The five that the paper cites were merged into
+`references.bib` on 2026-10-08.
+
+## Frozen submission
+
+`paper/submitted/neurips2026/` holds the anonymous source of the NeurIPS 2026
+submission, rebuilt and checked against the official PDF. It is a record. Do not edit
+it. Its README gives the provenance and the known differences.
+
+## No other copies
+
+On 2026-10-07 we moved every other copy out of the repo, to
+`BODHI/_archive/paper_copies_2026-10-07/` on the first author's machine. These were the
+folders arxiv/, arxiv_upload/, overleaf/, preprint/ and neurips_submission/, the files
+BODHI_overleaf.zip, main_cam.* and preview.* (the old workshop draft), and old build
+outputs. Do not make a new copy of the paper in the repo. Make a venue or arXiv
+version from `main.tex` at build time, and mark the commit with a tag.
+
+## Anonymity
+
+`main.tex` keeps the anonymous author block. Real names go only in the gitignored
+`paper/AUTHORS.md`. Code links go to the anonymous mirror. Before you share a build,
+check it for names, emails, account names, bucket names and local paths.

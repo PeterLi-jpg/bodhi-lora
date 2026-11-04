@@ -1,0 +1,110 @@
+{
+  "schema": 3,
+  "stage": "probe",
+  "cell": "chatdoctor__med42-8b__bodhi__2026-07",
+  "seed": null,
+  "created_utc": "2026-11-02T00:13:39.340489+00:00",
+  "git": {
+    "sha": "f76b10cc471cbd7648529f2df2310de63c3dff32",
+    "dirty": false,
+    "diff_sha256": null,
+    "n_untracked": 12
+  },
+  "packages": {
+    "python": "3.12.3",
+    "torch": "2.8.0",
+    "transformers": "4.56.2",
+    "vllm": "0.10.2",
+    "peft": null,
+    "trl": null,
+    "accelerate": null,
+    "bitsandbytes": "0.47.0",
+    "datasets": "5.0.0",
+    "bodhi-llm": "0.1.4",
+    "huggingface-hub": "0.36.2",
+    "numpy": "2.2.6"
+  },
+  "host_sha256": "e57f9913e18993f3b7eea3afa676d9d0ae3c5a04f647be54a2f28299b57e4149",
+  "hardware": {
+    "visible_devices": "6",
+    "gpus": [
+      {
+        "index": "6",
+        "name": "NVIDIA H100 80GB HBM3",
+        "memory": "81559 MiB"
+      }
+    ]
+  },
+  "time": {
+    "started_utc": "2026-11-02T00:12:53.955299+00:00",
+    "finished_utc": "2026-11-02T00:13:39.479693+00:00",
+    "seconds": 45.524
+  },
+  "config": {
+    "probe": {
+      "control": "healthbench",
+      "n_prompts": 100,
+      "prefix_tokens": 15,
+      "continuation_tokens": 25,
+      "seed": 0,
+      "serving": {
+        "max_model_len": 8192,
+        "max_num_seqs": 64,
+        "concurrency": 32,
+        "request_timeout_s": 180,
+        "drain_s": 0.0,
+        "enforce_eager": null
+      }
+    },
+    "control": "healthbench"
+  },
+  "config_sha256": "e28eced2c33cac319a953967fe68bc1b45d2eff2c36aa9fd02a630ee40c8b07c",
+  "models": {
+    "base": {
+      "id": "med42-8b",
+      "repo_id": "m42-health/Llama3-Med42-8B",
+      "family": "llama3",
+      "revision": "ceab7e7ee4b9dbde7ba82867f34274db51487d83",
+      "revision_source": "record",
+      "unpinned_reason": null
+    }
+  },
+  "engines": {
+    "base": {
+      "model": "m42-health/Llama3-Med42-8B",
+      "revision": "ceab7e7ee4b9dbde7ba82867f34274db51487d83",
+      "max_model_len": 8192,
+      "max_num_seqs": 64,
+      "tensor_parallel_size": 1,
+      "dtype": "bfloat16",
+      "quantization": null,
+      "enforce_eager": false,
+      "request_timeout_s": 180,
+      "lora_path": null,
+      "lora_modules": {},
+      "max_loras": null,
+      "max_lora_rank": null,
+      "env": {}
+    }
+  },
+  "outputs": [
+    {
+      "path": "/data/PROJECTS/bohdi/runs-2026-11/results/chatdoctor__med42-8b__bodhi__2026-07/shared/probe/probe.json",
+      "bytes": 1254,
+      "sha256": "7ffff01a028b6fe5cb23eef0141fdfa10daae919896009fce8878479d0b23fb2"
+    },
+    {
+      "path": "/data/PROJECTS/bohdi/runs-2026-11/results/chatdoctor__med42-8b__bodhi__2026-07/shared/probe/samples.jsonl",
+      "bytes": 95982,
+      "sha256": "2b716e0f98a32c6ff58472828e9ee0be37ab1441eb70329b27db16b36681eeb5",
+      "n_lines": 200
+    }
+  ],
+  "counts": {
+    "benchmark_hits": 0,
+    "control_hits": 0,
+    "n_per_set": 100,
+    "fisher_p_value": 1.0
+  },
+  "status": "complete"
+}

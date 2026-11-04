@@ -1,5 +1,7 @@
 #!/bin/bash
-# run this once after cloning, before submitting any slurm jobs
+# Run this once after cloning, inside the training virtualenv (.venv). It installs the
+# package editable with its train, gpu and dev extras (pyproject.toml), builds the vLLM
+# env (.venv-infer) on Linux and downloads HealthBench to the data root.
 set -euo pipefail
 
 cd "$(dirname "$0")"
@@ -32,10 +34,24 @@ echo "=== setup ==="
 echo "python: $(command -v python)"
 python --version
 
-mkdir -p logs data/raw data/sft eval checkpoints
+mkdir -p data/raw
 
 python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
+# Editable, so bodhi_lora finds configs/ and results/ next to it (bodhi_lora/paths.py).
+python -m pip install -e '.[train,gpu,dev]'
+
+# vLLM serving needs its own env (requirements-infer.txt explains why). vLLM
+# wheels are Linux and CUDA only, so a Mac or CPU dev box skips this step.
+if [ "$(uname -s)" = "Linux" ] && [ "${SKIP_INFER_ENV:-0}" != "1" ]; then
+    echo
+    echo "=== .venv-infer (requirements-infer.txt) ==="
+    python -m venv .venv-infer
+    .venv-infer/bin/python -m pip install --upgrade pip
+    # The lock holds every package of the env that ran the 2026-07 and 2026-10 cells.
+    .venv-infer/bin/python -m pip install -r requirements-infer.txt -c requirements-infer.lock.txt
+else
+    echo "skipping .venv-infer (not Linux, or SKIP_INFER_ENV=1); vLLM stages will not run here"
+fi
 
 echo
 echo "=== pip check ==="
@@ -54,7 +70,7 @@ fi
 
 echo
 echo "=== data ==="
-python scripts/download_data.py
+python -m bodhi_lora fetch healthbench
 
 echo
 echo "ready"

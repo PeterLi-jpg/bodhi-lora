@@ -1,0 +1,42 @@
+{
+  "schema": 3,
+  "stage": "filter",
+  "cell": "healthbench__medgemma-27b-text__bodhi__labelled-cap4096",
+  "seed": 42,
+  "created_utc": "2026-10-27T15:26:02.865953+00:00",
+  "git": {
+    "sha": "404f1936b8828fc8e56c664f0320df2dae919441",
+    "dirty": false,
+    "diff_sha256": null,
+    "n_untracked": 11
+  },
+  "packages": {
+    "python": "3.12.11",
+    "torch": "2.7.0",
+    "transformers": "4.57.6",
+    "vllm": "0.9.2",
+    "peft": "0.19.1",
+    "trl": "0.11.4",
+    "accelerate": "1.13.0",
+    "bitsandbytes": "0.47.0",
+    "datasets": "3.6.0",
+    "bodhi-llm": "0.1.4",
+    "huggingface-hub": "0.36.2",
+    "numpy": "2.2.6"
+  },
+  "host_sha256": "93fceb72101974171ddc3baeeabb83b7944d48080e69e047a4baec788bac9695",
+  "hardware": {
+    "visible_devices": null,
+    "gpus": [
+      {
+        "index": "0",
+        "name": "NVIDIA A100-SXM4-80GB",
+        "memory": "81920 MiB"
+      }
+    ]
+  },
+  "status": "complete",
+  "points_to": "results/healthbench__medgemma-27b-text__bodhi/seed_42/filter/manifest.json",
+  "points_to_sha256": "d6ff7f69db42d45d31bad6749ee419aca4a6f70873ef67dd4a7ac2433142f757",
+  "note": "adapters of healthbench__medgemma-27b-text__bodhi"
+}

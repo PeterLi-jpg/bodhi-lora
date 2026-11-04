@@ -1,0 +1,133 @@
+{
+  "schema": 3,
+  "stage": "grade",
+  "cell": "healthbench__mistral-small-24b__ask-first",
+  "seed": 99,
+  "created_utc": "2026-10-19T11:54:21.707712+00:00",
+  "git": {
+    "sha": "dc4ccac80eb252bf1f0e8793d20b5e64e7347874",
+    "dirty": false,
+    "diff_sha256": null,
+    "n_untracked": 7
+  },
+  "packages": {
+    "python": "3.12.11",
+    "torch": "2.8.0",
+    "transformers": "4.56.2",
+    "vllm": "0.10.2",
+    "peft": null,
+    "trl": null,
+    "accelerate": null,
+    "bitsandbytes": "0.47.0",
+    "datasets": "5.0.0",
+    "bodhi-llm": "0.1.4",
+    "huggingface-hub": "0.36.2",
+    "numpy": "2.2.6"
+  },
+  "host_sha256": "47ab991b993efd570adbabdd0a3ba6c6010998f7d1591e3ba4dd4c9357ba6750",
+  "hardware": {
+    "visible_devices": "0",
+    "gpus": [
+      {
+        "index": "0",
+        "name": "NVIDIA A100-SXM4-80GB",
+        "memory": "81920 MiB"
+      }
+    ]
+  },
+  "time": {
+    "started_utc": "2026-10-19T10:08:45.757161+00:00",
+    "finished_utc": "2026-10-19T11:54:40.612491+00:00",
+    "seconds": 6354.855
+  },
+  "models": {
+    "judge": {
+      "id": "medgemma-27b-text",
+      "repo_id": "google/medgemma-27b-text-it",
+      "family": "gemma",
+      "revision": "5b667cf2ddcf064085bc90952edb35a0edbfb79c",
+      "revision_source": "record",
+      "unpinned_reason": null
+    }
+  },
+  "engines": {
+    "judge": {
+      "model": "google/medgemma-27b-text-it",
+      "revision": "5b667cf2ddcf064085bc90952edb35a0edbfb79c",
+      "max_model_len": 8192,
+      "max_num_seqs": 64,
+      "tensor_parallel_size": 1,
+      "dtype": "bfloat16",
+      "quantization": null,
+      "enforce_eager": true,
+      "request_timeout_s": 900,
+      "lora_path": null,
+      "lora_modules": {},
+      "max_loras": null,
+      "max_lora_rank": null,
+      "env": {}
+    }
+  },
+  "inputs": [
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__ask-first/seed_99/eval/base.json",
+      "bytes": 2278483,
+      "sha256": "60d8db1be77cdaf21ff27493a041f0cdb3383e9140196e1a1f700bf121927bb0"
+    },
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__ask-first/seed_99/eval/base+ask-first.json",
+      "bytes": 2124494,
+      "sha256": "b5d0e4d1fa542e71048ea0394e8ffdc1eed243c3d0b3911660a8d674d86a7956"
+    },
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__ask-first/seed_99/eval/lora.json",
+      "bytes": 2073012,
+      "sha256": "0f6ea5e782234a78d2bc5547cadcc777257e6a58867ce2832f1e1bc3e85b368d"
+    },
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__ask-first/seed_99/eval/lora+ask-first.json",
+      "bytes": 2073675,
+      "sha256": "4e9bb6a654db055b85baffa892657f74a40333de8f4f7aa12eda3df8dd62ff67"
+    },
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__ask-first/seed_99/eval/base+bodhi.json",
+      "bytes": 2535303,
+      "sha256": "27cde9811d6e38657b4a6742d52741a71f7564527d5fd60301688078289fbb94"
+    }
+  ],
+  "outputs": [
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__ask-first/seed_99/grade/judge__medgemma-27b-text.json",
+      "bytes": 2546854,
+      "sha256": "eec782805da5bbe32e632e0c54e90c3eaf952e56dba998ab6616f1d36197fc2d"
+    }
+  ],
+  "counts": {
+    "base": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    },
+    "base+ask-first": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    },
+    "lora": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    },
+    "lora+ask-first": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    },
+    "base+bodhi": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    }
+  },
+  "status": "complete"
+}

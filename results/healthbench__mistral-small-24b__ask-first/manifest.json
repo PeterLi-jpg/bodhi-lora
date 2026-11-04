@@ -1,0 +1,304 @@
+{
+  "schema": 3,
+  "stage": "cell",
+  "cell": "healthbench__mistral-small-24b__ask-first",
+  "seed": null,
+  "created_utc": "2026-10-19T11:59:52.173974+00:00",
+  "git": {
+    "sha": "dc4ccac80eb252bf1f0e8793d20b5e64e7347874",
+    "dirty": false,
+    "diff_sha256": null,
+    "n_untracked": 7
+  },
+  "packages": {
+    "infer": {
+      "python": "3.12.11",
+      "torch": "2.8.0",
+      "transformers": "4.56.2",
+      "vllm": "0.10.2",
+      "peft": null,
+      "trl": null,
+      "accelerate": null,
+      "bitsandbytes": "0.47.0",
+      "datasets": "5.0.0",
+      "bodhi-llm": "0.1.4",
+      "huggingface-hub": "0.36.2",
+      "numpy": "2.2.6"
+    },
+    "train": {
+      "python": "3.12.11",
+      "torch": "2.7.0",
+      "transformers": "4.57.6",
+      "vllm": "0.9.2",
+      "peft": "0.19.1",
+      "trl": "0.11.4",
+      "accelerate": "1.13.0",
+      "bitsandbytes": "0.47.0",
+      "datasets": "3.6.0",
+      "bodhi-llm": "0.1.4",
+      "huggingface-hub": "0.36.2",
+      "numpy": "2.2.6"
+    }
+  },
+  "host_sha256": "066a5c167485bc309082b4528ce9bdd70a2f71f0fb76e809ca20c735587ba308",
+  "hardware": {
+    "visible_devices": null,
+    "gpus": [
+      {
+        "index": "0",
+        "name": "NVIDIA A100-SXM4-80GB",
+        "memory": "81920 MiB"
+      }
+    ]
+  },
+  "time": {
+    "started_utc": "2026-10-19T11:59:26.503114+00:00",
+    "finished_utc": "2026-10-19T11:59:52.290127+00:00",
+    "seconds": 25.787
+  },
+  "config": {
+    "id": "healthbench__mistral-small-24b__ask-first",
+    "benchmark": "healthbench",
+    "split": "default",
+    "model": "mistral-small-24b",
+    "protocol": "ask-first",
+    "seeds": [
+      42,
+      7,
+      13,
+      99,
+      101
+    ],
+    "adapters_from": null,
+    "traces_from": null,
+    "grading": {
+      "filter": "qwen2.5-14b",
+      "evaluator": "llama-3.1-8b",
+      "judges": [
+        "medgemma-27b-text"
+      ],
+      "same_family_waiver": null,
+      "judge_serving": null
+    },
+    "traces": {
+      "max_prompts": 4200,
+      "decoding": "greedy",
+      "temperature": 0.0,
+      "top_p": 1.0,
+      "seed": 0,
+      "max_new_tokens_per_pass": 2048,
+      "serving": {
+        "max_model_len": 8192,
+        "max_num_seqs": 64,
+        "concurrency": 32,
+        "request_timeout_s": 180,
+        "drain_s": 0.0,
+        "enforce_eager": null
+      }
+    },
+    "filter": {
+      "tau": {
+        "rule": "fixed",
+        "value": 0.4,
+        "percentile": null,
+        "min_kept_share": null,
+        "seed": 0
+      },
+      "val_ratio": 0.1,
+      "split_policy": "per_seed",
+      "split_seed": null,
+      "serving": {
+        "max_model_len": 8192,
+        "max_num_seqs": 64,
+        "concurrency": 16,
+        "request_timeout_s": 180,
+        "drain_s": 0.0,
+        "enforce_eager": null
+      }
+    },
+    "train": {
+      "engine": "peft",
+      "record": null,
+      "method": "lora",
+      "quantization": "4bit",
+      "r": 16,
+      "alpha": 32.0,
+      "dropout": 0.05,
+      "target_modules": [
+        "q_proj",
+        "k_proj",
+        "v_proj",
+        "o_proj",
+        "gate_proj",
+        "up_proj",
+        "down_proj"
+      ],
+      "epochs": 3.0,
+      "max_steps": null,
+      "per_device_batch": 2,
+      "grad_accum": 8,
+      "effective_batch": 16,
+      "lr": 0.0001,
+      "scheduler": "cosine",
+      "warmup_ratio": 0.05,
+      "max_seq_length": 4096,
+      "gradient_checkpointing": true,
+      "checkpoint": "best_val_loss",
+      "eval_every": "epoch",
+      "eval_steps": null,
+      "logging_steps": 10,
+      "hardware": "1x H100 80GB"
+    },
+    "eval": {
+      "conditions": [
+        "base",
+        "base+ask-first",
+        "lora",
+        "lora+ask-first",
+        "base+bodhi"
+      ],
+      "ids": {
+        "policy": "per_seed_draw",
+        "n": 200,
+        "unit": "row",
+        "only": [],
+        "file": null
+      },
+      "base_precision": "train",
+      "base_precision_reason": null,
+      "max_new_tokens": 1024,
+      "max_new_tokens_per_pass": 2048,
+      "serving": {
+        "max_model_len": 8192,
+        "max_num_seqs": 64,
+        "concurrency": 64,
+        "request_timeout_s": 900,
+        "drain_s": 0.0,
+        "enforce_eager": null
+      },
+      "shared_server": true
+    },
+    "probe": null,
+    "bench": {
+      "n_prompts": 50,
+      "seeds": [
+        42
+      ],
+      "enforce_eager": true,
+      "serving": {
+        "max_model_len": 8192,
+        "max_num_seqs": 1,
+        "concurrency": 1,
+        "request_timeout_s": 900,
+        "drain_s": 0.0,
+        "enforce_eager": null
+      }
+    },
+    "report": {
+      "label": "HealthBench-Hard, Mistral-Small-24B, ask-first",
+      "token": "HBMistralAskFirst",
+      "status": "planned",
+      "set_aside": null,
+      "notes": "",
+      "contrasts": [
+        "base+ask-first - base+bodhi"
+      ]
+    }
+  },
+  "config_sha256": "c4d6114ed53fcebaa2d69cc3d8e0194576ef14e8f92745ae68a57a4b308ab323",
+  "models": {
+    "base": {
+      "id": "mistral-small-24b",
+      "repo_id": "mistralai/Mistral-Small-24B-Instruct-2501",
+      "family": "mistral",
+      "revision": "9527884be6e5616bdd54de542f9ae13384489724",
+      "revision_source": "record",
+      "unpinned_reason": null
+    },
+    "teacher": {
+      "id": "mistral-small-24b",
+      "repo_id": "mistralai/Mistral-Small-24B-Instruct-2501",
+      "family": "mistral",
+      "revision": "9527884be6e5616bdd54de542f9ae13384489724",
+      "revision_source": "record",
+      "unpinned_reason": null
+    },
+    "filter": {
+      "id": "qwen2.5-14b",
+      "repo_id": "Qwen/Qwen2.5-14B-Instruct",
+      "family": "qwen2",
+      "revision": "cf98f3b3bbb457ad9e2bb7baf9a0125b6b88caa8",
+      "revision_source": "record",
+      "unpinned_reason": null
+    },
+    "evaluator": {
+      "id": "llama-3.1-8b",
+      "repo_id": "meta-llama/Llama-3.1-8B-Instruct",
+      "family": "llama3",
+      "revision": "0e9e39f249a16976918f6564b8830bc894c89659",
+      "revision_source": "record",
+      "unpinned_reason": null
+    },
+    "judge:medgemma-27b-text": {
+      "id": "medgemma-27b-text",
+      "repo_id": "google/medgemma-27b-text-it",
+      "family": "gemma",
+      "revision": "5b667cf2ddcf064085bc90952edb35a0edbfb79c",
+      "revision_source": "record",
+      "unpinned_reason": null
+    }
+  },
+  "status": "finished",
+  "mode": "gpu",
+  "seeds_run": [
+    42,
+    7,
+    13,
+    99,
+    101
+  ],
+  "stages_run": [
+    "probe",
+    "traces",
+    "filter",
+    "train",
+    "eval",
+    "grade",
+    "bench"
+  ],
+  "judges_run": [
+    "medgemma-27b-text"
+  ],
+  "family": {
+    "problems": [],
+    "waiver": null
+  },
+  "stage_manifests": {
+    "seed_42/traces": "e4720c8e88b0b14893be3438d3279c7e14be6c672dfa8dafb62b0a1bc50d4864",
+    "seed_42/filter": "b1ad100f128eb4a3be38572e8883f9bebca40ebe9efe98fe115ac6770ca37262",
+    "seed_42/train": "215088c1f9ee95c53b35566fa1c8db557b41008f895094365d5138d2cb932474",
+    "seed_42/eval": "c113d9b3812cb5081416060705544669149d2c72416e1e0e79c82ea3a8004bd5",
+    "seed_42/grade": "4ead6b0bcbff8f49eb4b44a79a5748cde841770cbaedef26377e43c101a16c2e",
+    "seed_42/bench": "80e4659c94acfb8e8e83ff484c3cfe475f5767fcb5e1ba533fba1d1abee9da5a",
+    "seed_7/traces": "e78a575d37ee0b840d49241b6329c6dc645da7f6a2333df886203ec2170f6b65",
+    "seed_7/filter": "71fb5fb6391c2745e03aa1cab5a81018d268696b95c112330c140c90676e99df",
+    "seed_7/train": "a66bc7f2e1b182ae0473331d8aabf5984ae1523397642015fc75a94f48e7d69f",
+    "seed_7/eval": "7bb8d942c23076e124bdf9debf4e8f9d4872462ea0cd85c1ddd7aa4ed19740cc",
+    "seed_7/grade": "96d57bf87ac1a88d0d71b6f8eaca93e07df508afd6b53f067e29c2596dee2244",
+    "seed_13/traces": "9243f174a5a699cb355f6c0e487cb833321e21c3631984ddf7a59845c1748da3",
+    "seed_13/filter": "4bc56f336bac784f2e5ee1a1f9f5a7b4b41690eca22b380fb945f6844e8163ff",
+    "seed_13/train": "59f4dbed03dcda1fa3ef7a20628304d131a84c6b7931752f5fc99fd1c50a8839",
+    "seed_13/eval": "e4465c6d044efce69cc56ce34add2b77ffde62ba7a5227d93a49ccd64fde5637",
+    "seed_13/grade": "e5514cbd147c22e8ab2a4b397ded190dc90bea3f4d5ec896cd9ef0e6c7e23160",
+    "seed_99/traces": "9c96b4809c59385f0209ca9d00f0866e88fa0e13c22c0d284f1823f869693afe",
+    "seed_99/filter": "f92984ebe8a9dd427c677daede8b0b86fdbcacd69e951cd4a926ad65023af8fa",
+    "seed_99/train": "21ee13406bf3c809d55d76194c53ec2a9907df16d093343b2744d9ba96436b4e",
+    "seed_99/eval": "de9c1b7eff43123bfa24189c392c647802db6d0d18c0f384e860ccea69301dd6",
+    "seed_99/grade": "c8d946b7ffa6bbce536038a38077215297422f52cfb0e2942038153c53c5925e",
+    "seed_101/traces": "a68c9e8210028a43a556ecfa6319f90ba89be6face1149ba174f941700e77613",
+    "seed_101/filter": "f2e2b2a7f969c428ffdda123f9459b7a86ff44e198518ed4bc61aff018764405",
+    "seed_101/train": "e20cc5c3c9d9dc23420e246e74fc5090f5bc57b5c67c98ad4f04baa8dfcceacd",
+    "seed_101/eval": "d09a77982df08fa4e685c4a910badc3795b9e22ba30ac79fa9fedf82e9d3e72e",
+    "seed_101/grade": "f866325c863384c03ea6adca0f747f85cb4285cd381ccabff26858954cc30dc2"
+  }
+}

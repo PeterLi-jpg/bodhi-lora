@@ -1,0 +1,265 @@
+"""The report of the uniform analysis (bodhi_lora.report) on the committed stats.json
+files: macro names come from each cell's record, every value comes from stats.json, the
+cross-cell tables have the same columns for every cell, a value a cell lacks is "--",
+never a number, and paper/generated/ is what the report writes."""
+import json
+import re
+
+import pytest
+
+pytest.importorskip("pandas")
+
+from bodhi_lora.analysis import analyzable, report_config  # noqa: E402
+from bodhi_lora.paths import CONFIGS_DIR, REPO_ROOT, project  # noqa: E402
+from bodhi_lora.registry import load_registry  # noqa: E402
+from bodhi_lora.report import Report, report, write  # noqa: E402
+from bodhi_lora.report.cross import cross_label  # noqa: E402
+from bodhi_lora.report.latex import fmt, fmt_ci, fmt_pm, fmt_range, token  # noqa: E402
+
+CROSS_TABLE = "tab_cross_cell_checks"
+GENERATED = REPO_ROOT / "paper" / "generated"
+
+
+@pytest.fixture(scope="module")
+def setup():
+    reg, cfg, proj = load_registry(CONFIGS_DIR), report_config(), project(CONFIGS_DIR)
+    if not all((proj.cell(c).analysis() / "stats.json").is_file() for c in cfg.cross_cells):
+        pytest.skip("the cells' stats.json are not in this checkout")
+    return reg, cfg, proj, report(reg, cfg, proj)
+
+
+def _stats(proj, cid):
+    return json.loads((proj.cell(cid).analysis() / "stats.json").read_text())
+
+
+def test_range_prints_both_ends_of_an_asymmetric_interval():
+    assert fmt_range(0.1, [-0.005, 0.201], 3) == "\\ensuremath{+0.100\\;[-0.005,\\,+0.201]}"
+    assert fmt_range(0.1, [-0.005, 0.201], 3, stack=True) == \
+        "\\shortstack[r]{\\ensuremath{+0.100}\\\\\\ensuremath{[-0.005,\\,+0.201]}}"
+    assert fmt_range(0.1, None, 3) == "\\ensuremath{+0.100}"
+    assert fmt_range(None, [0, 1], 3) == "--"
+
+
+def test_an_interval_end_near_zero_keeps_its_sign():
+    # -0.0003 at 3 decimals would print "-0.000" and hide that the interval crosses zero
+    assert fmt_ci([-0.0003, 0.037], 3) == "\\ensuremath{[-0.0003,\\,+0.037]}"
+    assert fmt_ci([0.00004, 0.5], 2) == "\\ensuremath{[+0.00004,\\,+0.50]}"
+    assert fmt_ci([0.0, 0.5], 2) == "\\ensuremath{[+0.00,\\,+0.50]}"
+    # past three extra decimals it stops; the value is zero for any table purpose
+    assert fmt_ci([-1e-9, 0.5], 2) == "\\ensuremath{[-0.00000,\\,+0.50]}"
+
+
+def test_cross_label_splits_benchmark_from_model():
+    assert cross_label("ChatDoctor, Med42-8B", "$^{\\dagger}$") == \
+        "\\shortstack[l]{ChatDoctor,\\\\Med42-8B$^{\\dagger}$}"
+    assert cross_label("smoke_cell") == "smoke\\_cell"
+
+
+def test_tokens():
+    assert token("needs-info-theme") == "NeedsInfoTheme"
+    assert token("pass1-headers") == "PassOneHeaders"
+    assert token("red_flag_rate") == "RedFlagRate"
+
+
+def test_macro_names_are_letters_unique_and_named_by_the_cell(setup):
+    reg, cfg, proj, rep = setup
+    names = [m[0] for m in rep.macros]
+    assert len(names) == len(set(names))
+    assert all(re.fullmatch(r"[A-Za-z]+", n) for n in names)
+    tokens = {reg.cells[c].report.token for c in rep.record["cells"]}
+    tokens |= {"Group", "Posted", "CrossCells", "Family", "Hyp"} | {g.token for g in cfg.grader_comparisons}
+    assert all(any(n.startswith(t) for t in tokens) for n in names)
+    # every macro names its source in stats.json
+    assert all(src for _, _, src in rep.macros)
+
+
+def test_every_analyzed_cell_gets_a_table(setup):
+    reg, cfg, proj, rep = setup
+    have = [c for c in analyzable(reg, cfg) if (proj.cell(c).analysis() / "stats.json").is_file()]
+    assert sorted(rep.record["cells"]) == sorted(have)
+    for c in have:
+        assert f"tab_cell_{reg.cells[c].report.token}" in rep.tables
+
+
+def test_values_come_from_stats(setup):
+    reg, cfg, proj, rep = setup
+    macros = {n: v for n, v, _ in rep.macros}
+    for cid in cfg.cross_cells:
+        s, t = _stats(proj, cid), reg.cells[cid].report.token
+        r = s["conditions"]["active_inquiry"]["lora"]
+        if r["seed_mean"] is not None:
+            assert macros[f"{t}ActiveInquiryLoRA"] == fmt(r["seed_mean"] * 100, 1)
+        d = s["contrasts"]["lora - base"]["metrics"]["rubric_score"]
+        assert macros[f"{t}RubricScoreLoRAvsBaseDiff"] == fmt(d["diff"], 3, sign=True)
+        over = s["discrimination"]["red_flag_rate"]["emergency-theme"]
+        name = f"{t}RedFlagRateEmergencyThemeNegRateLoRA"
+        if "not_measured" in over:
+            assert name not in macros
+        else:
+            assert macros[name] == fmt(over["conditions"]["lora"]["negative_rate"] * 100, 1)
+
+
+def test_cross_table_has_the_same_columns_for_every_cell(setup):
+    reg, cfg, proj, rep = setup
+    text = rep.tables[CROSS_TABLE]
+    body = text.split("\\midrule", 1)[1]
+    rows = [line for line in body.splitlines() if line.endswith("\\\\")]
+    assert len(rows) == len(cfg.cross_cells)
+    columns = cfg.cross_tables[CROSS_TABLE].columns
+    assert {line.count(" & ") for line in rows} == {len(columns)}
+    for cid in cfg.cross_cells:
+        s = _stats(proj, cid)
+        line = next(r for r in rows if r.startswith(cross_label(reg.cells[cid].report.label)[:-1]))
+        cells = line.removesuffix(" \\\\").split(" & ")[1:]
+        # The red-flag rate outside the emergency theme: a seed-level t interval, plus or
+        # minus its half width; "--" where the benchmark has no emergency-theme label.
+        over = s["discrimination"]["red_flag_rate"]["emergency-theme"]
+        i = next(i for i, c in enumerate(columns) if c.value.startswith("discrimination.red_flag_rate"))
+        if "not_measured" in over:
+            assert cells[i] == "--"
+        else:
+            t = over["contrasts"]["lora - base"]["negative_rate"]["seed_test"]
+            assert cells[i] == fmt_pm(t["diff"] * 100, [x * 100 for x in t["ci95"]], 1)
+        # The askers gap: a bootstrap interval, printed with both ends.
+        i = next(i for i, c in enumerate(columns) if c.value == "askers_gap.lora.gap")
+        g = s["askers_gap"]["lora"]
+        assert cells[i] == fmt_range(g["gap"], g["gap_ci95"], 3, sign=True, stack=True)
+
+
+def test_a_set_aside_cell_states_why(setup):
+    reg, cfg, proj, rep = setup
+    for cid in rep.record["cells"]:
+        cell = reg.cells[cid]
+        if cell.report.set_aside:
+            table = rep.tables[f"tab_cell_{cell.report.token}"]
+            assert "set aside: " in table and cell.report.label in table
+
+
+def test_report_is_deterministic(setup):
+    reg, cfg, proj, rep = setup
+    again = report(reg, cfg, proj)
+    assert again.macros == rep.macros and again.tables == rep.tables
+
+
+def test_table_one_has_a_row_for_every_cross_cell(setup):
+    """Table 1 (tab_cross_cell) comes from the report config, so a cell put in cross_cells
+    gets its row with no code change (the report step was not general before 2026-10-10)."""
+    reg, cfg, proj, rep = setup
+    text = rep.tables["tab_cross_cell"]
+    rows = [line for line in text.split("\\midrule", 1)[1].splitlines() if line.endswith("\\\\")]
+    assert len(rows) == len(cfg.cross_cells)
+    width = len(cfg.cross_tables["tab_cross_cell"].columns) + len(cfg.cross_tables["tab_cross_cell"].label_columns)
+    assert {line.count(" & ") + 1 for line in rows} == {width}
+
+
+def test_the_short_hypothesis_table_leaves_out_appendix_only_questions(setup):
+    """The main text's table keeps the primary questions; a question marked appendix_only
+    (the 1,024-token MedGemma-27B cells) is in the appendix's full table only."""
+    reg, cfg, proj, rep = setup
+    only = [h.id for h in cfg.hypotheses if h.appendix_only]
+    assert only, "configs/report.yaml marks no question appendix_only"
+
+    def ids(text):
+        return {line.split(" & ", 1)[0] for line in text.splitlines() if " & " in line} - {"", "Question"}
+
+    short, full = ids(rep.tables["tab_hypotheses_short"]), ids(rep.tables["tab_hypotheses"])
+    assert not short & set(only)
+    assert set(only) & full, "no appendix_only question has a row in the full table"
+
+
+def test_the_committed_paper_numbers_are_what_the_report_writes(setup, tmp_path):
+    """paper/generated/ is current: a fresh report writes the same bytes, and no other
+    tab_*.tex or numbers_*.tex is left over. CI checks the same with make numbers and git diff."""
+    reg, cfg, proj, rep = setup
+    written = write(rep, tmp_path)
+    for name in written:
+        assert (tmp_path / name).read_bytes() == (GENERATED / name).read_bytes(), name
+    for prefix in ("tab_", "numbers_"):
+        assert (sorted(p.name for p in GENERATED.glob(f"{prefix}*.tex"))
+                == sorted(n for n in written if n.startswith(prefix)))
+    # The anonymous reviewer mirror does not serve a file over 8 MB.
+    for name in written:
+        assert (GENERATED / name).stat().st_size < 8 * 2**20, name
+
+
+def test_every_macro_names_its_source_and_no_absolute_path(setup, tmp_path):
+    reg, cfg, proj, rep = setup
+    write(rep, tmp_path)
+    # A home folder in any output (the repo is public, and the files must be the same on
+    # every machine). The pattern is split so this file does not name one either.
+    home = re.compile(r"/(Users|home)" + r"/[A-Za-z]")
+    for path in tmp_path.iterdir():
+        assert not home.search(path.read_text()), path.name
+    lines = [line for path in sorted(tmp_path.glob("numbers_*.tex")) for line in path.read_text().splitlines()]
+    assert sum(line.startswith("\\newcommand") for line in lines) == len(rep.macros)
+    for line in lines:
+        if line.startswith("\\newcommand"):
+            assert re.search(r"\} % \S", line), line
+
+
+def test_no_paper_number_comes_from_a_keyword_analysis(setup):
+    """The three discussion scripts decide meaning by keywords (CONVENTIONS.md rule 15). Their
+    outputs are a record of withdrawn values (withdrawals W23 to W25): the report reads none
+    of them, and no package code names them."""
+    reg, cfg, proj, rep = setup
+    # Their output files; a posted value the paper cites where it withdraws it names the
+    # posted record (\\statPosted...), not these files.
+    record = ("mimicry_split.json", "interference_mechanism.json", "second_person_questions.json",
+              "rebuttal/analyses")
+    assert not any(r in src for _, _, src in rep.macros for r in record)
+    assert not any(r in path for path in rep.record["inputs"] for r in record)
+    for path in sorted((REPO_ROOT / "bodhi_lora").rglob("*.py")):
+        text = path.read_text()
+        assert not any(r in text for r in record), path
+
+
+def test_a_macro_name_is_letters_and_made_once():
+    rep = Report()
+    with pytest.raises(ValueError):
+        rep.add("Seed7Mean", "1", "x")
+    rep.add("Ok", "1", "x")
+    with pytest.raises(ValueError):
+        rep.add("Ok", "2", "x")
+    rep.add("Missing", "--", "x")
+    assert [m[0] for m in rep.macros] == ["Ok"]
+
+
+def test_a_table_row_that_does_not_fill_its_columns_is_an_error():
+    """GEN-1 of the 2026-10-11 audit: a fixed colspec under a cell with other conditions
+    made LaTeX that does not compile; tabular() now refuses it where the report is made."""
+    from bodhi_lora.report.latex import columns_of, row_width, tabular
+
+    assert columns_of("l@{}p{3cm}rr|c") == 5
+    assert row_width(["\\multicolumn{3}{l}{x}", "a"]) == 4
+    tabular("lrr", [["a", "b", "c"]], [[["1", "2", "3"]]], "test")
+    with pytest.raises(ValueError, match="fills 4 columns"):
+        tabular("lrr", [["a", "b", "c"]], [[["1", "2", "3", "4"]]], "test")
+
+
+def test_a_cross_cell_outside_every_block_stops_the_report(setup):
+    """GEN-3: a cell added to cross_cells but to no group a table prints must not drop out
+    of the table while the rule-based counts count it."""
+    from bodhi_lora.report.cross import _ordered
+
+    reg, cfg, proj = setup[:3]
+    members = {gid: [c for c in cfg.cross_cells if c != cfg.cross_cells[1]] for gid in cfg.groups}
+    with pytest.raises(ValueError, match="in none of its blocks"):
+        _ordered(cfg, members, ["submitted"], reg, [], "tab_test")
+    every = list(cfg.cross_cells)
+    assert _ordered(cfg, {"g": every}, ["g"], reg, [], "tab_test") == [every]
+    assert _ordered(cfg, {"g": every[:-1]}, ["g"], reg, every[-1:], "tab_test") == [every[:-1]]
+
+
+def test_a_path_takes_the_cells_own_protocol_and_leak_rule(setup):
+    """GEN-6: {protocol} and {leak_rule} resolve per cell, so a cell on another protocol
+    is measured with its own rule."""
+    from bodhi_lora.report.common import with_protocol
+
+    reg = setup[0]
+    cell = reg.cells["healthbench__mistral-small-24b__ask-first"]
+    stats = {"leakage": {"leak_ask-first__plan-format": {}, "leak_bodhi__analysis-format": {}}}
+    path = "leakage.leak_{protocol}__{leak_rule}.conditions.lora+{protocol}"
+    assert with_protocol(path, cell, stats) == "leakage.leak_ask-first__plan-format.conditions.lora+ask-first"
+    # Two rules of the cell's protocol: no guess, the path stays unresolved.
+    stats["leakage"]["leak_ask-first__other"] = {}
+    assert "{leak_rule}" in with_protocol(path, cell, stats)

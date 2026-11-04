@@ -1,0 +1,100 @@
+# Setup for R7 and R10 on NRP (DECISIONS.md D30; docs/NRP.md section 5), CPU only. The
+# volume already holds the envs (/data/venvs) and a checkout at the EOS reruns' commit, whose
+# results/ folders hold the reruns as untracked files. This job moves the checkout to COMMIT,
+# where some of those files are tracked: it first checks that each one equals the commit's
+# copy, or differs only in the commit id its manifest cites (the history purge renamed
+# 854761f to 7e02348; KNOWN_ISSUES.md), and stops on any other difference. Then it unpacks
+# the NLM files, checks that the token reads the five models, dry-runs the six cells and
+# lists the task pool.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: bodhi-lora-setup-r7
+  labels: {app: bodhi-lora}
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 604800
+  template:
+    metadata:
+      labels: {app: bodhi-lora}
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: setup
+          image: vllm/vllm-openai:v0.10.2
+          env:
+            - {name: COMMIT, value: "SET-ME"}
+            - {name: PYTHONUNBUFFERED, value: "1"}
+            - name: HF_TOKEN
+              valueFrom: {secretKeyRef: {name: nfootprint-hf, key: token}}
+          command: [/bin/bash, -lc]
+          args:
+            - |
+              set -euo pipefail
+              exec > >(tee -a /data/setup_r7.log) 2>&1
+              echo "=== setup-r7 $(date -u +%FT%TZ) on ${HOSTNAME}"
+              cd /data/bohdi
+              git fetch -q /data/incoming/bodhi.bundle 'refs/heads/*:refs/remotes/bundle/*'
+              git log --oneline -1
+              python3 - <<'PY'
+              import json, os, subprocess
+              commit = os.environ["COMMIT"]
+              old, new = "854761fffe22144d96121aee80d581a67a89b654", "7e02348b57fe7862af3676db9d8ce2ed03465580"
+              tracked = subprocess.run(["git", "ls-tree", "-r", "--name-only", commit, "--", "results"],
+                                       capture_output=True, text=True, check=True).stdout.split()
+              head = set(subprocess.run(["git", "ls-files", "--", "results"], capture_output=True, text=True,
+                                        check=True).stdout.split())
+              same = renamed = 0
+              bad = []
+              for path in tracked:
+                  if path in head or not os.path.isfile(path):
+                      continue
+                  disk = open(path, "rb").read()
+                  want = subprocess.run(["git", "show", f"{commit}:{path}"], capture_output=True, check=True).stdout
+                  if disk == want:
+                      same += 1
+                  elif disk.replace(old.encode(), new.encode()) == want:
+                      renamed += 1
+                  else:
+                      bad.append(path)
+              print(f"untracked files the commit tracks: {same} equal, {renamed} differ only in the purged commit id")
+              if bad:
+                  print("other differences:", *bad[:20], sep="\n  ")
+                  raise SystemExit(1)
+              PY
+              git checkout -q -f --detach "$COMMIT"
+              git log --oneline -1
+              tar -xzf /data/incoming/payload_r7.tar.gz -C /data/bohdi
+              for env in train infer; do tar -xf "/data/venvs/venv-$env.tar" -C /local; done
+              ls -l .venv .venv-infer
+              .venv/bin/python - <<'PY'
+              import yaml
+              from huggingface_hub import HfApi
+              api = HfApi()
+              for mid in ("medgemma-27b-text", "qwen2.5-14b", "llama-3.1-8b", "phi-4", "mistral-small-24b"):
+                  rec = yaml.safe_load(open(f"configs/models/{mid}.yaml"))
+                  info = api.model_info(rec["hf_id"], revision=rec["revision"], files_metadata=False)
+                  print("readable:", rec["hf_id"], rec["revision"][:10], len(info.siblings), "files")
+              PY
+              for cell in healthbench__medgemma-27b-text__bodhi healthbench__medgemma-27b-text__bodhi__labelled \
+                          mediq-paired__medgemma-27b-text__bodhi healthbench__medgemma-27b-text__bodhi__ctx4096 \
+                          nlm-clinical-questions__mistral-small-24b__bodhi nlm-clinical-questions__medgemma-27b-text__bodhi; do
+                .venv/bin/python -m bodhi_lora run "$cell" --dry-run > "/data/dryrun_${cell}.log" 2>&1 \
+                  && echo "dry run ok: $cell" || { echo "dry run FAILED: $cell"; tail -20 "/data/dryrun_${cell}.log"; exit 1; }
+              done
+              .venv/bin/python scripts/task_pool.py --dag configs/queues/r7_nrp.yaml \
+                --state /data/pool/r7 --repo /data/bohdi --list > /data/pool_r7_list.txt
+              wc -l /data/pool_r7_list.txt
+              df -h /data | tail -1
+              echo "=== setup-r7 done $(date -u +%FT%TZ)"
+          resources:
+            requests: {cpu: "4", memory: 16Gi, ephemeral-storage: 50Gi}
+            limits: {cpu: 4800m, memory: 19Gi, ephemeral-storage: 60Gi}
+          volumeMounts:
+            - {name: data, mountPath: /data}
+            - {name: local, mountPath: /local}
+      volumes:
+        - name: data
+          persistentVolumeClaim: {claimName: bodhi-lora-rerun}
+        - name: local
+          emptyDir: {sizeLimit: 45Gi}

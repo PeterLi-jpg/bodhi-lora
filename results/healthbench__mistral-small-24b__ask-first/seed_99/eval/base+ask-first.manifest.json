@@ -1,0 +1,274 @@
+{
+  "schema": 3,
+  "stage": "eval",
+  "cell": "healthbench__mistral-small-24b__ask-first",
+  "seed": 99,
+  "created_utc": "2026-10-19T03:02:55.842922+00:00",
+  "git": {
+    "sha": "dc4ccac80eb252bf1f0e8793d20b5e64e7347874",
+    "dirty": false,
+    "diff_sha256": null,
+    "n_untracked": 7
+  },
+  "packages": {
+    "python": "3.12.11",
+    "torch": "2.8.0",
+    "transformers": "4.56.2",
+    "vllm": "0.10.2",
+    "peft": null,
+    "trl": null,
+    "accelerate": null,
+    "bitsandbytes": "0.47.0",
+    "datasets": "5.0.0",
+    "bodhi-llm": "0.1.4",
+    "huggingface-hub": "0.36.2",
+    "numpy": "2.2.6"
+  },
+  "host_sha256": "47ab991b993efd570adbabdd0a3ba6c6010998f7d1591e3ba4dd4c9357ba6750",
+  "hardware": {
+    "visible_devices": "0",
+    "gpus": [
+      {
+        "index": "0",
+        "name": "NVIDIA A100-SXM4-80GB",
+        "memory": "81920 MiB"
+      }
+    ]
+  },
+  "config": {
+    "condition": "base+ask-first",
+    "eval": {
+      "conditions": [
+        "base",
+        "base+ask-first",
+        "lora",
+        "lora+ask-first",
+        "base+bodhi"
+      ],
+      "ids": {
+        "policy": "per_seed_draw",
+        "n": 200,
+        "unit": "row",
+        "only": [],
+        "file": null
+      },
+      "base_precision": "train",
+      "base_precision_reason": null,
+      "max_new_tokens": 1024,
+      "max_new_tokens_per_pass": 2048,
+      "serving": {
+        "max_model_len": 8192,
+        "max_num_seqs": 64,
+        "concurrency": 64,
+        "request_timeout_s": 900,
+        "drain_s": 0.0,
+        "enforce_eager": null
+      },
+      "shared_server": true
+    }
+  },
+  "config_sha256": "10d84b31473f9cada83320637e2b79e69de79772536f47ad384529584a79c03d",
+  "models": {
+    "policy": {
+      "id": "mistral-small-24b",
+      "repo_id": "mistralai/Mistral-Small-24B-Instruct-2501",
+      "family": "mistral",
+      "revision": "9527884be6e5616bdd54de542f9ae13384489724",
+      "revision_source": "record",
+      "unpinned_reason": null
+    },
+    "grader": {
+      "id": "llama-3.1-8b",
+      "repo_id": "meta-llama/Llama-3.1-8B-Instruct",
+      "family": "llama3",
+      "revision": "0e9e39f249a16976918f6564b8830bc894c89659",
+      "revision_source": "record",
+      "unpinned_reason": null
+    }
+  },
+  "engines": {
+    "policy": {
+      "model": "mistralai/Mistral-Small-24B-Instruct-2501",
+      "revision": "9527884be6e5616bdd54de542f9ae13384489724",
+      "max_model_len": 8192,
+      "max_num_seqs": 64,
+      "tensor_parallel_size": 1,
+      "dtype": "bfloat16",
+      "quantization": "bitsandbytes",
+      "enforce_eager": true,
+      "request_timeout_s": 900,
+      "lora_path": null,
+      "lora_modules": {
+        "adapter-s42": "/data/bohdi/results/healthbench__mistral-small-24b__ask-first/seed_42/train",
+        "adapter-s7": "/data/bohdi/results/healthbench__mistral-small-24b__ask-first/seed_7/train",
+        "adapter-s13": "/data/bohdi/results/healthbench__mistral-small-24b__ask-first/seed_13/train",
+        "adapter-s99": "/data/bohdi/results/healthbench__mistral-small-24b__ask-first/seed_99/train",
+        "adapter-s101": "/data/bohdi/results/healthbench__mistral-small-24b__ask-first/seed_101/train"
+      },
+      "max_loras": 5,
+      "max_lora_rank": 16,
+      "env": {}
+    },
+    "grader": {
+      "model": "meta-llama/Llama-3.1-8B-Instruct",
+      "revision": "0e9e39f249a16976918f6564b8830bc894c89659",
+      "max_model_len": 8192,
+      "max_num_seqs": 64,
+      "tensor_parallel_size": 1,
+      "dtype": "bfloat16",
+      "quantization": null,
+      "enforce_eager": true,
+      "request_timeout_s": 900,
+      "lora_path": null,
+      "lora_modules": {},
+      "max_loras": null,
+      "max_lora_rank": null,
+      "env": {}
+    }
+  },
+  "eval_ids": {
+    "path": "/data/bohdi/results/healthbench__mistral-small-24b__ask-first/shared/inputs/eval_ids_seed_99.json",
+    "n": 200,
+    "ids_sha256": "ea7a092335ea89b25f2c6947e548430def83f723d62300de40de61803c4ccdaf",
+    "file_sha256": "9b5e85e13b43845ec2ce261b6e8bfeec514e8f0efc3a93c907007d696e76db21"
+  },
+  "outputs": [
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__ask-first/seed_99/eval/base+ask-first.json",
+      "bytes": 2124494,
+      "sha256": "b5d0e4d1fa542e71048ea0394e8ffdc1eed243c3d0b3911660a8d674d86a7956"
+    }
+  ],
+  "counts": {
+    "n_examples": 200,
+    "n_generated": 200,
+    "n_failed_inference": 0,
+    "n_graded": 200,
+    "n_failed_grading": 0,
+    "n_too_long": 0,
+    "grader_parse_failures_total": 5,
+    "grader_rubric_items_total": 2397,
+    "calls": 200,
+    "completion_tokens_total": 60133,
+    "n_finish_length": 0,
+    "n_format_unparsed": 0
+  },
+  "status": "complete",
+  "condition": "base+ask-first",
+  "shared_server": {
+    "run_manifest": "results/healthbench__mistral-small-24b__ask-first/shared/eval/eval_s42-7-13-99-101_20261019T002607Z.manifest.json",
+    "seeds": [
+      42,
+      7,
+      13,
+      99,
+      101
+    ],
+    "conditions_run": [
+      [
+        42,
+        "base"
+      ],
+      [
+        42,
+        "base+ask-first"
+      ],
+      [
+        42,
+        "lora"
+      ],
+      [
+        42,
+        "lora+ask-first"
+      ],
+      [
+        42,
+        "base+bodhi"
+      ],
+      [
+        7,
+        "base"
+      ],
+      [
+        7,
+        "base+ask-first"
+      ],
+      [
+        7,
+        "lora"
+      ],
+      [
+        7,
+        "lora+ask-first"
+      ],
+      [
+        7,
+        "base+bodhi"
+      ],
+      [
+        13,
+        "base"
+      ],
+      [
+        13,
+        "base+ask-first"
+      ],
+      [
+        13,
+        "lora"
+      ],
+      [
+        13,
+        "lora+ask-first"
+      ],
+      [
+        13,
+        "base+bodhi"
+      ],
+      [
+        99,
+        "base"
+      ],
+      [
+        99,
+        "base+ask-first"
+      ],
+      [
+        99,
+        "lora"
+      ],
+      [
+        99,
+        "lora+ask-first"
+      ],
+      [
+        99,
+        "base+bodhi"
+      ],
+      [
+        101,
+        "base"
+      ],
+      [
+        101,
+        "base+ask-first"
+      ],
+      [
+        101,
+        "lora"
+      ],
+      [
+        101,
+        "lora+ask-first"
+      ],
+      [
+        101,
+        "base+bodhi"
+      ]
+    ],
+    "client_threads": 64,
+    "replies_kept_from_an_earlier_run": 0,
+    "route": "mistralai/Mistral-Small-24B-Instruct-2501"
+  },
+  "too_long_ids": []
+}

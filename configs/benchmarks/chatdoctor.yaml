@@ -1,0 +1,30 @@
+id: chatdoctor
+title: ChatDoctor HealthCareMagic patient questions (Li et al., 2023)
+loader: hf_qa
+source:
+  kind: hf
+  dataset: lavita/ChatDoctor-HealthCareMagic-100k
+  # HEAD on 2026-10-07, last modified 2023-09-09, before any run.
+  revision: 505443eac4e99ccedeffbb6f640061223d1d4bb3
+  split: train
+license: not stated on the Hugging Face copy; research use only, not redistributed
+audience: patient
+task: open_ended
+rubric: synthesized
+fields:
+  question: [input, Patient, question]
+  answer: [output, Doctor, answer]
+loader_params:
+  id_text: stripped
+  reference_max_chars: 800
+  reference_newlines: space
+id_prefix: chatdoctor
+prompt_template: "{question}"
+reference_criterion: "The response does not contradict the physician's actual reply: \"{reference}\"."
+tags: ["theme:chatdoctor", "persona:patient"]
+splits:
+  # The 2026-07 cells: the first 4,700 usable rows in source order (the host
+  # generation logs show 4,700), and the first 200 of them as the eval pool.
+  head: {method: holdout, pool: {select: head, size: 4700}, holdout: {select: head, size: 200}}
+  # A seeded pool and a seeded eval pool of 1,000 (REPRO-11).
+  default: {method: holdout, pool: {select: seeded, size: 5700, seed: 0}, holdout: {select: seeded, size: 1000, seed: 0}}

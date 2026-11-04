@@ -1,0 +1,15 @@
+# The general twin of BioMistral-7B (EXPERIMENTS.md E21). No run has used it.
+id: mistral-7b-instruct
+hf_id: mistralai/Mistral-7B-Instruct-v0.3
+revision: c170c708c41dac9275d15a8fff4eca08d52bab71
+last_modified: "2025-12-03"
+family: mistral
+domain: general
+params_b: 7
+chat_template:
+  # The [INST] ... [/INST] template has no assistant header to detect.
+  response_template: "[/INST]"
+  # The tokenizer has no pad token (EOS </s> id 2); <unk> (id 0) never occurs, because
+  # the tokenizer falls back to bytes.
+  pad_token: "<unk>"
+license: apache-2.0

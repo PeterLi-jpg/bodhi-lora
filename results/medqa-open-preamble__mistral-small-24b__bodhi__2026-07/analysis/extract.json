@@ -1,0 +1,19 @@
+{
+  "cell": "medqa-open-preamble__mistral-small-24b__bodhi__2026-07",
+  "leak_rules": {
+    "leak_bodhi__analysis-format": "ac34ac6776a406b8655785761edd14119041d29184b66a538678a70c38126a50"
+  },
+  "prompts": {
+    "benchmark": "medqa-open-preamble",
+    "rows": "not available: data/raw/medqa-open-preamble/rows.jsonl is missing or stale; run python -m bodhi_lora fetch medqa-open-preamble",
+    "split": "head"
+  },
+  "seeds": [
+    42,
+    7,
+    13,
+    99,
+    101
+  ],
+  "tokenizer": "mistralai/Mistral-Small-24B-Instruct-2501@9527884be6e5616bdd54de542f9ae13384489724"
+}

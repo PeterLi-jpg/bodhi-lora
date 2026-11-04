@@ -1,0 +1,42 @@
+{
+  "schema": 3,
+  "stage": "filter",
+  "cell": "nlm-clinical-questions__mistral-small-24b__bodhi",
+  "seed": 101,
+  "created_utc": "2026-10-21T03:00:32.729716+00:00",
+  "git": {
+    "sha": "d6ae7325af23da3980d8ac83c5607ad4275625f1",
+    "dirty": false,
+    "diff_sha256": null,
+    "n_untracked": 4
+  },
+  "packages": {
+    "python": "3.12.3",
+    "torch": "2.7.0",
+    "transformers": "4.57.6",
+    "vllm": "0.9.2",
+    "peft": "0.19.1",
+    "trl": "0.11.4",
+    "accelerate": "1.13.0",
+    "bitsandbytes": "0.47.0",
+    "datasets": "3.6.0",
+    "bodhi-llm": "0.1.4",
+    "huggingface-hub": "0.36.2",
+    "numpy": "2.2.6"
+  },
+  "host_sha256": "f901b2d54f777417d7649670880c9e0091a4ed3712c9d3219af5f63bf530c67c",
+  "hardware": {
+    "visible_devices": null,
+    "gpus": [
+      {
+        "index": "0",
+        "name": "NVIDIA A100-SXM4-80GB",
+        "memory": "81920 MiB"
+      }
+    ]
+  },
+  "status": "complete",
+  "points_to": "results/healthbench__mistral-small-24b__bodhi/seed_101/filter/manifest.json",
+  "points_to_sha256": "d08b5584172b2915599e4a73c36e548d761a601c9742b85201ff430f1946f162",
+  "note": "adapters of healthbench__mistral-small-24b__bodhi"
+}

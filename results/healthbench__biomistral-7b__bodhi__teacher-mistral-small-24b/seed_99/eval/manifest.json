@@ -1,0 +1,80 @@
+{
+  "schema": 3,
+  "stage": "eval",
+  "cell": "healthbench__biomistral-7b__bodhi__teacher-mistral-small-24b",
+  "seed": 99,
+  "created_utc": "2026-11-02T00:06:10.423490+00:00",
+  "git": {
+    "sha": "f76b10cc471cbd7648529f2df2310de63c3dff32",
+    "dirty": false,
+    "diff_sha256": null,
+    "n_untracked": 6
+  },
+  "packages": {
+    "python": "3.12.3",
+    "torch": "2.8.0",
+    "transformers": "4.56.2",
+    "vllm": "0.10.2",
+    "peft": null,
+    "trl": null,
+    "accelerate": null,
+    "bitsandbytes": "0.47.0",
+    "datasets": "5.0.0",
+    "bodhi-llm": "0.1.4",
+    "huggingface-hub": "0.36.2",
+    "numpy": "2.2.6"
+  },
+  "host_sha256": "e57f9913e18993f3b7eea3afa676d9d0ae3c5a04f647be54a2f28299b57e4149",
+  "hardware": {
+    "visible_devices": null,
+    "gpus": [
+      {
+        "index": "0",
+        "name": "NVIDIA H100 80GB HBM3",
+        "memory": "81559 MiB"
+      },
+      {
+        "index": "1",
+        "name": "NVIDIA H100 80GB HBM3",
+        "memory": "81559 MiB"
+      },
+      {
+        "index": "2",
+        "name": "NVIDIA H100 80GB HBM3",
+        "memory": "81559 MiB"
+      },
+      {
+        "index": "3",
+        "name": "NVIDIA H100 80GB HBM3",
+        "memory": "81559 MiB"
+      },
+      {
+        "index": "4",
+        "name": "NVIDIA H100 80GB HBM3",
+        "memory": "81559 MiB"
+      },
+      {
+        "index": "5",
+        "name": "NVIDIA H100 80GB HBM3",
+        "memory": "81559 MiB"
+      },
+      {
+        "index": "6",
+        "name": "NVIDIA H100 80GB HBM3",
+        "memory": "81559 MiB"
+      },
+      {
+        "index": "7",
+        "name": "NVIDIA H100 80GB HBM3",
+        "memory": "81559 MiB"
+      }
+    ]
+  },
+  "status": "complete",
+  "parts": {
+    "base+bodhi.manifest.json": "058a8f9cb40336e05ec90c7c56c0f080425c6f7a1f96657258fbbd2d0a49848a",
+    "base.manifest.json": "2f72464e80289abb6c5bc1dd4904cbfcc77fe32785d5cfe80683c0ae0e624fd2",
+    "lora+bodhi.manifest.json": "0c9c3ba8da1f175f4d68574c05e6cdbbc799ee1791aabd50979a88277073fadf",
+    "lora.manifest.json": "18cf739689b6164d25635600382154f4afe6dc2cde5ce971561edbbadfefc58f"
+  }
+}

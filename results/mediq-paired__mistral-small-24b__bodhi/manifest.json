@@ -1,0 +1,211 @@
+{
+  "schema": 3,
+  "stage": "cell",
+  "cell": "mediq-paired__mistral-small-24b__bodhi",
+  "seed": null,
+  "created_utc": "2026-10-19T11:23:42.901048+00:00",
+  "git": {
+    "sha": "dc4ccac80eb252bf1f0e8793d20b5e64e7347874",
+    "dirty": false,
+    "diff_sha256": null,
+    "n_untracked": 7
+  },
+  "packages": {
+    "infer": {
+      "python": "3.12.11",
+      "torch": "2.8.0",
+      "transformers": "4.56.2",
+      "vllm": "0.10.2",
+      "peft": null,
+      "trl": null,
+      "accelerate": null,
+      "bitsandbytes": "0.47.0",
+      "datasets": "5.0.0",
+      "bodhi-llm": "0.1.4",
+      "huggingface-hub": "0.36.2",
+      "numpy": "2.2.6"
+    },
+    "train": {
+      "python": "3.12.11",
+      "torch": "2.7.0",
+      "transformers": "4.57.6",
+      "vllm": "0.9.2",
+      "peft": "0.19.1",
+      "trl": "0.11.4",
+      "accelerate": "1.13.0",
+      "bitsandbytes": "0.47.0",
+      "datasets": "3.6.0",
+      "bodhi-llm": "0.1.4",
+      "huggingface-hub": "0.36.2",
+      "numpy": "2.2.6"
+    }
+  },
+  "host_sha256": "174023f8b2ca1169a04ab1f22fc9e6bdae510fd9311bdc64fb1cfeb32ad8dce6",
+  "hardware": {
+    "visible_devices": null,
+    "gpus": [
+      {
+        "index": "0",
+        "name": "NVIDIA A100-SXM4-80GB",
+        "memory": "81920 MiB"
+      }
+    ]
+  },
+  "time": {
+    "started_utc": "2026-10-19T11:22:45.711512+00:00",
+    "finished_utc": "2026-10-19T11:23:43.831740+00:00",
+    "seconds": 58.12
+  },
+  "config": {
+    "id": "mediq-paired__mistral-small-24b__bodhi",
+    "benchmark": "mediq-paired",
+    "split": "default",
+    "model": "mistral-small-24b",
+    "protocol": "bodhi",
+    "seeds": [
+      42,
+      7,
+      13,
+      99,
+      101
+    ],
+    "adapters_from": "healthbench__mistral-small-24b__bodhi",
+    "traces_from": null,
+    "grading": {
+      "filter": "qwen2.5-14b",
+      "evaluator": "llama-3.1-8b",
+      "judges": [],
+      "same_family_waiver": null,
+      "judge_serving": null
+    },
+    "traces": null,
+    "filter": null,
+    "train": null,
+    "eval": {
+      "conditions": [
+        "base",
+        "base+bodhi",
+        "lora",
+        "lora+bodhi",
+        "base+clarify",
+        "base+verbalized-confidence",
+        "base+mediq-abstain"
+      ],
+      "ids": {
+        "policy": "per_seed_draw",
+        "n": 200,
+        "unit": "pair",
+        "only": [],
+        "file": null
+      },
+      "base_precision": "train",
+      "base_precision_reason": null,
+      "max_new_tokens": 1024,
+      "max_new_tokens_per_pass": 2048,
+      "serving": {
+        "max_model_len": 8192,
+        "max_num_seqs": 64,
+        "concurrency": 64,
+        "request_timeout_s": 900,
+        "drain_s": 0.0,
+        "enforce_eager": null
+      },
+      "shared_server": true
+    },
+    "probe": null,
+    "bench": null,
+    "report": {
+      "label": "MediQ paired probe, Mistral-Small-24B",
+      "token": "MediqMistral",
+      "status": "planned",
+      "set_aside": null,
+      "notes": "",
+      "contrasts": []
+    }
+  },
+  "config_sha256": "98cd3eb988acb98a7076369784344b0a2a332d5a6698c4f9e82d4341bac176b0",
+  "models": {
+    "base": {
+      "id": "mistral-small-24b",
+      "repo_id": "mistralai/Mistral-Small-24B-Instruct-2501",
+      "family": "mistral",
+      "revision": "9527884be6e5616bdd54de542f9ae13384489724",
+      "revision_source": "record",
+      "unpinned_reason": null
+    },
+    "teacher": {
+      "id": "mistral-small-24b",
+      "repo_id": "mistralai/Mistral-Small-24B-Instruct-2501",
+      "family": "mistral",
+      "revision": "9527884be6e5616bdd54de542f9ae13384489724",
+      "revision_source": "record",
+      "unpinned_reason": null
+    },
+    "filter": {
+      "id": "qwen2.5-14b",
+      "repo_id": "Qwen/Qwen2.5-14B-Instruct",
+      "family": "qwen2",
+      "revision": "cf98f3b3bbb457ad9e2bb7baf9a0125b6b88caa8",
+      "revision_source": "record",
+      "unpinned_reason": null
+    },
+    "evaluator": {
+      "id": "llama-3.1-8b",
+      "repo_id": "meta-llama/Llama-3.1-8B-Instruct",
+      "family": "llama3",
+      "revision": "0e9e39f249a16976918f6564b8830bc894c89659",
+      "revision_source": "record",
+      "unpinned_reason": null
+    }
+  },
+  "status": "finished",
+  "mode": "gpu",
+  "seeds_run": [
+    42,
+    7,
+    13,
+    99,
+    101
+  ],
+  "stages_run": [
+    "probe",
+    "traces",
+    "filter",
+    "train",
+    "eval",
+    "grade",
+    "bench"
+  ],
+  "judges_run": [],
+  "family": {
+    "problems": [],
+    "waiver": null
+  },
+  "stage_manifests": {
+    "seed_42/traces": "3cc7472605b1ffd5b6788a5e54fd5461d86e71a635e8d82e31596907a04a22e8",
+    "seed_42/filter": "800bfd43b74e19e01514ff6e2e8c46e9ffdb6f1ff200bc0a03c1044dfae213da",
+    "seed_42/train": "d7459ecb72f86bcd505789a3fd3ccea188dd2a3be3bfa633c68c3fde2f4f292e",
+    "seed_42/eval": "3e9815c4adc95dc9d2916a2ef73c813bcff4de2af08b2c80dd8f508fc56458b0",
+    "seed_42/grade": "d51caedb82f7431f67dc40ea5e428f22ac94c7f58a5d413472ec90fc72add1a2",
+    "seed_7/traces": "b2f8bf5043df74094509ebcfe72e9d0da1aec920ee0da4dc17c54f722590f924",
+    "seed_7/filter": "b9cb84122fe87d2a47920f485129635124bfa9f5e2a1f92bf4c211d03931c350",
+    "seed_7/train": "5e94f6f240616f1ba46a2d64305b22a582f7b974e98c5695965de04b6abe1b60",
+    "seed_7/eval": "37f343905d3fcdefb0abbfbb053544082ff85c70010205db6b1155fdd0ec29ae",
+    "seed_7/grade": "be18d653ebe95d7969257b101268eb11e92c52553eb95fcec1e09a07ad296467",
+    "seed_13/traces": "daee2adf5c6ed8f5a3b43d9a9d7cc3ae61f785193eae89d2c0f662986a64c714",
+    "seed_13/filter": "b8e734ec773bc8212ae103a174df5384f506b25e8ae1e0e3e2e28582f6c2c1ac",
+    "seed_13/train": "35e2b6be65b15f07a30dd4b54c808b83ee222b7b0ba003aae6438f18c23a7103",
+    "seed_13/eval": "880bed23e2806c39777da17eabc779299b7393bec0cea97a3acc7fc6268f36bf",
+    "seed_13/grade": "810ce67af82246dddbe2ffd32e4dfc85e2549c9409964bad86e6c242b8a936d6",
+    "seed_99/traces": "9457d57178f28e2914f1523fd60267f335e4fb6c075bb44b5d071d171481a420",
+    "seed_99/filter": "0194aeea201b61edbd992179297721707d187eee00d54ad921a74fdd29aaca18",
+    "seed_99/train": "0ed4dbd4047561171fd0f527d04a08b5ae6bdc2efa0e59ebc1705ce54db8b974",
+    "seed_99/eval": "230ec08079910eb32793f86933f6374fa05b3008b73e3af7c44ae4c472048172",
+    "seed_99/grade": "6c72bbeb785766a009666172c4c15f4f3b7fcbc7319585786c3fe607a810c494",
+    "seed_101/traces": "3540888e39b00dcf0d11e06c3f043a50ae09ec85730e0d2105d0941a7d71b917",
+    "seed_101/filter": "ef03f8322323e2c789b9359748a05267f297c3e564be07617f54efbe54753a03",
+    "seed_101/train": "d4a2ee2fa444ff26887c37e9c880037bc80e84011d39aa544134ef30f6c9e54d",
+    "seed_101/eval": "ef3931f4dd51b900bdcc61ddc3d46dbd473ea4044014a2eb23c04fa156de6fb8",
+    "seed_101/grade": "9a61555b668abb4b728e7a0059d34deeed72b613cba2683f09f93d8e22d12a92"
+  }
+}

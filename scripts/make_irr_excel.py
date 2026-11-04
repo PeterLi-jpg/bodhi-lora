@@ -6,10 +6,12 @@ Each Excel has 3 sheets:
     yellow columns: ``physician_id``, ``physician_grade`` (pass/fail/unsure),
     ``physician_confidence`` (1/2/3), plus optional ``notes``.
   - **Instructions - Primary**: workflow + grading rules (verbatim from
-    the Sebastian-processed template at data/irr_instructions/primary.json).
+    the processed clinician_1 template at <M>/validation/instructions/primary.json).
   - **Instructions - Tiebreaker**: instructions for the adjudicator (used
     only after Stage-1 reviewers return; verbatim from
-    data/irr_instructions/tiebreaker.json).
+    <M>/validation/instructions/tiebreaker.json).
+
+<M> is the submitted cell, results/healthbench__medgemma-27b-text__bodhi__2026-05/.
 
 Sampling
 --------
@@ -23,11 +25,12 @@ rows ≈ 50 × ~10 = ~500 rows per clinician. The is_avoid_item column flags
 criteria where the model should NOT exhibit the behavior (negative-points
 rubric items) — orange-highlighted in the Excel.
 
-Output files (in results_modal/irr/):
+Output files (in <M>/validation/):
   Grading-template.xlsx              master copy, do not edit
-  Grading-1.xlsx, Grading-2.xlsx,    3 identical reviewer copies, rename to
-  Grading-3.xlsx                     Grading-<reviewer-name>.xlsx before sending
-  answer_key.xlsx                    KEEP LOCAL — row→source/config/llm_score
+  Grading-reviewer1.xlsx ..         3 identical reviewer copies. Keep these
+  Grading-reviewer3.xlsx             names; never put a rater's name in a file
+  answer_key.xlsx                    row→source/config/llm_score. It unblinds the sheets:
+                                     gitignored; move it outside the repo
   README.md                          short workflow summary
 
 Run scripts/make_tiebreaker_excel.py AFTER 3 reviewers return.
@@ -36,6 +39,7 @@ from __future__ import annotations
 
 import json
 import random
+import sys
 from pathlib import Path
 
 import pandas as pd
@@ -45,12 +49,16 @@ from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
 ROOT = Path(__file__).resolve().parent.parent
-RESULTS_DIR = ROOT / "results_modal"
-HEALTHBENCH_PATH = ROOT / "data" / "raw" / "healthbench_hard.jsonl"
-HEALTHBENCH_FULL_PATH = ROOT / "data" / "raw" / "healthbench.jsonl"
-FILTER_TRACES_PATH = ROOT / "data" / "sft_qwen_graded" / "seed_7_train.jsonl"
-INSTR_DIR = ROOT / "data" / "irr_instructions"
-OUT_DIR = RESULTS_DIR / "irr"
+sys.path.insert(0, str(ROOT))
+
+from bodhi_lora.registry import condition_from_legacy  # noqa: E402
+
+RESULTS_DIR = ROOT / "results" / "healthbench__medgemma-27b-text__bodhi__2026-05"
+HEALTHBENCH_PATH = ROOT / "data" / "raw" / "healthbench" / "hard.jsonl"
+HEALTHBENCH_FULL_PATH = ROOT / "data" / "raw" / "healthbench" / "full.jsonl"
+FILTER_TRACES_PATH = RESULTS_DIR / "seed_7" / "filter" / "train.jsonl"
+OUT_DIR = RESULTS_DIR / "validation"
+INSTR_DIR = OUT_DIR / "instructions"
 
 SEEDS = (7, 13, 42, 99, 101)
 CONFIGS = ("base_no_wrapper", "base_bodhi", "lora_no_wrapper", "lora_bodhi")
@@ -60,8 +68,10 @@ EVAL_PROMPTS_PER_CONFIG = 10    # 10 prompts × 4 configs = 40 eval responses
 FILTER_RESPONSES = 10           # 10 Qwen-graded BODHI traces
 SHUFFLE_SEED = 42
 
-# Issue #73 clinical leads. Update if the reviewer roster changes.
-REVIEWER_NAMES = ("zineb", "ash", "hillary")
+# One copy per primary rater. The file names carry a number, never a name:
+# Grading-reviewerK.xlsx goes to AnonClinicianK, and only the coordinator holds
+# the key from K to a person.
+REVIEWER_NAMES = ("reviewer1", "reviewer2", "reviewer3")
 
 # Style constants pulled byte-exact from clinician_1-processed.xlsx.
 HEADER_FILL = PatternFill("solid", fgColor="1F3864")
@@ -115,7 +125,7 @@ def load_per_seed_results(seed: int) -> dict[str, list[dict]]:
     seed_dir = RESULTS_DIR / f"seed_{seed}"
     out: dict[str, list[dict]] = {}
     for cfg in CONFIGS:
-        with open(seed_dir / f"{cfg}.json") as f:
+        with open(seed_dir / "eval" / f"{condition_from_legacy(cfg)}.json") as f:
             d = json.load(f)
         out[cfg] = d["results"]
     return out
@@ -351,8 +361,8 @@ def write_readme(out_path: Path, n_responses: int, n_grading_rows: int,
                  n_eval: int, n_filter: int) -> None:
     out_path.write_text(f"""# Inter-rater reliability (issue #73 + dual-grader validation)
 
-Format mirrors the Sebastian-processed template at
-`/Users/anqipeterli/Downloads/clinician_1-processed.xlsx`. Each Excel has
+Format mirrors the processed clinician_1 template
+(`clinician_1-processed.xlsx`, kept outside the repo). Each Excel has
 three sheets — Grading, Instructions - Primary, Instructions - Tiebreaker —
 with the full grading instructions and a worked example baked into the file
 itself.
@@ -361,20 +371,25 @@ itself.
 
 ```
 Grading-template.xlsx     master template, do not edit
-Grading-zineb.xlsx        → email to Zineb
-Grading-ash.xlsx          → email to Ash (Doulla)
-Grading-hillary.xlsx      → email to Hillary
-answer_key.xlsx           DO NOT SEND. Maps grading_id → source/config/llm_score
-                          for downstream κ analysis.
+Grading-reviewer1.xlsx    → AnonClinician1
+Grading-reviewer2.xlsx    → AnonClinician2
+Grading-reviewer3.xlsx    → AnonClinician3
 ```
 
-After all 3 reviewers return their `Grading-*.xlsx` files, drop them in this
-directory and run:
+`answer_key.xlsx` maps grading_id → source/config/llm_score for the κ analysis. It
+unblinds the sheets, so git ignores it: move it outside the repo, never send it, and pass
+its path to `make kappa` as ANSWER_KEY.
+
+Returned `Grading-*.xlsx` files can carry rater names. Keep them outside the
+repo and pass their paths. The scripts read them in place and never copy them:
 
 ```
-python scripts/make_tiebreaker_excel.py    # → tiebreaker_disputes.xlsx
-python scripts/compute_irr_kappa.py        # → kappa_results.{{json,md}}
+python scripts/make_tiebreaker_excel.py --rater-files <r1.xlsx> <r2.xlsx> <r3.xlsx>   # → Grading-tiebreaker.xlsx
+make kappa RATER_FILES="<r1.xlsx> ..." ANSWER_KEY=<answer_key.xlsx>   # → kappa_results.json
 ```
+
+`kappa_results.json` names raters only as rater_A, rater_B, ... So far one rater
+has returned grades, and `kappa_results.json` holds the result for that rater.
 
 ## Sample design
 
@@ -405,9 +420,9 @@ python scripts/compute_irr_kappa.py        # → kappa_results.{{json,md}}
 
 ## Data sources
 
-- `results_modal/seed_<N>/<config>.json` — 5-seed Modal eval (Llama-graded)
-- `data/sft_qwen_graded/seed_7_train.jsonl` — Qwen-filtered BODHI traces
-- `data/raw/healthbench_hard.jsonl`, `data/raw/healthbench.jsonl` — rubrics
+- `../seed_<N>/eval/<condition>.json` — 5-seed Modal eval (Llama-graded)
+- `../seed_7/filter/train.jsonl` — Qwen-filtered BODHI traces
+- `data/raw/healthbench/hard.jsonl`, `data/raw/healthbench/full.jsonl` — rubrics
 """)
 
 
@@ -448,17 +463,17 @@ def main() -> None:
     print(f"writing grading template -> {template_path}")
     write_grading_template(grading_rows, template_path)
 
-    # 3 identical reviewer copies, named for the issue #73 clinical leads.
-    # If reviewer roster changes, edit REVIEWER_NAMES below or rename the
-    # files manually before sending — find_reviewer_files() in the
-    # tiebreaker/kappa scripts globs Grading-*.xlsx so any naming works.
+    # 3 identical reviewer copies, numbered (see REVIEWER_NAMES).
+    # find_reviewer_files() in the tiebreaker/kappa scripts globs
+    # Grading-*.xlsx, so the numbered names work downstream.
     for name in REVIEWER_NAMES:
         copy_path = OUT_DIR / f"Grading-{name}.xlsx"
         copy_path.write_bytes(template_path.read_bytes())
         print(f"  wrote reviewer copy -> {copy_path}")
 
+    # Gitignored: the key unblinds the sheets, so it must leave the repo folder.
     answer_path = OUT_DIR / "answer_key.xlsx"
-    print(f"writing answer key       -> {answer_path}")
+    print(f"writing answer key       -> {answer_path} (move it outside the repo)")
     write_answer_key(grading_rows, answer_path)
 
     readme_path = OUT_DIR / "README.md"

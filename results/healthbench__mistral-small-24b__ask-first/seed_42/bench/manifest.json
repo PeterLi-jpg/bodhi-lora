@@ -1,0 +1,147 @@
+{
+  "schema": 3,
+  "stage": "bench",
+  "cell": "healthbench__mistral-small-24b__ask-first",
+  "seed": 42,
+  "created_utc": "2026-10-19T00:59:26.468316+00:00",
+  "git": {
+    "sha": "dc4ccac80eb252bf1f0e8793d20b5e64e7347874",
+    "dirty": false,
+    "diff_sha256": null,
+    "n_untracked": 7
+  },
+  "packages": {
+    "python": "3.12.11",
+    "torch": "2.8.0",
+    "transformers": "4.56.2",
+    "vllm": "0.10.2",
+    "peft": null,
+    "trl": null,
+    "accelerate": null,
+    "bitsandbytes": "0.47.0",
+    "datasets": "5.0.0",
+    "bodhi-llm": "0.1.4",
+    "huggingface-hub": "0.36.2",
+    "numpy": "2.2.6"
+  },
+  "host_sha256": "174023f8b2ca1169a04ab1f22fc9e6bdae510fd9311bdc64fb1cfeb32ad8dce6",
+  "hardware": {
+    "visible_devices": "0",
+    "gpus": [
+      {
+        "index": "0",
+        "name": "NVIDIA A100-SXM4-80GB",
+        "memory": "81920 MiB"
+      }
+    ]
+  },
+  "time": {
+    "started_utc": "2026-10-18T23:23:23.789199+00:00",
+    "finished_utc": "2026-10-19T00:59:29.944408+00:00",
+    "seconds": 5766.155
+  },
+  "models": {
+    "base": {
+      "id": "mistral-small-24b",
+      "repo_id": "mistralai/Mistral-Small-24B-Instruct-2501",
+      "family": "mistral",
+      "revision": "9527884be6e5616bdd54de542f9ae13384489724",
+      "revision_source": "record",
+      "unpinned_reason": null
+    }
+  },
+  "engines": {
+    "base": {
+      "model": "mistralai/Mistral-Small-24B-Instruct-2501",
+      "revision": "9527884be6e5616bdd54de542f9ae13384489724",
+      "max_model_len": 8192,
+      "max_num_seqs": 1,
+      "tensor_parallel_size": 1,
+      "dtype": "bfloat16",
+      "quantization": "bitsandbytes",
+      "enforce_eager": true,
+      "request_timeout_s": 900,
+      "lora_path": null,
+      "lora_modules": {},
+      "max_loras": null,
+      "max_lora_rank": null,
+      "env": {}
+    },
+    "base+ask-first": {
+      "model": "mistralai/Mistral-Small-24B-Instruct-2501",
+      "revision": "9527884be6e5616bdd54de542f9ae13384489724",
+      "max_model_len": 8192,
+      "max_num_seqs": 1,
+      "tensor_parallel_size": 1,
+      "dtype": "bfloat16",
+      "quantization": "bitsandbytes",
+      "enforce_eager": true,
+      "request_timeout_s": 900,
+      "lora_path": null,
+      "lora_modules": {},
+      "max_loras": null,
+      "max_lora_rank": null,
+      "env": {}
+    },
+    "lora": {
+      "model": "mistralai/Mistral-Small-24B-Instruct-2501",
+      "revision": "9527884be6e5616bdd54de542f9ae13384489724",
+      "max_model_len": 8192,
+      "max_num_seqs": 1,
+      "tensor_parallel_size": 1,
+      "dtype": "bfloat16",
+      "quantization": "bitsandbytes",
+      "enforce_eager": true,
+      "request_timeout_s": 900,
+      "lora_path": "/data/bohdi/results/healthbench__mistral-small-24b__ask-first/seed_42/train",
+      "lora_modules": {
+        "adapter": "/data/bohdi/results/healthbench__mistral-small-24b__ask-first/seed_42/train"
+      },
+      "max_loras": 1,
+      "max_lora_rank": 16,
+      "env": {}
+    },
+    "lora+ask-first": {
+      "model": "mistralai/Mistral-Small-24B-Instruct-2501",
+      "revision": "9527884be6e5616bdd54de542f9ae13384489724",
+      "max_model_len": 8192,
+      "max_num_seqs": 1,
+      "tensor_parallel_size": 1,
+      "dtype": "bfloat16",
+      "quantization": "bitsandbytes",
+      "enforce_eager": true,
+      "request_timeout_s": 900,
+      "lora_path": "/data/bohdi/results/healthbench__mistral-small-24b__ask-first/seed_42/train",
+      "lora_modules": {
+        "adapter": "/data/bohdi/results/healthbench__mistral-small-24b__ask-first/seed_42/train"
+      },
+      "max_loras": 1,
+      "max_lora_rank": 16,
+      "env": {}
+    },
+    "base+bodhi": {
+      "model": "mistralai/Mistral-Small-24B-Instruct-2501",
+      "revision": "9527884be6e5616bdd54de542f9ae13384489724",
+      "max_model_len": 8192,
+      "max_num_seqs": 1,
+      "tensor_parallel_size": 1,
+      "dtype": "bfloat16",
+      "quantization": "bitsandbytes",
+      "enforce_eager": true,
+      "request_timeout_s": 900,
+      "lora_path": null,
+      "lora_modules": {},
+      "max_loras": null,
+      "max_lora_rank": null,
+      "env": {}
+    }
+  },
+  "outputs": [
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__ask-first/seed_42/bench/bench.json",
+      "bytes": 19007,
+      "sha256": "a8030551b81200b741d1377f7ced2e98e36a57b5c6f579c79b1ccd78928a1878"
+    }
+  ],
+  "status": "complete"
+}

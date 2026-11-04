@@ -1,0 +1,171 @@
+{
+  "schema": 3,
+  "stage": "eval",
+  "cell": "healthbench__mistral-small-24b__bodhi__random-same-count",
+  "seed": 101,
+  "created_utc": "2026-11-02T03:58:03.048386+00:00",
+  "git": {
+    "sha": "f76b10cc471cbd7648529f2df2310de63c3dff32",
+    "dirty": false,
+    "diff_sha256": null,
+    "n_untracked": 13
+  },
+  "packages": {
+    "python": "3.12.3",
+    "torch": "2.8.0",
+    "transformers": "4.56.2",
+    "vllm": "0.10.2",
+    "peft": null,
+    "trl": null,
+    "accelerate": null,
+    "bitsandbytes": "0.47.0",
+    "datasets": "5.0.0",
+    "bodhi-llm": "0.1.4",
+    "huggingface-hub": "0.36.2",
+    "numpy": "2.2.6"
+  },
+  "host_sha256": "e57f9913e18993f3b7eea3afa676d9d0ae3c5a04f647be54a2f28299b57e4149",
+  "hardware": {
+    "visible_devices": "6",
+    "gpus": [
+      {
+        "index": "6",
+        "name": "NVIDIA H100 80GB HBM3",
+        "memory": "81559 MiB"
+      }
+    ]
+  },
+  "config": {
+    "condition": "base",
+    "eval": {
+      "conditions": [
+        "base",
+        "lora"
+      ],
+      "ids": {
+        "policy": "per_seed_draw",
+        "n": 200,
+        "unit": "row",
+        "only": [],
+        "file": null
+      },
+      "base_precision": "train",
+      "base_precision_reason": null,
+      "max_new_tokens": 1024,
+      "max_new_tokens_per_pass": 2048,
+      "serving": {
+        "max_model_len": 8192,
+        "max_num_seqs": 32,
+        "concurrency": 32,
+        "request_timeout_s": 900,
+        "drain_s": 0.0,
+        "enforce_eager": null
+      },
+      "shared_server": true
+    }
+  },
+  "config_sha256": "e3e71772362c21c62f19c94cb995d9dd709a13f0b09a6239ce904c3324693efe",
+  "models": {
+    "policy": {
+      "id": "mistral-small-24b",
+      "repo_id": "mistralai/Mistral-Small-24B-Instruct-2501",
+      "family": "mistral",
+      "revision": "9527884be6e5616bdd54de542f9ae13384489724",
+      "revision_source": "record",
+      "unpinned_reason": null
+    },
+    "grader": {
+      "id": "llama-3.1-8b",
+      "repo_id": "meta-llama/Llama-3.1-8B-Instruct",
+      "family": "llama3",
+      "revision": "0e9e39f249a16976918f6564b8830bc894c89659",
+      "revision_source": "record",
+      "unpinned_reason": null
+    }
+  },
+  "engines": {
+    "policy": {
+      "model": "mistralai/Mistral-Small-24B-Instruct-2501",
+      "revision": "9527884be6e5616bdd54de542f9ae13384489724",
+      "max_model_len": 8192,
+      "max_num_seqs": 32,
+      "tensor_parallel_size": 1,
+      "dtype": "bfloat16",
+      "quantization": "bitsandbytes",
+      "enforce_eager": true,
+      "request_timeout_s": 900,
+      "lora_path": null,
+      "lora_modules": {
+        "adapter-s101": "/data/PROJECTS/bohdi/runs-2026-11/results/healthbench__mistral-small-24b__bodhi__random-same-count/seed_101/train"
+      },
+      "max_loras": 1,
+      "max_lora_rank": 16,
+      "env": {}
+    },
+    "grader": {
+      "model": "meta-llama/Llama-3.1-8B-Instruct",
+      "revision": "0e9e39f249a16976918f6564b8830bc894c89659",
+      "max_model_len": 8192,
+      "max_num_seqs": 32,
+      "tensor_parallel_size": 1,
+      "dtype": "bfloat16",
+      "quantization": null,
+      "enforce_eager": true,
+      "request_timeout_s": 900,
+      "lora_path": null,
+      "lora_modules": {},
+      "max_loras": null,
+      "max_lora_rank": null,
+      "env": {}
+    }
+  },
+  "eval_ids": {
+    "path": "/data/PROJECTS/bohdi/runs-2026-11/results/healthbench__mistral-small-24b__bodhi__random-same-count/shared/inputs/eval_ids_seed_101.json",
+    "n": 200,
+    "ids_sha256": "cecf454342d7937ce5c71f6cbe0e52e999582834afeaf98c4b1e97f6f4efbcac",
+    "file_sha256": "ba00b695968dfadb7979bb76ad31aa15a64128699fb88d2138440618d6e4ce55"
+  },
+  "outputs": [
+    {
+      "path": "/data/PROJECTS/bohdi/runs-2026-11/results/healthbench__mistral-small-24b__bodhi__random-same-count/seed_101/eval/base.json",
+      "bytes": 2325840,
+      "sha256": "43520737b0c771478dcfdca9da4ef07a16414b922f705427db7958f9dbab63c5"
+    }
+  ],
+  "counts": {
+    "n_examples": 200,
+    "n_generated": 200,
+    "n_failed_inference": 0,
+    "n_graded": 200,
+    "n_failed_grading": 0,
+    "n_too_long": 0,
+    "grader_parse_failures_total": 1,
+    "grader_rubric_items_total": 2422,
+    "calls": 200,
+    "completion_tokens_total": 64461,
+    "n_finish_length": 3,
+    "n_format_unparsed": 0
+  },
+  "status": "complete",
+  "condition": "base",
+  "shared_server": {
+    "run_manifest": "results/healthbench__mistral-small-24b__bodhi__random-same-count/shared/eval/eval_s101_20261102T034601Z.manifest.json",
+    "seeds": [
+      101
+    ],
+    "conditions_run": [
+      [
+        101,
+        "base"
+      ],
+      [
+        101,
+        "lora"
+      ]
+    ],
+    "client_threads": 32,
+    "replies_kept_from_an_earlier_run": 0,
+    "route": "mistralai/Mistral-Small-24B-Instruct-2501"
+  },
+  "too_long_ids": []
+}

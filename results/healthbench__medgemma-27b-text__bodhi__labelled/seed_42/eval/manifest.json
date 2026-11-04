@@ -1,0 +1,46 @@
+{
+  "schema": 3,
+  "stage": "eval",
+  "cell": "healthbench__medgemma-27b-text__bodhi__labelled",
+  "seed": 42,
+  "created_utc": "2026-10-25T17:24:40.263128+00:00",
+  "git": {
+    "sha": "d51e977d79ae981c4cd1e261dbc130feefaea0ab",
+    "dirty": false,
+    "diff_sha256": null,
+    "n_untracked": 8
+  },
+  "packages": {
+    "python": "3.12.11",
+    "torch": "2.8.0",
+    "transformers": "4.56.2",
+    "vllm": "0.10.2",
+    "peft": null,
+    "trl": null,
+    "accelerate": null,
+    "bitsandbytes": "0.47.0",
+    "datasets": "5.0.0",
+    "bodhi-llm": "0.1.4",
+    "huggingface-hub": "0.36.2",
+    "numpy": "2.2.6"
+  },
+  "host_sha256": "1a0f66b435cfd84be5750769e2c6587c5bc24b35009b7cfdd98508726f6ce272",
+  "hardware": {
+    "visible_devices": null,
+    "gpus": [
+      {
+        "index": "0",
+        "name": "NVIDIA A100-SXM4-80GB",
+        "memory": "81920 MiB"
+      }
+    ]
+  },
+  "status": "complete",
+  "parts": {
+    "base+bodhi.manifest.json": "731e971512e1502e0feb542679da2095a141a1cf118644b9075961afa11c7f5b",
+    "base.manifest.json": "b521c124f7d666c0c875b321e2e35e475f93558d0094f4da4742f525dff2b1dc",
+    "lora+bodhi.manifest.json": "b0e870a4167ebb994d6b40752173e5886b523bec1b9df67329bc5fe008ea57a7",
+    "lora+red-flags-first.manifest.json": "ead3e6d5139e747e8f6b4f9a74812d812620fd46e3ec07e7e516017aa26a5fad",
+    "lora.manifest.json": "80aad2acd20d5688573d2549020940723551c6514ee314bab1d471f22d67c6b2"
+  }
+}

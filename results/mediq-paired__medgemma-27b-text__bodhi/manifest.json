@@ -1,0 +1,211 @@
+{
+  "schema": 3,
+  "stage": "cell",
+  "cell": "mediq-paired__medgemma-27b-text__bodhi",
+  "seed": null,
+  "created_utc": "2026-10-25T17:25:40.538073+00:00",
+  "git": {
+    "sha": "d51e977d79ae981c4cd1e261dbc130feefaea0ab",
+    "dirty": false,
+    "diff_sha256": null,
+    "n_untracked": 8
+  },
+  "packages": {
+    "infer": {
+      "python": "3.12.11",
+      "torch": "2.8.0",
+      "transformers": "4.56.2",
+      "vllm": "0.10.2",
+      "peft": null,
+      "trl": null,
+      "accelerate": null,
+      "bitsandbytes": "0.47.0",
+      "datasets": "5.0.0",
+      "bodhi-llm": "0.1.4",
+      "huggingface-hub": "0.36.2",
+      "numpy": "2.2.6"
+    },
+    "train": {
+      "python": "3.12.11",
+      "torch": "2.7.0",
+      "transformers": "4.57.6",
+      "vllm": "0.9.2",
+      "peft": "0.19.1",
+      "trl": "0.11.4",
+      "accelerate": "1.13.0",
+      "bitsandbytes": "0.47.0",
+      "datasets": "3.6.0",
+      "bodhi-llm": "0.1.4",
+      "huggingface-hub": "0.36.2",
+      "numpy": "2.2.6"
+    }
+  },
+  "host_sha256": "1a0f66b435cfd84be5750769e2c6587c5bc24b35009b7cfdd98508726f6ce272",
+  "hardware": {
+    "visible_devices": null,
+    "gpus": [
+      {
+        "index": "0",
+        "name": "NVIDIA A100-SXM4-80GB",
+        "memory": "81920 MiB"
+      }
+    ]
+  },
+  "time": {
+    "started_utc": "2026-10-25T17:25:08.967330+00:00",
+    "finished_utc": "2026-10-25T17:25:41.150991+00:00",
+    "seconds": 32.184
+  },
+  "config": {
+    "id": "mediq-paired__medgemma-27b-text__bodhi",
+    "benchmark": "mediq-paired",
+    "split": "default",
+    "model": "medgemma-27b-text",
+    "protocol": "bodhi",
+    "seeds": [
+      42,
+      7,
+      13,
+      99,
+      101
+    ],
+    "adapters_from": "healthbench__medgemma-27b-text__bodhi",
+    "traces_from": null,
+    "grading": {
+      "filter": "qwen2.5-14b",
+      "evaluator": "llama-3.1-8b",
+      "judges": [],
+      "same_family_waiver": null,
+      "judge_serving": null
+    },
+    "traces": null,
+    "filter": null,
+    "train": null,
+    "eval": {
+      "conditions": [
+        "base",
+        "base+bodhi",
+        "lora",
+        "lora+bodhi",
+        "base+clarify",
+        "base+verbalized-confidence",
+        "base+mediq-abstain"
+      ],
+      "ids": {
+        "policy": "per_seed_draw",
+        "n": 200,
+        "unit": "pair",
+        "only": [],
+        "file": null
+      },
+      "base_precision": "train",
+      "base_precision_reason": null,
+      "max_new_tokens": 1024,
+      "max_new_tokens_per_pass": 2048,
+      "serving": {
+        "max_model_len": 8192,
+        "max_num_seqs": 32,
+        "concurrency": 32,
+        "request_timeout_s": 900,
+        "drain_s": 0.0,
+        "enforce_eager": null
+      },
+      "shared_server": true
+    },
+    "probe": null,
+    "bench": null,
+    "report": {
+      "label": "MediQ paired probe, MedGemma-27B",
+      "token": "MediqMedGemma",
+      "status": "planned",
+      "set_aside": null,
+      "notes": "",
+      "contrasts": []
+    }
+  },
+  "config_sha256": "7618b2d3cb0074a3a7dae6990dc331b998fcac0579e93df8bbbcf0213a6dcd44",
+  "models": {
+    "base": {
+      "id": "medgemma-27b-text",
+      "repo_id": "google/medgemma-27b-text-it",
+      "family": "gemma",
+      "revision": "5b667cf2ddcf064085bc90952edb35a0edbfb79c",
+      "revision_source": "record",
+      "unpinned_reason": null
+    },
+    "teacher": {
+      "id": "medgemma-27b-text",
+      "repo_id": "google/medgemma-27b-text-it",
+      "family": "gemma",
+      "revision": "5b667cf2ddcf064085bc90952edb35a0edbfb79c",
+      "revision_source": "record",
+      "unpinned_reason": null
+    },
+    "filter": {
+      "id": "qwen2.5-14b",
+      "repo_id": "Qwen/Qwen2.5-14B-Instruct",
+      "family": "qwen2",
+      "revision": "cf98f3b3bbb457ad9e2bb7baf9a0125b6b88caa8",
+      "revision_source": "record",
+      "unpinned_reason": null
+    },
+    "evaluator": {
+      "id": "llama-3.1-8b",
+      "repo_id": "meta-llama/Llama-3.1-8B-Instruct",
+      "family": "llama3",
+      "revision": "0e9e39f249a16976918f6564b8830bc894c89659",
+      "revision_source": "record",
+      "unpinned_reason": null
+    }
+  },
+  "status": "finished",
+  "mode": "gpu",
+  "seeds_run": [
+    42,
+    7,
+    13,
+    99,
+    101
+  ],
+  "stages_run": [
+    "probe",
+    "traces",
+    "filter",
+    "train",
+    "eval",
+    "grade",
+    "bench"
+  ],
+  "judges_run": [],
+  "family": {
+    "problems": [],
+    "waiver": null
+  },
+  "stage_manifests": {
+    "seed_42/traces": "fab5b36d955f56378eac0cf30235ee793f456c3704af03d06b96d887363d6f5a",
+    "seed_42/filter": "7b711dd55c8919730f9eaa2b98c9c0a2dd44465a57e0108433f7f075e611c4c0",
+    "seed_42/train": "33ab921c852aa39a10eb1c61b53d334075870d111be106c2ddb2e89e74b12ad1",
+    "seed_42/eval": "67368c08ab49e431ab361a60525f36f401d0e08f7d46feda51974160346202bf",
+    "seed_42/grade": "af258513e3ab0928187a877947eaea477914026bcf38d170769f9d588c8a16f3",
+    "seed_7/traces": "be7f24f011c6c8cfc6f532814fd7226169ce0b51f8e457e79175cc5abf5d6298",
+    "seed_7/filter": "f36d2f147e1b68906a119f5afb5feb9ef7e9999cabca753430f4662249f551f0",
+    "seed_7/train": "0097acf5e49ac471378669c7aaca132c6466608bff39ab5bb799ddb000d5335a",
+    "seed_7/eval": "f02cdc6f2aae0ba0b1e6aa5d08b6d70d101059817569467bb210fd3812f1c227",
+    "seed_7/grade": "540928527aecffb54ce7b9cbc0169d9b3f1f7892bc07eb395bb859300e6b7492",
+    "seed_13/traces": "a952531fd72828867ca8d229402a83eee6acf861ab9ca2a96ce9e9f21f720d1d",
+    "seed_13/filter": "bd4029d5a420c0c889e32b94ef353a579ebd4f94325283d2f94ae5e92bebe481",
+    "seed_13/train": "9863d9ae2c0c440b3e79613b65ba456940b9a6327d60cf73ce31ee0647eb649e",
+    "seed_13/eval": "0de9e541113233037eac4e972db49c3546b01090d4512a3f1aba3b0aa4a00d42",
+    "seed_13/grade": "7de6e1038f125e736cf0eb14d8d2e50b993582293b1943d959a9a0d1b040974d",
+    "seed_99/traces": "fbd19cba5ee02b11858c511d3804ee1c3b9ae148e5002423012689d0f25f07e7",
+    "seed_99/filter": "a0575f5b17470c1ce96149137928fd49a13a5cac052c0d232e32226783268caa",
+    "seed_99/train": "c2cf1c94a943c91c9132a750597a59fdbe3e10166dfc19a9015d6faba297692a",
+    "seed_99/eval": "844613bd91c89368c4497d920d1cd11203786eb8eec3cc427b86064df9bd7448",
+    "seed_99/grade": "ac07f80cd34aac1987623d8ad7340ebfa4f6476b98b43d8803d85de91cb83536",
+    "seed_101/traces": "f834b35ba3a4736d69eac1abeed8975ac15d70f55580210126d03c72e0b8ce30",
+    "seed_101/filter": "cf49ffa8d61a51b5bbb7c855e05b33769e3023ac3343db1cbfd8ec1490db120d",
+    "seed_101/train": "9672be0ecb3ea9a39fa7728621c177a5023558e99889fd19ae15ada56991929d",
+    "seed_101/eval": "96033844c1a0d2d03063f19e8515fb201755a90362ba065a52da584e18263711",
+    "seed_101/grade": "b8e4047b3f57186e0951daf61d0883d3771abd60e33c2f54f77f7e2b42c125f5"
+  }
+}

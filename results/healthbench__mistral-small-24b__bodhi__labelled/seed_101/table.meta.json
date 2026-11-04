@@ -1,0 +1,65 @@
+{
+  "cell": "healthbench__mistral-small-24b__bodhi__labelled",
+  "completions": {
+    "base": 775,
+    "base+bodhi": 775,
+    "lora": 775,
+    "lora+bodhi": 775,
+    "lora+red-flags-first": 775
+  },
+  "grade": {
+    "counts": {
+      "base": {
+        "examples": 775,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "base+bodhi": {
+        "examples": 775,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "lora": {
+        "examples": 775,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "lora+bodhi": {
+        "examples": 775,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "lora+red-flags-first": {
+        "examples": 775,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      }
+    },
+    "file": "results/healthbench__mistral-small-24b__bodhi__labelled/seed_101/grade/epistemic__llama-3.1-8b.json",
+    "present": true
+  },
+  "n_examples": {
+    "base": 775,
+    "base+bodhi": 775,
+    "lora": 775,
+    "lora+bodhi": 775,
+    "lora+red-flags-first": 775
+  },
+  "score_metric": {
+    "base": "normalized_score",
+    "base+bodhi": "normalized_score",
+    "lora": "normalized_score",
+    "lora+bodhi": "normalized_score",
+    "lora+red-flags-first": "normalized_score"
+  },
+  "seed": 101,
+  "sources": {
+    "results/healthbench__mistral-small-24b__bodhi__labelled/seed_101/eval/base+bodhi.json": "3edf1c0b327daedbbc29e81cd6149242ade68804fab44c5f53d21ae78048cf20",
+    "results/healthbench__mistral-small-24b__bodhi__labelled/seed_101/eval/base.json": "dbc9262f92e5f2184b5aef9406962105a292b0e0b9aa2e32cddf2f0a91a90efe",
+    "results/healthbench__mistral-small-24b__bodhi__labelled/seed_101/eval/lora+bodhi.json": "3c21f410791446b2e68ae7fa04a3ba8a07ccfd346eaa486ec963d3732b779dac",
+    "results/healthbench__mistral-small-24b__bodhi__labelled/seed_101/eval/lora+red-flags-first.json": "cf6a32b97d23ac17a00482968b842ba060843176f3cb03cf2cfe3767abd64f56",
+    "results/healthbench__mistral-small-24b__bodhi__labelled/seed_101/eval/lora.json": "89af73829b15dcb5ce105ee33ec0ef297e612b2cfdccb4b48bd28846ffa10ad3",
+    "results/healthbench__mistral-small-24b__bodhi__labelled/seed_101/grade/epistemic__llama-3.1-8b.json": "6a30b79fed584f7846b929715720964b10de5c421b82e9adcc62ee43ccd215bf"
+  },
+  "tokenizer": "mistralai/Mistral-Small-24B-Instruct-2501@9527884be6e5616bdd54de542f9ae13384489724"
+}

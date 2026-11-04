@@ -1,0 +1,213 @@
+{
+  "schema": 3,
+  "stage": "cell",
+  "cell": "nlm-clinical-questions__mistral-small-24b__bodhi",
+  "seed": null,
+  "created_utc": "2026-10-21T03:00:34.861328+00:00",
+  "git": {
+    "sha": "d6ae7325af23da3980d8ac83c5607ad4275625f1",
+    "dirty": false,
+    "diff_sha256": null,
+    "n_untracked": 4
+  },
+  "packages": {
+    "infer": {
+      "python": "3.12.11",
+      "torch": "2.8.0",
+      "transformers": "4.56.2",
+      "vllm": "0.10.2",
+      "peft": null,
+      "trl": null,
+      "accelerate": null,
+      "bitsandbytes": "0.47.0",
+      "datasets": "5.0.0",
+      "bodhi-llm": "0.1.4",
+      "huggingface-hub": "0.36.2",
+      "numpy": "2.2.6"
+    },
+    "train": {
+      "python": "3.12.11",
+      "torch": "2.7.0",
+      "transformers": "4.57.6",
+      "vllm": "0.9.2",
+      "peft": "0.19.1",
+      "trl": "0.11.4",
+      "accelerate": "1.13.0",
+      "bitsandbytes": "0.47.0",
+      "datasets": "3.6.0",
+      "bodhi-llm": "0.1.4",
+      "huggingface-hub": "0.36.2",
+      "numpy": "2.2.6"
+    }
+  },
+  "host_sha256": "f901b2d54f777417d7649670880c9e0091a4ed3712c9d3219af5f63bf530c67c",
+  "hardware": {
+    "visible_devices": null,
+    "gpus": [
+      {
+        "index": "0",
+        "name": "NVIDIA A100-SXM4-80GB",
+        "memory": "81920 MiB"
+      }
+    ]
+  },
+  "time": {
+    "started_utc": "2026-10-21T02:07:35.148487+00:00",
+    "finished_utc": "2026-10-21T03:00:35.138464+00:00",
+    "seconds": 3179.99
+  },
+  "config": {
+    "id": "nlm-clinical-questions__mistral-small-24b__bodhi",
+    "benchmark": "nlm-clinical-questions",
+    "split": "default",
+    "model": "mistral-small-24b",
+    "protocol": "bodhi",
+    "seeds": [
+      42,
+      7,
+      13,
+      99,
+      101
+    ],
+    "adapters_from": "healthbench__mistral-small-24b__bodhi",
+    "traces_from": null,
+    "grading": {
+      "filter": "qwen2.5-14b",
+      "evaluator": "llama-3.1-8b",
+      "judges": [
+        "medgemma-27b-text"
+      ],
+      "same_family_waiver": null,
+      "judge_serving": null
+    },
+    "traces": null,
+    "filter": null,
+    "train": null,
+    "eval": {
+      "conditions": [
+        "base",
+        "base+bodhi",
+        "lora",
+        "lora+bodhi",
+        "base+clarify",
+        "base+verbalized-confidence",
+        "base+mediq-abstain"
+      ],
+      "ids": {
+        "policy": "per_seed_draw",
+        "n": 200,
+        "unit": "row",
+        "only": [],
+        "file": null
+      },
+      "base_precision": "train",
+      "base_precision_reason": null,
+      "max_new_tokens": 1024,
+      "max_new_tokens_per_pass": 2048,
+      "serving": {
+        "max_model_len": 8192,
+        "max_num_seqs": 32,
+        "concurrency": 32,
+        "request_timeout_s": 900,
+        "drain_s": 0.0,
+        "enforce_eager": null
+      },
+      "shared_server": true
+    },
+    "probe": null,
+    "bench": null,
+    "report": {
+      "label": "NLM clinician questions, Mistral-Small-24B",
+      "token": "QuestionsMistral",
+      "status": "planned",
+      "set_aside": null,
+      "notes": "",
+      "contrasts": []
+    }
+  },
+  "config_sha256": "4eab4fb7545ec56227b0ced9492d2dc12b740221af1ff4877abeb63afc98ef3d",
+  "models": {
+    "base": {
+      "id": "mistral-small-24b",
+      "repo_id": "mistralai/Mistral-Small-24B-Instruct-2501",
+      "family": "mistral",
+      "revision": "9527884be6e5616bdd54de542f9ae13384489724",
+      "revision_source": "record",
+      "unpinned_reason": null
+    },
+    "teacher": {
+      "id": "mistral-small-24b",
+      "repo_id": "mistralai/Mistral-Small-24B-Instruct-2501",
+      "family": "mistral",
+      "revision": "9527884be6e5616bdd54de542f9ae13384489724",
+      "revision_source": "record",
+      "unpinned_reason": null
+    },
+    "filter": {
+      "id": "qwen2.5-14b",
+      "repo_id": "Qwen/Qwen2.5-14B-Instruct",
+      "family": "qwen2",
+      "revision": "cf98f3b3bbb457ad9e2bb7baf9a0125b6b88caa8",
+      "revision_source": "record",
+      "unpinned_reason": null
+    },
+    "evaluator": {
+      "id": "llama-3.1-8b",
+      "repo_id": "meta-llama/Llama-3.1-8B-Instruct",
+      "family": "llama3",
+      "revision": "0e9e39f249a16976918f6564b8830bc894c89659",
+      "revision_source": "record",
+      "unpinned_reason": null
+    },
+    "judge:medgemma-27b-text": {
+      "id": "medgemma-27b-text",
+      "repo_id": "google/medgemma-27b-text-it",
+      "family": "gemma",
+      "revision": "5b667cf2ddcf064085bc90952edb35a0edbfb79c",
+      "revision_source": "record",
+      "unpinned_reason": null
+    }
+  },
+  "status": "finished",
+  "mode": "gpu",
+  "seeds_run": [
+    101
+  ],
+  "stages_run": [
+    "grade"
+  ],
+  "judges_run": [
+    "medgemma-27b-text"
+  ],
+  "family": {
+    "problems": [],
+    "waiver": null
+  },
+  "stage_manifests": {
+    "seed_42/traces": "c02ef2b3e8bcf573187473f591dafe3e52822c5293b13bd66c2329bf3f2afc94",
+    "seed_42/filter": "5b3e42635ac73f66735dde98cc5f411f273e4976addcb9dc38dd5a30a8bc5459",
+    "seed_42/train": "d1e81a8745a0905e09ee1656385c2cdb1a8a67110ebcd5b26cddb58b0de8bf18",
+    "seed_42/eval": "86ae82e6753ce205a10e7b51de056f45111912e229fb1a062d07a6fd35092fb2",
+    "seed_42/grade": "0851c861db19ad1e8c4c9fd15d07452c70b7e2f3f27400b95c8cd55a087c1f4b",
+    "seed_7/traces": "dad5570bdbea44c4273fe56f72f5fdb6e87791119934701997dbc2c88a208b71",
+    "seed_7/filter": "7301ebc3523d416e8cb0cc55453ba0f641b630ce1cba6e71769dce52b443f83f",
+    "seed_7/train": "fbb7fad1c165931111a6e855b1fd31f48dc50b4d1911e990c1fb8569d2a68637",
+    "seed_7/eval": "e6675d0f8216e8e766ff0f81b7cd95b67855537de550545386ca7fde31be20f0",
+    "seed_7/grade": "1004cd7865d228cf8f00e3b6aaa4bf62a35a972e9e073c2a2f50284e98a08c55",
+    "seed_13/traces": "35c71111cff9ed4311c92a964f958d5634acf53754c7e6d7c21837322557bde5",
+    "seed_13/filter": "571fc601e8948c47b9c4c1ce093c4dbe45b5c49a19ccb5e081f5c8dd352944d3",
+    "seed_13/train": "219a69001a5f304ffd4e063c51fa1617a95d1b3c2e64355e184841d4661c7590",
+    "seed_13/eval": "c66e6d66e23c981431395c99fe3e1bb572a636d0a28c5937edd8816e9e3357d6",
+    "seed_13/grade": "5a987fe073e1e84e43d8ba3b01c0712e5678fd8789dadd837c232c4283897277",
+    "seed_99/traces": "7d762a01829dfb078c777f7931d679c770d38c78e0e8d76c5210e5d1a35f38fe",
+    "seed_99/filter": "9a925a1c806c7004758b74a851134a5084fe2c10b16cf2c6b7da0500fba48aaf",
+    "seed_99/train": "ca9ed88d15afb2e53c351c04261cef3b35f2456dcc8057f74588784e30c66b7e",
+    "seed_99/eval": "d802a40b188769104a51c4f446f2bd622021ca7093a5b0bba07389442f300f16",
+    "seed_99/grade": "946c90b7769e1c0593151a33950e6c6c43a823db4ae38e4c6b0ac0b23c4aa8f0",
+    "seed_101/traces": "ab099c004967e8fad6e60907dd4e37866f3c4834cb4d84c17fa24105b0a40ba8",
+    "seed_101/filter": "45942d534a3de89439aae0370ac063c6f69837f822eb476d641b6d3277c954e6",
+    "seed_101/train": "1fd06804c65081b2279b770fe3222188d5b0c8a0763d2be3c14011232079572e",
+    "seed_101/eval": "272807a718a8dd0aacf0d9eb2af193b69c0443873df0b5f5d03d2d77b2d87d5d",
+    "seed_101/grade": "bd307169efebde159f1cba5240b0e35b987f65f55d9d3996f48226ebd9855a8d"
+  }
+}

@@ -1,0 +1,84 @@
+{
+  "cell": "nlm-clinical-questions__mistral-small-24b__bodhi",
+  "completions": {
+    "base": 200,
+    "base+bodhi": 200,
+    "base+clarify": 200,
+    "base+mediq-abstain": 200,
+    "base+verbalized-confidence": 200,
+    "lora": 200,
+    "lora+bodhi": 200
+  },
+  "grade": {
+    "counts": {
+      "base": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "base+bodhi": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "base+clarify": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "base+mediq-abstain": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "base+verbalized-confidence": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "lora": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      },
+      "lora+bodhi": {
+        "examples": 200,
+        "n_failed_lookups": 0,
+        "n_grade_errors": 0
+      }
+    },
+    "file": "results/nlm-clinical-questions__mistral-small-24b__bodhi/seed_7/grade/epistemic__llama-3.1-8b.json",
+    "present": true
+  },
+  "n_examples": {
+    "base": 200,
+    "base+bodhi": 200,
+    "base+clarify": 200,
+    "base+mediq-abstain": 200,
+    "base+verbalized-confidence": 200,
+    "lora": 200,
+    "lora+bodhi": 200
+  },
+  "score_metric": {
+    "base": "normalized_score",
+    "base+bodhi": "normalized_score",
+    "base+clarify": "normalized_score",
+    "base+mediq-abstain": "normalized_score",
+    "base+verbalized-confidence": "normalized_score",
+    "lora": "normalized_score",
+    "lora+bodhi": "normalized_score"
+  },
+  "seed": 7,
+  "sources": {
+    "results/nlm-clinical-questions__mistral-small-24b__bodhi/seed_7/eval/base+bodhi.json": "c590997bfdbea4da194ba05d7afac80ee9caa6adf03c964b487761ab72530650",
+    "results/nlm-clinical-questions__mistral-small-24b__bodhi/seed_7/eval/base+clarify.json": "08474e134b10f5d2a72d5097a36982a9ed7b8597a4e6713e4c3344e423f9b9fd",
+    "results/nlm-clinical-questions__mistral-small-24b__bodhi/seed_7/eval/base+mediq-abstain.json": "61a5686a19098564aab39e935210f6b2d58e356f9ea2e8c2fca07b19f1ba17bb",
+    "results/nlm-clinical-questions__mistral-small-24b__bodhi/seed_7/eval/base+verbalized-confidence.json": "95908e7cd64eb69412c9d4f33b22ab9b0dc04b452e45aaae18f53da406e55949",
+    "results/nlm-clinical-questions__mistral-small-24b__bodhi/seed_7/eval/base.json": "1e2ad0660f8a44dec47372b30cc0fb7f0c963be07e19ed8906cd6fb1e419c5ab",
+    "results/nlm-clinical-questions__mistral-small-24b__bodhi/seed_7/eval/lora+bodhi.json": "287ac6a1144b57a89396eda4312782f13a7572fcfa00071561fc36f152032e9d",
+    "results/nlm-clinical-questions__mistral-small-24b__bodhi/seed_7/eval/lora.json": "268a3cc322b90c6d5074f17b4108b8562e820108eeae9ab65ceec22ca4a49489",
+    "results/nlm-clinical-questions__mistral-small-24b__bodhi/seed_7/grade/epistemic__llama-3.1-8b.json": "0c10d8ecb15b220a7389128cf4e6cebc7685bf451cc86fe2b4b5691cad0b959b",
+    "results/nlm-clinical-questions__mistral-small-24b__bodhi/seed_7/grade/judge__medgemma-27b-text.json": "ac4c44357fad583bca7cc40d81bdc3902f235dc8bc0159664b6a37318dcc35cd"
+  },
+  "tokenizer": "mistralai/Mistral-Small-24B-Instruct-2501@9527884be6e5616bdd54de542f9ae13384489724"
+}

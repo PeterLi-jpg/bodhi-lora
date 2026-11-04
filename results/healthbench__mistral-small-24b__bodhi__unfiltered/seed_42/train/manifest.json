@@ -1,0 +1,166 @@
+{
+  "schema": 3,
+  "stage": "train",
+  "cell": "healthbench__mistral-small-24b__bodhi__unfiltered",
+  "seed": 42,
+  "created_utc": "2026-11-01T18:46:40.182482+00:00",
+  "git": {
+    "sha": "f76b10cc471cbd7648529f2df2310de63c3dff32",
+    "dirty": false,
+    "diff_sha256": null,
+    "n_untracked": 5
+  },
+  "packages": {
+    "python": "3.12.3",
+    "torch": "2.7.0",
+    "transformers": "4.57.6",
+    "vllm": "0.9.2",
+    "peft": "0.19.1",
+    "trl": "0.11.4",
+    "accelerate": "1.13.0",
+    "bitsandbytes": "0.47.0",
+    "datasets": "3.6.0",
+    "bodhi-llm": "0.1.4",
+    "huggingface-hub": "0.36.2",
+    "numpy": "2.2.6"
+  },
+  "host_sha256": "e57f9913e18993f3b7eea3afa676d9d0ae3c5a04f647be54a2f28299b57e4149",
+  "hardware": {
+    "visible_devices": "5",
+    "gpus": [
+      {
+        "index": "5",
+        "name": "NVIDIA H100 80GB HBM3",
+        "memory": "81559 MiB"
+      }
+    ]
+  },
+  "time": {
+    "started_utc": "2026-11-01T17:25:28.002911+00:00",
+    "finished_utc": "2026-11-01T18:46:40.317982+00:00",
+    "seconds": 4872.315
+  },
+  "config": {
+    "model": {
+      "id": "mistral-small-24b",
+      "hf_id": "mistralai/Mistral-Small-24B-Instruct-2501",
+      "revision": "9527884be6e5616bdd54de542f9ae13384489724",
+      "dtype": "bfloat16",
+      "quantization": "4bit",
+      "tokenizer_kwargs": {
+        "fix_mistral_regex": true
+      },
+      "response_template": "[/INST]",
+      "pad_token": "<pad>"
+    },
+    "lora": {
+      "method": "lora",
+      "r": 16,
+      "alpha": 32.0,
+      "dropout": 0.05,
+      "target_modules": [
+        "q_proj",
+        "k_proj",
+        "v_proj",
+        "o_proj",
+        "gate_proj",
+        "up_proj",
+        "down_proj"
+      ]
+    },
+    "training": {
+      "epochs": 3.0,
+      "max_steps": null,
+      "per_device_train_batch_size": 2,
+      "per_device_eval_batch_size": 2,
+      "gradient_accumulation_steps": 8,
+      "learning_rate": 0.0001,
+      "lr_scheduler_type": "cosine",
+      "warmup_ratio": 0.05,
+      "max_seq_length": 4096,
+      "gradient_checkpointing": true,
+      "checkpoint": "best_val_loss",
+      "eval_every": "epoch",
+      "eval_steps": null,
+      "logging_steps": 10
+    }
+  },
+  "config_sha256": "c4329bc3c34a3f31479e5fd23c6e08e78bf35c5b208bc59a136ad7b5defe98e2",
+  "models": {
+    "base": {
+      "id": "mistral-small-24b",
+      "repo_id": "mistralai/Mistral-Small-24B-Instruct-2501",
+      "family": "mistral",
+      "revision": "9527884be6e5616bdd54de542f9ae13384489724",
+      "revision_source": "record",
+      "unpinned_reason": null
+    }
+  },
+  "adapter": {
+    "path": "/data/PROJECTS/bohdi/runs-2026-11/results/healthbench__mistral-small-24b__bodhi__unfiltered/seed_42/train",
+    "sha256": "5e5b55f981bb7cb227c6b4ee52f9fa6b55a41fb582e1d5a3242f97da257315f5",
+    "files": {
+      "adapter_model.safetensors": "0fe50c73aaaee6279abfc3bc9f6af39349e333d1d7be4b8a04f69cb5b3e8d432",
+      "adapter_config.json": "c09c6e6e2776a6eeac40cffc7bfa4ba9d8f62596f3dbc32371b7c3c1206c1edf"
+    },
+    "r": 16,
+    "lora_alpha": 32.0,
+    "lora_dropout": 0.05,
+    "target_modules": [
+      "v_proj",
+      "down_proj",
+      "q_proj",
+      "up_proj",
+      "gate_proj",
+      "k_proj",
+      "o_proj"
+    ],
+    "base_model_name_or_path": "mistralai/Mistral-Small-24B-Instruct-2501",
+    "revision": null,
+    "use_dora": false,
+    "use_rslora": false
+  },
+  "inputs": [
+    {
+      "path": "/data/PROJECTS/bohdi/runs-2026-11/results/healthbench__mistral-small-24b__bodhi__unfiltered/seed_42/filter/train.jsonl",
+      "bytes": 44079575,
+      "sha256": "9ab9e3e18ccf19d8b7ff42cd756ce25af5b3bdcdc3cc2650f4a6e602c55652c9",
+      "n_lines": 2989
+    },
+    {
+      "path": "/data/PROJECTS/bohdi/runs-2026-11/results/healthbench__mistral-small-24b__bodhi__unfiltered/seed_42/filter/val.jsonl",
+      "bytes": 4800567,
+      "sha256": "d3088ce24047bffb1e33fb47ee9684326e5dcd4ddd4f3e05b7a9a1f1d9b89681",
+      "n_lines": 332
+    }
+  ],
+  "counts": {
+    "seed": 42,
+    "effective_batch": 16,
+    "world_size": 1,
+    "global_step": 561,
+    "epoch": 3.0,
+    "max_steps": 561,
+    "num_train_epochs": 3,
+    "first_train_loss": 0.5746,
+    "last_train_loss": 0.1183,
+    "eval_loss_by_step": [
+      [
+        187,
+        0.3646053075790405
+      ],
+      [
+        374,
+        0.3657861053943634
+      ],
+      [
+        561,
+        0.3799310624599457
+      ]
+    ],
+    "best_metric": 0.3646053075790405,
+    "best_model_checkpoint": "/data/PROJECTS/bohdi/runs-2026-11/results/healthbench__mistral-small-24b__bodhi__unfiltered/seed_42/train/checkpoint-187"
+  },
+  "status": "complete",
+  "quantization": "4bit"
+}

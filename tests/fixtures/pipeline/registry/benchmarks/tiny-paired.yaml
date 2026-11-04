@@ -1,0 +1,37 @@
+# Eight cases in the MediQ release format (id, question, context, answer, ...), written
+# for the tests; the twin of configs/benchmarks/mediq-paired.yaml.
+id: tiny-paired
+title: Tiny paired-context benchmark for the tests
+loader: paired_context_jsonl
+source:
+  kind: local
+  files:
+    dev:
+      path: tests/fixtures/pipeline/tiny_paired.jsonl
+      sha256: 9e8eeb381af5d23252b6f2d3f5397bd80d08b156b2ba5ae8992dfcc919cdb3db
+license: MIT (this repository)
+audience: clinician
+task: single_best_answer
+rubric: synthesized
+fields:
+  question: [question]
+  context: [context]
+  answer: [answer]
+loader_params:
+  initial_sentences: 1
+  reference_max_chars: 400
+id_prefix: tinypair
+prompt_template: "You are advising a clinician colleague. Answer the following clinical question.\n\n{context}\n\n{question}"
+reference_criterion: "The assistant's final clinical conclusion is consistent with the correct answer: \"{reference}\"."
+tags: ["theme:tiny-paired"]
+splits:
+  default: {method: holdout, pool: {select: all}, holdout: {select: all}}
+labels:
+  incomplete:
+    description: the row keeps only the first context sentence
+    source: construction
+    timing: pre_specified
+    field: variant
+    positive_values: [incomplete]
+    negative_values: [complete]
+    pair_field: pair_id

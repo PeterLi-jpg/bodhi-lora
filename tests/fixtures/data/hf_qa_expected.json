@@ -1,0 +1,1411 @@
+{
+ "chatdoctor": {
+  "rows": [
+   {
+    "prompt_id": "chatdoctor-bd0788439205",
+    "prompt": [
+     {
+      "role": "user",
+      "content": "I have had a cough for 3 days."
+     }
+    ],
+    "rubrics": [
+     {
+      "criterion": "The response does not contradict the physician's actual reply: \"Rest and fluids. See a doctor if it lasts.\".",
+      "points": 8,
+      "tags": [
+       "axis:accuracy"
+      ]
+     },
+     {
+      "criterion": "The response directly addresses the specific question that was asked.",
+      "points": 5,
+      "tags": [
+       "axis:instruction_following"
+      ]
+     },
+     {
+      "criterion": "The response covers at least one substantive, on-topic clinical point (mechanism, risk factor, management step, or diagnostic consideration).",
+      "points": 5,
+      "tags": [
+       "axis:completeness"
+      ]
+     },
+     {
+      "criterion": "The response gives concrete, actionable guidance (specific next steps, timeframes, dosing, or thresholds) rather than only generalities.",
+      "points": 4,
+      "tags": [
+       "axis:completeness"
+      ]
+     },
+     {
+      "criterion": "Where information needed to answer safely is missing, the response asks for it or explicitly states the limitation.",
+      "points": 4,
+      "tags": [
+       "axis:context_awareness"
+      ]
+     },
+     {
+      "criterion": "The response is clearly written and organized appropriately for its reader.",
+      "points": 3,
+      "tags": [
+       "axis:communication_quality"
+      ]
+     },
+     {
+      "criterion": "The response gives medically dangerous or clearly incorrect advice.",
+      "points": -8,
+      "tags": [
+       "axis:accuracy"
+      ]
+     },
+     {
+      "criterion": "The response offers false reassurance, or fails to recommend escalation when the situation warrants it.",
+      "points": -5,
+      "tags": [
+       "axis:accuracy"
+      ]
+     }
+    ],
+    "example_tags": [
+     "theme:chatdoctor",
+     "persona:patient"
+    ]
+   },
+   {
+    "prompt_id": "chatdoctor-973b70a0b838",
+    "prompt": [
+     {
+      "role": "user",
+      "content": "My knee hurts after running."
+     }
+    ],
+    "rubrics": [
+     {
+      "criterion": "The response does not contradict the physician's actual reply: \"Line one of a long answer. Line two. word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word wor\".",
+      "points": 8,
+      "tags": [
+       "axis:accuracy"
+      ]
+     },
+     {
+      "criterion": "The response directly addresses the specific question that was asked.",
+      "points": 5,
+      "tags": [
+       "axis:instruction_following"
+      ]
+     },
+     {
+      "criterion": "The response covers at least one substantive, on-topic clinical point (mechanism, risk factor, management step, or diagnostic consideration).",
+      "points": 5,
+      "tags": [
+       "axis:completeness"
+      ]
+     },
+     {
+      "criterion": "The response gives concrete, actionable guidance (specific next steps, timeframes, dosing, or thresholds) rather than only generalities.",
+      "points": 4,
+      "tags": [
+       "axis:completeness"
+      ]
+     },
+     {
+      "criterion": "Where information needed to answer safely is missing, the response asks for it or explicitly states the limitation.",
+      "points": 4,
+      "tags": [
+       "axis:context_awareness"
+      ]
+     },
+     {
+      "criterion": "The response is clearly written and organized appropriately for its reader.",
+      "points": 3,
+      "tags": [
+       "axis:communication_quality"
+      ]
+     },
+     {
+      "criterion": "The response gives medically dangerous or clearly incorrect advice.",
+      "points": -8,
+      "tags": [
+       "axis:accuracy"
+      ]
+     },
+     {
+      "criterion": "The response offers false reassurance, or fails to recommend escalation when the situation warrants it.",
+      "points": -5,
+      "tags": [
+       "axis:accuracy"
+      ]
+     }
+    ],
+    "example_tags": [
+     "theme:chatdoctor",
+     "persona:patient"
+    ]
+   },
+   {
+    "prompt_id": "chatdoctor-f45efd693138",
+    "prompt": [
+     {
+      "role": "user",
+      "content": "Can I take two painkillers together?"
+     }
+    ],
+    "rubrics": [
+     {
+      "criterion": "The response does not contradict the physician's actual reply: \"Ask a pharmacist.\".",
+      "points": 8,
+      "tags": [
+       "axis:accuracy"
+      ]
+     },
+     {
+      "criterion": "The response directly addresses the specific question that was asked.",
+      "points": 5,
+      "tags": [
+       "axis:instruction_following"
+      ]
+     },
+     {
+      "criterion": "The response covers at least one substantive, on-topic clinical point (mechanism, risk factor, management step, or diagnostic consideration).",
+      "points": 5,
+      "tags": [
+       "axis:completeness"
+      ]
+     },
+     {
+      "criterion": "The response gives concrete, actionable guidance (specific next steps, timeframes, dosing, or thresholds) rather than only generalities.",
+      "points": 4,
+      "tags": [
+       "axis:completeness"
+      ]
+     },
+     {
+      "criterion": "Where information needed to answer safely is missing, the response asks for it or explicitly states the limitation.",
+      "points": 4,
+      "tags": [
+       "axis:context_awareness"
+      ]
+     },
+     {
+      "criterion": "The response is clearly written and organized appropriately for its reader.",
+      "points": 3,
+      "tags": [
+       "axis:communication_quality"
+      ]
+     },
+     {
+      "criterion": "The response gives medically dangerous or clearly incorrect advice.",
+      "points": -8,
+      "tags": [
+       "axis:accuracy"
+      ]
+     },
+     {
+      "criterion": "The response offers false reassurance, or fails to recommend escalation when the situation warrants it.",
+      "points": -5,
+      "tags": [
+       "axis:accuracy"
+      ]
+     }
+    ],
+    "example_tags": [
+     "theme:chatdoctor",
+     "persona:patient"
+    ]
+   },
+   {
+    "prompt_id": "chatdoctor-f52dbe4108a5",
+    "prompt": [
+     {
+      "role": "user",
+      "content": "I feel tired all the time."
+     }
+    ],
+    "rubrics": [
+     {
+      "criterion": "The response does not contradict the physician's actual reply: \"Check thyroid and iron.\".",
+      "points": 8,
+      "tags": [
+       "axis:accuracy"
+      ]
+     },
+     {
+      "criterion": "The response directly addresses the specific question that was asked.",
+      "points": 5,
+      "tags": [
+       "axis:instruction_following"
+      ]
+     },
+     {
+      "criterion": "The response covers at least one substantive, on-topic clinical point (mechanism, risk factor, management step, or diagnostic consideration).",
+      "points": 5,
+      "tags": [
+       "axis:completeness"
+      ]
+     },
+     {
+      "criterion": "The response gives concrete, actionable guidance (specific next steps, timeframes, dosing, or thresholds) rather than only generalities.",
+      "points": 4,
+      "tags": [
+       "axis:completeness"
+      ]
+     },
+     {
+      "criterion": "Where information needed to answer safely is missing, the response asks for it or explicitly states the limitation.",
+      "points": 4,
+      "tags": [
+       "axis:context_awareness"
+      ]
+     },
+     {
+      "criterion": "The response is clearly written and organized appropriately for its reader.",
+      "points": 3,
+      "tags": [
+       "axis:communication_quality"
+      ]
+     },
+     {
+      "criterion": "The response gives medically dangerous or clearly incorrect advice.",
+      "points": -8,
+      "tags": [
+       "axis:accuracy"
+      ]
+     },
+     {
+      "criterion": "The response offers false reassurance, or fails to recommend escalation when the situation warrants it.",
+      "points": -5,
+      "tags": [
+       "axis:accuracy"
+      ]
+     }
+    ],
+    "example_tags": [
+     "theme:chatdoctor",
+     "persona:patient"
+    ]
+   }
+  ],
+  "counts": {
+   "n_source_rows": 7,
+   "n_unusable": 2,
+   "n_duplicates": 1,
+   "n_written": 4
+  }
+ },
+ "medquad": {
+  "rows": [
+   {
+    "prompt_id": "medquad-17194e3f9cdd",
+    "prompt": [
+     {
+      "role": "user",
+      "content": "What is glaucoma?"
+     }
+    ],
+    "rubrics": [
+     {
+      "criterion": "The response does not contradict this reference answer: \"Glaucoma is a group of eye diseases. It damages the optic nerve.\".",
+      "points": 8,
+      "tags": [
+       "axis:accuracy"
+      ]
+     },
+     {
+      "criterion": "The response directly addresses the specific question that was asked.",
+      "points": 5,
+      "tags": [
+       "axis:instruction_following"
+      ]
+     },
+     {
+      "criterion": "The response covers at least one substantive, on-topic clinical point (mechanism, risk factor, management step, or diagnostic consideration).",
+      "points": 5,
+      "tags": [
+       "axis:completeness"
+      ]
+     },
+     {
+      "criterion": "The response gives concrete, actionable guidance (specific next steps, timeframes, dosing, or thresholds) rather than only generalities.",
+      "points": 4,
+      "tags": [
+       "axis:completeness"
+      ]
+     },
+     {
+      "criterion": "Where information needed to answer safely is missing, the response asks for it or explicitly states the limitation.",
+      "points": 4,
+      "tags": [
+       "axis:context_awareness"
+      ]
+     },
+     {
+      "criterion": "The response is clearly written and organized appropriately for its reader.",
+      "points": 3,
+      "tags": [
+       "axis:communication_quality"
+      ]
+     },
+     {
+      "criterion": "The response gives medically dangerous or clearly incorrect advice.",
+      "points": -8,
+      "tags": [
+       "axis:accuracy"
+      ]
+     },
+     {
+      "criterion": "The response offers false reassurance, or fails to recommend escalation when the situation warrants it.",
+      "points": -5,
+      "tags": [
+       "axis:accuracy"
+      ]
+     }
+    ],
+    "example_tags": [
+     "theme:medquad",
+     "persona:patient"
+    ]
+   },
+   {
+    "prompt_id": "medquad-8d2263c5df10",
+    "prompt": [
+     {
+      "role": "user",
+      "content": "What causes gout?"
+     }
+    ],
+    "rubrics": [
+     {
+      "criterion": "The response does not contradict this reference answer: \"Line one of a long answer. Line two. word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word wor\".",
+      "points": 8,
+      "tags": [
+       "axis:accuracy"
+      ]
+     },
+     {
+      "criterion": "The response directly addresses the specific question that was asked.",
+      "points": 5,
+      "tags": [
+       "axis:instruction_following"
+      ]
+     },
+     {
+      "criterion": "The response covers at least one substantive, on-topic clinical point (mechanism, risk factor, management step, or diagnostic consideration).",
+      "points": 5,
+      "tags": [
+       "axis:completeness"
+      ]
+     },
+     {
+      "criterion": "The response gives concrete, actionable guidance (specific next steps, timeframes, dosing, or thresholds) rather than only generalities.",
+      "points": 4,
+      "tags": [
+       "axis:completeness"
+      ]
+     },
+     {
+      "criterion": "Where information needed to answer safely is missing, the response asks for it or explicitly states the limitation.",
+      "points": 4,
+      "tags": [
+       "axis:context_awareness"
+      ]
+     },
+     {
+      "criterion": "The response is clearly written and organized appropriately for its reader.",
+      "points": 3,
+      "tags": [
+       "axis:communication_quality"
+      ]
+     },
+     {
+      "criterion": "The response gives medically dangerous or clearly incorrect advice.",
+      "points": -8,
+      "tags": [
+       "axis:accuracy"
+      ]
+     },
+     {
+      "criterion": "The response offers false reassurance, or fails to recommend escalation when the situation warrants it.",
+      "points": -5,
+      "tags": [
+       "axis:accuracy"
+      ]
+     }
+    ],
+    "example_tags": [
+     "theme:medquad",
+     "persona:patient"
+    ]
+   },
+   {
+    "prompt_id": "medquad-f48225ea4e50",
+    "prompt": [
+     {
+      "role": "user",
+      "content": "How is asthma treated?"
+     }
+    ],
+    "rubrics": [
+     {
+      "criterion": "The response does not contradict this reference answer: \"Inhalers.\".",
+      "points": 8,
+      "tags": [
+       "axis:accuracy"
+      ]
+     },
+     {
+      "criterion": "The response directly addresses the specific question that was asked.",
+      "points": 5,
+      "tags": [
+       "axis:instruction_following"
+      ]
+     },
+     {
+      "criterion": "The response covers at least one substantive, on-topic clinical point (mechanism, risk factor, management step, or diagnostic consideration).",
+      "points": 5,
+      "tags": [
+       "axis:completeness"
+      ]
+     },
+     {
+      "criterion": "The response gives concrete, actionable guidance (specific next steps, timeframes, dosing, or thresholds) rather than only generalities.",
+      "points": 4,
+      "tags": [
+       "axis:completeness"
+      ]
+     },
+     {
+      "criterion": "Where information needed to answer safely is missing, the response asks for it or explicitly states the limitation.",
+      "points": 4,
+      "tags": [
+       "axis:context_awareness"
+      ]
+     },
+     {
+      "criterion": "The response is clearly written and organized appropriately for its reader.",
+      "points": 3,
+      "tags": [
+       "axis:communication_quality"
+      ]
+     },
+     {
+      "criterion": "The response gives medically dangerous or clearly incorrect advice.",
+      "points": -8,
+      "tags": [
+       "axis:accuracy"
+      ]
+     },
+     {
+      "criterion": "The response offers false reassurance, or fails to recommend escalation when the situation warrants it.",
+      "points": -5,
+      "tags": [
+       "axis:accuracy"
+      ]
+     }
+    ],
+    "example_tags": [
+     "theme:medquad",
+     "persona:patient"
+    ]
+   }
+  ],
+  "counts": {
+   "n_source_rows": 5,
+   "n_unusable": 1,
+   "n_duplicates": 1,
+   "n_written": 3
+  }
+ },
+ "medqa-open": {
+  "rows": [
+   {
+    "prompt_id": "medqa-76afc3f8ca5f",
+    "prompt": [
+     {
+      "role": "user",
+      "content": "You are advising a clinician colleague. Answer the following clinical question.\n\nA 45-year-old man has chest pain. What is the next step?"
+     }
+    ],
+    "rubrics": [
+     {
+      "criterion": "The assistant's final clinical conclusion is consistent with the correct answer: \"ECG\".",
+      "points": 8,
+      "tags": [
+       "axis:accuracy"
+      ]
+     },
+     {
+      "criterion": "The response directly addresses the specific question that was asked.",
+      "points": 5,
+      "tags": [
+       "axis:instruction_following"
+      ]
+     },
+     {
+      "criterion": "The response covers at least one substantive, on-topic clinical point (mechanism, risk factor, management step, or diagnostic consideration).",
+      "points": 5,
+      "tags": [
+       "axis:completeness"
+      ]
+     },
+     {
+      "criterion": "The response gives concrete, actionable guidance (specific next steps, timeframes, dosing, or thresholds) rather than only generalities.",
+      "points": 4,
+      "tags": [
+       "axis:completeness"
+      ]
+     },
+     {
+      "criterion": "Where information needed to answer safely is missing, the response asks for it or explicitly states the limitation.",
+      "points": 4,
+      "tags": [
+       "axis:context_awareness"
+      ]
+     },
+     {
+      "criterion": "The response is clearly written and organized appropriately for its reader.",
+      "points": 3,
+      "tags": [
+       "axis:communication_quality"
+      ]
+     },
+     {
+      "criterion": "The response gives medically dangerous or clearly incorrect advice.",
+      "points": -8,
+      "tags": [
+       "axis:accuracy"
+      ]
+     },
+     {
+      "criterion": "The response offers false reassurance, or fails to recommend escalation when the situation warrants it.",
+      "points": -5,
+      "tags": [
+       "axis:accuracy"
+      ]
+     }
+    ],
+    "example_tags": [
+     "theme:medqa",
+     "persona:clinician"
+    ]
+   },
+   {
+    "prompt_id": "medqa-5d21f72f4d45",
+    "prompt": [
+     {
+      "role": "user",
+      "content": "You are advising a clinician colleague. Answer the following clinical question.\n\nA child has a rash. Diagnosis?"
+     }
+    ],
+    "rubrics": [
+     {
+      "criterion": "The assistant's final clinical conclusion is consistent with the correct answer: \"Chickenpox\".",
+      "points": 8,
+      "tags": [
+       "axis:accuracy"
+      ]
+     },
+     {
+      "criterion": "The response directly addresses the specific question that was asked.",
+      "points": 5,
+      "tags": [
+       "axis:instruction_following"
+      ]
+     },
+     {
+      "criterion": "The response covers at least one substantive, on-topic clinical point (mechanism, risk factor, management step, or diagnostic consideration).",
+      "points": 5,
+      "tags": [
+       "axis:completeness"
+      ]
+     },
+     {
+      "criterion": "The response gives concrete, actionable guidance (specific next steps, timeframes, dosing, or thresholds) rather than only generalities.",
+      "points": 4,
+      "tags": [
+       "axis:completeness"
+      ]
+     },
+     {
+      "criterion": "Where information needed to answer safely is missing, the response asks for it or explicitly states the limitation.",
+      "points": 4,
+      "tags": [
+       "axis:context_awareness"
+      ]
+     },
+     {
+      "criterion": "The response is clearly written and organized appropriately for its reader.",
+      "points": 3,
+      "tags": [
+       "axis:communication_quality"
+      ]
+     },
+     {
+      "criterion": "The response gives medically dangerous or clearly incorrect advice.",
+      "points": -8,
+      "tags": [
+       "axis:accuracy"
+      ]
+     },
+     {
+      "criterion": "The response offers false reassurance, or fails to recommend escalation when the situation warrants it.",
+      "points": -5,
+      "tags": [
+       "axis:accuracy"
+      ]
+     }
+    ],
+    "example_tags": [
+     "theme:medqa",
+     "persona:clinician"
+    ]
+   },
+   {
+    "prompt_id": "medqa-a0938625b867",
+    "prompt": [
+     {
+      "role": "user",
+      "content": "You are advising a clinician colleague. Answer the following clinical question.\n\nA woman has fatigue."
+     }
+    ],
+    "rubrics": [
+     {
+      "criterion": "The assistant's final clinical conclusion is consistent with the correct answer: \"Anemia\".",
+      "points": 8,
+      "tags": [
+       "axis:accuracy"
+      ]
+     },
+     {
+      "criterion": "The response directly addresses the specific question that was asked.",
+      "points": 5,
+      "tags": [
+       "axis:instruction_following"
+      ]
+     },
+     {
+      "criterion": "The response covers at least one substantive, on-topic clinical point (mechanism, risk factor, management step, or diagnostic consideration).",
+      "points": 5,
+      "tags": [
+       "axis:completeness"
+      ]
+     },
+     {
+      "criterion": "The response gives concrete, actionable guidance (specific next steps, timeframes, dosing, or thresholds) rather than only generalities.",
+      "points": 4,
+      "tags": [
+       "axis:completeness"
+      ]
+     },
+     {
+      "criterion": "Where information needed to answer safely is missing, the response asks for it or explicitly states the limitation.",
+      "points": 4,
+      "tags": [
+       "axis:context_awareness"
+      ]
+     },
+     {
+      "criterion": "The response is clearly written and organized appropriately for its reader.",
+      "points": 3,
+      "tags": [
+       "axis:communication_quality"
+      ]
+     },
+     {
+      "criterion": "The response gives medically dangerous or clearly incorrect advice.",
+      "points": -8,
+      "tags": [
+       "axis:accuracy"
+      ]
+     },
+     {
+      "criterion": "The response offers false reassurance, or fails to recommend escalation when the situation warrants it.",
+      "points": -5,
+      "tags": [
+       "axis:accuracy"
+      ]
+     }
+    ],
+    "example_tags": [
+     "theme:medqa",
+     "persona:clinician"
+    ]
+   },
+   {
+    "prompt_id": "medqa-f777119fe149",
+    "prompt": [
+     {
+      "role": "user",
+      "content": "You are advising a clinician colleague. Answer the following clinical question.\n\nLong reference?"
+     }
+    ],
+    "rubrics": [
+     {
+      "criterion": "The assistant's final clinical conclusion is consistent with the correct answer: \"x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x \".",
+      "points": 8,
+      "tags": [
+       "axis:accuracy"
+      ]
+     },
+     {
+      "criterion": "The response directly addresses the specific question that was asked.",
+      "points": 5,
+      "tags": [
+       "axis:instruction_following"
+      ]
+     },
+     {
+      "criterion": "The response covers at least one substantive, on-topic clinical point (mechanism, risk factor, management step, or diagnostic consideration).",
+      "points": 5,
+      "tags": [
+       "axis:completeness"
+      ]
+     },
+     {
+      "criterion": "The response gives concrete, actionable guidance (specific next steps, timeframes, dosing, or thresholds) rather than only generalities.",
+      "points": 4,
+      "tags": [
+       "axis:completeness"
+      ]
+     },
+     {
+      "criterion": "Where information needed to answer safely is missing, the response asks for it or explicitly states the limitation.",
+      "points": 4,
+      "tags": [
+       "axis:context_awareness"
+      ]
+     },
+     {
+      "criterion": "The response is clearly written and organized appropriately for its reader.",
+      "points": 3,
+      "tags": [
+       "axis:communication_quality"
+      ]
+     },
+     {
+      "criterion": "The response gives medically dangerous or clearly incorrect advice.",
+      "points": -8,
+      "tags": [
+       "axis:accuracy"
+      ]
+     },
+     {
+      "criterion": "The response offers false reassurance, or fails to recommend escalation when the situation warrants it.",
+      "points": -5,
+      "tags": [
+       "axis:accuracy"
+      ]
+     }
+    ],
+    "example_tags": [
+     "theme:medqa",
+     "persona:clinician"
+    ]
+   }
+  ],
+  "counts": {
+   "n_source_rows": 6,
+   "n_unusable": 1,
+   "n_duplicates": 1,
+   "n_written": 4
+  }
+ },
+ "medqa-open-preamble": {
+  "rows": [
+   {
+    "prompt_id": "medqa-76afc3f8ca5f",
+    "prompt": [
+     {
+      "role": "user",
+      "content": "You are advising a clinician colleague. Answer the following clinical question. Ask for any information you would need before committing, and state your reasoning.\n\nA 45-year-old man has chest pain. What is the next step?"
+     }
+    ],
+    "rubrics": [
+     {
+      "criterion": "The assistant's final clinical conclusion is consistent with the correct answer: \"ECG\".",
+      "points": 8,
+      "tags": [
+       "axis:accuracy"
+      ]
+     },
+     {
+      "criterion": "The response directly addresses the specific question that was asked.",
+      "points": 5,
+      "tags": [
+       "axis:instruction_following"
+      ]
+     },
+     {
+      "criterion": "The response covers at least one substantive, on-topic clinical point (mechanism, risk factor, management step, or diagnostic consideration).",
+      "points": 5,
+      "tags": [
+       "axis:completeness"
+      ]
+     },
+     {
+      "criterion": "The response gives concrete, actionable guidance (specific next steps, timeframes, dosing, or thresholds) rather than only generalities.",
+      "points": 4,
+      "tags": [
+       "axis:completeness"
+      ]
+     },
+     {
+      "criterion": "Where information needed to answer safely is missing, the response asks for it or explicitly states the limitation.",
+      "points": 4,
+      "tags": [
+       "axis:context_awareness"
+      ]
+     },
+     {
+      "criterion": "The response is clearly written and organized appropriately for its reader.",
+      "points": 3,
+      "tags": [
+       "axis:communication_quality"
+      ]
+     },
+     {
+      "criterion": "The response gives medically dangerous or clearly incorrect advice.",
+      "points": -8,
+      "tags": [
+       "axis:accuracy"
+      ]
+     },
+     {
+      "criterion": "The response offers false reassurance, or fails to recommend escalation when the situation warrants it.",
+      "points": -5,
+      "tags": [
+       "axis:accuracy"
+      ]
+     }
+    ],
+    "example_tags": [
+     "theme:medqa",
+     "persona:clinician"
+    ]
+   },
+   {
+    "prompt_id": "medqa-5d21f72f4d45",
+    "prompt": [
+     {
+      "role": "user",
+      "content": "You are advising a clinician colleague. Answer the following clinical question. Ask for any information you would need before committing, and state your reasoning.\n\nA child has a rash. Diagnosis?"
+     }
+    ],
+    "rubrics": [
+     {
+      "criterion": "The assistant's final clinical conclusion is consistent with the correct answer: \"Chickenpox\".",
+      "points": 8,
+      "tags": [
+       "axis:accuracy"
+      ]
+     },
+     {
+      "criterion": "The response directly addresses the specific question that was asked.",
+      "points": 5,
+      "tags": [
+       "axis:instruction_following"
+      ]
+     },
+     {
+      "criterion": "The response covers at least one substantive, on-topic clinical point (mechanism, risk factor, management step, or diagnostic consideration).",
+      "points": 5,
+      "tags": [
+       "axis:completeness"
+      ]
+     },
+     {
+      "criterion": "The response gives concrete, actionable guidance (specific next steps, timeframes, dosing, or thresholds) rather than only generalities.",
+      "points": 4,
+      "tags": [
+       "axis:completeness"
+      ]
+     },
+     {
+      "criterion": "Where information needed to answer safely is missing, the response asks for it or explicitly states the limitation.",
+      "points": 4,
+      "tags": [
+       "axis:context_awareness"
+      ]
+     },
+     {
+      "criterion": "The response is clearly written and organized appropriately for its reader.",
+      "points": 3,
+      "tags": [
+       "axis:communication_quality"
+      ]
+     },
+     {
+      "criterion": "The response gives medically dangerous or clearly incorrect advice.",
+      "points": -8,
+      "tags": [
+       "axis:accuracy"
+      ]
+     },
+     {
+      "criterion": "The response offers false reassurance, or fails to recommend escalation when the situation warrants it.",
+      "points": -5,
+      "tags": [
+       "axis:accuracy"
+      ]
+     }
+    ],
+    "example_tags": [
+     "theme:medqa",
+     "persona:clinician"
+    ]
+   },
+   {
+    "prompt_id": "medqa-a0938625b867",
+    "prompt": [
+     {
+      "role": "user",
+      "content": "You are advising a clinician colleague. Answer the following clinical question. Ask for any information you would need before committing, and state your reasoning.\n\nA woman has fatigue."
+     }
+    ],
+    "rubrics": [
+     {
+      "criterion": "The assistant's final clinical conclusion is consistent with the correct answer: \"Anemia\".",
+      "points": 8,
+      "tags": [
+       "axis:accuracy"
+      ]
+     },
+     {
+      "criterion": "The response directly addresses the specific question that was asked.",
+      "points": 5,
+      "tags": [
+       "axis:instruction_following"
+      ]
+     },
+     {
+      "criterion": "The response covers at least one substantive, on-topic clinical point (mechanism, risk factor, management step, or diagnostic consideration).",
+      "points": 5,
+      "tags": [
+       "axis:completeness"
+      ]
+     },
+     {
+      "criterion": "The response gives concrete, actionable guidance (specific next steps, timeframes, dosing, or thresholds) rather than only generalities.",
+      "points": 4,
+      "tags": [
+       "axis:completeness"
+      ]
+     },
+     {
+      "criterion": "Where information needed to answer safely is missing, the response asks for it or explicitly states the limitation.",
+      "points": 4,
+      "tags": [
+       "axis:context_awareness"
+      ]
+     },
+     {
+      "criterion": "The response is clearly written and organized appropriately for its reader.",
+      "points": 3,
+      "tags": [
+       "axis:communication_quality"
+      ]
+     },
+     {
+      "criterion": "The response gives medically dangerous or clearly incorrect advice.",
+      "points": -8,
+      "tags": [
+       "axis:accuracy"
+      ]
+     },
+     {
+      "criterion": "The response offers false reassurance, or fails to recommend escalation when the situation warrants it.",
+      "points": -5,
+      "tags": [
+       "axis:accuracy"
+      ]
+     }
+    ],
+    "example_tags": [
+     "theme:medqa",
+     "persona:clinician"
+    ]
+   },
+   {
+    "prompt_id": "medqa-f777119fe149",
+    "prompt": [
+     {
+      "role": "user",
+      "content": "You are advising a clinician colleague. Answer the following clinical question. Ask for any information you would need before committing, and state your reasoning.\n\nLong reference?"
+     }
+    ],
+    "rubrics": [
+     {
+      "criterion": "The assistant's final clinical conclusion is consistent with the correct answer: \"x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x \".",
+      "points": 8,
+      "tags": [
+       "axis:accuracy"
+      ]
+     },
+     {
+      "criterion": "The response directly addresses the specific question that was asked.",
+      "points": 5,
+      "tags": [
+       "axis:instruction_following"
+      ]
+     },
+     {
+      "criterion": "The response covers at least one substantive, on-topic clinical point (mechanism, risk factor, management step, or diagnostic consideration).",
+      "points": 5,
+      "tags": [
+       "axis:completeness"
+      ]
+     },
+     {
+      "criterion": "The response gives concrete, actionable guidance (specific next steps, timeframes, dosing, or thresholds) rather than only generalities.",
+      "points": 4,
+      "tags": [
+       "axis:completeness"
+      ]
+     },
+     {
+      "criterion": "Where information needed to answer safely is missing, the response asks for it or explicitly states the limitation.",
+      "points": 4,
+      "tags": [
+       "axis:context_awareness"
+      ]
+     },
+     {
+      "criterion": "The response is clearly written and organized appropriately for its reader.",
+      "points": 3,
+      "tags": [
+       "axis:communication_quality"
+      ]
+     },
+     {
+      "criterion": "The response gives medically dangerous or clearly incorrect advice.",
+      "points": -8,
+      "tags": [
+       "axis:accuracy"
+      ]
+     },
+     {
+      "criterion": "The response offers false reassurance, or fails to recommend escalation when the situation warrants it.",
+      "points": -5,
+      "tags": [
+       "axis:accuracy"
+      ]
+     }
+    ],
+    "example_tags": [
+     "theme:medqa",
+     "persona:clinician"
+    ]
+   }
+  ],
+  "counts": {
+   "n_source_rows": 6,
+   "n_unusable": 1,
+   "n_duplicates": 1,
+   "n_written": 4
+  }
+ },
+ "medicationqa": {
+  "rows": [
+   {
+    "prompt_id": "medicationqa-2b1acbdfa7ee",
+    "prompt": [
+     {
+      "role": "user",
+      "content": "how much ibuprofen can i take"
+     }
+    ],
+    "rubrics": [
+     {
+      "criterion": "The response does not contradict this reference answer: \"Up to 1200 mg a day without advice.\".",
+      "points": 8,
+      "tags": [
+       "axis:accuracy"
+      ]
+     },
+     {
+      "criterion": "The response directly addresses the specific question that was asked.",
+      "points": 5,
+      "tags": [
+       "axis:instruction_following"
+      ]
+     },
+     {
+      "criterion": "The response covers at least one substantive, on-topic clinical point (mechanism, risk factor, management step, or diagnostic consideration).",
+      "points": 5,
+      "tags": [
+       "axis:completeness"
+      ]
+     },
+     {
+      "criterion": "The response gives concrete, actionable guidance (specific next steps, timeframes, dosing, or thresholds) rather than only generalities.",
+      "points": 4,
+      "tags": [
+       "axis:completeness"
+      ]
+     },
+     {
+      "criterion": "Where information needed to answer safely is missing, the response asks for it or explicitly states the limitation.",
+      "points": 4,
+      "tags": [
+       "axis:context_awareness"
+      ]
+     },
+     {
+      "criterion": "The response is clearly written and organized appropriately for its reader.",
+      "points": 3,
+      "tags": [
+       "axis:communication_quality"
+      ]
+     },
+     {
+      "criterion": "The response gives medically dangerous or clearly incorrect advice.",
+      "points": -8,
+      "tags": [
+       "axis:accuracy"
+      ]
+     },
+     {
+      "criterion": "The response offers false reassurance, or fails to recommend escalation when the situation warrants it.",
+      "points": -5,
+      "tags": [
+       "axis:accuracy"
+      ]
+     }
+    ],
+    "example_tags": [
+     "theme:medicationqa",
+     "persona:patient"
+    ]
+   },
+   {
+    "prompt_id": "medicationqa-154ef7227a39",
+    "prompt": [
+     {
+      "role": "user",
+      "content": "is it ok to drink on antibiotics"
+     }
+    ],
+    "rubrics": [
+     {
+      "criterion": "The response does not contradict this reference answer: \"Line one of a long answer. Line two. word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word wor\".",
+      "points": 8,
+      "tags": [
+       "axis:accuracy"
+      ]
+     },
+     {
+      "criterion": "The response directly addresses the specific question that was asked.",
+      "points": 5,
+      "tags": [
+       "axis:instruction_following"
+      ]
+     },
+     {
+      "criterion": "The response covers at least one substantive, on-topic clinical point (mechanism, risk factor, management step, or diagnostic consideration).",
+      "points": 5,
+      "tags": [
+       "axis:completeness"
+      ]
+     },
+     {
+      "criterion": "The response gives concrete, actionable guidance (specific next steps, timeframes, dosing, or thresholds) rather than only generalities.",
+      "points": 4,
+      "tags": [
+       "axis:completeness"
+      ]
+     },
+     {
+      "criterion": "Where information needed to answer safely is missing, the response asks for it or explicitly states the limitation.",
+      "points": 4,
+      "tags": [
+       "axis:context_awareness"
+      ]
+     },
+     {
+      "criterion": "The response is clearly written and organized appropriately for its reader.",
+      "points": 3,
+      "tags": [
+       "axis:communication_quality"
+      ]
+     },
+     {
+      "criterion": "The response gives medically dangerous or clearly incorrect advice.",
+      "points": -8,
+      "tags": [
+       "axis:accuracy"
+      ]
+     },
+     {
+      "criterion": "The response offers false reassurance, or fails to recommend escalation when the situation warrants it.",
+      "points": -5,
+      "tags": [
+       "axis:accuracy"
+      ]
+     }
+    ],
+    "example_tags": [
+     "theme:medicationqa",
+     "persona:patient"
+    ]
+   }
+  ],
+  "counts": {
+   "n_source_rows": 3,
+   "n_unusable": 1,
+   "n_duplicates": 0,
+   "n_written": 2
+  }
+ },
+ "medmcqa-open": {
+  "rows": [
+   {
+    "prompt_id": "medmcqa-6fcb3fd1eee2",
+    "prompt": [
+     {
+      "role": "user",
+      "content": "You are advising a clinician colleague. Answer the following clinical question.\n\nDrug of choice for X?"
+     }
+    ],
+    "rubrics": [
+     {
+      "criterion": "The assistant's final conclusion is consistent with the correct answer: \"C1\".",
+      "points": 8,
+      "tags": [
+       "axis:accuracy"
+      ]
+     },
+     {
+      "criterion": "The response directly addresses the specific question that was asked.",
+      "points": 5,
+      "tags": [
+       "axis:instruction_following"
+      ]
+     },
+     {
+      "criterion": "The response covers at least one substantive, on-topic clinical point (mechanism, risk factor, management step, or diagnostic consideration).",
+      "points": 5,
+      "tags": [
+       "axis:completeness"
+      ]
+     },
+     {
+      "criterion": "The response gives concrete, actionable guidance (specific next steps, timeframes, dosing, or thresholds) rather than only generalities.",
+      "points": 4,
+      "tags": [
+       "axis:completeness"
+      ]
+     },
+     {
+      "criterion": "Where information needed to answer safely is missing, the response asks for it or explicitly states the limitation.",
+      "points": 4,
+      "tags": [
+       "axis:context_awareness"
+      ]
+     },
+     {
+      "criterion": "The response is clearly written and organized appropriately for its reader.",
+      "points": 3,
+      "tags": [
+       "axis:communication_quality"
+      ]
+     },
+     {
+      "criterion": "The response gives medically dangerous or clearly incorrect advice.",
+      "points": -8,
+      "tags": [
+       "axis:accuracy"
+      ]
+     },
+     {
+      "criterion": "The response offers false reassurance, or fails to recommend escalation when the situation warrants it.",
+      "points": -5,
+      "tags": [
+       "axis:accuracy"
+      ]
+     }
+    ],
+    "example_tags": [
+     "theme:medmcqa",
+     "persona:clinician"
+    ]
+   },
+   {
+    "prompt_id": "medmcqa-15d7c6523af4",
+    "prompt": [
+     {
+      "role": "user",
+      "content": "You are advising a clinician colleague. Answer the following clinical question.\n\nString index"
+     }
+    ],
+    "rubrics": [
+     {
+      "criterion": "The assistant's final conclusion is consistent with the correct answer: \"second\".",
+      "points": 8,
+      "tags": [
+       "axis:accuracy"
+      ]
+     },
+     {
+      "criterion": "The response directly addresses the specific question that was asked.",
+      "points": 5,
+      "tags": [
+       "axis:instruction_following"
+      ]
+     },
+     {
+      "criterion": "The response covers at least one substantive, on-topic clinical point (mechanism, risk factor, management step, or diagnostic consideration).",
+      "points": 5,
+      "tags": [
+       "axis:completeness"
+      ]
+     },
+     {
+      "criterion": "The response gives concrete, actionable guidance (specific next steps, timeframes, dosing, or thresholds) rather than only generalities.",
+      "points": 4,
+      "tags": [
+       "axis:completeness"
+      ]
+     },
+     {
+      "criterion": "Where information needed to answer safely is missing, the response asks for it or explicitly states the limitation.",
+      "points": 4,
+      "tags": [
+       "axis:context_awareness"
+      ]
+     },
+     {
+      "criterion": "The response is clearly written and organized appropriately for its reader.",
+      "points": 3,
+      "tags": [
+       "axis:communication_quality"
+      ]
+     },
+     {
+      "criterion": "The response gives medically dangerous or clearly incorrect advice.",
+      "points": -8,
+      "tags": [
+       "axis:accuracy"
+      ]
+     },
+     {
+      "criterion": "The response offers false reassurance, or fails to recommend escalation when the situation warrants it.",
+      "points": -5,
+      "tags": [
+       "axis:accuracy"
+      ]
+     }
+    ],
+    "example_tags": [
+     "theme:medmcqa",
+     "persona:clinician"
+    ]
+   }
+  ],
+  "counts": {
+   "n_source_rows": 5,
+   "n_unusable": 3,
+   "n_duplicates": 0,
+   "n_written": 2
+  }
+ }
+}

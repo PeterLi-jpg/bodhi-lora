@@ -1,0 +1,94 @@
+# The workers of R7 and R10 on NRP (DECISIONS.md D30; docs/NRP.md section 5): three pods, one
+# A100-80GB each, run scripts/task_pool.py on configs/queues/r7_nrp.yaml with the state folder
+# /data/pool/r7. Five models fit on each pod's disk, so the local volume is larger than the
+# EOS reruns' (deploy/nrp/workers-job.yaml). Each takes the ready task with the longest
+# chain of hours after it, so the three cards stay busy until the work runs out, and a
+# pod with nothing left to take exits instead of holding its card. The pods wait in the
+# cluster's queue until a card is free; nothing is taken from another job.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: bodhi-lora-workers-r7
+  labels: {app: bodhi-lora}
+spec:
+  parallelism: 3                 # at most three cards (the BODHI budget)
+  completions: 3
+  backoffLimit: 8                # a pod that fails (exit 75: card in use) is replaced
+  ttlSecondsAfterFinished: 604800
+  template:
+    metadata:
+      labels: {app: bodhi-lora}
+    spec:
+      restartPolicy: Never
+      # task_pool gives a stopped task 120 s to stop its vLLM server
+      terminationGracePeriodSeconds: 180
+      tolerations:
+        - {key: nvidia.com/gpu, operator: Exists, effect: NoSchedule}
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: nvidia.com/gpu.product
+                    operator: In
+                    values: [NVIDIA-A100-SXM4-80GB, NVIDIA-A100-80GB-PCIe]
+      containers:
+        - name: worker
+          image: vllm/vllm-openai:v0.10.2
+          env:
+            - name: POD_NAME
+              valueFrom: {fieldRef: {fieldPath: metadata.name}}
+            - name: HF_TOKEN
+              valueFrom: {secretKeyRef: {name: nfootprint-hf, key: token}}
+            - {name: HF_HOME, value: /local/hf}
+            - {name: XDG_CACHE_HOME, value: /local/cache}
+            - {name: VLLM_CACHE_ROOT, value: /local/cache/vllm}
+            - {name: TRITON_CACHE_DIR, value: /local/cache/triton}
+            - {name: PYTHONUNBUFFERED, value: "1"}
+          command: [/bin/bash, -lc]
+          args:
+            - |
+              set -euo pipefail
+              # The envs, at the paths .venv and .venv-infer link to (deploy/nrp/setup-job.yaml).
+              for env in train infer; do
+                [ -x "/local/venv-$env/bin/python" ] || tar -xf "/data/venvs/venv-$env.tar" -C /local
+              done
+              cd /data/bohdi
+              source .venv/bin/activate
+              STATE=/data/pool/r7
+              POOL="python scripts/task_pool.py --dag configs/queues/r7_nrp.yaml --state $STATE --repo /data/bohdi"
+              echo "=== $POD_NAME $(date -u +%FT%TZ) on $(cat /etc/hostname) $(nvidia-smi --query-gpu=name,memory.total --format=csv,noheader)"
+              # A pod that would find nothing to run stops before it downloads the models.
+              # Only exit 3 means that; any other failure of the check fails the pod, so the
+              # Job replaces it instead of counting it as done.
+              rc=0; $POOL --has-work || rc=$?
+              if [ "$rc" = 3 ]; then echo "no task for this pod; done"; exit 0; fi
+              [ "$rc" = 0 ] || { echo "the work check failed (exit $rc)"; exit "$rc"; }
+              # The five models R7 and R10 load, at the revisions of their records, to this
+              # pod's disk. The duplicate full-model files are left out: vLLM and
+              # transformers load the shards that model.safetensors.index.json lists.
+              python - <<'PY'
+              import yaml
+              from huggingface_hub import snapshot_download
+              for mid in ("medgemma-27b-text", "qwen2.5-14b", "llama-3.1-8b", "phi-4", "mistral-small-24b"):
+                  rec = yaml.safe_load(open(f"configs/models/{mid}.yaml"))
+                  path = snapshot_download(rec["hf_id"], revision=rec["revision"], max_workers=16,
+                                           ignore_patterns=["consolidated*", "original/*", "*.pth", "*.gguf"])
+                  print("model", mid, rec["revision"][:10], path, flush=True)
+              PY
+              export HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1
+              exec $POOL
+          resources:
+            requests: {nvidia.com/a100: "1", cpu: "8", memory: 64Gi, ephemeral-storage: 250Gi}
+            limits: {nvidia.com/a100: "1", cpu: 9600m, memory: 76Gi, ephemeral-storage: 280Gi}
+          volumeMounts:
+            - {name: data, mountPath: /data}
+            - {name: local, mountPath: /local}
+            - {name: dshm, mountPath: /dev/shm}
+      volumes:
+        - name: data
+          persistentVolumeClaim: {claimName: bodhi-lora-rerun}
+        - name: local
+          emptyDir: {sizeLimit: 270Gi}
+        - name: dshm
+          emptyDir: {medium: Memory, sizeLimit: 16Gi}

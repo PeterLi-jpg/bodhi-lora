@@ -1,0 +1,133 @@
+{
+  "schema": 3,
+  "stage": "grade",
+  "cell": "healthbench__mistral-small-24b__ask-first",
+  "seed": 7,
+  "created_utc": "2026-10-19T06:36:43.664762+00:00",
+  "git": {
+    "sha": "dc4ccac80eb252bf1f0e8793d20b5e64e7347874",
+    "dirty": false,
+    "diff_sha256": null,
+    "n_untracked": 7
+  },
+  "packages": {
+    "python": "3.12.11",
+    "torch": "2.8.0",
+    "transformers": "4.56.2",
+    "vllm": "0.10.2",
+    "peft": null,
+    "trl": null,
+    "accelerate": null,
+    "bitsandbytes": "0.47.0",
+    "datasets": "5.0.0",
+    "bodhi-llm": "0.1.4",
+    "huggingface-hub": "0.36.2",
+    "numpy": "2.2.6"
+  },
+  "host_sha256": "066a5c167485bc309082b4528ce9bdd70a2f71f0fb76e809ca20c735587ba308",
+  "hardware": {
+    "visible_devices": "0",
+    "gpus": [
+      {
+        "index": "0",
+        "name": "NVIDIA A100-SXM4-80GB",
+        "memory": "81920 MiB"
+      }
+    ]
+  },
+  "time": {
+    "started_utc": "2026-10-19T06:32:42.688477+00:00",
+    "finished_utc": "2026-10-19T06:36:44.791984+00:00",
+    "seconds": 242.104
+  },
+  "models": {
+    "grader": {
+      "id": "llama-3.1-8b",
+      "repo_id": "meta-llama/Llama-3.1-8B-Instruct",
+      "family": "llama3",
+      "revision": "0e9e39f249a16976918f6564b8830bc894c89659",
+      "revision_source": "record",
+      "unpinned_reason": null
+    }
+  },
+  "engines": {
+    "grader": {
+      "model": "meta-llama/Llama-3.1-8B-Instruct",
+      "revision": "0e9e39f249a16976918f6564b8830bc894c89659",
+      "max_model_len": 8192,
+      "max_num_seqs": 64,
+      "tensor_parallel_size": 1,
+      "dtype": "bfloat16",
+      "quantization": null,
+      "enforce_eager": true,
+      "request_timeout_s": 900,
+      "lora_path": null,
+      "lora_modules": {},
+      "max_loras": null,
+      "max_lora_rank": null,
+      "env": {}
+    }
+  },
+  "inputs": [
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__ask-first/seed_7/eval/base.json",
+      "bytes": 2136309,
+      "sha256": "fa52cead3f018fb3002a94a9dd040b0bff3fe2b91e8b90116ca6b98e30e84c60"
+    },
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__ask-first/seed_7/eval/base+ask-first.json",
+      "bytes": 2020103,
+      "sha256": "a192139b53bb364213def9d3ba61681ab1650f032f5317ec6c8d96ebcb7765f1"
+    },
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__ask-first/seed_7/eval/lora.json",
+      "bytes": 1937654,
+      "sha256": "238e94720ff7f9417bbf6f5ab60d08b9ced177568bce0273e0c5a38f0932e521"
+    },
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__ask-first/seed_7/eval/lora+ask-first.json",
+      "bytes": 1950656,
+      "sha256": "61d4a7317b07ee9c0ea80666facebd7aedf88ae60e95dbe4b23070f37e02ccd4"
+    },
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__ask-first/seed_7/eval/base+bodhi.json",
+      "bytes": 2352384,
+      "sha256": "3b6672ace33ef1eb5670cb0ec7d34bea3e4f55eabf10c52058775c43b87a4484"
+    }
+  ],
+  "outputs": [
+    {
+      "path": "/data/bohdi/results/healthbench__mistral-small-24b__ask-first/seed_7/grade/epistemic__llama-3.1-8b.json",
+      "bytes": 3536460,
+      "sha256": "4ea5ed34f4e2883eeeadd9a7af366e66442cd499b9944b43b37edc21d146cf28"
+    }
+  ],
+  "counts": {
+    "base": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    },
+    "base+ask-first": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    },
+    "lora": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    },
+    "lora+ask-first": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    },
+    "base+bodhi": {
+      "n": 200,
+      "n_grade_errors": 0,
+      "n_too_long": 0
+    }
+  },
+  "status": "complete"
+}

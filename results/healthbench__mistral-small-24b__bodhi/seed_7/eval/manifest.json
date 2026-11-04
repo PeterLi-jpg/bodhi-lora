@@ -1,0 +1,50 @@
+{
+  "schema": 3,
+  "stage": "eval",
+  "cell": "healthbench__mistral-small-24b__bodhi",
+  "seed": 7,
+  "created_utc": "2026-10-19T11:22:27.539233+00:00",
+  "git": {
+    "sha": "dc4ccac80eb252bf1f0e8793d20b5e64e7347874",
+    "dirty": false,
+    "diff_sha256": null,
+    "n_untracked": 7
+  },
+  "packages": {
+    "python": "3.12.11",
+    "torch": "2.8.0",
+    "transformers": "4.56.2",
+    "vllm": "0.10.2",
+    "peft": null,
+    "trl": null,
+    "accelerate": null,
+    "bitsandbytes": "0.47.0",
+    "datasets": "5.0.0",
+    "bodhi-llm": "0.1.4",
+    "huggingface-hub": "0.36.2",
+    "numpy": "2.2.6"
+  },
+  "host_sha256": "174023f8b2ca1169a04ab1f22fc9e6bdae510fd9311bdc64fb1cfeb32ad8dce6",
+  "hardware": {
+    "visible_devices": null,
+    "gpus": [
+      {
+        "index": "0",
+        "name": "NVIDIA A100-SXM4-80GB",
+        "memory": "81920 MiB"
+      }
+    ]
+  },
+  "status": "complete",
+  "parts": {
+    "base+bodhi.manifest.json": "1bef261ae352a5fd80bf208f2952d7b91f1167f720f162d116ac29f46bc10ce7",
+    "base+clarify.manifest.json": "71074e4113a61d8d9cf87541a1a059d03c45c64a4cf29c90e52aa23c16935651",
+    "base+mediq-abstain.manifest.json": "c7bd18ae62ed97dc6cd04cb45b6783eda76fddafa9fba6dc7faf2c9befb9c236",
+    "base+red-flags-first.manifest.json": "84466107deb02683bda56b017f037dca9bb11e5bc6b49254398c034ff731e316",
+    "base+verbalized-confidence.manifest.json": "664f5ef7f49853c6b177dc7c20c9bc85c7cfdb575e19b9a9c8946cc63b4b7367",
+    "base.manifest.json": "37a71a1955f3db2d0c9a486b0abbd4c1059240fb04b8b69fc6dabadc2cd37619",
+    "lora+bodhi.manifest.json": "5c1f0f63cc2165074331c2efd750537917c44c78c1a0dda1d7c15fb7eca2ea31",
+    "lora+red-flags-first.manifest.json": "2559954499332a6baeb9a2d0874b594b8b07263e9ce499409859a38ecad9ebe6",
+    "lora.manifest.json": "803bc96bafba60b9f7df4f7eace3a3f02420ec80c2d274146eefa764f60b4084"
+  }
+}

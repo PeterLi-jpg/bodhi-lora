@@ -1,0 +1,15 @@
+# The reruns after the EOS fix (DECISIONS.md D28, BLOCKED.md item 2.1), in the order of
+# docs/RUN_PLAN.md section 4.4, which lists the same lines. scripts/gpu_queue.sh --gpu any
+# waits for a free card, puts its index in place of {gpu}, runs the lines one after
+# another and stops at the first that fails; --keep-lease keeps the card at the end
+# (docs/GPU_QUEUE.md section 9). The runner skips every stage whose manifest is
+# complete, so each line trains and evaluates only what the archive of 2026-10-17 moved.
+
+# R2: train the five seeds again; the adapter conditions, the evaluator, the judge, the bench.
+python -m bodhi_lora run healthbench__mistral-small-24b__bodhi --gpus {gpu}
+# R3 and R4: the adapter conditions on the new R2 adapters, and the evaluator.
+python -m bodhi_lora run mediq-paired__mistral-small-24b__bodhi --gpus {gpu}
+python -m bodhi_lora run healthbench__mistral-small-24b__bodhi__labelled --gpus {gpu}
+# R5: train the ask-first adapters again, then their MediQ conditions.
+python -m bodhi_lora run healthbench__mistral-small-24b__ask-first --gpus {gpu}
+python -m bodhi_lora run mediq-paired__mistral-small-24b__ask-first --gpus {gpu}

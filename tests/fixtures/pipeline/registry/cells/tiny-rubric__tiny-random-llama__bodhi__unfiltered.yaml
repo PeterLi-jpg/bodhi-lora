@@ -1,0 +1,45 @@
+# The twin of the filter ablation (EXPERIMENTS.md E22): the smoke cell's traces and grades,
+# every trace kept.
+id: tiny-rubric__tiny-random-llama__bodhi__unfiltered
+benchmark: tiny-rubric
+model: tiny-random-llama
+protocol: bodhi
+seeds: [1]
+traces_from: tiny-rubric__tiny-random-llama__bodhi
+grading:
+  filter: qwen2.5-14b
+  evaluator: llama-3.1-8b
+filter:
+  tau: {rule: none}
+  val_ratio: 0.2
+  split_policy: per_seed
+  serving: {max_model_len: 1024, max_num_seqs: 4, concurrency: 4, request_timeout_s: 60}
+train:
+  engine: peft
+  r: 4
+  alpha: 8
+  dropout: 0.0
+  target_modules: [q_proj, v_proj]
+  max_steps: 2
+  per_device_batch: 2
+  grad_accum: 1
+  effective_batch: 2
+  lr: 1.0e-3
+  scheduler: constant
+  max_seq_length: 256
+  checkpoint: last
+  eval_every: steps
+  eval_steps: 1
+  logging_steps: 1
+  hardware: CPU
+eval:
+  conditions: [base, lora]
+  ids: {policy: per_seed_draw, n: 4}
+  base_precision: model
+  max_new_tokens: 64
+  max_new_tokens_per_pass: 64
+  serving: {max_model_len: 1024, max_num_seqs: 4, concurrency: 4, request_timeout_s: 60}
+report:
+  label: Unfiltered fixture cell
+  token: TinyUnfiltered
+  status: planned

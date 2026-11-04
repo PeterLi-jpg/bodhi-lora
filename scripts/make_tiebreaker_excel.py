@@ -1,8 +1,8 @@
 """Stage 2 IRR helper: build a tiebreaker Excel from the 3 reviewer files.
 
-Reads ``results_modal/irr/Grading-*.xlsx`` (NOT Grading-template, NOT
+Reads ``<M>/validation/Grading-*.xlsx`` (NOT Grading-template, NOT
 Grading-tiebreaker), joins by ``grading_id``, and emits ONE Excel containing
-only the rows where the 3 primary reviewers split. The adjudicator (Martha)
+only the rows where the 3 primary reviewers split. The adjudicator (AnonClinician4)
 fills in the Tiebreaker tab.
 
 Dispute logic
@@ -20,15 +20,18 @@ are resolved by majority and are NOT shown to the adjudicator.
 
 Output
 ------
-``results_modal/irr/Grading-tiebreaker.xlsx`` with two sheets:
+``<M>/validation/Grading-tiebreaker.xlsx`` with two sheets:
   - Tiebreaker    (one row per disputed criterion, with the 3 prior grades
                    anonymized as reviewer_1/2/3 in the order the files were
                    loaded; adjudicator fills tiebreaker_grade + confidence
                    + required notes)
-  - Instructions - Tiebreaker  (verbatim from data/irr_instructions/tiebreaker.json)
+  - Instructions - Tiebreaker  (verbatim from <M>/validation/instructions/tiebreaker.json)
+
+<M> is the submitted cell, results/healthbench__medgemma-27b-text__bodhi__2026-05/.
 """
 from __future__ import annotations
 
+import argparse
 import json
 from pathlib import Path
 
@@ -39,8 +42,8 @@ from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
 ROOT = Path(__file__).resolve().parent.parent
-IRR_DIR = ROOT / "results_modal" / "irr"
-INSTR_DIR = ROOT / "data" / "irr_instructions"
+IRR_DIR = ROOT / "results" / "healthbench__medgemma-27b-text__bodhi__2026-05" / "validation"
+INSTR_DIR = IRR_DIR / "instructions"
 
 GRADE_VALUES = {"pass", "fail", "unsure"}
 
@@ -216,11 +219,17 @@ def write_tiebreaker_workbook(disputes: pd.DataFrame, out_path: Path) -> None:
 
 
 def main() -> None:
-    files = find_reviewer_files()
+    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    # Returned files can carry rater names, so they may stay outside the repo, as
+    # compute_irr_kappa.py --rater-files expects. Without the flag, read this folder.
+    ap.add_argument("--rater-files", type=Path, nargs="+", default=None,
+                    help="the three returned Grading-*.xlsx files, read in place")
+    args = ap.parse_args()
+    files = args.rater_files or find_reviewer_files()
     if len(files) != 3:
         raise SystemExit(
             f"Found {len(files)} reviewer files in {IRR_DIR}, expected exactly 3 "
-            "(Grading-<name1>.xlsx, Grading-<name2>.xlsx, Grading-<name3>.xlsx). "
+            "(Grading-reviewer1.xlsx, Grading-reviewer2.xlsx, Grading-reviewer3.xlsx). "
             "If reviewers are still grading, wait until all three return."
         )
 
@@ -249,7 +258,7 @@ def main() -> None:
     out_path = IRR_DIR / "Grading-tiebreaker.xlsx"
     write_tiebreaker_workbook(disputes, out_path)
     print(f"\nwrote {out_path}")
-    print(f"  send to adjudicator (Martha)")
+    print(f"  send to adjudicator (AnonClinician4)")
 
 
 if __name__ == "__main__":

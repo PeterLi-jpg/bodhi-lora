@@ -1,0 +1,170 @@
+"""The report: every number the paper prints, from the uniform analysis
+(docs/ARCHITECTURE.md section 7).
+
+    report(reg, cfg, proj) -> Report    every analyzed cell's stats.json and the
+                                        cross-cell stats.json -> macros, tables, record
+    write(rep, out_dir)                 paper/generated/{numbers.tex, numbers_<n>.tex,
+                                        numbers.json, tab_*.tex}
+
+`python -m bodhi_lora report` (make numbers) runs both. It reads only the analysis
+outputs, never the raw outputs, and treats every cell the same way: a new cell needs a
+record and its stats.json, not code. Macro names follow one rule. A cell's macros start
+with its record's report.token, so \\statHBMistralJulActiveInquiryLoRAvsBaseDiff is the
+LoRA - Base difference in active inquiry of the cell whose token is HBMistralJul; a
+group's with Group<token> (configs/report.yaml). A value the analysis does not have gets
+no macro, and a table shows "--".
+
+Tables:
+    tab_cell_<token>.tex     every analyzed cell (bodhi_lora/report/cell.py)
+    tab_<kind>_<token>.tex   the detail tables of each cell in report.detail_cells
+    tab_<name>.tex           each table of report.cross_tables, one row per cross cell
+    tab_cell_detail_<n>.tex  every cross cell's metrics by condition (report.cell_detail_tables)
+    tab_hypotheses.tex       the plan's decisions on the cells of report.hypotheses
+                             (bodhi_lora/report/hypotheses.py); tab_hypotheses_short.tex
+                             keeps the first outcome of each question, for the main text
+    tab_judges.tex           H8: each judge against the evaluator, in every cell it graded
+    tab_below_cap.tex        the decisions of H1, H2, H4 and H6 next to the same rule on the
+                             replies below the token cap (ANALYSIS_PLAN.md, 2026-10-23)
+    tab_cost.tex             C25: hours to make each training cell and seconds per reply
+"""
+from __future__ import annotations
+
+import hashlib
+import json
+import re
+from dataclasses import dataclass, field
+from pathlib import Path
+
+from bodhi_lora.analysis.config import ReportConfig
+from bodhi_lora.paths import Project
+from bodhi_lora.registry import Registry
+from bodhi_lora.report.cell import cell_macros, cell_table, detail_tables
+from bodhi_lora.report.cross import (cell_detail_tables, count_macros, cross_table, family_macros, grader_macros,
+                                     group_macros, posted_macros)
+from bodhi_lora.report.hypotheses import below_cap_table, cost_table, hypothesis_macros, hypothesis_table, judge_table
+from bodhi_lora.report.latex import MISSING, fmt, fmt_int
+
+
+@dataclass
+class Report:
+    # (macro name without the \stat prefix, value, source comment), in emission order.
+    macros: list[tuple[str, str, str]] = field(default_factory=list)
+    tables: dict[str, str] = field(default_factory=dict)
+    record: dict = field(default_factory=dict)
+    _names: set = field(default_factory=set)
+
+    def add(self, name: str, value: str, source: str) -> None:
+        if value == MISSING:
+            return
+        if not re.fullmatch(r"[A-Za-z]+", name):
+            raise ValueError(f"a macro name is letters only: {name!r}")
+        if name in self._names:
+            raise ValueError(f"macro \\stat{name} is made twice; two tokens collide")
+        self._names.add(name)
+        self.macros.append((name, value, source))
+
+
+def _sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def report(reg: Registry, cfg: ReportConfig, proj: Project) -> Report:
+    """Macros, tables and a record from every analyzed cell's stats.json and the
+    cross-cell statistics. A cell of cross_cells without its stats.json, or a missing
+    cross-cell stats.json, stops the report: the paper cannot be complete without them."""
+    from bodhi_lora.analysis import analyzable
+
+    rep = Report()
+    order = list(cfg.cross_cells) + [c for c in analyzable(reg, cfg) if c not in cfg.cross_cells]
+    all_stats, cells_rec, missing, inputs = {}, {}, {}, {}
+    for cid in order:
+        path = proj.cell(cid).analysis() / "stats.json"
+        if not path.is_file():
+            if cid in cfg.cross_cells or cid in cfg.detail_cells:
+                raise FileNotFoundError(f"{proj.rel(path)} is missing; run make analyze")
+            missing[cid] = "no stats.json (the cell has no outputs in this checkout)"
+            continue
+        stats = json.loads(path.read_text())
+        cell = reg.cells[cid]
+        src = proj.rel(path)
+        all_stats[cid] = stats
+        inputs[src] = _sha256(path)
+        cell_macros(rep, stats, cell, cfg, src)
+        rep.tables[f"tab_cell_{cell.report.token}"] = cell_table(stats, cell, cfg, src)
+        if cid in cfg.detail_cells:
+            rep.tables.update(detail_tables(stats, cell, cfg, src))
+        cells_rec[cid] = {"token": cell.report.token, "label": cell.report.label, "stats": src,
+                          "in_cross_cells": cid in cfg.cross_cells, "detail": cid in cfg.detail_cells,
+                          "set_aside": cell.report.set_aside, "family_waiver": cell.grading.same_family_waiver}
+    # The loop rule of the reply-health counts, so the paper states it from the config.
+    rep.add("CrossCellsReplyLoopMinChars", fmt_int(cfg.reply_health.loop_min_chars),
+            "configs/report.yaml: reply_health.loop_min_chars")
+    rep.add("CrossCellsReplyLoopMaxRatio", fmt(cfg.reply_health.loop_max_zlib_ratio, 2),
+            "configs/report.yaml: reply_health.loop_max_zlib_ratio")
+    cross_path = proj.results_root / "cross_cell" / "stats.json"
+    if not cross_path.is_file():
+        raise FileNotFoundError(f"{proj.rel(cross_path)} is missing; run make analyze")
+    cross = json.loads(cross_path.read_text())
+    src = proj.rel(cross_path)
+    inputs[src] = _sha256(cross_path)
+    members = {gid: g["cells"] for gid, g in cross["groups"].items()}
+    group_macros(rep, cross, all_stats, cfg, src)
+    count_macros(rep, all_stats, members, reg, cfg, cross["groups"])
+    grader_macros(rep, cross, reg, cfg, src)
+    posted_macros(rep, cross, cfg, src)
+    family_macros(rep, cross, all_stats, reg, cfg, src)
+    hypothesis_macros(rep, cross, reg, cfg, src)
+    if cross.get("hypotheses"):
+        rep.tables["tab_hypotheses"] = hypothesis_table(cross, reg, cfg, src)
+        rep.tables["tab_hypotheses_short"] = hypothesis_table(cross, reg, cfg, src, short=True)
+        rep.tables["tab_below_cap"] = below_cap_table(cross, reg, cfg, src)
+    rep.tables["tab_judges"] = judge_table(all_stats, order, reg, cfg,
+                                           f"{proj.rel(proj.results_root)}/*/analysis/stats.json")
+    rep.tables["tab_cost"] = cost_table(all_stats, reg, cfg, f"{proj.rel(proj.results_root)}/*/analysis/stats.json")
+    every = f"{proj.rel(proj.results_root)}/*/analysis/stats.json"
+    for name, spec in cfg.cross_tables.items():
+        rep.tables[name] = cross_table(spec, all_stats, members, reg, cfg, every, name)
+    rep.tables.update(cell_detail_tables(all_stats, members, reg, cfg, f"{every} (conditions, contrasts)"))
+    rep.record = {"cells": cells_rec, "not_reported": missing, "inputs": dict(sorted(inputs.items())),
+                  "tables": sorted(rep.tables), "macros": len(rep.macros)}
+    return rep
+
+
+# Macros per numbers_<n>.tex. The anonymous reviewer mirror does not serve a file over
+# 8 MB, and one file of every macro passed 11 MB; at most about 350 bytes a line, 10,000
+# lines stay under 3.5 MB.
+MACROS_PER_PART = 10_000
+
+
+def write(rep: Report, out_dir: Path) -> list[str]:
+    """numbers.tex, its parts numbers_<n>.tex, numbers.json and every table into out_dir.
+    A table or part the report no longer makes is removed, so no stale file survives.
+    Returns the files written."""
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    chunks = [rep.macros[i:i + MACROS_PER_PART] for i in range(0, len(rep.macros), MACROS_PER_PART)]
+    parts = [f"numbers_{n}" for n in range(1, len(chunks) + 1)]
+    for stale in sorted(out_dir.glob("tab_*.tex")):
+        if stale.stem not in rep.tables:
+            stale.unlink()
+    for stale in sorted(out_dir.glob("numbers_*.tex")):
+        if stale.stem not in parts:
+            stale.unlink()
+    # TeX reads an \input path from the folder of the main file, so a document outside
+    # paper/ (the figure source) sets \numbersdir to this folder before it inputs numbers.tex.
+    lines = ["% Generated by python -m bodhi_lora report (make numbers). Do not edit by hand.",
+             "% Every macro is in one of the parts below, one \\newcommand a line, with a comment",
+             "% naming the statistic it comes from.",
+             "\\providecommand{\\numbersdir}{generated/}"]
+    lines += [f"\\input{{\\numbersdir {part}}}" for part in parts]
+    (out_dir / "numbers.tex").write_text("\n".join(lines) + "\n")
+    for part, chunk in zip(parts, chunks):
+        body = [f"% Generated by python -m bodhi_lora report (make numbers), part of numbers.tex. "
+                "Do not edit by hand.", ""]
+        body += [f"\\newcommand{{\\stat{name}}}{{{value}}} % {source}" for name, value, source in chunk]
+        (out_dir / f"{part}.tex").write_text("\n".join(body) + "\n")
+    (out_dir / "numbers.json").write_text(json.dumps(rep.record, indent=2, sort_keys=True) + "\n")
+    for name, text in sorted(rep.tables.items()):
+        (out_dir / f"{name}.tex").write_text(text)
+    return (["numbers.tex"] + [f"{part}.tex" for part in parts] + ["numbers.json"]
+            + [f"{name}.tex" for name in sorted(rep.tables)])

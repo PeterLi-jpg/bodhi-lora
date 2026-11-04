@@ -1,0 +1,269 @@
+"""The decision rules of docs/ANALYSIS_PLAN.md (bodhi_lora/analysis/hypotheses.py) on
+small hand-made stats, one case per branch of each rule, and on the committed cells."""
+import json
+from types import SimpleNamespace
+
+import pytest
+
+pytest.importorskip("statsmodels")
+
+from bodhi_lora.analysis import report_config  # noqa: E402
+from bodhi_lora.analysis import stats as st  # noqa: E402
+from bodhi_lora.analysis.hypotheses import asking, baselines, cell_pair, context_pair, hypotheses_summary  # noqa: E402
+from bodhi_lora.paths import CONFIGS_DIR, project  # noqa: E402
+from bodhi_lora.registry import load_registry  # noqa: E402
+
+ALPHA = 0.05
+
+
+def seed_test(diff, lo, hi, p, p_holm=None):
+    r = {"diff": diff, "ci95": [lo, hi], "p": p, "n_seeds": 5}
+    if p_holm is not None:
+        r["p_holm_within_contrast"] = p_holm
+    return r
+
+
+UP = seed_test(0.2, 0.1, 0.3, 0.001, 0.004)
+FLAT = seed_test(0.01, -0.05, 0.07, 0.6, 0.9)
+DOWN = seed_test(-0.2, -0.3, -0.1, 0.001, 0.004)
+# Clears 0 before Holm but not after it.
+UP_BEFORE_HOLM = seed_test(0.05, 0.001, 0.099, 0.04, 0.12)
+
+
+def cell(contrasts: dict, **extra) -> dict:
+    return {"contrasts": {k: {"metrics": m} for k, m in contrasts.items()}, "subsets": {}, **extra}
+
+
+@pytest.mark.parametrize("ai, cs, decision", [
+    (UP, UP, "supported"),
+    (UP, FLAT, "partial"),
+    (UP, UP_BEFORE_HOLM, "partial"),
+    (FLAT, FLAT, "not supported"),
+    (UP, DOWN, "not supported"),
+])
+def test_asking_follows_h1s_rule(ai, cs, decision):
+    stats = cell({"lora - base": {"active_inquiry": ai, "context_seeking": cs}})
+    assert asking(stats, ALPHA)["decision"] == decision
+
+
+def test_asking_reads_a_subset_when_named():
+    stats = cell({"lora - base": {"active_inquiry": FLAT, "context_seeking": FLAT}})
+    stats["subsets"]["clinician-user=positive"] = {
+        "contrasts": {"lora - base": {"metrics": {"active_inquiry": UP, "context_seeking": UP}}}}
+    assert asking(stats, ALPHA, subset="clinician-user=positive")["decision"] == "supported"
+    assert asking(stats, ALPHA)["decision"] == "not supported"
+
+
+def test_a_missing_primary_outcome_is_not_decided():
+    assert asking(cell({"lora - base": {"active_inquiry": UP}}), ALPHA)["decision"] is None
+
+
+def protocols():
+    return {"clarify": SimpleNamespace(passes=1), "mediq-abstain": SimpleNamespace(passes=2)}
+
+
+@pytest.mark.parametrize("ai, cs, rubric, decision, narrows", [
+    (UP, UP, seed_test(-0.02, -0.03, -0.01, 0.01), "adapter ahead", False),
+    (DOWN, FLAT, seed_test(-0.02, -0.03, -0.01, 0.01), "baseline ahead", True),
+    (FLAT, FLAT, seed_test(-0.02, -0.03, -0.01, 0.01), "not separated", True),
+    (DOWN, FLAT, seed_test(0.02, 0.01, 0.03, 0.01), "baseline ahead", False),
+])
+def test_baselines_and_the_narrowing_clause(ai, cs, rubric, decision, narrows):
+    stats = cell({"lora - base+clarify": {"active_inquiry": ai, "context_seeking": cs, "rubric_score": rubric}})
+    r = baselines(stats, ALPHA, protocols(), ["base+clarify"])["baselines"]["base+clarify"]
+    assert (r["decision"], r["narrows"]) == (decision, narrows)
+
+
+def test_a_two_call_baseline_never_narrows_the_claim():
+    stats = cell({"lora - base+mediq-abstain": {"active_inquiry": DOWN, "context_seeking": FLAT,
+                                               "rubric_score": seed_test(-0.02, -0.03, -0.01, 0.01)}})
+    r = baselines(stats, ALPHA, protocols(), ["base+mediq-abstain"])["baselines"]["base+mediq-abstain"]
+    assert r["decision"] == "baseline ahead" and r["one_call"] is False and r["narrows"] is False
+
+
+def summary(rule: str, stats_by_cell: dict, **spec):
+    h = SimpleNamespace(id="HX", token="HX", rule=rule, cells=list(stats_by_cell), subset=None,
+                        baselines=[], reference=None, **spec)
+    cfg = SimpleNamespace(hypotheses=[h], alpha=ALPHA)
+    reg = SimpleNamespace(cells={c: SimpleNamespace(protocol="bodhi") for c in stats_by_cell}, protocols={})
+    return hypotheses_summary(stats_by_cell, cfg, reg)["HX"]["cells"]
+
+
+def test_cost_runs_holm_across_the_questions_cells():
+    # p = 0.03 alone lowers the score; with a second cell at p = 0.04 in the family, Holm
+    # gives both 0.06.
+    a = cell({"lora - base": {"rubric_score": seed_test(-0.02, -0.04, -0.002, 0.03)}})
+    b = cell({"lora - base": {"rubric_score": seed_test(-0.02, -0.04, -0.001, 0.04)}})
+    assert summary("cost", {"a": a})["a"]["decision"] == "lowers the score"
+    both = summary("cost", {"a": a, "b": b})
+    assert [both[c]["decision"] for c in "ab"] == ["no change detected"] * 2
+    assert both["a"]["outcomes"]["rubric_score"]["p_adj"] == pytest.approx(0.06)
+
+
+def paired(did, complete, lora_delta_ci):
+    return {"contrasts": {}, "subsets": {},
+            "paired_probe": {"active_inquiry": {"incomplete": {
+                "conditions": {"lora": {"delta": {"seed_mean": 0.1, "seed_ci95_t": lora_delta_ci}},
+                               "base": {"delta": {"seed_mean": 0.2, "seed_ci95_t": [0.1, 0.3]}}},
+                "contrasts": {"lora - base": {"did": did}}}}},
+            "discrimination": {"active_inquiry": {"incomplete": {"contrasts": {"lora - base": {
+                "negative_rate": {"seed_test": complete}}}}}}}
+
+
+@pytest.mark.parametrize("did, complete, lora_ci, decision", [
+    (seed_test(0.2, 0.1, 0.3, 0.001), FLAT, [0.1, 0.3], "calibration supported"),
+    (seed_test(0.2, 0.1, 0.3, 0.001), FLAT, [-0.1, 0.3], "not resolved"),
+    (seed_test(-0.2, -0.3, -0.1, 0.001), UP, [-0.1, 0.1], "mimicry indicated"),
+    (seed_test(0.01, -0.1, 0.1, 0.8), UP, [-0.1, 0.1], "mimicry indicated"),
+    (seed_test(0.01, -0.1, 0.1, 0.8), FLAT, [-0.1, 0.1], "not resolved"),
+])
+def test_paired_probe_follows_section_5_1(did, complete, lora_ci, decision):
+    assert summary("paired_probe", {"a": paired(did, complete, lora_ci)})["a"]["decision"] == decision
+
+
+def red_flags(drop, primary):
+    return cell({"lora+bodhi - lora": {"red_flag": drop}, "lora+red-flags-first - lora+bodhi": {"red_flag": primary}})
+
+
+@pytest.mark.parametrize("drop, primary, decision", [
+    (FLAT, UP, "no drop to recover"),
+    (UP, UP, "no drop to recover"),
+    (DOWN, UP, "recovered"),
+    (DOWN, FLAT, "not recovered"),
+])
+def test_red_flags_first_needs_a_drop_to_recover(drop, primary, decision):
+    assert summary("red_flags_first", {"a": red_flags(drop, primary)})["a"]["decision"] == decision
+
+
+def test_over_flagging_reads_the_non_emergent_rate():
+    stats = {"contrasts": {}, "subsets": {}, "discrimination": {"red_flag_rate": {"emergent-physician": {
+        "contrasts": {"lora - base": {"negative_rate": {"seed_test": UP}, "positive_rate": {"seed_test": FLAT}}}}}}}
+    r = summary("over_flagging", {"a": stats})["a"]
+    assert r["decision"] == "over-flagging found"
+    stats["discrimination"]["red_flag_rate"]["emergent-physician"]["contrasts"]["lora - base"]["negative_rate"] = \
+        {"seed_test": FLAT}
+    assert summary("over_flagging", {"a": stats})["a"]["decision"] == "not detected"
+
+
+def test_committed_decisions_are_what_the_rules_give():
+    """cross_cell/stats.json holds the decisions of the committed cells' stats."""
+    reg, cfg, proj = load_registry(CONFIGS_DIR), report_config(), project(CONFIGS_DIR)
+    path = proj.results_root / "cross_cell" / "stats.json"
+    if not path.is_file():
+        pytest.skip("the cross-cell statistics are not in this checkout")
+    # A cell that has not run yet has no stats; the rules list it as not measured, in both.
+    cells = {c for h in cfg.hypotheses for c in [*h.cells, h.reference] if c}
+    all_stats = {c: json.loads(p.read_text()) for c in cells
+                 if (p := proj.cell(c).analysis() / "stats.json").is_file()}
+    from bodhi_lora.analysis.cross import same_prompts
+    pairs = {(c, h.reference) for h in cfg.hypotheses if h.rule == "cell_pair" for c in h.cells}
+    fresh = json.loads(json.dumps(hypotheses_summary(all_stats, cfg, reg,
+                                                     {pr: same_prompts(proj, reg, *pr) for pr in pairs})))
+    committed = json.loads(path.read_text())["hypotheses"]
+    assert {h: {c: r.get("decision") for c, r in v["cells"].items()} for h, v in fresh.items()} == \
+        {h: {c: r.get("decision") for c, r in v["cells"].items()} for h, v in committed.items()}
+
+
+def ctx_cell(drop, primary=None):
+    m = {"lora+bodhi - lora": {"red_flag": drop}}
+    if primary:
+        m["lora+red-flags-first - lora+bodhi"] = {"red_flag": primary}
+    return cell(m)
+
+
+@pytest.mark.parametrize("short, full, decision", [
+    (DOWN, FLAT, "context implicated"),
+    (DOWN, UP, "context implicated"),
+    (FLAT, DOWN, "context not implicated"),
+    (UP, FLAT, "context not implicated"),
+    (DOWN, DOWN, "not resolved"),
+])
+def test_the_4096_pair_follows_the_2026_10_19_entry(short, full, decision):
+    r = context_pair(ctx_cell(short, FLAT), ctx_cell(full), "bodhi")
+    assert r["decision"] == decision
+    assert r["outcomes"]["red_flag"]["diff"] == FLAT["diff"]
+
+
+def test_the_4096_pair_waits_for_its_reference_only_when_there_is_a_drop():
+    assert context_pair(ctx_cell(FLAT), None, "bodhi")["decision"] == "context not implicated"
+    assert context_pair(ctx_cell(DOWN), None, "bodhi")["decision"] is None
+
+
+def test_the_same_rule_runs_again_on_the_replies_below_the_cap():
+    """docs/ANALYSIS_PLAN.md section 12, 2026-10-23: H1's rule on stats.json `below_cap`
+    next to the decision, which stays the rule's on the whole cell."""
+    stats = cell({"lora - base": {"active_inquiry": UP, "context_seeking": UP}})
+    stats["below_cap"] = {"contrasts": {"lora - base": {"metrics": {"active_inquiry": FLAT, "context_seeking": UP}}}}
+    r = summary("asking", {"a": stats})["a"]
+    assert r["decision"] == "supported"
+    assert r["below_cap"]["decision"] == "partial"
+    assert r["below_cap"]["outcomes"]["active_inquiry"]["diff"] == FLAT["diff"]
+
+
+def test_a_cell_without_stop_reasons_gets_no_below_cap_decision():
+    stats = cell({"lora - base": {"active_inquiry": UP, "context_seeking": UP}})
+    stats["below_cap"] = {"not_measured": "the eval stored no finish_length"}
+    assert "below_cap" not in summary("asking", {"a": stats})["a"]
+
+
+def test_cost_runs_its_family_again_below_the_cap():
+    a = cell({"lora - base": {"rubric_score": seed_test(-0.02, -0.04, -0.002, 0.03)}})
+    b = cell({"lora - base": {"rubric_score": seed_test(-0.02, -0.04, -0.001, 0.04)}})
+    for s in (a, b):
+        s["below_cap"] = {"contrasts": s["contrasts"]}
+    both = summary("cost", {"a": a, "b": b})
+    assert [both[c]["below_cap"]["decision"] for c in "ab"] == ["no change detected"] * 2
+    assert both["a"]["below_cap"]["outcomes"]["rubric_score"]["p_adj"] == pytest.approx(0.06)
+
+
+def lora_seeds(**metrics) -> dict:
+    """A cell's stats with per-seed values of `lora` for the given metrics."""
+    return {"conditions": {m: {"lora": {"per_seed": dict(zip(["42", "7", "13", "99", "101"], v))}}
+                           for m, v in metrics.items()}}
+
+
+FILTERED = lora_seeds(active_inquiry=[0.50, 0.52, 0.49, 0.55, 0.51], context_seeking=[1.0, 1.1, 0.9, 1.0, 1.0],
+                      rubric_score=[0.40, 0.41, 0.42, 0.40, 0.41])
+SAME = lora_seeds(active_inquiry=[0.48, 0.53, 0.50, 0.54, 0.50], context_seeking=[1.0, 1.0, 1.0, 1.1, 0.9],
+                  rubric_score=[0.40, 0.40, 0.41, 0.41, 0.40])
+LOWER = lora_seeds(active_inquiry=[0.30, 0.33, 0.31, 0.36, 0.32], context_seeking=[1.0, 1.0, 1.0, 1.1, 0.9],
+                   rubric_score=[0.40, 0.40, 0.41, 0.41, 0.40])
+
+
+def test_cell_pair_pairs_seeds_when_the_prompts_match():
+    r = cell_pair(FILTERED, LOWER, ALPHA, same_prompts=True)
+    assert r["decision"] == "rises" and r["test"] == "paired t over seeds"
+    ai = r["outcomes"]["active_inquiry"]
+    want = st.paired_test([0.50, 0.52, 0.49, 0.55, 0.51], [0.30, 0.33, 0.31, 0.36, 0.32])
+    assert ai["diff"] == pytest.approx(want["diff"]) and ai["p"] == pytest.approx(want["p"])
+    # Holm over the two primary outcomes (F1): never below the raw p.
+    assert ai["p_adj"] >= ai["p"]
+    assert r["secondary"]["rubric_score"]["p_adj"] is None
+
+
+def test_cell_pair_takes_welch_when_the_prompts_differ():
+    r = cell_pair(FILTERED, LOWER, ALPHA, same_prompts=False)
+    assert r["test"].startswith("Welch")
+    want = st.welch_test([0.50, 0.52, 0.49, 0.55, 0.51], [0.30, 0.33, 0.31, 0.36, 0.32])
+    assert r["outcomes"]["active_inquiry"]["p"] == pytest.approx(want["p"])
+    assert want["ci95"][0] < want["diff"] < want["ci95"][1]
+
+
+def test_cell_pair_detects_no_rise_between_close_cells():
+    assert cell_pair(FILTERED, SAME, ALPHA, same_prompts=True)["decision"] == "no rise detected"
+
+
+def test_cell_pair_runs_the_same_test_on_base():
+    stats = {"conditions": {**FILTERED["conditions"]}}
+    ref = {"conditions": {**LOWER["conditions"]}}
+    for s in (stats, ref):
+        for m in ("active_inquiry", "context_seeking", "rubric_score"):
+            s["conditions"][m] = {**s["conditions"][m], "base": {"per_seed": dict(zip(["42", "7", "13", "99", "101"], [0.1] * 5))}}
+    r = cell_pair(stats, ref, ALPHA, same_prompts=True)
+    assert r["base_check"]["active_inquiry"]["diff"] == pytest.approx(0.0)
+    assert r["decision"] == "rises"
+
+
+def test_cell_pair_needs_the_reference_and_the_eval_ids():
+    assert cell_pair(FILTERED, None, ALPHA, same_prompts=True)["decision"] is None
+    assert cell_pair(FILTERED, LOWER, ALPHA, same_prompts=None)["decision"] is None

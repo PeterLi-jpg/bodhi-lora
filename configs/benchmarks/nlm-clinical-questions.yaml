@@ -1,0 +1,43 @@
+# Questions clinicians asked at the point of care, 1991 to 2003 (EXPERIMENTS.md E19,
+# the second clinician-posed set): the four IOWA collections of the NLM Clinical
+# Questions Collection, 4,654 questions by the file names. Checked against the files on
+# 2026-10-09: each file is many XML documents one after another, each with its own XML
+# declaration and one <clinical_question> record holding id_info/nlm_id,
+# asker_info/occupation, original_question (the question as asked), short_question,
+# general_question, year_asked, patient_info and keywords. There is no answer, so the
+# rows have no rubric: the eval gives no rubric score, and the seven dimensions, the
+# judges' harm grades and the text counts apply. catalog.data.gov lists the Open Database
+# License; read NLM's terms page before a run.
+id: nlm-clinical-questions
+title: NLM Clinical Questions Collection, IOWA collections IA to ID
+loader: xml_records
+source:
+  kind: url
+  files:
+    ia:
+      url: "https://data.lhncbc.nlm.nih.gov/public/Clinical-Questions/Collection-IA-1095-Questions.xml"
+      sha256: 0245f98996e14defbf7a56e1a80d5b6ce9a1e6bd2a8cf6cc4cae8a3ee9ef0fb0
+    ib:
+      url: "https://data.lhncbc.nlm.nih.gov/public/Clinical-Questions/Collection-IB-1892-Questions.xml"
+      sha256: b4da5498aef345f19594a197e6451c6d43fa64c948a7d82fb4152bfcc38892d1
+    ic:
+      url: "https://data.lhncbc.nlm.nih.gov/public/Clinical-Questions/Collection-IC-1062-Questions.xml"
+      sha256: df8e2a6d46a7b736939792c4590107fc06a5a0c4a82490b68d4d73f0b394629b
+    id:
+      url: "https://data.lhncbc.nlm.nih.gov/public/Clinical-Questions/Collection-ID-605-Questions.xml"
+      sha256: 58ab04fb32277570828c3200cbbcda1a6df3549c3208624c006cfb38794ed526
+license: Open Database License per catalog.data.gov; check the NLM terms page
+audience: clinician
+task: open_ended
+rubric: none
+fields:
+  question: [original_question]
+loader_params:
+  record_tag: clinical_question
+  id_path: id_info/nlm_id
+  tag_paths: {asker: asker_info/occupation, year: year_asked}
+# The clinician framing of medqa-open, with no cue to ask.
+prompt_template: "You are advising a clinician colleague. Answer the following clinical question.\n\n{question}"
+tags: ["theme:clinical-questions", "persona:clinician"]
+splits:
+  default: {method: holdout, pool: {select: all}, holdout: {select: all}}
